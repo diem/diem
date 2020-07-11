@@ -173,9 +173,9 @@ impl Interpreter {
                         })
                         .map_err(|e| self.set_location(e))?;
                     let ty_args = resolver
-                        .materialize_generic_function(idx, current_frame.ty_args())
+                        .instantiate_generic_function(idx, current_frame.ty_args())
                         .map_err(|e| self.set_location(e))?;
-                    let func = resolver.function_from_generic(idx);
+                    let func = resolver.function_from_instantiation(idx);
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
                         continue;
@@ -983,7 +983,7 @@ impl Frame {
                     Bytecode::MutBorrowGlobalGeneric(si_idx)
                     | Bytecode::ImmBorrowGlobalGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
                         let size = interpreter.borrow_global(data_store, addr, &ty)?;
                         cost_strategy
                             .charge_instr_with_size(Opcodes::MUT_BORROW_GLOBAL_GENERIC, size)?;
@@ -996,7 +996,7 @@ impl Frame {
                     }
                     Bytecode::ExistsGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
                         let size = interpreter.exists(data_store, addr, &ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::EXISTS_GENERIC, size)?;
                     }
@@ -1010,7 +1010,7 @@ impl Frame {
                     }
                     Bytecode::MoveFromGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
                         let size = interpreter.move_from(data_store, addr, &ty)?;
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
@@ -1038,7 +1038,7 @@ impl Frame {
                             .value_as::<Reference>()?
                             .read_ref()?
                             .value_as::<AccountAddress>()?;
-                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
                         let size =
                             Interpreter::move_to(resource)(interpreter, data_store, addr, ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_GENERIC, size)?;

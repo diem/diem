@@ -104,7 +104,7 @@ impl ScriptCache {
 // A ModuleCache is the core structure in the Loader.
 // It holds all Modules, Types and Functions loaded.
 // Types and Functions are pushed globally to the ModuleCache.
-// A ModuleCache is accessed under lock.
+// All accesses to the ModuleCache are under lock (exclusive).
 pub struct ModuleCache {
     modules: BinaryCache<ModuleId, Module>,
     structs: Vec<Arc<StructType>>,
@@ -120,65 +120,97 @@ impl ModuleCache {
         }
     }
 
-    fn get(&self, id: &ModuleId) -> Option<Arc<Module>> {
+    //
+    // Common "get" operations
+    //
+
+    // Retrieve a module by `ModuleId`. The module may have not been loaded yet in which
+    // case `None` is returned
+    fn module_at(&self, id: &ModuleId) -> Option<Arc<Module>> {
         self.modules.get(id).map(|module| Arc::clone(module))
     }
 
-    fn insert(&mut self, id: ModuleId, module: CompiledModule) -> VMResult<Arc<Module>> {
-        self.add_module(&module)?;
-        let module = Module::new(module, self)?;
-        match self.get(&id) {
-            Some(module) => Ok(module),
-            None => Ok(Arc::clone(self.modules.insert(id, module))),
-        }
-    }
-
+    // Retrieve a function by index
     fn function_at(&self, idx: usize) -> Arc<Function> {
-        self.functions[idx].clone()
+        Arc::clone(&self.functions[idx])
     }
 
+    // Retrieve a struct by index
     fn struct_at(&self, idx: usize) -> Arc<StructType> {
         Arc::clone(&self.structs[idx])
+    }
+
+    //
+    // Insertion is under lock and it's a pretty heavy operation.
+    // The VM is pretty much stopped waiting for this to finish
+    //
+
+    fn insert(&mut self, id: ModuleId, module: CompiledModule) -> VMResult<Arc<Module>> {
+        if let Some(module) = self.module_at(&id) {
+            return Ok(module);
+        }
+
+        // we need this operation to be transactional, if an error occurs we must
+        // leave a clean state
+        self.add_module(&module)?;
+        match Module::new(module, self) {
+            Ok(module) => Ok(Arc::clone(self.modules.insert(id, module))),
+            Err((err, module)) => {
+                // remove all structs and functions that have been pushed
+                let strut_def_count = module.struct_defs().len();
+                self.structs.truncate(self.structs.len() - strut_def_count);
+                let function_count = module.function_defs().len();
+                self.functions
+                    .truncate(self.functions.len() - function_count);
+                Err(err.finish(Location::Undefined))
+            }
+        }
     }
 
     fn add_module(&mut self, module: &CompiledModule) -> VMResult<()> {
         let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
-            let st = self.load_type(module, struct_def, StructDefinitionIndex(idx as u16))?;
+            let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_fields(module, starting_idx)
-            .map_err(|e| e.finish(Location::Undefined))?;
-
+        self.load_field_types(module, starting_idx).or_else(|err| {
+            // clean up the structs that were cached
+            self.structs.truncate(starting_idx);
+            Err(err.finish(Location::Undefined))
+        })?;
         for func in module.function_defs() {
-            let function = self.load_function(module, func)?;
+            let function = Function::new(func, module);
             self.functions.push(Arc::new(function));
         }
         Ok(())
     }
 
-    fn load_type(
+    fn make_struct_type(
         &self,
         module: &CompiledModule,
         struct_def: &StructDefinition,
         idx: StructDefinitionIndex,
-    ) -> VMResult<StructType> {
+    ) -> StructType {
         let struct_handle = module.struct_handle_at(struct_def.struct_handle);
         let is_resource = struct_handle.is_nominal_resource;
         let name = module.identifier_at(struct_handle.name).to_owned();
         let type_parameters = struct_handle.type_parameters.clone();
         let module = module.self_id();
-        Ok(StructType {
+        StructType {
             fields: vec![],
             is_resource,
             type_parameters,
             name,
             module,
             struct_def: idx,
-        })
+        }
     }
 
-    fn load_fields(&mut self, module: &CompiledModule, starting_idx: usize) -> PartialVMResult<()> {
+    fn load_field_types(
+        &mut self,
+        module: &CompiledModule,
+        starting_idx: usize,
+    ) -> PartialVMResult<()> {
         let mut field_types = vec![];
         for struct_def in module.struct_defs() {
             let fields = match &struct_def.field_information {
@@ -188,29 +220,84 @@ impl ModuleCache {
 
             let mut field_tys = vec![];
             for field in fields {
-                let ty = self.make_type(module, &field.signature.0)?;
+                let ty = self.make_type_while_loading(module, &field.signature.0)?;
                 assume!(field_tys.len() < usize::max_value());
                 field_tys.push(ty);
             }
 
             field_types.push(field_tys);
         }
-        for (fields, arc_struct_type) in field_types
-            .into_iter()
-            .zip(&mut self.structs[starting_idx..])
-        {
-            match Arc::get_mut(arc_struct_type) {
-                None => {
-                    return Err(PartialVMError::new(StatusCode::INVALID_CODE_CACHE)
-                        .with_message("Arc Type should not have any reference".to_string()))
-                }
+        let mut struct_idx = starting_idx;
+        for fields in field_types {
+            match Arc::get_mut(&mut self.structs[struct_idx]) {
                 Some(struct_type) => struct_type.fields = fields,
+                None => {
+                    // we have pending references to the `Arc` which is impossible,
+                    // given the code that adds the `Arc` is above and no reference to
+                    // it should exist.
+                    // So in the spirit of not crashing we just rewrite the entire `Arc`
+                    // over and log the issue.
+                    crit!("Arc<StructType> cannot have any live reference while publishing");
+                    let mut struct_type = (*self.structs[struct_idx]).clone();
+                    struct_type.fields = fields;
+                    self.structs[struct_idx] = Arc::new(struct_type);
+                }
             }
+            struct_idx += 1;
         }
         Ok(())
     }
 
+    // `make_type` is the entry point to "translate" a `SignatureToken` to a `Type`
     fn make_type(&self, module: &CompiledModule, tok: &SignatureToken) -> PartialVMResult<Type> {
+        self.make_type_internal(module, tok, &|struct_name, module_id| {
+            Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
+        })
+    }
+
+    // While in the process of loading, and before a `Module` is saved into the cache the loader
+    // needs to resolve type references to the module itself (self) "manually"; that is,
+    // looping through the types of the module itself
+    fn make_type_while_loading(
+        &self,
+        module: &CompiledModule,
+        tok: &SignatureToken,
+    ) -> PartialVMResult<Type> {
+        let self_id = module.self_id();
+        self.make_type_internal(module, tok, &|struct_name, module_id| {
+            if module_id == &self_id {
+                // module has not been published yet, loop through the types
+                for (idx, struct_type) in self.structs.iter().enumerate().rev() {
+                    if &struct_type.module != module_id {
+                        break;
+                    }
+                    if struct_type.name.as_ident_str() == struct_name {
+                        return Ok(idx);
+                    }
+                }
+                Err(
+                    PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
+                        "Cannot find {:?}::{:?} in publishing module",
+                        module_id, struct_name
+                    )),
+                )
+            } else {
+                Ok(self.resolve_struct_by_name(struct_name, module_id)?.0)
+            }
+        })
+    }
+
+    // `make_type_internal` returns a `Type` given a signature and a resolver which
+    // is resonsible to map a local struct index to a global one
+    fn make_type_internal<F>(
+        &self,
+        module: &CompiledModule,
+        tok: &SignatureToken,
+        resolver: &F,
+    ) -> PartialVMResult<Type>
+    where
+        F: Fn(&IdentStr, &ModuleId) -> PartialVMResult<usize>,
+    {
         let res = match tok {
             SignatureToken::Bool => Type::Bool,
             SignatureToken::U8 => Type::U8,
@@ -220,15 +307,15 @@ impl ModuleCache {
             SignatureToken::Signer => Type::Signer,
             SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
             SignatureToken::Vector(inner_tok) => {
-                let inner_type = self.make_type(module, inner_tok)?;
+                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
                 Type::Vector(Box::new(inner_type))
             }
             SignatureToken::Reference(inner_tok) => {
-                let inner_type = self.make_type(module, inner_tok)?;
+                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
                 Type::Reference(Box::new(inner_type))
             }
             SignatureToken::MutableReference(inner_tok) => {
-                let inner_type = self.make_type(module, inner_tok)?;
+                let inner_type = self.make_type_internal(module, inner_tok, resolver)?;
                 Type::MutableReference(Box::new(inner_type))
             }
             SignatureToken::Struct(sh_idx) => {
@@ -239,13 +326,13 @@ impl ModuleCache {
                     *module.address_identifier_at(module_handle.address),
                     module.identifier_at(module_handle.name).to_owned(),
                 );
-                let def_idx = self.find_struct_by_name(struct_name, &module_id)?.0;
+                let def_idx = resolver(struct_name, &module_id)?;
                 Type::Struct(def_idx)
             }
             SignatureToken::StructInstantiation(sh_idx, tys) => {
                 let type_parameters: Vec<_> = tys
                     .iter()
-                    .map(|tok| self.make_type(module, tok))
+                    .map(|tok| self.make_type_internal(module, tok, resolver))
                     .collect::<PartialVMResult<_>>()?;
                 let struct_handle = module.struct_handle_at(*sh_idx);
                 let struct_name = module.identifier_at(struct_handle.name);
@@ -254,82 +341,54 @@ impl ModuleCache {
                     *module.address_identifier_at(module_handle.address),
                     module.identifier_at(module_handle.name).to_owned(),
                 );
-                let def_idx = self.find_struct_by_name(struct_name, &module_id)?.0;
+                let def_idx = resolver(struct_name, &module_id)?;
                 Type::StructInstantiation(def_idx, type_parameters)
             }
         };
         Ok(res)
     }
 
-    fn find_struct_by_name(
+    // Given a ModuleId::struct_name, retrieve the `StructType` and the index associated.
+    // Return and error if the type has not been loaded
+    fn resolve_struct_by_name(
         &self,
         struct_name: &IdentStr,
         module_id: &ModuleId,
     ) -> PartialVMResult<(usize, Arc<StructType>)> {
-        for (idx, ty) in self.structs.iter().enumerate() {
-            if struct_match(ty, &module_id, struct_name) {
-                return Ok((idx, Arc::clone(ty)));
-            }
+        match self
+            .modules
+            .get(module_id)
+            .and_then(|module| module.struct_map.get(struct_name))
+        {
+            Some(struct_idx) => Ok((*struct_idx, Arc::clone(&self.structs[*struct_idx]))),
+            None => Err(
+                PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
+                    "Cannot find {:?}::{:?} in cache",
+                    module_id, struct_name
+                )),
+            ),
         }
-        Err(
-            PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
-                "Cannot find {:?}::{:?} in cache",
-                module_id, struct_name
-            )),
-        )
     }
 
-    fn resolve_function_handle(
+    // Given a ModuleId::func_name, retrieve the `StructType` and the index associated.
+    // Return and error if the function has not been loaded
+    fn resolve_function_by_name(
         &self,
         func_name: &IdentStr,
         module_id: &ModuleId,
-    ) -> VMResult<usize> {
-        for (idx, f) in self.functions.iter().enumerate() {
-            if function_match(&f, module_id, func_name) {
-                return Ok(idx);
-            }
-        }
-        Err(PartialVMError::new(StatusCode::FUNCTION_RESOLUTION_FAILURE)
-            .with_message(format!(
-                "Cannot find {:?}::{:?} in cache",
-                module_id, func_name
-            ))
-            .finish(Location::Undefined))
-    }
-
-    fn load_function(
-        &self,
-        module: &CompiledModule,
-        func_def: &FunctionDefinition,
-    ) -> VMResult<Function> {
-        Ok(Function::new(func_def, module))
-    }
-}
-
-struct StructInfo {
-    struct_tag: Option<StructTag>,
-    struct_layout: Option<MoveStructLayout>,
-    kind_info: Option<(MoveKind, Vec<MoveKindInfo>)>,
-}
-
-impl StructInfo {
-    fn new() -> Self {
-        Self {
-            struct_tag: None,
-            struct_layout: None,
-            kind_info: None,
-        }
-    }
-}
-
-pub(crate) struct TypeCache {
-    structs: HashMap<usize, HashMap<Vec<Type>, StructInfo>>,
-}
-
-impl TypeCache {
-    fn new() -> Self {
-        Self {
-            structs: HashMap::new(),
+    ) -> PartialVMResult<usize> {
+        match self
+            .modules
+            .get(module_id)
+            .and_then(|module| module.function_map.get(func_name))
+        {
+            Some(func_idx) => Ok(*func_idx),
+            None => Err(
+                PartialVMError::new(StatusCode::FUNCTION_RESOLUTION_FAILURE).with_message(format!(
+                    "Cannot find {:?}::{:?} in cache",
+                    module_id, func_name
+                )),
+            ),
         }
     }
 }
@@ -486,7 +545,8 @@ impl Loader {
             .module_cache
             .lock()
             .unwrap()
-            .resolve_function_handle(function_name, module_id)?;
+            .resolve_function_by_name(function_name, module_id)
+            .map_err(|err| err.finish(Location::Undefined))?;
         let func = self.module_cache.lock().unwrap().function_at(idx);
 
         // verify type arguments
@@ -635,7 +695,8 @@ impl Loader {
                     .module_cache
                     .lock()
                     .unwrap()
-                    .find_struct_by_name(&struct_tag.name, &module_id)
+                    // GOOD module was loaded above
+                    .resolve_struct_by_name(&struct_tag.name, &module_id)
                     .map_err(|e| e.finish(Location::Undefined))?;
                 if struct_type.type_parameters.is_empty() && struct_tag.type_params.is_empty() {
                     Type::Struct(idx)
@@ -653,7 +714,7 @@ impl Loader {
     }
 
     fn load_module(&self, id: &ModuleId, data_store: &mut impl DataStore) -> VMResult<Arc<Module>> {
-        if let Some(module) = self.module_cache.lock().unwrap().get(id) {
+        if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
             return Ok(module);
         }
         let module = self.deserialize_and_verify_module(id, data_store)?;
@@ -690,6 +751,10 @@ impl Loader {
         self.module_cache.lock().unwrap().function_at(idx)
     }
 
+    fn struct_at(&self, idx: usize) -> Arc<StructType> {
+        self.module_cache.lock().unwrap().struct_at(idx)
+    }
+
     fn get_module(&self, idx: &ModuleId) -> Arc<Module> {
         Arc::clone(
             self.module_cache
@@ -710,10 +775,6 @@ impl Loader {
                 .get(hash)
                 .expect("Script hash on Function must exist"),
         )
-    }
-
-    fn struct_at(&self, idx: usize) -> Arc<StructType> {
-        self.module_cache.lock().unwrap().struct_at(idx)
     }
 
     fn is_resource(&self, type_: &Type) -> PartialVMResult<bool> {
@@ -800,7 +861,10 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(idx)
     }
 
-    pub(crate) fn function_from_generic(&self, idx: FunctionInstantiationIndex) -> Arc<Function> {
+    pub(crate) fn function_from_instantiation(
+        &self,
+        idx: FunctionInstantiationIndex,
+    ) -> Arc<Function> {
         let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
@@ -808,7 +872,7 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(func_inst.handle)
     }
 
-    pub(crate) fn materialize_generic_function(
+    pub(crate) fn instantiate_generic_function(
         &self,
         idx: FunctionInstantiationIndex,
         type_params: &[Type],
@@ -857,7 +921,7 @@ impl<'a> Resolver<'a> {
         Type::Struct(struct_def)
     }
 
-    pub(crate) fn get_struct_instantiation_type(
+    pub(crate) fn instantiate_generic_type(
         &self,
         idx: StructDefInstantiationIndex,
         ty_args: &[Type],
@@ -874,6 +938,10 @@ impl<'a> Resolver<'a> {
                 .map(|ty| ty.subst(ty_args))
                 .collect::<PartialVMResult<_>>()?,
         ))
+    }
+
+    pub(crate) fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
+        self.loader.is_resource(ty)
     }
 
     pub(crate) fn instantiation_is_resource(
@@ -932,12 +1000,12 @@ impl<'a> Resolver<'a> {
         }
     }
 
+    //
+    // FatType to be removed API
+    //
+
     pub fn type_to_fat_type(&self, ty: &Type) -> PartialVMResult<FatType> {
         self.loader.type_to_fat_type(ty)
-    }
-
-    pub(crate) fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
-        self.loader.is_resource(ty)
     }
 
     pub(crate) fn make_fat_type(
@@ -980,12 +1048,24 @@ pub(crate) struct Module {
     // primitive pools
     module: CompiledModule,
 
+    //
     // types as indexes into the Loader type list
+    //
+
+    // struct references carry the index into the global vector of types.
+    // That is effectively an indirection over the ref table:
+    // the instruction carries an index into this table which contains the index into the
+    // glabal table of types. No instantiation of generic types is saved into the global table.
     struct_refs: Vec<usize>,
     structs: Vec<StructDef>,
+    // materialized instantiations, whether partial or not
     struct_instantiations: Vec<StructInstantiation>,
 
     // functions as indexes into the Loader function list
+    // That is effectively an indirection over the ref table:
+    // the instruction carries an index into this table which contains the index into the
+    // glabal table of functions. No instantiation of generic functions is saved into
+    // the global table.
     function_refs: Vec<usize>,
     // materialized instantiations, whether partial or not
     function_instantiations: Vec<FunctionInstantiation>,
@@ -994,105 +1074,162 @@ pub(crate) struct Module {
     field_handles: Vec<FieldHandle>,
     // materialized instantiations, whether partial or not
     field_instantiations: Vec<FieldInstantiation>,
+
+    // function name to index into the Loader function list.
+    // This allows a direct access from function name to `Function`
+    function_map: HashMap<Identifier, usize>,
+    // struct name to index into the Loader type list
+    // This allows a direct access from struct name to `Struct`
+    struct_map: HashMap<Identifier, usize>,
 }
 
 impl Module {
-    fn new(module: CompiledModule, cache: &ModuleCache) -> VMResult<Self> {
+    fn new(
+        module: CompiledModule,
+        cache: &ModuleCache,
+    ) -> Result<Self, (PartialVMError, CompiledModule)> {
         let id = module.self_id();
 
         let mut struct_refs = vec![];
-        for struct_handle in module.struct_handles() {
-            let struct_name = module.identifier_at(struct_handle.name);
-            let module_handle = module.module_handle_at(struct_handle.module);
-            let module_id = module.module_id_for_handle(module_handle);
-            struct_refs.push(
-                cache
-                    .find_struct_by_name(struct_name, &module_id)
-                    .map_err(|e| e.finish(Location::Module(module.self_id())))?
-                    .0,
-            );
-        }
-
         let mut structs = vec![];
-        for struct_def in module.struct_defs() {
-            let idx = struct_refs[struct_def.struct_handle.0 as usize];
-            let field_count = cache.structs[idx].fields.len() as u16;
-            structs.push(StructDef { idx, field_count });
-        }
-
         let mut struct_instantiations = vec![];
-        for struct_inst in module.struct_instantiations() {
-            let def = struct_inst.def.0 as usize;
-            let struct_def = &structs[def];
-            let field_count = struct_def.field_count;
-            let mut instantiation = vec![];
-            for ty in &module.signature_at(struct_inst.type_parameters).0 {
-                instantiation.push(
-                    cache
-                        .make_type(&module, ty)
-                        .map_err(|e| e.finish(Location::Module(module.self_id())))?,
-                );
-            }
-            struct_instantiations.push(StructInstantiation {
-                field_count,
-                def: struct_def.idx,
-                instantiation,
-            });
-        }
-
         let mut function_refs = vec![];
-        for func_handle in module.function_handles() {
-            let func_name = module.identifier_at(func_handle.name);
-            let module_handle = module.module_handle_at(func_handle.module);
-            let module_id = module.module_id_for_handle(module_handle);
-            let ref_idx = cache.resolve_function_handle(func_name, &module_id)?;
-            function_refs.push(ref_idx);
-        }
-
         let mut function_instantiations = vec![];
-        for func_inst in module.function_instantiations() {
-            let handle = function_refs[func_inst.handle.0 as usize];
-            let mut instantiation = vec![];
-            for ty in &module.signature_at(func_inst.type_parameters).0 {
-                instantiation.push(
-                    cache
-                        .make_type(&module, ty)
-                        .map_err(|e| e.finish(Location::Module(module.self_id())))?,
-                );
-            }
-            function_instantiations.push(FunctionInstantiation {
-                handle,
-                instantiation,
-            });
-        }
-
         let mut field_handles = vec![];
-        for f_handle in module.field_handles() {
-            let def_idx = f_handle.owner;
-            let owner = structs[def_idx.0 as usize].idx;
-            let offset = f_handle.field as usize;
-            field_handles.push(FieldHandle { owner, offset });
-        }
-
         let mut field_instantiations: Vec<FieldInstantiation> = vec![];
-        for f_inst in module.field_instantiations() {
-            let fh_idx = f_inst.handle;
-            let owner = field_handles[fh_idx.0 as usize].owner;
-            let offset = field_handles[fh_idx.0 as usize].offset;
-            field_instantiations.push(FieldInstantiation { owner, offset });
-        }
+        let mut function_map = HashMap::new();
+        let mut struct_map = HashMap::new();
 
-        Ok(Self {
-            id,
-            module,
-            struct_refs,
-            structs,
-            function_refs,
-            struct_instantiations,
-            function_instantiations,
-            field_handles,
-            field_instantiations,
-        })
+        let mut create = || {
+            for struct_handle in module.struct_handles() {
+                let struct_name = module.identifier_at(struct_handle.name);
+                let module_handle = module.module_handle_at(struct_handle.module);
+                let module_id = module.module_id_for_handle(module_handle);
+                if module_id == id {
+                    // module has not been published yet, loop through the types in reverse order.
+                    // At this point all the types of the module are in the type list but not yet
+                    // exposed through the module cache. The implication is that any resolution
+                    // to types of the module being loaded is going to fail.
+                    // So we manually go through the types and find the proper index
+                    for (idx, struct_type) in cache.structs.iter().enumerate().rev() {
+                        if struct_type.module != module_id {
+                            return Err(PartialVMError::new(StatusCode::TYPE_RESOLUTION_FAILURE)
+                                .with_message(format!(
+                                    "Cannot find {:?}::{:?} in publishing module",
+                                    module_id, struct_name
+                                )));
+                        }
+                        if struct_type.name.as_ident_str() == struct_name {
+                            struct_refs.push(idx);
+                            break;
+                        }
+                    }
+                } else {
+                    struct_refs.push(cache.resolve_struct_by_name(struct_name, &module_id)?.0);
+                }
+            }
+
+            for struct_def in module.struct_defs() {
+                let idx = struct_refs[struct_def.struct_handle.0 as usize];
+                let field_count = cache.structs[idx].fields.len() as u16;
+                structs.push(StructDef { idx, field_count });
+                let name =
+                    module.identifier_at(module.struct_handle_at(struct_def.struct_handle).name);
+                struct_map.insert(name.to_owned(), idx);
+            }
+
+            for struct_inst in module.struct_instantiations() {
+                let def = struct_inst.def.0 as usize;
+                let struct_def = &structs[def];
+                let field_count = struct_def.field_count;
+                let mut instantiation = vec![];
+                for ty in &module.signature_at(struct_inst.type_parameters).0 {
+                    instantiation.push(cache.make_type_while_loading(&module, ty)?);
+                }
+                struct_instantiations.push(StructInstantiation {
+                    field_count,
+                    def: struct_def.idx,
+                    instantiation,
+                });
+            }
+
+            for func_handle in module.function_handles() {
+                let func_name = module.identifier_at(func_handle.name);
+                let module_handle = module.module_handle_at(func_handle.module);
+                let module_id = module.module_id_for_handle(module_handle);
+                if module_id == id {
+                    // module has not been published yet, loop through the functions
+                    for (idx, function) in cache.functions.iter().enumerate().rev() {
+                        if function.module_id() != Some(&module_id) {
+                            return Err(PartialVMError::new(
+                                StatusCode::FUNCTION_RESOLUTION_FAILURE,
+                            )
+                            .with_message(format!(
+                                "Cannot find {:?}::{:?} in publishing module",
+                                module_id, func_name
+                            )));
+                        }
+                        if function.name.as_ident_str() == func_name {
+                            function_refs.push(idx);
+                            break;
+                        }
+                    }
+                } else {
+                    function_refs.push(cache.resolve_function_by_name(func_name, &module_id)?);
+                }
+            }
+
+            for func_def in module.function_defs() {
+                let idx = function_refs[func_def.function.0 as usize];
+                let name = module.identifier_at(module.function_handle_at(func_def.function).name);
+                function_map.insert(name.to_owned(), idx);
+            }
+
+            for func_inst in module.function_instantiations() {
+                let handle = function_refs[func_inst.handle.0 as usize];
+                let mut instantiation = vec![];
+                for ty in &module.signature_at(func_inst.type_parameters).0 {
+                    instantiation.push(cache.make_type_while_loading(&module, ty)?);
+                }
+                function_instantiations.push(FunctionInstantiation {
+                    handle,
+                    instantiation,
+                });
+            }
+
+            for f_handle in module.field_handles() {
+                let def_idx = f_handle.owner;
+                let owner = structs[def_idx.0 as usize].idx;
+                let offset = f_handle.field as usize;
+                field_handles.push(FieldHandle { owner, offset });
+            }
+
+            for f_inst in module.field_instantiations() {
+                let fh_idx = f_inst.handle;
+                let owner = field_handles[fh_idx.0 as usize].owner;
+                let offset = field_handles[fh_idx.0 as usize].offset;
+                field_instantiations.push(FieldInstantiation { owner, offset });
+            }
+
+            Ok(())
+        };
+
+        match create() {
+            Ok(_) => Ok(Self {
+                id,
+                module,
+                struct_refs,
+                structs,
+                function_refs,
+                struct_instantiations,
+                function_instantiations,
+                field_handles,
+                field_instantiations,
+                function_map,
+                struct_map,
+            }),
+            Err(err) => Err((err, module)),
+        }
     }
 
     fn struct_at(&self, idx: StructDefinitionIndex) -> usize {
@@ -1132,10 +1269,10 @@ impl Module {
     }
 }
 
-// A Script is very similar to a binary Script but data is "transformed" to a representation
+// A Script is very similar to a `CompiledScript` but data is "transformed" to a representation
 // more appropriate to execution.
-// When code executes indexes in instructions are resolved against those runtime structure
-// so that any data needed for execution is immediately available
+// When code executes, indexes in instructions are resolved against runtime structures
+// (rather then "compiled") to make available data needed for execution
 #[derive(Debug)]
 struct Script {
     // primitive pools
@@ -1165,7 +1302,7 @@ impl Script {
             );
             struct_refs.push(
                 cache
-                    .find_struct_by_name(struct_name, &module_id)
+                    .resolve_struct_by_name(struct_name, &module_id)
                     .map_err(|e| e.finish(Location::Script))?
                     .0,
             );
@@ -1179,7 +1316,9 @@ impl Script {
                 *script.address_identifier_at(module_handle.address),
                 script.identifier_at(module_handle.name).to_owned(),
             );
-            let ref_idx = cache.resolve_function_handle(func_name, &module_id)?;
+            let ref_idx = cache
+                .resolve_function_by_name(func_name, &module_id)
+                .map_err(|err| err.finish(Location::Undefined))?;
             function_refs.push(ref_idx);
         }
 
@@ -1390,11 +1529,11 @@ impl Function {
 }
 
 //
-// Internal structures that are saved at the proper index in proper tables to access
+// Internal structures that are saved at the proper index in the proper tables to access
 // execution information (interpreter).
 // The following structs are internal to the loader and never exposed out.
 // The `Loader` will create those struct and the proper table when loading a module.
-// THe `Resolver` uses those structs to return information to the `Interpreter`.
+// The `Resolver` uses those structs to return information to the `Interpreter`.
 //
 
 // A function instantiation.
@@ -1468,12 +1607,36 @@ fn load_module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
     deps
 }
 
-fn struct_match(struct_: &StructType, module: &ModuleId, name: &IdentStr) -> bool {
-    struct_.name.as_ident_str() == name && &struct_.module == module
+//
+// Cache for data associated to a Struct, used for de/serialization and more
+//
+
+struct StructInfo {
+    struct_tag: Option<StructTag>,
+    struct_layout: Option<MoveStructLayout>,
+    kind_info: Option<(MoveKind, Vec<MoveKindInfo>)>,
 }
 
-fn function_match(function: &Function, module: &ModuleId, name: &IdentStr) -> bool {
-    function.name.as_ident_str() == name && function.module_id() == Some(module)
+impl StructInfo {
+    fn new() -> Self {
+        Self {
+            struct_tag: None,
+            struct_layout: None,
+            kind_info: None,
+        }
+    }
+}
+
+pub(crate) struct TypeCache {
+    structs: HashMap<usize, HashMap<Vec<Type>, StructInfo>>,
+}
+
+impl TypeCache {
+    fn new() -> Self {
+        Self {
+            structs: HashMap::new(),
+        }
+    }
 }
 
 const VALUE_DEPTH_MAX: usize = 256;
