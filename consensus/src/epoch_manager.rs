@@ -396,7 +396,7 @@ impl EpochManager {
                         // security log + return the error
                         {send_struct_log!(security_log(security_events::CONSENSUS_INVALID_MESSAGE)
                             .data("from_peer", &peer_id)
-                            .data("error", format!("{}", err))
+                            .data_display("error", &err)
                             .data("event", &unverified_event)
                         );
                     err})?;

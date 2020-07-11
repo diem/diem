@@ -290,7 +290,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     // security log
                     send_struct_log!(security_log(security_events::STATE_SYNC_INVALID_CHUNK)
                         .data("from_peer", &peer)
-                        .data("error", format!("{}", err))
+                        .data_display("error", &err)
                         .data("chunk", &response));
 
                     // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
