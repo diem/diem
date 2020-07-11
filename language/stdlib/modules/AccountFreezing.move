@@ -50,9 +50,19 @@ module AccountFreezing {
             unfreeze_event_handle: Event::new_event_handle(lr_account),
         });
     }
+    spec fun initialize {
+        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if exists<FreezeEventsHolder>(Signer::spec_address_of(lr_account));
+        ensures exists<FreezeEventsHolder>(Signer::spec_address_of(lr_account));
+    }
 
     public fun create(account: &signer) {
         move_to(account, FreezingBit { is_frozen: false })
+    }
+    spec fun create {
+        aborts_if exists<FreezingBit>(Signer::spec_address_of(account));
+        ensures spec_account_is_not_frozen(Signer::spec_address_of(account));
     }
 
     /// Freeze the account at `addr`.
@@ -115,6 +125,7 @@ module AccountFreezing {
      }
     spec fun account_is_frozen {
         aborts_if false;
+        ensures result == spec_account_is_frozen(addr);
     }
 
     spec module {
@@ -123,6 +134,26 @@ module AccountFreezing {
         define spec_account_is_frozen(addr: address): bool {
             exists<FreezingBit>(addr) && global<FreezingBit>(addr).is_frozen
         }
+
+        define spec_account_is_not_frozen(addr: address): bool {
+            exists<FreezingBit>(addr) && !global<FreezingBit>(addr).is_frozen
+        }
+
+        /// FreezeEventsHolder always exists after genesis.
+        invariant !LibraTimestamp::spec_is_genesis() ==>
+            exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+
+        /// The account of LibraRoot is not freezable [G2].
+        /// After genesis, FreezingBit of LibraRoot is always false.
+        invariant !LibraTimestamp::spec_is_genesis() ==>
+            spec_account_is_not_frozen(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+
+        /// The account of TreasuryCompliance is not freezable [G3].
+        /// After genesis, FreezingBit of TreasuryCompliance is always false.
+        invariant !LibraTimestamp::spec_is_genesis() ==>
+            spec_account_is_not_frozen(CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS());
+
+        // TODO: Need to decide the freezability of the roles such as Validator, ValidatorOperator, DesginatedDealer.
     }
 }
 }

@@ -15,6 +15,8 @@
 -  [Function `unfreeze_account`](#0x1_AccountFreezing_unfreeze_account)
 -  [Function `account_is_frozen`](#0x1_AccountFreezing_account_is_frozen)
 -  [Specification](#0x1_AccountFreezing_Specification)
+    -  [Function `initialize`](#0x1_AccountFreezing_Specification_initialize)
+    -  [Function `create`](#0x1_AccountFreezing_Specification_create)
     -  [Function `freeze_account`](#0x1_AccountFreezing_Specification_freeze_account)
     -  [Function `unfreeze_account`](#0x1_AccountFreezing_Specification_unfreeze_account)
     -  [Function `account_is_frozen`](#0x1_AccountFreezing_Specification_account_is_frozen)
@@ -326,6 +328,42 @@ Returns if the account at
 ## Specification
 
 
+<a name="0x1_AccountFreezing_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountFreezing_initialize">initialize</a>(lr_account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
+<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
+<b>ensures</b> exists&lt;<a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_Specification_create"></a>
+
+### Function `create`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountFreezing_create">create</a>(account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>ensures</b> <a href="#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+</code></pre>
+
+
+
 <a name="0x1_AccountFreezing_Specification_freeze_account"></a>
 
 ### Function `freeze_account`
@@ -378,6 +416,7 @@ Returns if the account at
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr);
 </code></pre>
 
 
@@ -388,4 +427,34 @@ Returns if the account at
 <b>define</b> <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
     exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && <b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
 }
+<a name="0x1_AccountFreezing_spec_account_is_not_frozen"></a>
+<b>define</b> <a href="#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && !<b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
+}
+</code></pre>
+
+
+FreezeEventsHolder always exists after genesis.
+
+
+<pre><code><b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt;
+    exists&lt;<a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+The account of LibraRoot is not freezable [G2].
+After genesis, FreezingBit of LibraRoot is always false.
+
+
+<pre><code><b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt;
+    <a href="#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+</code></pre>
+
+
+The account of TreasuryCompliance is not freezable [G3].
+After genesis, FreezingBit of TreasuryCompliance is always false.
+
+
+<pre><code><b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt;
+    <a href="#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>());
 </code></pre>
