@@ -532,9 +532,6 @@ impl RoundManager {
                 executed_block.block()
             ))?;
 
-        let consensus_state = self.safety_rules.consensus_state()?;
-        counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
-        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
         self.storage
             .save_vote(&vote)
             .context("[RoundManager] Fail to persist last vote")?;

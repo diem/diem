@@ -3397,7 +3397,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_last_vote_round",
+          "expr": "libra_safety_rules_last_voted_round",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
@@ -3485,7 +3485,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_preferred_block_round",
+          "expr": "libra_safety_rules_preferred_round",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
