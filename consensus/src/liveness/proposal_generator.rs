@@ -71,19 +71,6 @@ impl ProposalGenerator {
         Ok(Block::new_nil(round, hqc.as_ref().clone()))
     }
 
-    /// Reconfiguration rule - we propose empty blocks with parents' timestamp
-    /// after reconfiguration until it's committed
-    pub fn generate_reconfig_empty_suffix(&self, round: Round) -> anyhow::Result<BlockData> {
-        let hqc = self.ensure_highest_quorum_cert(round)?;
-        Ok(BlockData::new_proposal(
-            vec![],
-            self.author,
-            round,
-            hqc.certified_block().timestamp_usecs(),
-            hqc.as_ref().clone(),
-        ))
-    }
-
     /// The function generates a new proposal block: the returned future is fulfilled when the
     /// payload is delivered by the TxnManager implementation.  At most one proposal can be
     /// generated per round (no proposal equivocation allowed).
@@ -106,41 +93,45 @@ impl ProposalGenerator {
 
         let hqc = self.ensure_highest_quorum_cert(round)?;
 
-        if hqc.certified_block().has_reconfiguration() {
-            return self.generate_reconfig_empty_suffix(round);
-        }
+        let (payload, timestamp) = if hqc.certified_block().has_reconfiguration() {
+            // Reconfiguration rule - we propose empty blocks with parents' timestamp
+            // after reconfiguration until it's committed
+            (vec![], hqc.certified_block().timestamp_usecs())
+        } else {
+            // One needs to hold the blocks with the references to the payloads while get_block is
+            // being executed: pending blocks vector keeps all the pending ancestors of the extended branch.
+            let pending_blocks = self
+                .block_store
+                .path_from_root(hqc.certified_block().id())
+                .ok_or_else(|| format_err!("HQC {} already pruned", hqc.certified_block().id()))?;
 
-        // One needs to hold the blocks with the references to the payloads while get_block is
-        // being executed: pending blocks vector keeps all the pending ancestors of the extended
-        // branch.
-        let pending_blocks = self
-            .block_store
-            .path_from_root(hqc.certified_block().id())
-            .ok_or_else(|| format_err!("HQC {} already pruned", hqc.certified_block().id()))?;
+            // Exclude all the pending transactions: these are all the ancestors of
+            // parent (including) up to the root (excluding).
+            let exclude_payload: Vec<&Vec<_>> = pending_blocks
+                .iter()
+                .flat_map(|block| block.payload())
+                .collect();
 
-        // Exclude all the pending transactions: these are all the ancestors of
-        // parent (including) up to the root (excluding).
-        let exclude_payload: Vec<&Vec<_>> = pending_blocks
-            .iter()
-            .flat_map(|block| block.payload())
-            .collect();
+            // All proposed blocks in a branch are guaranteed to have increasing timestamps
+            // since their predecessor block will not be added to the BlockStore until
+            // the local time exceeds it.
+            let timestamp = self.time_service.get_current_timestamp();
 
-        // All proposed blocks in a branch are guaranteed to have increasing timestamps
-        // since their predecessor block will not be added to the BlockStore until
-        // the local time exceeds it.
-        let block_timestamp = self.time_service.get_current_timestamp();
+            let payload = self
+                .txn_manager
+                .pull_txns(self.max_block_size, exclude_payload)
+                .await
+                .context("Fail to retrieve txn")?;
 
-        let txns = self
-            .txn_manager
-            .pull_txns(self.max_block_size, exclude_payload)
-            .await
-            .context("Fail to retrieve txn")?;
+            (payload, timestamp.as_micros() as u64)
+        };
 
+        // create block proposal
         Ok(BlockData::new_proposal(
-            txns,
+            payload,
             self.author,
             round,
-            block_timestamp.as_micros() as u64,
+            timestamp,
             hqc.as_ref().clone(),
         ))
     }
