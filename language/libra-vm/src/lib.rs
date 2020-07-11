@@ -120,9 +120,10 @@ pub mod libra_transaction_executor;
 pub mod libra_transaction_validator;
 pub mod system_module_names;
 
-pub use crate::libra_transaction_executor::LibraVM;
-pub use crate::libra_transaction_validator::LibraVMValidator;
-pub use crate::libra_vm::txn_effects_to_writeset_and_events;
+pub use crate::{
+    libra_transaction_executor::LibraVM, libra_transaction_validator::LibraVMValidator,
+    libra_vm::txn_effects_to_writeset_and_events,
+};
 
 use libra_state_view::StateView;
 use libra_types::{

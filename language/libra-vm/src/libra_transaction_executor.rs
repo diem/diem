@@ -4,8 +4,10 @@
 use crate::{
     counters::*,
     data_cache::StateViewCache,
-    libra_vm::LibraVMInternals,
-    libra_vm::{get_transaction_output, txn_effects_to_writeset_and_events_cached, LibraVMImpl},
+    libra_vm::{
+        get_transaction_output, txn_effects_to_writeset_and_events_cached, LibraVMImpl,
+        LibraVMInternals,
+    },
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
     VMExecutor,
@@ -35,8 +37,10 @@ use move_vm_types::{
     values::Value,
 };
 use rayon::prelude::*;
-use std::convert::{AsMut, AsRef};
-use std::{collections::HashSet, convert::TryFrom};
+use std::{
+    collections::HashSet,
+    convert::{AsMut, AsRef, TryFrom},
+};
 
 pub struct LibraVM(LibraVMImpl);
 
