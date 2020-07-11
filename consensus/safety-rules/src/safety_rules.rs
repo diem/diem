@@ -104,19 +104,14 @@ impl SafetyRules {
     /// 2) round(B0) + 1 = round(B1), and
     /// 3) round(B1) + 1 = round(B2).
     pub fn construct_ledger_info(&self, proposed_block: &Block) -> Result<LedgerInfo, Error> {
-        // get rounds of the three blocks
         let block2 = proposed_block.round();
         let block1 = proposed_block.quorum_cert().certified_block().round();
         let block0 = proposed_block.quorum_cert().parent_block().round();
 
-        // checked additions
-        let block0plus1 =
-            u64::checked_add(block0, 1).ok_or(Error::IncorrectRounds(block0, block1, block2))?;
-        let block1plus1 =
-            u64::checked_add(block1, 1).ok_or(Error::IncorrectRounds(block0, block1, block2))?;
-
         // verify 3-chain rule
-        let commit = block0plus1 == block1 && block1plus1 == block2;
+        let next_round =
+            |round: u64| u64::checked_add(round, 1).ok_or(Error::IncorrectRound(round));
+        let commit = next_round(block0)? == block1 && next_round(block1)? == block2;
 
         // create a ledger info
         let ledger_info = if commit {
@@ -128,7 +123,6 @@ impl SafetyRules {
             LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
         };
 
-        // return
         Ok(ledger_info)
     }
 

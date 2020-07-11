@@ -9,8 +9,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("Provided epoch, {0}, does not match expected epoch, {1}")]
     IncorrectEpoch(u64, u64),
-    #[error("Three chained blocks have rounds that wrap around: {0}, {1}, {2}")]
-    IncorrectRounds(u64, u64, u64),
+    #[error("block has next round that wraps around: {0}")]
+    IncorrectRound(u64),
     #[error("Provided round, {0}, is incompatible with last voted round, {1}")]
     IncorrectLastVotedRound(u64, u64),
     #[error("Provided round, {0}, is incompatible with preferred round, {1}")]
