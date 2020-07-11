@@ -81,6 +81,15 @@ pub struct CompatibilityTest {
     updated_image_tag: String,
 }
 
+impl ComaptiblityTestParams {
+    pub fn new_compat(count: usize, updated_image_tag: String) -> Self {
+        Self {
+            count,
+            updated_image_tag,
+        }
+    }
+}
+
 impl ExperimentParam for ComaptiblityTestParams {
     type E = CompatibilityTest;
     fn build(self, cluster: &Cluster) -> Self::E {
