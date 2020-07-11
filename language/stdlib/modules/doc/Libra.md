@@ -2475,13 +2475,25 @@ the total_value CurrencyInfo keeps track of.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(lr_account);
-<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
-<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
-<b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-<b>aborts_if</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+<pre><code><b>include</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
 <b>ensures</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_RegisterCurrencyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt; {
+    lr_account: signer;
+    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(lr_account);
+    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+    <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+}
 </code></pre>
 
 
@@ -2539,6 +2551,30 @@ Specification version of
         value,
         <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
     )
+}
+</code></pre>
+
+
+Checks whether account has BurnCapability
+
+
+<a name="0x1_Libra_spec_has_burn_capability"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_has_burn_capability">spec_has_burn_capability</a>&lt;CoinType&gt;(account: signer): bool {
+    exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+}
+</code></pre>
+
+
+Checks whether account has MintCapability
+
+
+<a name="0x1_Libra_spec_has_mint_capability"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(account: signer): bool {
+    exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
 }
 </code></pre>
 

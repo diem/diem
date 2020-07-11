@@ -899,7 +899,7 @@ Helper functions
 }
 <a name="0x1_Roles_spec_has_register_new_currency_privilege"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_register_new_currency_privilege">spec_has_register_new_currency_privilege</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(account)
+    <a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(account)
 }
 <a name="0x1_Roles_spec_has_update_dual_attestation_threshold_privilege"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_update_dual_attestation_threshold_privilege">spec_has_update_dual_attestation_threshold_privilege</a>(account: signer): bool  {

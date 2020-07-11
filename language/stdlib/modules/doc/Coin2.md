@@ -7,6 +7,9 @@
 
 -  [Struct `Coin2`](#0x1_Coin2_Coin2)
 -  [Function `initialize`](#0x1_Coin2_initialize)
+-  [Specification](#0x1_Coin2_Specification)
+    -  [Function `initialize`](#0x1_Coin2_Specification_initialize)
+    -  [Module Specification](#0x1_Coin2_@Module_Specification)
 
 
 
@@ -75,3 +78,43 @@
 
 
 </details>
+
+<a name="0x1_Coin2_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_Coin2_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Coin2_initialize">initialize</a>(lr_account: &signer, tc_account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_RegisterCurrencyAbortsIf">Libra::RegisterCurrencyAbortsIf</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;;
+<b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>{currency_code: b"<a href="#0x1_Coin2">Coin2</a>"};
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role">Roles::spec_has_treasury_compliance_role</a>(tc_account);
+<b>aborts_if</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">Libra::spec_has_mint_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account);
+<b>aborts_if</b> <a href="Libra.md#0x1_Libra_spec_has_burn_capability">Libra::spec_has_burn_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account);
+<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;();
+<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_has_mint_capability">Libra::spec_has_mint_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account);
+<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_has_burn_capability">Libra::spec_has_burn_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account);
+</code></pre>
+
+
+**************** MODULE SPECIFICATION ****************
+
+<a name="0x1_Coin2_@Module_Specification"></a>
+
+### Module Specification
+
+
+Verify all functions in this module.
+
+
+<pre><code>pragma verify = <b>true</b>;
+</code></pre>

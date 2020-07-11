@@ -700,14 +700,17 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
+        include RegisterCurrencyAbortsIf<CoinType>;
+        include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
+        ensures spec_is_currency<CoinType>();
+    }
+    spec schema RegisterCurrencyAbortsIf<CoinType> {
+        lr_account: signer;
         aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
-        include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
-
-        ensures spec_is_currency<CoinType>();
     }
 
     /// Returns the total amount of currency minted of type `CoinType`.
@@ -851,6 +854,16 @@ module Libra {
                 value,
                 global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
             )
+        }
+
+        /// Checks whether account has BurnCapability
+        define spec_has_burn_capability<CoinType>(account: signer): bool {
+            exists<BurnCapability<CoinType>>(Signer::spec_address_of(account))
+        }
+
+        /// Checks whether account has MintCapability
+        define spec_has_mint_capability<CoinType>(account: signer): bool {
+            exists<MintCapability<CoinType>>(Signer::spec_address_of(account))
         }
     }
 
