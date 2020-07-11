@@ -82,6 +82,8 @@ spec:
           value: debug
         - name: RUST_BACKTRACE
           value: "1"
+        - name: PUSH_METRICS_ENDPOINT
+          value: "http://libra-testnet-prometheus-pushgateway:9091/metrics/job/safety_rules/instance/lsr-{validator_index}"
   volumes:
     - name: config-built
       emptyDir: {{}}
