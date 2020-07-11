@@ -61,26 +61,6 @@ pub static COMMITTED_TXNS_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
 });
 
 //////////////////////
-// SafetyRules COUNTERS
-//////////////////////
-/// This counter is set to the round of the highest voted block.
-pub static LAST_VOTE_ROUND: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_last_vote_round",
-        "This counter is set to the round of the highest voted block."
-    )
-    .unwrap()
-});
-
-/// This counter is set to the round of the preferred block (highest 2-chain head).
-pub static PREFERRED_BLOCK_ROUND: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_preferred_block_round",
-        "This counter is set to the round of the preferred block (highest 2-chain head)."
-    )
-    .unwrap()
-});
-//////////////////////
 // PROPOSAL ELECTION
 //////////////////////
 

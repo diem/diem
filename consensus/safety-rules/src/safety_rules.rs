@@ -321,6 +321,8 @@ impl TSafetyRules for SafetyRules {
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
+        COUNTERS.sign_proposal_request.inc();
+
         self.signer()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch())?;
@@ -328,7 +330,7 @@ impl TSafetyRules for SafetyRules {
         self.verify_qc(block_data.quorum_cert())?;
         self.verify_and_update_preferred_round(block_data.quorum_cert())?;
 
-        COUNTERS.sign_proposal.inc();
+        COUNTERS.sign_proposal_success.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
             self.signer()?,
@@ -337,7 +339,7 @@ impl TSafetyRules for SafetyRules {
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         debug!("Incoming timeout message for round {}", timeout.round());
-        COUNTERS.requested_sign_timeout.inc();
+        COUNTERS.sign_timeout_request.inc();
 
         self.signer()?;
         self.verify_epoch(timeout.epoch())?;
@@ -364,8 +366,9 @@ impl TSafetyRules for SafetyRules {
 
         let validator_signer = self.signer()?;
         let signature = timeout.sign(&validator_signer);
-        COUNTERS.sign_timeout.inc();
+
         debug!("Successfully signed timeout message.");
+        COUNTERS.sign_timeout_success.inc();
         Ok(signature)
     }
 }

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::COUNTERS;
 use anyhow::Result;
 use consensus_types::{
     common::{Author, Round},
@@ -127,6 +128,7 @@ impl PersistentSafetyStorage {
     pub fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
         self.internal_store
             .set(LAST_VOTED_ROUND, Value::U64(last_voted_round))?;
+        COUNTERS.preferred_round.set(last_voted_round as i64);
         Ok(())
     }
 
@@ -140,6 +142,7 @@ impl PersistentSafetyStorage {
     pub fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {
         self.internal_store
             .set(PREFERRED_ROUND, Value::U64(preferred_round))?;
+        COUNTERS.preferred_round.set(preferred_round as i64);
         Ok(())
     }
 
