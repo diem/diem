@@ -19,7 +19,7 @@ use std::{
     time::Duration,
 };
 
-pub use compatibility_test::{ComaptiblityTestParams, CompatibilityTest};
+pub use compatibility_test::{CompatibilityTest, CompatiblityTestParams};
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
@@ -139,7 +139,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("twin", f::<TwinValidatorsParams>());
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
-    known_experiments.insert("compatibility_test", f::<ComaptiblityTestParams>());
+    known_experiments.insert("compatibility_test", f::<CompatiblityTestParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
