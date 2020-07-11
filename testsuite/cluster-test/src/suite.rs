@@ -7,9 +7,9 @@ use std::{cmp::min, env};
 use crate::{
     cluster::Cluster,
     experiments::{
-        CpuFlamegraphParams, Experiment, ExperimentParam, PerformanceBenchmarkParams,
-        PerformanceBenchmarkThreeRegionSimulationParams, RebootRandomValidatorsParams,
-        RecoveryTimeParams, TwinValidatorsParams,
+        ComaptiblityTestParams, CpuFlamegraphParams, Experiment, ExperimentParam,
+        PerformanceBenchmarkParams, PerformanceBenchmarkThreeRegionSimulationParams,
+        RebootRandomValidatorsParams, RecoveryTimeParams, TwinValidatorsParams,
     },
 };
 use anyhow::{format_err, Result};
@@ -79,11 +79,27 @@ impl ExperimentSuite {
         Self { experiments }
     }
 
+    fn new_land_blocking_compat_suite(cluster: &Cluster) -> Self {
+        let count: usize = env::var("BATCH_SIZE").unwrap().parse().unwrap();
+        let updated_image_tag = env::var("TEST_TAG").unwrap();
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            ComaptiblityTestParams {
+                count,
+                updated_image_tag,
+            }
+            .build(cluster),
+        ));
+        experiments.extend(Self::new_land_blocking_suite(cluster).experiments);
+        Self { experiments }
+    }
+
     pub fn new_by_name(cluster: &Cluster, name: &str) -> Result<Self> {
         match name {
             "perf" => Ok(Self::new_perf_suite(cluster)),
             "pre_release" => Ok(Self::new_pre_release(cluster)),
             "land_blocking" => Ok(Self::new_land_blocking_suite(cluster)),
+            "land_blocking_compat" => Ok(Self::new_land_blocking_compat_suite(cluster)),
             other => Err(format_err!("Unknown suite: {}", other)),
         }
     }

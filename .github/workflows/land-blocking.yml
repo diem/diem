@@ -2,9 +2,9 @@
 name: Land-blocking Test
 
 on:
-  push:
+  pull_request:
     branches:
-      - auto
+      - master
 
 jobs:
   build-and-run-cluster-test:
@@ -19,16 +19,8 @@ jobs:
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
-      - name: Check kill switch
-        id: check_ks
-        run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
+          echo "::set-env name=PREV_TAG::land_$(git rev-parse --short=8 HEAD~1)"
       - name: Build, tag and push images
-        if: steps.check_ks.outputs.should_run == 'true'
         run: |
           set +e
           date
@@ -50,7 +42,6 @@ jobs:
           echo "Build failed after retries"
           exit 1
       - name: Launch cluster test
-        if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           set +e
@@ -58,138 +49,16 @@ jobs:
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           ./scripts/cti \
-            --tag ${TEST_TAG} \
+            --tag ${PREV_TAG} \
+            --cluster-test-tag ${TEST_TAG} \
             -E RUST_LOG=debug \
+            -E BATCH_SIZE=15 \
+            -E TEST_TAG=${TEST_TAG} \
             --report report.json \
-            --suite land_blocking
+            --suite land_blocking_compat
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
             echo "report.json end"
           else
             echo "report.json is empty or not found."
-            jq -n \
-              --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
-          $(tail -5 $CTI_OUTPUT_LOG)" \
-              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-            '{
-              "attachments": [
-                {
-                  "text": $msg,
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "Visit Job",
-                      "url": $url
-                    }
-                  ]
-                }
-              ]
-            }' > /tmp/payload
-            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
-          fi
-      - name: Post test results on PR
-        if: steps.check_ks.outputs.should_run == 'true'
-        uses: actions/github-script@0.4.0
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            // Find the number of the pull request that trigggers this push
-            let pr_num = 0;
-            let commit_message = context.payload.head_commit.message;
-            let re = /.*[^]Closes:\s\#(\d+)[^]Approved\sby:\s[A-Za-z0-9_-]+$/;
-            if (re.test(commit_message)) {
-              let match = re.exec(commit_message);
-              pr_num = match[1];
-            } else {
-              console.warn("Did not find pull request num in commit message. -\\_(O_o)_/-");
-              console.log("GH event payload\n", context.payload);
-              return;
-            }
-            // Read and check cluster test results
-            let should_fail = false;
-            let env_vars = process.env;
-            let body;
-            const fsp = require('fs').promises;
-            try {
-              data = await fsp.readFile('report.json', 'utf-8');
-              var result = JSON.parse(data);
-              // TODO - set P/F based on metrics TPS, latency
-              body = `Cluster Test Result
-            \`\`\`
-            ${result.text}
-            \`\`\`
-            `;
-              let tps = result.metrics.find(m => m.experiment == "all up" && m.metric == "avg_tps").value;
-              let min_tps = 900;
-              if (tps < min_tps) {
-                body += "\n :exclamation: Performance regression is detected on this PR";
-                body += "\n TPS with PR: " + tps + ", this is lower then minimum allowed " + min_tps + " TPS.";
-                should_fail = true;
-              }
-            } catch (err) {
-              if (err.code === 'ENOENT') {
-                body = "Cluster Test failed - no test report found.\n";
-                // Check Cluster Test output log for infra error
-                try {
-                  cti_log = await fsp.readFile(env_vars.CTI_OUTPUT_LOG, 'utf-8');
-                  let re = /.*(^Failed\sto\s.*\"Service\sUnavailable.\sPlease\stry\sagain\slater\.\".*)/;
-                  if (re.test(cti_log)) {
-                    let match = re.exec(cti_log);
-                    body += " There was service infra error:\n";
-                    body += `
-                    ${match[1]}
-                    `
-                    + "\n"
-                    ;
-                    body += "To retry, comment your PR with `@bors-libra retry`.";
-                    body += " If that doesn't trigger re-run, amend and push again.";
-                  }
-                } catch (err) {
-                  console.error("Failed to check infra error in CT output log.\n", err);
-                }
-              } else {
-                body = "Cluster Test failed - test report processing failed.";
-                console.error(err);
-              }
-              body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
-              // Post comment on PR then fail this workflow
-              should_fail = true;
-            }
-            // Add repro cmd to message
-            try {
-              body += "\nRepro cmd:\n";
-              body += `
-                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
-              `;
-            } catch (err) {
-              if (err.code === 'ReferenceError') {
-                console.error("env var $LIBRA_GIT_REV is not set.");
-              } else {
-                body += "[GHA DEBUG]\nFound error in actions/github-script\n";
-                body += err;
-              }
-            }
-            // Post test result on original pull request
-            try {
-              await github.issues.createComment(
-                  {
-                    issue_number: pr_num,
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    body: body,
-                  }
-              );
-            } catch (err) {
-              if (err.status === 401) {
-                // Fail silently for auth but log to console.
-                console.warn("GH token has expired when trying to POST\n", err);
-              } else {
-                console.error("HttpError other than 401 is not bypassed");
-                throw err;
-              }
-            }
-            // Fail the workflow if test fails or perf regresses
-            if (should_fail) {
-              throw "Land-blocking test failed";
-            }
