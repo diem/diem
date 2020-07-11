@@ -156,7 +156,7 @@ pub(crate) async fn coordinator<V>(
                     },
                     Err(e) => {
                         send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
-                            .data("error", format!("{}", e))
+                            .data_display("error", &e)
                     );
                     }
                 };

@@ -214,7 +214,7 @@ where
                         },
                         Err(err) => {
                             send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_HC)
-                                .data("error", format!("{}", err)));
+                            .data_display("error", &err));
 
                             debug_assert!(false, "Unexpected network error");
                         }
