@@ -8,6 +8,8 @@ use vm::errors::{PartialVMError, PartialVMResult};
 use crate::loaded_data::types::FatType;
 use vm::file_format::{Kind, StructDefinitionIndex};
 
+pub const TYPE_DEPTH_MAX: usize = 256;
+
 #[derive(Debug, Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StructType {
     pub fields: Vec<Type>,
@@ -35,40 +37,57 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn subst(&self, ty_args: &[Type]) -> PartialVMResult<Type> {
+    fn clone_impl(&self, depth: usize) -> PartialVMResult<Type> {
+        self.apply_subst(|idx, _| Ok(Type::TyParam(idx)), depth)
+    }
+
+    fn apply_subst<F>(&self, subst: F, depth: usize) -> PartialVMResult<Type>
+    where
+        F: Fn(usize, usize) -> PartialVMResult<Type> + Copy,
+    {
+        if depth > TYPE_DEPTH_MAX {
+            return Err(PartialVMError::new(StatusCode::VM_MAX_TYPE_DEPTH_REACHED));
+        }
         let res = match self {
-            Type::TyParam(idx) => match ty_args.get(*idx) {
-                Some(ty) => ty.clone(),
-                None => {
-                    return Err(
-                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(format!(
-                                "type substitution failed: index out of bounds -- len {} got {}",
-                                ty_args.len(),
-                                idx
-                            )),
-                    );
-                }
-            },
+            Type::TyParam(idx) => subst(*idx, depth)?,
             Type::Bool => Type::Bool,
             Type::U8 => Type::U8,
             Type::U64 => Type::U64,
             Type::U128 => Type::U128,
             Type::Address => Type::Address,
             Type::Signer => Type::Signer,
-            Type::Vector(ty) => Type::Vector(Box::new(ty.subst(ty_args)?)),
-            Type::Reference(ty) => Type::Reference(Box::new(ty.subst(ty_args)?)),
-            Type::MutableReference(ty) => Type::MutableReference(Box::new(ty.subst(ty_args)?)),
+            Type::Vector(ty) => Type::Vector(Box::new(ty.apply_subst(subst, depth + 1)?)),
+            Type::Reference(ty) => Type::Reference(Box::new(ty.apply_subst(subst, depth + 1)?)),
+            Type::MutableReference(ty) => {
+                Type::MutableReference(Box::new(ty.apply_subst(subst, depth + 1)?))
+            }
             Type::Struct(def_idx) => Type::Struct(*def_idx),
             Type::StructInstantiation(def_idx, instantiation) => {
                 let mut inst = vec![];
                 for ty in instantiation {
-                    inst.push(ty.subst(ty_args)?)
+                    inst.push(ty.apply_subst(subst, depth + 1)?)
                 }
                 Type::StructInstantiation(*def_idx, inst)
             }
         };
         Ok(res)
+    }
+
+    pub fn subst(&self, ty_args: &[Type]) -> PartialVMResult<Type> {
+        self.apply_subst(
+            |idx, depth| match ty_args.get(idx) {
+                Some(ty) => ty.clone_impl(depth),
+                None => Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!(
+                            "type substitution failed: index out of bounds -- len {} got {}",
+                            ty_args.len(),
+                            idx
+                        )),
+                ),
+            },
+            1,
+        )
     }
 }
 

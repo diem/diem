@@ -1473,6 +1473,8 @@ fn function_match(function: &Function, module: &ModuleId, name: &IdentStr) -> bo
     function.name.as_ident_str() == name && function.module_id() == Some(module)
 }
 
+const VALUE_DEPTH_MAX: usize = 256;
+
 impl Loader {
     fn type_to_fat_type(&self, ty: &Type) -> PartialVMResult<FatType> {
         use Type::*;
@@ -1559,6 +1561,7 @@ impl Loader {
         &self,
         gidx: usize,
         ty_args: &[Type],
+        depth: usize,
     ) -> PartialVMResult<MoveStructLayout> {
         if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
@@ -1576,7 +1579,7 @@ impl Loader {
             .collect::<PartialVMResult<Vec<_>>>()?;
         let field_layouts = field_tys
             .iter()
-            .map(|ty| self.type_to_type_layout(ty))
+            .map(|ty| self.type_to_type_layout_impl(ty, depth + 1))
             .collect::<PartialVMResult<Vec<_>>>()?;
         let struct_layout = MoveStructLayout::new(field_layouts);
 
@@ -1593,7 +1596,10 @@ impl Loader {
         Ok(struct_layout)
     }
 
-    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+    fn type_to_type_layout_impl(&self, ty: &Type, depth: usize) -> PartialVMResult<MoveTypeLayout> {
+        if depth > VALUE_DEPTH_MAX {
+            return Err(PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED));
+        }
         Ok(match ty {
             Type::Bool => MoveTypeLayout::Bool,
             Type::U8 => MoveTypeLayout::U8,
@@ -1601,12 +1607,14 @@ impl Loader {
             Type::U128 => MoveTypeLayout::U128,
             Type::Address => MoveTypeLayout::Address,
             Type::Signer => MoveTypeLayout::Signer,
-            Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(self.type_to_type_layout(ty)?)),
+            Type::Vector(ty) => {
+                MoveTypeLayout::Vector(Box::new(self.type_to_type_layout_impl(ty, depth + 1)?))
+            }
             Type::Struct(gidx) => {
-                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, &[])?)
+                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, &[], depth)?)
             }
             Type::StructInstantiation(gidx, ty_args) => {
-                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, ty_args)?)
+                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, ty_args, depth)?)
             }
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
                 return Err(
@@ -1617,10 +1625,15 @@ impl Loader {
         })
     }
 
+    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+        self.type_to_type_layout_impl(ty, 1)
+    }
+
     fn struct_gidx_to_kind_info(
         &self,
         gidx: usize,
         ty_args: &[Type],
+        depth: usize,
     ) -> PartialVMResult<(MoveKind, Vec<MoveKindInfo>)> {
         if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
@@ -1647,7 +1660,7 @@ impl Loader {
             .collect::<PartialVMResult<Vec<_>>>()?;
         let field_kind_info = field_tys
             .iter()
-            .map(|ty| self.type_to_kind_info(ty))
+            .map(|ty| self.type_to_kind_info_impl(ty, depth + 1))
             .collect::<PartialVMResult<Vec<_>>>()?;
         let kind_info = (MoveKind::from_bool(is_resource), field_kind_info);
 
@@ -1664,23 +1677,31 @@ impl Loader {
         Ok(kind_info)
     }
 
-    pub(crate) fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+    pub(crate) fn type_to_kind_info_impl(
+        &self,
+        ty: &Type,
+        depth: usize,
+    ) -> PartialVMResult<MoveKindInfo> {
+        if depth > VALUE_DEPTH_MAX {
+            return Err(PartialVMError::new(StatusCode::VM_MAX_VALUE_DEPTH_REACHED));
+        }
         Ok(match ty {
             Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
                 MoveKindInfo::Base(MoveKind::Copyable)
             }
             Type::Signer => MoveKindInfo::Base(MoveKind::Resource),
             Type::Vector(ty) => {
-                let kind_info = self.type_to_kind_info(ty)?;
+                let kind_info = self.type_to_kind_info_impl(ty, depth + 1)?;
                 MoveKindInfo::Vector(kind_info.kind(), Box::new(kind_info))
             }
             Type::Struct(gidx) => {
-                let (is_resource, field_kind_info) = self.struct_gidx_to_kind_info(*gidx, &[])?;
+                let (is_resource, field_kind_info) =
+                    self.struct_gidx_to_kind_info(*gidx, &[], depth)?;
                 MoveKindInfo::Struct(is_resource, field_kind_info)
             }
             Type::StructInstantiation(gidx, ty_args) => {
                 let (is_resource, field_kind_info) =
-                    self.struct_gidx_to_kind_info(*gidx, ty_args)?;
+                    self.struct_gidx_to_kind_info(*gidx, ty_args, depth)?;
                 MoveKindInfo::Struct(is_resource, field_kind_info)
             }
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
@@ -1690,6 +1711,10 @@ impl Loader {
                 )
             }
         })
+    }
+
+    pub(crate) fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+        self.type_to_kind_info_impl(ty, 1)
     }
 
     fn struct_to_fat_struct(

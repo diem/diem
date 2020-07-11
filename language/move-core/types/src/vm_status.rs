@@ -460,6 +460,8 @@ pub enum StatusCode {
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
     GAS_SCHEDULE_ERROR = 4023,
+    VM_MAX_TYPE_DEPTH_REACHED = 4024,
+    VM_MAX_VALUE_DEPTH_REACHED = 4025,
 
     // A reserved status to represent an unknown vm status.
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in

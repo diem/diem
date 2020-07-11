@@ -1,0 +1,87 @@
+module M {
+    struct Foo<T> { x: bool }
+    public f0<T>() { return; }
+    public f3<T>() { Self.f0<Self.Foo<Self.Foo<Self.Foo<T>>>>(); return; }
+    public f7<T>() {  Self.f3<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f11<T>() {  Self.f7<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f15<T>() {  Self.f11<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f19<T>() {  Self.f15<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f23<T>() {  Self.f19<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f27<T>() {  Self.f23<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f31<T>() {  Self.f27<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f35<T>() {  Self.f31<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f39<T>() {  Self.f35<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f43<T>() {  Self.f39<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f47<T>() {  Self.f43<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f51<T>() {  Self.f47<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f55<T>() {  Self.f51<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f59<T>() {  Self.f55<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f63<T>() {  Self.f59<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f67<T>() {  Self.f63<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f71<T>() {  Self.f67<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f75<T>() {  Self.f71<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f79<T>() {  Self.f75<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f83<T>() {  Self.f79<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f87<T>() {  Self.f83<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f91<T>() {  Self.f87<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f95<T>() {  Self.f91<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f99<T>() {  Self.f95<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f103<T>() {  Self.f99<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f107<T>() {  Self.f103<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f111<T>() {  Self.f107<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f115<T>() {  Self.f111<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f119<T>() {  Self.f115<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f123<T>() {  Self.f119<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f127<T>() {  Self.f123<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f131<T>() {  Self.f127<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f135<T>() {  Self.f131<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f139<T>() {  Self.f135<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f143<T>() {  Self.f139<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f147<T>() {  Self.f143<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f151<T>() {  Self.f147<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f155<T>() {  Self.f151<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f159<T>() {  Self.f155<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f163<T>() {  Self.f159<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f167<T>() {  Self.f163<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f171<T>() {  Self.f167<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f175<T>() {  Self.f171<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f179<T>() {  Self.f175<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f183<T>() {  Self.f179<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f187<T>() {  Self.f183<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f191<T>() {  Self.f187<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f195<T>() {  Self.f191<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f199<T>() {  Self.f195<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f203<T>() {  Self.f199<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f207<T>() {  Self.f203<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f211<T>() {  Self.f207<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f215<T>() {  Self.f211<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f219<T>() {  Self.f215<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f223<T>() {  Self.f219<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f227<T>() {  Self.f223<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f231<T>() {  Self.f227<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f235<T>() {  Self.f231<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f239<T>() {  Self.f235<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f243<T>() {  Self.f239<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f247<T>() {  Self.f243<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f251<T>() {  Self.f247<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+    public f255<T>() {  Self.f251<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
+}
+// check: EXECUTED
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.f255<u8>();
+    return;
+}
+// check: EXECUTED
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    M.f255<M.Foo<u8>>();
+    return;
+}
+// check: VM_MAX_TYPE_DEPTH_REACHED
