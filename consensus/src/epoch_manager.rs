@@ -37,7 +37,7 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
-use safety_rules::{SafetyRulesManager, TSafetyRules};
+use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -279,18 +279,10 @@ impl EpochManager {
 
         info!("Update SafetyRules");
 
-        let mut safety_rules = MetricsSafetyRules::new(self.safety_rules_manager.client());
-        let consensus_state = safety_rules
-            .consensus_state()
-            .expect("Unable to retrieve ConsensusState from SafetyRules");
-        let sr_waypoint = consensus_state.waypoint();
-        let proofs = self
-            .storage
-            .retrieve_epoch_change_proof(sr_waypoint.version())
-            .expect("Unable to retrieve Waypoint state from Storage");
-
+        let mut safety_rules =
+            MetricsSafetyRules::new(self.safety_rules_manager.client(), self.storage.clone());
         safety_rules
-            .initialize(&proofs)
+            .perform_initialize()
             .expect("Unable to initialize SafetyRules");
 
         info!("Create ProposalGenerator");

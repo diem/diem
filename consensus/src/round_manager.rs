@@ -694,6 +694,11 @@ impl RoundManager {
         self.safety_rules.consensus_state().unwrap()
     }
 
+    #[cfg(test)]
+    pub fn set_safety_rules(&mut self, safety_rules: MetricsSafetyRules) {
+        self.safety_rules = safety_rules
+    }
+
     pub fn epoch_state(&self) -> &EpochState {
         &self.epoch_state
     }
