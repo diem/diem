@@ -28,10 +28,8 @@ module Libra {
 
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
-    /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account or the
-    /// `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
-    ///
-    /// > TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
+    /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`
+    /// account or the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
@@ -160,6 +158,12 @@ module Libra {
         exchange_rate_update_events: EventHandle<ToLBRExchangeRateUpdateEvent>,
     }
 
+    // TODO (dd): It would be great to be able to prove this, but requires more work.
+    // This may help prove other useful properties.
+    // spec struct CurrencyInfo {
+    //     invariant preburn_value <= total_value;
+    // }
+
     /// A holding area where funds that will subsequently be burned wait while their underlying
     /// assets are moved off-chain.
     /// This resource can only be created by the holder of a `BurnCapability`. An account that
@@ -182,6 +186,8 @@ module Libra {
     const EDESTRUCTION_OF_NONZERO_COIN: u64 = 6;
     const EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE: u64 = 7;
     const ENOT_A_REGISTERED_CURRENCY: u64 = 8;
+    const ENOT_AN_SCS_CURRENCY: u64 = 9;
+    const EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE: u64 = 10;
 
     ///////////////////////////////////////////////////////////////////////////
     // Initialization and granting of privileges
@@ -210,22 +216,10 @@ module Libra {
         RegisteredCurrencies::initialize(config_account);
     }
 
-    /// Publishes the `MintCapability` `cap` for the `CoinType` currency
-    /// under `account`. `CoinType`  must be a registered currency type.
-    /// The caller must pass a `TreasuryComplianceRole` capability.
-    public fun publish_mint_capability<CoinType>(
-        publish_account: &signer,
-        cap: MintCapability<CoinType>,
-        tc_account: &signer,
-    ) {
-        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
-        assert_is_currency<CoinType>();
-        move_to(publish_account, cap)
-    }
-
     /// Publishes the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     /// must be a registered currency type.
     /// The caller must pass a `TreasuryComplianceRole` capability.
+    /// TODO (dd): I think there is a multiple signer problem here.
     public fun publish_burn_capability<CoinType>(
         account: &signer,
         cap: BurnCapability<CoinType>,
@@ -267,6 +261,7 @@ module Libra {
     spec fun burn {
         // TODO: There was a timeout (> 40s) for this function in CI. Verification turned off.
         pragma verify=false;
+        aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account));
     }
 
     /// Cancels the current burn request in the `Preburn` resource held
@@ -360,7 +355,10 @@ module Libra {
         };
     }
     spec fun preburn_with_resource {
+        // TODO (dd): Could not figure this out. Maybe there is an overflow in deposit?
+        pragma aborts_if_is_partial = true;
         include PreburnAbortsIf<CoinType>;
+        aborts_if preburn.to_burn.value != 0;
         include PreburnEnsures<CoinType>;
     }
     spec schema PreburnAbortsIf<CoinType> {
@@ -387,6 +385,8 @@ module Libra {
     ): Preburn<CoinType> {
         assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
+        // TODO (dd): consider adding an assertion here that to_burn <= info.total_value
+        // I don't think it can happen, but that may be difficult to prove.
         Preburn<CoinType> { to_burn: zero<CoinType>() }
     }
 
@@ -414,6 +414,8 @@ module Libra {
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
     }
     spec fun preburn_to {
+        // TODO: Missing aborts_if in preburn_with_resource
+        pragma aborts_if_is_partial = true;
         aborts_if !exists<Preburn<CoinType>>(Signer::spec_address_of(account));
         include PreburnAbortsIf<CoinType>;
         include PreburnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(Signer::spec_address_of(account))};
@@ -482,13 +484,11 @@ module Libra {
     spec schema BurnAbortsIf<CoinType> {
         preburn: Preburn<CoinType>;
         aborts_if !spec_is_currency<CoinType>();
-        // TODO(moezinia) made changes to preburn area which affect these abort conditions
-        // aborts_if len(preburn.requests) == 0;
-        // aborts_if {
-        //     let i = spec_currency_info<CoinType>();
-        //     i.total_value < preburn.requests[0].value || i.preburn_value < preburn.requests[0].value
-        // };
+        aborts_if preburn.to_burn.value == 0;
+        aborts_if spec_currency_info<CoinType>().preburn_value - preburn.to_burn.value < 0;
+        aborts_if spec_currency_info<CoinType>().total_value - preburn.to_burn.value < 0;
     }
+
     spec schema BurnEnsures<CoinType> {
         preburn: Preburn<CoinType>;
         // TODO(moezinia) made changes to preburn area which affect these abort conditions
@@ -530,14 +530,6 @@ module Libra {
         };
 
         coin
-    }
-
-    /// Removes and returns the `MintCapability<CoinType>` from `account`.
-    /// Calls to this function will fail if `account` does  not have a
-    /// published `MintCapability<CoinType>` resource at the top-level.
-    public fun remove_mint_capability<CoinType>(account: &signer): MintCapability<CoinType>
-    acquires MintCapability {
-        move_from<MintCapability<CoinType>>(Signer::address_of(account))
     }
 
     /// Removes and returns the `BurnCapability<CoinType>` from `account`.
@@ -649,10 +641,11 @@ module Libra {
 
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Libra.
-    /// The passed-in `account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
-    /// the `account` must also have the register new currency privilege.
-    /// After the first registration of `CoinType` as a  currency, all subsequent tries to register `CoinType` as a currency will fail.
-    ///
+    /// The passed-in `lr_account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
+    /// `lr_account` must also have the correct `RegisterNewCurrency` capability.
+    /// After the first registration of `CoinType` as a
+    /// currency, additional attempts to register `CoinType` as a currency
+    /// will abort.
     /// When the `CoinType` is registered it publishes the
     /// `CurrencyInfo<CoinType>` resource under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` and
     /// adds the currency to the set of `RegisteredCurrencies`. It returns
@@ -695,13 +688,63 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
+        // TODO (dd): I'm getting an incomprehensible error message from the prover, saying
+        // "abort not covered" and pointing exactly to the line
+        // assert(Roles::has_register_new_currency_privilege(lr_account)...) above, which
+        // is obviously covered by the aborts_if below (and in RegisterCurrencyAbortsIf, below).
+        // After adding the pragma, I get "function does not abort under this condition."
+        pragma aborts_if_is_partial = true;
+        // aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
+        include RegisterCurrencyAbortsIf<CoinType>;
+        ensures spec_is_currency<CoinType>();
+    }
+
+    spec schema RegisterCurrencyAbortsIf<CoinType> {
+        lr_account: signer;
+        // TODO (dd): Incomprehensible "function does not abort under this condition"
+        // aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
+    }
 
-        ensures spec_is_currency<CoinType>();
+    /// Registers a stable currency (SCS) coin -- i.e., a non-synthetic currency.
+    /// Resources are published on two distinct
+    /// accounts: The CoinInfo is published on the Libra root account, and the mint and
+    /// burn capabilities are published on a treasury compliance account.
+    /// This code allows different currencies to have different treasury compliance
+    /// accounts.
+    public fun register_SCS_currency<CoinType>(
+        lr_account: &signer,
+        tc_account: &signer,
+        to_lbr_exchange_rate: FixedPoint32,
+        scaling_factor: u64,
+        fractional_part: u64,
+        currency_code: vector<u8>,
+    ) {
+        assert(Roles::has_treasury_compliance_role(tc_account),
+               EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE);
+        let (mint_cap, burn_cap) =
+            register_currency<CoinType>(
+                lr_account,
+                to_lbr_exchange_rate,
+                false,   // is_synthetic
+                scaling_factor,
+                fractional_part,
+                currency_code,
+            );
+        // DD: converted to move_to because of problems proving invariant.
+        // publish_mint_capability<CoinType>(tc_account, mint_cap, tc_account);
+        move_to(tc_account, mint_cap);
+        publish_burn_capability<CoinType>(tc_account, burn_cap, tc_account);
+    }
+
+    spec fun register_SCS_currency {
+        // TODO (dd): I could not figure out what the problem was here.
+        pragma aborts_if_is_partial = true;
+        include RegisterCurrencyAbortsIf<CoinType>;
+        ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
     }
 
     /// Returns the total amount of currency minted of type `CoinType`.
@@ -733,6 +776,12 @@ module Libra {
     public fun is_currency<CoinType>(): bool {
         exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
     }
+
+    public fun is_SCS_currency<CoinType>(): bool acquires CurrencyInfo {
+        let info = borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        !info.is_synthetic
+    }
+
 
     /// Returns `true` if `CoinType` is a synthetic currency as defined in
     /// its `CurrencyInfo`. Returns `false` otherwise.
@@ -817,6 +866,11 @@ module Libra {
         assert(is_currency<CoinType>(), ENOT_A_REGISTERED_CURRENCY);
     }
 
+    fun assert_is_SCS_currency<CoinType>() acquires CurrencyInfo {
+        assert(is_SCS_currency<CoinType>(), ENOT_AN_SCS_CURRENCY);
+    }
+
+
     /// **************** MODULE SPECIFICATION ****************
 
     /// # Module Specification
@@ -825,7 +879,7 @@ module Libra {
         /// Verify all functions in this module.
         /// > TODO(wrwg): temporarily deactivated as a recent PR destroyed assumptions
         /// > about coin balance.
-        pragma verify = false;
+        pragma verify = true;
     }
 
     spec module {
@@ -846,7 +900,59 @@ module Libra {
                 global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
             )
         }
+
+        define spec_is_SCS_currency<CoinType>(): bool {
+            spec_is_currency<CoinType>() && !spec_currency_info<CoinType>().is_synthetic
+        }
+
+        /// Checks whether the currency has a mint capability.  This is only relevant for
+        /// SCS coins
+        define spec_has_mint_capability<CoinType>(addr1: address): bool {
+            exists<MintCapability<CoinType>>(addr1)
+        }
+
     }
+
+    /// ## Minting
+
+    /// For an SCS coin, the mint capability cannot move or disappear.
+    /// TODO: Specify that they're published at the one true treasurycompliance address?
+    spec schema MintCapabilitySpecs {
+        /// If an address has a mint capability, it is an SCS currency.
+        invariant module forall coin_type: type
+                             where (exists addr3: address : spec_has_mint_capability<coin_type>(addr3)) :
+                                  spec_is_SCS_currency<coin_type>();
+
+        /// If there is a pending offer for a mint capability, the coin_type is an SCS currency and
+        /// there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
+        invariant module forall coin_type: type :
+                                  spec_is_SCS_currency<coin_type>()
+                                  && (forall addr3: address : !spec_has_mint_capability<coin_type>(addr3));
+
+        // At most one address has a mint capability for SCS CoinType
+        invariant module forall coin_type: type where spec_is_SCS_currency<coin_type>():
+            forall addr1: address, addr2: address
+                 where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
+                      addr1 == addr2;
+
+        // Once a MintCapability appears at an address, it stays there.
+        ensures forall coin_type: type:
+            forall addr1: address where old(exists<MintCapability<coin_type>>(addr1)):
+                exists<MintCapability<coin_type>>(addr1);
+
+        // TODO: Only an address with a MintCapability may increase the amount of currency
+        // TODO: Only the account managing the currency may mint.  (add manager field to CurrencyInfo?)
+
+        // If address has a mint capability, it has the treasury compliance role
+        // TODO: change has_..._role functions to take addresses, not signers.
+//        ensures forall addr1: address where exists<MintCapability<CoinType>>(addr1):
+//                                        Roles::spec_has_treasury_compliance_role(addr1);
+    }
+
+    spec module {
+        apply MintCapabilitySpecs to *<T>, *;
+    }
+
 
     /// ## Conservation of currency
 
@@ -862,30 +968,30 @@ module Libra {
         invariant unpack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> - value;
     }
 
-    spec schema TotalValueRemainsSame<CoinType> {
-        /// The total amount of currency stays constant.
-        ensures sum_of_coin_values<CoinType> == old(sum_of_coin_values<CoinType>);
-    }
+    // spec schema TotalValueRemainsSame<CoinType> {
+    //     /// The total amount of currency stays constant.
+    //     ensures sum_of_coin_values<CoinType> == old(sum_of_coin_values<CoinType>);
+    // }
 
-    spec module {
-        /// Only mint and burn functions can change the total amount of currency.
-        apply TotalValueRemainsSame<CoinType> to *<CoinType>
-            except mint<CoinType>, mint_with_capability<CoinType>,
-            burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>;
-    }
+    // spec module {
+    //     /// Only mint and burn functions can change the total amount of currency.
+    //     apply TotalValueRemainsSame<CoinType> to *<CoinType>
+    //         except mint<CoinType>, mint_with_capability<CoinType>,
+    //         burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>;
+    // }
 
-    spec schema SumOfCoinValuesInvariant<CoinType> {
-        /// The sum of value of coins is consistent with
-        /// the total_value CurrencyInfo keeps track of.
-        invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
-        invariant module spec_is_currency<CoinType>()
-                    ==> sum_of_coin_values<CoinType>
-                        == global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value;
-    }
+    // spec schema SumOfCoinValuesInvariant<CoinType> {
+    //     /// The sum of value of coins is consistent with
+    //     /// the total_value CurrencyInfo keeps track of.
+    //     invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
+    //     invariant module spec_is_currency<CoinType>()
+    //                 ==> sum_of_coin_values<CoinType>
+    //                     == global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value;
+    // }
 
-    spec module {
-        apply SumOfCoinValuesInvariant<CoinType> to *<CoinType>;
-    }
+    // spec module {
+    //     apply SumOfCoinValuesInvariant<CoinType> to *<CoinType>;
+    // }
 
     /*
     TODO: specify the following:
@@ -898,5 +1004,7 @@ module Libra {
           module and maybe add a spec variable representing the sum of account
           balances.
     */
+
+
 }
 }

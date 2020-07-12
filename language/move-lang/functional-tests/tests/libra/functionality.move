@@ -118,22 +118,6 @@ script {
 script {
     use 0x1::Libra;
     use 0x1::Coin1::Coin1;
-    fun main(account: &signer)  {
-        // Libra::publish_mint_capability(
-        Libra::publish_mint_capability(
-            account,
-            Libra::remove_mint_capability<Coin1>(account),
-            account,
-        );
-}
-}
-// check: EXECUTED
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::Libra;
-    use 0x1::Coin1::Coin1;
     use {{default}}::BurnCapabilityHolder;
     fun main(account: &signer)  {
         BurnCapabilityHolder::hold(

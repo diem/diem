@@ -55,9 +55,19 @@ module Offer {
     /// recipient of the offered struct in the `Offer<Offered>` resource at the address `offer_address`
     /// Returns true if the recipient is allowed to redeem `Offer<Offered>` at `offer_address`
     /// and false otherwise.
+    ///
+    /// TODO (dd): this is undefined if the offer does not exist. Should this be anded with
+    /// "exists_at"?
+
     define is_allowed_recipient<Offered>(offer_addr: address, recipient: address): bool {
       recipient == global<Offer<Offered>>(offer_addr).for || recipient == offer_addr
     }
+
+    /// Mirrors the Move function exists_at<Offered>, above.
+    define spec_exists_at<Offered>(offer_addr: address): bool {
+        exists<Offer<Offered>>(offer_addr)
+    }
+
   }
 
   /// ## Creation of Offers
