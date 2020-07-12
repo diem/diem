@@ -160,7 +160,7 @@ fn create_node_for_fuzzing() -> RoundManager {
         round_state,
         proposer_election,
         proposal_generator,
-        MetricsSafetyRules::new(Box::new(safety_rules)),
+        MetricsSafetyRules::new(Box::new(safety_rules), storage.clone()),
         network,
         Arc::new(MockTransactionManager::new(None)),
         storage,

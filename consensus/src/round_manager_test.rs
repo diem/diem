@@ -13,7 +13,7 @@ use crate::{
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     network_tests::{NetworkPlayground, TwinId},
-    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
+    persistent_liveness_storage::RecoveryData,
     round_manager::RoundManager,
     test_utils::{
         consensus_runtime, timed_block_on, MockStateComputer, MockStorage, MockTransactionManager,
@@ -54,7 +54,7 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
-use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
+use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -191,9 +191,9 @@ impl NodeSetup {
 
         let round_state = Self::create_round_state(time_service);
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let mut safety_rules = MetricsSafetyRules::new(safety_rules_manager.client());
-        let proof = storage.retrieve_epoch_change_proof(0).unwrap();
-        safety_rules.initialize(&proof).unwrap();
+        let mut safety_rules =
+            MetricsSafetyRules::new(safety_rules_manager.client(), storage.clone());
+        safety_rules.perform_initialize().unwrap();
 
         let mut round_manager = RoundManager::new(
             epoch_state,
@@ -833,5 +833,60 @@ fn sync_on_partial_newer_sync_info() {
         assert_eq!(*node.block_store.highest_quorum_cert(), block_4_qc);
         // Help remote message sent
         let _ = node.next_sync_info().await;
+    });
+}
+
+#[test]
+fn safety_rules_crash() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let mut nodes = NodeSetup::create_nodes(&mut playground, runtime.handle().clone(), 1);
+    let mut node = nodes.pop().unwrap();
+    runtime.spawn(playground.start());
+
+    fn reset_safety_rules(node: &mut NodeSetup) {
+        let safety_storage = PersistentSafetyStorage::initialize(
+            Storage::from(libra_secure_storage::InMemoryStorage::new()),
+            node.signer.author(),
+            node.signer.private_key().clone(),
+            Ed25519PrivateKey::generate_for_testing(),
+            node.round_manager.consensus_state().waypoint(),
+        );
+
+        node.safety_rules_manager = SafetyRulesManager::new_local(safety_storage, false);
+        let safety_rules =
+            MetricsSafetyRules::new(node.safety_rules_manager.client(), node.storage.clone());
+        node.round_manager.set_safety_rules(safety_rules);
+    };
+
+    timed_block_on(&mut runtime, async {
+        for _ in 0..2 {
+            let proposal_msg = node.next_proposal().await;
+
+            reset_safety_rules(&mut node);
+            // construct_and_sign_vote
+            node.round_manager
+                .process_proposal_msg(proposal_msg)
+                .await
+                .unwrap();
+
+            let vote_msg = node.next_vote().await;
+
+            // sign_timeout
+            reset_safety_rules(&mut node);
+            let round = vote_msg.vote().vote_data().proposed().round();
+            node.round_manager
+                .process_local_timeout(round)
+                .await
+                .unwrap();
+            let vote_msg = node.next_vote().await;
+
+            // sign proposal
+            reset_safety_rules(&mut node);
+            node.round_manager.process_vote_msg(vote_msg).await.unwrap();
+        }
+
+        // verify the last sign proposal happened
+        node.next_proposal().await;
     });
 }
