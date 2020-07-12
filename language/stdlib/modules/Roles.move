@@ -323,7 +323,7 @@ module Roles {
         }
 
         define spec_has_register_new_currency_privilege(account: signer): bool {
-            spec_has_treasury_compliance_role(account)
+            spec_has_libra_root_role(account)
         }
 
         define spec_has_update_dual_attestation_threshold_privilege(account: signer): bool  {
