@@ -8,6 +8,7 @@
 main() {
     return;
 }
+// check: EXECUTED
 
 
 //! new-transaction
@@ -16,9 +17,11 @@ main() {
 //! gas-currency: Coin1
 main() {
     let x: u64;
-    x = 1 + 2 + 3;
+    x = 1;
+    while (copy(x) < 2000) { x = move(x) + 1; };
     return;
 }
+// check: EXECUTED
 
 
 //! new-transaction
@@ -29,3 +32,4 @@ main() {
     assert(LibraAccount.balance<Coin1.Coin1>({{bob}}) < LibraAccount.balance<Coin1.Coin1>({{alice}}), 42);
     return;
 }
+// check: EXECUTED

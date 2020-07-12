@@ -12,6 +12,7 @@ use crate::{
     account::{self, Account, AccountData},
     common_transactions::rotate_key_txn,
     executor::FakeExecutor,
+    gas_costs,
     keygen::KeyGen,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
@@ -186,16 +187,20 @@ fn create_child_vasp_all_currencies() {
         .is_some());
 
     // create a child VASP with a balance of amount
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account_script(
-            account_config::coin1_tag(),
-            *child.address(),
-            child.auth_key_prefix(),
-            add_all_currencies,
-            amount,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::coin1_tag(),
+                *child.address(),
+                child.auth_key_prefix(),
+                add_all_currencies,
+                amount,
+            ))
+            .sequence_number(0)
+            .max_gas_amount(gas_costs::TXN_RESERVED * 3)
+            .sign(),
+    );
 
     assert!(executor
         .read_balance_resource(&parent, account::coin1_currency_code())
@@ -250,16 +255,20 @@ fn create_child_vasp_with_balance() {
     );
 
     // create a child VASP with a balance of amount
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account_script(
-            account_config::coin1_tag(),
-            *child.address(),
-            child.auth_key_prefix(),
-            add_all_currencies,
-            amount,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::coin1_tag(),
+                *child.address(),
+                child.auth_key_prefix(),
+                add_all_currencies,
+                amount,
+            ))
+            .sequence_number(0)
+            .max_gas_amount(gas_costs::TXN_RESERVED * 3)
+            .sign(),
+    );
 
     // check balance
     assert_eq!(

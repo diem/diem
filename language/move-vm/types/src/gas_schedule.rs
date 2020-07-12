@@ -41,8 +41,8 @@ impl<'a> CostStrategy<'a> {
     /// This is the instantiation that must be used when executing a user script.
     pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
+            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
             cost_table,
-            gas_left,
             charge: true,
         }
     }
@@ -53,8 +53,8 @@ impl<'a> CostStrategy<'a> {
     /// code that does not have to charge the user.
     pub fn system(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
+            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
             cost_table,
-            gas_left,
             charge: false,
         }
     }
@@ -66,7 +66,10 @@ impl<'a> CostStrategy<'a> {
 
     /// Return the gas left.
     pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.gas_left
+        self.gas_left.map(|gas| {
+            (gas + (self.cost_table.gas_constants.gas_unit_scaling_factor - 1))
+                / self.cost_table.gas_constants.gas_unit_scaling_factor
+        })
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.
@@ -303,9 +306,8 @@ pub enum NativeCostIndex {
     POP_BACK = 10,
     DESTROY_EMPTY = 11,
     SWAP = 12,
-    SAVE_ACCOUNT = 13,
-    ED25519_VALIDATE_KEY = 14,
-    SIGNER_BORROW = 15,
-    CREATE_SIGNER = 16,
-    DESTROY_SIGNER = 17,
+    ED25519_VALIDATE_KEY = 13,
+    SIGNER_BORROW = 14,
+    CREATE_SIGNER = 15,
+    DESTROY_SIGNER = 16,
 }

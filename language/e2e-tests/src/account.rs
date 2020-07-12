@@ -350,7 +350,7 @@ impl Account {
             *self.address(),
             TransactionPayload::Script(script),
             sequence_number,
-            gas_costs::TXN_RESERVED * 2,
+            gas_costs::TXN_RESERVED,
             0, // gas price
             LBR_NAME.to_owned(),
         )

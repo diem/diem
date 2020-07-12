@@ -66,6 +66,10 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             .publish_module(module, sender, &mut self.data_cache, cost_strategy)
     }
 
+    pub fn num_mutated_accounts(&self) -> u64 {
+        self.data_cache.num_mutated_accounts()
+    }
+
     pub fn finish(self) -> VMResult<TransactionEffects> {
         self.data_cache
             .into_effects()

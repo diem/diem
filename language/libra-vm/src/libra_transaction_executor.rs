@@ -5,8 +5,8 @@ use crate::{
     counters::*,
     data_cache::StateViewCache,
     libra_vm::{
-        get_transaction_output, txn_effects_to_writeset_and_events_cached, LibraVMImpl,
-        LibraVMInternals,
+        charge_global_write_gas_usage, get_transaction_output,
+        txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
     },
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
@@ -150,6 +150,8 @@ impl LibraVM {
                 )
                 .map_err(|e| e.into_vm_status())?;
 
+            charge_global_write_gas_usage(cost_strategy, &session)?;
+
             cost_strategy.disable_metering();
             self.success_transaction_cleanup(
                 session,
@@ -197,6 +199,8 @@ impl LibraVM {
         session
             .publish_module(module.code().to_vec(), module_address, cost_strategy)
             .map_err(|e| e.into_vm_status())?;
+
+        charge_global_write_gas_usage(cost_strategy, &session)?;
 
         self.success_transaction_cleanup(
             session,
