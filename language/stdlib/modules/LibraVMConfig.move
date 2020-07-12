@@ -57,6 +57,8 @@ module LibraVMConfig {
         max_price_per_gas_unit: u64,
 
         max_transaction_size_in_bytes: u64,
+        gas_unit_scaling_factor: u64,
+        default_account_size: u64,
     }
 
     // Initialize the table under the libra root account
@@ -67,15 +69,17 @@ module LibraVMConfig {
         native_schedule: vector<u8>,
     ) {
         let gas_constants = GasConstants {
-            global_memory_per_byte_cost: 8,
-            global_memory_per_byte_write_cost: 8,
+            global_memory_per_byte_cost: 4,
+            global_memory_per_byte_write_cost: 9,
             min_transaction_gas_units: 600,
             large_transaction_cutoff: 600,
             instrinsic_gas_per_byte: 8,
-            maximum_number_of_gas_units: 2000000,
+            maximum_number_of_gas_units: 4000000,
             min_price_per_gas_unit: 0,
             max_price_per_gas_unit: 10000,
             max_transaction_size_in_bytes: 4096,
+            gas_unit_scaling_factor: 1000,
+            default_account_size: 800,
         };
 
         LibraConfig::publish_new_config(

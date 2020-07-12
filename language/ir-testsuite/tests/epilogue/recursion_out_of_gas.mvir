@@ -21,6 +21,4 @@ main() {
     return;
 }
 
-// check: gas_used
-// check: 5000
-// check: OUT_OF_GAS
+// check: CALL_STACK_OVERFLOW

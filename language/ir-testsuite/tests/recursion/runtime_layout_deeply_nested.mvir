@@ -73,8 +73,7 @@ main(account: &signer) {
     M.publish_256(move(account));
     return;
 }
-// check: OUT_OF_GAS
-// TODO: should be EXECUTED
+// check: EXECUTED
 
 
 //! new-transaction
@@ -84,5 +83,4 @@ main(account: &signer) {
     M.publish_257(move(account));
     return;
 }
-// check: OUT_OF_GAS
-// TODO: should be VM_MAX_VALUE_DEPTH_REACHED
+// check: VM_MAX_VALUE_DEPTH_REACHED

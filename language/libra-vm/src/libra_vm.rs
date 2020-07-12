@@ -36,6 +36,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::{convert::TryFrom, sync::Arc};
+use vm::errors::Location;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
@@ -460,6 +461,27 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         .collect::<Result<Vec<_>, VMStatus>>()?;
 
     Ok((ws, events))
+}
+
+pub(crate) fn charge_global_write_gas_usage<R: RemoteCache>(
+    cost_strategy: &mut CostStrategy,
+    session: &Session<R>,
+) -> Result<(), VMStatus> {
+    let total_cost = session.num_mutated_accounts()
+        * cost_strategy
+            .cost_table()
+            .gas_constants
+            .global_memory_per_byte_write_cost
+            .mul(
+                cost_strategy
+                    .cost_table()
+                    .gas_constants
+                    .default_account_size,
+            )
+            .get();
+    cost_strategy
+        .deduct_gas(GasUnits::new(total_cost))
+        .map_err(|p_err| p_err.finish(Location::Undefined).into_vm_status())
 }
 
 pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(

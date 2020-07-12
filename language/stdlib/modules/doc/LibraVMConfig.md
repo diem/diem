@@ -173,6 +173,20 @@
 <dd>
 
 </dd>
+<dt>
+
+<code>gas_unit_scaling_factor: u64</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>default_account_size: u64</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -200,15 +214,17 @@
     native_schedule: vector&lt;u8&gt;,
 ) {
     <b>let</b> gas_constants = <a href="#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
-        global_memory_per_byte_cost: 8,
-        global_memory_per_byte_write_cost: 8,
+        global_memory_per_byte_cost: 4,
+        global_memory_per_byte_write_cost: 9,
         min_transaction_gas_units: 600,
         large_transaction_cutoff: 600,
         instrinsic_gas_per_byte: 8,
-        maximum_number_of_gas_units: 2000000,
+        maximum_number_of_gas_units: 4000000,
         min_price_per_gas_unit: 0,
         max_price_per_gas_unit: 10000,
         max_transaction_size_in_bytes: 4096,
+        gas_unit_scaling_factor: 1000,
+        default_account_size: 800,
     };
 
     <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
