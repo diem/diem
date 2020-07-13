@@ -4,17 +4,14 @@
 use crate::{
     backup_types::state_snapshot::manifest::StateSnapshotBackup,
     storage::{BackupStorage, FileHandle},
-    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
+    utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
-use libra_types::{
-    account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof, transaction::Version,
-};
+use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
-use tokio::io::AsyncReadExt;
 
 #[derive(StructOpt)]
 pub struct StateSnapshotRestoreOpt {
@@ -61,13 +58,8 @@ impl StateSnapshotRestoreController {
             return Ok(());
         }
 
-        let mut manifest_bytes = Vec::new();
-        self.storage
-            .open_for_read(&self.manifest_handle)
-            .await?
-            .read_to_end(&mut manifest_bytes)
-            .await?;
-        let manifest: StateSnapshotBackup = serde_json::from_slice(&manifest_bytes)?;
+        let manifest: StateSnapshotBackup =
+            self.storage.load_json_file(&self.manifest_handle).await?;
 
         let mut receiver = self
             .restore_handler
@@ -75,7 +67,7 @@ impl StateSnapshotRestoreController {
 
         for chunk in manifest.chunks {
             let blobs = self.read_account_state_chunk(chunk.blobs).await?;
-            let proof = self.read_proof(chunk.proof).await?;
+            let proof = self.storage.load_lcs_file(&chunk.proof).await?;
 
             receiver.add_chunk(blobs, proof)?;
         }
@@ -100,14 +92,5 @@ impl StateSnapshotRestoreController {
         }
 
         Ok(chunk)
-    }
-
-    async fn read_proof(&self, file_handle: FileHandle) -> Result<SparseMerkleRangeProof> {
-        let mut file = self.storage.open_for_read(&file_handle).await?;
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf).await?;
-
-        let proof = lcs::from_bytes(&buf)?;
-        Ok(proof)
     }
 }

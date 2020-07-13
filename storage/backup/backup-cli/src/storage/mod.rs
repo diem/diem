@@ -86,7 +86,7 @@ impl Arbitrary for ShellSafeName {
 }
 
 #[async_trait]
-pub trait BackupStorage {
+pub trait BackupStorage: Send + Sync {
     /// Hint that a bunch of files are gonna be created related to a backup identified by `name`,
     /// which is unique to the content of the backup, i.e. it won't be the same name unless you are
     /// backing up exactly the same thing.

@@ -4,7 +4,7 @@
 use crate::{
     backup_types::epoch_ending::manifest::EpochEndingBackup,
     storage::{BackupStorage, FileHandle},
-    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
+    utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
 use anyhow::{anyhow, ensure, Result};
 use libra_types::{
@@ -13,7 +13,6 @@ use libra_types::{
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
-use tokio::io::AsyncReadExt;
 
 #[derive(StructOpt)]
 pub struct EpochEndingRestoreOpt {
@@ -44,13 +43,8 @@ impl EpochEndingRestoreController {
     }
 
     pub async fn run(self) -> Result<()> {
-        let mut manifest_bytes = Vec::new();
-        self.storage
-            .open_for_read(&self.manifest_handle)
-            .await?
-            .read_to_end(&mut manifest_bytes)
-            .await?;
-        let manifest: EpochEndingBackup = serde_json::from_slice(&manifest_bytes)?;
+        let manifest: EpochEndingBackup =
+            self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
 
         let mut next_epoch = manifest.first_epoch;
