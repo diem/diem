@@ -656,7 +656,7 @@ dependencies = [
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "resource-viewer 0.1.0",
- "rust_decimal 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_decimal 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustyline 6.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -4704,7 +4704,7 @@ dependencies = [
 
 [[package]]
 name = "rust_decimal"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "num-traits 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5691,7 +5691,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_decimal 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust_decimal 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "statistical 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
  "workspace-builder 0.1.0",
@@ -6829,7 +6829,7 @@ dependencies = [
 "checksum rusoto_signature 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9eddff187ac18c5a91d9ccda9353f30cf531620dce437c4db661dfe2e23b2029"
 "checksum rusoto_sts 0.44.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8b42c2d24e32a1646bdb1d5d83c49f977ffd26b52aff0cdcd239774628db81ee"
 "checksum rust-argon2 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2bc8af4bda8e1ff4932523b94d3dd20ee30a87232323eda55903ffd71d2fb017"
-"checksum rust_decimal 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "26b5f52edf35045e96b07aa29822bf4ce8495295fd5610270f85ab1f26df7ba5"
+"checksum rust_decimal 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "95ba36e8c41bf675947e200af432325f332f60a0aea0ef2dc456636c2f6037d7"
 "checksum rustc-demangle 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
 "checksum rustc-hash 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 "checksum rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
