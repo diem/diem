@@ -32,7 +32,7 @@ proptest! {
 
     // In this test we demonstrate a signature that's not message-bound by only
     // modifying the public key and the R component, under a pathological yet
-    // admissible S< l value for the signature.
+    // admissible s < l value for the signature.
     #[test]
     fn verify_sig_strict_torsion(idx in 0usize..8usize){
         let message = b"hello_world";
