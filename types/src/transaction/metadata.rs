@@ -28,17 +28,17 @@ pub enum GeneralMetadata {
 /// or refunded transaction reference
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GeneralMetadataV0 {
-    // Subaddress to which the funds are being sent
+    /// Subaddress to which the funds are being sent
     #[serde(with = "serde_bytes")]
     to_subaddress: Option<Vec<u8>>,
-    // Subaddress from which the funds are being sent
+    /// Subaddress from which the funds are being sent
     #[serde(with = "serde_bytes")]
     from_subaddress: Option<Vec<u8>>,
-    // In the case of refunds, referenced_event refers to the event sequence
-    // number of the sender’s original sent payment event.
-    // Since refunds are just another form of P2P transfer, the referenced
-    // event field allows a refunded payment to refer back to the original
-    // payment
+    /// In the case of refunds, referenced_event refers to the event sequence
+    /// number of the sender’s original sent payment event.
+    /// Since refunds are just another form of P2P transfer, the referenced
+    /// event field allows a refunded payment to refer back to the original
+    /// payment
     referenced_event: Option<u64>,
 }
 
@@ -52,14 +52,14 @@ pub enum TravelRuleMetadata {
 /// Transaction metadata format for transactions subject to travel rule
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TravelRuleMetadataV0 {
-    // Off-chain reference_id.  Used when off-chain APIs are used.
-    // Specifies the off-chain reference ID that was agreed upon in off-chain APIs.
+    /// Off-chain reference_id.  Used when off-chain APIs are used.
+    /// Specifies the off-chain reference ID that was agreed upon in off-chain APIs.
     off_chain_reference_id: Option<String>,
 }
 
 /// Opaque hex string-encoded binary transaction metadata
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UnstructuredStringMetadata {
-    // Unstructured string metadata
+    /// Unstructured string metadata
     metadata: Option<String>,
 }
