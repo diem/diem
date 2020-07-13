@@ -702,6 +702,13 @@ impl TransactionListProof {
         self.ledger_info_to_transaction_infos_proof.left_siblings()
     }
 
+    pub fn unpack(self) -> (TransactionAccumulatorRangeProof, Vec<TransactionInfo>) {
+        (
+            self.ledger_info_to_transaction_infos_proof,
+            self.transaction_infos,
+        )
+    }
+
     /// Verifies the list of transactions are correct using the proof. The verifier needs to have
     /// the ledger info and the version of the first transaction in possession.
     pub fn verify(
