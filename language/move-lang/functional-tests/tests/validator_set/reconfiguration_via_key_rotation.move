@@ -52,32 +52,19 @@ script{
 //! new-transaction
 //! sender: dave
 script{
+    use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;
-
     // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
     fun main(account: &signer) {
+        assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) !=
+               x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 98);
         ValidatorConfig::set_config(account, {{vivian}},
                                     x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
                                     x"", x"", x"", x"");
-    }
-}
-
-// check: EXECUTED
-
-//! new-transaction
-//! sender: libraroot
-script{
-    use 0x1::LibraSystem;
-    use 0x1::ValidatorConfig;
-
-    // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
-    fun main(account: &signer) {
-        let old_num_validators = LibraSystem::validator_set_size();
-        LibraSystem::update_and_reconfigure(account);
-        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
+        LibraSystem::update_config_and_reconfigure(account, {{vivian}});
         // check that the validator set contains Vivian's new key after reconfiguration
         assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) ==
-               x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 98);
+               x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 99);
     }
 }
 
@@ -93,29 +80,14 @@ script{
 //! new-transaction
 //! sender: dave
 script{
+    use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;
-    // rotate vivian's pubkey to the same value.
+    // rotate vivian's pubkey to the same value does not trigger the reconfiguration.
     fun main(account: &signer) {
         ValidatorConfig::set_config(account, {{vivian}},
                                     x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
                                     x"", x"", x"", x"");
-    }
-}
-
-// not: NewEpochEvent
-// check: EXECUTED
-
-//! new-transaction
-//! sender: libraroot
-script{
-    use 0x1::LibraSystem;
-    // No reconfiguration should be
-    // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
-    // NewEpoch event.
-    fun main(account: &signer) {
-        let old_num_validators = LibraSystem::validator_set_size();
-        LibraSystem::update_and_reconfigure(account);
-        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
+        LibraSystem::update_config_and_reconfigure(account, {{vivian}});
     }
 }
 

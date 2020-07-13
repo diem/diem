@@ -2,7 +2,7 @@ address 0x1 {
 
 module LibraSystem {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, ModifyConfigCapability};
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
@@ -14,6 +14,10 @@ module LibraSystem {
         addr: address,
         consensus_voting_power: u64,
         config: ValidatorConfig::Config,
+    }
+
+    resource struct CapabilityHolder {
+        cap: ModifyConfigCapability<LibraSystem>,
     }
 
     struct LibraSystem {
@@ -29,6 +33,7 @@ module LibraSystem {
     const EINVALID_PROSPECTIVE_VALIDATOR: u64 = 3;
     const EALREADY_A_VALIDATOR: u64 = 4;
     const ENOT_AN_ACTIVE_VALIDATOR: u64 = 5;
+    const EINVALID_TRANSACTION_SENDER: u64 = 6;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -46,13 +51,20 @@ module LibraSystem {
             EINVALID_SINGLETON_ADDRESS
         );
 
-        LibraConfig::publish_new_config<LibraSystem>(
+        let cap = LibraConfig::publish_new_config_and_get_capability<LibraSystem>(
             config_account,
             LibraSystem {
                 scheme: 0,
                 validators: Vector::empty(),
             },
         );
+        move_to(config_account, CapabilityHolder { cap })
+    }
+
+    // This copies the vector of validators into the LibraConfig's resource
+    // under ValidatorSet address
+    fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
+        LibraConfig::set_with_capability_and_reconfigure<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap, value)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -64,7 +76,7 @@ module LibraSystem {
     public fun add_validator(
         lr_account: &signer,
         account_address: address
-    ) {
+    ) acquires CapabilityHolder {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig::is_valid(account_address), EINVALID_PROSPECTIVE_VALIDATOR);
@@ -80,7 +92,7 @@ module LibraSystem {
             consensus_voting_power: 1,
         });
 
-        LibraConfig::set<LibraSystem>(lr_account, validator_set);
+        set_validator_set(validator_set);
     }
 
     // Removes a validator, only callable by the libra root account
@@ -88,7 +100,7 @@ module LibraSystem {
     public fun remove_validator(
         lr_account: &signer,
         account_address: address
-    ) {
+    ) acquires CapabilityHolder {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         let validator_set = get_validator_set();
         // Ensure that this address is an active validator
@@ -98,34 +110,30 @@ module LibraSystem {
         // Remove corresponding ValidatorInfo from the validator set
         _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
 
-        LibraConfig::set<LibraSystem>(lr_account, validator_set);
+        set_validator_set(validator_set);
     }
     spec fun remove_validator {
         // TODO(wrwg): function needs long to verify, only enable it with large timeout.
         pragma verify_duration_estimate = 60;
     }
 
-    // For all of the validators the information from ValidatorConfig gets copied into the ValidatorSet.
-    // This function makes no changes to the size of the set or the members of the set.
-    // NewEpochEvent event will be fired if at least one of the configs was changed.
-    public fun update_and_reconfigure(
-        lr_account: &signer
-        ) {
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+    // For a calling validator's operator copy the information from ValidatorConfig into the ValidatorSet.
+    // This function makes no changes to the size or the members of the set.
+    // If the config in the ValidatorSet changes, a NewEpochEvent is fired.
+    public fun update_config_and_reconfigure(
+        operator_account: &signer,
+        validator_address: address,
+    ) acquires CapabilityHolder {
+        assert(ValidatorConfig::get_operator(validator_address) == Signer::address_of(operator_account),
+               EINVALID_TRANSACTION_SENDER);
         let validator_set = get_validator_set();
-        let validators = &mut validator_set.validators;
-        let configs_changed = false;
-
-        let size = Vector::length(validators);
-        let i = 0;
-        while (i < size) {
-            let validator_info_update = update_ith_validator_info_(validators, i);
-            configs_changed = configs_changed || validator_info_update;
-            i = i + 1;
-        };
-        if (configs_changed) {
-            LibraConfig::set<LibraSystem>(lr_account, validator_set);
-        };
+        let to_update_index_vec = get_validator_index_(&validator_set.validators, validator_address);
+        assert(Option::is_some(&to_update_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
+        let to_update_index = *Option::borrow(&to_update_index_vec);
+        let is_validator_info_updated = update_ith_validator_info_(&mut validator_set.validators, to_update_index);
+        if (is_validator_info_updated) {
+            set_validator_set(validator_set);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -221,6 +229,14 @@ module LibraSystem {
 
     /// # Module specifications
 
+    // Each validator owner stores a Config in ValidatorConfig module.
+    // The validator may set the operator (another libra account), this operator will
+    // be able to set the values of the validator's Config.
+    // The 0xA550C18 address stores the set of validator's configs that are currently active
+    // in the Libra Protocol. The LibraRoot account may add/remove validators to/from the set.
+    // The operator of a validator that is currently in the validator set can modify
+    // the ValidatorInfo for its validator (only), and set the config for the
+    // modified validator set to the new validator set and trigger a reconfiguration.
     spec module {
 
         pragma verify = true, aborts_if_is_strict = true;
@@ -266,8 +282,18 @@ module LibraSystem {
         // TODO (dd): restore this function
         // aborts_if LibraConfig::spec_has_modify_config_capability<LibraSystem>();
         aborts_if !LibraTimestamp::spec_is_genesis();
+        ensures exists<CapabilityHolder>(Signer::spec_address_of(config_account));
         ensures LibraConfig::spec_is_published<LibraSystem>();
         ensures len(spec_get_validator_set()) == 0;
+    }
+
+    spec fun set_validator_set {
+        pragma assume_no_abort_from_here = true;
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
+        ensures LibraConfig::spec_get<LibraSystem>() == value;
     }
 
     spec fun add_validator {
@@ -276,6 +302,9 @@ module LibraSystem {
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if spec_is_validator(account_address);
         aborts_if !ValidatorConfig::spec_is_valid(account_address);
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
         ensures spec_is_validator(account_address);
     }
 
@@ -283,16 +312,14 @@ module LibraSystem {
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if !spec_is_validator(account_address);
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
         ensures !spec_is_validator(account_address);
     }
 
-    spec fun update_and_reconfigure {
-        /// > TODO(emmazzz): turn verify on when we are able to
-        /// > verify loop invariants.
-        pragma verify = false;
-        requires spec_validators_is_set(spec_get_validator_set());
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+    spec fun update_config_and_reconfigure {
+        pragma verify_duration_estimate = 100;
     }
 
     spec fun get_validator_set {

@@ -80,40 +80,6 @@ pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
         .expect("Failed to compile")
 });
 
-/// Returns a transaction to add a new validator
-pub fn add_validator_txn(
-    sender: &Account,
-    new_validator: &Account,
-    seq_num: u64,
-) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*new_validator.address()));
-
-    sender.create_signed_txn_with_args(
-        StdlibScript::AddValidator.compiled_bytes().into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 2,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
-/// Returns a transaction to update validators' configs and reconfigure
-///   (= emit reconfiguration event and change the epoch)
-pub fn reconfigure_txn(sender: &Account, seq_num: u64) -> SignedTransaction {
-    sender.create_signed_txn_with_args(
-        StdlibScript::Reconfigure.compiled_bytes().into_vec(),
-        vec![],
-        Vec::new(),
-        seq_num,
-        gas_costs::TXN_RESERVED * 2,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
 pub fn empty_txn(
     sender: &Account,
     seq_num: u64,
@@ -156,52 +122,6 @@ pub fn create_account_txn(
     )
 }
 
-/// Returns a transaction to create a validator account with the given arguments.
-pub fn create_validator_account_txn(
-    sender: &Account,
-    new_account: &Account,
-    seq_num: u64,
-) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*new_account.address()));
-    args.push(TransactionArgument::U8Vector(new_account.auth_key_prefix()));
-
-    sender.create_signed_txn_with_args(
-        StdlibScript::CreateValidatorAccount
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 3,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
-/// Returns a transaction to create a validator operator account with the given arguments.
-pub fn create_validator_operator_account_txn(
-    sender: &Account,
-    new_account: &Account,
-    seq_num: u64,
-) -> SignedTransaction {
-    let mut args: Vec<TransactionArgument> = Vec::new();
-    args.push(TransactionArgument::Address(*new_account.address()));
-    args.push(TransactionArgument::U8Vector(new_account.auth_key_prefix()));
-
-    sender.create_signed_txn_with_args(
-        StdlibScript::CreateValidatorOperatorAccount
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 3,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
 /// Returns a transaction to transfer coin from one account to another (possibly new) one, with the
 /// given arguments.
 pub fn peer_to_peer_txn(
@@ -226,56 +146,6 @@ pub fn peer_to_peer_txn(
         seq_num,
         gas_costs::TXN_RESERVED, // this is a default for gas
         0,                       // this is a default for gas
-        LBR_NAME.to_owned(),
-    )
-}
-
-/// Returns a transaction to set config for a candidate validator
-pub fn set_validator_config_txn(
-    sender_operator_account: &Account,
-    validator_account: &Account,
-    consensus_pubkey: Vec<u8>,
-    validator_network_identity_pubkey: Vec<u8>,
-    validator_network_address: Vec<u8>,
-    fullnodes_network_identity_pubkey: Vec<u8>,
-    fullnodes_network_address: Vec<u8>,
-    seq_num: u64,
-) -> SignedTransaction {
-    let args = vec![
-        TransactionArgument::Address(*validator_account.address()),
-        TransactionArgument::U8Vector(consensus_pubkey),
-        TransactionArgument::U8Vector(validator_network_identity_pubkey),
-        TransactionArgument::U8Vector(validator_network_address),
-        TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
-        TransactionArgument::U8Vector(fullnodes_network_address),
-    ];
-    sender_operator_account.create_signed_txn_with_args(
-        StdlibScript::SetValidatorConfig.compiled_bytes().into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 3,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
-/// Returns a transaction to set validator's operator
-pub fn set_validator_operator_txn(
-    sender_validator: &Account,
-    new_operator: &Account,
-    seq_num: u64,
-) -> SignedTransaction {
-    let args = vec![TransactionArgument::Address(*new_operator.address())];
-    sender_validator.create_signed_txn_with_args(
-        StdlibScript::SetValidatorOperator
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 3,
-        0,
         LBR_NAME.to_owned(),
     )
 }

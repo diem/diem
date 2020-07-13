@@ -35,7 +35,7 @@ use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_testing_account_script,
     encode_modify_publishing_option_script, encode_peer_to_peer_with_metadata_script,
-    encode_reconfigure_script, encode_set_validator_config_script, encode_testnet_mint_script,
+    encode_set_validator_config_and_reconfigure_script, encode_testnet_mint_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -161,7 +161,7 @@ fn test_reconfiguration() {
         /* sequence_number = */ 0,
         operator_key.take_private().unwrap(),
         operator_key.public_key(),
-        Some(encode_set_validator_config_script(
+        Some(encode_set_validator_config_and_reconfigure_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
             new_network_pubkey.as_slice().to_vec(),
@@ -177,18 +177,18 @@ fn test_reconfiguration() {
         .execute_block((block_id, txn_block.clone()), parent_block_id)
         .unwrap();
 
-    // Make sure there is no reconfiguration in the execution result
+    // Make sure the execution result sees the reconfiguration
     assert!(
-        !vm_output.has_reconfiguration(),
-        "StateComputeResult has unexpected reconfiguration"
+        vm_output.has_reconfiguration(),
+        "StateComputeResult does not see a reconfiguration"
     );
     let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, vm_output, block_id, vec![&signer]);
     let (_, reconfig_events) = executor
         .commit_blocks(vec![block_id], ledger_info_with_sigs)
         .unwrap();
     assert!(
-        reconfig_events.is_empty(),
-        "unexpected reconfiguration event"
+        !reconfig_events.is_empty(),
+        "expected reconfiguration event"
     );
 
     let (li, _epoch_change_proof, _accumulator_consistency_proof) =
@@ -218,8 +218,8 @@ fn test_reconfiguration() {
         new_pubkey
     );
 
-    // test validator's key under validator's account is not equal to the key in the
-    // validator set since the reconfiguration was not invoked by the association
+    // test validator's key under validator's account is now equal to the key in the
+    // validator set since the reconfiguration was invoked
     let validator_account_state_with_proof = db
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
@@ -228,7 +228,7 @@ fn test_reconfiguration() {
         .reader
         .get_account_state_with_proof(libra_root_address(), current_version, current_version)
         .unwrap();
-    assert_ne!(
+    assert_eq!(
         AccountState::try_from(&libra_root_account_state_with_proof.blob.unwrap())
             .unwrap()
             .get_validator_set()
@@ -245,46 +245,6 @@ fn test_reconfiguration() {
             .unwrap()
             .consensus_public_key
     );
-
-    // txn4 = reconfigure the system with a new consensus key
-    let txn4 = get_test_signed_transaction(
-        libra_root_address(),
-        /* sequence_number = */ 1,
-        genesis_key.clone(),
-        genesis_key.public_key(),
-        Some(encode_reconfigure_script()),
-    );
-
-    let txn_block = vec![txn4];
-    let block_id = gen_block_id(2);
-    let vm_output = executor
-        .execute_block((block_id, txn_block.clone()), executor.committed_block_id())
-        .unwrap();
-
-    // Make sure the execution result sees the reconfiguration
-    assert!(
-        vm_output.has_reconfiguration(),
-        "StateComputeResult does not see reconfiguration"
-    );
-    let ledger_info_with_sigs = gen_ledger_info_with_sigs(1, vm_output, block_id, vec![&signer]);
-    let (_, reconfig_events) = executor
-        .commit_blocks(vec![block_id], ledger_info_with_sigs)
-        .unwrap();
-    assert!(
-        !reconfig_events.is_empty(),
-        "expected reconfiguration event"
-    );
-
-    let (li, _epoch_change_proof, _accumulator_consistency_proof) =
-        db.reader.get_state_proof(0).unwrap();
-    let current_version = li.ledger_info().version();
-
-    let t4 = db
-        .reader
-        .get_txn_by_account(libra_root_address(), 1, current_version, true)
-        .unwrap();
-    verify_committed_txn_status(t4.as_ref(), &txn_block[0]).unwrap();
-    assert_eq!(t4.unwrap().events.unwrap().len(), 1);
 
     // test validator's key in the validator set is as expected
     let libra_root_account_state_with_proof = db

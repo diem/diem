@@ -61,30 +61,22 @@ script {
 //! sender: alice
 //! expiration-time: 3
 script {
-    use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
-    }
-}
-
-// check: EXECUTED
-
-//! new-transaction
-//! sender: libraroot
-script {
     use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        // call update to reconfigure
-        let old_num_validators = LibraSystem::validator_set_size();
-        LibraSystem::update_and_reconfigure(account);
-        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
-
+        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        // the local validator's key is now different from the one in the validator set
+        assert(ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{bob}})) !=
+               ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})), 99);
+        LibraSystem::update_config_and_reconfigure(account, {{bob}});
+        // the local validator's key is now the same as the key in the validator set
+        assert(ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{bob}})) ==
+               ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})), 99);
         // check bob's public key is updated
         let validator_config = LibraSystem::get_validator_config({{bob}});
         assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 99);
-
     }
 }
 
+// check: NewEpochEvent
 // check: EXECUTED

@@ -72,19 +72,41 @@ module LibraConfig {
         reconfigure_();
     }
 
+    // Set a config item to a new value and trigger a reconfiguration.
+    public fun set_with_capability_and_reconfigure<Config: copyable>(
+        _cap: &ModifyConfigCapability<Config>,
+        payload: Config
+    ) acquires LibraConfig, Configuration {
+        let addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
+        assert(exists<LibraConfig<Config>>(addr), ECONFIG_DOES_NOT_EXIST);
+        let config = borrow_global_mut<LibraConfig<Config>>(addr);
+        config.payload = payload;
+        reconfigure_();
+    }
+
+    // Publish a new config item.
+    // The caller will use the returned ModifyConfigCapability to specify the access control
+    // policy for who can modify the config.
+    // Does not trigger a reconfiguration.
+    public fun publish_new_config_and_get_capability<Config: copyable>(
+        config_account: &signer,
+        payload: Config,
+    ): ModifyConfigCapability<Config> {
+        // TODO: discuss and enable assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(Roles::has_libra_root_role(config_account), ENOT_LIBRA_ROOT);
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
+        move_to(config_account, LibraConfig { payload });
+        ModifyConfigCapability<Config> {}
+    }
+
     // Publish a new config item. Only the config address can modify such config.
+    // Does not trigger a reconfiguration.
     public fun publish_new_config<Config: copyable>(
         config_account: &signer,
         payload: Config
     ) {
-        //assert(LibraTimestamp::is_genesis(), ENOT_GENESIS); // TODO: This assertion is needed, but the move-lang test fails.
-        assert(Roles::has_libra_root_role(config_account), ENOT_LIBRA_ROOT);
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
-        move_to(config_account, ModifyConfigCapability<Config> {});
-        move_to(config_account, LibraConfig{ payload });
-        // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
-        // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
-        // the value which triggers the reconfiguration.
+        let capability = publish_new_config_and_get_capability<Config>(config_account, payload);
+        move_to(config_account, capability);
     }
 
     // Publish a new config item. Only the delegated address can modify such config after redeeming the capability.

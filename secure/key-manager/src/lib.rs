@@ -350,7 +350,7 @@ pub fn build_rotation_transaction(
     chain_id: ChainId,
 ) -> RawTransaction {
     let script = Script::new(
-        libra_transaction_scripts::SET_VALIDATOR_CONFIG_TXN.clone(),
+        libra_transaction_scripts::SET_VALIDATOR_CONFIG_AND_RECONFIGURE_TXN.clone(),
         vec![],
         vec![
             TransactionArgument::Address(owner_address),
