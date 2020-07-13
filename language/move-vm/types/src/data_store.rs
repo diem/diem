@@ -6,10 +6,7 @@ use crate::{
     values::{GlobalValue, Value},
 };
 use move_core_types::{account_address::AccountAddress, language_storage::ModuleId};
-use vm::{
-    errors::{PartialVMResult, VMResult},
-    file_format::CompiledModule,
-};
+use vm::errors::{PartialVMResult, VMResult};
 
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///
@@ -45,13 +42,13 @@ pub trait DataStore {
     ) -> PartialVMResult<Option<GlobalValue>>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
-    fn load_module(&self, module: &ModuleId) -> VMResult<CompiledModule>;
+    fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;
 
     /// Publish a module.
-    fn publish_module(&mut self, blob: Vec<u8>, module: CompiledModule) -> VMResult<()>;
+    fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()>;
 
     /// Check if this module exists.
-    fn exists_module(&self, module_id: &ModuleId) -> bool;
+    fn exists_module(&self, module_id: &ModuleId) -> VMResult<bool>;
 
     // ---
     // EventStore operations
