@@ -27,6 +27,8 @@
 -  [Function `has_register_new_currency_privilege`](#0x1_Roles_has_register_new_currency_privilege)
 -  [Function `has_update_dual_attestation_limit_privilege`](#0x1_Roles_has_update_dual_attestation_limit_privilege)
 -  [Function `has_on_chain_config_privilege`](#0x1_Roles_has_on_chain_config_privilege)
+-  [Function `can_hold_balance`](#0x1_Roles_can_hold_balance)
+-  [Function `needs_account_limits`](#0x1_Roles_needs_account_limits)
 -  [Specification](#0x1_Roles_Specification)
     -  [Function `grant_libra_root_role`](#0x1_Roles_Specification_grant_libra_root_role)
     -  [Function `grant_treasury_compliance_role`](#0x1_Roles_Specification_grant_treasury_compliance_role)
@@ -663,6 +665,66 @@ module that uses it.
 
 </details>
 
+<a name="0x1_Roles_can_hold_balance"></a>
+
+## Function `can_hold_balance`
+
+Return true if
+<code>addr</code> is allowed to receive and send
+<code><a href="Libra.md#0x1_Libra">Libra</a>&lt;T&gt;</code> for any T
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_can_hold_balance">can_hold_balance</a>(account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_can_hold_balance">can_hold_balance</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    // <a href="VASP.md#0x1_VASP">VASP</a> accounts, designated_dealers, and unhosted accounts can hold balances.
+    // Administrative accounts (`Validator`, `ValidatorOperator`, `TreasuryCompliance`, and
+    // `LibraRoot`) cannot.
+    <a href="#0x1_Roles_has_parent_VASP_role">has_parent_VASP_role</a>(account) ||
+    <a href="#0x1_Roles_has_child_VASP_role">has_child_VASP_role</a>(account) ||
+    <a href="#0x1_Roles_has_designated_dealer_role">has_designated_dealer_role</a>(account) ||
+    <a href="#0x1_Roles_has_unhosted_role">has_unhosted_role</a>(account)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_needs_account_limits"></a>
+
+## Function `needs_account_limits`
+
+Return true if
+<code>account</code> must have limits on sending/receiving/holding of funds
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_needs_account_limits">needs_account_limits</a>(account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_needs_account_limits">needs_account_limits</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    // All accounts that hold balances are subject <b>to</b> limits <b>except</b> designated dealers
+    <a href="#0x1_Roles_can_hold_balance">can_hold_balance</a>(account) && !<a href="#0x1_Roles_has_designated_dealer_role">has_designated_dealer_role</a>(account)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Roles_Specification"></a>
 
 ## Specification
@@ -907,6 +969,17 @@ Helper functions
 <a name="0x1_Roles_spec_has_on_chain_config_privilege_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_on_chain_config_privilege_addr">spec_has_on_chain_config_privilege_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr)
+}
+<a name="0x1_Roles_spec_can_hold_balance_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr) ||
+        <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr) ||
+        <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr) ||
+        <a href="#0x1_Roles_spec_has_unhosted_role_addr">spec_has_unhosted_role_addr</a>(addr)
+}
+<a name="0x1_Roles_spec_needs_account_limits_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_needs_account_limits_addr">spec_needs_account_limits_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr) && !<a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr)
 }
 </code></pre>
 

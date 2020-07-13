@@ -104,6 +104,7 @@ module LibraAccount {
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
     const EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
+    const EROLE_CANT_STORE_BALANCE: u64 = 4;
     const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
     const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
     const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
@@ -493,8 +494,6 @@ module LibraAccount {
             }
         );
         AccountFreezing::create(&new_account);
-
-        // (2) TODO: publish account limits?
         destroy_signer(new_account);
     }
 
@@ -638,17 +637,32 @@ module LibraAccount {
         balance_for(borrow_global<Balance<Token>>(addr))
     }
 
+    /// Return `true` if `addr` has already published account limits for `Token`
+    fun has_published_account_limits<Token>(addr: address): bool {
+        if (VASP::is_vasp(addr)) VASP::has_account_limits<Token>(addr)
+        else AccountLimits::has_window_published<Token>(addr)
+    }
+
     /// Add a balance of `Token` type to the sending account.
-    /// If the account is a VASP account, it must have (or be able to publish)
-    /// a limits definition and window.
+    /// If the account has a role that is subject to limits, it may need to publish account limits
+    /// as well
     public fun add_currency<Token>(account: &signer) {
         // aborts if `Token` is not a currency type in the system
         assert(Libra::is_currency<Token>(), ENOT_A_CURRENCY);
+        // Check that an account with this role is allowed to hold funds
+        assert(Roles::can_hold_balance(account), EROLE_CANT_STORE_BALANCE);
         // aborts if this account already has a balance in `Token`
-        assert(!exists<Balance<Token>>(Signer::address_of(account)), EADD_EXISTING_CURRENCY);
-        // aborts if this is a child VASP whose parent does not have an AccountLimits resource for
-        // `Token`
-        assert(VASP::try_allow_currency<Token>(account), EPARENT_VASP_CURRENCY_LIMITS_DNE);
+        let addr = Signer::address_of(account);
+        assert(!exists<Balance<Token>>(addr), EADD_EXISTING_CURRENCY);
+        // Check whether account limits are needed and add them if so
+        if (Roles::needs_account_limits(account) && !has_published_account_limits<Token>(addr)) {
+            if (VASP::is_vasp(addr)) {
+                VASP::add_account_limits<Token>(account)
+            } else {
+                // TODO(shb): need to add limits to unhosted as well
+            }
+        };
+
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
 

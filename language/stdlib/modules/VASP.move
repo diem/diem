@@ -4,8 +4,7 @@ module VASP {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
-    use 0x1::Roles;  // alias import does not play well with spec functions in Roles.
-    use 0x1::Libra;
+    use 0x1::Roles;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
@@ -97,29 +96,32 @@ module VASP {
              == TRACE(Signer::spec_address_of(parent));
     }
 
-    /// If the account passed in is not a VASP account, this returns true since
-    /// we don't need to ensure account limits exist for those accounts.
-    /// If the account is a child VASP account, this returns true only if a `Window<CoinType>` is
-    /// published in the parent's account.
-    /// If the account is a child VASP account, this will always return true;
-    /// either a `LimitsDefinition`/`Window` exist for `CoinType`, or these
-    /// will be published under the account.
-    public fun try_allow_currency<CoinType>(account: &signer): bool
-    acquires ChildVASP, VASPOperationsResource {
-        assert(Libra::is_currency<CoinType>(), ENOT_A_REGISTERED_CURRENCY);
-        let account_address = Signer::address_of(account);
-        if (!is_vasp(account_address)) return true;
-        let parent_address = parent_address(account_address);
-        if (AccountLimits::has_window_published<CoinType>(parent_address)) {
-            true
-        } else if (is_parent(account_address)) {
-            let cap = &borrow_global<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap;
-            AccountLimits::publish_window<CoinType>(account, cap, CoreAddresses::LIBRA_ROOT_ADDRESS());
-            true
-        } else {
-            // it's a child vasp, and we can't publish the limits definition under it.
-            false
+    /// Return `true` if `addr` is a parent or child VASP whose parent VASP account contains an
+    /// `AccountLimits<CoinType>` resource.
+    /// Aborts if `addr` is not a VASP
+    public fun has_account_limits<CoinType>(addr: address): bool acquires ChildVASP {
+        AccountLimits::has_window_published<CoinType>(parent_address(addr))
+    }
+    spec fun has_account_limits {
+        ensures result == spec_has_account_limits<CoinType>(addr);
+    }
+    spec module {
+        define spec_has_account_limits<CoinType>(addr: address): bool {
+            AccountLimits::spec_has_window_published<CoinType>(spec_parent_address(addr))
         }
+    }
+
+    /// Publish an `AccountLimits<CoinType>` resource under `account`.
+    /// Aborts if `account` is not a ParentVASP
+    /// Aborts if `account` already contains a `AccountLimits<CoinType>` resource
+    public fun add_account_limits<CoinType>(account: &signer) acquires VASPOperationsResource {
+        assert(Roles::has_parent_VASP_role(account), ENOT_A_PARENT_VASP);
+
+        AccountLimits::publish_window<CoinType>(
+            account,
+            &borrow_global<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap,
+            CoreAddresses::LIBRA_ROOT_ADDRESS()
+        )
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -329,6 +331,15 @@ module VASP {
 
     spec module {
         apply AbortsIfParentIsNotParentVASP to num_children;
+    }
+
+    /// ## The VASPOperationsResource should be published under the LibraRoot address after genesis
+    spec module {
+        define spec_is_published(): bool {
+            exists<VASPOperationsResource>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+        }
+
+        invariant !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
     }
 }
 

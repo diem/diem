@@ -1646,7 +1646,7 @@ fn add_child_currencies() {
             output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(13));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(4));
     }
 
     {
@@ -1668,19 +1668,19 @@ fn add_child_currencies() {
             output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(13));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(4));
     }
 
     executor.execute_and_apply(
         vasp_a
             .transaction()
-            .script(encode_allow_currency_for_vasp_script(
+            .script(encode_add_currency_to_account_script(
                 account_config::type_tag_for_currency_code(account::coin2_currency_code()),
             ))
             .sequence_number(1)
             .sign(),
     );
-    // This now works since the parent allowed this currency
+    // This now works since the parent now has limits for this currency
     executor.execute_and_apply(
         vasp_a
             .transaction()

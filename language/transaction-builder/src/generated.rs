@@ -65,21 +65,6 @@ pub fn encode_add_validator_script(validator_address: AccountAddress) -> Script 
     )
 }
 
-/// Adds limits and an accounting window for `CoinType` currency to the parent VASP
-/// `account`. This transaction will fail if sent from a child account.
-pub fn encode_allow_currency_for_vasp_script(coin_type: TypeTag) -> Script {
-    Script::new(
-        vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 9, 7, 19, 24, 8, 43,
-            16, 0, 0, 0, 1, 0, 1, 1, 1, 0, 3, 1, 6, 12, 1, 1, 0, 1, 9, 0, 4, 86, 65, 83, 80, 18,
-            116, 114, 121, 95, 97, 108, 108, 111, 119, 95, 99, 117, 114, 114, 101, 110, 99, 121, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 2, 4, 11, 0, 56, 0, 1, 2,
-        ],
-        vec![coin_type],
-        vec![],
-    )
-}
-
 /// Permanently destroy the `Token`s stored in the oldest burn request under the `Preburn`
 /// resource. This will only succeed if `account` has a `MintCapability<Token>`, a
 /// `Preburn<Token>` resource exists under `preburn_address`, and there is a pending burn

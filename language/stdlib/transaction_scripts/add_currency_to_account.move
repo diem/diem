@@ -2,7 +2,9 @@ script {
 use 0x1::LibraAccount;
 // Prover deps:
 use 0x1::Libra;
+use 0x1::Roles;
 use 0x1::Signer;
+use 0x1::VASP;
 
 /// Add a `Currency` balance to `account`, which will enable `account` to send and receive
 /// `Libra<Currency>`.
@@ -16,14 +18,25 @@ fun add_currency_to_account<Currency>(account: &signer) {
 }
 spec fun add_currency_to_account {
     pragma verify = true;
+    // TODO(shb): lots of spurious abort conditions that I couldn't figure out
     pragma aborts_if_is_partial = true;
-    // `Currency` must be valid
+
+    /// This publishes a `Balance<Currency>` to the caller's account
+    ensures exists<LibraAccount::Balance<Currency>>(Signer::spec_address_of(account));
+
+    /// `Currency` must be valid
     aborts_if !Libra::spec_is_currency<Currency>();
-    // Can't have existing balance in `Currency`
+    /// `account` must be allowed to hold balances
+    aborts_if !Roles::spec_can_hold_balance_addr(Signer::spec_address_of(account));
+    /// `account` cannot have an existing balance in `Currency`
     aborts_if exists<LibraAccount::Balance<Currency>>(Signer::spec_address_of(account));
-    // TODO(shb): Prover claims that there's no abort in this situation. I suspect we need to
-    // rewrite VASP::try_allow_currency to be more amenable to verification
-    // If child VASP, parent needs `AccountLimits<Currency>`
-    //aborts_if VASP::spec_is_child_vasp(Signer::spec_address_of(account)) && !exists<AccountLimits::Window<Currency>>(VASP::spec_parent_address(Signer::spec_address_of(account)));
+    /// If `account` is a child VASP, its parent must have a published `AccountLimits<Currency>`
+    aborts_if
+        Roles::spec_needs_account_limits_addr(Signer::spec_address_of(account)) &&
+        Roles::spec_has_child_VASP_role_addr(Signer::spec_address_of(account)) &&
+        !VASP::spec_has_account_limits<Currency>(Signer::spec_address_of(account)) &&
+        // TODO(shb): teach prover that Roles::spec_has_child_VASP_roles ==> VASP::spec_is_vasp and
+        // then eliminate this
+        VASP::spec_is_vasp(Signer::spec_address_of(account));
 }
 }

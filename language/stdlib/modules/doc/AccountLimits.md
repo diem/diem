@@ -31,6 +31,7 @@
     -  [Function `reset_window`](#0x1_AccountLimits_Specification_reset_window)
     -  [Function `can_receive`](#0x1_AccountLimits_Specification_can_receive)
     -  [Function `is_unrestricted`](#0x1_AccountLimits_Specification_is_unrestricted)
+    -  [Function `has_window_published`](#0x1_AccountLimits_Specification_has_window_published)
 
 
 
@@ -320,6 +321,9 @@ All accounts that could be subject to account limits will have a
 <code><a href="#0x1_AccountLimits_Window">Window</a></code> for each currency they can hold published at the top level.
 Root accounts for multi-account entities will hold this resource at
 their root/parent account.
+Aborts with ELIMITS_DEFINITION_ALREADY_EXISTS if
+<code>to_limit</code> already contains a
+Window<CoinType>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(to_limit: &signer, _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>, limit_address: address)
@@ -336,6 +340,10 @@ their root/parent account.
     _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
     limit_address: address,
 ) {
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_limit)),
+        ELIMITS_DEFINITION_ALREADY_EXISTS
+    );
     move_to(
         to_limit,
         <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt; {
@@ -985,5 +993,32 @@ pragma opaque = <b>true</b>;
     limits_def.max_outflow == max_u64() &&
     limits_def.max_holding == max_u64() &&
     limits_def.time_period == 86400000000
+}
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_Specification_has_window_published"></a>
+
+### Function `has_window_published`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_has_window_published">has_window_published</a>&lt;CoinType&gt;(addr: address): bool
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> result == <a href="#0x1_AccountLimits_spec_has_window_published">spec_has_window_published</a>&lt;CoinType&gt;(addr);
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_has_window_published"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_has_window_published">spec_has_window_published</a>&lt;CoinType&gt;(addr: address): bool {
+    exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr)
 }
 </code></pre>

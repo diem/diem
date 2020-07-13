@@ -1,6 +1,29 @@
-//! account: bob, 0LBR
+//! account: bob, 0LBR, 0, address
 //! account: charlie, 10000000Coin1
 //! account: denise, 10000000Coin2
+
+// create a parent VASP account for Bob
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
+fun main(lr_account: &signer) {
+    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    let add_all_currencies = false;
+
+    LibraAccount::create_parent_vasp_account<LBR>(
+        lr_account,
+        {{bob}},
+        {{bob::auth_key}},
+        x"A1",
+        x"A2",
+        copy pubkey,
+        add_all_currencies,
+    );
+}
+}
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob

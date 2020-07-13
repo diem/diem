@@ -259,6 +259,23 @@ module Roles {
          has_libra_root_role(account)
     }
 
+    /// Return true if `addr` is allowed to receive and send `Libra<T>` for any T
+    public fun can_hold_balance(account: &signer): bool acquires RoleId {
+        // VASP accounts, designated_dealers, and unhosted accounts can hold balances.
+        // Administrative accounts (`Validator`, `ValidatorOperator`, `TreasuryCompliance`, and
+        // `LibraRoot`) cannot.
+        has_parent_VASP_role(account) ||
+        has_child_VASP_role(account) ||
+        has_designated_dealer_role(account) ||
+        has_unhosted_role(account)
+    }
+
+    /// Return true if `account` must have limits on sending/receiving/holding of funds
+    public fun needs_account_limits(account: &signer): bool acquires RoleId {
+        // All accounts that hold balances are subject to limits except designated dealers
+        can_hold_balance(account) && !has_designated_dealer_role(account)
+    }
+
 //**************** Specifications ****************
 
     /// >**Note:** Just started, only a few specs.
@@ -331,6 +348,17 @@ module Roles {
 
         define spec_has_on_chain_config_privilege_addr(addr: address): bool {
             spec_has_libra_root_role_addr(addr)
+        }
+
+        define spec_can_hold_balance_addr(addr: address): bool {
+            spec_has_parent_VASP_role_addr(addr) ||
+                spec_has_child_VASP_role_addr(addr) ||
+                spec_has_designated_dealer_role_addr(addr) ||
+                spec_has_unhosted_role_addr(addr)
+        }
+
+        define spec_needs_account_limits_addr(addr: address): bool {
+            spec_can_hold_balance_addr(addr) && !spec_has_designated_dealer_role_addr(addr)
         }
     }
 
