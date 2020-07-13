@@ -1,7 +1,9 @@
-[package-exceptions]
-libra-crypto = { path = "crypto/crypto", all-features = false }
-libra-node = { path = "libra-node" }
-testsuite = { path = "testsuite", system = true }
+[system-tests]
+testsuite = { path = "testsuite" }
+
+[cargo]
+toolchain = "nightly-2020-07-08"
+flags = "-Zfeatures=all"
 
 [fix]
 

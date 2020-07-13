@@ -21,6 +21,6 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
     }
     pass_through_args.extend(args.args);
 
-    let cmd = CargoCommand::Clippy(&pass_through_args);
-    check::run_with(cmd, args.check_args, xctx.config())
+    let cmd = CargoCommand::Clippy(xctx.config().cargo_config(), &pass_through_args);
+    check::run_with(cmd, args.check_args, &xctx)
 }
