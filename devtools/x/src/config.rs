@@ -21,6 +21,8 @@ pub struct Config {
     workspace: WorkspaceConfig,
     /// Clippy configureation
     clippy: Clippy,
+    /// Fix configureation
+    fix: Fix,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -106,6 +108,10 @@ pub struct SubsetConfig {
 pub struct Clippy {
     allowed: Vec<String>,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub struct Fix {}
 
 impl Config {
     pub fn from_file(f: impl AsRef<Path>) -> Result<Self> {
