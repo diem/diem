@@ -49,10 +49,40 @@ Ed25519Signature:
   NEWTYPESTRUCT: BYTES
 EventKey:
   NEWTYPESTRUCT: BYTES
+GeneralMetadata:
+  ENUM:
+    0:
+      GeneralMetadataVersion0:
+        NEWTYPE:
+          TYPENAME: GeneralMetadataV0
+GeneralMetadataV0:
+  STRUCT:
+    - to_subaddress:
+        OPTION: BYTES
+    - from_subaddress:
+        OPTION: BYTES
+    - referenced_event:
+        OPTION: U64
 HashValue:
   NEWTYPESTRUCT: BYTES
 Identifier:
   NEWTYPESTRUCT: STR
+MetadataType:
+  ENUM:
+    0:
+      Undefined: UNIT
+    1:
+      GeneralMetadataType:
+        NEWTYPE:
+          TYPENAME: GeneralMetadata
+    2:
+      TravelRuleMetadataType:
+        NEWTYPE:
+          TYPENAME: TravelRuleMetadata
+    3:
+      UnstructuredStringMetadataType:
+        NEWTYPE:
+          TYPENAME: UnstructuredStringMetadata
 Module:
   STRUCT:
     - code: BYTES
@@ -164,6 +194,16 @@ TransactionPayload:
       Module:
         NEWTYPE:
           TYPENAME: Module
+TravelRuleMetadata:
+  ENUM:
+    0:
+      TravelRuleMetadataVersion0:
+        NEWTYPE:
+          TYPENAME: TravelRuleMetadataV0
+TravelRuleMetadataV0:
+  STRUCT:
+    - off_chain_reference_id:
+        OPTION: STR
 TypeTag:
   ENUM:
     0:
@@ -186,6 +226,10 @@ TypeTag:
       Struct:
         NEWTYPE:
           TYPENAME: StructTag
+UnstructuredStringMetadata:
+  STRUCT:
+    - metadata:
+        OPTION: STR
 WriteOp:
   ENUM:
     0:

@@ -37,11 +37,13 @@ use std::{
 pub mod authenticator;
 mod change_set;
 pub mod helpers;
+mod metadata;
 mod module;
 mod script;
 mod transaction_argument;
 
 pub use change_set::ChangeSet;
+pub use metadata::*;
 pub use module::Module;
 pub use script::{ArgumentABI, Script, ScriptABI, TypeArgumentABI, SCRIPT_HASH_LENGTH};
 
