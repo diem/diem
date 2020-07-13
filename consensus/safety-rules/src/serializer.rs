@@ -7,7 +7,6 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
-use libra_logger::warn;
 use libra_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
@@ -34,36 +33,21 @@ impl SerializerService {
         let input = lcs::from_bytes(&input_message)?;
 
         let output = match input {
-            SafetyRulesInput::ConsensusState => {
-                log_and_serialize(self.internal.consensus_state(), "ConsensusState")
+            SafetyRulesInput::ConsensusState => lcs::to_bytes(&self.internal.consensus_state()),
+            SafetyRulesInput::Initialize(li) => lcs::to_bytes(&self.internal.initialize(&li)),
+            SafetyRulesInput::ConstructAndSignVote(vote_proposal) => {
+                lcs::to_bytes(&self.internal.construct_and_sign_vote(&vote_proposal))
             }
-            SafetyRulesInput::Initialize(li) => {
-                log_and_serialize(self.internal.initialize(&li), "Initialize")
-            }
-            SafetyRulesInput::ConstructAndSignVote(vote_proposal) => log_and_serialize(
-                self.internal.construct_and_sign_vote(&vote_proposal),
-                "ConstructAndSignVote",
-            ),
             SafetyRulesInput::SignProposal(block_data) => {
-                log_and_serialize(self.internal.sign_proposal(*block_data), "SignProposal")
+                lcs::to_bytes(&self.internal.sign_proposal(*block_data))
             }
             SafetyRulesInput::SignTimeout(timeout) => {
-                log_and_serialize(self.internal.sign_timeout(&timeout), "SignTimeout")
+                lcs::to_bytes(&self.internal.sign_timeout(&timeout))
             }
         };
 
         Ok(output?)
     }
-}
-
-fn log_and_serialize<T: Serialize>(
-    response: Result<T, Error>,
-    from: &'static str,
-) -> Result<Vec<u8>, lcs::Error> {
-    if let Err(e) = &response {
-        warn!("[SafetyRules] {} failed: {}", from, e);
-    }
-    lcs::to_bytes(&response)
 }
 
 pub struct SerializerClient {

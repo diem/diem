@@ -12,9 +12,14 @@ pub fn safety_log(entry: LogEntry, event: LogEvent) -> StructuredLogEntry {
 pub enum LogEntry {
     ConsensusState,
     ConstructAndSignVote,
+    Epoch,
     Initialize,
+    KeyReconciliation,
+    LastVotedRound,
+    PreferredRound,
     SignProposal,
     SignTimeout,
+    Waypoint,
 }
 
 impl LogEntry {
@@ -22,9 +27,14 @@ impl LogEntry {
         match self {
             LogEntry::ConsensusState => "consensus_state",
             LogEntry::ConstructAndSignVote => "construct_and_sign_vote",
+            LogEntry::Epoch => "epoch",
             LogEntry::Initialize => "initialize",
+            LogEntry::LastVotedRound => "last_voted_round",
+            LogEntry::KeyReconciliation => "key_reconciliation",
+            LogEntry::PreferredRound => "preferred_round",
             LogEntry::SignProposal => "sign_proposal",
             LogEntry::SignTimeout => "sign_timeout",
+            LogEntry::Waypoint => "waypoint",
         }
     }
 }
@@ -34,6 +44,7 @@ pub enum LogEvent {
     Error,
     Request,
     Success,
+    Update,
 }
 
 impl LogEvent {
@@ -42,6 +53,7 @@ impl LogEvent {
             LogEvent::Error => "error",
             LogEvent::Request => "request",
             LogEvent::Success => "success",
+            LogEvent::Update => "update",
         }
     }
 }
