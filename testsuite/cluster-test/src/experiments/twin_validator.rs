@@ -37,14 +37,18 @@ pub struct TwinValidators {
 impl ExperimentParam for TwinValidatorsParams {
     type E = TwinValidators;
     fn build(self, cluster: &Cluster) -> Self::E {
-        if self.pair > 3 {
-            panic!("pair number {} can not more than 9", self.pair);
+        if self.pair >= cluster.validator_instances().len() {
+            panic!(
+                "pair number {} can not equal or more than validator number {}",
+                self.pair,
+                cluster.validator_instances().len()
+            );
         }
         let mut instances = cluster.validator_instances().to_vec();
         let mut twin_validators = vec![];
         let mut rnd = rand::thread_rng();
         for _i in 0..self.pair {
-            twin_validators.push(instances.remove(rnd.gen_range(0, instances.len())));
+            twin_validators.push(instances.remove(rnd.gen_range(1, instances.len())));
         }
         Self::E {
             instances,
