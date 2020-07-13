@@ -32,26 +32,21 @@ script {
 //! expiration-time: 3
 // rotate bob's key
 script {
+    use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
+        // assert bob is a validator
+        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
+        assert(LibraSystem::is_validator({{bob}}) == true, 98);
+
+        assert(ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{bob}})) ==
+               ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})), 99);
+
         // alice rotates bob's public key
         ValidatorConfig::set_config(account, {{bob}},
                                     x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
                                     x"", x"", x"", x"");
-    }
-}
-
-// check: EXECUTED
-
-//! new-transaction
-//! sender: libraroot
-script {
-    use 0x1::LibraSystem;
-    use 0x1::ValidatorConfig;
-    fun main(account: &signer) {
-        // use the update_token to trigger reconfiguration
-        LibraSystem::update_and_reconfigure(account);
-
+        LibraSystem::update_config_and_reconfigure(account, {{bob}});
         // check bob's public key
         let validator_config = LibraSystem::get_validator_config({{bob}});
         assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) ==

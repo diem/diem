@@ -14,11 +14,13 @@
 ## Function `add_validator`
 
 Add
-<code>new_validator</code> to the pending validator set.
+<code>new_validator</code> to the validator set.
 Fails if the
 <code>new_validator</code> address is already in the validator set
 or does not have a
 <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a></code> resource stored at the address.
+Emits a NewEpochEvent.
+TODO(valerini): rename to add_validator_and_reconfigure?
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_validator">add_validator</a>(lr_account: &signer, validator_address: address)

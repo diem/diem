@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface,
-    GAS_UNIT_PRICE, MAX_GAS_AMOUNT,
-};
+use crate::{libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface};
 use anyhow::Result;
 use executor::{db_bootstrapper, Executor};
 use executor_types::BlockExecutor;
@@ -24,15 +21,13 @@ use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
-    account_config::{libra_root_address, LBR_NAME},
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
-    chain_id::ChainId,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
-    transaction::{RawTransaction, Script, Transaction},
+    transaction::Transaction,
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
 };
@@ -326,12 +321,6 @@ fn get_test_configs() -> (NodeConfig, KeyManagerConfig) {
     (node_config, key_manager_config)
 }
 
-// Returns the association private key used for testing.
-fn get_test_association_key() -> Ed25519PrivateKey {
-    let (_, association_key) = config_builder::test_config();
-    association_key
-}
-
 // Creates and returns a test node that uses the JsonRpcLibraInterface.
 // This setup is useful for testing nodes as they operate in a production environment.
 fn setup_node_using_json_rpc() -> (Node<JsonRpcLibraInterface>, Runtime) {
@@ -545,15 +534,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         .unwrap();
     let txn1 = Transaction::UserTransaction(txn1.into_inner());
 
-    let association_prikey = get_test_association_key();
-    let txn2 = build_reconfiguration_transaction(
-        account_config::libra_root_address(),
-        1,
-        &association_prikey,
-        Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
-    );
-
-    node.execute_and_commit(vec![txn1, txn2]);
+    node.execute_and_commit(vec![txn1]);
 
     let new_config = node.libra.retrieve_validator_config(owner_account).unwrap();
     let new_info = node.libra.retrieve_validator_info(owner_account).unwrap();
@@ -597,7 +578,6 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
 
     // Execute key rotation on-chain
-    submit_reconfiguration_transaction(&node);
     node.execute_and_commit(node.libra.take_all_transactions());
     let rotated_info = node.libra.retrieve_validator_info(owner_account).unwrap();
     assert_ne!(
@@ -682,7 +662,6 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     // executed to re-sync everything up (on-chain).
     node.update_libra_timestamp();
     node.key_manager.execute_once().unwrap();
-    submit_reconfiguration_transaction(&node);
     node.execute_and_commit(node.libra.take_all_transactions());
     assert_eq!(
         Action::NoAction,
@@ -729,48 +708,4 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
 
     // Check that execute() now returns an error and doesn't spin forever.
     assert!(node.key_manager.execute().is_err());
-}
-
-// Creates and submits a reconfiguration transaction to the given libra interface.
-fn submit_reconfiguration_transaction<T: LibraInterface>(node: &Node<T>) {
-    let association_privkey = get_test_association_key();
-    let association_account = libra_root_address();
-    let seq_id = node
-        .libra
-        .retrieve_sequence_number(association_account)
-        .unwrap();
-    let expiration = Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS);
-
-    let txn = build_reconfiguration_transaction(
-        association_account,
-        seq_id,
-        &association_privkey,
-        expiration,
-    );
-    node.libra.submit_transaction(txn).unwrap();
-}
-
-fn build_reconfiguration_transaction(
-    sender: AccountAddress,
-    seq_id: u64,
-    signing_key: &Ed25519PrivateKey,
-    expiration: Duration,
-) -> Transaction {
-    let script = Script::new(
-        libra_transaction_scripts::RECONFIGURE_TXN.clone(),
-        vec![],
-        vec![],
-    );
-    let raw_txn = RawTransaction::new_script(
-        sender,
-        seq_id,
-        script,
-        MAX_GAS_AMOUNT,
-        GAS_UNIT_PRICE,
-        LBR_NAME.to_owned(),
-        expiration,
-        ChainId::test(),
-    );
-    let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();
-    Transaction::UserTransaction(signed_txn.into_inner())
 }

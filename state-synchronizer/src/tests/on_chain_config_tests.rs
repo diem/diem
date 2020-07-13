@@ -28,8 +28,7 @@ use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
     encode_block_prologue_script, encode_modify_publishing_option_script,
-    encode_peer_to_peer_with_metadata_script, encode_reconfigure_script,
-    encode_set_validator_config_script,
+    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
 };
 
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
@@ -175,7 +174,7 @@ fn test_on_chain_config_pub_sub() {
         /* sequence_number = */ 0,
         operator_key,
         operator_public_key,
-        Some(encode_set_validator_config_script(
+        Some(encode_set_validator_config_and_reconfigure_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
             new_network_pubkey.as_slice().to_vec(),
@@ -185,16 +184,7 @@ fn test_on_chain_config_pub_sub() {
         )),
     );
 
-    // reconfigure the system with a new consensus key
-    let txn6 = get_test_signed_transaction(
-        libra_root_address(),
-        /* sequence_number = */ 3,
-        genesis_key.clone(),
-        genesis_key.public_key(),
-        Some(encode_reconfigure_script()),
-    );
-
-    let block2 = vec![txn3, txn4, txn5, txn6];
+    let block2 = vec![txn3, txn4, txn5];
     let block2_id = gen_block_id(2);
 
     let output = block_executor

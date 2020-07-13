@@ -13,7 +13,10 @@
 
 ## Function `set_validator_config`
 
-Set validator's config.
+Set validator's config locally.
+Does not emit NewEpochEvent, the config is NOT changed in the validator set.
+TODO(valerini): rename to register_validator_config to avoid confusion with
+set_validator_config_and_reconfigure script.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_config">set_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)

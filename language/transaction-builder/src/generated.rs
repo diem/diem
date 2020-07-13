@@ -49,9 +49,10 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
     )
 }
 
-/// Add `new_validator` to the pending validator set. Fails if the `new_validator` address
-/// is already in the validator set or does not have a `ValidatorConfig` resource stored
-/// at the address.
+/// Add `new_validator` to the validator set. Fails if the `new_validator` address is
+/// already in the validator set or does not have a `ValidatorConfig` resource stored at
+/// the address. Emits a NewEpochEvent. TODO(valerini): rename to
+/// add_validator_and_reconfigure?
 pub fn encode_add_validator_script(validator_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -502,24 +503,9 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
     )
 }
 
-/// Update configs of all the validators and emit reconfiguration event.
-pub fn encode_reconfigure_script() -> Script {
-    Script::new(
-        vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 4, 7, 11, 35, 8, 46, 16, 0, 0,
-            0, 1, 0, 1, 0, 1, 6, 12, 0, 11, 76, 105, 98, 114, 97, 83, 121, 115, 116, 101, 109, 22,
-            117, 112, 100, 97, 116, 101, 95, 97, 110, 100, 95, 114, 101, 99, 111, 110, 102, 105,
-            103, 117, 114, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 3, 11, 0,
-            17, 0, 2,
-        ],
-        vec![],
-        vec![],
-    )
-}
-
-/// Adding `to_remove` to the set of pending validator removals. Fails if the `to_remove`
-/// address is already in the validator set or already in the pending removals. Callable
-/// by Validator's operator.
+/// Removes a validator from the validator set. Fails if the validator_address is not in
+/// the validator set. Emits a NewEpochEvent. TODO(valerini): rename to
+/// remove_validator_and_reconfigure?
 pub fn encode_remove_validator_script(validator_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -663,7 +649,9 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
     )
 }
 
-/// Set validator's config.
+/// Set validator's config locally. Does not emit NewEpochEvent, the config is NOT changed
+/// in the validator set. TODO(valerini): rename to register_validator_config to avoid
+/// confusion with set_validator_config_and_reconfigure script.
 pub fn encode_set_validator_config_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
@@ -679,6 +667,39 @@ pub fn encode_set_validator_config_script(
             105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99,
             111, 110, 102, 105, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 9,
             11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11, 5, 11, 6, 17, 0, 2,
+        ],
+        vec![],
+        vec![
+            TransactionArgument::Address(validator_account),
+            TransactionArgument::U8Vector(consensus_pubkey),
+            TransactionArgument::U8Vector(validator_network_identity_pubkey),
+            TransactionArgument::U8Vector(validator_network_address),
+            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
+            TransactionArgument::U8Vector(fullnodes_network_address),
+        ],
+    )
+}
+
+/// Set validator's config and updates the config in the validator set. NewEpochEvent is
+/// emitted.
+pub fn encode_set_validator_config_and_reconfigure_script(
+    validator_account: AccountAddress,
+    consensus_pubkey: Vec<u8>,
+    validator_network_identity_pubkey: Vec<u8>,
+    validator_network_address: Vec<u8>,
+    fullnodes_network_identity_pubkey: Vec<u8>,
+    fullnodes_network_address: Vec<u8>,
+) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 19, 7, 33, 69, 8, 102, 16,
+            0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 10,
+            2, 0, 2, 6, 12, 5, 11, 76, 105, 98, 114, 97, 83, 121, 115, 116, 101, 109, 15, 86, 97,
+            108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95,
+            99, 111, 110, 102, 105, 103, 29, 117, 112, 100, 97, 116, 101, 95, 99, 111, 110, 102,
+            105, 103, 95, 97, 110, 100, 95, 114, 101, 99, 111, 110, 102, 105, 103, 117, 114, 101,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 12, 10, 0, 10, 1, 11, 2, 11,
+            3, 11, 4, 11, 5, 11, 6, 17, 0, 11, 0, 10, 1, 17, 1, 2,
         ],
         vec![],
         vec![

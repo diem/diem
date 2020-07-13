@@ -16,7 +16,7 @@ fun main(account: &signer) {
 script {
     use 0x1::LibraSystem;
     fun main(account: &signer) {
-        LibraSystem::update_and_reconfigure(account);
+        LibraSystem::update_config_and_reconfigure(account, {{bob}});
     }
 }
 // check: ABORTED

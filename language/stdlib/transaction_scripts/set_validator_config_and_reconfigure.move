@@ -1,11 +1,10 @@
 script {
+    use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;
 
-    /// Set validator's config locally.
-    /// Does not emit NewEpochEvent, the config is NOT changed in the validator set.
-    /// TODO(valerini): rename to register_validator_config to avoid confusion with
-    ///                 set_validator_config_and_reconfigure script.
-    fun set_validator_config(
+    /// Set validator's config and updates the config in the validator set.
+    /// NewEpochEvent is emitted.
+    fun set_validator_config_and_reconfigure(
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
@@ -23,5 +22,6 @@ script {
             fullnodes_network_identity_pubkey,
             fullnodes_network_address
         );
+        LibraSystem::update_config_and_reconfigure(account, validator_account);
      }
 }

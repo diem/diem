@@ -1284,7 +1284,7 @@ fn test_key_manager_consensus_rotation() {
 
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
     let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
-    let account = node_config.clone().validator_network.unwrap().peer_id();
+    let account = node_config.validator_network.unwrap().peer_id();
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
     assert_eq!(&current_consensus, validator_info.consensus_public_key());
@@ -1302,12 +1302,11 @@ fn test_key_manager_consensus_rotation() {
     sleep(Duration::from_secs(20));
 
     // Submit a reconfiguration so that the key rotation will be performed on-chain
-    let libra = get_libra_interface(&node_config);
-    let time_service = RealTimeService::new();
-    let association_key = env.faucet_key.0;
-    submit_new_reconfig(&libra, &time_service, &association_key).unwrap();
-
-    sleep(Duration::from_secs(2));
+    // let libra = get_libra_interface(&node_config);
+    // let time_service = RealTimeService::new();
+    // let association_key = env.faucet_key.0;
+    // submit_new_reconfig(&libra, &time_service, &association_key).unwrap();
+    // sleep(Duration::from_secs(2));
 
     // Verify the consensus key has been rotated in secure storage and on-chain.
     let rotated_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
@@ -1368,7 +1367,7 @@ fn submit_new_validator_config(
     let validator_network_key = validator_config.validator_network_identity_public_key;
     let full_node_network_key = validator_config.full_node_network_identity_public_key;
     let full_node_network_address = validator_config.full_node_network_address;
-    let script = transaction_builder::encode_set_validator_config_script(
+    let script = transaction_builder::encode_set_validator_config_and_reconfigure_script(
         validator_account,
         consensus_key.to_bytes().to_vec(),
         validator_network_key.to_bytes(),
@@ -1378,25 +1377,6 @@ fn submit_new_validator_config(
     );
     let operator_address = account_address::from_public_key(&operator_key.public_key());
     submit_new_transaction(libra, time_service, operator_key, operator_address, script)
-}
-
-fn submit_new_reconfig(
-    libra: &JsonRpcLibraInterface,
-    time_service: &RealTimeService,
-    association_key: &Ed25519PrivateKey,
-) -> anyhow::Result<(AccountAddress, u64)> {
-    let script = Script::new(
-        libra_transaction_scripts::RECONFIGURE_TXN.clone(),
-        vec![],
-        vec![],
-    );
-    submit_new_transaction(
-        libra,
-        time_service,
-        association_key,
-        libra_root_address(),
-        script,
-    )
 }
 
 /// Helper function to build libra interfaces for smoke test
@@ -1420,8 +1400,7 @@ fn wait_for_all_nodes(
 #[test]
 /// There are three main steps to network key rotation
 /// 1. Rotate the key in local storage
-/// 2. Write a transaction to update the ValidatorConfig (Operator)
-/// 3. Make a Reconfigure call (Association)
+/// 2. Write a transaction to update the ValidatorConfig trigerring the reconfiguration (Operator)
 fn test_network_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
@@ -1494,6 +1473,7 @@ fn test_network_key_rotation() {
     validator_config.validator_network_address = raw_enc_addr;
     validator_config.validator_network_identity_public_key = new_public_key;
 
+    let last_reconfig = libra.last_reconfiguration().unwrap();
     let operator_key = storage.export_private_key(OPERATOR_KEY).unwrap();
     submit_new_validator_config(
         libra,
@@ -1512,11 +1492,6 @@ fn test_network_key_rotation() {
             .validator_network_identity_public_key
             == new_public_key
     });
-
-    // This is submitting a new reconfig on a different validator using the association key
-    let last_reconfig = libra.last_reconfiguration().unwrap();
-    let association_key = swarm.faucet_key.0;
-    submit_new_reconfig(libra, &time_service, &association_key).unwrap();
 
     // Ensure all nodes have been reconfigured
     wait_for_all_nodes(&libra_interfaces, |libra| {
