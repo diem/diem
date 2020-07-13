@@ -55,7 +55,6 @@ default = ["fiat"]
 assert-private-keys-not-cloneable = []
 cloneable-private-keys = []
 fuzzing = ["proptest", "proptest-derive", "cloneable-private-keys"]
-batch = ["ed25519-dalek/batch"]
 fiat = ["curve25519-dalek", "ed25519-dalek", "x25519-dalek"]
 vanilla = ["vanilla-curve25519-dalek", "vanilla-ed25519-dalek", "vanilla-x25519-dalek"]
 
