@@ -82,7 +82,7 @@ module Roles {
     }
     spec fun grant_treasury_compliance_role {
         aborts_if !LibraTimestamp::spec_is_genesis();
-        aborts_if !spec_has_libra_root_role(lr_account);
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if spec_address_of(treasury_compliance_account) != CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS();
         aborts_if exists<RoleId>(spec_address_of(treasury_compliance_account));
         ensures exists<RoleId>(spec_address_of(treasury_compliance_account));
@@ -107,7 +107,7 @@ module Roles {
         move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID });
     }
     spec fun new_designated_dealer_role {
-        aborts_if !spec_has_treasury_compliance_role(creating_account);
+        aborts_if !spec_has_treasury_compliance_role_addr(Signer::spec_address_of(creating_account));
         aborts_if exists<RoleId>(spec_address_of(new_account));
         ensures exists<RoleId>(spec_address_of(new_account));
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_DESIGNATED_DEALER_ROLE_ID();
@@ -125,7 +125,7 @@ module Roles {
         move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID });
     }
     spec fun new_validator_role {
-        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(creating_account));
         aborts_if exists<RoleId>(spec_address_of(new_account));
         ensures exists<RoleId>(spec_address_of(new_account));
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_VALIDATOR_ROLE_ID();
@@ -143,7 +143,7 @@ module Roles {
         move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID });
     }
     spec fun new_validator_operator_role {
-        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(creating_account));
         aborts_if exists<RoleId>(spec_address_of(new_account));
         ensures exists<RoleId>(spec_address_of(new_account));
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_VALIDATOR_OPERATOR_ROLE_ID();
@@ -161,7 +161,7 @@ module Roles {
         move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID });
     }
     spec fun new_parent_vasp_role {
-        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(creating_account));
         aborts_if exists<RoleId>(spec_address_of(new_account));
         ensures exists<RoleId>(spec_address_of(new_account));
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_PARENT_VASP_ROLE_ID();
@@ -179,7 +179,7 @@ module Roles {
         move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID });
     }
     spec fun new_child_vasp_role {
-        aborts_if !spec_has_parent_VASP_role(creating_account);
+        aborts_if !spec_has_parent_VASP_role_addr(Signer::spec_address_of(creating_account));
         aborts_if exists<RoleId>(spec_address_of(new_account));
         ensures exists<RoleId>(spec_address_of(new_account));
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_CHILD_VASP_ROLE_ID();
@@ -276,8 +276,7 @@ module Roles {
             global<RoleId>(addr).role_id
         }
 
-        define spec_has_role_id(account: signer, role_id: u64): bool {
-            let addr = spec_address_of(account);
+        define spec_has_role_id_addr(addr: address, role_id: u64): bool {
             exists<RoleId>(addr) && global<RoleId>(addr).role_id == role_id
         }
 
@@ -290,48 +289,48 @@ module Roles {
         define SPEC_CHILD_VASP_ROLE_ID(): u64 { 6 }
         define SPEC_UNHOSTED_ROLE_ID(): u64 { 7 }
 
-        define spec_has_libra_root_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_LIBRA_ROOT_ROLE_ID())
+        define spec_has_libra_root_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_LIBRA_ROOT_ROLE_ID())
         }
 
-        define spec_has_treasury_compliance_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_TREASURY_COMPLIANCE_ROLE_ID())
+        define spec_has_treasury_compliance_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_TREASURY_COMPLIANCE_ROLE_ID())
         }
 
-        define spec_has_designated_dealer_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_DESIGNATED_DEALER_ROLE_ID())
+        define spec_has_designated_dealer_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_DESIGNATED_DEALER_ROLE_ID())
         }
 
-        define spec_has_validator_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_VALIDATOR_ROLE_ID())
+        define spec_has_validator_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_VALIDATOR_ROLE_ID())
         }
 
-        define spec_has_validator_operator_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_VALIDATOR_OPERATOR_ROLE_ID())
+        define spec_has_validator_operator_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_VALIDATOR_OPERATOR_ROLE_ID())
         }
 
-        define spec_has_parent_VASP_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_PARENT_VASP_ROLE_ID())
+        define spec_has_parent_VASP_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_PARENT_VASP_ROLE_ID())
         }
 
-        define spec_has_child_VASP_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_CHILD_VASP_ROLE_ID())
+        define spec_has_child_VASP_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_CHILD_VASP_ROLE_ID())
         }
 
-        define spec_has_unhosted_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_UNHOSTED_ROLE_ID())
+        define spec_has_unhosted_role_addr(addr: address): bool {
+            spec_has_role_id_addr(addr, SPEC_UNHOSTED_ROLE_ID())
         }
 
-        define spec_has_register_new_currency_privilege(account: signer): bool {
-            spec_has_libra_root_role(account)
+        define spec_has_register_new_currency_privilege_addr(addr: address): bool {
+            spec_has_treasury_compliance_role_addr(addr)
         }
 
-        define spec_has_update_dual_attestation_threshold_privilege(account: signer): bool  {
-            spec_has_treasury_compliance_role(account)
+        define spec_has_update_dual_attestation_threshold_privilege_addr(addr: address): bool  {
+            spec_has_treasury_compliance_role_addr(addr)
         }
 
-        define spec_has_on_chain_config_privilege(account: signer): bool {
-            spec_has_libra_root_role(account)
+        define spec_has_on_chain_config_privilege_addr(addr: address): bool {
+            spec_has_libra_root_role_addr(addr)
         }
     }
 
@@ -356,17 +355,17 @@ module Roles {
 
     spec schema AbortsIfNotLibraRoot {
         creating_account: signer;
-        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(creating_account));
     }
 
     spec schema AbortsIfNotTreasuryCompliance {
         creating_account: signer;
-        aborts_if !spec_has_treasury_compliance_role(creating_account);
+        aborts_if !spec_has_treasury_compliance_role_addr(Signer::spec_address_of(creating_account));
     }
 
     spec schema AbortsIfNotParentVASP {
         creating_account: signer;
-        aborts_if !spec_has_parent_VASP_role(creating_account);
+        aborts_if !spec_has_parent_VASP_role_addr(Signer::spec_address_of(creating_account));
     }
 
     spec module {

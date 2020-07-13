@@ -700,7 +700,7 @@ module that uses it.
 
 
 <pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
-<b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(lr_account);
+<b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> spec_address_of(treasury_compliance_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>();
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(treasury_compliance_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(treasury_compliance_account));
@@ -720,7 +720,7 @@ module that uses it.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(creating_account);
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>();
@@ -739,7 +739,7 @@ module that uses it.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(creating_account);
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>();
@@ -758,7 +758,7 @@ module that uses it.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(creating_account);
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>();
@@ -777,7 +777,7 @@ module that uses it.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(creating_account);
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>();
@@ -796,7 +796,7 @@ module that uses it.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role">spec_has_parent_VASP_role</a>(creating_account);
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>();
@@ -844,9 +844,8 @@ Helper functions
     <b>let</b> addr = spec_address_of(account);
     <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id
 }
-<a name="0x1_Roles_spec_has_role_id"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account: signer, role_id: u64): bool {
-    <b>let</b> addr = spec_address_of(account);
+<a name="0x1_Roles_spec_has_role_id_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr: address, role_id: u64): bool {
     exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) && <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == role_id
 }
 <a name="0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID"></a>
@@ -865,49 +864,49 @@ Helper functions
 <b>define</b> <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>(): u64 { 6 }
 <a name="0x1_Roles_SPEC_UNHOSTED_ROLE_ID"></a>
 <b>define</b> <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>(): u64 { 7 }
-<a name="0x1_Roles_spec_has_libra_root_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_libra_root_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_treasury_compliance_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_treasury_compliance_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_designated_dealer_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_designated_dealer_role">spec_has_designated_dealer_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_designated_dealer_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_validator_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_validator_role">spec_has_validator_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_validator_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_validator_role_addr">spec_has_validator_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_validator_operator_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_validator_operator_role">spec_has_validator_operator_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_validator_operator_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_validator_operator_role_addr">spec_has_validator_operator_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_parent_VASP_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_parent_VASP_role">spec_has_parent_VASP_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_parent_VASP_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_child_VASP_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_child_VASP_role">spec_has_child_VASP_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_child_VASP_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_unhosted_role"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_unhosted_role">spec_has_unhosted_role</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(account, <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>())
+<a name="0x1_Roles_spec_has_unhosted_role_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_unhosted_role_addr">spec_has_unhosted_role_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_register_new_currency_privilege"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_register_new_currency_privilege">spec_has_register_new_currency_privilege</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(account)
+<a name="0x1_Roles_spec_has_register_new_currency_privilege_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
 }
-<a name="0x1_Roles_spec_has_update_dual_attestation_threshold_privilege"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_update_dual_attestation_threshold_privilege">spec_has_update_dual_attestation_threshold_privilege</a>(account: signer): bool  {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(account)
+<a name="0x1_Roles_spec_has_update_dual_attestation_threshold_privilege_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_update_dual_attestation_threshold_privilege_addr">spec_has_update_dual_attestation_threshold_privilege_addr</a>(addr: address): bool  {
+    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
 }
-<a name="0x1_Roles_spec_has_on_chain_config_privilege"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_on_chain_config_privilege">spec_has_on_chain_config_privilege</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(account)
+<a name="0x1_Roles_spec_has_on_chain_config_privilege_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_on_chain_config_privilege_addr">spec_has_on_chain_config_privilege_addr</a>(addr: address): bool {
+    <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr)
 }
 </code></pre>
 
@@ -956,7 +955,7 @@ will remain an account with role
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
     creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(creating_account);
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 }
 </code></pre>
 
@@ -968,7 +967,7 @@ will remain an account with role
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a> {
     creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(creating_account);
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 }
 </code></pre>
 
@@ -980,7 +979,7 @@ will remain an account with role
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotParentVASP">AbortsIfNotParentVASP</a> {
     creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role">spec_has_parent_VASP_role</a>(creating_account);
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
 }
 </code></pre>
 

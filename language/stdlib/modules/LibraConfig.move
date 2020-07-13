@@ -167,13 +167,10 @@ module LibraConfig {
             exists<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
 
-        define spec_has_modify_config_capability<Config>(): bool {
-            exists<ModifyConfigCapability<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+        define spec_has_on_chain_config_privilege_addr(addr: address): bool {
+            Roles::spec_has_libra_root_role_addr(addr)
         }
 
-        define spec_has_on_chain_config_privilege(account: signer): bool {
-            Roles::spec_has_libra_root_role(account)
-        }
     }
 
     // check spec_is_published

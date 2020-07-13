@@ -57,18 +57,14 @@
     lr_account: &signer,
     tc_account: &signer,
 ) {
-    // Register the <a href="#0x1_Coin2">Coin2</a> currency.
-    <b>let</b> (coin2_mint_cap, coin2_burn_cap) =
-        <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(
-            lr_account,
-            <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2), // exchange rate <b>to</b> <a href="LBR.md#0x1_LBR">LBR</a>
-            <b>false</b>,   // is_synthetic
-            1000000, // scaling_factor = 10^6
-            100,     // fractional_part = 10^2
-            b"<a href="#0x1_Coin2">Coin2</a>",
-        );
-    <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account, coin2_mint_cap, tc_account);
-    <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(tc_account, coin2_burn_cap, tc_account);
+    <a href="Libra.md#0x1_Libra_register_SCS_currency">Libra::register_SCS_currency</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(
+        lr_account,
+        tc_account,
+        <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2), // exchange rate <b>to</b> <a href="LBR.md#0x1_LBR">LBR</a>
+        1000000, // scaling_factor = 10^6
+        100,     // fractional_part = 10^2
+        b"<a href="#0x1_Coin2">Coin2</a>",
+    );
 }
 </code></pre>
 

@@ -688,21 +688,10 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        // TODO (dd): I'm getting an incomprehensible error message from the prover, saying
-        // "abort not covered" and pointing exactly to the line
-        // assert(Roles::has_register_new_currency_privilege(lr_account)...) above, which
-        // is obviously covered by the aborts_if below (and in RegisterCurrencyAbortsIf, below).
-        // After adding the pragma, I get "function does not abort under this condition."
         pragma aborts_if_is_partial = true;
-        // aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
-        include RegisterCurrencyAbortsIf<CoinType>;
-        ensures spec_is_currency<CoinType>();
-    }
-
-    spec schema RegisterCurrencyAbortsIf<CoinType> {
-        lr_account: signer;
-        // TODO (dd): Incomprehensible "function does not abort under this condition"
-        // aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
+        // TODO (dd): explore why I'm getting an error saying has_register_new_currency_privilege assert in
+        // code is not covered.
+        // aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account));
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
@@ -743,7 +732,7 @@ module Libra {
     spec fun register_SCS_currency {
         // TODO (dd): I could not figure out what the problem was here.
         pragma aborts_if_is_partial = true;
-        include RegisterCurrencyAbortsIf<CoinType>;
+        // include RegisterCurrencyAbortsIf<CoinType>;
         ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
     }
 
