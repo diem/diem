@@ -291,7 +291,7 @@ impl TestInstrumenter {
         let preconds = self.get_smoke_test_preconditions(func_env);
         let mut conds = vec![];
         for precond in preconds {
-            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, data, count, true, &conds, " in the precondition");
+            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, &precond.loc, data, count, true, &conds, " in the precondition");
             conds.push(precond.clone());
         }
     }
@@ -301,7 +301,7 @@ impl TestInstrumenter {
     fn instrument_const_postcond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
         let preconds = self.get_smoke_test_preconditions(func_env);
         for cond in &func_env.get_spec().conditions {
-            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, data, count, true, &preconds, " in the postcondition");
+            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, &cond.loc, data, count, true, &preconds, " in the postcondition");
         }
     }
 
@@ -310,6 +310,7 @@ impl TestInstrumenter {
         kind: &ConditionKind,
         func_env: &FunctionEnv<'_>,
         exp: &Exp,
+        loc: &Loc,
         data: &mut FunctionTargetData,
         count: &mut i64,
         first_level: bool,
@@ -322,11 +323,11 @@ impl TestInstrumenter {
             let exps = vec![exp_is_true, exp_is_false];
 
             // Create a specification check for each boolean polarity true and false
-            for (i, exp) in exps.iter().enumerate() {
+            for exp in exps {
                 let mut conds = preconds.clone();
 
                 *count = *count + 1;
-                let span = Span::new(func_env.get_loc().span().start() + ByteOffset(*count), func_env.get_loc().span().end());
+                let span = Span::new(loc.span().start() + ByteOffset(*count), loc.span().end());
                 let loc = Loc::new(func_env.get_loc().file_id(), span);
 
                 let cond = self.make_condition(
@@ -336,17 +337,10 @@ impl TestInstrumenter {
                 );
                 conds.push(cond);
                 let info = ConditionInfo {
-                    message: if i == 0 {
-                        format!("subexpression in {} is always true: {:?}{}",
-                            func_env.get_name().display(func_env.symbol_pool()),
-                            exp,
-                            msg_suffix)
-                    } else {
-                        format!("subexpression in {} is always false: {:?}{}",
-                            func_env.get_name().display(func_env.symbol_pool()),
-                            exp,
-                            msg_suffix)
-                    },
+                    message: format!("subexpression in {} is always constant: {:?} {}",
+                        func_env.get_name().display(func_env.symbol_pool()),
+                        &exp,
+                        msg_suffix),
                     omit_trace: true,
                     negative_cond: true,
                 };
@@ -359,16 +353,16 @@ impl TestInstrumenter {
         match exp {
             Call(_, _, exps) => {
                 for exp in exps {
-                    self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds, msg_suffix);
+                    self.create_const_subexp_condition(kind, func_env, &exp, loc, data, count, false, preconds, msg_suffix);
                 }
             }
             Block(_, _, exp) => {
-                self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &exp, loc, data, count, false, preconds, msg_suffix);
             }
             IfElse(_, cond, then_, else_) => {
-                self.create_const_subexp_condition(kind, func_env, &cond, data, count, false, preconds, msg_suffix);
-                self.create_const_subexp_condition(kind, func_env, &then_, data, count, false, preconds, msg_suffix);
-                self.create_const_subexp_condition(kind, func_env, &else_, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &cond, loc, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &then_, loc, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &else_, loc, data, count, false, preconds, msg_suffix);
             }
             _ => ()
         }
