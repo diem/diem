@@ -102,8 +102,7 @@ fn execute_function_in_module<S: StateView>(
         module.identifier_at(entry_name_idx)
     };
     {
-        let mut libra_vm = LibraVM::new();
-        libra_vm.load_configs(state_view);
+        let libra_vm = LibraVM::new(state_view);
 
         let internals = libra_vm.internals();
 

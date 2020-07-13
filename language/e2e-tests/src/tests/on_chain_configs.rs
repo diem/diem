@@ -21,8 +21,7 @@ use transaction_builder::encode_update_dual_attestation_limit_script;
 #[test]
 fn initial_libra_version() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let mut vm = LibraVM::new();
-    vm.load_configs(executor.get_state_view());
+    let vm = LibraVM::new(executor.get_state_view());
 
     assert_eq!(
         vm.internals().libra_version().unwrap(),
@@ -42,9 +41,9 @@ fn initial_libra_version() {
     executor.new_block();
     executor.execute_and_apply(txn);
 
-    vm.load_configs(executor.get_state_view());
+    let new_vm = LibraVM::new(executor.get_state_view());
     assert_eq!(
-        vm.internals().libra_version().unwrap(),
+        new_vm.internals().libra_version().unwrap(),
         LibraVersion { major: 2 }
     );
 }
