@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 #[cfg(feature = "vanilla")]
+use vanilla_curve25519_dalek as curve25519_dalek;
+#[cfg(feature = "vanilla")]
 use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate as libra_crypto;
@@ -16,7 +18,7 @@ use crate::{
 
 use core::{
     convert::TryFrom,
-    ops::{Index, IndexMut},
+    ops::{Index, IndexMut, Neg},
 };
 
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
@@ -27,6 +29,40 @@ use serde::{Deserialize, Serialize};
 struct CryptoHashable(pub usize);
 
 proptest! {
+
+    // In this test we demonstrate a signature that's not message-bound by only
+    // modifying the public key and the R component, under a pathological yet
+    // admissible S< l value for the signature.
+    #[test]
+    fn verify_sig_strict_torsion(idx in 0usize..8usize){
+        let message = b"hello_world";
+
+        // Dalek only performs an order check, so this is allowed
+        let bad_scalar = curve25519_dalek::scalar::Scalar::zero();
+
+        let bad_component_1 = curve25519_dalek::edwards::CompressedEdwardsY(EIGHT_TORSION[idx]).decompress().unwrap();
+        let bad_component_2 = bad_component_1.neg();
+
+        // compute bad_pub_key, bad_signature
+        let bad_pub_key_point = bad_component_1; // we need this to cancel the hashed component of the verification equation
+
+        // we pick an evil R component
+        let bad_sig_point = bad_component_2;
+
+        let bad_key = ed25519_dalek::PublicKey::from_bytes(&bad_pub_key_point.compress().to_bytes()).unwrap();
+        // We check that we would have caught this one on the public key
+        prop_assert!(Ed25519PublicKey::try_from(&bad_pub_key_point.compress().to_bytes()[..]).is_err());
+
+        let bad_signature = ed25519_dalek::Signature::from_bytes(&[
+            &bad_sig_point.compress().to_bytes()[..],
+            &bad_scalar.to_bytes()[..]
+        ].concat()).unwrap();
+
+        // Seek k = H(R, A, M) ≡ 1 [8]
+        prop_assume!(bad_key.verify(&message[..], &bad_signature).is_ok());
+        prop_assert!(bad_key.verify_strict(&message[..], &bad_signature).is_err());
+
+    }
 
     #[test]
     fn convert_from_ed25519_publickey(keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()) {
