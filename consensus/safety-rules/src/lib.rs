@@ -7,6 +7,7 @@ mod consensus_state;
 mod counters;
 mod error;
 mod local_client;
+mod logging;
 mod persistent_safety_storage;
 mod process;
 mod remote_service;
