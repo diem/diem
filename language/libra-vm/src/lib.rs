@@ -113,9 +113,6 @@ pub mod foreign_contracts;
 mod libra_vm;
 pub mod transaction_metadata;
 
-#[cfg(test)]
-mod unit_tests;
-
 pub mod libra_transaction_executor;
 pub mod libra_transaction_validator;
 pub mod system_module_names;

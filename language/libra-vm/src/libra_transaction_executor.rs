@@ -12,7 +12,6 @@ use crate::{
     transaction_metadata::TransactionMetadata,
     VMExecutor,
 };
-use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_trace::prelude::*;
@@ -20,8 +19,8 @@ use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
     transaction::{
-        ChangeSet, Module, Script, SignatureCheckedTransaction, SignedTransaction, Transaction,
-        TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
+        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionArgument,
+        TransactionOutput, TransactionPayload, TransactionStatus,
     },
     vm_status::{StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
@@ -297,7 +296,6 @@ impl LibraVM {
     ) -> Result<TransactionOutput, VMStatus> {
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
-        remote_cache.push_write_set(&write_set);
         Ok(TransactionOutput::new(
             write_set,
             events,
@@ -347,26 +345,13 @@ impl LibraVM {
             &txn_data,
             VMStatus::Executed,
         )
-        .map(|output| {
-            remote_cache.push_write_set(output.write_set());
-            output
-        })
     }
 
     fn process_writeset_transaction(
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
-        txn: SignedTransaction,
+        txn: SignatureCheckedTransaction,
     ) -> Result<TransactionOutput, VMStatus> {
-        let txn = match txn.check_signature() {
-            Ok(t) => t,
-            _ => {
-                return Ok(discard_error_output(VMStatus::Error(
-                    StatusCode::INVALID_SIGNATURE,
-                )))
-            }
-        };
-
         let change_set = if let TransactionPayload::WriteSet(change_set) = txn.payload() {
             change_set
         } else {
@@ -478,71 +463,53 @@ impl LibraVM {
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
-        let blocks = chunk_block_transactions(transactions);
+        let mut current_block_id;
         let mut execute_block_trace_guard = vec![];
-        let mut current_block_id = HashValue::zero();
-        for block in blocks {
-            match block {
-                TransactionBlock::UserTransaction(txns) => {
-                    let mut outs =
-                        self.execute_user_transactions(current_block_id, txns, data_cache)?;
-                    result.append(&mut outs);
-                }
-                TransactionBlock::BlockPrologue(block_metadata) => {
+        let mut should_restart = false;
+
+        let signature_verified_block: Vec<Result<PreprocessedTransaction, VMStatus>>;
+        {
+            signature_verified_block = transactions
+                .into_par_iter()
+                .map(preprocess_transaction)
+                .collect();
+        }
+
+        for txn in signature_verified_block {
+            if should_restart {
+                result.push(TransactionOutput::new(
+                    WriteSet::default(),
+                    vec![],
+                    0,
+                    TransactionStatus::Retry,
+                ));
+                continue;
+            };
+            let output = match txn {
+                Ok(PreprocessedTransaction::BlockPrologue(block_metadata)) => {
                     execute_block_trace_guard.clear();
                     current_block_id = block_metadata.id();
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
-                    result.push(self.process_block_prologue(data_cache, block_metadata)?)
+                    self.process_block_prologue(data_cache, block_metadata)?
                 }
-                TransactionBlock::WaypointWriteSet(change_set) => result.push(
-                    self.process_waypoint_change_set(data_cache, change_set)
-                        .unwrap_or_else(discard_error_output),
-                ),
-                TransactionBlock::WriteSet(txn) => {
-                    result.push(self.process_writeset_transaction(data_cache, *txn)?)
-                }
-            }
-        }
-
-        // Record the histogram count for transactions per block.
-        match i64::try_from(count) {
-            Ok(val) => BLOCK_TRANSACTION_COUNT.set(val),
-            Err(_) => BLOCK_TRANSACTION_COUNT.set(std::i64::MAX),
-        }
-
-        Ok(result)
-    }
-
-    fn execute_user_transactions(
-        &mut self,
-        block_id: HashValue,
-        txn_block: Vec<SignedTransaction>,
-        data_cache: &mut StateViewCache<'_>,
-    ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>>;
-        {
-            trace_code_block!("libra_vm::verify_signatures", {"block", block_id});
-            signature_verified_block = txn_block
-                .into_par_iter()
-                .map(|txn| {
-                    txn.check_signature()
-                        .map_err(|_| VMStatus::Error(StatusCode::INVALID_SIGNATURE))
-                })
-                .collect();
-        }
-        let mut result = vec![];
-        trace_code_block!("libra_vm::execute_transactions", {"block", block_id});
-        for transaction in signature_verified_block {
-            let output = match transaction {
-                Ok(txn) => {
+                Ok(PreprocessedTransaction::WaypointWriteSet(change_set)) => self
+                    .process_waypoint_change_set(data_cache, change_set)
+                    .unwrap_or_else(discard_error_output),
+                Ok(PreprocessedTransaction::UserTransaction(txn)) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
                     self.execute_user_transaction(data_cache, &txn)
                 }
+                Ok(PreprocessedTransaction::WriteSet(txn)) => {
+                    self.process_writeset_transaction(data_cache, *txn)?
+                }
                 Err(e) => discard_error_output(e),
             };
-
             if !output.status().is_discarded() {
                 data_cache.push_write_set(output.write_set());
+            }
+
+            if is_reconfiguration(&output) {
+                should_restart = true;
             }
 
             // Increment the counter for transactions executed.
@@ -560,55 +527,49 @@ impl LibraVM {
             assume!(result.len() < usize::max_value());
             result.push(output);
         }
+
+        // Record the histogram count for transactions per block.
+        match i64::try_from(count) {
+            Ok(val) => BLOCK_TRANSACTION_COUNT.set(val),
+            Err(_) => BLOCK_TRANSACTION_COUNT.set(std::i64::MAX),
+        }
+
         Ok(result)
     }
 }
 
-/// Transactions divided by transaction flow.
-/// Transaction flows are different across different types of transactions.
-pub enum TransactionBlock {
-    UserTransaction(Vec<SignedTransaction>),
-    WaypointWriteSet(ChangeSet),
-    BlockPrologue(BlockMetadata),
-    WriteSet(Box<SignedTransaction>),
-}
-
-pub fn chunk_block_transactions(txns: Vec<Transaction>) -> Vec<TransactionBlock> {
-    let mut blocks = vec![];
-    let mut buf = vec![];
-    for txn in txns {
-        match txn {
-            Transaction::BlockMetadata(data) => {
-                if !buf.is_empty() {
-                    blocks.push(TransactionBlock::UserTransaction(buf));
-                    buf = vec![];
-                }
-                blocks.push(TransactionBlock::BlockPrologue(data));
-            }
-            Transaction::WaypointWriteSet(cs) => {
-                if !buf.is_empty() {
-                    blocks.push(TransactionBlock::UserTransaction(buf));
-                    buf = vec![];
-                }
-                blocks.push(TransactionBlock::WaypointWriteSet(cs));
-            }
-            Transaction::UserTransaction(txn) => {
-                if let TransactionPayload::WriteSet(_) = txn.payload() {
-                    if !buf.is_empty() {
-                        blocks.push(TransactionBlock::UserTransaction(buf));
-                        buf = vec![];
-                    }
-                    blocks.push(TransactionBlock::WriteSet(Box::new(txn)));
-                } else {
-                    buf.push(txn);
-                }
+fn preprocess_transaction(txn: Transaction) -> Result<PreprocessedTransaction, VMStatus> {
+    Ok(match txn {
+        Transaction::BlockMetadata(b) => PreprocessedTransaction::BlockPrologue(b),
+        Transaction::WaypointWriteSet(cs) => PreprocessedTransaction::WaypointWriteSet(cs),
+        Transaction::UserTransaction(txn) => {
+            let checked_txn = txn
+                .check_signature()
+                .map_err(|_| VMStatus::Error(StatusCode::INVALID_SIGNATURE))?;
+            if let TransactionPayload::WriteSet(_) = checked_txn.payload() {
+                PreprocessedTransaction::WriteSet(Box::new(checked_txn))
+            } else {
+                PreprocessedTransaction::UserTransaction(Box::new(checked_txn))
             }
         }
-    }
-    if !buf.is_empty() {
-        blocks.push(TransactionBlock::UserTransaction(buf));
-    }
-    blocks
+    })
+}
+
+fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
+    let new_epoch_event_key = libra_types::on_chain_config::new_epoch_event_key();
+    vm_output
+        .events()
+        .iter()
+        .any(|event| *event.key() == new_epoch_event_key)
+}
+
+/// Transactions divided by transaction flow.
+/// Transaction flows are different across different types of transactions.
+enum PreprocessedTransaction {
+    UserTransaction(Box<SignatureCheckedTransaction>),
+    WaypointWriteSet(ChangeSet),
+    BlockPrologue(BlockMetadata),
+    WriteSet(Box<SignatureCheckedTransaction>),
 }
 
 // Executor external API
