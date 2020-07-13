@@ -2,22 +2,20 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    change_set::ChangeSet,
-    ledger_store::{Accumulator as TransactionAccumulator, LedgerStore},
-    schema::transaction_accumulator::TransactionAccumulatorSchema,
-    state_store::StateStore,
+    change_set::ChangeSet, ledger_store::LedgerStore,
+    schema::transaction_accumulator::TransactionAccumulatorSchema, state_store::StateStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use libra_crypto::HashValue;
 use libra_jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
-    proof::definition::LeafCount,
-    transaction::{TransactionListWithProof, Version},
+    proof::{definition::LeafCount, position::FrozenSubTreeIterator},
+    transaction::{Transaction, TransactionInfo, Version},
 };
 use schemadb::DB;
-use std::{borrow::Borrow, sync::Arc};
+use std::sync::Arc;
 
 /// Provides functionalities for LibraDB data restore.
 #[derive(Clone)]
@@ -73,59 +71,54 @@ impl RestoreHandler {
         Ok(())
     }
 
+    pub fn confirm_or_save_frozen_subtrees(
+        &self,
+        num_leaves: LeafCount,
+        frozen_subtrees: &[HashValue],
+    ) -> Result<()> {
+        let mut cs = ChangeSet::new();
+        let positions: Vec<_> = FrozenSubTreeIterator::new(num_leaves).collect();
+
+        ensure!(
+            positions.len() == frozen_subtrees.len(),
+            "Number of frozen subtree roots not expected. Expected: {}, actual: {}",
+            positions.len(),
+            frozen_subtrees.len(),
+        );
+
+        positions
+            .iter()
+            .zip(frozen_subtrees.iter().rev())
+            .map(|(p, h)| {
+                if let Some(_h) = self.db.get::<TransactionAccumulatorSchema>(&p)? {
+                    ensure!(
+                        h == &_h,
+                        "Frozen subtree root does not match that already in DB. Provided: {}, in db: {}.",
+                        h,
+                        _h,
+                    );
+                } else {
+                    cs.batch.put::<TransactionAccumulatorSchema>(p, h)?;
+                }
+                Ok(())
+            })
+            .collect::<Result<Vec<_>>>()?;
+        self.db.write_schemas(cs.batch)
+    }
+
     pub fn save_transactions(
         &self,
-        txn_list_with_proof: &TransactionListWithProof,
-        ledger_info: &LedgerInfoWithSignatures,
-        save_left_siblings: bool,
-        limit: usize,
+        first_version: Version,
+        txns: &[Transaction],
+        txn_infos: &[TransactionInfo],
     ) -> Result<()> {
-        // TODO: check signatures
-        let first_version = txn_list_with_proof
-            .first_transaction_version
-            .ok_or_else(|| anyhow!("Transaction list is empty."))?;
-
-        if save_left_siblings {
-            let mut cs = ChangeSet::new();
-            let (left_sibling_positions, _) = TransactionAccumulator::get_range_proof_positions(
-                self.ledger_store.borrow(),
-                ledger_info.ledger_info().version() + 1,
-                txn_list_with_proof.first_transaction_version,
-                txn_list_with_proof.transactions.len() as LeafCount,
-            )?;
-
-            ensure!(
-                left_sibling_positions.len() == txn_list_with_proof.proof.left_siblings().len(),
-                "Number of left siblings not expected. Expected: {}, actual: {}",
-                left_sibling_positions.len(),
-                txn_list_with_proof.proof.left_siblings().len(),
-            );
-
-            left_sibling_positions
-                .iter()
-                .zip(txn_list_with_proof.proof.left_siblings())
-                .map(|(p, h)| {
-                    if self.db.get::<TransactionAccumulatorSchema>(&p)?.is_none() {
-                        cs.batch.put::<TransactionAccumulatorSchema>(p, h)?;
-                    }
-                    Ok(())
-                })
-                .collect::<Result<Vec<_>>>()?;
-            self.db.write_schemas(cs.batch)?;
-        }
-
         let mut cs = ChangeSet::new();
-        let mut version = first_version;
-        for txn in &txn_list_with_proof.transactions[..limit] {
+        for (idx, txn) in txns.iter().enumerate() {
             self.transaction_store
-                .put_transaction(version, txn, &mut cs)?;
-            version += 1;
+                .put_transaction(first_version + idx as Version, txn, &mut cs)?;
         }
-        self.ledger_store.put_transaction_infos(
-            first_version,
-            &txn_list_with_proof.proof.transaction_infos()[..limit],
-            &mut cs,
-        )?;
+        self.ledger_store
+            .put_transaction_infos(first_version, txn_infos, &mut cs)?;
 
         self.db.write_schemas(cs.batch)
     }
