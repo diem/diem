@@ -15,6 +15,7 @@ mod check;
 mod clippy;
 mod config;
 mod context;
+mod fix;
 mod fmt;
 mod generate_summaries;
 mod lint;
@@ -40,6 +41,9 @@ enum Command {
     #[structopt(name = "clippy")]
     /// Run `cargo clippy`
     Clippy(clippy::Args),
+    #[structopt(name = "fix")]
+    /// Run `cargo fix`
+    Fix(fix::Args),
     #[structopt(name = "fmt")]
     /// Run `cargo fmt`
     Fmt(fmt::Args),
@@ -83,6 +87,7 @@ fn main() -> Result<()> {
         Command::Test(args) => test::run(args, xctx),
         Command::Check(args) => check::run(args, xctx),
         Command::Clippy(args) => clippy::run(args, xctx),
+        Command::Fix(args) => fix::run(args, xctx),
         Command::Fmt(args) => fmt::run(args, xctx),
         Command::Bench(args) => bench::run(args, xctx),
         Command::Lint(args) => lint::run(args, xctx),

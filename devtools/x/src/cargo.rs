@@ -201,6 +201,7 @@ pub enum CargoCommand<'a> {
     Bench(&'a [OsString]),
     Check,
     Clippy(&'a [OsString]),
+    Fix(&'a [OsString]),
     Test {
         direct_args: &'a [OsString],
         args: &'a [OsString],
@@ -281,6 +282,7 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(_) => "bench",
             CargoCommand::Check => "check",
             CargoCommand::Clippy(_) => "clippy",
+            CargoCommand::Fix(_) => "fix",
             CargoCommand::Test { .. } => "test",
         }
     }
@@ -290,6 +292,7 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(args) => args,
             CargoCommand::Check => &[],
             CargoCommand::Clippy(args) => args,
+            CargoCommand::Fix(args) => args,
             CargoCommand::Test { args, .. } => args,
         }
     }
@@ -299,6 +302,7 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(_) => &[],
             CargoCommand::Check => &[],
             CargoCommand::Clippy(_) => &[],
+            CargoCommand::Fix(_) => &[],
             CargoCommand::Test { direct_args, .. } => direct_args,
         }
     }
@@ -308,6 +312,7 @@ impl<'a> CargoCommand<'a> {
             CargoCommand::Bench(_) => &[],
             CargoCommand::Check => &[],
             CargoCommand::Clippy(_) => &[],
+            CargoCommand::Fix(_) => &[],
             CargoCommand::Test { env, .. } => &env,
         }
     }

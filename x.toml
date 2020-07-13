@@ -3,6 +3,8 @@ libra-crypto = { path = "crypto/crypto", all-features = false }
 libra-node = { path = "libra-node" }
 testsuite = { path = "testsuite", system = true }
 
+[fix]
+
 [clippy]
 allowed = [
     # Deriving Arbitrary often causes this warning to show up.

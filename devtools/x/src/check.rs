@@ -13,13 +13,13 @@ use structopt::StructOpt;
 pub struct Args {
     #[structopt(long, short, number_of_values = 1)]
     /// Run check on the provided packages
-    package: Vec<String>,
+    pub(crate) package: Vec<String>,
     #[structopt(long)]
     /// Run check on all packages in the workspace
-    workspace: bool,
+    pub(crate) workspace: bool,
     #[structopt(long)]
     /// Run check on all targets of a package (lib, bin, test, example)
-    all_targets: bool,
+    pub(crate) all_targets: bool,
 }
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
