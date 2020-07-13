@@ -80,9 +80,9 @@ MetadataType:
         NEWTYPE:
           TYPENAME: TravelRuleMetadata
     3:
-      UnstructuredStringMetadataType:
+      UnstructuredBytesMetadataType:
         NEWTYPE:
-          TYPENAME: UnstructuredStringMetadata
+          TYPENAME: UnstructuredBytesMetadata
 Module:
   STRUCT:
     - code: BYTES
@@ -226,10 +226,10 @@ TypeTag:
       Struct:
         NEWTYPE:
           TYPENAME: StructTag
-UnstructuredStringMetadata:
+UnstructuredBytesMetadata:
   STRUCT:
     - metadata:
-        OPTION: STR
+        OPTION: BYTES
 WriteOp:
   ENUM:
     0:
