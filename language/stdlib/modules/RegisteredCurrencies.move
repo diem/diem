@@ -15,31 +15,24 @@ module RegisteredCurrencies {
         currency_codes: vector<vector<u8>>,
     }
 
-    /// A capability which allows updating of the currency on-chain configuration.
-    resource struct RegistrationCapability {
-        cap: LibraConfig::ModifyConfigCapability<Self::RegisteredCurrencies>,
-    }
-
     const ENOT_GENESIS: u64 = 0;
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 2;
 
     /// Initializes this module. Can only be called from genesis.
-    public fun initialize(
-        config_account: &signer,
-    ): RegistrationCapability {
+    public fun initialize(config_account: &signer) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
 
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             EINVALID_SINGLETON_ADDRESS
         );
-        let cap = LibraConfig::publish_new_config_with_capability(
+        LibraConfig::publish_new_config(
             config_account,
             RegisteredCurrencies { currency_codes: Vector::empty() }
         );
 
-        RegistrationCapability { cap }
+
     }
     spec fun initialize {
         pragma aborts_if_is_partial; // because of Roles import problem below
@@ -56,8 +49,8 @@ module RegisteredCurrencies {
 
     /// Adds a new currency code. The currency code must not yet exist.
     public fun add_currency_code(
+        lr_account: &signer,
         currency_code: vector<u8>,
-        cap: &RegistrationCapability,
     ) {
         let config = LibraConfig::get<RegisteredCurrencies>();
         assert(
@@ -65,7 +58,7 @@ module RegisteredCurrencies {
             ECURRENCY_CODE_ALREADY_TAKEN
         );
         Vector::push_back(&mut config.currency_codes, currency_code);
-        LibraConfig::set_with_capability(&cap.cap, config);
+        LibraConfig::set(lr_account, config);
     }
     spec fun add_currency_code {
         include AddCurrencyCodeAbortsIf;
@@ -73,9 +66,11 @@ module RegisteredCurrencies {
         ensures Vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
     }
     spec schema AddCurrencyCodeAbortsIf {
+        lr_account: &signer;
         currency_code: vector<u8>;
 
         aborts_if !LibraConfig::spec_is_published<RegisteredCurrencies>();
+        aborts_if !exists<LibraConfig::ModifyConfigCapability<RegisteredCurrencies>>(Signer::spec_address_of(lr_account));
 
         /// The same currency code can be only added once.
         aborts_if Vector::spec_contains(
