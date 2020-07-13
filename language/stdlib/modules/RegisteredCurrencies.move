@@ -38,7 +38,7 @@ module RegisteredCurrencies {
         pragma aborts_if_is_partial; // because of Roles import problem below
         /// Function aborts if already initialized or not in genesis.
         // TODO: I don't think there is any way to import the next function for spec only.
-        // aborts_if !Roles::spec_has_on_chain_config_privilege(config_account);
+        // aborts_if !Roles::spec_has_on_chain_config_privilege_addr(Signer::spec_address_of(config_account));
         aborts_if Signer::spec_address_of(config_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if LibraConfig::spec_is_published<RegisteredCurrencies>();
         aborts_if !spec_is_genesis();

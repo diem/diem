@@ -462,12 +462,8 @@ Spec version of
 <pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
     exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
 }
-<a name="0x1_LibraConfig_spec_has_modify_config_capability"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_has_modify_config_capability">spec_has_modify_config_capability</a>&lt;Config&gt;(): bool {
-    exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
-}
-<a name="0x1_LibraConfig_spec_has_on_chain_config_privilege"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_has_on_chain_config_privilege">spec_has_on_chain_config_privilege</a>(account: signer): bool {
-    <a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(account)
+<a name="0x1_LibraConfig_spec_has_on_chain_config_privilege_addr"></a>
+<b>define</b> <a href="#0x1_LibraConfig_spec_has_on_chain_config_privilege_addr">spec_has_on_chain_config_privilege_addr</a>(addr: address): bool {
+    <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(addr)
 }
 </code></pre>

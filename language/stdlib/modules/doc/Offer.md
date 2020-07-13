@@ -192,12 +192,27 @@ Returns true if the recipient is allowed to redeem
 <code>offer_address</code>
 and false otherwise.
 
+TODO (dd): this is undefined if the offer does not exist. Should this be anded with
+"exists_at"?
+
 
 <a name="0x1_Offer_is_allowed_recipient"></a>
 
 
 <pre><code><b>define</b> <a href="#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_addr: address, recipient: address): bool {
   recipient == <b>global</b>&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_addr).for || recipient == offer_addr
+}
+</code></pre>
+
+
+Mirrors the Move function exists_at<Offered>, above.
+
+
+<a name="0x1_Offer_spec_exists_at"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Offer_spec_exists_at">spec_exists_at</a>&lt;Offered&gt;(offer_addr: address): bool {
+    exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_addr)
 }
 </code></pre>
 

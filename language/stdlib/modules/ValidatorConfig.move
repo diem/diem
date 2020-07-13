@@ -48,7 +48,7 @@ module ValidatorConfig {
     }
 
     spec fun publish {
-        aborts_if !Roles::spec_has_libra_root_role(lr_account);
+        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if spec_exists_config(Signer::spec_address_of(account));
         ensures spec_exists_config(Signer::spec_address_of(account));
     }

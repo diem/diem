@@ -86,7 +86,7 @@ module AccountFreezing {
         );
     }
     spec fun freeze_account {
-        aborts_if !Roles::spec_has_treasury_compliance_role(account);
+        aborts_if !Roles::spec_has_treasury_compliance_role_addr(Signer::spec_address_of(account));
         aborts_if frozen_address == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if frozen_address == CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS();
         aborts_if !exists<FreezingBit>(frozen_address);
@@ -112,7 +112,7 @@ module AccountFreezing {
         );
     }
     spec fun unfreeze_account {
-        aborts_if !Roles::spec_has_treasury_compliance_role(account);
+        aborts_if !Roles::spec_has_treasury_compliance_role_addr(Signer::spec_address_of(account));
         aborts_if !exists<FreezingBit>(unfrozen_address);
         aborts_if !exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
         ensures !spec_account_is_frozen(unfrozen_address);

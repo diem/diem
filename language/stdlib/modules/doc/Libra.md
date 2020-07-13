@@ -17,7 +17,6 @@
 -  [Resource `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_Libra_Preburn)
 -  [Function `initialize`](#0x1_Libra_initialize)
--  [Function `publish_mint_capability`](#0x1_Libra_publish_mint_capability)
 -  [Function `publish_burn_capability`](#0x1_Libra_publish_burn_capability)
 -  [Function `mint`](#0x1_Libra_mint)
 -  [Function `burn`](#0x1_Libra_burn)
@@ -30,7 +29,6 @@
 -  [Function `burn_with_capability`](#0x1_Libra_burn_with_capability)
 -  [Function `burn_with_resource_cap`](#0x1_Libra_burn_with_resource_cap)
 -  [Function `cancel_burn_with_capability`](#0x1_Libra_cancel_burn_with_capability)
--  [Function `remove_mint_capability`](#0x1_Libra_remove_mint_capability)
 -  [Function `remove_burn_capability`](#0x1_Libra_remove_burn_capability)
 -  [Function `preburn_value`](#0x1_Libra_preburn_value)
 -  [Function `zero`](#0x1_Libra_zero)
@@ -42,10 +40,12 @@
 -  [Function `deposit`](#0x1_Libra_deposit)
 -  [Function `destroy_zero`](#0x1_Libra_destroy_zero)
 -  [Function `register_currency`](#0x1_Libra_register_currency)
+-  [Function `register_SCS_currency`](#0x1_Libra_register_SCS_currency)
 -  [Function `market_cap`](#0x1_Libra_market_cap)
 -  [Function `approx_lbr_for_value`](#0x1_Libra_approx_lbr_for_value)
 -  [Function `approx_lbr_for_coin`](#0x1_Libra_approx_lbr_for_coin)
 -  [Function `is_currency`](#0x1_Libra_is_currency)
+-  [Function `is_SCS_currency`](#0x1_Libra_is_SCS_currency)
 -  [Function `is_synthetic_currency`](#0x1_Libra_is_synthetic_currency)
 -  [Function `scaling_factor`](#0x1_Libra_scaling_factor)
 -  [Function `fractional_part`](#0x1_Libra_fractional_part)
@@ -54,6 +54,7 @@
 -  [Function `lbr_exchange_rate`](#0x1_Libra_lbr_exchange_rate)
 -  [Function `update_minting_ability`](#0x1_Libra_update_minting_ability)
 -  [Function `assert_is_currency`](#0x1_Libra_assert_is_currency)
+-  [Function `assert_is_SCS_currency`](#0x1_Libra_assert_is_SCS_currency)
 -  [Specification](#0x1_Libra_Specification)
     -  [Resource `Libra`](#0x1_Libra_Specification_Libra)
     -  [Function `mint`](#0x1_Libra_Specification_mint)
@@ -69,7 +70,9 @@
     -  [Function `join`](#0x1_Libra_Specification_join)
     -  [Function `destroy_zero`](#0x1_Libra_Specification_destroy_zero)
     -  [Function `register_currency`](#0x1_Libra_Specification_register_currency)
+    -  [Function `register_SCS_currency`](#0x1_Libra_Specification_register_SCS_currency)
     -  [Module Specification](#0x1_Libra_@Module_Specification)
+        -  [Minting](#0x1_Libra_@Minting)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
 
 The
@@ -159,11 +162,10 @@ The
 of coins of
 <code>CoinType</code> currency by the holder of this capability.
 This capability is held only either by the
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code> account or the
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code>
+account or the
 <code><a href="LBR.md#0x1_LBR">0x1::LBR</a></code> module (and
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code> in testnet).
-
-> TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;
@@ -708,45 +710,6 @@ config, and publishes the
 
 </details>
 
-<a name="0x1_Libra_publish_mint_capability"></a>
-
-## Function `publish_mint_capability`
-
-Publishes the
-<code><a href="#0x1_Libra_MintCapability">MintCapability</a></code>
-<code>cap</code> for the
-<code>CoinType</code> currency
-under
-<code>account</code>.
-<code>CoinType</code>  must be a registered currency type.
-The caller must pass a
-<code>TreasuryComplianceRole</code> capability.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(publish_account: &signer, cap: <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, tc_account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(
-    publish_account: &signer,
-    cap: <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;,
-    tc_account: &signer,
-) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
-    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
-    move_to(publish_account, cap)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_Libra_publish_burn_capability"></a>
 
 ## Function `publish_burn_capability`
@@ -760,6 +723,7 @@ Publishes the
 must be a registered currency type.
 The caller must pass a
 <code>TreasuryComplianceRole</code> capability.
+TODO (dd): I think there is a multiple signer problem here.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;, tc_account: &signer)
@@ -1031,6 +995,8 @@ Create a
 ): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
+    // TODO (dd): consider adding an assertion here that to_burn &lt;= info.total_value
+    // I don't think it can happen, but that may be difficult <b>to</b> prove.
     <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { to_burn: <a href="#0x1_Libra_zero">zero</a>&lt;CoinType&gt;() }
 }
 </code></pre>
@@ -1260,38 +1226,6 @@ at
     };
 
     coin
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_Libra_remove_mint_capability"></a>
-
-## Function `remove_mint_capability`
-
-Removes and returns the
-<code><a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> from
-<code>account</code>.
-Calls to this function will fail if
-<code>account</code> does  not have a
-published
-<code><a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> resource at the top-level.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_remove_mint_capability">remove_mint_capability</a>&lt;CoinType&gt;(account: &signer): <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_remove_mint_capability">remove_mint_capability</a>&lt;CoinType&gt;(account: &signer): <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;
-<b>acquires</b> <a href="#0x1_Libra_MintCapability">MintCapability</a> {
-    move_from&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
 }
 </code></pre>
 
@@ -1618,14 +1552,15 @@ Register the type
 <code>CoinType</code> as a currency. Until the type is
 registered as a currency it cannot be used as a coin/currency unit in Libra.
 The passed-in
-<code>account</code> must be a specific address (
+<code>lr_account</code> must be a specific address (
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>) and
-the
-<code>account</code> must also have the register new currency privilege.
+<code>lr_account</code> must also have the correct
+<code><a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a></code> capability.
 After the first registration of
-<code>CoinType</code> as a  currency, all subsequent tries to register
-<code>CoinType</code> as a currency will fail.
-
+<code>CoinType</code> as a
+currency, additional attempts to register
+<code>CoinType</code> as a currency
+will abort.
 When the
 <code>CoinType</code> is registered it publishes the
 <code><a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;</code> resource under the
@@ -1681,6 +1616,57 @@ adds the currency to the set of
         currency_code,
     );
     (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Libra_register_SCS_currency"></a>
+
+## Function `register_SCS_currency`
+
+Registers a stable currency (SCS) coin -- i.e., a non-synthetic currency.
+Resources are published on two distinct
+accounts: The CoinInfo is published on the Libra root account, and the mint and
+burn capabilities are published on a treasury compliance account.
+This code allows different currencies to have different treasury compliance
+accounts.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;(lr_account: &signer, tc_account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;(
+    lr_account: &signer,
+    tc_account: &signer,
+    to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>,
+    scaling_factor: u64,
+    fractional_part: u64,
+    currency_code: vector&lt;u8&gt;,
+) {
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account),
+           EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE);
+    <b>let</b> (mint_cap, burn_cap) =
+        <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(
+            lr_account,
+            to_lbr_exchange_rate,
+            <b>false</b>,   // is_synthetic
+            scaling_factor,
+            fractional_part,
+            currency_code,
+        );
+    // DD: converted <b>to</b> move_to because of problems proving <b>invariant</b>.
+    // publish_mint_capability&lt;CoinType&gt;(tc_account, mint_cap, tc_account);
+    move_to(tc_account, mint_cap);
+    <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(tc_account, burn_cap, tc_account);
 }
 </code></pre>
 
@@ -1797,6 +1783,31 @@ Returns
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(): bool {
     exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Libra_is_SCS_currency"></a>
+
+## Function `is_SCS_currency`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(): bool <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <b>let</b> info = borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    !info.is_synthetic
 }
 </code></pre>
 
@@ -2060,6 +2071,30 @@ Asserts that
 
 </details>
 
+<a name="0x1_Libra_assert_is_SCS_currency"></a>
+
+## Function `assert_is_SCS_currency`
+
+
+
+<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;()
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;() <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <b>assert</b>(<a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(), ENOT_AN_SCS_CURRENCY);
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Libra_Specification"></a>
 
 ## Specification
@@ -2097,52 +2132,6 @@ Account for updating
 
 
 
-
-<a name="0x1_Libra_TotalValueRemainsSame"></a>
-
-The total amount of currency stays constant.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_TotalValueRemainsSame">TotalValueRemainsSame</a>&lt;CoinType&gt; {
-    <b>ensures</b> <a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt; == <b>old</b>(<a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;);
-}
-</code></pre>
-
-
-
-Only mint and burn functions can change the total amount of currency.
-
-
-<pre><code><b>apply</b> <a href="#0x1_Libra_TotalValueRemainsSame">TotalValueRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
-    <b>except</b> <a href="#0x1_Libra_mint">mint</a>&lt;CoinType&gt;, <a href="#0x1_Libra_mint_with_capability">mint_with_capability</a>&lt;CoinType&gt;,
-    <a href="#0x1_Libra_burn">burn</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;;
-</code></pre>
-
-
-
-
-<a name="0x1_Libra_SumOfCoinValuesInvariant"></a>
-
-The sum of value of coins is consistent with
-the total_value CurrencyInfo keeps track of.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_SumOfCoinValuesInvariant">SumOfCoinValuesInvariant</a>&lt;CoinType&gt; {
-    <b>invariant</b> <b>module</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt; == 0;
-    <b>invariant</b> <b>module</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;()
-                ==&gt; <a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;
-                    == <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).total_value;
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_Libra_SumOfCoinValuesInvariant">SumOfCoinValuesInvariant</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;;
-</code></pre>
-
-
-
 <a name="0x1_Libra_Specification_mint"></a>
 
 ### Function `mint`
@@ -2173,6 +2162,7 @@ the total_value CurrencyInfo keeps track of.
 
 
 <pre><code>pragma verify=<b>false</b>;
+<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 </code></pre>
 
 
@@ -2234,7 +2224,9 @@ the total_value CurrencyInfo keeps track of.
 
 
 
-<pre><code><b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
+<b>aborts_if</b> preburn.to_burn.value != 0;
 <b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -2278,7 +2270,8 @@ the total_value CurrencyInfo keeps track of.
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 <b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))};
 </code></pre>
@@ -2327,6 +2320,9 @@ the total_value CurrencyInfo keeps track of.
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+    <b>aborts_if</b> preburn.to_burn.value == 0;
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value - preburn.to_burn.<a href="#0x1_Libra_value">value</a> &lt; 0;
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value - preburn.to_burn.<a href="#0x1_Libra_value">value</a> &lt; 0;
 }
 </code></pre>
 
@@ -2445,12 +2441,28 @@ the total_value CurrencyInfo keeps track of.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(lr_account);
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
 <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
 <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
 <b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
-<b>ensures</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_register_SCS_currency"></a>
+
+### Function `register_SCS_currency`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;(lr_account: &signer, tc_account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<b>ensures</b> <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
 </code></pre>
 
 
@@ -2466,7 +2478,7 @@ Verify all functions in this module.
 > about coin balance.
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>
 
 
@@ -2509,6 +2521,70 @@ Specification version of
         <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
     )
 }
+<a name="0x1_Libra_spec_is_SCS_currency"></a>
+<b>define</b> <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;CoinType&gt;(): bool {
+    <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() && !<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().is_synthetic
+}
+</code></pre>
+
+
+Checks whether the currency has a mint capability.  This is only relevant for
+SCS coins
+
+
+<a name="0x1_Libra_spec_has_mint_capability"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(addr1: address): bool {
+    exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(addr1)
+}
+</code></pre>
+
+
+
+<a name="0x1_Libra_@Minting"></a>
+
+#### Minting
+
+For an SCS coin, the mint capability cannot move or disappear.
+TODO: Specify that they're published at the one true treasurycompliance address?
+
+
+<a name="0x1_Libra_MintCapabilitySpecs"></a>
+
+If an address has a mint capability, it is an SCS currency.
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type
+                         where (exists addr3: address : <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3)) :
+                              <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;();
+}
+</code></pre>
+
+
+If there is a pending offer for a mint capability, the coin_type is an SCS currency and
+there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type :
+                              <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;()
+                              && (forall addr3: address : !<a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3));
+    <b>invariant</b> <b>module</b> forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
+        forall addr1: address, addr2: address
+             where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1) && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr2):
+                  addr1 == addr2;
+    <b>ensures</b> forall coin_type: type:
+        forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)):
+            exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> <b>to</b> *&lt;T&gt;, *;
 </code></pre>
 
 
