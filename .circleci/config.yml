@@ -352,20 +352,24 @@ jobs:
           command: |
             set +e
             num_fails=0
+            failed_tests=
             for target in $(cat /tmp/tests_to_run) ; do
               retry=0
               status=1
-              failed_tests=
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
                 RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
                   cargo x test --package testsuite -- $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
+                if [[ $status != 0 ]] ; then
+                   echo Failed to execute $target, $retry times
+                fi
                 sleep 10
               done
               if [[ $status != 0 ]] ; then
                 num_fails=$((num_fails + 1))
-                failed_tests="$target\n$failed_tests"
+                echo failed to execute $target
+                failed_tests="${target}\n${failed_tests}"
               elif [[ $retry > 1 ]]; then
                 echo "$target passed after $retry tries" >> ${FLAKY_TESTS_FILE}
               fi
@@ -376,7 +380,7 @@ jobs:
               echo -e $msg > ${MESSAGE_PAYLOAD_FILE}
             fi
             if [[ $num_fails != 0 ]]; then
-              echo -e "$num_fails test(s) failed:\n$failed_tests"
+              echo -e "$num_fails test(s) failed:\n${failed_tests}"
             fi
             exit $num_fails
       - save_sccache
