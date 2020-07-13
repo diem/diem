@@ -45,13 +45,8 @@ use std::{
 pub struct LibraVM(LibraVMImpl);
 
 impl LibraVM {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self(LibraVMImpl::new())
-    }
-
-    pub fn load_configs<S: StateView>(&mut self, state: &S) {
-        self.0.load_configs(state)
+    pub fn new<S: StateView>(state: &S) -> Self {
+        Self(LibraVMImpl::new(state))
     }
 
     pub fn internals(&self) -> LibraVMInternals {
@@ -215,7 +210,6 @@ impl LibraVM {
 
     fn execute_user_transaction(
         &mut self,
-        _state_view: &dyn StateView,
         remote_cache: &StateViewCache<'_>,
         txn: &SignatureCheckedTransaction,
     ) -> TransactionOutput {
@@ -304,7 +298,6 @@ impl LibraVM {
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         remote_cache.push_write_set(&write_set);
-        self.0.load_configs_impl(remote_cache);
         Ok(TransactionOutput::new(
             write_set,
             events,
@@ -481,37 +474,32 @@ impl LibraVM {
     fn execute_block_impl(
         &mut self,
         transactions: Vec<Transaction>,
-        state_view: &dyn StateView,
+        data_cache: &mut StateViewCache,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
-        let mut data_cache = StateViewCache::new(state_view);
         let mut execute_block_trace_guard = vec![];
         let mut current_block_id = HashValue::zero();
         for block in blocks {
             match block {
                 TransactionBlock::UserTransaction(txns) => {
-                    let mut outs = self.execute_user_transactions(
-                        current_block_id,
-                        txns,
-                        &mut data_cache,
-                        state_view,
-                    )?;
+                    let mut outs =
+                        self.execute_user_transactions(current_block_id, txns, data_cache)?;
                     result.append(&mut outs);
                 }
                 TransactionBlock::BlockPrologue(block_metadata) => {
                     execute_block_trace_guard.clear();
                     current_block_id = block_metadata.id();
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
-                    result.push(self.process_block_prologue(&mut data_cache, block_metadata)?)
+                    result.push(self.process_block_prologue(data_cache, block_metadata)?)
                 }
                 TransactionBlock::WaypointWriteSet(change_set) => result.push(
-                    self.process_waypoint_change_set(&mut data_cache, change_set)
+                    self.process_waypoint_change_set(data_cache, change_set)
                         .unwrap_or_else(discard_error_output),
                 ),
                 TransactionBlock::WriteSet(txn) => {
-                    result.push(self.process_writeset_transaction(&mut data_cache, *txn)?)
+                    result.push(self.process_writeset_transaction(data_cache, *txn)?)
                 }
             }
         }
@@ -530,9 +518,7 @@ impl LibraVM {
         block_id: HashValue,
         txn_block: Vec<SignedTransaction>,
         data_cache: &mut StateViewCache<'_>,
-        state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        self.0.load_configs_impl(data_cache);
         let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>>;
         {
             trace_code_block!("libra_vm::verify_signatures", {"block", block_id});
@@ -550,7 +536,7 @@ impl LibraVM {
             let output = match transaction {
                 Ok(txn) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
-                    self.execute_user_transaction(state_view, data_cache, &txn)
+                    self.execute_user_transaction(data_cache, &txn)
                 }
                 Err(e) => discard_error_output(e),
             };
@@ -636,8 +622,9 @@ impl VMExecutor for LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        let mut vm = LibraVM::new();
-        vm.execute_block_impl(transactions, state_view)
+        let mut state_view_cache = StateViewCache::new(state_view);
+        let mut vm = LibraVM::new(&state_view_cache);
+        vm.execute_block_impl(transactions, &mut state_view_cache)
     }
 }
 

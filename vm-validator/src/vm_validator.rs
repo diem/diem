@@ -36,7 +36,6 @@ pub struct VMValidator {
 
 impl VMValidator {
     pub fn new(db_reader: Arc<dyn DbReader>) -> Self {
-        let mut vm = LibraVMValidator::new();
         let (version, state_root) = db_reader.get_latest_state_root().expect("Should not fail.");
         let smt = SparseMerkleTree::new(state_root);
         let state_view = VerifiedStateView::new(
@@ -47,7 +46,7 @@ impl VMValidator {
             &smt,
         );
 
-        vm.load_configs(&state_view);
+        let vm = LibraVMValidator::new(&state_view);
         VMValidator { db_reader, vm }
     }
 }

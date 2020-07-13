@@ -17,9 +17,8 @@ fn failed_transaction_cleanup_test() {
     let sender = AccountData::new(1_000_000, 10);
     fake_executor.add_account_data(&sender);
 
-    let mut libra_vm = LibraVM::new();
+    let libra_vm = LibraVM::new(fake_executor.get_state_view());
     let data_cache = StateViewCache::new(fake_executor.get_state_view());
-    libra_vm.load_configs(fake_executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
     txn_data.sender = *sender.address();

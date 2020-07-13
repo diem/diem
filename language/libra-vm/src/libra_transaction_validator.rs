@@ -31,17 +31,12 @@ const PRIORITIZED_TRANSACTION_ROLE_CUTOFF: u64 = 5;
 pub struct LibraVMValidator(LibraVMImpl);
 
 impl LibraVMValidator {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self(LibraVMImpl::new())
+    pub fn new<S: StateView>(state: &S) -> Self {
+        Self(LibraVMImpl::new(state))
     }
 
     pub fn init_with_config(version: LibraVersion, on_chain_config: VMConfig) -> Self {
         LibraVMValidator(LibraVMImpl::init_with_config(version, on_chain_config))
-    }
-
-    pub fn load_configs<S: StateView>(&mut self, state: &S) {
-        self.0.load_configs(state)
     }
 
     fn verify_transaction_impl(

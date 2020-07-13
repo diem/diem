@@ -45,27 +45,17 @@ pub struct LibraVMImpl {
     version: Option<LibraVersion>,
 }
 
-macro_rules! gas_schedule {
-    ($s: expr) => {
-        $s.on_chain_config
-            .as_ref()
-            .map(|config| &config.gas_schedule)
-            .ok_or_else(|| {
-                error!("VM Startup Failed. Gas Schedule Not Found");
-                VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
-            })
-    };
-}
-
 impl LibraVMImpl {
     #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new<S: StateView>(state: &S) -> Self {
         let inner = MoveVM::new();
-        Self {
+        let mut vm = Self {
             move_vm: Arc::new(inner),
             on_chain_config: None,
             version: None,
-        }
+        };
+        vm.load_configs_impl(&RemoteStorage::new(state));
+        vm
     }
 
     pub fn init_with_config(version: LibraVersion, on_chain_config: VMConfig) -> Self {
@@ -82,10 +72,6 @@ impl LibraVMImpl {
         LibraVMInternals(self)
     }
 
-    pub fn load_configs<S: StateView>(&mut self, state: &S) {
-        self.load_configs_impl(&RemoteStorage::new(state))
-    }
-
     pub(crate) fn on_chain_config(&self) -> Result<&VMConfig, VMStatus> {
         self.on_chain_config.as_ref().ok_or_else(|| {
             error!("VM Startup Failed. On Chain Config Not Found");
@@ -93,13 +79,19 @@ impl LibraVMImpl {
         })
     }
 
-    pub(crate) fn load_configs_impl<S: ConfigStorage>(&mut self, data_cache: &S) {
+    fn load_configs_impl<S: ConfigStorage>(&mut self, data_cache: &S) {
         self.on_chain_config = VMConfig::fetch_config(data_cache);
         self.version = LibraVersion::fetch_config(data_cache);
     }
 
     pub fn get_gas_schedule(&self) -> Result<&CostTable, VMStatus> {
-        gas_schedule!(self)
+        self.on_chain_config
+            .as_ref()
+            .map(|config| &config.gas_schedule)
+            .ok_or_else(|| {
+                error!("VM Startup Failed. Gas Schedule Not Found");
+                VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
+            })
     }
 
     pub fn get_libra_version(&self) -> Result<LibraVersion, VMStatus> {
