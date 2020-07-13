@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    consensus_state::ConsensusState, error::Error,
-    persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
+    consensus_state::ConsensusState,
+    error::Error,
+    logging::{self, LogEntry, LogEvent, LogField},
+    persistent_safety_storage::PersistentSafetyStorage,
+    t_safety_rules::TSafetyRules,
+    COUNTERS,
 };
 use consensus_types::{
     block::Block,
@@ -20,7 +24,7 @@ use libra_crypto::{
     hash::HashValue,
     traits::Signature,
 };
-use libra_logger::debug;
+use libra_logger::prelude::*;
 use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
     ledger_info::LedgerInfo, validator_signer::ValidatorSigner, waypoint::Waypoint,
@@ -194,10 +198,10 @@ impl SafetyRules {
             .map_err(|e| Error::InvalidQuorumCertificate(e.to_string()))?;
         Ok(())
     }
-}
 
-impl TSafetyRules for SafetyRules {
-    fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
+    // Internal functions mapped to the public interface to enable exhaustive logging and metrics
+
+    fn guarded_consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
             self.persistent_storage.epoch()?,
             self.persistent_storage.last_voted_round()?,
@@ -207,7 +211,7 @@ impl TSafetyRules for SafetyRules {
         ))
     }
 
-    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
+    fn guarded_initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         debug!("Initializing");
 
         let waypoint = self.persistent_storage.waypoint()?;
@@ -266,7 +270,7 @@ impl TSafetyRules for SafetyRules {
         Ok(())
     }
 
-    fn construct_and_sign_vote(
+    fn guarded_construct_and_sign_vote(
         &mut self,
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
@@ -319,10 +323,7 @@ impl TSafetyRules for SafetyRules {
         Ok(vote)
     }
 
-    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
-        debug!("Incoming proposal to sign.");
-        COUNTERS.sign_proposal_request.inc();
-
+    fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         self.signer()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch())?;
@@ -330,17 +331,13 @@ impl TSafetyRules for SafetyRules {
         self.verify_qc(block_data.quorum_cert())?;
         self.verify_and_update_preferred_round(block_data.quorum_cert())?;
 
-        COUNTERS.sign_proposal_success.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
             self.signer()?,
         ))
     }
 
-    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
-        debug!("Incoming timeout message for round {}", timeout.round());
-        COUNTERS.sign_timeout_request.inc();
-
+    fn guarded_sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.signer()?;
         self.verify_epoch(timeout.epoch())?;
 
@@ -367,8 +364,106 @@ impl TSafetyRules for SafetyRules {
         let validator_signer = self.signer()?;
         let signature = timeout.sign(&validator_signer);
 
-        debug!("Successfully signed timeout message.");
-        COUNTERS.sign_timeout_success.inc();
         Ok(signature)
     }
+}
+
+impl TSafetyRules for SafetyRules {
+    fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
+        let log_cb = |log: StructuredLogEntry| log;
+        let cb = || self.guarded_consensus_state();
+        run_and_log(
+            cb,
+            &COUNTERS.consensus_state_request,
+            &COUNTERS.consensus_state_success,
+            &COUNTERS.consensus_state_error,
+            log_cb,
+            LogEntry::ConsensusState,
+        )
+    }
+
+    fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
+        let log_cb = |log: StructuredLogEntry| log;
+        let cb = || self.guarded_initialize(proof);
+        run_and_log(
+            cb,
+            &COUNTERS.initialize_request,
+            &COUNTERS.initialize_success,
+            &COUNTERS.initialize_error,
+            log_cb,
+            LogEntry::Initialize,
+        )
+    }
+
+    fn construct_and_sign_vote(
+        &mut self,
+        maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
+        let round = maybe_signed_vote_proposal.vote_proposal.block().round();
+        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
+        let cb = || self.guarded_construct_and_sign_vote(maybe_signed_vote_proposal);
+        run_and_log(
+            cb,
+            &COUNTERS.construct_and_sign_vote_request,
+            &COUNTERS.construct_and_sign_vote_success,
+            &COUNTERS.construct_and_sign_vote_error,
+            log_cb,
+            LogEntry::ConstructAndSignVote,
+        )
+    }
+
+    fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+        let round = block_data.round();
+        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
+        let cb = || self.guarded_sign_proposal(block_data);
+        run_and_log(
+            cb,
+            &COUNTERS.sign_proposal_request,
+            &COUNTERS.sign_proposal_success,
+            &COUNTERS.sign_proposal_error,
+            log_cb,
+            LogEntry::SignProposal,
+        )
+    }
+
+    fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), timeout.round());
+        let cb = || self.guarded_sign_timeout(timeout);
+        run_and_log(
+            cb,
+            &COUNTERS.sign_timeout_request,
+            &COUNTERS.sign_timeout_success,
+            &COUNTERS.sign_timeout_error,
+            log_cb,
+            LogEntry::SignTimeout,
+        )
+    }
+}
+
+fn run_and_log<F, L, R>(
+    callback: F,
+    entry_counter: &libra_secure_push_metrics::Counter,
+    success_counter: &libra_secure_push_metrics::Counter,
+    error_counter: &libra_secure_push_metrics::Counter,
+    log_cb: L,
+    log_entry: LogEntry,
+) -> Result<R, Error>
+where
+    F: FnOnce() -> Result<R, Error>,
+    L: Fn(StructuredLogEntry) -> StructuredLogEntry,
+{
+    send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
+    entry_counter.inc();
+    callback()
+        .map(|v| {
+            send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
+            success_counter.inc();
+            v
+        })
+        .map_err(|err| {
+            send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Error))
+                .data(LogField::Message.as_str(), &err));
+            error_counter.inc();
+            err
+        })
 }

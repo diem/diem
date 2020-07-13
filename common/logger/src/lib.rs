@@ -49,7 +49,7 @@
 //! // Usage:
 //! send_struct_log!(StructuredLogEntry::new_named("category", "Committed")
 //!    .data("block", &block)
-//!    .data("autor", &author))
+//!    .data("author", &author))
 //! ```
 //!
 //! Arguments passed to .data will be serialized into json, and as such should implement Serialize.
@@ -119,7 +119,7 @@ pub mod prelude {
     pub use crate::{
         crit, debug, error, info,
         security::{security_events, security_log},
-        send_struct_log, trace, warn,
+        send_struct_log, trace, warn, StructuredLogEntry,
     };
 }
 
