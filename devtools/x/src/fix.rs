@@ -22,6 +22,6 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
         ..args.check_args
     };
 
-    let cmd = CargoCommand::Fix(&pass_through_args);
-    check::run_with(cmd, with_all_targets, xctx.config())
+    let cmd = CargoCommand::Fix(xctx.config().cargo_config(), &pass_through_args);
+    check::run_with(cmd, with_all_targets, &xctx)
 }

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{cargo::Cargo, Result};
+use crate::{cargo::Cargo, context::XContext, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
@@ -16,37 +16,19 @@ pub fn project_root() -> &'static Path {
         .unwrap()
 }
 
-pub fn locate_project() -> Result<PathBuf> {
+pub fn locate_project(xctx: &XContext) -> Result<PathBuf> {
     #[derive(Deserialize)]
     struct LocateProject {
         root: PathBuf,
     };
 
-    let output = Cargo::new("locate-project").run_with_output()?;
+    let output = Cargo::new(xctx.config().cargo_config(), "locate-project").run_with_output()?;
     Ok(serde_json::from_slice::<LocateProject>(&output)?.root)
 }
 
-pub fn project_is_root() -> Result<bool> {
-    let mut project = locate_project()?;
+pub fn project_is_root(xctx: &XContext) -> Result<bool> {
+    let mut project = locate_project(xctx)?;
     project.pop();
 
     Ok(project == project_root())
-}
-
-pub fn get_local_package() -> Result<String> {
-    let output = Cargo::new("pkgid").run_with_output()?;
-    let pkgid = Path::new(std::str::from_utf8(&output)?)
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap();
-
-    let name = if let Some(idx) = pkgid.find(':') {
-        let (pkgid, _) = pkgid.split_at(idx);
-        pkgid.split_at(pkgid.find('#').unwrap()).1[1..].to_string()
-    } else {
-        pkgid.split_at(pkgid.find('#').unwrap()).0.to_string()
-    };
-
-    Ok(name)
 }

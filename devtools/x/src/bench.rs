@@ -24,53 +24,15 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     args.args.extend(args.benchname.clone());
     let config = xctx.config();
 
-    let cmd = CargoCommand::Bench(&args.args);
-    let base_args = CargoArgs {
-        all_features: true,
-        ..CargoArgs::default()
-    };
+    let cmd = CargoCommand::Bench(config.cargo_config(), &args.args);
+    let base_args = CargoArgs::default();
 
     if !args.package.is_empty() {
-        let run_together = args.package.iter().filter(|p| !config.is_exception(p));
-        let run_separate = args.package.iter().filter_map(|p| {
-            config.package_exceptions().get(p).map(|e| {
-                (
-                    p,
-                    CargoArgs {
-                        all_features: e.all_features,
-                        ..base_args
-                    },
-                )
-            })
-        });
-        cmd.run_on_packages_together(run_together, &base_args)?;
-        cmd.run_on_packages_separate(run_separate)?;
-    } else if utils::project_is_root()? {
-        cmd.run_with_exclusions(
-            config.package_exceptions().iter().map(|(p, _)| p),
-            &base_args,
-        )?;
-        cmd.run_on_packages_separate(config.package_exceptions().iter().map(|(name, pkg)| {
-            (
-                name,
-                CargoArgs {
-                    all_features: pkg.all_features,
-                    ..base_args
-                },
-            )
-        }))?;
+        cmd.run_on_packages(args.package.iter(), &base_args)?;
+    } else if utils::project_is_root(&xctx)? {
+        cmd.run_on_all_packages(&base_args)?;
     } else {
-        let package = utils::get_local_package()?;
-        let all_features = config
-            .package_exceptions()
-            .get(&package)
-            .map(|pkg| pkg.all_features)
-            .unwrap_or(true);
-
-        cmd.run_on_local_package(&CargoArgs {
-            all_features,
-            ..base_args
-        })?;
-    }
+        cmd.run_on_local_package(&base_args)?;
+    };
     Ok(())
 }

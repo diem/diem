@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{utils::project_root, Result};
+use crate::{config::CargoConfig, utils::project_root, Result};
 use anyhow::anyhow;
 use log::{info, warn};
 use std::{
@@ -18,8 +18,29 @@ pub struct Cargo {
 }
 
 impl Cargo {
-    pub fn new<S: AsRef<OsStr>>(command: S) -> Self {
-        let mut inner = Command::new("cargo");
+    pub fn new<S: AsRef<OsStr>>(cargo_config: &CargoConfig, command: S) -> Self {
+        // run rustup to find correct toolchain
+        let cargo_binary = String::from_utf8(
+            Command::new("rustup")
+                .arg("which")
+                .arg("--toolchain")
+                .arg(&cargo_config.toolchain)
+                .arg("cargo")
+                .output()
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "failed to find cargo for toolchain {} via rustup",
+                        &cargo_config.toolchain
+                    )
+                })
+                .stdout,
+        )
+        .expect("got bad utf8 from rustup output");
+
+        let mut inner = Command::new(str::trim(&cargo_binary));
+        if let Some(flags) = &cargo_config.flags {
+            inner.arg(&flags);
+        }
         inner.arg(command);
         Self {
             inner,
@@ -35,11 +56,6 @@ impl Cargo {
 
     pub fn workspace(&mut self) -> &mut Self {
         self.inner.arg("--workspace");
-        self
-    }
-
-    pub fn all_features(&mut self) -> &mut Self {
-        self.inner.arg("--all-features");
         self
     }
 
@@ -191,18 +207,18 @@ impl Cargo {
 
 #[derive(Debug, Default)]
 pub struct CargoArgs {
-    pub all_features: bool,
     pub all_targets: bool,
 }
 
 /// Represents an invocations of cargo that will call multiple other invocations of
 /// cargo based on groupings implied by the contents of <workspace-root>/x.toml.
 pub enum CargoCommand<'a> {
-    Bench(&'a [OsString]),
-    Check,
-    Clippy(&'a [OsString]),
-    Fix(&'a [OsString]),
+    Bench(&'a CargoConfig, &'a [OsString]),
+    Check(&'a CargoConfig),
+    Clippy(&'a CargoConfig, &'a [OsString]),
+    Fix(&'a CargoConfig, &'a [OsString]),
     Test {
+        cargo_config: &'a CargoConfig,
         direct_args: &'a [OsString],
         args: &'a [OsString],
         env: &'a [(&'a str, &'a str)],
@@ -210,8 +226,18 @@ pub enum CargoCommand<'a> {
 }
 
 impl<'a> CargoCommand<'a> {
+    pub fn cargo_config(&self) -> &CargoConfig {
+        match self {
+            CargoCommand::Bench(config, _) => config,
+            CargoCommand::Check(config) => config,
+            CargoCommand::Clippy(config, _) => config,
+            CargoCommand::Fix(config, _) => config,
+            CargoCommand::Test { cargo_config, .. } => cargo_config,
+        }
+    }
+
     pub fn run_on_local_package(&self, args: &CargoArgs) -> Result<()> {
-        let mut cargo = Cargo::new(self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
         Self::apply_args(&mut cargo, args);
         cargo
             .args(self.direct_args())
@@ -220,26 +246,7 @@ impl<'a> CargoCommand<'a> {
             .run()
     }
 
-    pub fn run_on_packages_separate<I, S>(&self, packages: I) -> Result<()>
-    where
-        I: IntoIterator<Item = (S, CargoArgs)>,
-        S: AsRef<OsStr>,
-    {
-        for (name, args) in packages {
-            let mut cargo = Cargo::new(self.as_str());
-            Self::apply_args(&mut cargo, &args);
-            cargo
-                .args(self.direct_args())
-                .packages(&[name])
-                .current_dir(project_root())
-                .pass_through(self.pass_through_args())
-                .envs(self.get_extra_env().to_owned())
-                .run()?;
-        }
-        Ok(())
-    }
-
-    pub fn run_on_packages_together<I, S>(&self, packages: I, args: &CargoArgs) -> Result<()>
+    pub fn run_on_packages<I, S>(&self, packages: I, args: &CargoArgs) -> Result<()>
     where
         I: IntoIterator<Item = S> + Clone,
         S: AsRef<OsStr>,
@@ -249,7 +256,7 @@ impl<'a> CargoCommand<'a> {
             return Ok(());
         }
 
-        let mut cargo = Cargo::new(self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
@@ -260,12 +267,24 @@ impl<'a> CargoCommand<'a> {
             .run()
     }
 
+    pub fn run_on_all_packages(&self, args: &CargoArgs) -> Result<()> {
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
+        Self::apply_args(&mut cargo, args);
+        cargo
+            .current_dir(project_root())
+            .workspace()
+            .args(self.direct_args())
+            .pass_through(self.pass_through_args())
+            .envs(self.get_extra_env().to_owned())
+            .run()
+    }
+
     pub fn run_with_exclusions<I, S>(&self, exclusions: I, args: &CargoArgs) -> Result<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        let mut cargo = Cargo::new(self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
@@ -279,48 +298,45 @@ impl<'a> CargoCommand<'a> {
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            CargoCommand::Bench(_) => "bench",
-            CargoCommand::Check => "check",
-            CargoCommand::Clippy(_) => "clippy",
-            CargoCommand::Fix(_) => "fix",
+            CargoCommand::Bench(_, _) => "bench",
+            CargoCommand::Check(_) => "check",
+            CargoCommand::Clippy(_, _) => "clippy",
+            CargoCommand::Fix(_, _) => "fix",
             CargoCommand::Test { .. } => "test",
         }
     }
 
     fn pass_through_args(&self) -> &[OsString] {
         match self {
-            CargoCommand::Bench(args) => args,
-            CargoCommand::Check => &[],
-            CargoCommand::Clippy(args) => args,
-            CargoCommand::Fix(args) => args,
+            CargoCommand::Bench(_, args) => args,
+            CargoCommand::Check(_) => &[],
+            CargoCommand::Clippy(_, args) => args,
+            CargoCommand::Fix(_, args) => args,
             CargoCommand::Test { args, .. } => args,
         }
     }
 
     fn direct_args(&self) -> &[OsString] {
         match self {
-            CargoCommand::Bench(_) => &[],
-            CargoCommand::Check => &[],
-            CargoCommand::Clippy(_) => &[],
-            CargoCommand::Fix(_) => &[],
+            CargoCommand::Bench(_, _) => &[],
+            CargoCommand::Check(_) => &[],
+            CargoCommand::Clippy(_, _) => &[],
+            CargoCommand::Fix(_, _) => &[],
             CargoCommand::Test { direct_args, .. } => direct_args,
         }
     }
 
     pub fn get_extra_env(&self) -> &[(&str, &str)] {
         match self {
-            CargoCommand::Bench(_) => &[],
-            CargoCommand::Check => &[],
-            CargoCommand::Clippy(_) => &[],
-            CargoCommand::Fix(_) => &[],
+            CargoCommand::Bench(_, _) => &[],
+            CargoCommand::Check(_) => &[],
+            CargoCommand::Clippy(_, _) => &[],
+            CargoCommand::Fix(_, _) => &[],
             CargoCommand::Test { env, .. } => &env,
         }
     }
 
     fn apply_args(cargo: &mut Cargo, args: &CargoArgs) {
-        if args.all_features {
-            cargo.all_features();
-        }
         if args.all_targets {
             cargo.all_targets();
         }

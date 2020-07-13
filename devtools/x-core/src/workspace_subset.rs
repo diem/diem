@@ -4,7 +4,7 @@
 use crate::{Result, SystemError};
 use guppy::{
     graph::{
-        cargo::{CargoOptions, CargoSet},
+        cargo::{CargoOptions, CargoResolverVersion, CargoSet},
         feature::{default_filter, FeatureFilter, FeatureSet},
         PackageGraph, PackageMetadata,
     },
@@ -69,7 +69,9 @@ impl<'g> WorkspaceSubset<'g> {
             .map_err(|err| SystemError::de("deserializing root Cargo.toml", err))?;
         let default_members = contents.workspace.default_members;
 
-        let cargo_opts = CargoOptions::new().with_dev_deps(false);
+        let cargo_opts = CargoOptions::new()
+            .with_version(CargoResolverVersion::V2)
+            .with_dev_deps(false);
         Ok(Self::new(
             package_graph,
             default_members,
