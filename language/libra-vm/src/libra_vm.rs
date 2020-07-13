@@ -4,7 +4,6 @@
 use crate::{
     access_path_cache::AccessPathCache,
     counters::*,
-    create_access_path,
     data_cache::{RemoteStorage, StateViewCache},
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
@@ -13,7 +12,6 @@ use crate::{
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
-    account_address::AccountAddress,
     account_config,
     contract_event::ContractEvent,
     event::EventKey,
@@ -200,10 +198,12 @@ impl LibraVMImpl {
     pub(crate) fn is_allowed_module(
         &self,
         txn_data: &TransactionMetadata,
-        remote_cache: &StateViewCache,
+        _remote_cache: &StateViewCache,
     ) -> Result<(), VMStatus> {
-        if !&self.on_chain_config()?.publishing_option.is_open()
-            && !can_publish_modules(txn_data.sender(), remote_cache)
+        if !&self
+            .on_chain_config()?
+            .publishing_option
+            .is_allowed_module(&txn_data.sender)
         {
             warn!("[VM] Custom modules not allowed");
             Err(VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER))
@@ -415,15 +415,6 @@ impl<'a> LibraVMInternals<'a> {
         let remote_storage = RemoteStorage::new(state_view);
         let session = self.move_vm().new_session(&remote_storage);
         f(session)
-    }
-}
-
-fn can_publish_modules(sender: AccountAddress, remote_cache: &StateViewCache) -> bool {
-    let module_publishing_priv_path =
-        create_access_path(sender, module_publishing_capability_struct_tag());
-    match remote_cache.get(&module_publishing_priv_path) {
-        Ok(Some(_)) => true,
-        _ => false,
     }
 }
 

@@ -12,7 +12,7 @@ fun main() {}
 
 //! new-transaction
 //! sender: libraroot
-//! args: b"01",
+//! args: b"0100010000000000000000000000000a550c18",
 script {
 use 0x1::LibraVMConfig;
 

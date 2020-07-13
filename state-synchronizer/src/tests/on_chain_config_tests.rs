@@ -99,7 +99,7 @@ fn test_on_chain_config_pub_sub() {
         existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
         existing_list
     };
-    let vm_publishing_option = VMPublishingOption::Locked(new_whitelist);
+    let vm_publishing_option = VMPublishingOption::locked(new_whitelist);
 
     let txn2 = get_test_signed_transaction(
         genesis_account,

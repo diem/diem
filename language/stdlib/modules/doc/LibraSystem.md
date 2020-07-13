@@ -8,7 +8,6 @@
 -  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
 -  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
--  [Function `set_validator_set`](#0x1_LibraSystem_set_validator_set)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
 -  [Function `remove_validator`](#0x1_LibraSystem_remove_validator)
 -  [Function `update_and_reconfigure`](#0x1_LibraSystem_update_and_reconfigure)
@@ -23,7 +22,6 @@
 -  [Specification](#0x1_LibraSystem_Specification)
     -  [Function `initialize_validator_set`](#0x1_LibraSystem_Specification_initialize_validator_set)
     -  [Specifications for individual functions](#0x1_LibraSystem_@Specifications_for_individual_functions)
-    -  [Function `set_validator_set`](#0x1_LibraSystem_Specification_set_validator_set)
     -  [Function `add_validator`](#0x1_LibraSystem_Specification_add_validator)
     -  [Function `remove_validator`](#0x1_LibraSystem_Specification_remove_validator)
     -  [Module specifications](#0x1_LibraSystem_@Module_specifications)
@@ -155,30 +153,6 @@
 
 </details>
 
-<a name="0x1_LibraSystem_set_validator_set"></a>
-
-## Function `set_validator_set`
-
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account: &signer, value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account: &signer, value: <a href="#0x1_LibraSystem">LibraSystem</a>) {
-    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;(lr_account, value);
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_LibraSystem_add_validator"></a>
 
 ## Function `add_validator`
@@ -213,7 +187,7 @@
         consensus_voting_power: 1,
     });
 
-    <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account, validator_set);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;(lr_account, validator_set);
 }
 </code></pre>
 
@@ -249,7 +223,7 @@
     // Remove corresponding <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> from the validator set
     _  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> validator_set.validators, to_remove_index);
 
-    <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account, validator_set);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;(lr_account, validator_set);
 }
 </code></pre>
 
@@ -288,7 +262,7 @@
         i = i + 1;
     };
     <b>if</b> (configs_changed) {
-        <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account, validator_set);
+        <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;(lr_account, validator_set);
     };
 }
 </code></pre>
@@ -558,25 +532,6 @@
 <b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_Specification_set_validator_set"></a>
-
-### Function `set_validator_set`
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(lr_account: &signer, value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
-</code></pre>
-
-
-
-
-<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
-pragma aborts_if_is_partial = <b>true</b>;
-<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;() == value;
 </code></pre>
 
 

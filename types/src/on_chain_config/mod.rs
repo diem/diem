@@ -25,7 +25,7 @@ pub use self::{
     libra_version::LibraVersion,
     registered_currencies::RegisteredCurrencies,
     validator_set::ValidatorSet,
-    vm_config::{VMConfig, VMPublishingOption},
+    vm_config::{ModulePublishingOption, ScriptPublishingOption, VMConfig, VMPublishingOption},
 };
 
 /// To register an on-chain config in Rust:

@@ -15,7 +15,7 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
-    on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
+    on_chain_config::{OnChainConfig, ScriptPublishingOption, VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
@@ -74,7 +74,7 @@ impl FakeExecutor {
         Self::custom_genesis(
             stdlib_modules(StdLibOptions::Compiled).to_vec(),
             None,
-            VMPublishingOption::Locked(StdlibScript::whitelist()),
+            VMPublishingOption::locked(StdlibScript::whitelist()),
         )
     }
 
@@ -82,7 +82,7 @@ impl FakeExecutor {
     /// publishing options given by `publishing_options`. These can only be either `Open` or
     /// `CustomScript`.
     pub fn from_genesis_with_options(publishing_options: VMPublishingOption) -> Self {
-        if let VMPublishingOption::Locked(_) = publishing_options {
+        if let ScriptPublishingOption::Locked(_) = publishing_options.script_option {
             panic!("Whitelisted transactions are not supported as a publishing option")
         }
 

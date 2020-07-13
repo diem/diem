@@ -71,7 +71,7 @@ pub fn encode_genesis_transaction_with_validator(
         validators,
         stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib
         vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
+            .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::whitelist())),
     )
 }
 
@@ -478,7 +478,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
         &GENESIS_KEYPAIR.1,
         &validator_registrations(&swarm.nodes),
         stdlib_modules,
-        VMPublishingOption::Open,
+        VMPublishingOption::open(),
     )
     .0
 }
@@ -492,7 +492,7 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
         &GENESIS_KEYPAIR.1,
         &validator_registrations(&swarm.nodes),
         stdlib_modules,
-        VMPublishingOption::Open,
+        VMPublishingOption::open(),
     )
     .1
 }

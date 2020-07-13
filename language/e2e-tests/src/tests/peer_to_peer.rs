@@ -80,7 +80,8 @@ fn single_peer_to_peer_with_event() {
 fn single_peer_to_peer_with_padding() {
     ::libra_logger::Logger::new().environment_only(true).init();
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+    let mut executor =
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
 
     // create and publish a sender with 1_000_000 coins and a receiver with 100_000 coins
     let sender = AccountData::new(1_000_000, 10);

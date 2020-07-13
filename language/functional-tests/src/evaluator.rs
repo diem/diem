@@ -600,7 +600,7 @@ pub fn eval<TComp: Compiler>(
             })
             .to_vec(),
             Some(config.validator_accounts),
-            VMPublishingOption::Open,
+            VMPublishingOption::open(),
         )
     };
     for data in config.accounts.values() {
