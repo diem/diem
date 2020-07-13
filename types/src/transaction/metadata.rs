@@ -14,7 +14,7 @@ pub enum MetadataType {
     Undefined,
     GeneralMetadataType(GeneralMetadata),
     TravelRuleMetadataType(TravelRuleMetadata),
-    UnstructuredStringMetadataType(UnstructuredStringMetadata),
+    UnstructuredBytesMetadataType(UnstructuredBytesMetadata),
 }
 
 /// List of supported transaction metadata format versions for regular
@@ -57,9 +57,10 @@ pub struct TravelRuleMetadataV0 {
     off_chain_reference_id: Option<String>,
 }
 
-/// Opaque hex string-encoded binary transaction metadata
+/// Opaque binary transaction metadata
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UnstructuredStringMetadata {
-    /// Unstructured string metadata
-    metadata: Option<String>,
+pub struct UnstructuredBytesMetadata {
+    /// Unstructured byte vector metadata
+    #[serde(with = "serde_bytes")]
+    metadata: Option<Vec<u8>>,
 }
