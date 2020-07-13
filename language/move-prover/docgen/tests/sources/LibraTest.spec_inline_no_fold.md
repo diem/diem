@@ -9,7 +9,6 @@
 -  [Resource `Libra`](#0x1_LibraTest_Libra)
 -  [Resource `MintCapability`](#0x1_LibraTest_MintCapability)
 -  [Resource `BurnCapability`](#0x1_LibraTest_BurnCapability)
--  [Resource `CurrencyRegistrationCapability`](#0x1_LibraTest_CurrencyRegistrationCapability)
 -  [Struct `MintEvent`](#0x1_LibraTest_MintEvent)
 -  [Struct `BurnEvent`](#0x1_LibraTest_BurnEvent)
 -  [Struct `PreburnEvent`](#0x1_LibraTest_PreburnEvent)
@@ -23,7 +22,6 @@
 -  [Function `mint`](#0x1_LibraTest_mint)
 -  [Function `burn`](#0x1_LibraTest_burn)
 -  [Function `cancel_burn`](#0x1_LibraTest_cancel_burn)
--  [Function `new_preburn`](#0x1_LibraTest_new_preburn)
 -  [Function `mint_with_capability`](#0x1_LibraTest_mint_with_capability)
 -  [Function `preburn_with_resource`](#0x1_LibraTest_preburn_with_resource)
 -  [Function `create_preburn`](#0x1_LibraTest_create_preburn)
@@ -257,42 +255,17 @@ and the
 </dl>
 
 
-<a name="0x1_LibraTest_CurrencyRegistrationCapability"></a>
+<a name="0x1_LibraTest_MintEvent"></a>
 
-## Resource `CurrencyRegistrationCapability`
+## Struct `MintEvent`
 
 The
-<code><a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> is a singleton resource
+<code>CurrencyRegistrationCapability</code> is a singleton resource
 published under the
 <code><a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code> and grants
 the capability to the
 <code><a href="#0x1_Libra">0x1::Libra</a></code> module to add currencies to the
 <code><a href="#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain config.
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>
-</code></pre>
-
-
-
-##### Fields
-
-
-<dl>
-<dt>
-
-<code>cap: <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a></code>
-</dt>
-<dd>
- A capability to allow updating the set of registered currencies on-chain.
-</dd>
-</dl>
-
-
-<a name="0x1_LibraTest_MintEvent"></a>
-
-## Struct `MintEvent`
-
 A
 <code><a href="#0x1_LibraTest_MintEvent">MintEvent</a></code> is emitted every time a Libra coin is minted. This
 contains the
@@ -677,8 +650,7 @@ contains this address has the authority to initiate a burn request. A burn reque
 resolved by the holder of a
 <code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a></code> by either (1) burning the funds, or (2)
 returning the funds to the account that initiated the burn request.
-including multiple burn requests from the same account. However, burn requests
-(and cancellations) from the same account must be resolved in FIFO order.
+Concurrent preburn requests are not allowed, only one request (in to_burn) can be handled at any time.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;
@@ -692,10 +664,11 @@ including multiple burn requests from the same account. However, burn requests
 <dl>
 <dt>
 
-<code>requests: vector&lt;<a href="#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;&gt;</code>
+<code>to_burn: <a href="#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;</code>
 </dt>
 <dd>
- The queue of pending burn requests
+ A single pending burn amount.
+ There is no pending burn request if the value in to_burn is 0
 </dd>
 </dl>
 
@@ -716,7 +689,7 @@ Initialization of the
 registered currencies in the
 <code><a href="#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain
 config, and publishes the
-<code><a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> under the
+<code>CurrencyRegistrationCapability</code> under the
 <code><a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>. This can only be called from genesis.
 
 
@@ -731,14 +704,13 @@ config, and publishes the
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_initialize">initialize</a>(
     config_account: &signer,
 ) {
-    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     // Operational constraint
     <b>assert</b>(
         <a href="#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        0
+        EINVALID_SINGLETON_ADDRESS
     );
-    <b>let</b> cap = <a href="#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
-    move_to(config_account, <a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
+    <a href="#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
 }
 </code></pre>
 
@@ -759,7 +731,7 @@ The caller must pass a
 <code>TreasuryComplianceRole</code> capability.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(publish_account: &signer, cap: <a href="#0x1_LibraTest_MintCapability">LibraTest::MintCapability</a>&lt;CoinType&gt;, tc_signer: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(publish_account: &signer, cap: <a href="#0x1_LibraTest_MintCapability">LibraTest::MintCapability</a>&lt;CoinType&gt;, tc_account: &signer)
 </code></pre>
 
 
@@ -770,10 +742,9 @@ The caller must pass a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(
     publish_account: &signer,
     cap: <a href="#0x1_LibraTest_MintCapability">MintCapability</a>&lt;CoinType&gt;,
-    tc_signer: &signer,
+    tc_account: &signer,
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_signer), 919402);
+    <b>assert</b>(<a href="#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     move_to(publish_account, cap)
 }
@@ -809,8 +780,7 @@ The caller must pass a
     cap: <a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;,
     tc_account: &signer,
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919403);
+    <b>assert</b>(<a href="#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     move_to(account, cap)
 }
@@ -879,6 +849,15 @@ published
 
 
 
+##### Specification
+
+
+
+<pre><code>pragma verify=<b>false</b>;
+</code></pre>
+
+
+
 ##### Implementation
 
 
@@ -899,12 +878,12 @@ published
 
 ## Function `cancel_burn`
 
-Cancels the oldest burn request in the
+Cancels the current burn request in the
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource held
 under the
 <code>preburn_address</code>, and returns the coins.
 Calls to this will fail if the sender does not have a published
-<code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, or if there are no preburn requests
+<code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, or if there is no preburn request
 outstanding in the
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource under
 <code>preburn_address</code>.
@@ -931,32 +910,6 @@ outstanding in the
 
 
 
-<a name="0x1_LibraTest_new_preburn"></a>
-
-## Function `new_preburn`
-
-Create a new
-<code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource, and return it back to the sender.
-The
-<code>CoinType</code> must be a registered currency on-chain.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_new_preburn">new_preburn</a>&lt;CoinType&gt;(): <a href="#0x1_LibraTest_Preburn">LibraTest::Preburn</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-##### Implementation
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_new_preburn">new_preburn</a>&lt;CoinType&gt;(): <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt; {
-    <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
-    <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="#0x1_Vector_empty">Vector::empty</a>() }
-}
-</code></pre>
-
-
-
 <a name="0x1_LibraTest_mint_with_capability"></a>
 
 ## Function `mint_with_capability`
@@ -967,7 +920,7 @@ Mint a new
 <code>value</code>. The
 caller must have a reference to a
 <code><a href="#0x1_LibraTest_MintCapability">MintCapability</a>&lt;CoinType&gt;</code>. Only
-the Association account or the
+the treasury compliance account or the
 <code><a href="#0x1_LBR">0x1::LBR</a></code> module can acquire such a
 reference.
 
@@ -1027,7 +980,7 @@ reference.
     <b>let</b> currency_code = <a href="#0x1_LibraTest_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-    <b>assert</b>(info.can_mint, 4);
+    <b>assert</b>(info.can_mint, EMINTING_NOT_ALLOWED);
     info.total_value = info.total_value + (value <b>as</b> u128);
     // don't emit mint events for synthetic currenices
     <b>if</b> (!info.is_synthetic) {
@@ -1052,10 +1005,11 @@ reference.
 
 Add the
 <code>coin</code> to the
-<code>preburn</code> queue in the
+<code>preburn</code> to_burn field in the
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource
 held at the address
-<code>preburn_address</code>. Emits a
+<code>preburn_address</code> if it is empty, otherwise raise
+a PendingPreburn Error (code 6). Emits a
 <code><a href="#0x1_LibraTest_PreburnEvent">PreburnEvent</a></code> to
 the
 <code>preburn_events</code> event stream in the
@@ -1100,7 +1054,6 @@ the
 <pre><code><b>schema</b> <a href="#0x1_LibraTest_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt; {
     coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
     preburn: <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;;
-    <b>ensures</b> <a href="#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(preburn.requests, <b>old</b>(preburn.requests), coin);
     <b>ensures</b> <a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
                 == <b>old</b>(<a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) + coin.value;
 }
@@ -1117,10 +1070,9 @@ the
     preburn_address: address,
 ) <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> coin_value = <a href="#0x1_LibraTest_value">value</a>(&coin);
-    <a href="#0x1_Vector_push_back">Vector::push_back</a>(
-        &<b>mut</b> preburn.requests,
-        coin
-    );
+    // Throw <b>if</b> already occupied
+    <b>assert</b>(<a href="#0x1_LibraTest_value">value</a>(&preburn.to_burn) == 0, 6);
+    <a href="#0x1_LibraTest_deposit">deposit</a>(&<b>mut</b> preburn.to_burn, coin);
     <b>let</b> currency_code = <a href="#0x1_LibraTest_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.preburn_value = info.preburn_value + coin_value;
@@ -1159,10 +1111,9 @@ Create a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_create_preburn">create_preburn</a>&lt;CoinType&gt;(
     tc_account: &signer
 ): <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt; {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919404);
-    <b>assert</b>(<a href="#0x1_LibraTest_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
-    <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="#0x1_Vector_empty">Vector::empty</a>() }
+    <b>assert</b>(<a href="#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
+    <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt; { to_burn: <a href="#0x1_LibraTest_zero">zero</a>&lt;CoinType&gt;() }
 }
 </code></pre>
 
@@ -1194,8 +1145,7 @@ this resource for the designated dealer.
     account: &signer,
     tc_account: &signer
 ) <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(!<a href="#0x1_LibraTest_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
-    // move_to(account, <a href="#0x1_LibraTest_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_capability))
+    <b>assert</b>(!<a href="#0x1_LibraTest_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), EIS_SYNTHETIC_CURRENCY);
     move_to(account, <a href="#0x1_LibraTest_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_account))
 }
 </code></pre>
@@ -1249,17 +1199,16 @@ Calls to this function will fail if
 ## Function `burn_with_capability`
 
 Permanently removes the coins held in the
-<code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource stored at
-<code>preburn_address</code> and
-updates the market cap accordingly. If there are multiple preburn
-requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+<code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource (in to_burn field)
+stored at
+<code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a
 <code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;</code>
 resource under
-<code>preburn_address</code>, or, if the preburn queue for
-<code>CoinType</code> has no pending burn requests.
+<code>preburn_address</code>, or, if the preburn to_burn area for
+<code>CoinType</code> is empty (error code 7).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, capability: &<a href="#0x1_LibraTest_BurnCapability">LibraTest::BurnCapability</a>&lt;CoinType&gt;)
@@ -1285,7 +1234,7 @@ resource under
     preburn_address: address,
     capability: &<a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_LibraTest_Preburn">Preburn</a> {
-    // destroy the coin at the head of the preburn queue
+    // destroy the coin in the preburn to_burn area
     <a href="#0x1_LibraTest_burn_with_resource_cap">burn_with_resource_cap</a>(
         borrow_global_mut&lt;<a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address),
         preburn_address,
@@ -1301,18 +1250,16 @@ resource under
 ## Function `burn_with_resource_cap`
 
 Permanently removes the coins held in the
-<code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource
-<code>preburn</code> stored at
-<code>preburn_address</code> and
-updates the market cap accordingly. If there are multiple preburn
-requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+<code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource (in to_burn field)
+stored at
+<code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a
 <code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;</code>
 resource under
-<code>preburn_address</code>, or, if the preburn queue for
-<code>CoinType</code> has no pending burn requests.
+<code>preburn_address</code>, or, if the preburn to_burn area for
+<code>CoinType</code> is empty (error code 7).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_LibraTest_Preburn">LibraTest::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_LibraTest_BurnCapability">LibraTest::BurnCapability</a>&lt;CoinType&gt;)
@@ -1337,11 +1284,6 @@ resource under
 <pre><code><b>schema</b> <a href="#0x1_LibraTest_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> !<a href="#0x1_LibraTest_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-    <b>aborts_if</b> len(preburn.requests) == 0;
-    <b>aborts_if</b> {
-        <b>let</b> i = <a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
-        i.total_value &lt; preburn.requests[0].value || i.<a href="#0x1_LibraTest_preburn_value">preburn_value</a> &lt; preburn.requests[0].value
-    };
 }
 </code></pre>
 
@@ -1353,11 +1295,10 @@ resource under
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTest_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;;
-    <b>ensures</b> <a href="#0x1_Vector_eq_pop_front">Vector::eq_pop_front</a>(preburn.requests, <b>old</b>(preburn.requests));
     <b>ensures</b> <a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value
-            == <b>old</b>(<a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) - <b>old</b>(preburn.requests[0].value);
+            == <b>old</b>(<a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) - <b>old</b>(preburn.to_burn.value);
     <b>ensures</b> <a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
-            == <b>old</b>(<a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) - <b>old</b>(preburn.requests[0].value);
+            == <b>old</b>(<a href="#0x1_LibraTest_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) - <b>old</b>(preburn.to_burn.value);
 }
 </code></pre>
 
@@ -1372,8 +1313,10 @@ resource under
     _capability: &<a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> currency_code = <a href="#0x1_LibraTest_currency_code">currency_code</a>&lt;CoinType&gt;();
-    // destroy the coin at the head of the preburn queue
-    <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = <a href="#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
+    // Abort <b>if</b> no coin present in preburn area
+    <b>assert</b>(preburn.to_burn.value &gt; 0, 7);
+    // destroy the coin in <a href="#0x1_LibraTest_Preburn">Preburn</a> area
+    <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = <a href="#0x1_LibraTest_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.total_value = info.total_value - (value <b>as</b> u128);
@@ -1402,14 +1345,11 @@ Cancels the burn request in the
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a></code> resource stored at
 <code>preburn_address</code> and
 return the coins to the caller.
-If there are multiple preburn requests in progress for
-<code>CoinType</code> (i.e. in the
-preburn queue), this will cancel the oldest one.
 This function can only be called by the holder of a
 <code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, and will fail if the
 <code><a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;</code> resource
 at
-<code>preburn_address</code> does not contain any pending burn requests.
+<code>preburn_address</code> does not contain a pending burn request.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, _capability: &<a href="#0x1_LibraTest_BurnCapability">LibraTest::BurnCapability</a>&lt;CoinType&gt;): <a href="#0x1_LibraTest_Libra">LibraTest::Libra</a>&lt;CoinType&gt;
@@ -1424,9 +1364,9 @@ at
     preburn_address: address,
     _capability: &<a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_LibraTest_Preburn">Preburn</a> {
-    // destroy the coin at the head of the preburn queue
+    // destroy the coin in the preburn area
     <b>let</b> preburn = borrow_global_mut&lt;<a href="#0x1_LibraTest_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address);
-    <b>let</b> coin = <a href="#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
+    <b>let</b> coin = <a href="#0x1_LibraTest_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="#0x1_LibraTest_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
@@ -1668,7 +1608,7 @@ value of the passed-in
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; {
     // Check that `amount` is less than the coin's value
-    <b>assert</b>(coin.value &gt;= amount, 10);
+    <b>assert</b>(coin.value &gt;= amount, EAMOUNT_EXCEEDS_COIN_VALUE);
     coin.value = coin.value - amount;
     <a href="#0x1_Libra">Libra</a> { value: amount }
 }
@@ -1807,7 +1747,7 @@ a
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = coin;
-    <b>assert</b>(value == 0, 5)
+    <b>assert</b>(value == 0, EDESTRUCTION_OF_NONZERO_COIN)
 }
 </code></pre>
 
@@ -1824,13 +1764,11 @@ The passed-in
 <code>account</code> must be a specific address (
 <code><a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>) and
 the
-<code>account</code> must also have the correct
-<code><a href="#0x1_LibraTest_RegisterNewCurrency">RegisterNewCurrency</a></code> capability.
+<code>account</code> must also have the register new currency privilege.
 After the first registration of
-<code>CoinType</code> as a
-currency, all subsequent tries to register
-<code>CoinType</code> as a currency
-will fail.
+<code>CoinType</code> as a  currency, all subsequent tries to register
+<code>CoinType</code> as a currency will fail.
+
 When the
 <code>CoinType</code> is registered it publishes the
 <code><a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;</code> resource under the
@@ -1841,7 +1779,7 @@ adds the currency to the set of
 <code><a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> resources.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer, to_lbr_exchange_rate: <a href="#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x1_LibraTest_MintCapability">LibraTest::MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_LibraTest_BurnCapability">LibraTest::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_register_currency">register_currency</a>&lt;CoinType&gt;(lr_account: &signer, to_lbr_exchange_rate: <a href="#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x1_LibraTest_MintCapability">LibraTest::MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_LibraTest_BurnCapability">LibraTest::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1850,10 +1788,9 @@ adds the currency to the set of
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(tc_account);
-<b>aborts_if</b> <a href="#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
-<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
-<b>aborts_if</b> exists&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(lr_account);
+<b>aborts_if</b> <a href="#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> <a href="#0x1_LibraTest_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
 <b>include</b> <a href="#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
 <b>ensures</b> <a href="#0x1_LibraTest_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
@@ -1868,9 +1805,11 @@ adds the currency to the set of
 
 
 Verify all functions in this module.
+> TODO(wrwg): temporarily deactivated as a recent PR destroyed assumptions
+> about coin balance.
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 
@@ -1900,6 +1839,22 @@ Returns currency information.
 </code></pre>
 
 
+Specification version of
+<code><a href="#0x1_LibraTest_approx_lbr_for_value">Self::approx_lbr_for_value</a></code>.
+
+
+<a name="0x1_LibraTest_spec_approx_lbr_for_value"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTest_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;CoinType&gt;(value: num):  num {
+    <a href="#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(
+        value,
+        <b>global</b>&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
+    )
+}
+</code></pre>
+
+
 
 <a name="0x1_LibraTest_@Conservation_of_currency"></a>
 
@@ -1922,26 +1877,22 @@ all coins of a currency type.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_register_currency">register_currency</a>&lt;CoinType&gt;(
-    account: &signer,
-    // DD refactor
-    tc_account: &signer,
+    lr_account: &signer,
     to_lbr_exchange_rate: <a href="#0x1_FixedPoint32">FixedPoint32</a>,
     is_synthetic: bool,
     scaling_factor: u64,
     fractional_part: u64,
     currency_code: vector&lt;u8&gt;,
 ): (<a href="#0x1_LibraTest_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
-<b>acquires</b> <a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_register_new_currency_privilege(tc_account), 919405);
-    // Operational constraint that it must be stored under a specific
-    // address.
+{
+    <b>assert</b>(<a href="#0x1_Roles_has_register_new_currency_privilege">Roles::has_register_new_currency_privilege</a>(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+    // Operational constraint that it must be stored under a specific address.
     <b>assert</b>(
-        <a href="#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(),
-        8
+        <a href="#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(),
+        EINVALID_SINGLETON_ADDRESS
     );
 
-    move_to(account, <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
+    move_to(lr_account, <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
         total_value: 0,
         preburn_value: 0,
         to_lbr_exchange_rate,
@@ -1950,15 +1901,15 @@ all coins of a currency type.
         fractional_part,
         currency_code: <b>copy</b> currency_code,
         can_mint: <b>true</b>,
-        mint_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_MintEvent">MintEvent</a>&gt;(account),
-        burn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_BurnEvent">BurnEvent</a>&gt;(account),
-        preburn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_PreburnEvent">PreburnEvent</a>&gt;(account),
-        cancel_burn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_CancelBurnEvent">CancelBurnEvent</a>&gt;(account),
-        exchange_rate_update_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a>&gt;(account)
+        mint_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_MintEvent">MintEvent</a>&gt;(lr_account),
+        burn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_BurnEvent">BurnEvent</a>&gt;(lr_account),
+        preburn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_PreburnEvent">PreburnEvent</a>&gt;(lr_account),
+        cancel_burn_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_CancelBurnEvent">CancelBurnEvent</a>&gt;(lr_account),
+        exchange_rate_update_events: <a href="#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraTest_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a>&gt;(lr_account)
     });
     <a href="#0x1_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
+        lr_account,
         currency_code,
-        &borrow_global&lt;<a href="#0x1_LibraTest_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).cap
     );
     (<a href="#0x1_LibraTest_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x1_LibraTest_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
 }
@@ -2199,8 +2150,7 @@ Updates the
     tr_account: &signer,
     lbr_exchange_rate: <a href="#0x1_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tr_account), 919406);
+    <b>assert</b>(<a href="#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;FromCoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -2248,7 +2198,7 @@ Returns the (rough) exchange rate between
 
 There may be situations in which we disallow the further minting of
 coins in the system without removing the currency. This function
-allows the association to control whether or not further coins of
+allows the association TC account to control whether or not further coins of
 <code>CoinType</code> can be minted or not. If this is called with
 <code>can_mint =
 <b>true</b></code>, then minting is allowed, if
@@ -2271,8 +2221,7 @@ start out in the default state of
     can_mint: bool,
     )
 <b>acquires</b> <a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tr_account), 919407);
+    <b>assert</b>(<a href="#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_LibraTest_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
@@ -2298,6 +2247,6 @@ Asserts that
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraTest_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;() {
-    <b>assert</b>(<a href="#0x1_LibraTest_is_currency">is_currency</a>&lt;CoinType&gt;(), 1);
+    <b>assert</b>(<a href="#0x1_LibraTest_is_currency">is_currency</a>&lt;CoinType&gt;(), ENOT_A_REGISTERED_CURRENCY);
 }
 </code></pre>

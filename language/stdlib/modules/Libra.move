@@ -8,7 +8,7 @@ module Libra {
     use 0x1::CoreAddresses;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
-    use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
+    use 0x1::RegisteredCurrencies;
     use 0x1::Signer;
     use 0x1::Roles;
     use 0x1::LibraTimestamp;
@@ -43,10 +43,6 @@ module Libra {
     /// published under the `CoreAddresses::LIBRA_ROOT_ADDRESS()` and grants
     /// the capability to the `0x1::Libra` module to add currencies to the
     /// `0x1::RegisteredCurrencies` on-chain config.
-    resource struct CurrencyRegistrationCapability {
-        /// A capability to allow updating the set of registered currencies on-chain.
-        cap: RegistrationCapability,
-    }
 
     /// A `MintEvent` is emitted every time a Libra coin is minted. This
     /// contains the `amount` minted (in base units of the currency being
@@ -211,8 +207,7 @@ module Libra {
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             EINVALID_SINGLETON_ADDRESS
         );
-        let cap = RegisteredCurrencies::initialize(config_account);
-        move_to(config_account, CurrencyRegistrationCapability{ cap })
+        RegisteredCurrencies::initialize(config_account);
     }
 
     /// Publishes the `MintCapability` `cap` for the `CoinType` currency
@@ -670,7 +665,7 @@ module Libra {
         fractional_part: u64,
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
-    acquires CurrencyRegistrationCapability {
+    {
         assert(Roles::has_register_new_currency_privilege(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
         // Operational constraint that it must be stored under a specific address.
         assert(
@@ -694,15 +689,14 @@ module Libra {
             exchange_rate_update_events: Event::new_event_handle<ToLBRExchangeRateUpdateEvent>(lr_account)
         });
         RegisteredCurrencies::add_currency_code(
+            lr_account,
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap
         );
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
         aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
-        aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;

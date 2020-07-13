@@ -2,7 +2,6 @@ address 0x1 {
 
 module LibraVMConfig {
     use 0x1::LibraConfig;
-    use 0x1::Signer;
 
     // The struct to hold all config data needed to operate the LibraVM.
     // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configruation.
@@ -79,8 +78,7 @@ module LibraVMConfig {
             max_transaction_size_in_bytes: 4096,
         };
 
-
-        LibraConfig::publish_new_config_with_delegate<LibraVMConfig>(
+        LibraConfig::publish_new_config(
             lr_account,
             LibraVMConfig {
                 publishing_option,
@@ -90,9 +88,7 @@ module LibraVMConfig {
                     gas_constants,
                 }
             },
-            Signer::address_of(lr_account),
         );
-        LibraConfig::claim_delegated_modify_config<LibraVMConfig>(lr_account, Signer::address_of(lr_account));
     }
 
     public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {
@@ -101,5 +97,4 @@ module LibraVMConfig {
         LibraConfig::set<LibraVMConfig>(account, current_config);
     }
 }
-
 }

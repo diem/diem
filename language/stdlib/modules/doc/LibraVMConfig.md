@@ -211,8 +211,7 @@
         max_transaction_size_in_bytes: 4096,
     };
 
-
-    <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_delegate">LibraConfig::publish_new_config_with_delegate</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(
+    <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
         lr_account,
         <a href="#0x1_LibraVMConfig">LibraVMConfig</a> {
             publishing_option,
@@ -222,9 +221,7 @@
                 gas_constants,
             }
         },
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account),
     );
-    <a href="LibraConfig.md#0x1_LibraConfig_claim_delegated_modify_config">LibraConfig::claim_delegated_modify_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(lr_account, <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account));
 }
 </code></pre>
 

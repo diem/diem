@@ -9,7 +9,6 @@
 -  [Resource `Libra`](#0x1_Libra_Libra)
 -  [Resource `MintCapability`](#0x1_Libra_MintCapability)
 -  [Resource `BurnCapability`](#0x1_Libra_BurnCapability)
--  [Resource `CurrencyRegistrationCapability`](#0x1_Libra_CurrencyRegistrationCapability)
 -  [Struct `MintEvent`](#0x1_Libra_MintEvent)
 -  [Struct `BurnEvent`](#0x1_Libra_BurnEvent)
 -  [Struct `PreburnEvent`](#0x1_Libra_PreburnEvent)
@@ -224,45 +223,17 @@ and the
 
 </details>
 
-<a name="0x1_Libra_CurrencyRegistrationCapability"></a>
+<a name="0x1_Libra_MintEvent"></a>
 
-## Resource `CurrencyRegistrationCapability`
+## Struct `MintEvent`
 
 The
-<code><a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> is a singleton resource
+<code>CurrencyRegistrationCapability</code> is a singleton resource
 published under the
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code> and grants
 the capability to the
 <code><a href="#0x1_Libra">0x1::Libra</a></code> module to add currencies to the
 <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain config.
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>cap: <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a></code>
-</dt>
-<dd>
- A capability to allow updating the set of registered currencies on-chain.
-</dd>
-</dl>
-
-
-</details>
-
-<a name="0x1_Libra_MintEvent"></a>
-
-## Struct `MintEvent`
-
 A
 <code><a href="#0x1_Libra_MintEvent">MintEvent</a></code> is emitted every time a Libra coin is minted. This
 contains the
@@ -707,7 +678,7 @@ Initialization of the
 registered currencies in the
 <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain
 config, and publishes the
-<code><a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> under the
+<code>CurrencyRegistrationCapability</code> under the
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>. This can only be called from genesis.
 
 
@@ -729,8 +700,7 @@ config, and publishes the
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         EINVALID_SINGLETON_ADDRESS
     );
-    <b>let</b> cap = <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
-    move_to(config_account, <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
+    <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
 }
 </code></pre>
 
@@ -1683,7 +1653,7 @@ adds the currency to the set of
     fractional_part: u64,
     currency_code: vector&lt;u8&gt;,
 ): (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
-<b>acquires</b> <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
+{
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_register_new_currency_privilege">Roles::has_register_new_currency_privilege</a>(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
     // Operational constraint that it must be stored under a specific address.
     <b>assert</b>(
@@ -1707,8 +1677,8 @@ adds the currency to the set of
         exchange_rate_update_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a>&gt;(lr_account)
     });
     <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
+        lr_account,
         currency_code,
-        &borrow_global&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).cap
     );
     (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
 }
@@ -2477,7 +2447,6 @@ the total_value CurrencyInfo keeps track of.
 
 <pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege">Roles::spec_has_register_new_currency_privilege</a>(lr_account);
 <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>();
-<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
 <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
 <b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
