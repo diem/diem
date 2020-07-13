@@ -4,7 +4,7 @@
 use crate::{
     backup_types::transaction::manifest::TransactionBackup,
     storage::{BackupStorage, FileHandle},
-    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
+    utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
 use anyhow::{ensure, Result};
 use libra_types::{
@@ -15,7 +15,6 @@ use libra_types::{
 use libradb::backup::restore_handler::RestoreHandler;
 use std::{cmp::min, sync::Arc};
 use structopt::StructOpt;
-use tokio::io::AsyncReadExt;
 
 #[derive(StructOpt)]
 pub struct TransactionRestoreOpt {
@@ -46,13 +45,8 @@ impl TransactionRestoreController {
     }
 
     pub async fn run(self) -> Result<()> {
-        let mut manifest_bytes = Vec::new();
-        self.storage
-            .open_for_read(&self.manifest_handle)
-            .await?
-            .read_to_end(&mut manifest_bytes)
-            .await?;
-        let manifest: TransactionBackup = serde_json::from_slice(&manifest_bytes)?;
+        let manifest: TransactionBackup =
+            self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
         if self.target_version < manifest.first_version {
             println!(
@@ -66,7 +60,12 @@ impl TransactionRestoreController {
         for chunk in manifest.chunks {
             // verify
             let (txns, txn_infos) = self.read_chunk(chunk.transactions).await?;
-            let (proof, ledger_info) = self.read_proof(chunk.proof).await?;
+            let (proof, ledger_info) = self
+                .storage
+                .load_lcs_file::<(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)>(
+                    &chunk.proof,
+                )
+                .await?;
             ensure!(
                 chunk.first_version + (txns.len() as Version) == chunk.last_version + 1,
                 "Number of items in chunks doesn't match that in manifest. first_version: {}, last_version: {}, items in chunk: {}",
@@ -127,15 +126,5 @@ impl TransactionRestoreController {
         }
 
         Ok((txns, txn_infos))
-    }
-
-    async fn read_proof(
-        &self,
-        file_handle: FileHandle,
-    ) -> Result<(TransactionAccumulatorRangeProof, LedgerInfoWithSignatures)> {
-        let mut file = self.storage.open_for_read(&file_handle).await?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes).await?;
-        Ok(lcs::from_bytes(&bytes)?)
     }
 }
