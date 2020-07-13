@@ -53,6 +53,8 @@ module AccountLimits {
     const ENOT_LIBRA_ROOT: u64 = 2;
     const ENOT_TREASURY_COMPLIANCE: u64 = 3;
     const ENO_LIMITS_DEFINITION_EXISTS: u64 = 4;
+    const ELIMITS_DEFINITION_ALREADY_EXISTS: u64 = 5;
+
 
     /// 24 hours in microseconds
     const ONE_DAY: u64 = 86400000000;
@@ -129,11 +131,17 @@ module AccountLimits {
     /// `Window` for each currency they can hold published at the top level.
     /// Root accounts for multi-account entities will hold this resource at
     /// their root/parent account.
+    /// Aborts with ELIMITS_DEFINITION_ALREADY_EXISTS if `to_limit` already contains a
+    /// Window<CoinType>
     public fun publish_window<CoinType>(
         to_limit: &signer,
         _: &AccountLimitMutationCapability,
         limit_address: address,
     ) {
+        assert(
+            !exists<Window<CoinType>>(Signer::address_of(to_limit)),
+            ELIMITS_DEFINITION_ALREADY_EXISTS
+        );
         move_to(
             to_limit,
             Window<CoinType> {
@@ -360,6 +368,14 @@ module AccountLimits {
 
     public fun has_window_published<CoinType>(addr: address): bool {
         exists<Window<CoinType>>(addr)
+    }
+    spec fun has_window_published {
+        ensures result == spec_has_window_published<CoinType>(addr);
+    }
+    spec module {
+        define spec_has_window_published<CoinType>(addr: address): bool {
+            exists<Window<CoinType>>(addr)
+        }
     }
 
     fun current_time(): u64 {

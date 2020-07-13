@@ -24,7 +24,6 @@ pub enum StdlibScript {
     AddCurrencyToAccount,
     AddRecoveryRotationCapability,
     AddValidator,
-    AllowCurrencyForVasp,
     Burn,
     BurnTxnFees,
     CancelBurn,
@@ -74,7 +73,6 @@ impl StdlibScript {
             AddCurrencyToAccount,
             AddRecoveryRotationCapability,
             AddValidator,
-            AllowCurrencyForVasp,
             Burn,
             BurnTxnFees,
             CancelBurn,
@@ -202,7 +200,6 @@ impl fmt::Display for StdlibScript {
             "{}",
             match self {
                 AddValidator => "add_validator",
-                AllowCurrencyForVasp => "allow_currency_for_vasp",
                 AddCurrencyToAccount => "add_currency_to_account",
                 AddRecoveryRotationCapability => "add_recovery_rotation_capability",
                 Burn => "burn",

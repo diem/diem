@@ -11,7 +11,8 @@
 -  [Function `initialize`](#0x1_VASP_initialize)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
--  [Function `try_allow_currency`](#0x1_VASP_try_allow_currency)
+-  [Function `has_account_limits`](#0x1_VASP_has_account_limits)
+-  [Function `add_account_limits`](#0x1_VASP_add_account_limits)
 -  [Function `parent_address`](#0x1_VASP_parent_address)
 -  [Function `is_parent`](#0x1_VASP_is_parent)
 -  [Function `is_child`](#0x1_VASP_is_child)
@@ -21,6 +22,7 @@
 -  [Specification](#0x1_VASP_Specification)
     -  [Function `publish_parent_vasp_credential`](#0x1_VASP_Specification_publish_parent_vasp_credential)
     -  [Function `publish_child_vasp_credential`](#0x1_VASP_Specification_publish_child_vasp_credential)
+    -  [Function `has_account_limits`](#0x1_VASP_Specification_has_account_limits)
     -  [Function `parent_address`](#0x1_VASP_Specification_parent_address)
     -  [Function `is_parent`](#0x1_VASP_Specification_is_parent)
     -  [Function `is_child`](#0x1_VASP_Specification_is_child)
@@ -33,6 +35,7 @@
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
         -  [Parent does not change](#0x1_VASP_@Parent_does_not_change)
         -  [Aborts conditions shared between functions.](#0x1_VASP_@Aborts_conditions_shared_between_functions.)
+        -  [The VASPOperationsResource should be published under the LibraRoot address after genesis](#0x1_VASP_@The_VASPOperationsResource_should_be_published_under_the_LibraRoot_address_after_genesis)
 
 
 
@@ -234,24 +237,19 @@ Aborts if
 
 </details>
 
-<a name="0x1_VASP_try_allow_currency"></a>
+<a name="0x1_VASP_has_account_limits"></a>
 
-## Function `try_allow_currency`
+## Function `has_account_limits`
 
-If the account passed in is not a VASP account, this returns true since
-we don't need to ensure account limits exist for those accounts.
-If the account is a child VASP account, this returns true only if a
-<code>Window&lt;CoinType&gt;</code> is
-published in the parent's account.
-If the account is a child VASP account, this will always return true;
-either a
-<code>LimitsDefinition</code>/
-<code>Window</code> exist for
-<code>CoinType</code>, or these
-will be published under the account.
+Return
+<code><b>true</b></code> if
+<code>addr</code> is a parent or child VASP whose parent VASP account contains an
+<code><a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;CoinType&gt;</code> resource.
+Aborts if
+<code>addr</code> is not a VASP
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_try_allow_currency">try_allow_currency</a>&lt;CoinType&gt;(account: &signer): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType&gt;(addr: address): bool
 </code></pre>
 
 
@@ -260,22 +258,46 @@ will be published under the account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_try_allow_currency">try_allow_currency</a>&lt;CoinType&gt;(account: &signer): bool
-<b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
-    <b>assert</b>(<a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;CoinType&gt;(), ENOT_A_REGISTERED_CURRENCY);
-    <b>let</b> account_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>if</b> (!<a href="#0x1_VASP_is_vasp">is_vasp</a>(account_address)) <b>return</b> <b>true</b>;
-    <b>let</b> parent_address = <a href="#0x1_VASP_parent_address">parent_address</a>(account_address);
-    <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;CoinType&gt;(parent_address)) {
-        <b>true</b>
-    } <b>else</b> <b>if</b> (<a href="#0x1_VASP_is_parent">is_parent</a>(account_address)) {
-        <b>let</b> cap = &borrow_global&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap;
-        <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(account, cap, <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-        <b>true</b>
-    } <b>else</b> {
-        // it's a child vasp, and we can't publish the limits definition under it.
-        <b>false</b>
-    }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType&gt;(addr: address): bool <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a> {
+    <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;CoinType&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr))
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_VASP_add_account_limits"></a>
+
+## Function `add_account_limits`
+
+Publish an
+<code><a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;CoinType&gt;</code> resource under
+<code>account</code>.
+Aborts if
+<code>account</code> is not a ParentVASP
+Aborts if
+<code>account</code> already contains a
+<code><a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;CoinType&gt;</code> resource
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_add_account_limits">add_account_limits</a>&lt;CoinType&gt;(account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_add_account_limits">add_account_limits</a>&lt;CoinType&gt;(account: &signer) <b>acquires</b> <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(account), ENOT_A_PARENT_VASP);
+
+    <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(
+        account,
+        &borrow_global&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap,
+        <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
+    )
 }
 </code></pre>
 
@@ -494,6 +516,33 @@ Aborts if
 <b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
 <b>ensures</b> TRACE(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child)))
      == TRACE(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_has_account_limits"></a>
+
+### Function `has_account_limits`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType&gt;(addr: address): bool
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> result == <a href="#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;CoinType&gt;(addr);
+</code></pre>
+
+
+
+
+<a name="0x1_VASP_spec_has_account_limits"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;CoinType&gt;(addr: address): bool {
+    <a href="AccountLimits.md#0x1_AccountLimits_spec_has_window_published">AccountLimits::spec_has_window_published</a>&lt;CoinType&gt;(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr))
+}
 </code></pre>
 
 
@@ -870,4 +919,21 @@ Returns the number of children under
 
 
 <pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> num_children;
+</code></pre>
+
+
+
+<a name="0x1_VASP_@The_VASPOperationsResource_should_be_published_under_the_LibraRoot_address_after_genesis"></a>
+
+#### The VASPOperationsResource should be published under the LibraRoot address after genesis
+
+
+
+<a name="0x1_VASP_spec_is_published"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_published">spec_is_published</a>(): bool {
+    exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+}
+<b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_VASP_spec_is_published">spec_is_published</a>();
 </code></pre>
