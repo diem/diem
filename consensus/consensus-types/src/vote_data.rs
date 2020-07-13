@@ -11,7 +11,7 @@ use std::fmt::{Display, Formatter};
 pub struct VoteData {
     /// Contains all the block information needed for voting for the proposed round.
     proposed: BlockInfo,
-    /// Contains all the block information for the parent for the proposed round.
+    /// Contains all the block information for the block the proposal is extending.
     parent: BlockInfo,
 }
 
@@ -26,20 +26,22 @@ impl Display for VoteData {
 }
 
 impl VoteData {
+    /// Constructs a new VoteData from the block information of a proposed block and the block it extends.
     pub fn new(proposed: BlockInfo, parent: BlockInfo) -> Self {
         Self { proposed, parent }
     }
 
-    /// Contains all the block information needed for voting for the proposed round.
+    /// Returns block information associated to the block being extended by the proposal.
     pub fn parent(&self) -> &BlockInfo {
         &self.parent
     }
 
-    /// Contains all the block information for the parent for the proposed round.
+    /// Returns block information associated to the block being voted on.
     pub fn proposed(&self) -> &BlockInfo {
         &self.proposed
     }
 
+    /// Well-formedness checks that are independent of the current state.
     pub fn verify(&self) -> anyhow::Result<()> {
         anyhow::ensure!(
             self.parent.epoch() == self.proposed.epoch(),
