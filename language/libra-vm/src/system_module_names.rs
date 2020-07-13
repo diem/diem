@@ -3,10 +3,7 @@
 //! Names of modules, functions, and types used by Libra System.
 
 use libra_types::account_config;
-use move_core_types::{
-    identifier::Identifier,
-    language_storage::{ModuleId, StructTag},
-};
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use once_cell::sync::Lazy;
 
 // Data to resolve basic account and transaction flow functions and structs
@@ -38,14 +35,3 @@ pub static BUMP_SEQUENCE_NUMBER_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("bump_sequence_number").unwrap());
 pub static BLOCK_PROLOGUE: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("block_prologue").unwrap());
-pub static MODULE_PUBLISHING_TYPE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("PublishModule").unwrap());
-
-pub fn module_publishing_capability_struct_tag() -> StructTag {
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        module: account_config::ACCOUNT_MODULE_IDENTIFIER.to_owned(),
-        name: MODULE_PUBLISHING_TYPE_NAME.to_owned(),
-        type_params: vec![],
-    }
-}

@@ -36,7 +36,6 @@
     <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
     <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(lr_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_grant_module_publishing_privilege">LibraAccount::grant_module_publishing_privilege</a>(lr_account);
     <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">Roles::grant_treasury_compliance_role</a>(tc_account, lr_account);
 
     // <a href="Event.md#0x1_Event">Event</a> and On-chain config setup

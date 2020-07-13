@@ -14,7 +14,7 @@ use vm::file_format::{
 
 #[test]
 fn script_code_unverifiable() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
     // create and publish sender
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
@@ -62,7 +62,7 @@ fn script_code_unverifiable() {
 
 #[test]
 fn script_none_existing_module_dep() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
     // create and publish sender
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
@@ -134,7 +134,7 @@ fn script_none_existing_module_dep() {
 
 #[test]
 fn script_non_existing_function_dep() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
     // create and publish sender
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
@@ -206,7 +206,7 @@ fn script_non_existing_function_dep() {
 
 #[test]
 fn script_bad_sig_function_dep() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
     // create and publish sender
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);

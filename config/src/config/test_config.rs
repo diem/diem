@@ -58,7 +58,7 @@ impl TestConfig {
             operator_keypair: None,
             execution_keypair: None,
             temp_dir: None,
-            publishing_option: Some(VMPublishingOption::Open),
+            publishing_option: Some(VMPublishingOption::open()),
         }
     }
 

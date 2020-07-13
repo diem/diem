@@ -25,8 +25,6 @@ module LibraAccount {
     use 0x1::Option::{Self, Option};
     use 0x1::Roles;
 
-    resource struct PublishModule {}
-
     /// Every Libra account has a LibraAccount resource
     resource struct LibraAccount {
         /// The current authentication key.
@@ -128,18 +126,6 @@ module LibraAccount {
     const EPROLOGUE_ACCOUNT_DNE: u64 = 4;
     const EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
     const EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
-
-    /// Grants the ability to publish modules to the libra root account. The VM
-    /// will look for this resource to determine whether the sending account can publish modules.
-    /// Aborts if the `account` does not have the correct role (libra root).
-    public fun grant_module_publishing_privilege(account: &signer) {
-        // This is also an operational constraint since the VM will look for
-        // this specific address and publish these modules under the core code
-        // address.
-        assert(Roles::has_libra_root_role(account), ENOT_LIBRA_ROOT);
-        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
-        move_to(account, PublishModule{});
-    }
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(

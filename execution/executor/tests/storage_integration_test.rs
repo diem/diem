@@ -364,7 +364,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_modify_publishing_option_script(
-            VMPublishingOption::CustomScripts,
+            VMPublishingOption::custom_scripts(),
         )),
     );
 
@@ -544,7 +544,7 @@ fn test_extend_whitelist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_modify_publishing_option_script(
-            VMPublishingOption::Locked(new_whitelist),
+            VMPublishingOption::locked(new_whitelist),
         )),
     );
 

@@ -190,7 +190,7 @@ impl LibraVM {
         )?;
 
         // Publish the module
-        let module_address = if self.0.on_chain_config()?.publishing_option.is_open() {
+        let module_address = if self.0.on_chain_config()?.publishing_option.is_open_module() {
             txn_data.sender()
         } else {
             account_config::CORE_CODE_ADDRESS

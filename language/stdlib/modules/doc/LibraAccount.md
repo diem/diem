@@ -5,7 +5,6 @@
 
 ### Table of Contents
 
--  [Resource `PublishModule`](#0x1_LibraAccount_PublishModule)
 -  [Resource `LibraAccount`](#0x1_LibraAccount_LibraAccount)
 -  [Resource `Balance`](#0x1_LibraAccount_Balance)
 -  [Resource `WithdrawCapability`](#0x1_LibraAccount_WithdrawCapability)
@@ -13,7 +12,6 @@
 -  [Resource `AccountOperationsCapability`](#0x1_LibraAccount_AccountOperationsCapability)
 -  [Struct `SentPaymentEvent`](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
--  [Function `grant_module_publishing_privilege`](#0x1_LibraAccount_grant_module_publishing_privilege)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
@@ -65,34 +63,6 @@
     -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
 
 
-
-<a name="0x1_LibraAccount_PublishModule"></a>
-
-## Resource `PublishModule`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraAccount_PublishModule">PublishModule</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_LibraAccount_LibraAccount"></a>
 
@@ -389,39 +359,6 @@ Message for received events
  Metadata associated with the payment
 </dd>
 </dl>
-
-
-</details>
-
-<a name="0x1_LibraAccount_grant_module_publishing_privilege"></a>
-
-## Function `grant_module_publishing_privilege`
-
-Grants the ability to publish modules to the libra root account. The VM
-will look for this resource to determine whether the sending account can publish modules.
-Aborts if the
-<code>account</code> does not have the correct role (libra root).
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_module_publishing_privilege">grant_module_publishing_privilege</a>(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_module_publishing_privilege">grant_module_publishing_privilege</a>(account: &signer) {
-    // This is also an operational constraint since the VM will look for
-    // this specific address and publish these modules under the core code
-    // address.
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account), ENOT_LIBRA_ROOT);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
-    move_to(account, <a href="#0x1_LibraAccount_PublishModule">PublishModule</a>{});
-}
-</code></pre>
-
 
 
 </details>

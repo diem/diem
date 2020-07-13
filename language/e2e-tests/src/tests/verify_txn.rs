@@ -371,7 +371,8 @@ pub fn test_whitelist() {
 #[test]
 pub fn test_arbitrary_script_execution() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+    let mut executor =
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
 
     // create an empty transaction
     let sender = AccountData::new(1_000_000, 10);
@@ -402,7 +403,8 @@ pub fn test_arbitrary_script_execution() {
 #[test]
 pub fn test_publish_from_libra_root() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+    let mut executor =
+        FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
@@ -443,7 +445,7 @@ pub fn test_publish_from_libra_root() {
 #[test]
 pub fn test_no_publishing_libra_root_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+    let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_libra_root();
@@ -482,7 +484,7 @@ pub fn test_no_publishing_libra_root_sender() {
 #[test]
 pub fn test_open_publishing_invalid_address() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
@@ -535,7 +537,7 @@ pub fn test_open_publishing_invalid_address() {
 #[test]
 pub fn test_open_publishing() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);
@@ -575,7 +577,7 @@ pub fn test_open_publishing() {
 
 #[test]
 fn test_dependency_fails_verification() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::Open);
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
 
     // Get a module that fails verification into the store.
     let bad_module_code = "
