@@ -5,7 +5,6 @@ use crate::loader::Loader;
 
 use move_core_types::{
     account_address::AccountAddress,
-    identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     value::MoveTypeLayout,
     vm_status::StatusCode,
@@ -16,7 +15,7 @@ use move_vm_types::{
     values::{GlobalValue, Value},
 };
 use std::collections::btree_map::BTreeMap;
-use vm::{errors::*, file_format::CompiledModule};
+use vm::errors::*;
 
 /// Trait for the Move VM to abstract `StateView` operations.
 ///
@@ -32,7 +31,7 @@ pub trait RemoteCache {
 
 pub struct AccountDataCache {
     data_map: BTreeMap<Type, Option<GlobalValue>>,
-    module_map: BTreeMap<Identifier, (Vec<u8>, CompiledModule)>,
+    module_map: BTreeMap<ModuleId, Vec<u8>>,
 }
 
 impl AccountDataCache {
@@ -117,7 +116,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
                 account_cache
                     .module_map
                     .into_iter()
-                    .map(|(_, (blob, m))| (m.self_id(), blob)),
+                    .map(|(module_id, blob)| (module_id, blob)),
             );
         }
 
@@ -214,46 +213,38 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         Ok(self.load_data(addr, ty)?.take())
     }
 
-    // REVIEW: The txn data cache isn't really caching the modules read from storage. Is this really desired?
-    fn load_module(&self, module_id: &ModuleId) -> VMResult<CompiledModule> {
+    fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {
         if let Some(account_cache) = self.account_map.get(module_id.address()) {
-            if let Some((_, m)) = account_cache.module_map.get(module_id.name()) {
-                return Ok(m.clone());
+            if let Some(blob) = account_cache.module_map.get(module_id) {
+                return Ok(blob.clone());
             }
         }
         match self.remote.get_module(module_id)? {
-            Some(bytes) => CompiledModule::deserialize(&bytes).map_err(|_| {
-                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                    .finish(Location::Undefined)
-            }),
+            Some(bytes) => Ok(bytes),
             None => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
                 .with_message(format!("Cannot find {:?} in data cache", module_id))
                 .finish(Location::Undefined)),
         }
     }
 
-    fn publish_module(&mut self, blob: Vec<u8>, module: CompiledModule) -> VMResult<()> {
-        let module_id = module.self_id();
+    fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {
         let account_cache =
             Self::get_mut_or_insert_with(&mut self.account_map, module_id.address(), || {
                 (*module_id.address(), AccountDataCache::new())
             });
 
-        account_cache
-            .module_map
-            .insert(module_id.name().to_owned(), (blob, module));
+        account_cache.module_map.insert(module_id.clone(), blob);
 
         Ok(())
     }
 
-    fn exists_module(&self, m: &ModuleId) -> bool {
-        if let Some(account_cache) = self.account_map.get(m.address()) {
-            if account_cache.module_map.contains_key(m.name()) {
-                return true;
+    fn exists_module(&self, module_id: &ModuleId) -> VMResult<bool> {
+        if let Some(account_cache) = self.account_map.get(module_id.address()) {
+            if account_cache.module_map.contains_key(module_id) {
+                return Ok(true);
             }
         }
-        // REVIEW: This seems very inefficient. Can we not load the contents of the module?
-        matches!(self.remote.get_module(&m), Ok(Some(_)))
+        Ok(self.remote.get_module(module_id)?.is_some())
     }
 
     fn emit_event(&mut self, guid: Vec<u8>, seq_num: u64, ty: Type, val: Value) {

@@ -73,7 +73,7 @@ impl VMRuntime {
         // Make sure that there is not already a module with this name published
         // under the transaction sender's account.
         let module_id = compiled_module.self_id();
-        if data_store.exists_module(&module_id) {
+        if data_store.exists_module(&module_id)? {
             return Err(
                 PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME).finish(Location::Undefined)
             );
@@ -82,7 +82,7 @@ impl VMRuntime {
         // perform bytecode and loading verification
         self.loader.verify_module(&compiled_module)?;
 
-        data_store.publish_module(module, compiled_module)
+        data_store.publish_module(&module_id, module)
     }
 
     pub(crate) fn execute_script(

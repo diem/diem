@@ -536,7 +536,10 @@ impl Loader {
         data_store: &mut impl DataStore,
     ) -> VMResult<CompiledModule> {
         let module = match data_store.load_module(id) {
-            Ok(m) => m,
+            Ok(bytes) => CompiledModule::deserialize(&bytes).map_err(|_| {
+                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                    .finish(Location::Undefined)
+            })?,
             Err(err) => {
                 crit!("[VM] Error fetching module with id {:?}", id);
                 return Err(err);
