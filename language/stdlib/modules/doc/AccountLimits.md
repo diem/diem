@@ -27,6 +27,7 @@
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
 -  [Specification](#0x1_AccountLimits_Specification)
     -  [Function `update_deposit_limits`](#0x1_AccountLimits_Specification_update_deposit_limits)
+    -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_Specification_update_withdrawal_limits)
     -  [Function `reset_window`](#0x1_AccountLimits_Specification_reset_window)
     -  [Function `can_receive`](#0x1_AccountLimits_Specification_can_receive)
     -  [Function `is_unrestricted`](#0x1_AccountLimits_Specification_is_unrestricted)
@@ -799,6 +800,36 @@ pragma opaque = <b>true</b>;
 
 
 <pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_Specification_update_withdrawal_limits"></a>
+
+### Function `update_withdrawal_limits`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
+</code></pre>
+
+
+
+> TODO(emmazzz): turn verify on and opaque off when the module
+> is fully specified.
+
+
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque = <b>true</b>;
+<b>ensures</b> result == <a href="#0x1_AccountLimits_spec_update_withdrawal_limits">spec_update_withdrawal_limits</a>&lt;CoinType&gt;(amount, addr);
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_update_withdrawal_limits"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_update_withdrawal_limits">spec_update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool;
 </code></pre>
 
 

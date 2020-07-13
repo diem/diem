@@ -113,6 +113,18 @@ module AccountLimits {
         )
     }
 
+    spec fun update_withdrawal_limits {
+        /// > TODO(emmazzz): turn verify on and opaque off when the module
+        /// > is fully specified.
+        pragma verify = false;
+        pragma opaque = true;
+        ensures result == spec_update_withdrawal_limits<CoinType>(amount, addr);
+    }
+
+    spec module {
+        define spec_update_withdrawal_limits<CoinType>(amount: u64, addr: address): bool;
+    }
+
     /// All accounts that could be subject to account limits will have a
     /// `Window` for each currency they can hold published at the top level.
     /// Root accounts for multi-account entities will hold this resource at
