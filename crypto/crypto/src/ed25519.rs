@@ -396,6 +396,9 @@ impl Signature for Ed25519Signature {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SigningKeyMaterial = Ed25519PrivateKey;
 
+    /// Verifies that the provided signature is valid for the provided
+    /// message, according to the RFC8032 algorithm. This strict verification performs the
+    /// recommended check of 5.1.7 §3, on top of the required RFC8032 verifications.
     fn verify<T: CryptoHash + Serialize>(
         &self,
         message: &T,
@@ -415,7 +418,7 @@ impl Signature for Ed25519Signature {
 
         public_key
             .0
-            .verify(message, &self.0)
+            .verify_strict(message, &self.0)
             .map_err(|e| anyhow!("{}", e))
             .and(Ok(()))
     }
