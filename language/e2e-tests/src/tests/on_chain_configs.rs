@@ -49,6 +49,36 @@ fn initial_libra_version() {
 }
 
 #[test]
+fn drop_txn_after_reconfiguration() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let vm = LibraVM::new(executor.get_state_view());
+
+    assert_eq!(
+        vm.internals().libra_version().unwrap(),
+        LibraVersion { major: 1 }
+    );
+
+    let account = Account::new_genesis_account(libra_types::on_chain_config::config_address());
+    let txn = account.create_signed_txn_with_args(
+        StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
+        vec![],
+        vec![TransactionArgument::U64(2)],
+        1,
+        TXN_RESERVED,
+        0,
+        LBR_NAME.to_owned(),
+    );
+    executor.new_block();
+
+    let sender = AccountData::new(1_000_000, 10);
+    let receiver = AccountData::new(100_000, 10);
+    let txn2 = peer_to_peer_txn(&sender.account(), &receiver.account(), 11, 1000);
+
+    let mut output = executor.execute_block(vec![txn, txn2]).unwrap();
+    assert_eq!(output.pop().unwrap().status(), &TransactionStatus::Retry)
+}
+
+#[test]
 fn updated_limit_allows_txn() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
