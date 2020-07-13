@@ -33,6 +33,7 @@ define_counters![
         construct_and_sign_vote_success: Counter,
         "The number of successful requests to construct_and_sign_vote"
     ),
+    (epoch: Gauge, "The current epoch"),
     (
         initialize_error: Counter,
         "The number of unsuccessful requests to sign_proposal"

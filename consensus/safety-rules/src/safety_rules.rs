@@ -133,10 +133,6 @@ impl SafetyRules {
         let two_chain_round = quorum_cert.parent_block().round();
 
         if one_chain_round < preferred_round {
-            debug!(
-                "QC round does not match preferred round {} < {}",
-                one_chain_round, preferred_round
-            );
             return Err(Error::IncorrectPreferredRound(
                 one_chain_round,
                 preferred_round,
@@ -147,10 +143,12 @@ impl SafetyRules {
             Ordering::Greater => self
                 .persistent_storage
                 .set_preferred_round(two_chain_round)?,
-            Ordering::Less => debug!(
+            Ordering::Less => {
+                trace!(
                 "2-chain round {} is lower than preferred round {} but 1-chain round {} is higher.",
                 two_chain_round, preferred_round, one_chain_round
-            ),
+            )
+            }
             Ordering::Equal => (),
         }
         Ok(())
@@ -186,11 +184,6 @@ impl SafetyRules {
             return Ok(());
         }
 
-        debug!(
-            "Vote proposal is old {} <= {}",
-            proposed_block.round(),
-            last_voted_round
-        );
         Err(Error::IncorrectLastVotedRound(
             proposed_block.round(),
             last_voted_round,
@@ -219,8 +212,6 @@ impl SafetyRules {
     }
 
     fn guarded_initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
-        debug!("Initializing");
-
         let waypoint = self.persistent_storage.waypoint()?;
         let last_li = proof
             .verify(&waypoint)
@@ -237,23 +228,31 @@ impl SafetyRules {
             if curr_key != Some(expected_key.clone()) {
                 let consensus_key = self
                     .persistent_storage
-                    .consensus_key_for_version(expected_key.clone())
+                    .consensus_key_for_version(expected_key)
                     .ok()
                     .ok_or_else(|| {
-                        debug!("Validator key not found!");
+                        send_struct_log!(logging::safety_log(
+                            LogEntry::KeyReconciliation,
+                            LogEvent::Error
+                        )
+                        .data(LogField::Message.as_str(), "Validator key not found"));
+
                         self.validator_signer = None;
                         Error::InternalError("Validator key not found".into())
                     })?;
-                debug!(
-                    "Reconciled pub key for signer {} [{:#?} -> {}]",
-                    author, curr_key, expected_key
-                );
+
                 self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
-            } else {
-                debug!("Validator key matches the key in validator set.");
             }
+
+            send_struct_log!(
+                logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
+                    .data(LogField::Message.as_str(), "in set")
+            );
         } else {
-            debug!("The validator is not in set!");
+            send_struct_log!(
+                logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
+                    .data(LogField::Message.as_str(), "not in set")
+            );
             self.validator_signer = None;
         }
 

@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::COUNTERS;
+use crate::{
+    logging::{self, LogEntry, LogEvent, LogField},
+    COUNTERS,
+};
 use anyhow::Result;
 use consensus_types::{
     common::{Author, Round},
@@ -12,6 +15,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, EXECUTION_KEY, LAST_VOTE, LAST_VOTED_ROUND, OWNER_ACCOUNT,
     PREFERRED_ROUND, WAYPOINT,
 };
+use libra_logger::prelude::*;
 use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
 use libra_types::waypoint::Waypoint;
 use std::str::FromStr;
@@ -115,6 +119,9 @@ impl PersistentSafetyStorage {
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<()> {
         self.internal_store.set(EPOCH, Value::U64(epoch))?;
+        COUNTERS.preferred_round.set(epoch as i64);
+        send_struct_log!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
+            .data(LogField::Message.as_str(), epoch));
         Ok(())
     }
 
@@ -129,6 +136,10 @@ impl PersistentSafetyStorage {
         self.internal_store
             .set(LAST_VOTED_ROUND, Value::U64(last_voted_round))?;
         COUNTERS.preferred_round.set(last_voted_round as i64);
+        send_struct_log!(
+            logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
+                .data(LogField::Message.as_str(), last_voted_round)
+        );
         Ok(())
     }
 
@@ -143,6 +154,10 @@ impl PersistentSafetyStorage {
         self.internal_store
             .set(PREFERRED_ROUND, Value::U64(preferred_round))?;
         COUNTERS.preferred_round.set(preferred_round as i64);
+        send_struct_log!(
+            logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
+                .data(LogField::Message.as_str(), preferred_round)
+        );
         Ok(())
     }
 
@@ -158,6 +173,8 @@ impl PersistentSafetyStorage {
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
         self.internal_store
             .set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        send_struct_log!(logging::safety_log(LogEntry::Waypoint, LogEvent::Update)
+            .data(LogField::Message.as_str(), waypoint));
         Ok(())
     }
 
