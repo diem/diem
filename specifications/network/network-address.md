@@ -3,6 +3,7 @@
 `NetworkAddress` is a compact, efficient, self-describing and future-proof network address represented as a stack of protocols, inspired by libp2p's [multiaddr](https://multiformats.io/multiaddr/) format. The primary differences include using [LCS] to describe the binary format and reducing the set of supported protocols.
 
 (TODO(philiphayes): we should rename this to make it less generic sounding...)
+(TODO(philiphayes): include `EncNetworkAddress` spec)
 
 In particular, a `NetworkAddress` is intended to be a fully self-contained description of _how_ to dial a [LibraNet](spec.md) peer, describing both the base transport protocol and all subsequent connection upgrade protocols.
 

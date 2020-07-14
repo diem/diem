@@ -2,7 +2,7 @@
 
 ## Overview
 
-The [LibraNet](spec.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Libra blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawNetworkAddress`](network-address.md)es.
+The [LibraNet](spec.md) On-chain Discovery Protocol is an authenticated discovery protocol for nodes to learn validator and VFN network addresses and network identity public keys. On-chain discovery leverages the Move language and Libra blockchain to serve as a central authenticated data-store for distributing advertised validator and VFN discovery information in the form of [`RawEncNetworkAddress`](network-address.md)es for validators and [`RawNetworkAddress`](network-address.md)es for VFNs.
 
 ## Design Principles
 
@@ -25,8 +25,6 @@ On-chain discovery serves use cases (1) and (2) but not (3) or (4).
 
 ## On-chain Config
 
-(TODO(philiphayes): describe encryption of validator addresses)
-
 Validator and VFN discovery information are stored in the `ValidatorSet` in the [`OnChainConfig`](../consensus/spec.md#onchainconfig).
 
 ```rust
@@ -48,7 +46,7 @@ struct ValidatorInfo {
 
 struct ValidatorConfig {
     consensus_public_key: Ed25519PublicKey,
-    validator_network_addresses: Vec<RawNetworkAddress>,
+    validator_network_addresses: Vec<RawEncNetworkAddress>,
     full_node_network_addresses: Vec<RawNetworkAddress>,
 }
 
@@ -60,54 +58,15 @@ enum ConsensusScheme {
 
 * [`AccountAddress`](../common/common_data_structures.md#accountaddress)
 * [`RawNetworkAddress`](network-address.md)
-
-## LibraNet Messages
-
-```rust
-/// OnchainDiscovery LibraNet message types. These are sent over-the-wire.
-enum OnchainDiscoveryMsg {
-    QueryDiscoverySetRequest(QueryDiscoverySetRequest),
-    QueryDiscoverySetResponse(QueryDiscoverySetResponse),
-}
-
-/// A request for another peer's latest validator set and a validator change proof
-/// to get the client up-to-date if they're behind.
-struct QueryDiscoverySetRequest {
-    known_version: u64,
-}
-
-/// A response to a [`QueryDiscoverySetRequest`]. The server will include an
-/// epoch change proof if the client is behind.
-///
-/// The validator set only changes when there is a new epoch. To minimize
-/// wire overhead, the server will include the validator set account's
-/// [`AccountStateWithProof`] _if and only if_ the server also presents a
-/// non-empty epoch change proof.
-struct QueryDiscoverySetResponse {
-    latest_li: LedgerInfoWithSignatures,
-    epoch_change_proof: EpochChangeProof,
-    accumulator_proof: AccumulatorConsistencyProof,
-    account_state: Option<AccountStateWithProof>,
-}
-```
-
-* [`LedgerInfoWithSignatures`](../common/common_data_structures.md#ledgerinfowithsignatures)
-* [`EpochChangeProof`](../consensus/spec.md#epochchangeproof)
-* `AccumulatorConsistencyProof` (TODO(philiphayes): link)
-* `AccountStateWithProof` (TODO(philiphayes): link)
-
-(TODO(philiphayes): update the message types after we migrate to the new storage API)
-(TODO(philiphayes): how to deal with partial epoch change proof?)
-
-Validators and VFNs service `QueryDiscoverySetRequest`s. In the future, this bespoke service will probably move to a more general storage query API. Note that validators will only service other validators' requests.
+* [`RawEncNetworkAddress`](network-address.md)
 
 ## Bootstrapping
 
-Nodes bootstrap onto the network using the latest known validator set from their latest known chain state in storage (which may be the genesis state) and seed peers from their local configuration if they are too far behind. So long as at least one peer is available that will accept the bootstrapping node's connection and will service their `QueryDiscoverySetRequest`, then the bootstrapping node will successfully ratchet up to the latest epoch and learn the `ValidatorSet` for that epoch.
+Nodes bootstrap onto the network using the latest known validator set from their latest known chain state in storage (which may be the genesis state) and seed peers from their local configuration if they are too far behind. So long as at least one peer is available that will accept the bootstrapping node's connection then the bootstrapping node will successfully ratchet up to the latest epoch and learn the `ValidatorSet` for that epoch.
 
 ## Steady State
 
-Once nodes are up-to-date, they can receive updates to the on-chain validator set from their own state-sync module. Otherwise, they must actively query their peers for the latest validator set to ensure they have the latest connectivity information for all their peers.
+Once nodes are up-to-date, they can receive updates to the on-chain validator set from their own state-sync module.
 
 ## Network Key and Address Rotation
 
@@ -145,8 +104,4 @@ Alternatively, a safer approach to preserve validator connectivity (at the expen
 
 ## Caveats
 
-1. The current on-chain model for on-chain discovery scales poorly for very large validator sets. Due to the way account state proofs work, query proofs require the entire account state blob (containing every validator's discovery information) in order to verify the proof. In other words, nodes can't query a subset of the discovery information and still verify the proof-of-inclusion.
-
-2. Modifications to the discovery information requires a quorum. In the event of a connectivity crisis where the validator set loses quorum (e.g. 1/3+ validators crash and forget their identity pubkeys), validators can't submit transactions to modify the on-chain discovery information to regain connectivity. A sufficient fallback in such an extreme event might be for each validator to manually configure their seed peers config with all other validators' discovery information. Alternatively, the Libra Association may issue a new Genesis Transaction to manually set a new validator set, though this requires a hard fork and significant coordination.
-
-(TODO(philiphayes): link to LUP when spec exists)
+Modifications to the discovery information requires a quorum. In the event of a connectivity crisis where the validator set loses quorum (e.g. 1/3+ validators crash and forget their identity pubkeys), validators can't submit transactions to modify the on-chain discovery information to regain connectivity. A sufficient fallback in such an extreme event might be for each validator to manually configure their seed peers config with all other validators' discovery information. Alternatively, the Libra Association may issue a new Genesis Transaction to manually set a new validator set, though this requires significant coordination.
