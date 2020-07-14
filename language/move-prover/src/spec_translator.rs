@@ -28,8 +28,9 @@ use spec_lang::{
     emit, emitln,
     env::{
         ConditionInfo, GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA,
-        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_EXPORT, CONDITION_INJECTED_PROP,
-        EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS,
+        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
+        CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA,
+        REQUIRES_IF_ABORTS,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -620,7 +621,16 @@ impl<'env> SpecTranslator<'env> {
                 if !kinds.contains(&cond.kind) {
                     return false;
                 }
+                let env = self.module_env().env;
+                let abstract_ = env
+                    .is_property_true(&cond.properties, CONDITION_ABSTRACT_PROP)
+                    .unwrap_or(false);
+                let concrete = env
+                    .is_property_true(&cond.properties, CONDITION_CONCRETE_PROP)
+                    .unwrap_or(false);
                 match entry_point {
+                    DirectInterModule | DirectIntraModule | Indirect if concrete => false,
+                    Verification if abstract_ => false,
                     DirectIntraModule => {
                         // For intra-module calls, all Requires and RequiresModule are visible.
                         // Ensures are only visible if the function is opaque.
@@ -664,7 +674,7 @@ impl<'env> SpecTranslator<'env> {
         !env.is_property_true(&cond.properties, CONDITION_INJECTED_PROP)
             .unwrap_or(false)
             || env
-                .is_property_true(&cond.properties, CONDITION_EXPORT)
+                .is_property_true(&cond.properties, CONDITION_EXPORT_PROP)
                 .unwrap_or(false)
     }
 
@@ -1425,6 +1435,7 @@ impl<'env> SpecTranslator<'env> {
         }
         for ty in instantiation.iter() {
             maybe_comma();
+            assert!(!ty.is_incomplete());
             emit!(self.writer, &self.translate_type(ty));
         }
         for exp in args {

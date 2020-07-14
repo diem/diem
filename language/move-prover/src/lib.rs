@@ -93,6 +93,7 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with boogie generation errors"));
     }
+    let output_existed = std::path::Path::new(&options.output_path).exists();
     debug!("writing boogie to `{}`", &options.output_path);
     writer.process_result(|result| fs::write(&options.output_path, result))?;
     let translator_elapsed = now.elapsed();
@@ -123,12 +124,15 @@ pub fn run_move_prover<W: WriteColor>(
                 options.backend.bench_repeat
             );
         }
-
         if env.has_errors() {
             env.report_errors(error_writer);
             return Err(anyhow!("exiting with boogie verification errors"));
         }
     }
+    if !output_existed && !options.backend.keep_artifacts {
+        std::fs::remove_file(&options.output_path).unwrap_or_default();
+    }
+
     Ok(())
 }
 

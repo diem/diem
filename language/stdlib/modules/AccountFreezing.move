@@ -125,6 +125,7 @@ module AccountFreezing {
      }
     spec fun account_is_frozen {
         aborts_if false;
+        pragma opaque = true;
         ensures result == spec_account_is_frozen(addr);
     }
 

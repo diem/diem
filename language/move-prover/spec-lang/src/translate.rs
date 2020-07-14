@@ -2011,9 +2011,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 },
                 rhs,
             ) => {
-                let lhs_exp = self
-                    .exp_translator_for_schema(&loc, context_type_params, vars)
-                    .translate_exp(lhs, &BOOL_TYPE);
+                let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
+                let lhs_exp = et.translate_exp(lhs, &BOOL_TYPE);
+                et.finalize_types();
                 let path_cond = self.extend_path_condition(&loc, path_cond, lhs_exp);
                 self.def_ana_schema_exp_oper(
                     context_type_params,
@@ -2049,9 +2049,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 );
             }
             EA::Exp_::IfElse(c, t, e) => {
-                let c_exp = self
-                    .exp_translator_for_schema(&loc, context_type_params, vars)
-                    .translate_exp(c, &BOOL_TYPE);
+                let mut et = self.exp_translator_for_schema(&loc, context_type_params, vars);
+                let c_exp = et.translate_exp(c, &BOOL_TYPE);
+                et.finalize_types();
                 let t_path_cond =
                     self.extend_path_condition(&loc, path_cond.clone(), c_exp.clone());
                 self.def_ana_schema_exp_oper(
@@ -2940,7 +2940,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     .iter()
                     .map(|ty| self.finalize_type(node_id, ty))
                     .collect_vec();
-                self.parent.instantiation_map.insert(node_id, inst);
+                self.set_instantiation(node_id, inst);
             }
         }
     }
@@ -4251,9 +4251,7 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
                 .map(|ty| ty.instantiate(self.type_args))
                 .collect_vec()
         });
-        let new_node_id = self.parent.new_node_id();
-        self.parent.loc_map.insert(new_node_id, loc);
-        self.parent.type_map.insert(new_node_id, ty);
+        let new_node_id = self.parent.new_node_id_with_type_loc(&ty, &loc);
         if let Some(instantiation) = instantiation_opt {
             self.parent
                 .instantiation_map
@@ -4267,6 +4265,7 @@ impl<'env, 'translator, 'rewriter> ExpRewriter<'env, 'translator, 'rewriter> {
 fn extract_schema_access<'a>(exp: &'a EA::Exp, res: &mut Vec<&'a EA::ModuleAccess>) {
     match &exp.value {
         EA::Exp_::Name(maccess, _) => res.push(maccess),
+        EA::Exp_::Pack(maccess, ..) => res.push(maccess),
         EA::Exp_::BinopExp(_, _, rhs) => extract_schema_access(rhs, res),
         EA::Exp_::IfElse(_, t, e) => {
             extract_schema_access(t, res);

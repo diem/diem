@@ -173,7 +173,7 @@ or the withdraw capability for addr itself.
 <b>include</b> <a href="#SCRIPT_AbortsIfPayerInvalid">AbortsIfPayerInvalid</a>&lt;Currency&gt;;
 <b>include</b> <a href="#SCRIPT_AbortsIfPayeeInvalid">AbortsIfPayeeInvalid</a>&lt;Currency&gt;;
 <b>include</b> <a href="#SCRIPT_AbortsIfAmountInvalid">AbortsIfAmountInvalid</a>&lt;Currency&gt;;
-<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_TravelRuleAppliesAbortsIf">DualAttestation::TravelRuleAppliesAbortsIf</a>&lt;Currency&gt;;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Currency&gt;{payer: <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer), value: amount};
 <b>include</b> <a href="#SCRIPT_AbortsIfAmountExceedsLimit">AbortsIfAmountExceedsLimit</a>&lt;Currency&gt;;
 </code></pre>
 

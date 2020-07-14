@@ -113,7 +113,9 @@ pub fn boogie_type_value(env: &GlobalEnv, ty: &Type) -> String {
         // TODO: function and tuple types?
         Type::Tuple(_args) => "Tuple_type_value()".to_string(),
         Type::Fun(_args, _result) => "Function_type_value()".to_string(),
-        Type::Error | Type::Var(..) | Type::TypeDomain(..) => panic!("unexpected transient type"),
+        Type::Error => panic!("unexpected error type"),
+        Type::Var(..) => panic!("unexpected type variable"),
+        Type::TypeDomain(..) => panic!("unexpected transient type"),
     }
 }
 

@@ -71,6 +71,7 @@
     -  [Function `destroy_zero`](#0x1_Libra_Specification_destroy_zero)
     -  [Function `register_currency`](#0x1_Libra_Specification_register_currency)
     -  [Function `register_SCS_currency`](#0x1_Libra_Specification_register_SCS_currency)
+    -  [Function `currency_code`](#0x1_Libra_Specification_currency_code)
     -  [Module Specification](#0x1_Libra_@Module_Specification)
         -  [Minting](#0x1_Libra_@Minting)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
@@ -2488,6 +2489,35 @@ Returns the market cap of CoinType.
 
 <pre><code><b>define</b> <a href="#0x1_Libra_spec_market_cap">spec_market_cap</a>&lt;CoinType&gt;(): u128 {
     <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).total_value
+}
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_currency_code"></a>
+
+### Function `currency_code`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;(): vector&lt;u8&gt;
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_Libra_CurrencyCodeAbortsIf">CurrencyCodeAbortsIf</a>&lt;CoinType&gt;;
+<b>ensures</b> result == <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().currency_code;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_CurrencyCodeAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_CurrencyCodeAbortsIf">CurrencyCodeAbortsIf</a>&lt;CoinType&gt; {
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>());
 }
 </code></pre>
 

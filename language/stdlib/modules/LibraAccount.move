@@ -157,7 +157,7 @@ module LibraAccount {
         if (is_withdrawal) {
             VASP::is_vasp(payer) && (!VASP::is_vasp(payee) || !VASP::is_same_vasp(payer, payee))
         } else {
-            VASP::is_vasp(payee) && (!VASP::is_vasp(payee) || !VASP::is_same_vasp(payer, payee))
+            VASP::is_vasp(payee) && (!VASP::is_vasp(payer) || !VASP::is_same_vasp(payee, payer))
         }
     }
     spec fun should_track_limits_for_account {
@@ -169,7 +169,7 @@ module LibraAccount {
             if (is_withdrawal) {
                 VASP::spec_is_vasp(payer) && (!VASP::spec_is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
             } else {
-                VASP::spec_is_vasp(payee) && (!VASP::spec_is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
+                VASP::spec_is_vasp(payee) && (!VASP::spec_is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
             }
         }
     }
@@ -194,6 +194,9 @@ module LibraAccount {
         // from an existing balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
     }
+    spec fun staple_lbr {
+        pragma verify_duration_estimate = 100;
+    }
 
     /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
     /// LBR reserve, and deposit them to `cap.address`.
@@ -210,6 +213,9 @@ module LibraAccount {
         let payee_address = cap.account_address;
         deposit(payer_address, payee_address, coin1, x"", x"");
         deposit(payer_address, payee_address, coin2, x"", x"")
+    }
+    spec fun unstaple_lbr {
+        pragma verify_duration_estimate = 100;
     }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
@@ -262,38 +268,39 @@ module LibraAccount {
         );
     }
     spec fun deposit {
-        include DepositAbortsIf<Token>;
-        include DepositEnsures<Token>;
+        include DepositAbortsIf<Token>{amount: to_deposit.value};
+        include DepositEnsures<Token>{amount: to_deposit.value};
     }
     spec schema DepositAbortsIf<Token> {
         payer: address;
         payee: address;
-        to_deposit: Libra<Token>;
+        amount: u64;
         metadata_signature: vector<u8>;
         metadata: vector<u8>;
-        aborts_if spec_should_track_limits_for_account(payer, payee, false)
-                    && (!spec_has_account_operations_cap()
-                       || !AccountLimits::spec_update_deposit_limits<Token>(
-                              to_deposit.value,
-                              VASP::spec_parent_address(payee)
-                           )
-                       );
-        aborts_if to_deposit.value == 0;
         aborts_if AccountFreezing::spec_account_is_frozen(payee);
-        aborts_if !exists<LibraAccount>(payee);
-        aborts_if !exists<Balance<Token>>(payee);
-        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
-        include DualAttestation::TravelRuleAppliesAbortsIf<Token>;
+        aborts_if amount == 0;
+        include DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
         aborts_if
-            DualAttestation::spec_dual_attestation_required<Token>(payer, payee, to_deposit.value)
-            && !DualAttestation::signature_is_valid(payer, payee, metadata_signature, metadata, to_deposit.value);
+            spec_should_track_limits_for_account(payer, payee, false) &&
+            !spec_has_account_operations_cap();
+        include
+            spec_should_track_limits_for_account(payer, payee, false) ==>
+            AccountLimits::UpdateDepositLimitsAbortsIf<Token> {
+                addr: VASP::spec_parent_address(payee),
+            };
+        aborts_if
+            spec_should_track_limits_for_account(payer, payee, false) &&
+            !AccountLimits::spec_update_deposit_limits<Token>(amount, VASP::spec_parent_address(payee));
+        aborts_if !exists<Balance<Token>>(payee);
+        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64();
+        aborts_if !exists<LibraAccount>(payee);
+        include Libra::CurrencyCodeAbortsIf<Token>;
     }
     spec schema DepositEnsures<Token> {
         payer: address;
         payee: address;
-        to_deposit: Libra<Token>;
-        ensures global<Balance<Token>>(payee).coin.value
-            == old(global<Balance<Token>>(payee).coin.value) + to_deposit.value;
+        amount: u64;
+        ensures global<Balance<Token>>(payee).coin.value == old(global<Balance<Token>>(payee).coin.value) + amount;
     }
 
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
@@ -311,6 +318,9 @@ module LibraAccount {
         // Use the reserved address as the payer because the funds did not come from an existing
         // balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
+    }
+    spec fun tiered_mint {
+        pragma verify_duration_estimate = 100;
     }
 
     // Cancel the burn request from `preburn_address` and return the funds.
@@ -347,6 +357,35 @@ module LibraAccount {
         // Abort if this withdrawal would make the `payer`'s balance go negative
         assert(Libra::value(coin) >= amount, EINSUFFICIENT_BALANCE);
         Libra::withdraw(coin, amount)
+    }
+    spec fun withdraw_from_balance {
+        include WithdrawFromBalanceAbortsIf<Token>;
+        include WithdrawFromBalanceEnsures<Token>;
+    }
+    spec schema WithdrawFromBalanceAbortsIf<Token> {
+        payer: address;
+        payee: address;
+        balance: Balance<Token>;
+        amount: u64;
+        aborts_if AccountFreezing::spec_account_is_frozen(payer);
+        include
+            spec_should_track_limits_for_account(payer, payee, true) ==>
+            AccountLimits::UpdateWithdrawalLimitsAbortsIf<Token> {
+                addr: VASP::spec_parent_address(payer),
+            };
+        aborts_if
+            spec_should_track_limits_for_account(payer, payee, true) &&
+            (   !spec_has_account_operations_cap() ||
+                !AccountLimits::spec_update_withdrawal_limits<Token>(amount, VASP::spec_parent_address(payer))
+            );
+        aborts_if balance.coin.value < amount;
+    }
+    spec schema WithdrawFromBalanceEnsures<Token> {
+        balance: Balance<Token>;
+        amount: u64;
+        result: Libra<Token>;
+        ensures balance.coin.value == old(balance.coin.value) - amount;
+        ensures result.value == amount;
     }
 
     /// Withdraw `amount` `Libra<Token>`'s from the account balance under
@@ -850,7 +889,7 @@ module LibraAccount {
     // ****************** SPECIFICATIONS *******************
 
     spec module {
-        pragma verify = true;
+        pragma verify;
 
         /// Returns field `key_rotation_capability` of the
         /// LibraAccount under `addr`.
