@@ -64,6 +64,11 @@ struct Args {
     #[structopt(long, group = "action")]
     exec: Option<String>,
 
+    #[structopt(long, requires = "suite")]
+    continue_on_err: bool,
+    #[structopt(long, requires = "continue-on-err")]
+    reset_image_tag: Option<String>,
+
     #[structopt(last = true)]
     last: Vec<String>,
 
@@ -203,7 +208,7 @@ async fn handle_cluster_test_runner_commands(
         let duration = Duration::from_secs(args.duration);
         run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await?
     } else if let Some(suite) = args.suite.as_ref() {
-        perf_msg = Some(runner.run_named_suite(suite).await?);
+        perf_msg = Some(runner.run_named_suite(suite, args).await?);
     } else if let Some(experiment_name) = args.run.as_ref() {
         runner
             .run_and_report(get_experiment(experiment_name, &args.last, &runner.cluster))
@@ -449,6 +454,20 @@ impl ClusterTestRunner {
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
     }
 
+    pub async fn reset(&mut self, args: &Args) -> Result<()> {
+        let current_tag = args.deploy.as_deref().unwrap_or("master");
+        let reset_image_tag: String = match args.reset_image_tag.as_deref() {
+            None => current_tag.to_string(),
+            Some(img_tag) => img_tag.to_string(),
+        };
+        let cluster_builder = ClusterBuilder::new(reset_image_tag, self.cluster_swarm.clone());
+        self.cluster = cluster_builder
+            .setup_cluster(&args.cluster_builder_params)
+            .await
+            .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
+        Ok(())
+    }
+
     /// Discovers cluster, setup log, etc
     pub async fn setup(args: &Args) -> Result<Self> {
         let current_tag = args.deploy.as_deref().unwrap_or("master");
@@ -556,20 +575,32 @@ impl ClusterTestRunner {
         }
     }
 
-    async fn run_suite(&mut self, suite: ExperimentSuite) -> Result<()> {
+    async fn run_suite(&mut self, suite: ExperimentSuite, args: &Args) -> Result<()> {
         info!("Starting suite");
         let suite_started = Instant::now();
+        let suite_length = suite.experiments.len();
+        let mut successes = 0;
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            self.run_single_experiment(experiment, None)
-                .await
-                .map_err(move |e| {
+            let experiment_result = self.run_single_experiment(experiment, None).await;
+            if args.continue_on_err {
+                if experiment_result.is_err() {
+                    info!("Experiment failed! Attempting cluster reset");
+                    self.reset(args).await?;
+                } else {
+                    successes += 1;
+                }
+            } else {
+                experiment_result.map_err(move |e| {
                     format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
                 })?;
+            }
         }
         info!(
-            "Suite completed in {:?}",
-            Instant::now().duration_since(suite_started)
+            "Suite completed in {:?} with {}/{} success",
+            Instant::now().duration_since(suite_started),
+            successes,
+            suite_length
         );
         self.print_report();
         Ok(())
@@ -584,9 +615,9 @@ impl ClusterTestRunner {
         );
     }
 
-    pub async fn run_named_suite(&mut self, name: &str) -> Result<String> {
+    pub async fn run_named_suite(&mut self, name: &str, args: &Args) -> Result<String> {
         let suite = ExperimentSuite::new_by_name(&self.cluster, name)?;
-        self.run_suite(suite).await?;
+        self.run_suite(suite, args).await?;
         Ok(self.report.to_string())
     }
 
