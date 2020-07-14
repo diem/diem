@@ -158,3 +158,38 @@ fn test_that_cpp_code_compiles() {
         .unwrap();
     assert!(status.success());
 }
+
+#[test]
+#[ignore]
+fn test_that_java_code_compiles() {
+    let registry = get_libra_registry();
+    let abis = get_stdlib_script_abis();
+    let dir = tempdir().unwrap();
+
+    let lcs_installer = serdegen::java::Installer::new(dir.path().to_path_buf());
+    lcs_installer
+        .install_module("org.libra.types", &registry)
+        .unwrap();
+    lcs_installer.install_serde_runtime().unwrap();
+
+    let abi_installer = buildgen::java::Installer::new(dir.path().to_path_buf());
+    abi_installer
+        .install_transaction_builders("org.libra.builder.Builder", &abis)
+        .unwrap();
+
+    let paths = std::iter::empty()
+        .chain(std::fs::read_dir(dir.path().join("com/facebook/serde")).unwrap())
+        .chain(std::fs::read_dir(dir.path().join("org/libra/types")).unwrap())
+        .chain(std::fs::read_dir(dir.path().join("org/libra/builder")).unwrap())
+        .map(|e| e.unwrap().path());
+
+    let status = Command::new("javac")
+        .arg("-cp")
+        .arg(dir.path())
+        .arg("-d")
+        .arg(dir.path())
+        .args(paths)
+        .status()
+        .unwrap();
+    assert!(status.success());
+}
