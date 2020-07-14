@@ -2,9 +2,9 @@
 name: Land-blocking Test
 
 on:
-  push:
+  pull_request:
     branches:
-      - auto
+      - master
 
 jobs:
   build-and-run-cluster-test:
@@ -19,16 +19,8 @@ jobs:
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
-      - name: Check kill switch
-        id: check_ks
-        run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
+          echo "::set-env name=PREV_TAG::land_$(git rev-parse --short=8 HEAD~1)"
       - name: Build, tag and push images
-        if: steps.check_ks.outputs.should_run == 'true'
         run: |
           set +e
           date
@@ -49,47 +41,49 @@ jobs:
           done
           echo "Build failed after retries"
           exit 1
+      - name: Determine which cluster-test suite to run
+        run: |
+          commit_message=$(git log -1 --pretty=%B)
+          echo $commit_message | grep '\[breaking\]'
+          if [ $? -eq 0 ]; then
+            echo "Breaking change detected! Will run land_blocking suite"
+            echo "::set-env name=TEST_COMPAT::0"
+          else
+            echo "Will run land_blocking_compat suite"
+            echo "::set-env name=TEST_COMPAT::1"
+          fi
       - name: Launch cluster test
-        if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           set +e
           date
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
-          ./scripts/cti \
-            --tag ${TEST_TAG} \
-            -E RUST_LOG=debug \
-            --report report.json \
-            --suite land_blocking
+          if [ $TEST_COMPAT -eq 1 ]; then
+            ./scripts/cti \
+              --tag ${PREV_TAG} \
+              --cluster-test-tag ${TEST_TAG} \
+              -E RUST_LOG=debug \
+              -E BATCH_SIZE=15 \
+              -E UPDATE_TO_TAG=${TEST_TAG} \
+              --report report.json \
+              --suite land_blocking_compat
+          else
+            ./scripts/cti \
+              --tag ${TEST_TAG} \
+              -E RUST_LOG=debug \
+              --report report.json \
+              --suite land_blocking
+          fi
+          ret=$?
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
             echo "report.json end"
           else
             echo "report.json is empty or not found."
-            jq -n \
-              --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
-          $(tail -5 $CTI_OUTPUT_LOG)" \
-              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-            '{
-              "attachments": [
-                {
-                  "text": $msg,
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "Visit Job",
-                      "url": $url
-                    }
-                  ]
-                }
-              ]
-            }' > /tmp/payload
-            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
           fi
       - name: Post test results on PR
-        if: steps.check_ks.outputs.should_run == 'true'
         uses: actions/github-script@0.4.0
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -120,6 +114,17 @@ jobs:
             ${result.text}
             \`\`\`
             `;
+              if (parseInt(env_vars.TEST_COMPAT)) {
+                let storage_compat = result.metrics.find(m => m.metric == "storage_compat").value;
+                let consensus_compat = result.metrics.find(m => m.metric == "consensus_compat").value;
+                body += "\n :tada: Backwards compatible: \n";
+                body += "* storage \n"
+                body += "* consensus \n"
+              } catch (err) {
+                body += "\n :exclamation: Backwards compatibility broken";
+                should_fail = true;
+                throw err;
+              }
               let tps = result.metrics.find(m => m.experiment == "all up" && m.metric == "avg_tps").value;
               let min_tps = 900;
               if (tps < min_tps) {
