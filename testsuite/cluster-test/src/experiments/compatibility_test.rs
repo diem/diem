@@ -132,7 +132,8 @@ impl Experiment for CompatibilityTest {
         context
             .tx_emitter
             .emit_txn_for(job_duration, fullnode_txn_job.clone())
-            .await?;
+            .await
+            .map_err(|e| anyhow::format_err!("Failed to generate traffic: {}", e))?;
 
         info!("1. Changing the images for the first instance to validate storage");
         let first_node = vec![self.first_node.clone()];
@@ -143,28 +144,42 @@ impl Experiment for CompatibilityTest {
                 job_duration,
                 EmitJobRequest::for_instances(first_node, context.global_emit_job_request),
             )
-            .await?;
+            .await
+            .map_err(|e| anyhow::format_err!("Storage backwards compat broken: {}", e))?;
+
+        context
+            .report
+            .report_metric(self.to_string(), "storage_compat", 1.0);
 
         info!("2. Changing images for the first batch to test consensus");
         update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, validator_txn_job.clone())
-            .await?;
+            .await
+            .map_err(|e| anyhow::format_err!("Consensus backwards compat broken: {}", e))?;
+
+        context
+            .report
+            .report_metric(self.to_string(), "consensus_compat", 1.0);
 
         info!("3. Changing images for the rest of the nodes");
         update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, validator_txn_job)
-            .await?;
+            .await
+            .map_err(|e| {
+                anyhow::format_err!("Failed to upgrade rest of validator images: {}", e)
+            })?;
 
         info!("4. Changing images for full nodes");
         update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, fullnode_txn_job)
-            .await?;
+            .await
+            .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
         Ok(())
     }
 
