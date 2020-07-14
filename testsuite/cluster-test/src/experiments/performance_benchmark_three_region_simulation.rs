@@ -37,11 +37,11 @@ impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
 #[async_trait]
 impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let num_nodes = self.cluster.validator_instances().len();
-        let split_country_num = 26 as usize;
-        let split_region_num = split_country_num / 2;
-        let (us, euro) = self.cluster.split_n_validators_random(split_country_num);
-        let (us_west, us_east) = us.split_n_validators_random(split_region_num);
+        // let num_nodes = self.cluster.validator_instances().len();
+        // let split_country_num = 2 as usize;
+        // let split_region_num = split_country_num / 2;
+        let (us, euro) = self.cluster.split_n_validators_random(20);
+        let (us_west, us_east) = us.split_n_validators_random(10);
         three_region_simulation_effects_k8s(
             (
                 us_west.validator_instances().to_vec(),
@@ -49,9 +49,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 euro.validator_instances().to_vec(),
             ),
             (
-                Duration::from_millis(60), // us_east<->eu one way delay
+                Duration::from_millis(100), // us_east<->eu one way delay
                 Duration::from_millis(100), // us_west<->eu one way delay
-                Duration::from_millis(40), // us_west<->us_east one way delay
+                Duration::from_millis(100), // us_west<->us_east one way delay
             ),
             context.cluster_swarm,
         )
