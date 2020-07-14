@@ -10,11 +10,11 @@ use serde::{Deserialize, Serialize};
 
 /// List of all supported metadata types
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum MetadataType {
+pub enum Metadata {
     Undefined,
-    GeneralMetadataType(GeneralMetadata),
-    TravelRuleMetadataType(TravelRuleMetadata),
-    UnstructuredBytesMetadataType(UnstructuredBytesMetadata),
+    GeneralMetadata(GeneralMetadata),
+    TravelRuleMetadata(TravelRuleMetadata),
+    UnstructuredBytesMetadata(UnstructuredBytesMetadata),
 }
 
 /// List of supported transaction metadata format versions for regular

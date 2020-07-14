@@ -394,21 +394,20 @@ pub fn encode_modify_publishing_option_script(args: Vec<u8>) -> Script {
 /// `metadata` and `metadata_signature` parameters are only required if `amount` >=
 /// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct
 /// entities (e.g., different VASPs, or a VASP and a DesignatedDealer). Standardized
-/// `metadata` LCS format can be found in
-/// `libra_types::transaction::metadata::MetadataType`. ## Events When this script
-/// executes without aborting, it emits two events: `SentPaymentEvent { amount,
-/// currency_code = Currency, payee, metadata }` on `payer`'s `LibraAccount::sent_events`
-/// handle, and `ReceivedPaymentEvent { amount, currency_code = Currency, payer, metadata
-/// }` on `payee`'s `LibraAccount::received_events` handle. ## Common Aborts These aborts
-/// can in occur in any payment. * Aborts with `LibraAccount::EINSUFFICIENT_BALANCE` if
-/// `amount` is greater than `payer`'s balance in `Currency`. * Aborts with
-/// `LibraAccount::ECOIN_DEPOSIT_IS_ZERO` if `amount` is zero. * Aborts with
-/// `LibraAccount::EPAYEE_DOES_NOT_EXIST` if no account exists at the address `payee`. *
-/// Aborts with `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` if an account exists at
-/// `payee`, but it does not accept payments in `Currency`. ## Dual Attestation Aborts
-/// These aborts can occur in any payment subject to dual attestation. * Aborts with
-/// `DualAttestation::EMALFORMED_METADATA_SIGNATURE` if `metadata_signature`'s is not 64
-/// bytes. * Aborts with `DualAttestation:EINVALID_METADATA_SIGNATURE` if
+/// `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
+/// ## Events When this script executes without aborting, it emits two events:
+/// `SentPaymentEvent { amount, currency_code = Currency, payee, metadata }` on `payer`'s
+/// `LibraAccount::sent_events` handle, and `ReceivedPaymentEvent { amount, currency_code
+/// = Currency, payer, metadata }` on `payee`'s `LibraAccount::received_events` handle. ##
+/// Common Aborts These aborts can in occur in any payment. * Aborts with
+/// `LibraAccount::EINSUFFICIENT_BALANCE` if `amount` is greater than `payer`'s balance in
+/// `Currency`. * Aborts with `LibraAccount::ECOIN_DEPOSIT_IS_ZERO` if `amount` is zero. *
+/// Aborts with `LibraAccount::EPAYEE_DOES_NOT_EXIST` if no account exists at the address
+/// `payee`. * Aborts with `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` if an account
+/// exists at `payee`, but it does not accept payments in `Currency`. ## Dual Attestation
+/// Aborts These aborts can occur in any payment subject to dual attestation. * Aborts
+/// with `DualAttestation::EMALFORMED_METADATA_SIGNATURE` if `metadata_signature`'s is not
+/// 64 bytes. * Aborts with `DualAttestation:EINVALID_METADATA_SIGNATURE` if
 /// `metadata_signature` does not verify on the message `metadata` | `payer` | `value` |
 /// `DOMAIN_SEPARATOR` using the `compliance_public_key` published in the `payee`'s
 /// `DualAttestation::Credential` resource. ## Other Aborts These aborts should only

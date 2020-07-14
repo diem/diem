@@ -40,7 +40,7 @@ The
 (e.g., different VASPs, or a VASP and a DesignatedDealer).
 Standardized
 <code>metadata</code> LCS format can be found in
-<code>libra_types::transaction::metadata::MetadataType</code>.
+<code>libra_types::transaction::metadata::Metadata</code>.
 
 
 <a name="SCRIPT_@Events"></a>
