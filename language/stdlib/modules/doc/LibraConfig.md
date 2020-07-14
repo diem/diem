@@ -263,7 +263,8 @@
     config_account: &signer,
     payload: Config
 ) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_on_chain_config_privilege">Roles::has_on_chain_config_privilege</a>(config_account), ENO_CONFIG_PRIVILEGE);
+    //<b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS); // TODO: This assertion is needed, but the <b>move</b>-lang test fails.
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(config_account), ENOT_LIBRA_ROOT);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
     move_to(config_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a>{ payload });
@@ -461,9 +462,5 @@ Spec version of
 
 <pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
     exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
-}
-<a name="0x1_LibraConfig_spec_has_on_chain_config_privilege_addr"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_has_on_chain_config_privilege_addr">spec_has_on_chain_config_privilege_addr</a>(addr: address): bool {
-    <a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(addr)
 }
 </code></pre>

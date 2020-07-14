@@ -24,7 +24,6 @@
 -  [Function `has_child_VASP_role`](#0x1_Roles_has_child_VASP_role)
 -  [Function `has_register_new_currency_privilege`](#0x1_Roles_has_register_new_currency_privilege)
 -  [Function `has_update_dual_attestation_limit_privilege`](#0x1_Roles_has_update_dual_attestation_limit_privilege)
--  [Function `has_on_chain_config_privilege`](#0x1_Roles_has_on_chain_config_privilege)
 -  [Function `can_hold_balance`](#0x1_Roles_can_hold_balance)
 -  [Function `needs_account_limits`](#0x1_Roles_needs_account_limits)
 -  [Specification](#0x1_Roles_Specification)
@@ -585,30 +584,6 @@ module that uses it.
 
 </details>
 
-<a name="0x1_Roles_has_on_chain_config_privilege"></a>
-
-## Function `has_on_chain_config_privilege`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_on_chain_config_privilege">has_on_chain_config_privilege</a>(account: &signer): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_on_chain_config_privilege">has_on_chain_config_privilege</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-     <a href="#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(account)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_Roles_can_hold_balance"></a>
 
 ## Function `can_hold_balance`
@@ -628,7 +603,7 @@ Return true if
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_can_hold_balance">can_hold_balance</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    // <a href="VASP.md#0x1_VASP">VASP</a> accounts, designated_dealers, and unhosted accounts can hold balances.
+    // <a href="VASP.md#0x1_VASP">VASP</a> accounts and designated_dealers can hold balances.
     // Administrative accounts (`Validator`, `ValidatorOperator`, `TreasuryCompliance`, and
     // `LibraRoot`) cannot.
     <a href="#0x1_Roles_has_parent_VASP_role">has_parent_VASP_role</a>(account) ||
@@ -879,15 +854,11 @@ Helper functions
 }
 <a name="0x1_Roles_spec_has_register_new_currency_privilege_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr: address): bool {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
-}
-<a name="0x1_Roles_spec_has_update_dual_attestation_threshold_privilege_addr"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_update_dual_attestation_threshold_privilege_addr">spec_has_update_dual_attestation_threshold_privilege_addr</a>(addr: address): bool  {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
-}
-<a name="0x1_Roles_spec_has_on_chain_config_privilege_addr"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_on_chain_config_privilege_addr">spec_has_on_chain_config_privilege_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr)
+}
+<a name="0x1_Roles_spec_has_update_dual_attestation_limit_privilege_addr"></a>
+<b>define</b> <a href="#0x1_Roles_spec_has_update_dual_attestation_limit_privilege_addr">spec_has_update_dual_attestation_limit_privilege_addr</a>(addr: address): bool  {
+    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
 }
 <a name="0x1_Roles_spec_can_hold_balance_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr: address): bool {
@@ -1038,4 +1009,126 @@ published through
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_child_vasp_role;
 <b>apply</b> <a href="#0x1_Roles_AbortsIfNotParentVASP">AbortsIfNotParentVASP</a> <b>to</b> new_child_vasp_role;
+</code></pre>
+
+
+The LibraRoot role is globally unique [C2]. A
+<code>RoldId</code> with
+<code>LIBRA_ROOT_ROLE_ID()</code> can only exists in the
+<code>LIBRA_ROOT_ADDRESS()</code>. TODO: Verify that
+<code>LIBRA_ROOT_ADDRESS()</code> has a LibraRoot role after
+<code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code>.
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
+  addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+</code></pre>
+
+
+The TreasuryCompliance role is globally unique [C3]. A
+<code>RoldId</code> with
+<code>TREASURY_COMPLIANCE_ROLE_ID()</code> can only exists in the
+<code>TREASURY_COMPLIANCE_ADDRESS()</code>. TODO: Verify that
+<code>TREASURY_COMPLIANCE_ADDRESS()</code> has a TreasuryCompliance role after
+<code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code>.
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
+  addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>();
+</code></pre>
+
+
+LibraRoot cannot have balances [E2].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
+    !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+TreasuryCompliance cannot have balances [E3].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
+    !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+Validator cannot have balances [E4].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_validator_role_addr">spec_has_validator_role_addr</a>(addr):
+    !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+ValidatorOperator cannot have balances [E5].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_validator_operator_role_addr">spec_has_validator_operator_role_addr</a>(addr):
+    !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+DesignatedDealer have balances [E6].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr):
+    <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+ParentVASP have balances [E7].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr):
+    <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+ChildVASP have balances [E8].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr):
+    <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
+</code></pre>
+
+
+DesignatedDealer does not need account limits [F6].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr):
+    !<a href="#0x1_Roles_spec_needs_account_limits_addr">spec_needs_account_limits_addr</a>(addr);
+</code></pre>
+
+
+ParentVASP needs account limits [F7].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr):
+    <a href="#0x1_Roles_spec_needs_account_limits_addr">spec_needs_account_limits_addr</a>(addr);
+</code></pre>
+
+
+ChildVASP needs account limits [F8].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr):
+    <a href="#0x1_Roles_spec_needs_account_limits_addr">spec_needs_account_limits_addr</a>(addr);
+</code></pre>
+
+
+update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_update_dual_attestation_limit_privilege_addr">spec_has_update_dual_attestation_limit_privilege_addr</a>(addr):
+    <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr);
+</code></pre>
+
+
+register_new_currency_privilege is granted to LibraRoot [B18].
+
+
+<pre><code><b>invariant</b> forall addr: address where <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr):
+    <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr);
 </code></pre>

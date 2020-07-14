@@ -29,8 +29,7 @@ module LibraConfig {
     const EINVALID_SINGLETON_ADDRESS: u64 = 2;
     const ECONFIG_DOES_NOT_EXIST: u64 = 3;
     const EMODIFY_CAPABILITY_NOT_HELD: u64 = 4;
-    const ENO_CONFIG_PRIVILEGE: u64 = 5;
-    const EINVALID_BLOCK_TIME: u64 = 6;
+    const EINVALID_BLOCK_TIME: u64 = 5;
 
     // This can only be invoked by the config address, and only a single time.
     // Currently, it is invoked in the genesis transaction
@@ -78,7 +77,8 @@ module LibraConfig {
         config_account: &signer,
         payload: Config
     ) {
-        assert(Roles::has_on_chain_config_privilege(config_account), ENO_CONFIG_PRIVILEGE);
+        //assert(LibraTimestamp::is_genesis(), ENOT_GENESIS); // TODO: This assertion is needed, but the move-lang test fails.
+        assert(Roles::has_libra_root_role(config_account), ENOT_LIBRA_ROOT);
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to(config_account, ModifyConfigCapability<Config> {});
         move_to(config_account, LibraConfig{ payload });
@@ -165,10 +165,6 @@ module LibraConfig {
         /// Spec version of `LibraConfig::is_published<Config>`.
         define spec_is_published<Config>(): bool {
             exists<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
-        }
-
-        define spec_has_on_chain_config_privilege_addr(addr: address): bool {
-            Roles::spec_has_libra_root_role_addr(addr)
         }
 
     }

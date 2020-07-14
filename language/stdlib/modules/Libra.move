@@ -695,10 +695,7 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        pragma aborts_if_is_partial = true;
-        // TODO (dd): explore why I'm getting an error saying has_register_new_currency_privilege assert in
-        // code is not covered.
-        // aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account));
+        aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account));
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
