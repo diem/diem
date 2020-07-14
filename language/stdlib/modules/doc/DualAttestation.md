@@ -191,7 +191,9 @@ Rotate the base URL for
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_rotate_base_url">rotate_base_url</a>(account: &signer, new_url: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
-    borrow_global_mut&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)).base_url = new_url
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr), ENOT_PARENT_VASP_OR_DD);
+    borrow_global_mut&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url = new_url
 }
 </code></pre>
 
@@ -221,9 +223,10 @@ Rotate the compliance public key for
     account: &signer,
     new_key: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr), ENOT_PARENT_VASP_OR_DD);
     <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), EINVALID_PUBLIC_KEY);
-    <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    borrow_global_mut&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(parent_addr).compliance_public_key = new_key
+    borrow_global_mut&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key = new_key
 }
 </code></pre>
 

@@ -94,7 +94,9 @@ module DualAttestation {
 
     /// Rotate the base URL for `account` to `new_url`
     public fun rotate_base_url(account: &signer, new_url: vector<u8>) acquires Credential {
-        borrow_global_mut<Credential>(Signer::address_of(account)).base_url = new_url
+        let addr = Signer::address_of(account);
+        assert(exists<Credential>(addr), ENOT_PARENT_VASP_OR_DD);
+        borrow_global_mut<Credential>(addr).base_url = new_url
     }
     spec fun rotate_base_url {
         aborts_if !exists<Credential>(Signer::spec_address_of(account));
@@ -107,9 +109,10 @@ module DualAttestation {
         account: &signer,
         new_key: vector<u8>,
     ) acquires Credential {
+        let addr = Signer::address_of(account);
+        assert(exists<Credential>(addr), ENOT_PARENT_VASP_OR_DD);
         assert(Signature::ed25519_validate_pubkey(copy new_key), EINVALID_PUBLIC_KEY);
-        let parent_addr = Signer::address_of(account);
-        borrow_global_mut<Credential>(parent_addr).compliance_public_key = new_key
+        borrow_global_mut<Credential>(addr).compliance_public_key = new_key
     }
     spec fun rotate_compliance_public_key {
         aborts_if !exists<Credential>(Signer::spec_address_of(account));

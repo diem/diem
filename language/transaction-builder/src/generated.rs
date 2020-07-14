@@ -612,33 +612,25 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script(
     )
 }
 
-/// Rotate `account`'s base URL to `new_url`.
-pub fn encode_rotate_base_url_script(new_url: Vec<u8>) -> Script {
+/// Rotate `account`'s base URL to `new_url` and its compliance public key to `new_key`.
+/// Aborts if `account` is not a ParentVASP or DesignatedDealer Aborts if `new_key` is not
+/// a well-formed public key
+pub fn encode_rotate_dual_attestation_info_script(new_url: Vec<u8>, new_key: Vec<u8>) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 32, 8, 45, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 10, 2, 0, 15, 68, 117, 97, 108, 65, 116, 116, 101, 115, 116,
-            97, 116, 105, 111, 110, 15, 114, 111, 116, 97, 116, 101, 95, 98, 97, 115, 101, 95, 117,
-            114, 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 11, 1, 17,
-            0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 10, 5, 12, 13, 7, 25, 61, 8, 86, 16, 0,
+            0, 0, 1, 0, 1, 0, 0, 2, 0, 1, 0, 2, 6, 12, 10, 2, 0, 3, 6, 12, 10, 2, 10, 2, 15, 68,
+            117, 97, 108, 65, 116, 116, 101, 115, 116, 97, 116, 105, 111, 110, 15, 114, 111, 116,
+            97, 116, 101, 95, 98, 97, 115, 101, 95, 117, 114, 108, 28, 114, 111, 116, 97, 116, 101,
+            95, 99, 111, 109, 112, 108, 105, 97, 110, 99, 101, 95, 112, 117, 98, 108, 105, 99, 95,
+            107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 7, 10, 0, 11,
+            1, 17, 0, 11, 0, 11, 2, 17, 1, 2,
         ],
         vec![],
-        vec![TransactionArgument::U8Vector(new_url)],
-    )
-}
-
-/// Encode a program that rotates `account`'s compliance public key to `new_key`.
-pub fn encode_rotate_compliance_public_key_script(new_key: Vec<u8>) -> Script {
-    Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 45, 8, 58, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 10, 2, 0, 15, 68, 117, 97, 108, 65, 116, 116, 101, 115, 116,
-            97, 116, 105, 111, 110, 28, 114, 111, 116, 97, 116, 101, 95, 99, 111, 109, 112, 108,
-            105, 97, 110, 99, 101, 95, 112, 117, 98, 108, 105, 99, 95, 107, 101, 121, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 11, 1, 17, 0, 2,
+            TransactionArgument::U8Vector(new_url),
+            TransactionArgument::U8Vector(new_key),
         ],
-        vec![],
-        vec![TransactionArgument::U8Vector(new_key)],
     )
 }
 
