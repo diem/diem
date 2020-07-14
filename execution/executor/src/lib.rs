@@ -35,7 +35,7 @@ use libra_types::{
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config,
-    proof::{accumulator::InMemoryAccumulator, definition::LeafCount, SparseMerkleProof},
+    proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionOutput,
         TransactionPayload, TransactionStatus, TransactionToCommit, Version,
@@ -152,38 +152,83 @@ where
         Ok(None)
     }
 
-    /// Verifies proofs using provided ledger info. Also verifies that the version of the first
-    /// transaction matches the latest committed transaction. If the first few transaction happens
-    /// to be older, returns how many need to be skipped and the first version to be committed.
+    /// Verify input chunk and return transactions to be applied, skipping those already persisted.
+    /// Specifically:
+    ///  1. Verify that input transactions belongs to the ledger represented by the ledger info.
+    ///  2. Verify that transactions to skip match what's already persisted (no fork).
+    ///  3. Return Transactions to be applied.
     fn verify_chunk(
-        txn_list_with_proof: &TransactionListWithProof,
-        ledger_info_with_sigs: &LedgerInfoWithSignatures,
-        num_committed_txns: u64,
-    ) -> Result<(LeafCount, Version)> {
+        &self,
+        txn_list_with_proof: TransactionListWithProof,
+        verified_target_li: &LedgerInfoWithSignatures,
+    ) -> Result<(Vec<Transaction>, Vec<TransactionInfo>)> {
+        // 1. Verify that input transactions belongs to the ledger represented by the ledger info.
         txn_list_with_proof.verify(
-            ledger_info_with_sigs.ledger_info(),
+            verified_target_li.ledger_info(),
             txn_list_with_proof.first_transaction_version,
         )?;
 
+        // Return empty if there's no work to do.
         if txn_list_with_proof.transactions.is_empty() {
-            return Ok((0, num_committed_txns as Version /* first_version */));
+            return Ok((Vec::new(), Vec::new()));
         }
-
         let first_txn_version = txn_list_with_proof
             .first_transaction_version
             .expect("first_transaction_version should exist.")
             as Version;
-
+        let num_committed_txns = self.cache.synced_trees().txn_accumulator().num_leaves();
         ensure!(
             first_txn_version <= num_committed_txns,
             "Transaction list too new. Expected version: {}. First transaction version: {}.",
             num_committed_txns,
             first_txn_version
         );
-        Ok((
-            num_committed_txns - first_txn_version,
-            num_committed_txns as Version,
-        ))
+        let versions_between_first_and_committed = num_committed_txns - first_txn_version;
+        if txn_list_with_proof.transactions.len() <= versions_between_first_and_committed as usize {
+            // All already in DB, nothing to do.
+            return Ok((Vec::new(), Vec::new()));
+        }
+
+        // 2. Verify that skipped transactions match what's already persisted (no fork):
+        let num_txns_to_skip = num_committed_txns - first_txn_version;
+        info!("Skipping the first {} transactions.", num_txns_to_skip);
+
+        // If the proof is verified, then the length of txn_infos and txns must be the same.
+        let skipped_transaction_infos =
+            &txn_list_with_proof.proof.transaction_infos()[..num_txns_to_skip as usize];
+
+        // Left side of the proof happens to be the frozen subtree roots of the accumulator
+        // right before the list of txns are applied.
+        let frozen_subtree_roots_from_proof = txn_list_with_proof
+            .proof
+            .left_siblings()
+            .iter()
+            .rev()
+            .cloned()
+            .collect::<Vec<_>>();
+        let accu_from_proof = InMemoryAccumulator::<TransactionAccumulatorHasher>::new(
+            frozen_subtree_roots_from_proof,
+            first_txn_version,
+        )?
+        .append(
+            &skipped_transaction_infos
+                .iter()
+                .map(CryptoHash::hash)
+                .collect::<Vec<_>>()[..],
+        );
+        // The two accumulator root hashes should be identical.
+        ensure!(
+            self.cache.synced_trees().state_id() == accu_from_proof.root_hash(),
+            "Fork happens because the current synced_trees doesn't match the txn list provided."
+        );
+
+        // 3. Return verified transactions to be applied.
+        let mut txns: Vec<_> = txn_list_with_proof.transactions;
+        txns.drain(0..num_txns_to_skip as usize);
+        let (_, mut txn_infos) = txn_list_with_proof.proof.unpack();
+        txn_infos.drain(0..num_txns_to_skip as usize);
+
+        Ok((txns, txn_infos))
     }
 
     /// Post-processing of what the VM outputs. Returns the entire block's output.
@@ -435,78 +480,17 @@ where
             executed_trees.state_tree(),
         )
     }
-}
 
-impl<V: VMExecutor> ChunkExecutor for Executor<V> {
-    fn execute_and_commit_chunk(
+    fn execute_chunk(
         &mut self,
-        txn_list_with_proof: TransactionListWithProof,
-        // Target LI that has been verified independently: the proofs are relative to this version.
-        verified_target_li: LedgerInfoWithSignatures,
-        // An optional end of epoch LedgerInfo. We do not allow chunks that end epoch without
-        // carrying any epoch change LI.
-        epoch_change_li: Option<LedgerInfoWithSignatures>,
-    ) -> Result<Vec<ContractEvent>> {
-        // Update the cache in executor to be consistent with latest synced state.
-        self.reset_cache()?;
-
-        info!(
-            "Local synced version: {}. First transaction version in request: {:?}. \
-             Number of transactions in request: {}.",
-            self.cache.synced_trees().txn_accumulator().num_leaves() - 1,
-            txn_list_with_proof.first_transaction_version,
-            txn_list_with_proof.transactions.len(),
-        );
-
-        let (num_txns_to_skip, first_version) = Self::verify_chunk(
-            &txn_list_with_proof,
-            &verified_target_li,
-            self.cache.synced_trees().txn_accumulator().num_leaves(),
-        )?;
-
-        info!("Skipping the first {} transactions.", num_txns_to_skip);
-        let txn_list_is_empty = txn_list_with_proof.is_empty();
-        let transactions: Vec<_> = txn_list_with_proof
-            .transactions
-            .into_iter()
-            .skip(num_txns_to_skip as usize)
-            .collect();
-
-        // If the proof is verified, then the length of txn_infos and txns must be the same.
-        let (skipped_transaction_infos, transaction_infos) = txn_list_with_proof
-            .proof
-            .transaction_infos()
-            .split_at(num_txns_to_skip as usize);
-
-        // verify no fork happens.
-        if !txn_list_is_empty {
-            // Left side of the proof happens to be the frozen subtree roots of the accumulator
-            // right before the list of txns are applied.
-            let frozen_subtree_roots_from_proof = txn_list_with_proof
-                .proof
-                .left_siblings()
-                .iter()
-                .rev()
-                .cloned()
-                .collect::<Vec<_>>();
-            let accu_from_proof = InMemoryAccumulator::<TransactionAccumulatorHasher>::new(
-                frozen_subtree_roots_from_proof,
-                first_version - num_txns_to_skip,
-            )?
-            .append(
-                &skipped_transaction_infos
-                    .iter()
-                    .map(CryptoHash::hash)
-                    .collect::<Vec<_>>()[..],
-            );
-
-            // The two accumulator root hashes should be identical.
-            ensure!(
-                self.cache.synced_trees().state_id() == accu_from_proof.root_hash(),
-                "Fork happens because the current synced_trees doesn't match the txn list provided."
-            )
-        }
-
+        first_version: u64,
+        transactions: Vec<Transaction>,
+        transaction_infos: Vec<TransactionInfo>,
+    ) -> Result<(
+        ProcessedVMOutput,
+        Vec<TransactionToCommit>,
+        Vec<ContractEvent>,
+    )> {
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
             StateViewId::ChunkExecution { first_version },
@@ -580,7 +564,41 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
                 txn_data.events().to_vec(),
             ));
         }
+        Ok((output, txns_to_commit, reconfig_events))
+    }
+}
 
+impl<V: VMExecutor> ChunkExecutor for Executor<V> {
+    fn execute_and_commit_chunk(
+        &mut self,
+        txn_list_with_proof: TransactionListWithProof,
+        // Target LI that has been verified independently: the proofs are relative to this version.
+        verified_target_li: LedgerInfoWithSignatures,
+        // An optional end of epoch LedgerInfo. We do not allow chunks that end epoch without
+        // carrying any epoch change LI.
+        epoch_change_li: Option<LedgerInfoWithSignatures>,
+    ) -> Result<Vec<ContractEvent>> {
+        // 1. Update the cache in executor to be consistent with latest synced state.
+        self.reset_cache()?;
+
+        info!(
+            "Local synced version: {}. First transaction version in request: {:?}. \
+             Number of transactions in request: {}.",
+            self.cache.synced_trees().txn_accumulator().num_leaves() - 1,
+            txn_list_with_proof.first_transaction_version,
+            txn_list_with_proof.transactions.len(),
+        );
+
+        // 2. Verify input transaction list.
+        let (transactions, transaction_infos) =
+            self.verify_chunk(txn_list_with_proof, &verified_target_li)?;
+
+        // 3. Execute transactions.
+        let first_version = self.cache.synced_trees().txn_accumulator().num_leaves();
+        let (output, txns_to_commit, reconfig_events) =
+            self.execute_chunk(first_version, transactions, transaction_infos)?;
+
+        // 4. Commit to DB.
         let ledger_info_to_commit =
             Self::find_chunk_li(verified_target_li, epoch_change_li, &output)?;
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
@@ -592,6 +610,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             ledger_info_to_commit.as_ref(),
         )?;
 
+        // 5. Cache maintenance.
         let output_trees = output.executed_trees().clone();
         if let Some(ledger_info_with_sigs) = &ledger_info_to_commit {
             self.cache
@@ -600,6 +619,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             self.cache.update_synced_trees(output_trees);
         }
         self.cache.reset();
+
         info!(
             "Synced to version {}, the corresponding LedgerInfo is {}.",
             self.cache
