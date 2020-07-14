@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod integration_test_impl;
+
 use executor::db_bootstrapper::bootstrap_db_if_empty;
 use executor_types::StateComputeResult;
 use libra_config::{config::NodeConfig, utils};
