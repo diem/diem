@@ -11,6 +11,7 @@ members = [
     "common/datatest-stable",
     "common/debug-interface",
     "common/futures-semaphore",
+    "common/inject-error",
     "common/lcs",
     "common/libradoc",
     "common/logger",
