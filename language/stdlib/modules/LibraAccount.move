@@ -105,6 +105,7 @@ module LibraAccount {
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
     const EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
     const EROLE_CANT_STORE_BALANCE: u64 = 4;
+    const EINSUFFICIENT_BALANCE: u64 = 5;
     const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
     const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
     const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
@@ -116,6 +117,11 @@ module LibraAccount {
     const ENOT_A_CURRENCY: u64 = 14;
     const EADD_EXISTING_CURRENCY: u64 = 15;
     const EACCOUNT_FROZEN: u64 = 16;
+    /// Attempting to send funds to an account that does not exist
+    const EPAYEE_DOES_NOT_EXIST: u64 = 17;
+    /// Attempting to send funds in (e.g.) LBR to an account that exists, but does not have a
+    /// Balance<LBR> resource
+    const EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -219,6 +225,11 @@ module LibraAccount {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         assert(deposit_value > 0, ECOIN_DEPOSIT_IS_ZERO);
+        // Check that an account exists at `payee`
+        assert(exists<LibraAccount>(payee), EPAYEE_DOES_NOT_EXIST);
+        // Check that `payee` can accept payments in `Token`
+        assert(exists<Balance<Token>>(payee), EPAYEE_CANT_ACCEPT_CURRENCY_TYPE);
+
         // Check that the payment complies with dual attestation rules
         DualAttestation::assert_payment_ok<Token>(
             payer, payee, deposit_value, copy metadata, metadata_signature
@@ -332,7 +343,10 @@ module LibraAccount {
             );
             assert(can_withdraw, EWITHDRAWAL_EXCEEDS_LIMITS);
         };
-        Libra::withdraw(&mut balance.coin, amount)
+        let coin = &mut balance.coin;
+        // Abort if this withdrawal would make the `payer`'s balance go negative
+        assert(Libra::value(coin) >= amount, EINSUFFICIENT_BALANCE);
+        Libra::withdraw(coin, amount)
     }
 
     /// Withdraw `amount` `Libra<Token>`'s from the account balance under

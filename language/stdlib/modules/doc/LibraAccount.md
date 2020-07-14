@@ -556,6 +556,11 @@ Record a payment of
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&to_deposit);
     <b>assert</b>(deposit_value &gt; 0, ECOIN_DEPOSIT_IS_ZERO);
+    // Check that an account exists at `payee`
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee), EPAYEE_DOES_NOT_EXIST);
+    // Check that `payee` can accept payments in `Token`
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee), EPAYEE_CANT_ACCEPT_CURRENCY_TYPE);
+
     // Check that the payment complies with dual attestation rules
     <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">DualAttestation::assert_payment_ok</a>&lt;Token&gt;(
         payer, payee, deposit_value, <b>copy</b> metadata, metadata_signature
@@ -694,7 +699,10 @@ Helper to withdraw
         );
         <b>assert</b>(can_withdraw, EWITHDRAWAL_EXCEEDS_LIMITS);
     };
-    <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> balance.coin, amount)
+    <b>let</b> coin = &<b>mut</b> balance.coin;
+    // Abort <b>if</b> this withdrawal would make the `payer`'s balance go negative
+    <b>assert</b>(<a href="Libra.md#0x1_Libra_value">Libra::value</a>(coin) &gt;= amount, EINSUFFICIENT_BALANCE);
+    <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(coin, amount)
 }
 </code></pre>
 
