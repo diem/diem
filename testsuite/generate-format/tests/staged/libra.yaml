@@ -67,20 +67,20 @@ HashValue:
   NEWTYPESTRUCT: BYTES
 Identifier:
   NEWTYPESTRUCT: STR
-MetadataType:
+Metadata:
   ENUM:
     0:
       Undefined: UNIT
     1:
-      GeneralMetadataType:
+      GeneralMetadata:
         NEWTYPE:
           TYPENAME: GeneralMetadata
     2:
-      TravelRuleMetadataType:
+      TravelRuleMetadata:
         NEWTYPE:
           TYPENAME: TravelRuleMetadata
     3:
-      UnstructuredBytesMetadataType:
+      UnstructuredBytesMetadata:
         NEWTYPE:
           TYPENAME: UnstructuredBytesMetadata
 Module:

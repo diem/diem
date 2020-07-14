@@ -15,7 +15,7 @@ use 0x1::VASP;
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
 /// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct entities
 /// (e.g., different VASPs, or a VASP and a DesignatedDealer).
-/// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::MetadataType`.
+/// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
 ///
 /// ## Events
 /// When this script executes without aborting, it emits two events:
