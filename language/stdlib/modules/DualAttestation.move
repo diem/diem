@@ -240,10 +240,10 @@ module DualAttestation {
     }
     spec fun dual_attestation_required {
         pragma opaque = true;
-        include TravelRuleAppliesAbortsIf<Token>;
+        include DualAttestationRequiredAbortsIf<Token>;
         ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
     }
-    spec schema TravelRuleAppliesAbortsIf<Token> {
+    spec schema DualAttestationRequiredAbortsIf<Token> {
         aborts_if !Libra::spec_is_currency<Token>();
         aborts_if !spec_is_published();
     }
@@ -322,12 +322,20 @@ module DualAttestation {
     }
     spec fun assert_signature_is_valid {
         pragma opaque = true;
+        include AssertSignatureValidAbortsIf;
+    }
+    spec schema AssertSignatureValidAbortsIf {
+        payer: address;
+        payee: address;
+        metadata_signature: vector<u8>;
+        metadata: vector<u8>;
+        deposit_value: u64;
         aborts_if !exists<Credential>(spec_credential_address(payee));
-        aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
+        aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
     }
     spec module {
         /// Returns true if signature is valid.
-        define signature_is_valid(
+        define spec_signature_is_valid(
             payer: address,
             payee: address,
             metadata_signature: vector<u8>,
@@ -361,6 +369,19 @@ module DualAttestation {
         if (dual_attestation_required<Currency>(payer, payee, value)) {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
+    }
+    spec fun assert_payment_ok {
+        pragma opaque;
+        include AssertPaymentOkAbortsIf<Currency>;
+    }
+    spec schema AssertPaymentOkAbortsIf<Currency> {
+        payer: address;
+        payee: address;
+        value: u64;
+        metadata: vector<u8>;
+        metadata_signature: vector<u8>;
+        aborts_if spec_dual_attestation_required<Currency>(payer, payee, value)
+            && !spec_signature_is_valid(payer, payee, metadata_signature, metadata, value);
     }
 
     ///////////////////////////////////////////////////////////////////////////

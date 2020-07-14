@@ -59,7 +59,11 @@
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
     -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_Specification_should_track_limits_for_account)
+    -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
+    -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
+    -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
+    -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
 
 
@@ -426,7 +430,7 @@ Depending on the
     <b>if</b> (is_withdrawal) {
         <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payer, payee))
     } <b>else</b> {
-        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payer, payee))
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payee, payer))
     }
 }
 </code></pre>
@@ -2000,9 +2004,41 @@ a writeset transaction is committed.
     <b>if</b> (is_withdrawal) {
         <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
     } <b>else</b> {
-        <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
+        <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payee, payer))
     }
 }
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_staple_lbr"></a>
+
+### Function `staple_lbr`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_staple_lbr">staple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify_duration_estimate = 100;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_unstaple_lbr"></a>
+
+### Function `unstaple_lbr`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unstaple_lbr">unstaple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify_duration_estimate = 100;
 </code></pre>
 
 
@@ -2018,8 +2054,8 @@ a writeset transaction is committed.
 
 
 
-<pre><code><b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;;
-<b>include</b> <a href="#0x1_LibraAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: to_deposit.value};
+<b>include</b> <a href="#0x1_LibraAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt;{amount: to_deposit.value};
 </code></pre>
 
 
@@ -2031,25 +2067,27 @@ a writeset transaction is committed.
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt; {
     payer: address;
     payee: address;
-    to_deposit: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt;;
+    amount: u64;
     metadata_signature: vector&lt;u8&gt;;
     metadata: vector&lt;u8&gt;;
-    <b>aborts_if</b> <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>)
-                && (!<a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>()
-                   || !<a href="AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">AccountLimits::spec_update_deposit_limits</a>&lt;Token&gt;(
-                          to_deposit.value,
-                          <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
-                       )
-                   );
-    <b>aborts_if</b> to_deposit.value == 0;
     <b>aborts_if</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">AccountFreezing::spec_account_is_frozen</a>(payee);
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
-    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value + to_deposit.value &gt; max_u64();
-    <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_TravelRuleAppliesAbortsIf">DualAttestation::TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
+    <b>aborts_if</b> amount == 0;
+    <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Token&gt;{value: amount};
     <b>aborts_if</b>
-        <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">DualAttestation::spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, to_deposit.value)
-        && !<a href="DualAttestation.md#0x1_DualAttestation_signature_is_valid">DualAttestation::signature_is_valid</a>(payer, payee, metadata_signature, metadata, to_deposit.value);
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) &&
+        !<a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>();
+    <b>include</b>
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) ==&gt;
+        <a href="AccountLimits.md#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">AccountLimits::UpdateDepositLimitsAbortsIf</a>&lt;Token&gt; {
+            addr: <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee),
+        };
+    <b>aborts_if</b>
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) &&
+        !<a href="AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">AccountLimits::spec_update_deposit_limits</a>&lt;Token&gt;(amount, <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
+    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value + amount &gt; max_u64();
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
+    <b>include</b> <a href="Libra.md#0x1_Libra_CurrencyCodeAbortsIf">Libra::CurrencyCodeAbortsIf</a>&lt;Token&gt;;
 }
 </code></pre>
 
@@ -2062,9 +2100,82 @@ a writeset transaction is committed.
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt; {
     payer: address;
     payee: address;
-    to_deposit: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt;;
-    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value
-        == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value) + to_deposit.value;
+    amount: u64;
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value) + amount;
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_tiered_mint"></a>
+
+### Function `tiered_mint`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify_duration_estimate = 100;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_withdraw_from_balance"></a>
+
+### Function `withdraw_from_balance`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(payer: address, payee: address, balance: &<b>mut</b> <a href="#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;, amount: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_WithdrawFromBalanceAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt; {
+    payer: address;
+    payee: address;
+    balance: <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;;
+    amount: u64;
+    <b>aborts_if</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">AccountFreezing::spec_account_is_frozen</a>(payer);
+    <b>include</b>
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>true</b>) ==&gt;
+        <a href="AccountLimits.md#0x1_AccountLimits_UpdateWithdrawalLimitsAbortsIf">AccountLimits::UpdateWithdrawalLimitsAbortsIf</a>&lt;Token&gt; {
+            addr: <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer),
+        };
+    <b>aborts_if</b>
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>true</b>) &&
+        (   !<a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>() ||
+            !<a href="AccountLimits.md#0x1_AccountLimits_spec_update_withdrawal_limits">AccountLimits::spec_update_withdrawal_limits</a>&lt;Token&gt;(amount, <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer))
+        );
+    <b>aborts_if</b> balance.coin.value &lt; amount;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_WithdrawFromBalanceEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt; {
+    balance: <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;;
+    amount: u64;
+    result: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt;;
+    <b>ensures</b> balance.coin.value == <b>old</b>(balance.coin.value) - amount;
+    <b>ensures</b> result.value == amount;
 }
 </code></pre>
 
@@ -2087,7 +2198,7 @@ a writeset transaction is committed.
 
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code>pragma verify;
 </code></pre>
 
 

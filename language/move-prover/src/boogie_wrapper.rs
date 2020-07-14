@@ -143,6 +143,7 @@ impl<'env> BoogieWrapper<'env> {
     ) -> anyhow::Result<()> {
         let BoogieOutput { errors, all_output } = self.call_boogie(bench_repeat, boogie_file)?;
         let boogie_log_file = self.options.get_boogie_log_file(boogie_file);
+        let log_file_existed = std::path::Path::new(&boogie_log_file).exists();
         debug!("writing boogie log to {}", boogie_log_file);
         fs::write(&boogie_log_file, &all_output)?;
 
@@ -161,6 +162,10 @@ impl<'env> BoogieWrapper<'env> {
 
         // Add errors for functions with smoke tests
         self.add_negative_errors(negative_cond_errors);
+
+        if !log_file_existed && !self.options.backend.keep_artifacts {
+            std::fs::remove_file(boogie_log_file).unwrap_or_default();
+        }
 
         Ok(())
     }

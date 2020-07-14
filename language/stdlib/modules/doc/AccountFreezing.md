@@ -416,6 +416,7 @@ Returns if the account at
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
+pragma opaque = <b>true</b>;
 <b>ensures</b> result == <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr);
 </code></pre>
 

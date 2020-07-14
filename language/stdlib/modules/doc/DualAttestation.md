@@ -34,6 +34,7 @@
     -  [Function `dual_attestation_required`](#0x1_DualAttestation_Specification_dual_attestation_required)
     -  [Function `dual_attestation_message`](#0x1_DualAttestation_Specification_dual_attestation_message)
     -  [Function `assert_signature_is_valid`](#0x1_DualAttestation_Specification_assert_signature_is_valid)
+    -  [Function `assert_payment_ok`](#0x1_DualAttestation_Specification_assert_payment_ok)
     -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_Specification_get_cur_microlibra_limit)
 
 
@@ -857,17 +858,17 @@ Spec version of
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>include</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x1_DualAttestation_DualAttestationRequiredAbortsIf">DualAttestationRequiredAbortsIf</a>&lt;Token&gt;;
 <b>ensures</b> result == <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
 </code></pre>
 
 
 
 
-<a name="0x1_DualAttestation_TravelRuleAppliesAbortsIf"></a>
+<a name="0x1_DualAttestation_DualAttestationRequiredAbortsIf"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt; {
+<pre><code><b>schema</b> <a href="#0x1_DualAttestation_DualAttestationRequiredAbortsIf">DualAttestationRequiredAbortsIf</a>&lt;Token&gt; {
     <b>aborts_if</b> !<a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;Token&gt;();
     <b>aborts_if</b> !<a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 }
@@ -967,8 +968,24 @@ Uninterpreted function for
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee));
-<b>aborts_if</b> !<a href="#0x1_DualAttestation_signature_is_valid">signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value);
+<b>include</b> <a href="#0x1_DualAttestation_AssertSignatureValidAbortsIf">AssertSignatureValidAbortsIf</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_DualAttestation_AssertSignatureValidAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DualAttestation_AssertSignatureValidAbortsIf">AssertSignatureValidAbortsIf</a> {
+    payer: address;
+    payee: address;
+    metadata_signature: vector&lt;u8&gt;;
+    metadata: vector&lt;u8&gt;;
+    deposit_value: u64;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee));
+    <b>aborts_if</b> !<a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value);
+}
 </code></pre>
 
 
@@ -976,10 +993,10 @@ Uninterpreted function for
 Returns true if signature is valid.
 
 
-<a name="0x1_DualAttestation_signature_is_valid"></a>
+<a name="0x1_DualAttestation_spec_signature_is_valid"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_DualAttestation_signature_is_valid">signature_is_valid</a>(
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(
     payer: address,
     payee: address,
     metadata_signature: vector&lt;u8&gt;,
@@ -992,6 +1009,40 @@ Returns true if signature is valid.
                 <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)),
                 <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
            )
+}
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_Specification_assert_payment_ok"></a>
+
+### Function `assert_payment_ok`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency&gt;(payer: address, payee: address, value: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_DualAttestation_AssertPaymentOkAbortsIf">AssertPaymentOkAbortsIf</a>&lt;Currency&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_DualAttestation_AssertPaymentOkAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DualAttestation_AssertPaymentOkAbortsIf">AssertPaymentOkAbortsIf</a>&lt;Currency&gt; {
+    payer: address;
+    payee: address;
+    value: u64;
+    metadata: vector&lt;u8&gt;;
+    metadata_signature: vector&lt;u8&gt;;
+    <b>aborts_if</b> <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)
+        && !<a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value);
 }
 </code></pre>
 

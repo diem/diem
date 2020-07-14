@@ -69,7 +69,7 @@ spec fun peer_to_peer_with_metadata {
     include AbortsIfPayerInvalid<Currency>;
     include AbortsIfPayeeInvalid<Currency>;
     include AbortsIfAmountInvalid<Currency>;
-    include DualAttestation::TravelRuleAppliesAbortsIf<Currency>;
+    include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: Signer::spec_address_of(payer), value: amount};
     include AbortsIfAmountExceedsLimit<Currency>;
 
     /// Post condition: the balances of payer and payee are changed correctly.

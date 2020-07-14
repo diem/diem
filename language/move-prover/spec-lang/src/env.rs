@@ -94,7 +94,17 @@ pub const CONDITION_INJECTED_PROP: &str = "$injected";
 
 /// Property which can be attached to conditions to make them exported into the VC context
 /// even if they are injected.
-pub const CONDITION_EXPORT: &str = "export";
+pub const CONDITION_EXPORT_PROP: &str = "export";
+
+/// Abstract property which can be used together with an opaque specification. An abstract
+/// property is not verified against the implementation, but will be used for the
+/// function's behavior in the application context. This allows to "override" the specification
+/// with a more abstract version. In general we would need to prover the abstraction is
+/// subsumed by the implementation, but this is currently not done.
+pub const CONDITION_ABSTRACT_PROP: &str = "abstract";
+
+/// Opposite to the abstract property.
+pub const CONDITION_CONCRETE_PROP: &str = "concrete";
 
 /// Pragma which indicates that the functions aborts and ensure conditions shall be exported
 /// to the verification context even if the implementation of the function is inlined.

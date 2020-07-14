@@ -812,6 +812,14 @@ module Libra {
     acquires CurrencyInfo {
         *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code
     }
+    spec fun currency_code {
+        pragma opaque;
+        include CurrencyCodeAbortsIf<CoinType>;
+        ensures result == spec_currency_info<CoinType>().currency_code;
+    }
+    spec schema CurrencyCodeAbortsIf<CoinType> {
+        aborts_if !exists<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS());
+    }
 
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
     /// `FromCoinType` to the new passed-in `lbr_exchange_rate`.
