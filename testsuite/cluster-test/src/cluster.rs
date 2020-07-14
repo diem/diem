@@ -18,6 +18,8 @@ pub struct Cluster {
     // guaranteed non-empty
     validator_instances: Vec<Instance>,
     fullnode_instances: Vec<Instance>,
+    lsr_instances: Vec<Instance>,
+    vault_instances: Vec<Instance>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
 }
 
@@ -41,6 +43,8 @@ impl Cluster {
         Self {
             validator_instances: instances,
             fullnode_instances: vec![],
+            lsr_instances: vec![],
+            vault_instances: vec![],
             mint_key_pair,
         }
     }
@@ -55,10 +59,17 @@ impl Cluster {
         KeyPair::from(mint_key)
     }
 
-    pub fn new(validator_instances: Vec<Instance>, fullnode_instances: Vec<Instance>) -> Self {
+    pub fn new(
+        validator_instances: Vec<Instance>,
+        fullnode_instances: Vec<Instance>,
+        lsr_instances: Vec<Instance>,
+        vault_instances: Vec<Instance>,
+    ) -> Self {
         Self {
             validator_instances,
             fullnode_instances,
+            lsr_instances,
+            vault_instances,
             mint_key_pair: Self::get_mint_key_pair(),
         }
     }
@@ -87,10 +98,20 @@ impl Cluster {
         &self.fullnode_instances
     }
 
+    pub fn lsr_instances(&self) -> &[Instance] {
+        &self.lsr_instances
+    }
+
+    pub fn vault_instances(&self) -> &[Instance] {
+        &self.vault_instances
+    }
+
     pub fn all_instances(&self) -> impl Iterator<Item = &Instance> {
         self.validator_instances
             .iter()
             .chain(self.fullnode_instances.iter())
+            .chain(self.lsr_instances.iter())
+            .chain(self.vault_instances.iter())
     }
 
     pub fn into_validator_instances(self) -> Vec<Instance> {
@@ -99,6 +120,14 @@ impl Cluster {
 
     pub fn into_fullnode_instances(self) -> Vec<Instance> {
         self.fullnode_instances
+    }
+
+    pub fn into_lsr_instances(self) -> Vec<Instance> {
+        self.lsr_instances
+    }
+
+    pub fn into_vault_instances(self) -> Vec<Instance> {
+        self.vault_instances
     }
 
     pub fn mint_key_pair(&self) -> &KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
@@ -152,6 +181,8 @@ impl Cluster {
         Cluster {
             validator_instances: instances,
             fullnode_instances: vec![],
+            lsr_instances: vec![],
+            vault_instances: vec![],
             mint_key_pair: self.mint_key_pair.clone(),
         }
     }
@@ -160,6 +191,8 @@ impl Cluster {
         Cluster {
             validator_instances: vec![],
             fullnode_instances: instances,
+            lsr_instances: vec![],
+            vault_instances: vec![],
             mint_key_pair: self.mint_key_pair.clone(),
         }
     }
