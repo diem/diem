@@ -125,6 +125,22 @@ impl PersistentSafetyStorage {
         Ok(())
     }
 
+    pub fn last_vote(&self) -> Result<Option<Vote>> {
+        let result = lcs::from_bytes(
+            &self
+                .internal_store
+                .get(LAST_VOTE)
+                .and_then(|r| r.value.bytes())?,
+        )?;
+        Ok(result)
+    }
+
+    pub fn set_last_vote(&mut self, vote: Option<Vote>) -> Result<()> {
+        self.internal_store
+            .set(LAST_VOTE, Value::Bytes(lcs::to_bytes(&vote)?))?;
+        Ok(())
+    }
+
     pub fn last_voted_round(&self) -> Result<Round> {
         Ok(self
             .internal_store
@@ -175,22 +191,6 @@ impl PersistentSafetyStorage {
             .set(WAYPOINT, Value::String(waypoint.to_string()))?;
         send_struct_log!(logging::safety_log(LogEntry::Waypoint, LogEvent::Update)
             .data(LogField::Message.as_str(), waypoint));
-        Ok(())
-    }
-
-    pub fn last_vote(&self) -> Result<Option<Vote>> {
-        let result = lcs::from_bytes(
-            &self
-                .internal_store
-                .get(LAST_VOTE)
-                .and_then(|r| r.value.bytes())?,
-        )?;
-        Ok(result)
-    }
-
-    pub fn set_last_vote(&mut self, vote: Option<Vote>) -> Result<()> {
-        self.internal_store
-            .set(LAST_VOTE, Value::Bytes(lcs::to_bytes(&vote)?))?;
         Ok(())
     }
 
