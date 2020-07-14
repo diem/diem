@@ -11,6 +11,8 @@ fun main() {
     false || X::error();
 }
 }
+// TODO(status_migration) remove duplicate check
+// check:"ABORTED { code: 42,"
 // check:"ABORTED { code: 42,"
 
 //! new-transaction
@@ -20,6 +22,8 @@ fun main() {
     true && X::error();
 }
 }
+// TODO(status_migration) remove duplicate check
+// check:"ABORTED { code: 42,"
 // check:"ABORTED { code: 42,"
 
 //! new-transaction
@@ -29,6 +33,8 @@ fun main() {
     X::error() && false;
 }
 }
+// TODO(status_migration) remove duplicate check
+// check:"ABORTED { code: 42,"
 // check:"ABORTED { code: 42,"
 
 //! new-transaction
@@ -38,4 +44,6 @@ fun main() {
     X::error() || true;
 }
 }
+// TODO(status_migration) remove duplicate check
+// check:"ABORTED { code: 42,"
 // check:"ABORTED { code: 42,"

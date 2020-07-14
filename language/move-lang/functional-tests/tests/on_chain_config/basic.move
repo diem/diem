@@ -5,6 +5,8 @@ script {
         LibraConfig::initialize(account);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -15,6 +17,8 @@ script {
         let _x = LibraConfig::get<u64>();
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -25,6 +29,8 @@ script {
         LibraConfig::set(account, 0);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -35,5 +41,7 @@ script {
         LibraConfig::publish_new_config(account, 0);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0

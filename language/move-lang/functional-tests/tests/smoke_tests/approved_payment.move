@@ -129,6 +129,8 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9003
 
@@ -157,6 +159,8 @@ fun main(account: &signer) {
     ApprovedPayment::rotate_sender_key(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9003
 
@@ -230,6 +234,8 @@ fun main(account: &signer) {
     ApprovedPayment::rotate_sender_key(account, x"0000000000000000000000000000000000000000000000000000000000000000");
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9003
 
@@ -287,6 +293,8 @@ fun main(account: &signer) {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9001
 
@@ -303,6 +311,8 @@ fun main(account: &signer) {
     ApprovedPayment::deposit_to_payee<LBR>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9002
 
@@ -330,6 +340,8 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9003
 
@@ -344,5 +356,7 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9003

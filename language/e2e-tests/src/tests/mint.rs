@@ -11,7 +11,7 @@ use crate::{
 use libra_types::{
     account_config,
     transaction::TransactionStatus,
-    vm_status::{AbortLocation, StatusCode, VMStatus},
+    vm_status::{known_locations, KeptVMStatus},
 };
 use transaction_builder::*;
 
@@ -88,10 +88,12 @@ fn tiered_mint_designated_dealer() {
         ),
         3,
     ));
-    // TODO(tmn) provide a real abort location
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 3)),
+        &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
+            known_locations::designated_dealer_module_abort(),
+            3
+        )),
     ));
 }
 
@@ -129,10 +131,12 @@ fn mint_to_existing_not_dd() {
         0,
     ));
     assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::ABORTED
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
+            known_locations::designated_dealer_module_abort(),
+            5
+        )),
     );
-    assert_eq!(output.status().vm_status().move_abort_code(), Some(5));
 }
 
 #[test]
@@ -160,10 +164,12 @@ fn mint_to_new_account() {
     ));
 
     assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::ABORTED
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
+            known_locations::designated_dealer_module_abort(),
+            5
+        )),
     );
-    assert_eq!(output.status().vm_status().move_abort_code(), Some(5));
 }
 
 #[test]

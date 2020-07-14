@@ -19,7 +19,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, U
 use libra_types::{
     account_config,
     transaction::{authenticator::AuthenticationKey, TransactionOutput, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode},
 };
 use transaction_builder::*;
 
@@ -70,7 +70,7 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::Error(StatusCode::SENDING_ACCOUNT_FROZEN,)),
+        &TransactionStatus::Discard(StatusCode::SENDING_ACCOUNT_FROZEN),
     );
 
     // Execute unfreeze on account
@@ -81,7 +81,7 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed),
+        &TransactionStatus::Keep(KeptVMStatus::Executed),
     );
 }
 
@@ -378,10 +378,7 @@ fn dual_attestation_payment() {
             ),
             1,
         ));
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::EXECUTED
-        );
+        assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed));
     }
     {
         // transaction >= 1_000_000 (set in DualAttestation.move) threshold goes through signature verification but has an
@@ -397,14 +394,11 @@ fn dual_attestation_payment() {
             ),
             2,
         ));
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(
-            output.status().vm_status().move_abort_code(),
-            Some(BAD_METADATA_SIGNATURE_ERROR_CODE)
-        );
+
+        assert!(matches!(
+            output.status().status(),
+            Ok(KeptVMStatus::MoveAbort(_, BAD_METADATA_SIGNATURE_ERROR_CODE))
+        ));
     }
 
     {
@@ -437,14 +431,11 @@ fn dual_attestation_payment() {
             ),
             2,
         ));
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(
-            output.status().vm_status().move_abort_code(),
-            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
-        )
+
+        assert!(matches!(
+            output.status().status(),
+            Ok(KeptVMStatus::MoveAbort(_, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE))
+        ));
     }
 
     {
@@ -477,14 +468,10 @@ fn dual_attestation_payment() {
             ),
             2,
         ));
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(
-            output.status().vm_status().move_abort_code(),
-            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
-        );
+        assert!(matches!(
+            output.status().status(),
+            Ok(KeptVMStatus::MoveAbort(_, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE))
+        ));
     }
     {
         // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
@@ -557,26 +544,15 @@ fn dual_attestation_payment() {
             ),
             3,
         ));
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(
-            output.status().vm_status().move_abort_code(),
-            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
-        );
+        assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
     }
 }
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::ABORTED
-    );
-    assert_eq!(
-        output.status().vm_status().move_abort_code(),
-        Some(error_code)
-    );
+    assert!(matches!(
+        output.status().status(),
+        Ok(KeptVMStatus::MoveAbort(_, code)) if code == error_code
+    ));
 }
 
 // Check that DD <-> DD and DD <-> VASP payments over the threshold fail without dual attesation.
@@ -842,11 +818,7 @@ fn recovery_address() {
         encode_add_recovery_rotation_capability_script(*parent.address()),
         0,
     ));
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::ABORTED
-    );
-    assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+    assert_aborted_with(output, 3);
 
     // try to rotate child's key from other_vasp--should abort
     let (_, pubkey3) = keygen.generate_keypair();
@@ -859,11 +831,7 @@ fn recovery_address() {
         ),
         0,
     ));
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::ABORTED
-    );
-    assert_eq!(output.status().vm_status().move_abort_code(), Some(2));
+    assert_aborted_with(output, 2);
 }
 
 #[test]
@@ -1035,11 +1003,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
     }
 
     {
@@ -1058,11 +1022,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
     }
 
     // Intra-vasp transfer isn't limited
@@ -1126,11 +1086,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
 
         // Reset the window
         let prev_block_time = executor.get_block_time();
@@ -1149,10 +1105,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::EXECUTED
-        );
+        assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1224,11 +1177,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
+        assert_aborted_with(output, 6);
     }
 
     {
@@ -1247,11 +1196,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
+        assert_aborted_with(output, 6);
     }
 
     {
@@ -1270,11 +1215,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
+        assert_aborted_with(output, 6);
 
         // update block time
         let prev_block_time = executor.get_block_time();
@@ -1296,10 +1237,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::EXECUTED
-        );
+        assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed),);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1363,11 +1301,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
     }
 
     // Fine since A can still send
@@ -1418,11 +1352,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
     }
 
     // intra-vasp: OK since it isn't checked/contributes to the total balance
@@ -1454,11 +1384,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
 
         // Reset window
         let prev_block_time = executor.get_block_time();
@@ -1478,11 +1404,7 @@ fn account_limits() {
                 .ttl(ttl)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
+        assert_aborted_with(output, 3);
     }
 }
 
@@ -1548,11 +1470,7 @@ fn add_child_currencies() {
                 .sequence_number(1)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(4));
+        assert_aborted_with(output, 4);
     }
 
     {
@@ -1570,11 +1488,7 @@ fn add_child_currencies() {
                 .sequence_number(1)
                 .sign(),
         );
-        assert_eq!(
-            output.status().vm_status().status_code(),
-            StatusCode::ABORTED
-        );
-        assert_eq!(output.status().vm_status().move_abort_code(), Some(4));
+        assert_aborted_with(output, 4);
     }
 
     executor.execute_and_apply(

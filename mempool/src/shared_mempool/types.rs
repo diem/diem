@@ -23,7 +23,7 @@ use libra_types::{
     mempool_status::MempoolStatus,
     on_chain_config::{ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
     transaction::SignedTransaction,
-    vm_status::VMStatus,
+    vm_status::DiscardedVMStatus,
 };
 use std::{
     collections::HashMap,
@@ -188,7 +188,7 @@ pub struct TransactionExclusion {
 }
 
 /// Submission Status is represented as combination of vm_validator internal status and core mempool insertion status
-pub type SubmissionStatus = (MempoolStatus, Option<VMStatus>);
+pub type SubmissionStatus = (MempoolStatus, Option<DiscardedVMStatus>);
 
 /// sender type: used to enqueue new transactions to shared mempool by client endpoints
 pub type MempoolClientSender =

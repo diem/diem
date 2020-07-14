@@ -8,7 +8,7 @@ use libra_types::{
     account_address::AccountAddress,
     on_chain_config::OnChainConfigPayload,
     transaction::{SignedTransaction, VMValidatorResult},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use libra_vm::VMValidator;
 use std::convert::TryFrom;
@@ -33,7 +33,7 @@ impl TransactionValidation for MockVMValidator {
             Ok(txn) => txn,
             Err(_) => {
                 return Ok(VMValidatorResult::new(
-                    Some(VMStatus::Error(StatusCode::INVALID_SIGNATURE)),
+                    Some(StatusCode::INVALID_SIGNATURE),
                     0,
                     false,
                 ))
@@ -54,21 +54,19 @@ impl TransactionValidation for MockVMValidator {
         let invalid_auth_key_test_add =
             AccountAddress::try_from(&[6 as u8; AccountAddress::LENGTH])?;
         let ret = if sender == account_dne_test_add {
-            Some(VMStatus::Error(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST))
+            Some(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
         } else if sender == invalid_sig_test_add {
-            Some(VMStatus::Error(StatusCode::INVALID_SIGNATURE))
+            Some(StatusCode::INVALID_SIGNATURE)
         } else if sender == insufficient_balance_test_add {
-            Some(VMStatus::Error(
-                StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-            ))
+            Some(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
         } else if sender == seq_number_too_new_test_add {
-            Some(VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_NEW))
+            Some(StatusCode::SEQUENCE_NUMBER_TOO_NEW)
         } else if sender == seq_number_too_old_test_add {
-            Some(VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_OLD))
+            Some(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
         } else if sender == txn_expiration_time_test_add {
-            Some(VMStatus::Error(StatusCode::TRANSACTION_EXPIRED))
+            Some(StatusCode::TRANSACTION_EXPIRED)
         } else if sender == invalid_auth_key_test_add {
-            Some(VMStatus::Error(StatusCode::INVALID_AUTH_KEY))
+            Some(StatusCode::INVALID_AUTH_KEY)
         } else {
             None
         };

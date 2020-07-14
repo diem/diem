@@ -53,6 +53,8 @@ main() {
   return;
 }
 
+// TODO(status_migration) Remove duplicate check
+// check: ABORTED 0
 // check: ABORTED 0
 
 //! new-transaction

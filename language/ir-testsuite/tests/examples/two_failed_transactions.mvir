@@ -5,6 +5,8 @@ main() {
 
 // check: ABORTED
 // check: 42
+// TODO(status_migration) Remove extra check
+// check: ABORTED
 
 
 //! new-transaction
@@ -15,3 +17,5 @@ main() {
 
 // check: ABORTED
 // check: 43
+// TODO(status_migration) Remove extra check
+// check: ABORTED

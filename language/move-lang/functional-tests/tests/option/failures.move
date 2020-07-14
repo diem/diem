@@ -8,6 +8,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED 1
 
 
@@ -20,6 +22,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED 1
 
 //! new-transaction
@@ -31,6 +35,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED 1
 
 
@@ -43,6 +49,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED 1
 
 
@@ -55,5 +63,7 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0

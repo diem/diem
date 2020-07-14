@@ -13,7 +13,7 @@ use libra_types::{
     account_config::LBR_NAME,
     on_chain_config::LibraVersion,
     transaction::{TransactionArgument, TransactionStatus},
-    vm_status::VMStatus,
+    vm_status::KeptVMStatus,
 };
 use libra_vm::LibraVM;
 use transaction_builder::encode_update_dual_attestation_limit_script;
@@ -97,7 +97,7 @@ fn updated_limit_allows_txn() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     // higher transaction works with higher limit
@@ -106,7 +106,7 @@ fn updated_limit_allows_txn() {
     let output = executor.execute_and_apply(txn);
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     ));
     let sender_balance = executor
         .read_balance_resource(sender.account(), account::lbr_currency_code())

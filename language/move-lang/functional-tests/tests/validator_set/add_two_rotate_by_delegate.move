@@ -30,6 +30,8 @@ script {
     }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 
 //! new-transaction
@@ -42,6 +44,8 @@ script {
     }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 
 //! new-transaction

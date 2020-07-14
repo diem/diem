@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_status::{AbortLocation, StatusCode, VMStatus},
+    vm_status::{known_locations, KeptVMStatus, StatusCode},
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
@@ -66,7 +66,7 @@ impl AUTransactionGen for P2PTransferGen {
                 receiver.balance += self.amount;
                 receiver.received_events_count += 1;
 
-                status = TransactionStatus::Keep(VMStatus::Executed);
+                status = TransactionStatus::Keep(KeptVMStatus::Executed);
                 gas_used = sender.peer_to_peer_gas_cost();
             }
             (true, true, false) => {
@@ -79,8 +79,10 @@ impl AUTransactionGen for P2PTransferGen {
                 // 6 means the balance was insufficient while trying to deduct gas costs in the
                 // epilogue.
                 // TODO: define these values in a central location
-                // TODO(tmn) provide a real abort location
-                status = TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 6));
+                status = TransactionStatus::Keep(KeptVMStatus::MoveAbort(
+                    known_locations::account_module_abort(),
+                    6,
+                ));
             }
             (true, false, _) => {
                 // Enough to pass validation but not to do the transfer. The transaction will be run
@@ -89,13 +91,16 @@ impl AUTransactionGen for P2PTransferGen {
                 gas_used = sender.peer_to_peer_too_low_gas_cost();
                 sender.balance -= gas_used * txn.gas_unit_price();
                 // 10 means the balance was insufficient while trying to transfer.
-                status = TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 5));
+                status = TransactionStatus::Keep(KeptVMStatus::MoveAbort(
+                    known_locations::account_module_abort(),
+                    5,
+                ));
             }
             (false, _, _) => {
                 // Not enough gas to pass validation. Nothing will happen.
-                status = TransactionStatus::Discard(VMStatus::Error(
+                status = TransactionStatus::Discard(
                     StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-                ));
+                );
             }
         }
 

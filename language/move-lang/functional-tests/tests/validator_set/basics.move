@@ -9,6 +9,8 @@ fun main(account: &signer) {
     LibraSystem::initialize_validator_set(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -19,6 +21,8 @@ script {
         LibraSystem::update_config_and_reconfigure(account, {{bob}});
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 
@@ -65,6 +69,8 @@ script {
                                     x"", x"", x"", x"");
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 
@@ -76,5 +82,7 @@ script {
         ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1

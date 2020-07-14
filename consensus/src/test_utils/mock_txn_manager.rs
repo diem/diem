@@ -12,7 +12,7 @@ use futures::channel::mpsc;
 use libra_mempool::ConsensusRequest;
 use libra_types::{
     transaction::TransactionStatus,
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode},
 };
 use rand::Rng;
 
@@ -39,8 +39,8 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
     // generate count + 1 status to mock the block metadata txn in mempool proxy
     for _ in 0..=count {
         let random_status = match rand::thread_rng().gen_range(0, 2) {
-            0 => TransactionStatus::Keep(VMStatus::Executed),
-            1 => TransactionStatus::Discard(VMStatus::Error(StatusCode::UNKNOWN_VALIDATION_STATUS)),
+            0 => TransactionStatus::Keep(KeptVMStatus::Executed),
+            1 => TransactionStatus::Discard(StatusCode::UNKNOWN_VALIDATION_STATUS),
             _ => unreachable!(),
         };
         statuses.push(random_status);

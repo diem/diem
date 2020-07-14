@@ -90,8 +90,8 @@ impl LibraClient {
             Err(e) => {
                 if let Some(error) = e.downcast_ref::<JsonRpcError>() {
                     // check VM status
-                    if let Some(vm_status) = error.get_vm_status() {
-                        if vm_status.status_code() == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
+                    if let Some(status_code) = error.get_status_code() {
+                        if status_code == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
                             if let Some(sender_account) = sender_account_opt {
                                 // update sender's sequence number if too old
                                 sender_account.sequence_number =

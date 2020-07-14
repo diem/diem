@@ -17,7 +17,7 @@ use libra_types::{
     event::EventKey,
     on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig},
     transaction::{ChangeSet, Script, TransactionOutput, TransactionStatus},
-    vm_status::{convert_prologue_runtime_error, StatusCode, VMStatus},
+    vm_status::{convert_prologue_runtime_error, KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
@@ -491,7 +491,7 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
     session: Session<R>,
     cost_strategy: &CostStrategy,
     txn_data: &TransactionMetadata,
-    status: VMStatus,
+    status: KeptVMStatus,
 ) -> Result<TransactionOutput, VMStatus> {
     let gas_used: u64 = txn_data
         .max_gas_amount()

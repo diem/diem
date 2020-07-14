@@ -272,6 +272,8 @@ main(account: &signer) {
     SortedLinkedList.create_new_list(move(account));
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 
@@ -293,6 +295,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 12, {{alice}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -304,6 +308,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 15, {{alice}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 7
 
@@ -325,6 +331,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 4, {{bob}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 6
 
@@ -346,6 +354,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 15, {{eve}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 5
 
@@ -357,6 +367,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 6
 
@@ -368,6 +380,8 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -399,6 +413,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 11
 
@@ -430,6 +446,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 11
 
@@ -441,6 +459,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(move(account), {{david}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 15
 
@@ -452,6 +472,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(move(account), {{alice}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 14
 
@@ -463,6 +485,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 12
 
@@ -474,6 +498,8 @@ main(account: &signer) {
     SortedLinkedList.remove_list(move(account));
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9
 
@@ -488,6 +514,8 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(copy(account), {{alice}});
     return;
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 14
 

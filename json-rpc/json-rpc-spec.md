@@ -822,6 +822,66 @@ A Libra account.
 ---
 
 
+## MoveAbort - type
+
+**Description**
+
+Object representing the abort condition raised by Move code via `abort` or `assert` during execution of a transaction by the VM on the blockchain.
+
+### Attributes
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+  <td>location</td>
+  <td>String</td><td>String of the form "address::moduleName" where the abort condition was triggered. "Script" if the abort was raised in the transaction script</td>
+  </tr>
+  <tr>
+  <td>abort_code</td><td>u64</td><td>Abort code raised by the Move module</td>
+  </tr>
+</table>
+
+##
+
+---
+
+## ExecutionFailure - type
+
+**Description**
+
+Object representing execution failure while executing Move code, but not raised via a Move abort (e.g. division by zero) during execution of a transaction by the VM on the blockchain.
+
+### Attributes
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+  <td>location</td>
+  <td>String</td><td>String of the form "address::moduleName" where the execution error occurred. "Script" if the execution error occurred while execution code that was part of the transaction script.</td>
+  </tr>
+  <tr>
+  <td>function_index</td><td>u16</td><td>The function index in the `location` where the error occurred.</td>
+  </tr>
+  <tr>
+  <td>code_offset</td><td>u16</td><td>The code offset in the function at `function_index` where the execution failure happened.</td>
+  </tr>
+</table>
+
+##
+
+---
 
 ## Transaction - type
 
@@ -869,9 +929,9 @@ A transaction on the blockchain.
   <tr>
    <td>vm_status
    </td>
-   <td>u64
+   <td>Object
    </td>
-   <td>S<a href="https://github.com/libra/libra/blob/master/types/src/vm_error.rs#L256">tatus code</a> representing the result of the VM processing this transaction.
+   <td> The returned status of the transaction after being processed by the VM. One of Executed, OutOfGas, <a href ="#moveabort---type">MoveAbort</a>, <a href="#executionfailure--type">ExecutionFailure</a>, VerificationFailure, DeserializationError, or PublishingFailure.
    </td>
   </tr>
   <tr>

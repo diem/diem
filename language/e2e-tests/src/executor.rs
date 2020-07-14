@@ -20,7 +20,7 @@ use libra_types::{
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, VMStatus},
     write_set::WriteSet,
 };
 use libra_vm::{
@@ -195,6 +195,21 @@ impl FakeExecutor {
         )
     }
 
+    /// Alternate form of 'execute_block' that keeps the vm_status before it goes into the
+    /// `TransactionOutput`
+    pub fn execute_block_and_keep_vm_status(
+        &self,
+        txn_block: Vec<SignedTransaction>,
+    ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
+        LibraVM::execute_block_and_keep_vm_status(
+            txn_block
+                .into_iter()
+                .map(Transaction::UserTransaction)
+                .collect(),
+            &self.data_store,
+        )
+    }
+
     /// Executes the transaction as a singleton block and applies the resulting write set to the
     /// data store. Panics if execution fails
     pub fn execute_and_apply(&mut self, transaction: SignedTransaction) -> TransactionOutput {
@@ -205,7 +220,7 @@ impl FakeExecutor {
             TransactionStatus::Keep(status) => {
                 self.apply_write_set(output.write_set());
                 assert!(
-                    status.status_code() == StatusCode::EXECUTED,
+                    status == &KeptVMStatus::Executed,
                     "transaction failed with {:?}",
                     status
                 );

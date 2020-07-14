@@ -3,7 +3,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
+    assert_prologue_disparity, assert_prologue_parity,
     compile::compile_module_with_address,
     executor::FakeExecutor,
     transaction_status_eq,
@@ -20,7 +20,7 @@ use libra_types::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
         MAX_TRANSACTION_SIZE_IN_BYTES,
     },
-    vm_status::{StatusCode, StatusType, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode},
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
@@ -50,7 +50,7 @@ fn verify_signature() {
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()).status(),
         executor.execute_transaction(signed_txn).status(),
-        VMStatus::Error(StatusCode::INVALID_SIGNATURE)
+        StatusCode::INVALID_SIGNATURE
     );
 }
 
@@ -79,7 +79,7 @@ fn verify_reserved_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()).status(),
         executor.execute_transaction(signed_txn).status(),
-        VMStatus::Error(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
 }
 
@@ -131,7 +131,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INVALID_AUTH_KEY)
+        StatusCode::INVALID_AUTH_KEY
     );
 
     // Create a new transaction that has a old sequence number.
@@ -147,7 +147,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
+        StatusCode::SEQUENCE_NUMBER_TOO_OLD
     );
 
     // Create a new transaction that has a too new sequence number.
@@ -163,9 +163,7 @@ fn verify_simple_payment() {
     assert_prologue_disparity!(
         executor.verify_transaction(txn.clone()).status() => None,
         executor.execute_transaction(txn).status() =>
-        TransactionStatus::Discard(VMStatus::Error(
-                StatusCode::SEQUENCE_NUMBER_TOO_NEW
-        ))
+        TransactionStatus::Discard(StatusCode::SEQUENCE_NUMBER_TOO_NEW)
     );
 
     // Create a new transaction that doesn't have enough balance to pay for gas.
@@ -181,7 +179,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,)
+        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
     );
 
     // XXX TZ: TransactionExpired
@@ -203,7 +201,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
 
     // RejectedWriteSet is tested in `verify_rejected_write_set`
@@ -227,7 +225,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND)
+        StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND
     );
 
     // Note: We can't test this at the moment since MIN_PRICE_PER_GAS_UNIT is set to 0 for
@@ -258,7 +256,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,)
+        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -273,7 +271,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,)
+        StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -288,7 +286,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,)
+        StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -303,7 +301,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE)
+        StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE
     );
 
     // Create a new transaction that swaps the two arguments.
@@ -322,7 +320,8 @@ fn verify_simple_payment() {
     );
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Error(StatusCode::TYPE_MISMATCH,))
+        // StatusCode::TYPE_MISMATCH
+        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
     );
 
     // Create a new transaction that has no argument.
@@ -338,7 +337,8 @@ fn verify_simple_payment() {
 
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Error(StatusCode::TYPE_MISMATCH,))
+        // StatusCode::TYPE_MISMATCH
+        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
     );
 }
 
@@ -365,7 +365,7 @@ pub fn test_whitelist() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::UNKNOWN_SCRIPT)
+        StatusCode::UNKNOWN_SCRIPT
     );
 }
 
@@ -396,8 +396,9 @@ pub fn test_arbitrary_script_execution() {
     let status = executor.execute_transaction(txn).status().clone();
     assert!(!status.is_discarded());
     assert_eq!(
-        status.vm_status().status_code(),
-        StatusCode::CODE_DESERIALIZATION_ERROR,
+        status.status(),
+        // StatusCode::CODE_DESERIALIZATION_ERROR
+        Ok(KeptVMStatus::DeserializationError)
     );
 }
 
@@ -439,7 +440,7 @@ pub fn test_publish_from_libra_root() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER)
+        StatusCode::INVALID_MODULE_PUBLISHER
     );
 }
 
@@ -459,8 +460,7 @@ fn verify_chain_id() {
     );
 
     let status = executor.execute_transaction(txn).status().clone();
-    assert!(status.is_discarded());
-    assert_eq!(status.vm_status().status_code(), StatusCode::BAD_CHAIN_ID,);
+    assert_eq!(status, TransactionStatus::Discard(StatusCode::BAD_CHAIN_ID));
 }
 
 #[test]
@@ -498,7 +498,7 @@ pub fn test_no_publishing_libra_root_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }
 
@@ -549,7 +549,8 @@ pub fn test_open_publishing_invalid_address() {
     // execute and fail for the same reason
     let output = executor.execute_transaction(txn);
     if let TransactionStatus::Keep(status) = output.status() {
-        assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER)
+        // assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER)
+        assert!(status == &KeptVMStatus::VerificationError);
     } else {
         panic!("Unexpected execution status: {:?}", output)
     };
@@ -592,7 +593,7 @@ pub fn test_open_publishing() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }
 
@@ -657,8 +658,8 @@ fn test_dependency_fails_verification() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     match executor.execute_transaction(txn).status() {
         TransactionStatus::Keep(status) => {
-            assert!(status.status_type() == StatusType::Verification);
-            assert!(status.status_code() == StatusCode::INVALID_RESOURCE_FIELD);
+            assert!(status == &KeptVMStatus::VerificationError);
+            // assert!(status.status_code() == StatusCode::INVALID_RESOURCE_FIELD);
         }
         _ => panic!("Failed to find missing dependency in bytecode verifier"),
     }

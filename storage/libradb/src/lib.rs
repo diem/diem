@@ -439,7 +439,7 @@ impl LibraDB {
                     s,
                     e,
                     t.gas_used(),
-                    t.major_status(),
+                    t.status().clone(),
                 ))
             })
             .collect::<Result<Vec<_>>>()?;

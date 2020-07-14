@@ -199,7 +199,7 @@ async fn get_transactions(
             hash: tx.hash().to_hex(),
             transaction: tx.into(),
             events,
-            vm_status: info.major_status(),
+            vm_status: info.status().into(),
             gas_used: info.gas_used(),
         });
     }
@@ -242,7 +242,7 @@ async fn get_account_transaction(
             hash: tx.transaction.hash().to_hex(),
             transaction: tx.transaction.into(),
             events,
-            vm_status: tx.proof.transaction_info().major_status(),
+            vm_status: tx.proof.transaction_info().status().into(),
             gas_used: tx.proof.transaction_info().gas_used(),
         }))
     } else {

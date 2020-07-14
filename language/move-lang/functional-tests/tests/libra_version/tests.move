@@ -5,6 +5,8 @@ fun main(account: &signer) {
     LibraVersion::initialize(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -15,5 +17,7 @@ fun main(account: &signer) {
     LibraVersion::set(account, 0);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1

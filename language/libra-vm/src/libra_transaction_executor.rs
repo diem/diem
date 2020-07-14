@@ -22,7 +22,7 @@ use libra_types::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
     },
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
 use move_core_types::{
@@ -63,9 +63,29 @@ impl LibraVM {
         remote_cache: &StateViewCache<'_>,
         account_currency_symbol: &IdentStr,
     ) -> TransactionOutput {
+        self.failed_transaction_cleanup_and_keep_vm_status(
+            error_code,
+            gas_schedule,
+            gas_left,
+            txn_data,
+            remote_cache,
+            account_currency_symbol,
+        )
+        .1
+    }
+
+    fn failed_transaction_cleanup_and_keep_vm_status(
+        &self,
+        error_code: VMStatus,
+        gas_schedule: &CostTable,
+        gas_left: GasUnits<GasCarrier>,
+        txn_data: &TransactionMetadata,
+        remote_cache: &StateViewCache<'_>,
+        account_currency_symbol: &IdentStr,
+    ) -> (VMStatus, TransactionOutput) {
         let mut cost_strategy = CostStrategy::system(gas_schedule, gas_left);
         let mut session = self.0.new_session(remote_cache);
-        match TransactionStatus::from(error_code) {
+        match TransactionStatus::from(error_code.clone()) {
             TransactionStatus::Keep(status) => {
                 if let Err(e) = self.0.run_failure_epilogue(
                     &mut session,
@@ -73,12 +93,16 @@ impl LibraVM {
                     txn_data,
                     account_currency_symbol,
                 ) {
-                    return discard_error_output(e);
+                    return discard_error_vm_status(e);
                 }
-                get_transaction_output(&mut (), session, &cost_strategy, txn_data, status)
-                    .unwrap_or_else(discard_error_output)
+                let txn_output =
+                    get_transaction_output(&mut (), session, &cost_strategy, txn_data, status)
+                        .unwrap_or_else(|e| discard_error_vm_status(e).1);
+                (error_code, txn_output)
             }
-            TransactionStatus::Discard(status) => discard_error_output(status),
+            TransactionStatus::Discard(status) => {
+                (VMStatus::Error(status), discard_error_output(status))
+            }
             TransactionStatus::Retry => unreachable!(),
         }
     }
@@ -90,7 +114,7 @@ impl LibraVM {
         gas_left: GasUnits<GasCarrier>,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let mut cost_strategy = CostStrategy::system(gas_schedule, gas_left);
         self.0.run_success_epilogue(
             &mut session,
@@ -99,13 +123,16 @@ impl LibraVM {
             account_currency_symbol,
         )?;
 
-        Ok(get_transaction_output(
-            &mut (),
-            session,
-            &cost_strategy,
-            txn_data,
+        Ok((
             VMStatus::Executed,
-        )?)
+            get_transaction_output(
+                &mut (),
+                session,
+                &cost_strategy,
+                txn_data,
+                KeptVMStatus::Executed,
+            )?,
+        ))
     }
 
     fn execute_script(
@@ -115,7 +142,7 @@ impl LibraVM {
         txn_data: &TransactionMetadata,
         script: &Script,
         account_currency_symbol: &IdentStr,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let gas_schedule = self.0.get_gas_schedule()?;
         let mut session = self.0.new_session(remote_cache);
 
@@ -170,7 +197,7 @@ impl LibraVM {
         txn_data: &TransactionMetadata,
         module: &Module,
         account_currency_symbol: &IdentStr,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let gas_schedule = self.0.get_gas_schedule()?;
         let mut session = self.0.new_session(remote_cache);
 
@@ -215,12 +242,12 @@ impl LibraVM {
         &mut self,
         remote_cache: &StateViewCache<'_>,
         txn: &SignatureCheckedTransaction,
-    ) -> TransactionOutput {
+    ) -> (VMStatus, TransactionOutput) {
         macro_rules! unwrap_or_discard {
             ($res: expr) => {
                 match $res {
                     Ok(s) => s,
-                    Err(e) => return discard_error_output(e),
+                    Err(e) => return discard_error_vm_status(e),
                 }
             };
         }
@@ -247,7 +274,9 @@ impl LibraVM {
                 m,
                 account_currency_symbol.as_ident_str(),
             ),
-            _ => return discard_error_output(VMStatus::Error(StatusCode::UNREACHABLE)),
+            TransactionPayload::WriteSet(_) => {
+                return discard_error_vm_status(VMStatus::Error(StatusCode::UNREACHABLE))
+            }
         };
 
         let gas_usage = txn_data
@@ -261,9 +290,9 @@ impl LibraVM {
             Err(err) => {
                 let txn_status = TransactionStatus::from(err.clone());
                 if txn_status.is_discarded() {
-                    discard_error_output(err)
+                    discard_error_vm_status(err)
                 } else {
-                    self.failed_transaction_cleanup(
+                    self.failed_transaction_cleanup_and_keep_vm_status(
                         err,
                         gas_schedule,
                         cost_strategy.remaining_gas(),
@@ -295,15 +324,13 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         change_set: ChangeSet,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
-        Ok(TransactionOutput::new(
-            write_set,
-            events,
-            0,
-            VMStatus::Executed.into(),
+        Ok((
+            VMStatus::Executed,
+            TransactionOutput::new(write_set, events, 0, VMStatus::Executed.into()),
         ))
     }
 
@@ -311,7 +338,7 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         block_metadata: BlockMetadata,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let mut txn_data = TransactionMetadata::default();
         txn_data.sender = account_config::reserved_vm_address();
 
@@ -342,26 +369,28 @@ impl LibraVM {
         };
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
-        get_transaction_output(
+        let output = get_transaction_output(
             &mut (),
             session,
             &cost_strategy,
             &txn_data,
-            VMStatus::Executed,
-        )
+            KeptVMStatus::Executed,
+        )?;
+        Ok((VMStatus::Executed, output))
     }
 
     fn process_writeset_transaction(
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         txn: SignatureCheckedTransaction,
-    ) -> Result<TransactionOutput, VMStatus> {
+    ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let txn_data = TransactionMetadata::new(&txn);
 
         let mut session = self.0.new_session(remote_cache);
 
         if let Err(e) = self.0.run_writeset_prologue(&mut session, &txn_data) {
-            return Ok(discard_error_output(e));
+            // Switch any error from the prologue to a reject
+            return Ok((e, discard_error_output(StatusCode::REJECTED_WRITE_SET)));
         };
 
         // Bump the sequence number of sender.
@@ -388,7 +417,7 @@ impl LibraVM {
                 execute_as: signer,
             }) => {
                 let mut tmp_session = self.0.new_session(remote_cache);
-                if let Ok(effect) = tmp_session
+                let execution_result = tmp_session
                     .execute_script(
                         script.code().to_vec(),
                         script.ty_args().to_vec(),
@@ -397,19 +426,20 @@ impl LibraVM {
                         &mut cost_strategy,
                     )
                     .and_then(|_| tmp_session.finish())
-                    .map_err(|e| e.into_vm_status())
-                {
-                    let (cs, events) = txn_effects_to_writeset_and_events(effect)?;
-                    ChangeSet::new(cs, events)
-                } else {
-                    return Ok(discard_error_output(VMStatus::Error(
-                        StatusCode::INVALID_WRITE_SET,
-                    )));
+                    .map_err(|e| e.into_vm_status());
+                match execution_result {
+                    Ok(effect) => {
+                        let (cs, events) = txn_effects_to_writeset_and_events(effect)?;
+                        ChangeSet::new(cs, events)
+                    }
+                    Err(e) => {
+                        return Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET)));
+                    }
                 }
             }
-            _ => {
+            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
                 error!("[libra_vm] UNREACHABLE");
-                return Ok(discard_error_output(VMStatus::Error(
+                return Ok(discard_error_vm_status(VMStatus::Error(
                     StatusCode::UNREACHABLE,
                 )));
             }
@@ -420,7 +450,8 @@ impl LibraVM {
             .run_writeset_epilogue(&mut session, &change_set, &txn_data)?;
 
         if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
-            return Ok(discard_error_output(e));
+            // Any error at this point would be an invalid writeset
+            return Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET)));
         };
 
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
@@ -440,9 +471,8 @@ impl LibraVM {
                     .collect::<HashSet<_>>(),
             )
         {
-            return Ok(discard_error_output(VMStatus::Error(
-                StatusCode::INVALID_WRITE_SET,
-            )));
+            let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
+            return Ok(discard_error_vm_status(vm_status));
         }
         if !epilogue_events
             .iter()
@@ -456,9 +486,8 @@ impl LibraVM {
                     .collect::<HashSet<_>>(),
             )
         {
-            return Ok(discard_error_output(VMStatus::Error(
-                StatusCode::INVALID_WRITE_SET,
-            )));
+            let vm_status = VMStatus::Error(StatusCode::INVALID_WRITE_SET);
+            return Ok(discard_error_vm_status(vm_status));
         }
 
         let write_set = WriteSetMut::new(
@@ -478,11 +507,14 @@ impl LibraVM {
             .collect();
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
-        Ok(TransactionOutput::new(
-            write_set,
-            events,
-            0,
-            TransactionStatus::Keep(VMStatus::Executed),
+        Ok((
+            VMStatus::Executed,
+            TransactionOutput::new(
+                write_set,
+                events,
+                0,
+                TransactionStatus::Keep(KeptVMStatus::Executed),
+            ),
         ))
     }
 
@@ -490,7 +522,7 @@ impl LibraVM {
         &mut self,
         transactions: Vec<Transaction>,
         data_cache: &mut StateViewCache,
-    ) -> Result<Vec<TransactionOutput>, VMStatus> {
+    ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
         let mut current_block_id;
@@ -507,15 +539,16 @@ impl LibraVM {
 
         for txn in signature_verified_block {
             if should_restart {
-                result.push(TransactionOutput::new(
+                let txn_output = TransactionOutput::new(
                     WriteSet::default(),
                     vec![],
                     0,
                     TransactionStatus::Retry,
-                ));
+                );
+                result.push((VMStatus::Error(StatusCode::UNKNOWN_STATUS), txn_output));
                 continue;
             };
-            let output = match txn {
+            let (vm_status, output) = match txn {
                 Ok(PreprocessedTransaction::BlockPrologue(block_metadata)) => {
                     execute_block_trace_guard.clear();
                     current_block_id = block_metadata.id();
@@ -524,7 +557,7 @@ impl LibraVM {
                 }
                 Ok(PreprocessedTransaction::WaypointWriteSet(change_set)) => self
                     .process_waypoint_change_set(data_cache, change_set)
-                    .unwrap_or_else(discard_error_output),
+                    .unwrap_or_else(discard_error_vm_status),
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
                     self.execute_user_transaction(data_cache, &txn)
@@ -532,7 +565,7 @@ impl LibraVM {
                 Ok(PreprocessedTransaction::WriteSet(txn)) => {
                     self.process_writeset_transaction(data_cache, *txn)?
                 }
-                Err(e) => discard_error_output(e),
+                Err(e) => discard_error_vm_status(e),
             };
             if !output.status().is_discarded() {
                 data_cache.push_write_set(output.write_set());
@@ -555,7 +588,7 @@ impl LibraVM {
             // `result` is initially empty, a single element is pushed per loop iteration and
             // the number of iterations is bound to the max size of `signature_verified_block`
             assume!(result.len() < usize::max_value());
-            result.push(output);
+            result.push((vm_status, output))
         }
 
         // Record the histogram count for transactions per block.
@@ -565,6 +598,17 @@ impl LibraVM {
         }
 
         Ok(result)
+    }
+
+    /// Alternate form of 'execute_block' that keeps the vm_status before it goes into the
+    /// `TransactionOutput`
+    pub fn execute_block_and_keep_vm_status(
+        transactions: Vec<Transaction>,
+        state_view: &dyn StateView,
+    ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
+        let mut state_view_cache = StateViewCache::new(state_view);
+        let mut vm = LibraVM::new(&state_view_cache);
+        vm.execute_block_impl(transactions, &mut state_view_cache)
     }
 }
 
@@ -613,13 +657,27 @@ impl VMExecutor for LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-        let mut state_view_cache = StateViewCache::new(state_view);
-        let mut vm = LibraVM::new(&state_view_cache);
-        vm.execute_block_impl(transactions, &mut state_view_cache)
+        let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
+        Ok(output
+            .into_iter()
+            .map(|(_vm_status, txn_output)| txn_output)
+            .collect())
     }
 }
 
-pub(crate) fn discard_error_output(err: VMStatus) -> TransactionOutput {
+pub(crate) fn discard_error_vm_status(err: VMStatus) -> (VMStatus, TransactionOutput) {
+    let vm_status = err.clone();
+    let error_code = match err.keep_or_discard() {
+        Ok(_) => {
+            debug_assert!(false, "discarding non-discardable error: {:?}", vm_status);
+            vm_status.status_code()
+        }
+        Err(code) => code,
+    };
+    (vm_status, discard_error_output(error_code))
+}
+
+pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
     // Since this transaction will be discarded, no writeset will be included.
     TransactionOutput::new(
         WriteSet::default(),

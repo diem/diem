@@ -11,7 +11,7 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
     transaction::authenticator::TransactionAuthenticator,
-    vm_status::{StatusCode, StatusType, VMStatus},
+    vm_status::{DiscardedVMStatus, KeptVMStatus, StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
 use anyhow::{ensure, format_err, Error, Result};
@@ -589,22 +589,21 @@ impl TransactionWithProof {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub enum TransactionStatus {
     /// Discard the transaction output
-    Discard(VMStatus),
+    Discard(DiscardedVMStatus),
 
     /// Keep the transaction output
-    Keep(VMStatus),
+    Keep(KeptVMStatus),
 
     /// Retry the transaction because it is after a ValidatorSetChange txn
     Retry,
 }
 
 impl TransactionStatus {
-    pub fn vm_status(&self) -> VMStatus {
+    pub fn status(&self) -> Result<KeptVMStatus, StatusCode> {
         match self {
-            TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => {
-                vm_status.clone()
-            }
-            TransactionStatus::Retry => VMStatus::Error(StatusCode::UNKNOWN_VALIDATION_STATUS),
+            TransactionStatus::Keep(status) => Ok(status.clone()),
+            TransactionStatus::Discard(code) => Err(*code),
+            TransactionStatus::Retry => Err(StatusCode::UNKNOWN_VALIDATION_STATUS),
         }
     }
 
@@ -619,27 +618,9 @@ impl TransactionStatus {
 
 impl From<VMStatus> for TransactionStatus {
     fn from(vm_status: VMStatus) -> Self {
-        let should_discard = match vm_status.status_type() {
-            // Any unknown error should be discarded
-            StatusType::Unknown => true,
-            // Any error that is a validation status (i.e. an error arising from the prologue)
-            // causes the transaction to not be included.
-            StatusType::Validation => true,
-            // If the VM encountered an invalid internal state, we should discard the transaction.
-            StatusType::InvariantViolation => true,
-            // A transaction that publishes code that cannot be verified will be charged.
-            StatusType::Verification => false,
-            // Even if we are unable to decode the transaction, there should be a charge made to
-            // that user's account for the gas fees related to decoding, running the prologue etc.
-            StatusType::Deserialization => false,
-            // Any error encountered during the execution of the transaction will charge gas.
-            StatusType::Execution => false,
-        };
-
-        if should_discard {
-            TransactionStatus::Discard(vm_status)
-        } else {
-            TransactionStatus::Keep(vm_status)
+        match vm_status.keep_or_discard() {
+            Ok(recorded) => TransactionStatus::Keep(recorded),
+            Err(code) => TransactionStatus::Discard(code),
         }
     }
 }
@@ -647,22 +628,33 @@ impl From<VMStatus> for TransactionStatus {
 /// The result of running the transaction through the VM validator.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VMValidatorResult {
-    status: Option<VMStatus>,
+    status: Option<DiscardedVMStatus>,
     score: u64,
     is_governance_txn: bool,
 }
 
 impl VMValidatorResult {
-    pub fn new(status: Option<VMStatus>, score: u64, is_governance_txn: bool) -> Self {
+    pub fn new(vm_status: Option<DiscardedVMStatus>, score: u64, is_governance_txn: bool) -> Self {
+        debug_assert!(
+            match vm_status {
+                None => true,
+                Some(status) =>
+                    status.status_type() == StatusType::Unknown
+                        || status.status_type() == StatusType::Validation
+                        || status.status_type() == StatusType::InvariantViolation,
+            },
+            "Unexpected discarded status: {:?}",
+            vm_status
+        );
         Self {
-            status,
+            status: vm_status,
             score,
             is_governance_txn,
         }
     }
 
-    pub fn status(&self) -> Option<VMStatus> {
-        self.status.clone()
+    pub fn status(&self) -> Option<DiscardedVMStatus> {
+        self.status
     }
 
     pub fn score(&self) -> u64 {
@@ -740,10 +732,10 @@ pub struct TransactionInfo {
     /// The amount of gas used.
     gas_used: u64,
 
-    /// The major status. This will provide the general error class. Note that this is not
-    /// particularly high fidelity in the presence of sub statuses but, the major status does
-    /// determine whether or not the transaction is applied to the global state or not.
-    major_status: StatusCode,
+    /// The vm status. If it is not `Executed`, this will provide the general error class. Execution
+    /// failures and Move abort's recieve more detailed information. But other errors are generally
+    /// categorized with no status code or other information
+    status: KeptVMStatus,
 }
 
 impl TransactionInfo {
@@ -754,14 +746,14 @@ impl TransactionInfo {
         state_root_hash: HashValue,
         event_root_hash: HashValue,
         gas_used: u64,
-        major_status: StatusCode,
+        status: KeptVMStatus,
     ) -> TransactionInfo {
         TransactionInfo {
             transaction_hash,
             state_root_hash,
             event_root_hash,
             gas_used,
-            major_status,
+            status,
         }
     }
 
@@ -787,8 +779,8 @@ impl TransactionInfo {
         self.gas_used
     }
 
-    pub fn major_status(&self) -> StatusCode {
-        self.major_status
+    pub fn status(&self) -> &KeptVMStatus {
+        &self.status
     }
 }
 
@@ -796,8 +788,8 @@ impl Display for TransactionInfo {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, major_status: {:?}]",
-            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.major_status(),
+            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, recorded_status: {:?}]",
+            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.status(),
         )
     }
 }
@@ -808,7 +800,7 @@ pub struct TransactionToCommit {
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     events: Vec<ContractEvent>,
     gas_used: u64,
-    major_status: StatusCode,
+    status: KeptVMStatus,
 }
 
 impl TransactionToCommit {
@@ -817,14 +809,14 @@ impl TransactionToCommit {
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         events: Vec<ContractEvent>,
         gas_used: u64,
-        major_status: StatusCode,
+        status: KeptVMStatus,
     ) -> Self {
         TransactionToCommit {
             transaction,
             account_states,
             events,
             gas_used,
-            major_status,
+            status,
         }
     }
 
@@ -844,8 +836,8 @@ impl TransactionToCommit {
         self.gas_used
     }
 
-    pub fn major_status(&self) -> StatusCode {
-        self.major_status
+    pub fn status(&self) -> &KeptVMStatus {
+        &self.status
     }
 }
 

@@ -5,8 +5,11 @@ script {
         RegisteredCurrencies::initialize(account);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
+
 //! new-transaction
 //! sender: libraroot
 script {
@@ -15,5 +18,7 @@ script {
         RegisteredCurrencies::initialize(account);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0

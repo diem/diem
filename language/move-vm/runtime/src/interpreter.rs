@@ -231,7 +231,9 @@ impl Interpreter {
             ty_args,
         )
         .map_err(|e| match function.module_id() {
-            Some(id) => e.finish(Location::Module(id.clone())),
+            Some(id) => e
+                .at_code_offset(function.index(), 0)
+                .finish(Location::Module(id.clone())),
             None => {
                 let err = PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                     .with_message("Unexpected native function not located in a module".to_owned());
@@ -643,7 +645,10 @@ impl Frame {
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<ExitCode> {
         self.execute_code_impl(resolver, interpreter, data_store, cost_strategy)
-            .map_err(|e| e.finish(self.location()))
+            .map_err(|e| {
+                e.at_code_offset(self.function.index(), self.pc)
+                    .finish(self.location())
+            })
     }
 
     fn execute_code_impl(

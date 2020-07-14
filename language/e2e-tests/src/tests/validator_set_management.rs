@@ -3,7 +3,7 @@
 
 use crate::{account::Account, executor::FakeExecutor};
 use libra_types::{
-    on_chain_config::new_epoch_event_key, transaction::TransactionStatus, vm_status::VMStatus,
+    on_chain_config::new_epoch_event_key, transaction::TransactionStatus, vm_status::KeptVMStatus,
 };
 use transaction_builder::*;
 
@@ -48,7 +48,7 @@ fn validator_add() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
     assert!(output
         .events()
@@ -91,7 +91,7 @@ fn validator_rotate_key_and_reconfigure() {
     );
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     let output = executor.execute_and_apply(
@@ -101,7 +101,7 @@ fn validator_rotate_key_and_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
     assert!(output
         .events()
@@ -131,7 +131,7 @@ fn validator_rotate_key_and_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
     assert!(output
         .events()
@@ -156,7 +156,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     let output = executor.execute_and_apply(libra_root_account.signed_script_txn(
@@ -168,7 +168,7 @@ fn validator_set_operator_set_key_reconfigure() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
     executor.new_block();
 
@@ -178,7 +178,7 @@ fn validator_set_operator_set_key_reconfigure() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     let output = executor.execute_and_apply(
@@ -202,7 +202,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     let output = executor.execute_and_apply(
@@ -212,7 +212,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
     assert!(output
         .events()
@@ -242,7 +242,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     assert!(output

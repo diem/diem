@@ -7,7 +7,7 @@ use compiler::Compiler;
 use libra_types::{
     account_config::LBR_NAME,
     transaction::{Module, SignedTransaction, Transaction, TransactionPayload, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::KeptVMStatus,
 };
 use vm::CompiledModule;
 
@@ -24,10 +24,11 @@ fn move_from_across_blocks() {
     // remove resource fails given no resource were published
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 
     // publish resource
@@ -45,19 +46,21 @@ fn move_from_across_blocks() {
     // remove resource fails given it was removed already
     let rem_txn = remove_resource_txn(&sender, 15, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 
     // borrow resource fail given it was removed
     let borrow_txn = borrow_resource_txn(&sender, 16, vec![module.clone()]);
     let output = executor.execute_transaction(borrow_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 
     // publish resource again
@@ -74,12 +77,13 @@ fn move_from_across_blocks() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
-    assert_eq!(
-        output[1].status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output[1].status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     for out in output {
         executor.apply_write_set(out.write_set());
     }
@@ -98,10 +102,11 @@ fn borrow_after_move() {
     // remove resource fails given no resource were published
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 
     // publish resource
@@ -122,12 +127,13 @@ fn borrow_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
-    assert_eq!(
-        output[1].status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output[1].status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     for out in output {
         executor.apply_write_set(out.write_set());
     }
@@ -146,10 +152,11 @@ fn change_after_move() {
     // remove resource fails given no resource were published
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 
     // publish resource
@@ -170,12 +177,13 @@ fn change_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
-    assert_eq!(
-        output[1].status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output[1].status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     for out in output {
         executor.apply_write_set(out.write_set());
     }
@@ -183,10 +191,11 @@ fn change_after_move() {
     // borrow resource
     let borrow_txn = borrow_resource_txn(&sender, 16, vec![module]);
     let output = executor.execute_transaction(borrow_txn);
-    assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::MISSING_DATA,
-    );
+    assert!(matches!(
+        output.status().status(),
+        // StatusCode::MISSING_DATA
+        Ok(KeptVMStatus::ExecutionFailure { .. })
+    ));
     executor.apply_write_set(output.write_set());
 }
 

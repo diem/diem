@@ -15,7 +15,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
-    vm_status::StatusCode,
+    vm_status::KeptVMStatus,
 };
 use move_core_types::{
     identifier::Identifier,
@@ -325,12 +325,58 @@ impl From<&Vec<u8>> for BytesView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub enum VMStatusView {
+    #[serde(rename = "executed")]
+    Executed,
+    #[serde(rename = "out_of_gas")]
+    OutOfGas,
+    #[serde(rename = "move_abort")]
+    MoveAbort { location: String, abort_code: u64 },
+    #[serde(rename = "execution_failure")]
+    ExecutionFailure {
+        location: String,
+        function_index: u16,
+        code_offset: u16,
+    },
+    #[serde(rename = "verification_error")]
+    VerificationError,
+    #[serde(rename = "deserialization_error")]
+    DeserializationError,
+    #[serde(rename = "publishing_failure")]
+    PublishingFailure,
+}
+
+impl From<&KeptVMStatus> for VMStatusView {
+    fn from(status: &KeptVMStatus) -> Self {
+        match status {
+            KeptVMStatus::Executed => VMStatusView::Executed,
+            KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
+            KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusView::MoveAbort {
+                location: loc.to_string(),
+                abort_code: *abort_code,
+            },
+            KeptVMStatus::ExecutionFailure {
+                location,
+                function,
+                code_offset,
+            } => VMStatusView::ExecutionFailure {
+                location: location.to_string(),
+                function_index: *function,
+                code_offset: *code_offset,
+            },
+            KeptVMStatus::VerificationError => VMStatusView::VerificationError,
+            KeptVMStatus::DeserializationError => VMStatusView::DeserializationError,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
     pub hash: String,
     pub events: Vec<EventView>,
-    pub vm_status: StatusCode,
+    pub vm_status: VMStatusView,
     pub gas_used: u64,
 }
 

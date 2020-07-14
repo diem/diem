@@ -96,6 +96,8 @@ fun main(account: &signer) {
     LibraAccount::add_currency<u64>(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 16
 

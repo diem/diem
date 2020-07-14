@@ -44,6 +44,8 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -57,6 +59,8 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -75,6 +79,8 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::rotate_key(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -91,5 +97,6 @@ fun main(account: &signer) {
     SharedEd25519PublicKey::rotate_key(account, invalid_pubkey)
 }
 }
+// TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: 0

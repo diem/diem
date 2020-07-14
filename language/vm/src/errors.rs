@@ -38,6 +38,7 @@ impl VMError {
             major_status,
             sub_status,
             location,
+            mut offsets,
             ..
         } = self;
         match (major_status, sub_status, location) {
@@ -59,6 +60,44 @@ impl VMError {
                     sub_status, location
                 );
                 VMStatus::Error(StatusCode::ABORTED)
+            }
+
+            // TODO Errors for OUT_OF_GAS do not always have index set
+            (major_status, sub_status, location)
+                if major_status.status_type() == StatusType::Execution =>
+            {
+                debug_assert!(
+                    major_status.should_skip_checks_for_todo() || offsets.len() == 1,
+                    "Unexpected offsets. major_status: {:?}\
+                    sub_status: {:?}\
+                    location: {:?}\
+                    offsets: {:#?}",
+                    major_status,
+                    sub_status,
+                    location,
+                    offsets
+                );
+                let abort_location = match location {
+                    Location::Script => vm_status::AbortLocation::Script,
+                    Location::Module(id) => vm_status::AbortLocation::Module(id),
+                    Location::Undefined => {
+                        debug_assert!(major_status.should_skip_checks_for_todo());
+                        return VMStatus::Error(major_status);
+                    }
+                };
+                let (function, code_offset) = match offsets.pop() {
+                    None => {
+                        debug_assert!(major_status.should_skip_checks_for_todo());
+                        return VMStatus::Error(major_status);
+                    }
+                    Some((fdef_idx, code_offset)) => (fdef_idx.0, code_offset),
+                };
+                VMStatus::ExecutionFailure {
+                    status_code: major_status,
+                    location: abort_location,
+                    function,
+                    code_offset,
+                }
             }
 
             (major_status, _, _) => VMStatus::Error(major_status),

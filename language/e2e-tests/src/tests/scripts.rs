@@ -4,7 +4,7 @@
 use crate::{account, account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
     account_address::AccountAddress, account_config, on_chain_config::VMPublishingOption,
-    transaction::TransactionStatus, vm_status::StatusCode,
+    transaction::TransactionStatus, vm_status::KeptVMStatus,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
@@ -42,8 +42,9 @@ fn script_code_unverifiable() {
         _ => panic!("TransactionStatus must be Keep"),
     }
     assert_eq!(
-        status.vm_status().status_code(),
-        StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
+        status.status(),
+        // StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK
+        Ok(KeptVMStatus::VerificationError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -116,7 +117,11 @@ fn script_none_existing_module_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().status_code(), StatusCode::LINKER_ERROR);
+    assert_eq!(
+        status.status(),
+        //StatusCode::LINKER_ERROR
+        Ok(KeptVMStatus::VerificationError)
+    );
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
@@ -188,7 +193,11 @@ fn script_non_existing_function_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().status_code(), StatusCode::LOOKUP_FAILED);
+    assert_eq!(
+        status.status(),
+        // StatusCode::LOOKUP_FAILED
+        Ok(KeptVMStatus::VerificationError)
+    );
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
@@ -262,7 +271,11 @@ fn script_bad_sig_function_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().status_code(), StatusCode::TYPE_MISMATCH);
+    assert_eq!(
+        status.status(),
+        // StatusCode::TYPE_MISMATCH
+        Ok(KeptVMStatus::VerificationError)
+    );
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
