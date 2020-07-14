@@ -13,6 +13,7 @@ use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, lbr_type_tag, LBR_NAME},
+    chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
     transaction::{
@@ -440,6 +441,26 @@ pub fn test_publish_from_libra_root() {
         executor.execute_transaction(txn).status(),
         VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER)
     );
+}
+
+#[test]
+fn verify_chain_id() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 0);
+    executor.add_account_data(&sender);
+    let private_key = Ed25519PrivateKey::generate_for_testing();
+    let txn = transaction_test_helpers::get_test_txn_with_chain_id(
+        *sender.address(),
+        0,
+        &private_key,
+        private_key.public_key(),
+        // all tests use ChainId::test() for chain_id,so pick something different
+        ChainId::new(ChainId::test().id() + 1),
+    );
+
+    let status = executor.execute_transaction(txn).status().clone();
+    assert!(status.is_discarded());
+    assert_eq!(status.vm_status().status_code(), StatusCode::BAD_CHAIN_ID,);
 }
 
 #[test]

@@ -11,6 +11,7 @@ use libra_secure_storage::KVStorage;
 use libra_types::{
     account_address,
     account_address::AccountAddress,
+    chain_id::ChainId,
     transaction::{Transaction, TransactionPayload},
 };
 use std::{fs::File, io::Write, path::PathBuf};
@@ -38,7 +39,8 @@ impl Genesis {
             association_key,
             &operator_assignments,
             &operator_registrations,
-            Some(libra_types::on_chain_config::VMPublishingOption::open()),
+            Some(libra_types::on_chain_config::VMPublishingOption::open()), // TODO: intended?
+            ChainId::test(), // TODO: where should we read this from?
         );
 
         if let Some(path) = self.path {

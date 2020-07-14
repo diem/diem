@@ -7,6 +7,7 @@ module Genesis {
     use 0x1::AccountFreezing;
     use 0x1::AccountLimits;
     use 0x1::VASP;
+    use 0x1::ChainId;
     use 0x1::Coin1;
     use 0x1::Coin2;
     use 0x1::DualAttestation;
@@ -34,8 +35,11 @@ module Genesis {
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
+        chain_id: u8,
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
+
+        ChainId::initialize(lr_account, chain_id);
 
         Roles::grant_libra_root_role(lr_account);
         Roles::grant_treasury_compliance_role(tc_account, lr_account);
@@ -103,15 +107,9 @@ module Genesis {
             native_schedule,
         );
 
-        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
-        LibraAccount::rotate_authentication_key(&config_rotate_key_cap, copy genesis_auth_key);
-        LibraAccount::restore_key_rotation_capability(config_rotate_key_cap);
-
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
         LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
-
-        // Restore privileges
 
         // Mark that genesis has finished. This must appear as the last call.
         LibraTimestamp::set_time_has_started(lr_account);

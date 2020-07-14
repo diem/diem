@@ -14,7 +14,7 @@ use libra_config::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_temppath::TempPath;
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -40,6 +40,7 @@ pub struct ValidatorConfig {
     pub safety_rules_token: Option<String>,
     pub seed: [u8; 32],
     pub template: NodeConfig,
+    pub chain_id: ChainId,
 }
 
 impl Default for ValidatorConfig {
@@ -59,6 +60,7 @@ impl Default for ValidatorConfig {
             safety_rules_token: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
+            chain_id: ChainId::test(),
         }
     }
 }
@@ -154,6 +156,7 @@ impl ValidatorConfig {
                 .test
                 .as_ref()
                 .and_then(|config| config.publishing_option.clone()),
+            self.chain_id,
         );
 
         let (waypoint, maybe_waypoint) = if self.build_waypoint {

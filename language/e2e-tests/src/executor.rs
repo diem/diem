@@ -15,6 +15,7 @@ use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
+    chain_id::ChainId,
     on_chain_config::{OnChainConfig, ScriptPublishingOption, VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
@@ -117,6 +118,7 @@ impl FakeExecutor {
                 &vm_genesis::operator_registrations(&swarm.nodes),
                 &genesis_modules,
                 publishing_options,
+                ChainId::test(),
             )
             .0
         };

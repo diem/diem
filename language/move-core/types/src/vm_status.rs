@@ -177,6 +177,7 @@ pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 3; // transaction sequence number is t
 pub const EACCOUNT_DOES_NOT_EXIST: u64 = 4; // transaction sender's account does not exist
 pub const ECANT_PAY_GAS_DEPOSIT: u64 = 5; // insufficient balance to pay for gas deposit
 pub const ETRANSACTION_EXPIRED: u64 = 6; // transaction expiration time exceeds block time.
+pub const EBAD_CHAIN_ID: u64 = 7; // chain_id in transaction doesn't match the one on-chain
 
 /// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
 /// conventions for debugging
@@ -205,6 +206,7 @@ pub fn convert_prologue_runtime_error(status: VMStatus) -> VMStatus {
                 // Can't pay for transaction gas deposit/fee
                 ECANT_PAY_GAS_DEPOSIT => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
                 ETRANSACTION_EXPIRED => StatusCode::TRANSACTION_EXPIRED,
+                EBAD_CHAIN_ID => StatusCode::BAD_CHAIN_ID,
                 code => return VMStatus::MoveAbort(location, code),
             };
             VMStatus::Error(new_major_status)
@@ -313,6 +315,8 @@ pub enum StatusCode {
     INVALID_MODULE_PUBLISHER = 21,
     // The sending account has no role
     NO_ACCOUNT_ROLE = 22,
+    // The transaction's chain_id does not match the one published on-chain
+    BAD_CHAIN_ID = 23,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
