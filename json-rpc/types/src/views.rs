@@ -349,7 +349,7 @@ pub enum TransactionDataView {
         signature: String,
         public_key: String,
         sequence_number: u64,
-        chain_id: u64,
+        chain_id: u8,
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency: String,

@@ -7,6 +7,7 @@ use libra_config::config::NodeConfig;
 use libra_management::config_builder::FullnodeType;
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
+use libra_types::chain_id::ChainId;
 use std::path::Path;
 use structopt::StructOpt;
 
@@ -73,10 +74,11 @@ fn main() {
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
 
     println!(
-        "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {}",
+        "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {:?}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
         faucet_key_file_path,
         waypoint,
+        ChainId::test().id()
     );
 
     let ports = validator_swarm.config.config_files.iter().map(|config| {
@@ -115,10 +117,11 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {}",
+            "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {}",
             format!("http://localhost:{}", full_node_config.rpc.address.port()),
             faucet_key_file_path,
             waypoint,
+            ChainId::test().id(),
         );
     }
 
