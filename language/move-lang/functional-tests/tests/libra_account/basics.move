@@ -75,18 +75,6 @@ script {
 // check: 9
 
 //! new-transaction
-//! sender: libraroot
-script {
-    use 0x1::LibraAccount;
-    use 0x1::LBR::LBR;
-    fun main(account: &signer) {
-        LibraAccount::create_unhosted_account<LBR>(account, 0xDEADBEEF, x"", false);
-    }
-}
-// check: ABORTED
-// check: 8
-
-//! new-transaction
 script {
     use 0x1::LibraAccount;
     use 0x1::Signer;

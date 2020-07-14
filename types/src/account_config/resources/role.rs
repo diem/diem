@@ -13,7 +13,6 @@ pub enum AccountRole {
     },
     ChildVASP(ChildVASP),
     DesignatedDealer(Credential), // TODO: add DesignatedDealer resource as well
-    Unhosted,
     Unknown,
     // TODO: add other roles
 }

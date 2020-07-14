@@ -13,7 +13,6 @@
 -  [Function `new_validator_operator_role`](#0x1_Roles_new_validator_operator_role)
 -  [Function `new_parent_vasp_role`](#0x1_Roles_new_parent_vasp_role)
 -  [Function `new_child_vasp_role`](#0x1_Roles_new_child_vasp_role)
--  [Function `new_unhosted_role`](#0x1_Roles_new_unhosted_role)
 -  [Function `has_role`](#0x1_Roles_has_role)
         -  [privilege-checking functions for roles ##](#0x1_Roles_@privilege-checking_functions_for_roles_##)
 -  [Function `has_libra_root_role`](#0x1_Roles_has_libra_root_role)
@@ -23,7 +22,6 @@
 -  [Function `has_validator_operator_role`](#0x1_Roles_has_validator_operator_role)
 -  [Function `has_parent_VASP_role`](#0x1_Roles_has_parent_VASP_role)
 -  [Function `has_child_VASP_role`](#0x1_Roles_has_child_VASP_role)
--  [Function `has_unhosted_role`](#0x1_Roles_has_unhosted_role)
 -  [Function `has_register_new_currency_privilege`](#0x1_Roles_has_register_new_currency_privilege)
 -  [Function `has_update_dual_attestation_limit_privilege`](#0x1_Roles_has_update_dual_attestation_limit_privilege)
 -  [Function `has_on_chain_config_privilege`](#0x1_Roles_has_on_chain_config_privilege)
@@ -37,7 +35,6 @@
     -  [Function `new_validator_operator_role`](#0x1_Roles_Specification_new_validator_operator_role)
     -  [Function `new_parent_vasp_role`](#0x1_Roles_Specification_new_parent_vasp_role)
     -  [Function `new_child_vasp_role`](#0x1_Roles_Specification_new_child_vasp_role)
-    -  [Function `new_unhosted_role`](#0x1_Roles_Specification_new_unhosted_role)
         -  [Role persistence](#0x1_Roles_@Role_persistence)
 
 This module describes two things:
@@ -333,35 +330,6 @@ The
 
 </details>
 
-<a name="0x1_Roles_new_unhosted_role"></a>
-
-## Function `new_unhosted_role`
-
-Publish an Unhosted
-<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
-<code>new_account</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer) {
-    // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
-    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: UNHOSTED_ROLE_ID });
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_Roles_has_role"></a>
 
 ## Function `has_role`
@@ -569,30 +537,6 @@ module that uses it.
 
 </details>
 
-<a name="0x1_Roles_has_unhosted_role"></a>
-
-## Function `has_unhosted_role`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_unhosted_role">has_unhosted_role</a>(account: &signer): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_unhosted_role">has_unhosted_role</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    <a href="#0x1_Roles_has_role">has_role</a>(account, UNHOSTED_ROLE_ID)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_Roles_has_register_new_currency_privilege"></a>
 
 ## Function `has_register_new_currency_privilege`
@@ -689,8 +633,7 @@ Return true if
     // `LibraRoot`) cannot.
     <a href="#0x1_Roles_has_parent_VASP_role">has_parent_VASP_role</a>(account) ||
     <a href="#0x1_Roles_has_child_VASP_role">has_child_VASP_role</a>(account) ||
-    <a href="#0x1_Roles_has_designated_dealer_role">has_designated_dealer_role</a>(account) ||
-    <a href="#0x1_Roles_has_unhosted_role">has_unhosted_role</a>(account)
+    <a href="#0x1_Roles_has_designated_dealer_role">has_designated_dealer_role</a>(account)
 }
 </code></pre>
 
@@ -865,24 +808,6 @@ Return true if
 </code></pre>
 
 
-
-<a name="0x1_Roles_Specification_new_unhosted_role"></a>
-
-### Function `new_unhosted_role`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>();
-</code></pre>
-
-
 >**Note:** Just started, only a few specs.
 
 
@@ -924,8 +849,6 @@ Helper functions
 <b>define</b> <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>(): u64 { 5 }
 <a name="0x1_Roles_SPEC_CHILD_VASP_ROLE_ID"></a>
 <b>define</b> <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>(): u64 { 6 }
-<a name="0x1_Roles_SPEC_UNHOSTED_ROLE_ID"></a>
-<b>define</b> <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>(): u64 { 7 }
 <a name="0x1_Roles_spec_has_libra_root_role_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>())
@@ -954,10 +877,6 @@ Helper functions
 <b>define</b> <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>())
 }
-<a name="0x1_Roles_spec_has_unhosted_role_addr"></a>
-<b>define</b> <a href="#0x1_Roles_spec_has_unhosted_role_addr">spec_has_unhosted_role_addr</a>(addr: address): bool {
-    <a href="#0x1_Roles_spec_has_role_id_addr">spec_has_role_id_addr</a>(addr, <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>())
-}
 <a name="0x1_Roles_spec_has_register_new_currency_privilege_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr)
@@ -974,8 +893,7 @@ Helper functions
 <b>define</b> <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr: address): bool {
     <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr) ||
         <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr) ||
-        <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr) ||
-        <a href="#0x1_Roles_spec_has_unhosted_role_addr">spec_has_unhosted_role_addr</a>(addr)
+        <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr)
 }
 <a name="0x1_Roles_spec_needs_account_limits_addr"></a>
 <b>define</b> <a href="#0x1_Roles_spec_needs_account_limits_addr">spec_needs_account_limits_addr</a>(addr: address): bool {

@@ -10,7 +10,7 @@
 
 use crate::{
     account::{self, Account, AccountData},
-    common_transactions::{create_account_txn, rotate_key_txn},
+    common_transactions::rotate_key_txn,
     executor::FakeExecutor,
     keygen::KeyGen,
 };
@@ -328,7 +328,6 @@ fn dual_attestation_payment() {
             i,
         ));
     }
-    let dd_sequence_num = num_payments;
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(payment_sender.signed_script_txn(
@@ -509,107 +508,6 @@ fn dual_attestation_payment() {
             0,
         ));
     }
-
-    // ======= tests for UHW =======
-
-    // create two unhosted accounts + give some funds to the first one
-    let unhosted = Account::new();
-    let unhosted_other = Account::new();
-    executor.execute_and_apply(create_account_txn(
-        &libra_root,
-        &unhosted,
-        3,
-        0,
-        account_config::coin1_tag(),
-    ));
-    executor.execute_and_apply(create_account_txn(
-        &libra_root,
-        &unhosted_other,
-        4,
-        0,
-        account_config::coin1_tag(),
-    ));
-
-    let num_payments = 3;
-    for i in 0..num_payments {
-        executor.execute_and_apply(dd.signed_script_txn(
-            encode_testnet_mint_script(
-                account_config::coin1_tag(),
-                *unhosted.address(),
-                COIN1_THRESHOLD - 1,
-            ),
-            dd_sequence_num + i,
-        ));
-    }
-
-    {
-        // Check that unhosted wallet <-> VASP transactions do not require dual attestation
-        // since checking isn't performed on VASP->UHW transfers.
-        executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *unhosted.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            3,
-        ));
-    }
-    {
-        // Checking isn't performed on VASP->UHW
-        // Check from a child account.
-        executor.execute_and_apply(sender_child.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *unhosted.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            1,
-        ));
-    }
-    {
-        // Checking isn't performed on UHW->VASP
-        executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_sender.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            0,
-        ));
-    }
-    {
-        // Checking isn't performed on UHW->VASP
-        executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *sender_child.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            1,
-        ));
-    }
-    {
-        // Finally, check that unhosted <-> unhosted transactions do not require dual attestation
-        // Checking isn't performed on UHW->UHW
-        executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *unhosted_other.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            2,
-        ));
-    }
     {
         // Rotate the parent VASP's compliance key
         let (_, new_compliance_public_key) = keygen.generate_keypair();
@@ -649,7 +547,7 @@ fn dual_attestation_payment() {
                 ref_id,
                 signature.to_bytes().to_vec(),
             ),
-            4,
+            3,
         ));
         assert_eq!(
             output.status().vm_status().status_code(),

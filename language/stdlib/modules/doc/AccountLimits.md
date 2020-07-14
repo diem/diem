@@ -70,8 +70,9 @@ the operations can mutate account states.
 ## Resource `LimitsDefinition`
 
 A resource specifying the account limits per-currency. There is a default
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource for unhosted accounts published at
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>, but other not-unhosted accounts may have
+"unlimited"
+<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource for accounts published at
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>, but other accounts may have
 different account limit definitons. In such cases, they will have a
 <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> published under their (root) account.
 
@@ -213,7 +214,7 @@ need to be a unique capability.
 
 ## Function `initialize`
 
-Initializes the account limits for unhosted accounts.
+Initializes the account limits for accounts.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer)

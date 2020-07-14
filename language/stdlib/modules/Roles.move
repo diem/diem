@@ -33,7 +33,6 @@ module Roles {
     const VALIDATOR_OPERATOR_ROLE_ID: u64 = 4;
     const PARENT_VASP_ROLE_ID: u64 = 5;
     const CHILD_VASP_ROLE_ID: u64 = 6;
-    const UNHOSTED_ROLE_ID: u64 = 7;
 
     /// The roleId contains the role id for the account. This is only moved
     /// to an account as a top-level resource, and is otherwise immovable.
@@ -185,20 +184,6 @@ module Roles {
         ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_CHILD_VASP_ROLE_ID();
     }
 
-    /// Publish an Unhosted `RoleId` under `new_account`.
-    // TODO(tzakian): remove unhosted creation/guard so that only
-    // libra root can create.
-    public fun new_unhosted_role(_creating_account: &signer, new_account: &signer) {
-        // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
-        move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID });
-    }
-    spec fun new_unhosted_role {
-        aborts_if exists<RoleId>(spec_address_of(new_account));
-        ensures exists<RoleId>(spec_address_of(new_account));
-        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_UNHOSTED_ROLE_ID();
-    }
-
     ///  ## privilege-checking functions for roles ##
     ///
     /// Naming conventions: Many of the "has_*_privilege" functions do have the same body
@@ -243,10 +228,6 @@ module Roles {
         has_role(account, CHILD_VASP_ROLE_ID)
     }
 
-    public fun has_unhosted_role(account: &signer): bool acquires RoleId {
-        has_role(account, UNHOSTED_ROLE_ID)
-    }
-
     public fun has_register_new_currency_privilege(account: &signer): bool acquires RoleId {
          has_libra_root_role(account)
     }
@@ -266,8 +247,7 @@ module Roles {
         // `LibraRoot`) cannot.
         has_parent_VASP_role(account) ||
         has_child_VASP_role(account) ||
-        has_designated_dealer_role(account) ||
-        has_unhosted_role(account)
+        has_designated_dealer_role(account)
     }
 
     /// Return true if `account` must have limits on sending/receiving/holding of funds
@@ -304,7 +284,6 @@ module Roles {
         define SPEC_VALIDATOR_OPERATOR_ROLE_ID(): u64 { 4 }
         define SPEC_PARENT_VASP_ROLE_ID(): u64 { 5 }
         define SPEC_CHILD_VASP_ROLE_ID(): u64 { 6 }
-        define SPEC_UNHOSTED_ROLE_ID(): u64 { 7 }
 
         define spec_has_libra_root_role_addr(addr: address): bool {
             spec_has_role_id_addr(addr, SPEC_LIBRA_ROOT_ROLE_ID())
@@ -334,10 +313,6 @@ module Roles {
             spec_has_role_id_addr(addr, SPEC_CHILD_VASP_ROLE_ID())
         }
 
-        define spec_has_unhosted_role_addr(addr: address): bool {
-            spec_has_role_id_addr(addr, SPEC_UNHOSTED_ROLE_ID())
-        }
-
         define spec_has_register_new_currency_privilege_addr(addr: address): bool {
             spec_has_treasury_compliance_role_addr(addr)
         }
@@ -353,8 +328,7 @@ module Roles {
         define spec_can_hold_balance_addr(addr: address): bool {
             spec_has_parent_VASP_role_addr(addr) ||
                 spec_has_child_VASP_role_addr(addr) ||
-                spec_has_designated_dealer_role_addr(addr) ||
-                spec_has_unhosted_role_addr(addr)
+                spec_has_designated_dealer_role_addr(addr)
         }
 
         define spec_needs_account_limits_addr(addr: address): bool {
