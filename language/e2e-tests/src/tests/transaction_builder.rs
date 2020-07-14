@@ -131,16 +131,14 @@ fn create_parent_and_child_vasp() {
     );
 
     let (_, new_compliance_public_key) = keygen.generate_keypair();
-    // rotate parent's compliance public key
+    // rotate parent's base_url and compliance public key
     executor.execute_and_apply(parent.signed_script_txn(
-        encode_rotate_base_url_script(new_compliance_public_key.to_bytes().to_vec()),
+        encode_rotate_dual_attestation_info_script(
+            b"new_name".to_vec(),
+            new_compliance_public_key.to_bytes().to_vec(),
+        ),
         1,
     ));
-
-    // rotate parent's base URL
-    executor.execute_and_apply(
-        parent.signed_script_txn(encode_rotate_base_url_script(b"new_name".to_vec()), 2),
-    );
 }
 
 #[test]
@@ -518,10 +516,11 @@ fn dual_attestation_payment() {
         ));
     }
     {
-        // Rotate the parent VASP's compliance key
+        // Rotate the parent VASP's compliance key and base URL
         let (_, new_compliance_public_key) = keygen.generate_keypair();
         executor.execute_and_apply(payment_receiver.signed_script_txn(
-            encode_rotate_compliance_public_key_script(
+            encode_rotate_dual_attestation_info_script(
+                b"any base_url works".to_vec(),
                 new_compliance_public_key.to_bytes().to_vec(),
             ),
             0,
