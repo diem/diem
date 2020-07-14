@@ -1453,6 +1453,7 @@ dependencies = [
 name = "executor-test-helpers"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
@@ -1463,9 +1464,11 @@ dependencies = [
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "storage-service 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder 0.1.0",
 ]
 
 [[package]]
