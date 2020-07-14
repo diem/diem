@@ -21,7 +21,7 @@ BlockMetadata:
     - proposer:
         TYPENAME: AccountAddress
 ChainId:
-  NEWTYPESTRUCT: U64
+  NEWTYPESTRUCT: U8
 ChangeSet:
   STRUCT:
     - write_set:

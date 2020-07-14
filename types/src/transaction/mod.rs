@@ -82,7 +82,7 @@ pub struct RawTransaction {
     #[serde(deserialize_with = "deserialize_duration")]
     expiration_time: Duration,
 
-    // chain ID of the network this transaction is intended for
+    // chain ID of the Libra network this transaction is intended for
     chain_id: ChainId,
 }
 

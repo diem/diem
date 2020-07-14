@@ -103,7 +103,7 @@ pub struct IndexAndSequence {
 
 /// Proxy handling CLI commands/inputs.
 pub struct ClientProxy {
-    /// chain ID of the network this client is interacting with
+    /// chain ID of the Libra network this client is interacting with
     pub chain_id: ChainId,
     /// client for admission control interface.
     pub client: LibraClient,

@@ -121,7 +121,7 @@ struct TxnParams {
     pub sender_address: String,
     // Sequence number of this transaction corresponding to sender's account.
     pub sequence_number: u64,
-    // Chain ID of the network this transaction is intended for
+    // Chain ID of the Libra network this transaction is intended for
     pub chain_id: String,
     // Maximal total gas specified by wallet to spend for this transaction.
     pub max_gas_amount: u64,

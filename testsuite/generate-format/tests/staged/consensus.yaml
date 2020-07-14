@@ -84,7 +84,7 @@ BlockType:
     2:
       Genesis: UNIT
 ChainId:
-  NEWTYPESTRUCT: U64
+  NEWTYPESTRUCT: U8
 ChangeSet:
   STRUCT:
     - write_set:

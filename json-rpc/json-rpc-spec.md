@@ -1061,9 +1061,9 @@ User submitted transaction.
   <tr>
    <td>chain_id
    </td>
-   <td>u64
+   <td>u8
    </td>
-   <td>Chain ID of the network this transaction is intended for
+   <td>Chain ID of the Libra network this transaction is intended for
    </td>
   </tr>
   <tr>
