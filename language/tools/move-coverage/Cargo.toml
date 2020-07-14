@@ -15,7 +15,7 @@ structopt = "0.3.15"
 serde = { version = "1.0.114", default-features = false }
 anyhow = "1.0.31"
 codespan = { version = "0.8.0", features = ["serialization"] }
-colored = "1.9.3"
+colored = "2.0.0"
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-types = { path = "../../../types", version = "0.1.0" }
