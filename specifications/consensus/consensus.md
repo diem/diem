@@ -48,10 +48,13 @@ Fields:
 * `block_data` is the container of the block with zero or more transactions
 * `signature` is populated if this block was proposed by a validator. If this block is a genesis or NIL block, it is `None`.
 
-Verification
+Verification:
 
-* if `signature` is set, ensure `block_data.block_type == BlockType::Proposal {author, ..}`
-* `ed25519_verify(signature, block_data.hash(), OnChainConfig.validators().public_key(author))`
+* if this block is received through a proposal, the `signature` field MUST be set:
+    - ensure that the block is a legitimate proposal (`block_data.block_type == BlockType::Proposal {author, ..}`)
+    - verify the block's signature by calling `verify(signature, block_data.hash(), OnChainConfig.validators().public_key(author))`
+* if this block is received via a BlockRetrievalResponse, it is possible that the signature is not set. In this case verify that the block is a NIL block (`block_data.block_type == BlockType::NilBlock`)
+* verify `block_data` according to [BlockData](#blockdata)    
 
 ### BlockData
 
@@ -88,15 +91,12 @@ Fields
 Verification
 
 * ensure that if `BlockData` is received from the network that `block_type`, is not genesis. Genesis is only constructed from end-epoch LedgerInfo locally and is never sent to other validators.
-* Assume that `parent_block` is the `BlockInfo` of `quorum_cert.vote_data.proposed`.
-
-  * ensure `round` is greater than `parent_block.round`
-  * ensure `epoch` is equal to `parent_block.epoch`
-  * if `parent_block.next_epoch_state` is set, ensure `block_type == BlockType::NIL` or the payload in the `BlockType::Proposal` is empty
-  * if a block is a nil block, or if `parent_block.has_reconfiguration`, ensure the block and the parent block have the same timestamp. otherwise ensure `timestamp_usecs` > `parent_block.timestamp_usecs`
-
-* ensure that if `quorum_cert.commit_info().next_epoch_state()` is set, a proposal should not be generated if the epoch ends, it should transition to next epoch.
-* verify `quorum_cert`
+* Let `parent_block` be the `BlockInfo` of `quorum_cert.vote_data.proposed`.
+  - ensure `round` is greater than `parent_block.round`
+  - ensure `epoch` is equal to `parent_block.epoch`
+  - if `parent_block.next_epoch_state` is set, ensure `block_type == BlockType::NIL` or the payload in the `BlockType::Proposal` is empty
+  - if a block is a NIL block, or if `parent_block.has_reconfiguration`, ensure the block and the parent block have the same timestamp. otherwise ensure `timestamp_usecs` > `parent_block.timestamp_usecs`
+* verify `quorum_cert` according to section [QuorumCert](#quorumcert)
 
 ### BlockType
 
@@ -395,7 +395,7 @@ Verification
 
   * TODO: Consider whether `status` == NotEnoughBlocks is also correct behavior. If the number of blocks to catch up exceeds a limit, a validator should rely on [state synchronization](../state_synchronizer/state_sync_specification.md) to catch up.
 
-* verify each blocks independently
+* verify each blocks independently according to [section Block](#block)
 * verify the blocks form a chain where the first one's id == the `block_id` in BlockRetrievalRequest. `[blocks[i].block_data.quorum_cert.certified_block.id == blocks[i+1].id for i in 0..blocks.len()-1]`
 
 ### EpochRetrievalRequest
@@ -1114,6 +1114,8 @@ fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> Result<()> {
     let ProposalMsg {proposal, sync_info} = proposal_msg;
     self.ensure_epoch(proposal.epoch())?;
     self.ensure_round(proposal.round(), sync_info)?;
+    proposal_msg.verify()?;
+    ensure!(proposal.block.block_data.quorum_cert.signed_ledger_info.ledger_info.commit_info.next_epoch_state.is_none());
     let executed_block = self.block_store.execute_and_insert(proposal)?;
     if let Some(vote) = self.safety_rules.vote(executed_block) {
         self.round_state.save(vote);
@@ -1128,6 +1130,8 @@ fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> Result<()> {
 ```
 
 * ensure and sync the epoch and round
+* verify the proposal message
+* ensure that the proposal does not extend a block that ended an epoch
 * execute the block
 * save and persist the vote in round state
 * send the vote to next proposer if decide to vote
@@ -1229,13 +1233,13 @@ fn process_epoch_change_proof(&mut self, proof: EpochChangeProof) -> Result<()> 
 ##### Processing a BlockRetrievalRequest
 
 ```rust
-fn process_block_retrieval(&self, request: BlockRetreivalRequest);
+fn process_block_retrieval(&self, request: BlockRetrievalRequest);
 ```
 
 Read only request.
 
 * find if request.block_id is present and `num_blocks` before it (included) exist in self.block_store
-* construct BlockRetrievalResposne correspondingly and send back the rpc response to the `sender`
+* construct BlockRetrievalResponse correspondingly and send back the rpc response to the `sender`
 
 ##### Processing a EpochRetrievalRequest
 
