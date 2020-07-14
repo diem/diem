@@ -17,8 +17,8 @@ module AccountLimits {
     resource struct AccountLimitMutationCapability { }
 
     /// A resource specifying the account limits per-currency. There is a default
-    /// `LimitsDefinition` resource for unhosted accounts published at
-    /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`, but other not-unhosted accounts may have
+    /// "unlimited" `LimitsDefinition` resource for accounts published at
+    /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`, but other accounts may have
     /// different account limit definitons. In such cases, they will have a
     /// `LimitsDefinition` published under their (root) account.
     resource struct LimitsDefinition<CoinType> {
@@ -68,7 +68,7 @@ module AccountLimits {
         AccountLimitMutationCapability{}
     }
 
-    /// Initializes the account limits for unhosted accounts.
+    /// Initializes the account limits for accounts.
     public fun initialize(lr_account: &signer) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_INITIALIZATION_ADDRESS);

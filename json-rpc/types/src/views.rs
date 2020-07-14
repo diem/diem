@@ -48,10 +48,6 @@ impl AmountView {
 pub enum AccountRoleView {
     #[serde(rename = "unknown")]
     Unknown,
-    #[serde(rename = "unhosted")]
-    Unhosted,
-    #[serde(rename = "empty")]
-    Empty,
     #[serde(rename = "child_vasp")]
     ChildVASP { parent_vasp_address: BytesView },
     #[serde(rename = "parent_vasp")]
@@ -430,7 +426,6 @@ impl From<Transaction> for TransactionDataView {
 impl From<AccountRole> for AccountRoleView {
     fn from(role: AccountRole) -> Self {
         match role {
-            AccountRole::Unhosted => AccountRoleView::Unhosted,
             AccountRole::Unknown => AccountRoleView::Unknown,
             AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
                 parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),

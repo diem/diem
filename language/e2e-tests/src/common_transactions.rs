@@ -22,9 +22,21 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
       let with_cap: LibraAccount.WithdrawCapability;
+      let name: vector<u8>;
+      let url: vector<u8>;
+      let pub_key: vector<u8>;
+      name = h\"\";
+      url = h\"\";
+      pub_key = h\"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde\";
 
-      LibraAccount.create_unhosted_account<Token>(
-        copy(account), copy(fresh_address), move(auth_key_prefix), false
+      LibraAccount.create_parent_vasp_account<Token>(
+        copy(account),
+        copy(fresh_address),
+        move(auth_key_prefix),
+        move(name),
+        move(url),
+        move(pub_key),
+        false
       );
       if (copy(initial_amount) > 0) {
          with_cap = LibraAccount.extract_withdraw_capability(copy(account));

@@ -599,28 +599,6 @@ module LibraAccount {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Unhosted methods
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// For now, only the libra root account can create an unhosted account, and it will choose not to
-    /// on mainnet
-    /// > TODO(tzakian): eventually, anyone will be able to create an unhosted wallet accunt
-    public fun create_unhosted_account<Token>(
-        creator_account: &signer,
-        new_account_address: address,
-        auth_key_prefix: vector<u8>,
-        add_all_currencies: bool
-    ) {
-        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
-        assert(!exists_at(new_account_address), EACCOUNT_ALREADY_EXISTS);
-        let new_account = create_signer(new_account_address);
-        Roles::new_unhosted_role(creator_account, &new_account);
-        Event::publish_generator(&new_account);
-        add_currencies_for_account<Token>(&new_account, add_all_currencies);
-        make_account(new_account, auth_key_prefix)
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     // General purpose methods
     ///////////////////////////////////////////////////////////////////////////
 

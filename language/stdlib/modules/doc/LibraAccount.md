@@ -35,7 +35,6 @@
 -  [Function `create_designated_dealer`](#0x1_LibraAccount_create_designated_dealer)
 -  [Function `create_parent_vasp_account`](#0x1_LibraAccount_create_parent_vasp_account)
 -  [Function `create_child_vasp_account`](#0x1_LibraAccount_create_child_vasp_account)
--  [Function `create_unhosted_account`](#0x1_LibraAccount_create_unhosted_account)
 -  [Function `create_signer`](#0x1_LibraAccount_create_signer)
 -  [Function `destroy_signer`](#0x1_LibraAccount_destroy_signer)
 -  [Function `balance_for`](#0x1_LibraAccount_balance_for)
@@ -1274,44 +1273,6 @@ also be added. This account will be a child of
         parent,
         &new_account,
     );
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(&new_account, add_all_currencies);
-    <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_create_unhosted_account"></a>
-
-## Function `create_unhosted_account`
-
-For now, only the libra root account can create an unhosted account, and it will choose not to
-on mainnet
-> TODO(tzakian): eventually, anyone will be able to create an unhosted wallet accunt
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(
-    creator_account: &signer,
-    new_account_address: address,
-    auth_key_prefix: vector&lt;u8&gt;,
-    add_all_currencies: bool
-) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(creator_account), ENOT_LIBRA_ROOT);
-    <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), EACCOUNT_ALREADY_EXISTS);
-    <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_unhosted_role">Roles::new_unhosted_role</a>(creator_account, &new_account);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(&new_account, add_all_currencies);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
