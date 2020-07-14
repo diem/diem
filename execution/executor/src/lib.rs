@@ -19,6 +19,7 @@ use crate::{
 use anyhow::{bail, ensure, format_err, Result};
 use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
+    TransactionReplayer,
 };
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
@@ -96,7 +97,7 @@ where
         Ok(())
     }
 
-    fn new_on_unbootstrapped_db(db: DbReaderWriter, tree_state: TreeState) -> Self {
+    pub fn new_on_unbootstrapped_db(db: DbReaderWriter, tree_state: TreeState) -> Self {
         Self {
             db,
             cache: SpeculationCache::new_for_db_bootstrapping(tree_state),
@@ -501,7 +502,7 @@ where
         );
         let vm_outputs = {
             let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
-            V::execute_block(transactions.to_vec(), &state_view)?
+            V::execute_block(transactions.clone(), &state_view)?
         };
 
         // Since other validators have committed these transactions, their status should all be
@@ -633,6 +634,30 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             },
         );
         Ok(reconfig_events)
+    }
+}
+
+impl<V: VMExecutor> TransactionReplayer for Executor<V> {
+    fn replay_chunk(
+        &mut self,
+        first_version: Version,
+        txns: Vec<Transaction>,
+        txn_infos: Vec<TransactionInfo>,
+    ) -> Result<()> {
+        ensure!(
+            first_version == self.cache.synced_trees().txn_accumulator().num_leaves(),
+            "Version not expected. Expected: {}, got: {}",
+            self.cache.synced_trees().txn_accumulator().num_leaves(),
+            first_version,
+        );
+        let (output, txns_to_commit, _) = self.execute_chunk(first_version, txns, txn_infos)?;
+        self.db
+            .writer
+            .save_transactions(&txns_to_commit, first_version, None)?;
+
+        self.cache
+            .update_synced_trees(output.executed_trees().clone());
+        Ok(())
     }
 }
 

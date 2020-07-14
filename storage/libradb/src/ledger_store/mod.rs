@@ -156,9 +156,13 @@ impl LedgerStore {
     ) -> Result<TreeState> {
         Ok(TreeState::new(
             num_transactions,
-            Accumulator::get_frozen_subtree_hashes(self, num_transactions)?,
+            self.get_frozen_subtree_hashes(num_transactions)?,
             transaction_info.state_root_hash(),
         ))
+    }
+
+    pub fn get_frozen_subtree_hashes(&self, num_transactions: LeafCount) -> Result<Vec<HashValue>> {
+        Accumulator::get_frozen_subtree_hashes(self, num_transactions)
     }
 
     pub fn get_startup_info(&self) -> Result<Option<StartupInfo>> {

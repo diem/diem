@@ -16,6 +16,7 @@ use crate::{
 use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
+use libradb::GetRestoreHandler;
 use std::{path::PathBuf, sync::Arc};
 use tokio::time::Duration;
 

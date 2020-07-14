@@ -22,9 +22,8 @@ use libra_types::{
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use transaction_builder::{
-    encode_set_validator_config_and_reconfigure_script,
     encode_block_prologue_script, encode_modify_publishing_option_script,
-    encode_peer_to_peer_with_metadata_script,
+    encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
 };
 
 #[test]

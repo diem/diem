@@ -40,10 +40,10 @@ use libra_types::{
     write_set::{WriteOp, WriteSetMut},
 };
 use libra_vm::LibraVM;
-use libradb::LibraDB;
+use libradb::{GetRestoreHandler, LibraDB};
 use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
 use transaction_builder::{
     encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
@@ -233,7 +233,7 @@ fn get_state_backup(
 }
 
 fn restore_state_to_db(
-    db: &LibraDB,
+    db: &Arc<LibraDB>,
     accounts: Vec<(HashValue, AccountStateBlob)>,
     proof: SparseMerkleRangeProof,
     root_hash: HashValue,

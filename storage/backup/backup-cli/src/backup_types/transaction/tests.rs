@@ -17,6 +17,7 @@ use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
+use libradb::GetRestoreHandler;
 use std::{mem::size_of, path::PathBuf, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
@@ -71,7 +72,10 @@ fn end_to_end() {
 
     rt.block_on(
         TransactionRestoreController::new(
-            TransactionRestoreOpt { manifest_handle },
+            TransactionRestoreOpt {
+                manifest_handle,
+                replay_from_version: Version::max_value(),
+            },
             GlobalRestoreOpt {
                 db_dir: PathBuf::new(),
                 target_version,

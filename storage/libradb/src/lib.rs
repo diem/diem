@@ -291,16 +291,6 @@ impl LibraDB {
         )
     }
 
-    /// Gets an instance of `RestoreHandler` for data restore purpose.
-    pub fn get_restore_handler(&self) -> RestoreHandler {
-        RestoreHandler::new(
-            Arc::clone(&self.db),
-            Arc::clone(&self.ledger_store),
-            Arc::clone(&self.transaction_store),
-            Arc::clone(&self.state_store),
-        )
-    }
-
     // ================================== Private APIs ==================================
     fn get_events_by_event_key(
         &self,
@@ -804,4 +794,21 @@ fn get_first_seq_num_and_limit(ascending: bool, cursor: u64, limit: u64) -> Resu
     } else {
         (0, cursor + 1)
     })
+}
+
+pub trait GetRestoreHandler {
+    /// Gets an instance of `RestoreHandler` for data restore purpose.
+    fn get_restore_handler(&self) -> RestoreHandler;
+}
+
+impl GetRestoreHandler for Arc<LibraDB> {
+    fn get_restore_handler(&self) -> RestoreHandler {
+        RestoreHandler::new(
+            Arc::clone(&self.db),
+            Arc::clone(self),
+            Arc::clone(&self.ledger_store),
+            Arc::clone(&self.transaction_store),
+            Arc::clone(&self.state_store),
+        )
+    }
 }

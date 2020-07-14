@@ -104,7 +104,6 @@ impl StateStore {
         Ok(new_root_hash_vec)
     }
 
-    #[cfg(test)]
     pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
         JellyfishMerkleTree::new(self).get_root_hash(version)
     }
