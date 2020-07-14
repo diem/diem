@@ -472,6 +472,17 @@ module LibraAccount {
         assert(Vector::length(&new_authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
         sender_account_resource.authentication_key = new_authentication_key;
     }
+    spec fun rotate_authentication_key {
+        aborts_if !exists<LibraAccount>(cap.account_address);
+        aborts_if len(new_authentication_key) != 32;
+        ensures global<LibraAccount>(cap.account_address).authentication_key == new_authentication_key;
+    }
+    spec module {
+        define spec_rotate_authentication_key(addr: address, new_authentication_key: vector<u8>): bool {
+            global<LibraAccount>(addr).authentication_key == new_authentication_key
+        }
+    }
+
 
     /// Return a unique capability granting permission to rotate the sender's authentication key
     public fun extract_key_rotation_capability(account: &signer): KeyRotationCapability
@@ -482,12 +493,22 @@ module LibraAccount {
         let account = borrow_global_mut<LibraAccount>(account_address);
         Option::extract(&mut account.key_rotation_capability)
     }
+    spec fun extract_key_rotation_capability {
+        aborts_if !exists<LibraAccount>(Signer::spec_address_of(account));
+        aborts_if spec_delegated_key_rotation_capability(Signer::spec_address_of(account));
+        ensures spec_delegated_key_rotation_capability(Signer::spec_address_of(account));
+    }
 
     /// Return the key rotation capability to the account it originally came from
     public fun restore_key_rotation_capability(cap: KeyRotationCapability)
     acquires LibraAccount {
         let account = borrow_global_mut<LibraAccount>(cap.account_address);
         Option::fill(&mut account.key_rotation_capability, cap)
+    }
+    spec fun restore_key_rotation_capability {
+        aborts_if !exists<LibraAccount>(cap.account_address);
+        aborts_if !spec_delegated_key_rotation_capability(cap.account_address);
+        ensures spec_holds_own_key_rotation_cap(cap.account_address);
     }
 
     fun add_currencies_for_account<Token>(
@@ -904,6 +925,16 @@ module LibraAccount {
             Option::spec_is_some(spec_get_key_rotation_cap(addr))
             && addr == Option::spec_value_inside(
                 spec_get_key_rotation_cap(addr)).account_address
+        }
+
+        define spec_key_rotation_capability_address(cap: KeyRotationCapability): address {
+            cap.account_address
+        }
+
+        /// Returns true if the LibraAccount at `addr` holds a
+        /// `KeyRotationCapability`.
+        define spec_delegated_key_rotation_capability(addr: address): bool {
+            Option::spec_is_none(spec_get_key_rotation_cap(addr))
         }
 
         /// Returns true if `AccountOperationsCapability` is published.

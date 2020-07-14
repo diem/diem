@@ -65,6 +65,9 @@
     -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
+    -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
+    -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
+    -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
 
 
 
@@ -2197,6 +2200,71 @@ a writeset transaction is committed.
 
 
 
+<a name="0x1_LibraAccount_Specification_rotate_authentication_key"></a>
+
+### Function `rotate_authentication_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_rotate_authentication_key">rotate_authentication_key</a>(cap: &<a href="#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>, new_authentication_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
+<b>aborts_if</b> len(new_authentication_key) != 32;
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address).authentication_key == new_authentication_key;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_spec_rotate_authentication_key"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_rotate_authentication_key">spec_rotate_authentication_key</a>(addr: address, new_authentication_key: vector&lt;u8&gt;): bool {
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key == new_authentication_key
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_extract_key_rotation_capability"></a>
+
+### Function `extract_key_rotation_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_extract_key_rotation_capability">extract_key_rotation_capability</a>(account: &signer): <a href="#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>aborts_if</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_restore_key_rotation_capability"></a>
+
+### Function `restore_key_rotation_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_restore_key_rotation_capability">restore_key_rotation_capability</a>(cap: <a href="#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
+<b>aborts_if</b> !<a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(cap.account_address);
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
+</code></pre>
+
+
+
 
 <pre><code>pragma verify;
 </code></pre>
@@ -2230,6 +2298,24 @@ Returns true if the LibraAccount at
     <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
     && addr == <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(
         <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address
+}
+<a name="0x1_LibraAccount_spec_key_rotation_capability_address"></a>
+<b>define</b> <a href="#0x1_LibraAccount_spec_key_rotation_capability_address">spec_key_rotation_capability_address</a>(cap: <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>): address {
+    cap.account_address
+}
+</code></pre>
+
+
+Returns true if the LibraAccount at
+<code>addr</code> holds a
+<code><a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a></code>.
+
+
+<a name="0x1_LibraAccount_spec_delegated_key_rotation_capability"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(addr: address): bool {
+    <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
 }
 </code></pre>
 
