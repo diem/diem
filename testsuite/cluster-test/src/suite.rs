@@ -63,14 +63,24 @@ impl ExperimentSuite {
         Self { experiments }
     }
 
-    pub fn new_strong_commit(cluster: &Cluster) -> Self {
+    pub fn new_strong_commit_normal(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
-        // experiments.push(Box::new(
-        //     PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
-        // ));
-        // experiments.push(Box::new(
-        //     PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
-        // ));
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_nodes_down(0).build(cluster),
+        ));
+        Self { experiments }
+    }
+
+    pub fn new_strong_commit_nodes_down(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
+        ));
+        Self { experiments }
+    }
+
+    pub fn new_strong_commit_region(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
         ));

@@ -70,7 +70,11 @@ struct Args {
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
     #[structopt(long, group = "action")]
-    strong_commit: bool,
+    strong_commit_normal: bool,
+    #[structopt(long, group = "action")]
+    strong_commit_nodes_down: bool,
+    #[structopt(long, group = "action")]
+    strong_commit_region: bool,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -183,8 +187,12 @@ pub fn main() {
     } else if args.changelog.is_none() && args.deploy.is_none() {
         println!("No action specified");
         process::exit(1);
-    } else if args.strong_commit {
-        perf_msg = Some(runner.strong_commit());
+    } else if args.strong_commit_region {
+        perf_msg = Some(runner.strong_commit_region());
+    } else if args.strong_commit_normal {
+        perf_msg = Some(runner.strong_commit_normal());
+    } else if args.strong_commit_nodes_down {
+        perf_msg = Some(runner.strong_commit_nodes_down());
     }
 
     if let Some(mut changelog) = args.changelog {
@@ -663,8 +671,20 @@ impl ClusterTestRunner {
         self.report.to_string()
     }
 
-    pub fn strong_commit(&mut self) -> String {
-        let suite = ExperimentSuite::new_strong_commit(&self.cluster);
+    pub fn strong_commit_region(&mut self) -> String {
+        let suite = ExperimentSuite::new_strong_commit_region(&self.cluster);
+        self.run_suite(suite).unwrap();
+        self.report.to_string()
+    }
+
+    pub fn strong_commit_normal(&mut self) -> String {
+        let suite = ExperimentSuite::new_strong_commit_normal(&self.cluster);
+        self.run_suite(suite).unwrap();
+        self.report.to_string()
+    }
+
+    pub fn strong_commit_nodes_down(&mut self) -> String {
+        let suite = ExperimentSuite::new_strong_commit_nodes_down(&self.cluster);
         self.run_suite(suite).unwrap();
         self.report.to_string()
     }
