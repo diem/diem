@@ -46,7 +46,7 @@ While a validator has a public endpoint and a validator endpoint, in order to su
 
 As [depicted](#The-Libra-network), there are 4 network protocol specifications:
 
-* **Consensus protocol**. This is how agreement is reached between a known set of validators assuming byzantine fault-tolerant (BFT) conditions.
+* **[Consensus protocol](consensus/consensus.md)**. This is how agreement is reached between a known set of validators assuming byzantine fault-tolerant (BFT) conditions.
 * **Mempool protocol**. The protocol is used between validators, between full nodes, and between validators and full nodes to quickly re-share user transactions. This is how transactions are passed upstream, eventually intending to reach a validator that proposes a block that includes these transactions.
 * **State synchronizer protocol**. The protocol used between validators, between full nodes, and between validators and full nodes to replicate the ledger history and ledger state of the committed blockchain.
 * **[JSON-RPC](../json-rpc/json-rpc-spec.md) client to full node protocol**. The protocol used between clients and full nodes to submit transactions and query the state of the blockchain. This uses the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) protocol, and takes into account trusted or untrusted full nodes.
