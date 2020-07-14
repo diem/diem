@@ -145,12 +145,20 @@ impl Experiment for CompatibilityTest {
             )
             .await?;
 
+        context
+            .report
+            .report_metric(self.to_string(), "storage_compat", 1.0);
+
         info!("2. Changing images for the first batch to test consensus");
         update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, validator_txn_job.clone())
             .await?;
+
+        context
+            .report
+            .report_metric(self.to_string(), "consensus_compat", 1.0);
 
         info!("3. Changing images for the rest of the nodes");
         update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
