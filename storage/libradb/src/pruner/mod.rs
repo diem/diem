@@ -33,6 +33,7 @@ use std::{
 ///
 /// It creates a worker thread on construction and joins it on destruction. When destructed, it
 /// quits the worker thread eagerly without waiting for all pending work to be done.
+#[derive(Debug)]
 pub(crate) struct Pruner {
     /// Other than the latest version, how many historical versions to keep being readable. For
     /// example, this being 0 means keep only the latest version.

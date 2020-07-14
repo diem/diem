@@ -17,6 +17,7 @@ use libra_types::{
 use schemadb::{SchemaIterator, DB};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub(crate) struct TransactionStore {
     db: Arc<DB>,
 }

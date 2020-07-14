@@ -14,6 +14,7 @@ use libra_types::transaction::Version;
 use schemadb::{SchemaBatch, DB};
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub(crate) struct SystemStore {
     db: Arc<DB>,
 }
