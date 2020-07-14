@@ -974,7 +974,7 @@ impl WithdrawCapability {
     }
 
     pub fn value(&self) -> Value {
-        Value::vector_general(vec![Value::struct_(Struct::pack(
+        Value::vector_resource_for_testing_only(vec![Value::struct_(Struct::pack(
             vec![Value::address(self.account_address)],
             true,
         ))])
@@ -995,7 +995,7 @@ impl KeyRotationCapability {
     }
 
     pub fn value(&self) -> Value {
-        Value::vector_general(vec![Value::struct_(Struct::pack(
+        Value::vector_resource_for_testing_only(vec![Value::struct_(Struct::pack(
             vec![Value::address(self.account_address)],
             true,
         ))])
