@@ -348,7 +348,7 @@ where
         // including in flight dials.
         let to_connect_size = if let Some(conn_limit) = self.connection_limit {
             min(
-                conn_limit - self.connected.len() - self.dial_queue.len(),
+                conn_limit.saturating_sub(self.connected.len() + self.dial_queue.len()),
                 to_connect.len(),
             )
         } else {
