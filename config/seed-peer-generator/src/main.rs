@@ -3,7 +3,8 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{PersistableConfig, HANDSHAKE_VERSION};
+use libra_config::config::PersistableConfig;
+use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::JsonRpcClient;
 use libra_types::{
@@ -38,7 +39,17 @@ fn main() {
     let seed_peers_config = validator_set
         .payload()
         .iter()
-        .map(|v| to_seed_peer(v))
+        .filter_map(|v| match to_seed_peer(v) {
+            Ok(result) => Some(result),
+            Err(error) => {
+                warn!(
+                    "Unable to read peer id for validator {} {}",
+                    v.account_address(),
+                    error
+                );
+                None
+            }
+        })
         .collect::<SeedPeersConfig>();
 
     // Save to a file for loading later
@@ -55,11 +66,11 @@ fn get_validator_set(endpoint: String, peer_id: PeerId) -> anyhow::Result<Option
 }
 
 /// Convert ValidatorInfo to a seed peer
-fn to_seed_peer(validator_info: &ValidatorInfo) -> (PeerId, Vec<NetworkAddress>) {
+fn to_seed_peer(
+    validator_info: &ValidatorInfo,
+) -> Result<(PeerId, Vec<NetworkAddress>), lcs::Error> {
     let peer_id = *validator_info.account_address();
-    let seed_pubkey = validator_info.network_identity_public_key();
     let network_addr =
-        NetworkAddress::try_from(&validator_info.config().full_node_network_address).unwrap();
-    let seed_addr = network_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
-    (peer_id, vec![seed_addr])
+        NetworkAddress::try_from(&validator_info.config().full_node_network_address)?;
+    Ok((peer_id, vec![network_addr]))
 }
