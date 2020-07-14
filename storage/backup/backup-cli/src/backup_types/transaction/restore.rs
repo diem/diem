@@ -7,19 +7,31 @@ use crate::{
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
 use anyhow::{ensure, Result};
+use executor::Executor;
+use executor_types::TransactionReplayer;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{TransactionAccumulatorRangeProof, TransactionListProof},
     transaction::{Transaction, TransactionInfo, TransactionListWithProof, Version},
 };
+use libra_vm::LibraVM;
 use libradb::backup::restore_handler::RestoreHandler;
-use std::{cmp::min, sync::Arc};
+use std::{
+    cmp::{max, min},
+    sync::Arc,
+};
+use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
 pub struct TransactionRestoreOpt {
     #[structopt(long = "transaction-manifest")]
     pub manifest_handle: FileHandle,
+    #[structopt(
+        long = "replay-transaction-from-version",
+        default_value = "Version::max_value()"
+    )]
+    pub replay_from_version: Version,
 }
 
 pub struct TransactionRestoreController {
@@ -27,12 +39,14 @@ pub struct TransactionRestoreController {
     restore_handler: Arc<RestoreHandler>,
     manifest_handle: FileHandle,
     target_version: Version,
+    replay_from_version: Version,
     state: State,
 }
 
 #[derive(Default)]
 struct State {
     frozen_subtree_confirmed: bool,
+    transaction_replayer: Option<Executor<LibraVM>>,
 }
 
 struct LoadedChunk {
@@ -104,6 +118,7 @@ impl TransactionRestoreController {
             restore_handler,
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version,
+            replay_from_version: opt.replay_from_version,
             state: State::default(),
         }
     }
@@ -119,6 +134,18 @@ impl TransactionRestoreController {
         Ok(())
     }
 
+    fn transaction_replayer(&mut self) -> Result<&mut Executor<LibraVM>> {
+        if self.state.transaction_replayer.is_none() {
+            let replayer = Executor::new_on_unbootstrapped_db(
+                DbReaderWriter::from_arc(Arc::clone(&self.restore_handler.libradb)),
+                self.restore_handler
+                    .get_tree_state(self.replay_from_version)?,
+            );
+            self.state.transaction_replayer = Some(replayer);
+        }
+        Ok(self.state.transaction_replayer.as_mut().unwrap())
+    }
+
     pub async fn run(mut self) -> Result<()> {
         let manifest: TransactionBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
@@ -132,22 +159,44 @@ impl TransactionRestoreController {
         }
 
         for chunk_manifest in manifest.chunks {
-            let chunk = LoadedChunk::load(chunk_manifest, &self.storage).await?;
+            if chunk_manifest.first_version > self.target_version {
+                break;
+            }
+
+            let mut chunk = LoadedChunk::load(chunk_manifest, &self.storage).await?;
             self.maybe_save_frozen_subtrees(&chunk)?;
 
             let last = min(self.target_version, chunk.manifest.last_version);
-            let num_txns_to_save = (last - chunk.manifest.first_version + 1) as usize;
-            // write to db
-            if last >= chunk.manifest.first_version {
+            let first_to_replay = max(chunk.manifest.first_version, self.replay_from_version);
+
+            // Transactions to save without replaying:
+            if first_to_replay > chunk.manifest.first_version {
+                let last_to_save = min(last, first_to_replay);
+                let num_txns_to_save = (last_to_save - chunk.manifest.first_version + 1) as usize;
                 self.restore_handler.save_transactions(
                     chunk.manifest.first_version,
                     &chunk.txns[..num_txns_to_save],
                     &chunk.txn_infos[..num_txns_to_save],
                 )?;
+                chunk.txns.drain(0..num_txns_to_save);
+                chunk.txn_infos.drain(0..num_txns_to_save);
+            }
+            // Those to replay:
+            if first_to_replay <= last {
+                let num_to_replay = (last - first_to_replay + 1) as usize;
+                chunk.txns.truncate(num_to_replay);
+                chunk.txn_infos.truncate(num_to_replay);
+                self.transaction_replayer()?.replay_chunk(
+                    first_to_replay,
+                    chunk.txns,
+                    chunk.txn_infos,
+                )?;
             }
 
-            if last < chunk.manifest.last_version {
-                break;
+            // Last chunk
+            if chunk.manifest.last_version == manifest.last_version {
+                self.restore_handler
+                    .save_ledger_info_if_newer(chunk.ledger_info)?;
             }
         }
 

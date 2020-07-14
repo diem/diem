@@ -594,7 +594,6 @@ where
         Ok(self.get_with_proof(key, version)?.0)
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
     pub fn get_root_hash(&self, version: Version) -> Result<HashValue> {
         self.get_root_hash_option(version)?
             .ok_or_else(|| format_err!("Root node not found for version {}.", version))

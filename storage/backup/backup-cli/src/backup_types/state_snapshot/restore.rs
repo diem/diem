@@ -24,11 +24,11 @@ pub struct StateSnapshotRestoreOpt {
 pub struct StateSnapshotRestoreController {
     storage: Arc<dyn BackupStorage>,
     restore_handler: Arc<RestoreHandler>,
-    // State snapshot restore to this version
+    /// State snapshot restores to this version.
     version: Version,
     manifest_handle: FileHandle,
-    // Global "target_version" for the entire restore process, if `version` is newer than this,
-    // nothing will be done.
+    /// Global "target_version" for the entire restore process, if `version` is newer than this,
+    /// nothing will be done, otherwise, this has no effect.
     target_version: Version,
 }
 

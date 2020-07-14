@@ -12,13 +12,13 @@ use libra_types::transaction::Version;
 use std::{mem::size_of, path::PathBuf};
 use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Clone, StructOpt)]
 pub struct GlobalBackupOpt {
     #[structopt(long = "max-chunk-size", help = "Maximum chunk file size in bytes.")]
     pub max_chunk_size: usize,
 }
 
-#[derive(StructOpt)]
+#[derive(Clone, StructOpt)]
 pub struct GlobalRestoreOpt {
     #[structopt(long = "target-db-dir", parse(from_os_str))]
     pub db_dir: PathBuf,

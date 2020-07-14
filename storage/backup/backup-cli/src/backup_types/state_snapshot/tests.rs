@@ -17,6 +17,7 @@ use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
 use libra_types::transaction::{Version, PRE_GENESIS_VERSION};
+use libradb::GetRestoreHandler;
 use std::{path::PathBuf, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;

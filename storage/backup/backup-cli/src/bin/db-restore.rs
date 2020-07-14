@@ -11,7 +11,7 @@ use backup_cli::{
     storage::StorageOpt,
     utils::GlobalRestoreOpt,
 };
-use libradb::LibraDB;
+use libradb::{GetRestoreHandler, LibraDB};
 use std::sync::Arc;
 use structopt::StructOpt;
 

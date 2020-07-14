@@ -4,3 +4,6 @@
 pub mod epoch_ending;
 pub mod state_snapshot;
 pub mod transaction;
+
+#[cfg(test)]
+pub mod tests;

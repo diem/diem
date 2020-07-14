@@ -17,7 +17,9 @@ use libra_types::{
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
     proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof, SparseMerkleProof},
-    transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
+    transaction::{
+        Transaction, TransactionInfo, TransactionListWithProof, TransactionStatus, Version,
+    },
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
 use serde::{Deserialize, Serialize};
@@ -71,6 +73,15 @@ pub trait BlockExecutor: Send {
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error>;
+}
+
+pub trait TransactionReplayer: Send {
+    fn replay_chunk(
+        &mut self,
+        first_version: Version,
+        txns: Vec<Transaction>,
+        txn_infos: Vec<TransactionInfo>,
+    ) -> Result<()>;
 }
 
 /// A structure that summarizes the result of the execution needed for consensus to agree on.
