@@ -156,33 +156,6 @@ module DualAttestation {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Certification and expiration
-    ///////////////////////////////////////////////////////////////////////////
-
-
-    /// Renew's `credential`'s certificate
-    public fun recertify(credential: &mut Credential) {
-        credential.expiration_date = LibraTimestamp::now_microseconds() + ONE_YEAR;
-    }
-    spec fun recertify {
-        // TODO: use ONE_YEAR below once the spec language supports constants
-        aborts_if !LibraTimestamp::spec_root_ctm_initialized();
-        aborts_if LibraTimestamp::spec_now_microseconds() + 31540000000000 > max_u64();
-        ensures credential.expiration_date
-             == LibraTimestamp::spec_now_microseconds() + 31540000000000;
-    }
-
-    /// Non-destructively decertify `credential`. Can be recertified later on via `recertify`.
-    public fun decertify(credential: &mut Credential) {
-        // Expire the parent credential.
-        credential.expiration_date = 0;
-    }
-    spec fun decertify {
-        aborts_if false;
-        ensures credential.expiration_date == 0;
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     // Dual attestation requirements and checking
     ///////////////////////////////////////////////////////////////////////////
 

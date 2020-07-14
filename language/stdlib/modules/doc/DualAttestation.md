@@ -14,8 +14,6 @@
 -  [Function `base_url`](#0x1_DualAttestation_base_url)
 -  [Function `compliance_public_key`](#0x1_DualAttestation_compliance_public_key)
 -  [Function `expiration_date`](#0x1_DualAttestation_expiration_date)
--  [Function `recertify`](#0x1_DualAttestation_recertify)
--  [Function `decertify`](#0x1_DualAttestation_decertify)
 -  [Function `credential_address`](#0x1_DualAttestation_credential_address)
 -  [Function `dual_attestation_required`](#0x1_DualAttestation_dual_attestation_required)
 -  [Function `dual_attestation_message`](#0x1_DualAttestation_dual_attestation_message)
@@ -28,8 +26,6 @@
     -  [Function `rotate_base_url`](#0x1_DualAttestation_Specification_rotate_base_url)
     -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_Specification_rotate_compliance_public_key)
     -  [Function `compliance_public_key`](#0x1_DualAttestation_Specification_compliance_public_key)
-    -  [Function `recertify`](#0x1_DualAttestation_Specification_recertify)
-    -  [Function `decertify`](#0x1_DualAttestation_Specification_decertify)
     -  [Function `credential_address`](#0x1_DualAttestation_Specification_credential_address)
     -  [Function `dual_attestation_required`](#0x1_DualAttestation_Specification_dual_attestation_required)
     -  [Function `dual_attestation_message`](#0x1_DualAttestation_Specification_dual_attestation_message)
@@ -342,60 +338,6 @@ Aborts <b>if</b> </code>addr
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_expiration_date">expiration_date</a>(addr: address): u64  <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
     *&borrow_global&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).expiration_date
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_DualAttestation_recertify"></a>
-
-## Function `recertify`
-
-Renew's
-<code>credential</code>'s certificate
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_recertify">recertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">DualAttestation::Credential</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_recertify">recertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">Credential</a>) {
-    credential.expiration_date = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>() + ONE_YEAR;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_DualAttestation_decertify"></a>
-
-## Function `decertify`
-
-Non-destructively decertify
-<code>credential</code>. Can be recertified later on via
-<code>recertify</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_decertify">decertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">DualAttestation::Credential</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_decertify">decertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">Credential</a>) {
-    // Expire the parent credential.
-    credential.expiration_date = 0;
 }
 </code></pre>
 
@@ -774,42 +716,6 @@ Spec version of
 <pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(addr: address): vector&lt;u8&gt; {
     <b>global</b>&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key
 }
-</code></pre>
-
-
-
-<a name="0x1_DualAttestation_Specification_recertify"></a>
-
-### Function `recertify`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_recertify">recertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">DualAttestation::Credential</a>)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_root_ctm_initialized">LibraTimestamp::spec_root_ctm_initialized</a>();
-<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + 31540000000000 &gt; max_u64();
-<b>ensures</b> credential.expiration_date
-     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + 31540000000000;
-</code></pre>
-
-
-
-<a name="0x1_DualAttestation_Specification_decertify"></a>
-
-### Function `decertify`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_decertify">decertify</a>(credential: &<b>mut</b> <a href="#0x1_DualAttestation_Credential">DualAttestation::Credential</a>)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> credential.expiration_date == 0;
 </code></pre>
 
 
