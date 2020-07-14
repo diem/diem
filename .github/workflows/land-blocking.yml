@@ -62,12 +62,15 @@ jobs:
             -E RUST_LOG=debug \
             --report report.json \
             --suite land_blocking
+          ret=$?
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
             echo "report.json end"
           else
             echo "report.json is empty or not found."
+          fi
+          if [ $ret -ne 0 ]; then
             jq -n \
               --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
           $(tail -5 $CTI_OUTPUT_LOG)" \
@@ -149,7 +152,7 @@ jobs:
                   console.error("Failed to check infra error in CT output log.\n", err);
                 }
               } else {
-                body = "Cluster Test failed - test report processing failed.";
+                body += "\n Cluster Test failed - test report processing failed.";
                 console.error(err);
               }
               body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
