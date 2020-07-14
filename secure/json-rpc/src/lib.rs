@@ -279,7 +279,7 @@ mod test {
             SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionWithProof,
             Version,
         },
-        vm_status::StatusCode,
+        vm_status::KeptVMStatus,
     };
     use libradb::errors::LibraDbError::NotFound;
     use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
@@ -429,7 +429,7 @@ mod test {
             HashValue::zero(),
             HashValue::zero(),
             0,
-            StatusCode::UNKNOWN_STATUS,
+            KeptVMStatus::VerificationError,
         );
 
         AccountStateProof::new(

@@ -21,10 +21,7 @@ use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::OnChainConfigPayload,
     transaction::SignedTransaction,
-    vm_status::{
-        StatusCode::{RESOURCE_DOES_NOT_EXIST, SEQUENCE_NUMBER_TOO_OLD},
-        VMStatus,
-    },
+    vm_status::DiscardedVMStatus,
     PeerId,
 };
 use std::{
@@ -329,14 +326,14 @@ where
                 } else {
                     statuses.push((
                         MempoolStatus::new(MempoolStatusCode::VmError),
-                        Some(VMStatus::Error(SEQUENCE_NUMBER_TOO_OLD)),
+                        Some(DiscardedVMStatus::SEQUENCE_NUMBER_TOO_OLD),
                     ));
                 }
             } else {
                 // failed to get transaction
                 statuses.push((
                     MempoolStatus::new(MempoolStatusCode::VmError),
-                    Some(VMStatus::Error(RESOURCE_DOES_NOT_EXIST)),
+                    Some(DiscardedVMStatus::RESOURCE_DOES_NOT_EXIST),
                 ));
             }
             None
@@ -378,7 +375,7 @@ where
                     Some(validation_status) => {
                         statuses.push((
                             MempoolStatus::new(MempoolStatusCode::VmError),
-                            Some(validation_status.clone()),
+                            Some(validation_status),
                         ));
                     }
                 }

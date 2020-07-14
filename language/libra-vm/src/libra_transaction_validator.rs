@@ -70,7 +70,10 @@ impl LibraVMValidator {
                 )
             }
             TransactionPayload::WriteSet(_cs) => {
-                self.0.run_writeset_prologue(&mut session, &txn_data)
+                self.0
+                    .run_writeset_prologue(&mut session, &txn_data)
+                    // Switch any error from the prologue to a reject
+                    .map_err(|_| VMStatus::Error(StatusCode::REJECTED_WRITE_SET))
             }
         }
     }
@@ -102,7 +105,7 @@ impl VMValidator for LibraVMValidator {
                 Ok(code) => code,
                 Err(_) => {
                     return VMValidatorResult::new(
-                        Some(VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER)),
+                        Some(StatusCode::INVALID_GAS_SPECIFIER),
                         gas_price,
                         false,
                     )
@@ -113,18 +116,14 @@ impl VMValidator for LibraVMValidator {
         let signature_verified_txn = if let Ok(t) = transaction.check_signature() {
             t
         } else {
-            return VMValidatorResult::new(
-                Some(VMStatus::Error(StatusCode::INVALID_SIGNATURE)),
-                gas_price,
-                false,
-            );
+            return VMValidatorResult::new(Some(StatusCode::INVALID_SIGNATURE), gas_price, false);
         };
 
         let is_prioritized_txn = is_prioritized_txn(txn_sender, &data_cache);
         let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
         {
             Ok(price) => price,
-            Err(err) => return VMValidatorResult::new(Some(err), gas_price, false),
+            Err(err) => return VMValidatorResult::new(Some(err.status_code()), gas_price, false),
         };
 
         let res = match self.verify_transaction_impl(
@@ -151,7 +150,11 @@ impl VMValidator for LibraVMValidator {
             .with_label_values(&[counter_label])
             .inc();
 
-        VMValidatorResult::new(res, normalized_gas_price, is_prioritized_txn)
+        VMValidatorResult::new(
+            res.map(|s| s.status_code()),
+            normalized_gas_price,
+            is_prioritized_txn,
+        )
     }
 }
 

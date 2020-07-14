@@ -58,6 +58,8 @@ script {
     }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 6
 
@@ -74,7 +76,8 @@ script {
     }
 }
 
-
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -93,5 +96,7 @@ script {
     }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0

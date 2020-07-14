@@ -50,5 +50,9 @@ main(account: &signer) {
 
     return;
 }
+
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
+// check: code: 2
 // check: ABORTED
 // check: code: 2

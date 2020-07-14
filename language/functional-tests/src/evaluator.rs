@@ -23,7 +23,7 @@ use libra_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_status::StatusCode,
+    vm_status::KeptVMStatus,
 };
 use mirai_annotations::checked_verify;
 use move_core_types::{
@@ -378,21 +378,23 @@ fn run_transaction(
     exec: &mut FakeExecutor,
     transaction: SignedTransaction,
 ) -> Result<TransactionOutput> {
-    let mut outputs = exec.execute_block(vec![transaction]).unwrap();
+    let mut outputs = exec
+        .execute_block_and_keep_vm_status(vec![transaction])
+        .unwrap();
     if outputs.len() == 1 {
-        let output = outputs.pop().unwrap();
-        match output.status() {
+        let (vm_status, txn_output) = outputs.pop().unwrap();
+        match txn_output.status() {
             TransactionStatus::Keep(status) => {
-                exec.apply_write_set(output.write_set());
-                if status.status_code() == StatusCode::EXECUTED {
-                    Ok(output)
+                exec.apply_write_set(txn_output.write_set());
+                if status == &KeptVMStatus::Executed {
+                    Ok(txn_output)
                 } else {
-                    Err(ErrorKind::VMExecutionFailure(output).into())
+                    Err(ErrorKind::VMExecutionFailure(vm_status, txn_output).into())
                 }
             }
             TransactionStatus::Discard(_) | TransactionStatus::Retry => {
-                checked_verify!(output.write_set().is_empty());
-                Err(ErrorKind::DiscardedTransaction(output).into())
+                checked_verify!(txn_output.write_set().is_empty());
+                Err(ErrorKind::DiscardedTransaction(txn_output).into())
             }
         }
     } else {

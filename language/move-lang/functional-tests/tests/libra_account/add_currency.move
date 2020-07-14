@@ -8,6 +8,8 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 4
 
@@ -21,6 +23,8 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 4
 
@@ -51,6 +55,8 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 4
 
@@ -64,5 +70,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 4

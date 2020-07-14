@@ -22,7 +22,7 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version, WriteSetPayload,
     },
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_crypto::{
@@ -748,7 +748,7 @@ pub struct TransactionToCommitGen {
     /// Gas used.
     gas_used: u64,
     /// Transaction status
-    major_status: StatusCode,
+    status: KeptVMStatus,
 }
 
 impl TransactionToCommitGen {
@@ -780,7 +780,7 @@ impl TransactionToCommitGen {
             account_states,
             events,
             self.gas_used,
-            self.major_status,
+            self.status,
         )
     }
 }
@@ -805,10 +805,10 @@ impl Arbitrary for TransactionToCommitGen {
             ),
             vec((any::<Index>(), any::<AccountStateBlobGen>()), 0..=1),
             any::<u64>(),
-            any::<StatusCode>(),
+            any::<KeptVMStatus>(),
         )
             .prop_map(
-                |(sender, event_emitters, mut touched_accounts, gas_used, major_status)| {
+                |(sender, event_emitters, mut touched_accounts, gas_used, status)| {
                     // To reflect change of account/event sequence numbers, txn sender account and
                     // event emitter accounts must be updated.
                     let (sender_index, sender_blob_gen, txn_gen) = sender;
@@ -825,7 +825,7 @@ impl Arbitrary for TransactionToCommitGen {
                         event_gens,
                         account_state_gens: touched_accounts,
                         gas_used,
-                        major_status,
+                        status,
                     }
                 },
             )

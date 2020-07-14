@@ -3,7 +3,7 @@
 
 use crate::{
     account::{Account, AccountData},
-    assert_prologue_parity, assert_status_eq,
+    assert_prologue_parity,
     compile::compile_module_with_address,
     executor::FakeExecutor,
     transaction_status_eq,
@@ -12,7 +12,7 @@ use libra_types::{
     account_config::{self, LBR_NAME},
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
-    vm_status::{StatusCode, StatusType, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode},
 };
 
 // A module with an address different from the sender's address should be rejected
@@ -55,14 +55,13 @@ fn bad_module_address() {
 
     // execute and fail for the same reason
     let output = executor.execute_transaction(txn);
-    let status = match output.status() {
+    match output.status() {
         TransactionStatus::Keep(status) => {
-            assert!(status.status_type() == StatusType::Verification);
-            status
+            assert!(status == &KeptVMStatus::VerificationError);
+            // assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
         }
         vm_status => panic!("Unexpected verification status: {:?}", vm_status),
     };
-    assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
 }
 
 // Publishing a module named M under the same address twice should be rejected
@@ -106,14 +105,14 @@ fn duplicate_module() {
     // first tx should succeed
     assert!(transaction_status_eq(
         &output1.status(),
-        &TransactionStatus::Keep(VMStatus::Executed),
+        &TransactionStatus::Keep(KeptVMStatus::Executed),
     ));
 
     // second one should fail because it tries to re-publish a module named M
     let output2 = executor.execute_transaction(txn2);
     assert!(transaction_status_eq(
         &output2.status(),
-        &TransactionStatus::Keep(VMStatus::Error(StatusCode::DUPLICATE_MODULE_NAME)),
+        &TransactionStatus::Keep(KeptVMStatus::VerificationError),
     ));
 }
 
@@ -147,7 +146,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER)
+        StatusCode::INVALID_MODULE_PUBLISHER
     );
 }
 
@@ -179,7 +178,7 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }
 
@@ -211,7 +210,7 @@ pub fn test_publishing_no_modules_proper_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }
 
@@ -245,7 +244,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER)
+        StatusCode::INVALID_MODULE_PUBLISHER
     );
 }
 
@@ -277,7 +276,7 @@ pub fn test_publishing_no_modules_invalid_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER)
+        StatusCode::INVALID_MODULE_PUBLISHER
     );
 }
 
@@ -309,6 +308,6 @@ pub fn test_publishing_allow_modules() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::Executed)
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 }

@@ -44,7 +44,7 @@ fn to_blocks_to_commit(
                     state_root_hash,
                     event_root_hash,
                     txn_to_commit.gas_used(),
-                    txn_to_commit.major_status(),
+                    txn_to_commit.status().clone(),
                 );
                 let txn_accu_hash =
                     db.ledger_store

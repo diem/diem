@@ -7,7 +7,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, BurnEvent, COIN1_NAME},
     transaction::{authenticator::AuthenticationKey, TransactionArgument},
-    vm_status::StatusCode,
+    vm_status::KeptVMStatus,
 };
 use move_core_types::{
     identifier::Identifier,
@@ -59,10 +59,7 @@ fn burn_txn_fees() {
                 COIN1_NAME.to_owned(),
             ),
         );
-        assert_eq!(
-            status.status().vm_status().status_code(),
-            StatusCode::EXECUTED
-        );
+        assert_eq!(status.status().status(), Ok(KeptVMStatus::Executed));
         status.gas_used()
     };
 

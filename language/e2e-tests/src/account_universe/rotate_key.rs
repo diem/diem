@@ -13,7 +13,7 @@ use libra_crypto::{
 use libra_proptest_helpers::Index;
 use libra_types::{
     transaction::{authenticator::AuthenticationKey, SignedTransaction, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode},
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
@@ -49,11 +49,9 @@ impl AUTransactionGen for RotateKeyGen {
                 self.new_keypair.public_key.clone(),
             );
 
-            TransactionStatus::Keep(VMStatus::Executed)
+            TransactionStatus::Keep(KeptVMStatus::Executed)
         } else {
-            TransactionStatus::Discard(VMStatus::Error(
-                StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-            ))
+            TransactionStatus::Discard(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
         };
 
         (txn, (status, gas_used))

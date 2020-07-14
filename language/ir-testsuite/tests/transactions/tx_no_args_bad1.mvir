@@ -6,5 +6,6 @@ main() {
     return;
 }
 
-// check: Keep
+// TODO(status_migration) breaks if Keep is first
 // check: TYPE_MISMATCH
+// check: Keep

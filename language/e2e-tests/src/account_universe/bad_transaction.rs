@@ -15,7 +15,7 @@ use libra_proptest_helpers::Index;
 use libra_types::{
     account_config::LBR_NAME,
     transaction::{SignedTransaction, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasConstants};
 use move_vm_types::gas_schedule::calculate_intrinsic_gas;
@@ -58,9 +58,9 @@ impl AUTransactionGen for SequenceNumberMismatchGen {
             txn,
             (
                 if seq >= sender.sequence_number {
-                    TransactionStatus::Discard(VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_NEW))
+                    TransactionStatus::Discard(StatusCode::SEQUENCE_NUMBER_TOO_NEW)
                 } else {
-                    TransactionStatus::Discard(VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_OLD))
+                    TransactionStatus::Discard(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
                 },
                 0,
             ),
@@ -104,25 +104,19 @@ impl AUTransactionGen for InsufficientBalanceGen {
             txn,
             (
                 if max_gas_unit > default_constants.maximum_number_of_gas_units.get() {
-                    TransactionStatus::Discard(VMStatus::Error(
+                    TransactionStatus::Discard(
                         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
-                    ))
+                    )
                 } else if max_gas_unit < min_cost {
-                    TransactionStatus::Discard(VMStatus::Error(
+                    TransactionStatus::Discard(
                         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
-                    ))
+                    )
                 } else if self.gas_unit_price > default_constants.max_price_per_gas_unit.get() {
-                    TransactionStatus::Discard(VMStatus::Error(
-                        StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND,
-                    ))
+                    TransactionStatus::Discard(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND)
                 } else if self.gas_unit_price < default_constants.min_price_per_gas_unit.get() {
-                    TransactionStatus::Discard(VMStatus::Error(
-                        StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND,
-                    ))
+                    TransactionStatus::Discard(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND)
                 } else {
-                    TransactionStatus::Discard(VMStatus::Error(
-                        StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-                    ))
+                    TransactionStatus::Discard(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
                 },
                 0,
             ),
@@ -166,10 +160,7 @@ impl AUTransactionGen for InvalidAuthkeyGen {
 
         (
             txn,
-            (
-                TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_AUTH_KEY)),
-                0,
-            ),
+            (TransactionStatus::Discard(StatusCode::INVALID_AUTH_KEY), 0),
         )
     }
 }

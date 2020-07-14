@@ -54,6 +54,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -68,6 +70,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 
@@ -88,6 +92,9 @@ fun main() {
     Authenticator::create_multi_ed25519(keys, 3);
 }
 }
+
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 2
 
@@ -106,6 +113,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 3
 
@@ -124,6 +133,8 @@ fun main() {
 }
 }
 
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 

@@ -248,7 +248,7 @@ where
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
-                        status.status_code(),
+                        status.clone(),
                     );
 
                     let real_txn_info_hash = txn_info.hash();
@@ -259,7 +259,7 @@ where
                     if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
                         crit!(
                             "Discarded transaction has non-empty write set or events. \
-                             Transaction: {:?}. Status: {}.",
+                             Transaction: {:?}. Status: {:?}.",
                             txn,
                             status,
                         );
@@ -546,12 +546,23 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
             itertools::zip_eq(transactions, output.transaction_data()),
             transaction_infos.iter().enumerate(),
         ) {
+            let recorded_status = match txn_data.status() {
+                TransactionStatus::Keep(recorded_status) => recorded_status.clone(),
+                status @ TransactionStatus::Discard(_) | status @ TransactionStatus::Retry => {
+                    bail!(
+                        "The {}-th transaction to be commited did not have a status of 'Keep' \
+                        but instead had the following status: {:?}",
+                        i,
+                        status
+                    )
+                }
+            };
             let generated_txn_info = &TransactionInfo::new(
                 txn.hash(),
                 txn_data.state_root_hash(),
                 txn_data.event_root_hash(),
                 txn_data.gas_used(),
-                txn_data.status().vm_status().status_code(),
+                recorded_status.clone(),
             );
             ensure!(
                 txn_info == generated_txn_info,
@@ -563,7 +574,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
-                txn_data.status().vm_status().status_code(),
+                recorded_status,
             ));
             reconfig_events.append(&mut Self::extract_reconfig_events(
                 txn_data.events().to_vec(),
@@ -732,13 +743,13 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         for (txn, txn_data) in blocks.iter().flat_map(|block| {
             itertools::zip_eq(block.transactions(), block.output().transaction_data())
         }) {
-            if let TransactionStatus::Keep(_) = txn_data.status() {
+            if let TransactionStatus::Keep(recorded_status) = txn_data.status() {
                 txns_to_keep.push(TransactionToCommit::new(
                     txn.clone(),
                     txn_data.account_blobs().clone(),
                     txn_data.events().to_vec(),
                     txn_data.gas_used(),
-                    txn_data.status().vm_status().status_code(),
+                    recorded_status.clone(),
                 ));
             }
         }

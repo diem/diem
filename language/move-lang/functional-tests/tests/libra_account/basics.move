@@ -27,6 +27,8 @@ script {
         LibraAccount::initialize(sender);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 0
 
@@ -53,6 +55,8 @@ script {
         LibraAccount::restore_key_rotation_capability(rot_cap);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 8
 
@@ -71,6 +75,8 @@ script {
         );
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 9
 

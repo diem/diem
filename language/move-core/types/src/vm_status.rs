@@ -60,7 +60,34 @@ pub enum VMStatus {
 
     /// Indicates an `abort` from inside Move code. Contains the location of the abort and the code
     MoveAbort(AbortLocation, /* code */ u64),
+
+    /// Indicates an failure from inside Move code, where the VM could not continue exection, e.g.
+    /// dividing by zero or a missing resource
+    ExecutionFailure {
+        status_code: StatusCode,
+        location: AbortLocation,
+        function: u16,
+        code_offset: u16,
+    },
 }
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+pub enum KeptVMStatus {
+    Executed,
+    OutOfGas,
+    MoveAbort(AbortLocation, /* code */ u64),
+    ExecutionFailure {
+        location: AbortLocation,
+        function: u16,
+        code_offset: u16,
+    },
+    VerificationError,
+    DeserializationError,
+}
+
+pub type DiscardedVMStatus = StatusCode;
 
 /// An `AbortLocation` specifies where a Move program `abort` occurred, either in a function in
 /// a module, or in a script
@@ -86,68 +113,18 @@ pub enum StatusType {
     Unknown,
 }
 
-impl fmt::Display for StatusType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let string = match self {
-            StatusType::Validation => "Validation",
-            StatusType::Verification => "Verification",
-            StatusType::InvariantViolation => "Invariant violation",
-            StatusType::Deserialization => "Deserialization",
-            StatusType::Execution => "Execution",
-            StatusType::Unknown => "Unknown",
-        };
-        write!(f, "{}", string)
-    }
-}
-
-impl fmt::Display for VMStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let status_type = self.status_type();
-        let mut status = format!("status {:#?} of type {}", self.status_code(), status_type);
-
-        if let VMStatus::MoveAbort(_, code) = self {
-            status = format!("{} with sub status {}", status, code);
-        }
-
-        write!(f, "{}", status)
-    }
-}
-
-impl fmt::Debug for VMStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            VMStatus::Executed => write!(f, "EXECUTED"),
-            VMStatus::Error(code) => f.debug_struct("ERROR").field("status_code", code).finish(),
-            VMStatus::MoveAbort(location, code) => f
-                .debug_struct("ABORTED")
-                .field("code", code)
-                .field("location", location)
-                .finish(),
-        }
-    }
-}
-
-impl fmt::Debug for AbortLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AbortLocation::Script => write!(f, "Script"),
-            AbortLocation::Module(id) => write!(f, "{}", id),
-        }
-    }
-}
-
-impl std::error::Error for VMStatus {}
-
 impl VMStatus {
     /// Return the status code for the `VMStatus`
     pub fn status_code(&self) -> StatusCode {
         match self {
             Self::Executed => StatusCode::EXECUTED,
             Self::MoveAbort(_, _) => StatusCode::ABORTED,
+            Self::ExecutionFailure { status_code, .. } => *status_code,
             Self::Error(code) => {
                 let code = *code;
                 debug_assert!(code != StatusCode::EXECUTED);
                 debug_assert!(code != StatusCode::ABORTED);
+                debug_assert!(code.status_type() != StatusType::Execution);
                 code
             }
         }
@@ -157,13 +134,60 @@ impl VMStatus {
     pub fn move_abort_code(&self) -> Option<u64> {
         match self {
             Self::MoveAbort(_, code) => Some(*code),
-            Self::Error(_) | Self::Executed => None,
+            Self::Error(_) | Self::ExecutionFailure { .. } | Self::Executed => None,
         }
     }
 
     /// Return the status type for this `VMStatus`. This is solely determined by the `status_code`
     pub fn status_type(&self) -> StatusType {
         self.status_code().status_type()
+    }
+
+    /// Returns `Ok` with a recorded status if it should be kept, `Err` of the error code if it
+    /// should be discarded
+    pub fn keep_or_discard(self) -> Result<KeptVMStatus, DiscardedVMStatus> {
+        match self {
+            VMStatus::Executed => Ok(KeptVMStatus::Executed),
+            VMStatus::MoveAbort(location, code) => Ok(KeptVMStatus::MoveAbort(location, code)),
+            VMStatus::ExecutionFailure {
+                status_code: _status_code,
+                location,
+                function,
+                code_offset,
+            } => Ok(KeptVMStatus::ExecutionFailure {
+                location,
+                function,
+                code_offset,
+            }),
+            VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
+            VMStatus::Error(code) => {
+                match code.status_type() {
+                    // Any unknown error should be discarded
+                    StatusType::Unknown => Err(code),
+                    // Any error that is a validation status (i.e. an error arising from the prologue)
+                    // causes the transaction to not be included.
+                    StatusType::Validation => Err(code),
+                    // If the VM encountered an invalid internal state, we should discard the transaction.
+                    StatusType::InvariantViolation => Err(code),
+                    // A transaction that publishes code that cannot be verified will be charged.
+                    StatusType::Verification => Ok(KeptVMStatus::VerificationError),
+                    // If we are able to decode the`SignedTransaction`, but failed to decode
+                    // `SingedTransaction.raw_transaction.payload` (i.e., the transaction script),
+                    // there should be a charge made to that user's account for the gas fees related
+                    // to decoding, running the prologue etc.
+                    StatusType::Deserialization => Ok(KeptVMStatus::DeserializationError),
+                    // Any error encountered during the execution of the transaction will charge gas.
+                    StatusType::Execution => {
+                        debug_assert!(code.should_skip_checks_for_todo());
+                        Ok(KeptVMStatus::ExecutionFailure {
+                            location: AbortLocation::Script,
+                            function: 0,
+                            code_offset: 0,
+                        })
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -211,7 +235,179 @@ pub fn convert_prologue_runtime_error(status: VMStatus) -> VMStatus {
             };
             VMStatus::Error(new_major_status)
         }
-        status @ VMStatus::Error(_) | status @ VMStatus::Executed => status,
+        status @ VMStatus::ExecutionFailure { .. }
+        | status @ VMStatus::Error(_)
+        | status @ VMStatus::Executed => status,
+    }
+}
+
+impl fmt::Display for StatusType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let string = match self {
+            StatusType::Validation => "Validation",
+            StatusType::Verification => "Verification",
+            StatusType::InvariantViolation => "Invariant violation",
+            StatusType::Deserialization => "Deserialization",
+            StatusType::Execution => "Execution",
+            StatusType::Unknown => "Unknown",
+        };
+        write!(f, "{}", string)
+    }
+}
+
+impl fmt::Display for VMStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status_type = self.status_type();
+        let mut status = format!("status {:#?} of type {}", self.status_code(), status_type);
+
+        if let VMStatus::MoveAbort(_, code) = self {
+            status = format!("{} with sub status {}", status, code);
+        }
+
+        write!(f, "{}", status)
+    }
+}
+
+impl fmt::Display for KeptVMStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "status ")?;
+        match self {
+            KeptVMStatus::Executed => write!(f, "EXECUTED"),
+            KeptVMStatus::OutOfGas => write!(f, "OUT_OF_GAS"),
+            KeptVMStatus::VerificationError => write!(f, "VERIFICATION_ERROR"),
+            KeptVMStatus::DeserializationError => write!(f, "DESERIALIZATION_ERROR"),
+            KeptVMStatus::MoveAbort(location, code) => {
+                write!(f, "ABORTED with code {} in {}", code, location)
+            }
+            KeptVMStatus::ExecutionFailure {
+                location,
+                function,
+                code_offset,
+            } => write!(
+                f,
+                "EXECUTION_FAILURE at bytecode offset {} in function index {} in {}",
+                code_offset, function, location
+            ),
+        }
+    }
+}
+
+impl fmt::Debug for VMStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VMStatus::Executed => write!(f, "EXECUTED"),
+            VMStatus::Error(code) => f.debug_struct("ERROR").field("status_code", code).finish(),
+            VMStatus::MoveAbort(location, code) => f
+                .debug_struct("ABORTED")
+                .field("code", code)
+                .field("location", location)
+                .finish(),
+            VMStatus::ExecutionFailure {
+                status_code,
+                location,
+                function,
+                code_offset,
+            } => f
+                .debug_struct("EXECUTION_FAILURE")
+                .field("status_code", status_code)
+                .field("location", location)
+                .field("function_definition", function)
+                .field("code_offset", code_offset)
+                .finish(),
+        }
+    }
+}
+
+impl fmt::Debug for KeptVMStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            KeptVMStatus::Executed => write!(f, "EXECUTED"),
+            KeptVMStatus::OutOfGas => write!(f, "OUT_OF_GAS"),
+            KeptVMStatus::MoveAbort(location, code) => f
+                .debug_struct("ABORTED")
+                .field("code", code)
+                .field("location", location)
+                .finish(),
+            KeptVMStatus::ExecutionFailure {
+                location,
+                function,
+                code_offset,
+            } => f
+                .debug_struct("EXECUTION_FAILURE")
+                .field("location", location)
+                .field("function_definition", function)
+                .field("code_offset", code_offset)
+                .finish(),
+            KeptVMStatus::VerificationError => write!(f, "VERIFICATION_ERROR"),
+            KeptVMStatus::DeserializationError => write!(f, "DESERIALIZATION_ERROR"),
+        }
+    }
+}
+
+impl fmt::Display for AbortLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AbortLocation::Script => write!(f, "Script"),
+            AbortLocation::Module(id) => write!(f, "{}", id),
+        }
+    }
+}
+
+impl fmt::Debug for AbortLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for VMStatus {}
+
+pub mod known_locations {
+    use crate::{
+        identifier::Identifier,
+        language_storage::{ModuleId, CORE_CODE_ADDRESS},
+        vm_status::AbortLocation,
+    };
+    use once_cell::sync::Lazy;
+
+    /// The name of the Account module.
+    pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
+    /// The Identifier for the Account module.
+    pub static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(ACCOUNT_MODULE_NAME).unwrap());
+    /// The ModuleId for the Account module.
+    pub static ACCOUNT_MODULE: Lazy<ModuleId> =
+        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, ACCOUNT_MODULE_IDENTIFIER.clone()));
+    /// Location for an abort in the Account module
+    pub fn account_module_abort() -> AbortLocation {
+        AbortLocation::Module(ACCOUNT_MODULE.clone())
+    }
+
+    /// The name of the Libra module.
+    pub const LIBRA_MODULE_NAME: &str = "Libra";
+    /// The Identifier for the Libra module.
+    pub static LIBRA_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(LIBRA_MODULE_NAME).unwrap());
+    /// The ModuleId for the Libra module.
+    pub static LIBRA_MODULE: Lazy<ModuleId> =
+        Lazy::new(|| ModuleId::new(CORE_CODE_ADDRESS, LIBRA_MODULE_IDENTIFIER.clone()));
+    pub fn libra_module_abort() -> AbortLocation {
+        AbortLocation::Module(LIBRA_MODULE.clone())
+    }
+
+    /// The name of the Libra module.
+    pub const DESIGNATED_DEALER_MODULE_NAME: &str = "DesignatedDealer";
+    /// The Identifier for the Libra module.
+    pub static DESIGNATED_DEALER_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(DESIGNATED_DEALER_MODULE_NAME).unwrap());
+    /// The ModuleId for the Libra module.
+    pub static DESIGNATED_DEALER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+        ModuleId::new(
+            CORE_CODE_ADDRESS,
+            DESIGNATED_DEALER_MODULE_IDENTIFIER.clone(),
+        )
+    });
+    pub fn designated_dealer_module_abort() -> AbortLocation {
+        AbortLocation::Module(DESIGNATED_DEALER_MODULE.clone())
     }
 }
 
@@ -418,6 +614,9 @@ pub enum StatusCode {
     GENERIC_MEMBER_OPCODE_MISMATCH = 1090,
     FUNCTION_RESOLUTION_FAILURE = 1091,
     INVALID_OPERATION_IN_SCRIPT = 1094,
+    // The sender is trying to publish a module named `M`, but the sender's account already
+    // contains a module with this name.
+    DUPLICATE_MODULE_NAME = 1095,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.
@@ -462,6 +661,9 @@ pub enum StatusCode {
     BAD_U64 = 3019,
     BAD_U128 = 3020,
     BAD_ULEB_U8 = 3021,
+    VALUE_SERIALIZATION_ERROR = 3022,
+    VALUE_DESERIALIZATION_ERROR = 3023,
+    CODE_DESERIALIZATION_ERROR = 3024,
 
     // Errors that can arise at runtime
     // Runtime Errors: 4000-4999
@@ -483,15 +685,9 @@ pub enum StatusCode {
     INVALID_DATA = 4010,
     REMOTE_DATA_ERROR = 4011,
     CANNOT_WRITE_EXISTING_RESOURCE = 4012,
-    VALUE_SERIALIZATION_ERROR = 4013,
-    VALUE_DESERIALIZATION_ERROR = 4014,
-    // The sender is trying to publish a module named `M`, but the sender's account already
-    // contains a module with this name.
-    DUPLICATE_MODULE_NAME = 4015,
     ABORTED = 4016,
     ARITHMETIC_ERROR = 4017,
     DYNAMIC_REFERENCE_ERROR = 4018,
-    CODE_DESERIALIZATION_ERROR = 4019,
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
     GAS_SCHEDULE_ERROR = 4023,
@@ -539,6 +735,23 @@ impl StatusCode {
         }
 
         StatusType::Unknown
+    }
+
+    /// Should only be used in debug asserts. These status codes are missing some data
+    /// checked in debug asserts
+    pub fn should_skip_checks_for_todo(self) -> bool {
+        fn todo_needs_execution_trace_information() -> std::collections::HashSet<StatusCode> {
+            vec![
+                StatusCode::OUT_OF_GAS,
+                StatusCode::VM_MAX_TYPE_DEPTH_REACHED,
+                StatusCode::VM_MAX_VALUE_DEPTH_REACHED,
+                StatusCode::CALL_STACK_OVERFLOW,
+            ]
+            .into_iter()
+            .collect()
+        }
+
+        todo_needs_execution_trace_information().contains(&self)
     }
 }
 

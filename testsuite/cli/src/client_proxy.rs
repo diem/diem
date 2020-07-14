@@ -14,7 +14,9 @@ use libra_crypto::{
     traits::ValidCryptoMaterial,
     x25519, ValidCryptoMaterialStringExt,
 };
-use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, TransactionView};
+use libra_json_rpc_client::views::{
+    AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
+};
 use libra_logger::prelude::*;
 use libra_network_address::{
     encrypted::{
@@ -40,7 +42,6 @@ use libra_types::{
         parse_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version, WriteSetPayload,
     },
-    vm_status::StatusCode,
     waypoint::Waypoint,
 };
 use libra_wallet::{io_utils, WalletLibrary};
@@ -738,7 +739,7 @@ impl ClientProxy {
                 .get_txn_by_acc_seq(account, sequence_number - 1, true)
             {
                 Ok(Some(txn_view)) => {
-                    if txn_view.vm_status == StatusCode::EXECUTED {
+                    if txn_view.vm_status == VMStatusView::Executed {
                         println!("transaction executed!");
                         if txn_view.events.is_empty() {
                             println!("no events emitted");

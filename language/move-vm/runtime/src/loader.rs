@@ -33,7 +33,7 @@ use vm::{
     errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
-        FieldInstantiationIndex, FunctionDefinition, FunctionHandleIndex,
+        FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
         FunctionInstantiationIndex, Kind, Signature, SignatureToken, StructDefInstantiationIndex,
         StructDefinition, StructDefinitionIndex, StructFieldInformation, TableIndex,
     },
@@ -178,8 +178,9 @@ impl ModuleCache {
             self.structs.truncate(starting_idx);
             Err(err.finish(Location::Undefined))
         })?;
-        for func in module.function_defs() {
-            let function = Function::new(func, module);
+        for (idx, func) in module.function_defs().iter().enumerate() {
+            let findex = FunctionDefinitionIndex(idx as TableIndex);
+            let function = Function::new(findex, func, module);
             self.functions.push(Arc::new(function));
         }
         Ok(())
@@ -1359,6 +1360,7 @@ impl Script {
         let name = Identifier::new("main").unwrap();
         let native = None; // Script entries cannot be native
         let main: Arc<Function> = Arc::new(Function {
+            index: FunctionDefinitionIndex(0),
             code,
             parameters,
             return_,
@@ -1401,6 +1403,7 @@ enum Scope {
 // A runtime function
 #[derive(Debug)]
 pub(crate) struct Function {
+    index: FunctionDefinitionIndex,
     code: Vec<Bytecode>,
     parameters: Signature,
     return_: Signature,
@@ -1412,7 +1415,11 @@ pub(crate) struct Function {
 }
 
 impl Function {
-    fn new(def: &FunctionDefinition, module: &CompiledModule) -> Self {
+    fn new(
+        index: FunctionDefinitionIndex,
+        def: &FunctionDefinition,
+        module: &CompiledModule,
+    ) -> Self {
         let handle = module.function_handle_at(def.function);
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();
@@ -1445,6 +1452,7 @@ impl Function {
         let return_ = module.signature_at(handle.return_).clone();
         let type_parameters = handle.type_parameters.clone();
         Self {
+            index,
             code,
             parameters,
             return_,
@@ -1461,6 +1469,10 @@ impl Function {
             Scope::Module(module_id) => Some(module_id),
             Scope::Script(_) => None,
         }
+    }
+
+    pub(crate) fn index(&self) -> FunctionDefinitionIndex {
+        self.index
     }
 
     pub(crate) fn get_resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {

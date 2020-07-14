@@ -11,7 +11,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, Priv
 use libra_json_rpc_client::{
     views::{
         AccountStateWithProofView, BlockMetadata, BytesView, EventView, StateProofView,
-        TransactionDataView, TransactionView,
+        TransactionDataView, TransactionView, VMStatusView,
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
@@ -30,7 +30,7 @@ use libra_types::{
     proof::{SparseMerkleProof, TransactionAccumulatorProof, TransactionInfoWithProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, TransactionInfo, TransactionPayload},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use libradb::test_helper::arb_blocks_to_commit;
 use move_core_types::language_storage::TypeTag;
@@ -86,7 +86,7 @@ fn mock_db() -> MockLibraDB {
         all_txns.extend(txns_to_commit.iter().map(|txn_to_commit| {
             (
                 txn_to_commit.transaction().clone(),
-                txn_to_commit.major_status(),
+                txn_to_commit.status().clone(),
             )
         }));
     }
@@ -224,12 +224,9 @@ fn test_transaction_submission() {
     if let Err(e) = response {
         if let Some(error) = e.downcast_ref::<JsonRpcError>() {
             assert_eq!(error.code, ServerCode::VmValidationError as i16);
-            let vm_status: VMStatus =
+            let status_code: StatusCode =
                 serde_json::from_value(error.data.as_ref().unwrap().clone()).unwrap();
-            assert_eq!(
-                vm_status.status_code(),
-                StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
-            );
+            assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
         } else {
             panic!("unexpected error format");
         }
@@ -400,7 +397,7 @@ fn test_get_transactions() {
                 .collect::<Vec<_>>();
 
             assert_eq!(expected_events.len(), view.events.len());
-            assert_eq!(status, &view.vm_status);
+            assert_eq!(VMStatusView::from(status), view.vm_status);
 
             for (i, event_view) in view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
@@ -484,8 +481,8 @@ fn test_get_account_transaction() {
 
             assert_eq!(tx_view.events.len(), expected_events.len());
 
-            // check VM major status
-            assert_eq!(&tx_view.vm_status, expected_status);
+            // check VM status
+            assert_eq!(tx_view.vm_status, VMStatusView::from(expected_status));
 
             for (i, event_view) in tx_view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");

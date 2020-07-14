@@ -10,9 +10,10 @@ main() {
     return;
 }
 
+// TODO(status_migration) Test fails if OUT_OF_GAS is last of the 3
+// check: OUT_OF_GAS
 // check: gas_used
 // check: 10000
-// check: OUT_OF_GAS
 
 
 //! new-transaction

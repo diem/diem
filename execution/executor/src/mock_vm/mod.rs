@@ -20,7 +20,7 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    vm_status::{AbortLocation, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_vm::VMExecutor;
@@ -43,12 +43,11 @@ enum MockVMTransaction {
 }
 
 pub static KEEP_STATUS: Lazy<TransactionStatus> =
-    Lazy::new(|| TransactionStatus::Keep(VMStatus::Executed));
+    Lazy::new(|| TransactionStatus::Keep(KeptVMStatus::Executed));
 
 // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
-// TODO(tmn) provide a real abort location
 pub static DISCARD_STATUS: Lazy<TransactionStatus> =
-    Lazy::new(|| TransactionStatus::Discard(VMStatus::MoveAbort(AbortLocation::Script, 10)));
+    Lazy::new(|| TransactionStatus::Discard(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE));
 
 pub struct MockVM;
 
@@ -141,7 +140,7 @@ impl VMExecutor for MockVM {
                         write_set,
                         events,
                         0,
-                        TransactionStatus::Keep(VMStatus::Executed),
+                        TransactionStatus::Keep(KeptVMStatus::Executed),
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {

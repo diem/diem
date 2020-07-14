@@ -8,8 +8,12 @@ use thiserror::Error;
 /// Defines all errors in this crate.
 #[derive(Clone, Debug, Error)]
 pub enum ErrorKind {
-    #[error("an error occurred when executing the transaction, txn status {:?}", .0.status())]
-    VMExecutionFailure(TransactionOutput),
+    #[error(
+        "an error occurred when executing the transaction, vm status {:?}, txn status {:?}",
+        .0,
+        .1.status(),
+    )]
+    VMExecutionFailure(VMStatus, TransactionOutput),
     #[error("the transaction was discarded: {0:?}")]
     DiscardedTransaction(TransactionOutput),
     #[error("the checker has failed to match the directives against the output")]

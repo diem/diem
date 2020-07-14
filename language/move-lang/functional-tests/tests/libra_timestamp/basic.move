@@ -7,6 +7,8 @@ script {
         LibraTimestamp::initialize(account);
     }
 }
+// TODO(status_migration) remove duplicate check
+// check: ABORTED
 // check: ABORTED
 // check: 1
 

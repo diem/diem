@@ -6,7 +6,7 @@ use crate::{
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
 };
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
 use move_vm_types::gas_schedule::zero_cost_schedule;
@@ -41,8 +41,9 @@ fn failed_transaction_cleanup_test() {
     assert_eq!(out1.gas_used(), 90_000);
     assert!(!out1.status().is_discarded());
     assert_eq!(
-        out1.status().vm_status().status_code(),
-        StatusCode::TYPE_MISMATCH
+        out1.status().status(),
+        // StatusCode::TYPE_MISMATCH
+        Ok(KeptVMStatus::VerificationError)
     );
 
     // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
@@ -57,10 +58,7 @@ fn failed_transaction_cleanup_test() {
     assert!(out2.write_set().is_empty());
     assert!(out2.gas_used() == 0);
     assert!(out2.status().is_discarded());
-    assert_eq!(
-        out2.status().vm_status().status_code(),
-        StatusCode::OUT_OF_BOUNDS_INDEX
-    );
+    assert_eq!(out2.status().status(), Err(StatusCode::OUT_OF_BOUNDS_INDEX));
 }
 
 #[test]
@@ -81,7 +79,7 @@ fn non_existent_sender() {
 
     let output = &executor.execute_transaction(txn);
     assert_eq!(
-        output.status().vm_status().status_code(),
-        StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST,
+        output.status().status(),
+        Err(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
     );
 }
