@@ -19,6 +19,7 @@ enum Language {
     Python3,
     Rust,
     Cpp,
+    Java,
 }
 }
 
@@ -45,6 +46,7 @@ struct Options {
 
     /// Module name for the transaction builders installed in the `target_source_dir`.
     /// Rust crates may contain a version number, e.g. "test:1.2.0".
+    /// In Java, this is expected to be a class name, e.g. "com.test.Test" to create `com/test/Test.java`.
     #[structopt(long)]
     module_name: Option<String>,
 
@@ -79,6 +81,16 @@ fn main() {
                 Language::Cpp => {
                     buildgen::cpp::output(&mut out, &abis, options.module_name.as_deref()).unwrap()
                 }
+                Language::Java => {
+                    let module_name = options.module_name.as_deref().unwrap_or("Helpers");
+                    let parts = module_name.rsplitn(2, '.').collect::<Vec<_>>();
+                    let (package_name, class_name) = if parts.len() > 1 {
+                        (Some(parts[1]), parts[0])
+                    } else {
+                        (None, parts[0])
+                    };
+                    buildgen::java::output(&mut out, &abis, package_name, class_name).unwrap()
+                }
             }
             return;
         }
@@ -95,6 +107,7 @@ fn main() {
                 )),
                 Language::Rust => Box::new(serdegen::rust::Installer::new(install_dir.clone())),
                 Language::Cpp => Box::new(serdegen::cpp::Installer::new(install_dir.clone())),
+                Language::Java => Box::new(serdegen::java::Installer::new(install_dir.clone())),
             };
 
         match options.language {
@@ -115,6 +128,7 @@ fn main() {
                     format!("libra-types:{}", options.libra_version_number)
                 }
             }
+            Language::Java => "org.libra.types".to_string(),
             _ => "libra_types".to_string(),
         };
         installer.install_module(&name, &registry).unwrap();
@@ -133,6 +147,7 @@ fn main() {
                 options.libra_version_number,
             )),
             Language::Cpp => Box::new(buildgen::cpp::Installer::new(install_dir)),
+            Language::Java => Box::new(buildgen::java::Installer::new(install_dir)),
         };
 
     if let Some(name) = options.module_name {

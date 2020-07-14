@@ -73,6 +73,16 @@ target/debug/generate-transaction-builders \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 
+* To install Java source packages `com.facebook.serde`, `com.facebook.lcs`, `org.libra.types`, and a class `org.libra.stdlib.Stdlib` into a target directory `$DEST`, run:
+```bash
+target/debug/generate-transaction-builders \
+    --language java \
+    --module-name org.libra.stdlib.Stdlib \
+    --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
+    --target-source-dir "$DEST" \
+    "language/stdlib/compiled/transaction_scripts/abi"
+```
+
 More command line options are available with `target/debug/generate-transaction-builders --help`.
 
 
