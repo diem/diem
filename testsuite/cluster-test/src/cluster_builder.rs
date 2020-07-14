@@ -12,10 +12,7 @@ use crate::{
     },
 };
 use anyhow::{format_err, Result};
-use futures::{
-    future::{join, try_join_all},
-    try_join,
-};
+use futures::{future::try_join_all, try_join};
 use libra_logger::info;
 use structopt::StructOpt;
 
@@ -97,7 +94,7 @@ impl ClusterBuilder {
         aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
             .await
             .map_err(|err| format_err!("{} scale up failed: {}", asg_name, err))?;
-        let (validators, fullnodes) = self
+        let ((validators, lsrs, vaults), fullnodes) = self
             .spawn_validator_and_fullnode_set(
                 params.num_validators,
                 params.fullnodes_per_validator,
@@ -109,7 +106,7 @@ impl ClusterBuilder {
             )
             .await
             .map_err(|e| format_err!("Failed to spawn_validator_and_fullnode_set: {}", e))?;
-        let cluster = Cluster::new(validators, fullnodes);
+        let cluster = Cluster::new(validators, fullnodes, lsrs, vaults);
 
         info!(
             "Deployed {} validators and {} fns",
@@ -129,8 +126,9 @@ impl ClusterBuilder {
         image_tag: &str,
         config_overrides: &[String],
         delete_data: bool,
-    ) -> Result<Vec<Instance>> {
+    ) -> Result<(Vec<Instance>, Vec<Instance>, Vec<Instance>)> {
         let mut lsrs = vec![];
+        let mut vaults = vec![];
         if enable_lsr {
             if lsr_backend == "vault" {
                 let mut vault_instances: Vec<_> = (0..num_validators)
@@ -163,7 +161,7 @@ impl ClusterBuilder {
                     )
                 })
                 .collect();
-            lsrs.append(&mut lsr_instances);
+            vaults.append(&mut lsr_instances);
         }
         let validators = (0..num_validators).map(|i| {
             let validator_config = ValidatorConfig {
@@ -181,9 +179,10 @@ impl ClusterBuilder {
                 delete_data,
             )
         });
-        let (lsrs, validators) = join(try_join_all(lsrs), try_join_all(validators)).await;
-        lsrs?;
-        validators
+        let lsrs = try_join_all(lsrs).await?;
+        let vaults = try_join_all(vaults).await?;
+        let validators = try_join_all(validators).await?;
+        Ok((validators, lsrs, vaults))
     }
 
     /// Creates a set of fullnodes with the given `image_tag`
@@ -227,7 +226,7 @@ impl ClusterBuilder {
         image_tag: &str,
         config_overrides: &[String],
         delete_data: bool,
-    ) -> Result<(Vec<Instance>, Vec<Instance>)> {
+    ) -> Result<((Vec<Instance>, Vec<Instance>, Vec<Instance>), Vec<Instance>)> {
         try_join!(
             self.spawn_validator_set(
                 num_validators,
