@@ -36,4 +36,4 @@ script {
     }
 }
 // check: ABORTED
-// check: 5
+// check: 0

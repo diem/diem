@@ -259,7 +259,7 @@ module LibraSystem {
     spec fun initialize_validator_set {
         // TODO (dd): In a hurry to get this landed.
         pragma aborts_if_is_partial = true;
-        aborts_if !Roles::spec_has_on_chain_config_privilege_addr(Signer::spec_address_of(config_account));
+        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(config_account));
         aborts_if Signer::spec_address_of(config_account)
             != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if LibraConfig::spec_is_published<LibraSystem>();
