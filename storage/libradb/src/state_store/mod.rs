@@ -28,6 +28,7 @@ use libra_types::{
 use schemadb::{SchemaBatch, DB};
 use std::{collections::HashMap, sync::Arc};
 
+#[derive(Debug)]
 pub(crate) struct StateStore {
     db: Arc<DB>,
 }

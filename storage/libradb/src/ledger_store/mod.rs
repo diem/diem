@@ -34,6 +34,7 @@ use schemadb::{ReadOptions, SchemaIterator, DB};
 use std::{ops::Deref, sync::Arc};
 use storage_interface::{StartupInfo, TreeState};
 
+#[derive(Debug)]
 pub(crate) struct LedgerStore {
     db: Arc<DB>,
 

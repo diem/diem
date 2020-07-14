@@ -31,6 +31,7 @@ use libra_types::{
 use schemadb::{schema::ValueCodec, ReadOptions, DB};
 use std::{convert::TryFrom, sync::Arc};
 
+#[derive(Debug)]
 pub(crate) struct EventStore {
     db: Arc<DB>,
 }

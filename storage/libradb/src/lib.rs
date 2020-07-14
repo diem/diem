@@ -121,6 +121,7 @@ fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<(
 
 /// This holds a handle to the underlying DB responsible for physical storage and provides APIs for
 /// access to the core Libra data structures.
+#[derive(Debug)]
 pub struct LibraDB {
     db: Arc<DB>,
     ledger_store: Arc<LedgerStore>,
