@@ -4,6 +4,7 @@ address 0x1 {
 module LibraAccount {
     use 0x1::AccountFreezing;
     use 0x1::CoreAddresses;
+    use 0x1::ChainId;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
@@ -133,6 +134,7 @@ module LibraAccount {
     const EPROLOGUE_ACCOUNT_DNE: u64 = 4;
     const EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
     const EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
+    const EPROLOGUE_BAD_CHAIN_ID: u64 = 7;
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -777,8 +779,12 @@ module LibraAccount {
         txn_gas_price: u64,
         txn_max_gas_units: u64,
         txn_expiration_time: u64,
+        chain_id: u8
     ) acquires LibraAccount, Balance {
         let transaction_sender = Signer::address_of(sender);
+
+        // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
+        assert(ChainId::get() == chain_id, EPROLOGUE_BAD_CHAIN_ID);
 
         // Verify that the transaction sender's account exists
         assert(exists_at(transaction_sender), EPROLOGUE_ACCOUNT_DNE);

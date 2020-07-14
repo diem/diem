@@ -1713,7 +1713,7 @@ It verifies:
 - That the sequence number matches the transaction's sequence key
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue">prologue</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64)
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue">prologue</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8)
 </code></pre>
 
 
@@ -1729,8 +1729,12 @@ It verifies:
     txn_gas_price: u64,
     txn_max_gas_units: u64,
     txn_expiration_time: u64,
+    chain_id: u8
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
+
+    // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
+    <b>assert</b>(<a href="ChainId.md#0x1_ChainId_get">ChainId::get</a>() == chain_id, EPROLOGUE_BAD_CHAIN_ID);
 
     // Verify that the transaction sender's account exists
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), EPROLOGUE_ACCOUNT_DNE);

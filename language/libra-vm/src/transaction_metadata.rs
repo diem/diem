@@ -4,6 +4,7 @@
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
 use libra_types::{
     account_address::AccountAddress,
+    chain_id::ChainId,
     transaction::{authenticator::AuthenticationKeyPreimage, SignedTransaction},
 };
 use move_core_types::gas_schedule::{
@@ -19,6 +20,7 @@ pub struct TransactionMetadata {
     pub gas_unit_price: GasPrice<GasCarrier>,
     pub transaction_size: AbstractMemorySize<GasCarrier>,
     pub expiration_time: Duration,
+    pub chain_id: ChainId,
 }
 
 impl TransactionMetadata {
@@ -34,6 +36,7 @@ impl TransactionMetadata {
             gas_unit_price: GasPrice::new(txn.gas_unit_price()),
             transaction_size: AbstractMemorySize::new(txn.raw_txn_bytes_len() as u64),
             expiration_time: txn.expiration_time(),
+            chain_id: txn.chain_id(),
         }
     }
 
@@ -64,6 +67,10 @@ impl TransactionMetadata {
     pub fn expiration_time(&self) -> u64 {
         self.expiration_time.as_secs()
     }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.chain_id
+    }
 }
 
 impl Default for TransactionMetadata {
@@ -79,6 +86,7 @@ impl Default for TransactionMetadata {
             gas_unit_price: GasPrice::new(0),
             transaction_size: AbstractMemorySize::new(0),
             expiration_time: Duration::new(0, 0),
+            chain_id: ChainId::test(),
         }
     }
 }

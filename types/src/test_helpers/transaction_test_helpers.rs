@@ -85,6 +85,33 @@ pub fn get_test_unchecked_transaction(
     gas_currency_code: String,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
+    get_test_unchecked_transaction_(
+        sender,
+        sequence_number,
+        private_key,
+        public_key,
+        script,
+        expiration_time,
+        gas_unit_price,
+        gas_currency_code,
+        max_gas_amount,
+        ChainId::test(),
+    )
+}
+
+// Test helper for creating transactions for which the signature hasn't been checked.
+fn get_test_unchecked_transaction_(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
+    expiration_time: u64,
+    gas_unit_price: u64,
+    gas_currency_code: String,
+    max_gas_amount: Option<u64>,
+    chain_id: ChainId,
+) -> SignedTransaction {
     let raw_txn = RawTransaction::new_script(
         sender,
         sequence_number,
@@ -93,7 +120,7 @@ pub fn get_test_unchecked_transaction(
         gas_unit_price,
         gas_currency_code,
         Duration::from_secs(expiration_time),
-        ChainId::test(),
+        chain_id,
     );
 
     let signature = private_key.sign(&raw_txn);
@@ -150,6 +177,32 @@ pub fn get_test_unchecked_txn(
         TEST_GAS_PRICE,
         LBR_NAME.to_owned(),
         None,
+    )
+}
+
+pub fn get_test_txn_with_chain_id(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    chain_id: ChainId,
+) -> SignedTransaction {
+    let expiration_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        + 10; // 10 seconds from now.
+    get_test_unchecked_transaction_(
+        sender,
+        sequence_number,
+        private_key,
+        public_key,
+        None,
+        expiration_time,
+        TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
+        None,
+        chain_id,
     )
 }
 

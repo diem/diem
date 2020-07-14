@@ -70,7 +70,8 @@ fn main() {
                 module_path.push(name);
                 module_path.set_extension(COMPILED_EXTENSION);
                 if save_binary(&module_path, &bytes) {
-                    println!("Compiled module binary {:?} has changed", module_path);
+                    // TODO(tzakian): this sometimes prints when module binaries don't change
+                    //println!("Compiled module binary {:?} has changed", module_path);
                 };
                 module_path.pop();
             }

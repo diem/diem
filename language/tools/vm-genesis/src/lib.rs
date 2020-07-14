@@ -21,6 +21,7 @@ use libra_network_address::{
 };
 use libra_types::{
     account_address, account_config,
+    chain_id::ChainId,
     contract_event::ContractEvent,
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{
@@ -67,6 +68,7 @@ pub fn encode_genesis_transaction(
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
     vm_publishing_option: Option<VMPublishingOption>,
+    chain_id: ChainId,
 ) -> Transaction {
     Transaction::WaypointWriteSet(
         encode_genesis_change_set(
@@ -76,6 +78,7 @@ pub fn encode_genesis_transaction(
             stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
             vm_publishing_option
                 .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::whitelist())),
+            chain_id,
         )
         .0,
     )
@@ -97,6 +100,7 @@ pub fn encode_genesis_change_set(
     operator_registrations: &[OperatorRegistration],
     stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
+    chain_id: ChainId,
 ) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>) {
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
@@ -116,8 +120,14 @@ pub fn encode_genesis_change_set(
         type_params: vec![],
     });
 
+    create_and_initialize_main_accounts(
+        &mut session,
+        &public_key,
+        vm_publishing_option,
+        &lbr_ty,
+        chain_id,
+    );
     // generate the genesis WriteSet
-    create_and_initialize_main_accounts(&mut session, &public_key, vm_publishing_option, &lbr_ty);
     create_and_initialize_owners_operators(
         &mut session,
         &operator_assignments,
@@ -210,6 +220,7 @@ fn create_and_initialize_main_accounts(
     public_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
     lbr_ty: &TypeTag,
+    chain_id: ChainId,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
 
@@ -233,6 +244,7 @@ fn create_and_initialize_main_accounts(
             Value::vector_u8(option_bytes),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
+            Value::u8(chain_id.id()),
         ],
     );
 
@@ -502,6 +514,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
         &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::open(),
+        ChainId::test(),
     )
     .0
 }
@@ -517,6 +530,7 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
         &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::open(),
+        ChainId::test(),
     )
     .1
 }

@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
 </code></pre>
 
 
@@ -32,8 +32,11 @@
     publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
+    chain_id: u8,
 ) {
     <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
+
+    <a href="ChainId.md#0x1_ChainId_initialize">ChainId::initialize</a>(lr_account, chain_id);
 
     <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(lr_account);
     <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">Roles::grant_treasury_compliance_role</a>(tc_account, lr_account);
@@ -101,15 +104,9 @@
         native_schedule,
     );
 
-    <b>let</b> config_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(lr_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&config_rotate_key_cap, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(config_rotate_key_cap);
-
     <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
-
-    // Restore privileges
 
     // Mark that genesis has finished. This must appear <b>as</b> the last call.
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_set_time_has_started">LibraTimestamp::set_time_has_started</a>(lr_account);
