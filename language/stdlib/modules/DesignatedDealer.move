@@ -54,8 +54,9 @@ module DesignatedDealer {
     /// The maximum number of tiers allowed
     const MAX_NUM_TIERS: u64 = 4;
 
-    /// Default amounts for tiers when a DD is created
-    const TIER_0_DEFAULT: u64 = 500000;
+    /// Default FIAT amounts for tiers when a DD is created
+    /// These get scaled by coin specific scaling factor on tier setting
+    const TIER_0_DEFAULT: u64 = 500000; // ex $500,000
     const TIER_1_DEFAULT: u64 = 5000000;
     const TIER_2_DEFAULT: u64 = 50000000;
     const TIER_3_DEFAULT: u64 = 500000000;
@@ -100,10 +101,12 @@ module DesignatedDealer {
             window_inflow: 0,
             tiers: Vector::empty(),
         });
-        add_tier<CoinType>(tc_account, dd_addr, TIER_0_DEFAULT);
-        add_tier<CoinType>(tc_account, dd_addr, TIER_1_DEFAULT);
-        add_tier<CoinType>(tc_account, dd_addr, TIER_2_DEFAULT);
-        add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT);
+        // Add tier amounts in base_units of CoinType
+        let coin_scaling_factor = Libra::scaling_factor<CoinType>();
+        add_tier<CoinType>(tc_account, dd_addr, TIER_0_DEFAULT * coin_scaling_factor);
+        add_tier<CoinType>(tc_account, dd_addr, TIER_1_DEFAULT * coin_scaling_factor);
+        add_tier<CoinType>(tc_account, dd_addr, TIER_2_DEFAULT * coin_scaling_factor);
+        add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
     }
 
     public fun add_tier<CoinType>(

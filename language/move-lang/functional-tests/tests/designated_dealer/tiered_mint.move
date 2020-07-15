@@ -1,7 +1,7 @@
 //! account: ricky, 0
 
 // --------------------------------------------------------------------
-// BLESSED treasury compliant account initiate first tier
+// BLESSED treasury compliance acccount creates DD with tiers of one coin type
 
 //! new-transaction
 //! sender: blessed
@@ -34,7 +34,7 @@ script {
     fun main(tc_account: &signer) {
         let designated_dealer_address = 0xDEADBEEF;
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, designated_dealer_address, 99, 0
+            tc_account, designated_dealer_address, 99*1000000, 0
         );
     }
 }
@@ -53,7 +53,59 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, 0xDEADBEEF, 5000001, 1
+            tc_account, 0xDEADBEEF, 5000001*1000000, 1
+        );
+    }
+}
+
+// check: ABORTED
+// check: 6
+
+// --------------------------------------------------------------------
+// Mint initiated and is below 2nd tier upperbound
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
+    fun main(tc_account: &signer) {
+        LibraAccount::tiered_mint<Coin1>(
+            tc_account, 0xDEADBEEF, 5000001*1000000, 2
+        );
+    }
+}
+
+// check: EXECUTED
+
+// --------------------------------------------------------------------
+// Mint initiated and is below 3rd tier upperbound
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
+    fun main(tc_account: &signer) {
+        LibraAccount::tiered_mint<Coin1>(
+            tc_account, 0xDEADBEEF, 50000001*1000000, 3
+        );
+    }
+}
+
+// check: EXECUTED
+
+// --------------------------------------------------------------------
+// Too large
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
+    fun main(tc_account: &signer) {
+        LibraAccount::tiered_mint<Coin1>(
+            tc_account, 0xDEADBEEF, 500000001*1000000, 3
         );
     }
 }
