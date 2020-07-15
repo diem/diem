@@ -38,7 +38,7 @@ use libra_types::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
         parse_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
-        TransactionArgument, TransactionPayload, Version,
+        TransactionArgument, TransactionPayload, Version, WriteSetPayload,
     },
     vm_status::StatusCode,
     waypoint::Waypoint,
@@ -589,9 +589,9 @@ impl ClientProxy {
 
         match self.libra_root_account {
             Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::WriteSet(
+                TransactionPayload::WriteSet(WriteSetPayload::Direct(
                     transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
-                ),
+                )),
                 is_blocking,
             ),
             None => unimplemented!(),

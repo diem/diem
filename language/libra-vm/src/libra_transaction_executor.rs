@@ -10,7 +10,7 @@ use crate::{
     },
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
-    VMExecutor,
+    txn_effects_to_writeset_and_events, VMExecutor,
 };
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
@@ -20,7 +20,7 @@ use libra_types::{
     block_metadata::BlockMetadata,
     transaction::{
         ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionArgument,
-        TransactionOutput, TransactionPayload, TransactionStatus,
+        TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
     },
     vm_status::{StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
@@ -247,9 +247,7 @@ impl LibraVM {
                 m,
                 account_currency_symbol.as_ident_str(),
             ),
-            TransactionPayload::WriteSet(_) => {
-                return discard_error_output(VMStatus::Error(StatusCode::UNREACHABLE))
-            }
+            _ => return discard_error_output(VMStatus::Error(StatusCode::UNREACHABLE)),
         };
 
         let gas_usage = txn_data
@@ -358,15 +356,6 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         txn: SignatureCheckedTransaction,
     ) -> Result<TransactionOutput, VMStatus> {
-        let change_set = if let TransactionPayload::WriteSet(change_set) = txn.payload() {
-            change_set
-        } else {
-            error!("[libra_vm] UNREACHABLE");
-            return Ok(discard_error_output(VMStatus::Error(
-                StatusCode::UNREACHABLE,
-            )));
-        };
-
         let txn_data = TransactionMetadata::new(&txn);
 
         let mut session = self.0.new_session(remote_cache);
@@ -392,9 +381,43 @@ impl LibraVM {
             )
             .map_err(|e| e.into_vm_status())?;
 
+        let change_set = match txn.payload() {
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(change_set)) => change_set.clone(),
+            TransactionPayload::WriteSet(WriteSetPayload::Script {
+                script,
+                execute_as: signer,
+            }) => {
+                let mut tmp_session = self.0.new_session(remote_cache);
+                if let Ok(effect) = tmp_session
+                    .execute_script(
+                        script.code().to_vec(),
+                        script.ty_args().to_vec(),
+                        convert_txn_args(script.args()),
+                        *signer,
+                        &mut cost_strategy,
+                    )
+                    .and_then(|_| tmp_session.finish())
+                    .map_err(|e| e.into_vm_status())
+                {
+                    let (cs, events) = txn_effects_to_writeset_and_events(effect)?;
+                    ChangeSet::new(cs, events)
+                } else {
+                    return Ok(discard_error_output(VMStatus::Error(
+                        StatusCode::INVALID_WRITE_SET,
+                    )));
+                }
+            }
+            _ => {
+                error!("[libra_vm] UNREACHABLE");
+                return Ok(discard_error_output(VMStatus::Error(
+                    StatusCode::UNREACHABLE,
+                )));
+            }
+        };
+
         // Emit the reconfiguration event
         self.0
-            .run_writeset_epilogue(&mut session, change_set, &txn_data)?;
+            .run_writeset_epilogue(&mut session, &change_set, &txn_data)?;
 
         if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
             return Ok(discard_error_output(e));

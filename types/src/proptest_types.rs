@@ -20,7 +20,7 @@ use crate::{
     transaction::{
         ChangeSet, Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
-        TransactionStatus, TransactionToCommit, Version,
+        TransactionStatus, TransactionToCommit, Version, WriteSetPayload,
     },
     vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
@@ -308,10 +308,16 @@ fn new_raw_transaction(
             Duration::from_secs(expiration_time_secs),
             chain_id,
         ),
-        TransactionPayload::WriteSet(write_set) => {
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(write_set)) => {
             // It's a bit unfortunate that max_gas_amount etc is generated but
             // not used, but it isn't a huge deal.
             RawTransaction::new_change_set(sender, sequence_number, write_set, chain_id)
+        }
+        TransactionPayload::WriteSet(WriteSetPayload::Script {
+            execute_as: signer,
+            script,
+        }) => {
+            RawTransaction::new_writeset_script(sender, sequence_number, script, signer, chain_id)
         }
     }
 }
@@ -471,13 +477,16 @@ impl TransactionPayload {
     }
 
     pub fn write_set_strategy() -> impl Strategy<Value = Self> {
-        any::<WriteSet>().prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
+        any::<WriteSet>().prop_map(|ws| {
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws, vec![])))
+        })
     }
 
     /// Similar to `write_set_strategy` except generates a valid write set for the genesis block.
     pub fn genesis_strategy() -> impl Strategy<Value = Self> {
-        WriteSet::genesis_strategy()
-            .prop_map(|ws| TransactionPayload::WriteSet(ChangeSet::new(ws, vec![])))
+        WriteSet::genesis_strategy().prop_map(|ws| {
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(ws, vec![])))
+        })
     }
 }
 

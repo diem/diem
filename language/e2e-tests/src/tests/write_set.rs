@@ -14,6 +14,7 @@ use libra_types::{
     on_chain_config::new_epoch_event_key,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, TransactionPayload, TransactionStatus,
+        WriteSetPayload,
     },
     vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSetMut},
@@ -38,7 +39,7 @@ fn invalid_write_set_sender() {
 
     let writeset_txn = sender_account.account().create_signed_txn_impl(
         *sender_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
         0,
         100_000,
         1,
@@ -66,7 +67,10 @@ fn verify_and_execute_writeset() {
 
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set.clone(), vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+            write_set.clone(),
+            vec![],
+        ))),
         1,
         100_000,
         0,
@@ -113,7 +117,7 @@ fn verify_and_execute_writeset() {
     // (3) Cannot apply the writeset with future sequence number.
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
         10,
         100_000,
         1,
@@ -144,7 +148,10 @@ fn bad_writesets() {
     // rejected.
     let writeset_txn = new_account_data.account().create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set.clone(), vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+            write_set.clone(),
+            vec![],
+        ))),
         1,
         100_000,
         1,
@@ -161,7 +168,10 @@ fn bad_writesets() {
     let event = ContractEvent::new(new_epoch_event_key(), 0, lbr_type_tag(), vec![]);
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![event])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+            write_set,
+            vec![event],
+        ))),
         1,
         100_000,
         1,
@@ -191,7 +201,7 @@ fn bad_writesets() {
         .unwrap();
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
         1,
         100_000,
         0,
@@ -221,7 +231,7 @@ fn bad_writesets() {
         .unwrap();
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
         1,
         100_000,
         0,
@@ -259,7 +269,7 @@ fn transfer_and_execute_writeset() {
 
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
-        TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
+        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
         1, // sequence number
         100_000,
         0, // gas unit price

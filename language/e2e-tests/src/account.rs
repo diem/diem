@@ -17,7 +17,7 @@ use libra_types::{
     event::EventHandle,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Module, RawTransaction, Script,
-        SignedTransaction, TransactionArgument, TransactionPayload,
+        SignedTransaction, TransactionArgument, TransactionPayload, WriteSetPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -209,9 +209,19 @@ impl Account {
         gas_currency_code: String,
     ) -> RawTransaction {
         match payload {
-            TransactionPayload::WriteSet(writeset) => {
+            TransactionPayload::WriteSet(WriteSetPayload::Direct(writeset)) => {
                 RawTransaction::new_change_set(address, sequence_number, writeset, ChainId::test())
             }
+            TransactionPayload::WriteSet(WriteSetPayload::Script {
+                execute_as: signer,
+                script,
+            }) => RawTransaction::new_writeset_script(
+                address,
+                sequence_number,
+                script,
+                signer,
+                ChainId::test(),
+            ),
             TransactionPayload::Module(module) => RawTransaction::new_module(
                 address,
                 sequence_number,
@@ -430,7 +440,7 @@ impl TransactionBuilder {
     }
 
     pub fn write_set(mut self, w: ChangeSet) -> Self {
-        self.program = Some(TransactionPayload::WriteSet(w));
+        self.program = Some(TransactionPayload::WriteSet(WriteSetPayload::Direct(w)));
         self
     }
 
