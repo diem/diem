@@ -18,7 +18,7 @@
 
 use crate::{
     gas_schedule::NativeCostIndex,
-    loaded_data::{runtime_types::Type, types::FatType},
+    loaded_data::runtime_types::{Type, TypeEnv},
     values::Value,
 };
 use move_core_types::gas_schedule::{
@@ -33,7 +33,7 @@ use vm::errors::PartialVMResult;
 /// Normally a native function will only need the `CostTable`.
 /// The set of native functions and their linkage is entirely inside the MoveVM
 /// runtime.
-pub trait NativeContext {
+pub trait NativeContext: TypeEnv {
     /// Prints stack trace.
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()>;
     /// Gets cost table ref.
@@ -46,8 +46,6 @@ pub trait NativeContext {
         ty: Type,
         val: Value,
     ) -> PartialVMResult<()>;
-    /// Converts types to fet types.
-    fn convert_to_fat_types(&self, types: Vec<Type>) -> PartialVMResult<Vec<FatType>>;
     /// Whether a type is a resource or not.
     fn is_resource(&self, ty: &Type) -> PartialVMResult<bool>;
 }

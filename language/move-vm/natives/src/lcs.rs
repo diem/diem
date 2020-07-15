@@ -14,7 +14,7 @@ use vm::errors::PartialVMResult;
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
     context: &mut impl NativeContext,
-    ty_args: Vec<Type>,
+    mut ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
@@ -22,10 +22,10 @@ pub fn native_to_bytes(
 
     let ref_to_val = pop_arg!(args, Reference);
 
-    let mut ty_args = context.convert_to_fat_types(ty_args)?;
     let arg_type = ty_args.pop().unwrap();
     // delegate to the LCS serialization for `Value`
-    let serialized_value = match ref_to_val.read_ref()?.simple_serialize_fat(&arg_type) {
+    let layout = context.type_to_type_layout(&arg_type)?;
+    let serialized_value = match ref_to_val.read_ref()?.simple_serialize(&layout) {
         None => {
             let cost = native_gas(context.cost_table(), NativeCostIndex::LCS_TO_BYTES, 1);
             return Ok(NativeResult::err(cost, NFE_LCS_SERIALIZATION_FAILURE));
