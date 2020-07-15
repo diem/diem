@@ -440,9 +440,9 @@ impl Interpreter {
         if func.local_count() > 0 {
             let mut tys = vec![];
             for local in &func.locals().0 {
-                tys.push(resolver.make_fat_type(local, ty_args)?);
+                tys.push(resolver.make_type(local, ty_args)?);
             }
-            values::debug::print_locals(buf, &tys, &frame.locals)?;
+            values::debug::print_locals(buf, resolver, &tys, &frame.locals)?;
             debug_writeln!(buf)?;
         } else {
             debug_writeln!(buf, "            (none)")?;

@@ -16,7 +16,7 @@ use vm::errors::PartialVMResult;
 #[allow(unused_variables)]
 pub fn native_print(
     context: &mut impl NativeContext,
-    ty_args: Vec<Type>,
+    mut ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
 ) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
@@ -25,12 +25,11 @@ pub fn native_print(
     // No-op if the feature flag is not present.
     #[cfg(feature = "debug_module")]
     {
-        let mut ty_args = context.convert_to_fat_types(ty_args)?;
         let ty = ty_args.pop().unwrap();
         let r = pop_arg!(args, Reference);
 
         let mut buf = String::new();
-        print_reference(&mut buf, &ty, &r)?;
+        print_reference(&mut buf, context, &ty, &r)?;
         println!("[debug] {}", buf);
     }
 

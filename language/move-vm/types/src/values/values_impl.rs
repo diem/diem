@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    loaded_data::runtime_types::TypeEnv,
     loaded_data::types::{FatStructType, FatType},
     natives::function::NativeResult,
 };
-use libra_types::{
-    account_address::AccountAddress,
-    vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
-};
+use libra_types::vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode};
 use move_core_types::{
+    account_address::AccountAddress,
     gas_schedule::{
         words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
         STRUCT_SIZE,
@@ -1813,6 +1812,7 @@ impl VectorRef {
         let c = self.0.container();
         check_elem_layout(context, type_param, c)?;
         if idx >= c.len() {
+            println!("here!!! idx: {}, len: {}", idx, c.len());
             return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
         }
         Ok(NativeResult::ok(
@@ -2266,41 +2266,51 @@ pub mod debug {
     use super::*;
     use std::fmt::Write;
 
-    fn print_value_impl<B: Write>(
+    fn print_value_impl<B: Write, E: TypeEnv>(
         buf: &mut B,
-        ty: &FatType,
+        env: &E,
+        ty: &Type,
         val: &ValueImpl,
     ) -> PartialVMResult<()> {
         match (ty, val) {
-            (FatType::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
-            (FatType::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
-            (FatType::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
-            (FatType::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
-            (FatType::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
+            (Type::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
+            (Type::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
+            (Type::U128, ValueImpl::U128(x)) => debug_write!(buf, "{}u128", x),
+            (Type::Bool, ValueImpl::Bool(x)) => debug_write!(buf, "{}", x),
+            (Type::Address, ValueImpl::Address(x)) => debug_write!(buf, "{}", x),
 
-            (FatType::Vector(elem_ty), ValueImpl::Container(c)) => print_vector(buf, elem_ty, c),
+            (Type::Vector(elem_ty), ValueImpl::Container(c)) => print_vector(buf, env, elem_ty, c),
 
-            (FatType::Struct(struct_ty), ValueImpl::Container(Container::StructC(r)))
-            | (FatType::Struct(struct_ty), ValueImpl::Container(Container::StructR(r))) => {
-                print_struct(buf, struct_ty, &*r.borrow())
+            (Type::Struct(gidx), ValueImpl::Container(Container::StructC(r)))
+            | (Type::Struct(gidx), ValueImpl::Container(Container::StructR(r))) => {
+                print_struct(buf, env, *gidx, &[], &*r.borrow())
             }
 
-            (FatType::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
+            (
+                Type::StructInstantiation(gidx, ty_args),
+                ValueImpl::Container(Container::StructC(r)),
+            )
+            | (
+                Type::StructInstantiation(gidx, ty_args),
+                ValueImpl::Container(Container::StructR(r)),
+            ) => print_struct(buf, env, *gidx, ty_args, &*r.borrow()),
+
+            (Type::MutableReference(val_ty), ValueImpl::ContainerRef(r)) => {
                 debug_write!(buf, "(&mut) ")?;
-                print_container_ref(buf, val_ty, r)
+                print_container_ref(buf, env, val_ty, r)
             }
-            (FatType::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
+            (Type::Reference(val_ty), ValueImpl::ContainerRef(r)) => {
                 debug_write!(buf, "(&) ")?;
-                print_container_ref(buf, val_ty, r)
+                print_container_ref(buf, env, val_ty, r)
             }
 
-            (FatType::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
+            (Type::MutableReference(val_ty), ValueImpl::IndexedRef(r)) => {
                 debug_write!(buf, "(&mut) ")?;
-                print_indexed_ref(buf, val_ty, r)
+                print_indexed_ref(buf, env, val_ty, r)
             }
-            (FatType::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
+            (Type::Reference(val_ty), ValueImpl::IndexedRef(r)) => {
                 debug_write!(buf, "(&) ")?;
-                print_indexed_ref(buf, val_ty, r)
+                print_indexed_ref(buf, env, val_ty, r)
             }
 
             (_, ValueImpl::Invalid) => debug_write!(buf, "(invalid)"),
@@ -2310,9 +2320,10 @@ pub mod debug {
         }
     }
 
-    fn print_vector<B: Write>(
+    fn print_vector<B: Write, E: TypeEnv>(
         buf: &mut B,
-        elem_ty: &FatType,
+        env: &E,
+        elem_ty: &Type,
         v: &Container,
     ) -> PartialVMResult<()> {
         macro_rules! print_vector {
@@ -2332,22 +2343,21 @@ pub mod debug {
         }
 
         match (elem_ty, v) {
-            (FatType::U8, Container::VecU8(v)) => print_vector!(v, "u8"),
-            (FatType::U64, Container::VecU64(v)) => print_vector!(v, "u64"),
-            (FatType::U128, Container::VecU128(v)) => print_vector!(v, "u128"),
-            (FatType::Bool, Container::VecBool(v)) => print_vector!(v, ""),
-            (FatType::Address, Container::VecAddress(v)) => print_vector!(v, ""),
+            (Type::U8, Container::VecU8(v)) => print_vector!(v, "u8"),
+            (Type::U64, Container::VecU64(v)) => print_vector!(v, "u64"),
+            (Type::U128, Container::VecU128(v)) => print_vector!(v, "u128"),
+            (Type::Bool, Container::VecBool(v)) => print_vector!(v, ""),
+            (Type::Address, Container::VecAddress(v)) => print_vector!(v, ""),
 
-            (FatType::Struct(_), Container::StructC(r))
-            | (FatType::Struct(_), Container::StructR(r)) => {
+            (Type::Struct(_), Container::StructC(r)) | (Type::Struct(_), Container::StructR(r)) => {
                 debug_write!(buf, "[")?;
                 let v = r.borrow();
                 let mut it = v.iter();
                 if let Some(x) = it.next() {
-                    print_value_impl(buf, elem_ty, x)?;
+                    print_value_impl(buf, env, elem_ty, x)?;
                     for x in it {
                         debug_write!(buf, ", ")?;
-                        print_value_impl(buf, elem_ty, x)?;
+                        print_value_impl(buf, env, elem_ty, x)?;
                     }
                 }
                 debug_write!(buf, "]")
@@ -2362,45 +2372,59 @@ pub mod debug {
         }
     }
 
-    fn print_struct<B: Write>(
+    fn print_struct<B: Write, E: TypeEnv>(
         buf: &mut B,
-        struct_ty: &FatStructType,
+        env: &E,
+        gidx: usize,
+        ty_args: &[Type],
         fields: &[ValueImpl],
     ) -> PartialVMResult<()> {
-        let layout = &struct_ty.layout;
+        let layout = env.get_struct_field_tys(gidx, ty_args)?;
         if layout.len() != fields.len() {
             return Err(
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
-                    "cannot print container as struct type {:?}, expected {} fields, got {}",
-                    struct_ty,
+                    "cannot print container as struct, expected {} fields, got {}",
                     layout.len(),
                     fields.len()
                 )),
             );
         }
-        debug_write!(buf, "{}::{} {{ ", struct_ty.module, struct_ty.name)?;
+        debug_write!(
+            buf,
+            "{}::{} {{ ",
+            env.get_struct_module(gidx)?,
+            env.get_struct_name(gidx)?
+        )?;
         let mut it = layout.iter().zip(fields.iter());
         if let Some((ty, val)) = it.next() {
-            print_value_impl(buf, ty, val)?;
+            print_value_impl(buf, env, ty, val)?;
             for (ty, val) in it {
                 debug_write!(buf, ", ")?;
-                print_value_impl(buf, ty, val)?;
+                print_value_impl(buf, env, ty, val)?;
             }
         }
         debug_write!(buf, " }}")
     }
 
-    fn print_container_ref<B: Write>(
+    fn print_container_ref<B: Write, E: TypeEnv>(
         buf: &mut B,
-        val_ty: &FatType,
+        env: &E,
+        val_ty: &Type,
         r: &ContainerRef,
     ) -> PartialVMResult<()> {
         match (val_ty, r.container()) {
-            (FatType::Vector(elem_ty), c) => print_vector(buf, elem_ty, c),
-            (FatType::Struct(struct_ty), Container::StructC(r))
-            | (FatType::Struct(struct_ty), Container::StructR(r)) => {
-                print_struct(buf, struct_ty, &*r.borrow())
+            (Type::Vector(elem_ty), c) => print_vector(buf, env, elem_ty, c),
+
+            (Type::Struct(gidx), Container::StructC(r))
+            | (Type::Struct(gidx), Container::StructR(r)) => {
+                print_struct(buf, env, *gidx, &[], &*r.borrow())
             }
+
+            (Type::StructInstantiation(gidx, ty_args), Container::StructC(r))
+            | (Type::StructInstantiation(gidx, ty_args), Container::StructR(r)) => {
+                print_struct(buf, env, *gidx, ty_args, &*r.borrow())
+            }
+
             _ => Err(
                 PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                     "cannot print container {:?} as type {:?}",
@@ -2411,9 +2435,10 @@ pub mod debug {
         }
     }
 
-    fn print_indexed_ref<B: Write>(
+    fn print_indexed_ref<B: Write, E: TypeEnv>(
         buf: &mut B,
-        val_ty: &FatType,
+        env: &E,
+        val_ty: &Type,
         r: &IndexedRef,
     ) -> PartialVMResult<()> {
         macro_rules! print_vector_elem {
@@ -2430,37 +2455,37 @@ pub mod debug {
 
         let idx = r.idx;
         match (val_ty, &*r.container_ref.container()) {
-            (FatType::U8, Container::VecU8(r)) => print_vector_elem!(r, idx, "u8"),
-            (FatType::U64, Container::VecU64(r)) => print_vector_elem!(r, idx, "u64"),
-            (FatType::U128, Container::VecU128(r)) => print_vector_elem!(r, idx, "u128"),
-            (FatType::Bool, Container::VecBool(r)) => print_vector_elem!(r, idx, ""),
+            (Type::U8, Container::VecU8(r)) => print_vector_elem!(r, idx, "u8"),
+            (Type::U64, Container::VecU64(r)) => print_vector_elem!(r, idx, "u64"),
+            (Type::U128, Container::VecU128(r)) => print_vector_elem!(r, idx, "u128"),
+            (Type::Bool, Container::VecBool(r)) => print_vector_elem!(r, idx, ""),
 
-            (FatType::U8, Container::StructC(r))
-            | (FatType::U64, Container::StructC(r))
-            | (FatType::U128, Container::StructC(r))
-            | (FatType::Bool, Container::StructC(r))
-            | (FatType::Address, Container::StructC(r))
-            | (FatType::U8, Container::StructR(r))
-            | (FatType::U64, Container::StructR(r))
-            | (FatType::U128, Container::StructR(r))
-            | (FatType::Bool, Container::StructR(r))
-            | (FatType::Address, Container::StructR(r))
-            | (FatType::U8, Container::VecC(r))
-            | (FatType::U64, Container::VecC(r))
-            | (FatType::U128, Container::VecC(r))
-            | (FatType::Bool, Container::VecC(r))
-            | (FatType::Address, Container::VecC(r))
-            | (FatType::U8, Container::VecR(r))
-            | (FatType::U64, Container::VecR(r))
-            | (FatType::U128, Container::VecR(r))
-            | (FatType::Bool, Container::VecR(r))
-            | (FatType::Address, Container::VecR(r))
-            | (FatType::U8, Container::Locals(r))
-            | (FatType::U64, Container::Locals(r))
-            | (FatType::U128, Container::Locals(r))
-            | (FatType::Bool, Container::Locals(r))
-            | (FatType::Address, Container::Locals(r)) => match r.borrow().get(idx) {
-                Some(val) => print_value_impl(buf, val_ty, val),
+            (Type::U8, Container::StructC(r))
+            | (Type::U64, Container::StructC(r))
+            | (Type::U128, Container::StructC(r))
+            | (Type::Bool, Container::StructC(r))
+            | (Type::Address, Container::StructC(r))
+            | (Type::U8, Container::StructR(r))
+            | (Type::U64, Container::StructR(r))
+            | (Type::U128, Container::StructR(r))
+            | (Type::Bool, Container::StructR(r))
+            | (Type::Address, Container::StructR(r))
+            | (Type::U8, Container::VecC(r))
+            | (Type::U64, Container::VecC(r))
+            | (Type::U128, Container::VecC(r))
+            | (Type::Bool, Container::VecC(r))
+            | (Type::Address, Container::VecC(r))
+            | (Type::U8, Container::VecR(r))
+            | (Type::U64, Container::VecR(r))
+            | (Type::U128, Container::VecR(r))
+            | (Type::Bool, Container::VecR(r))
+            | (Type::Address, Container::VecR(r))
+            | (Type::U8, Container::Locals(r))
+            | (Type::U64, Container::Locals(r))
+            | (Type::U128, Container::Locals(r))
+            | (Type::Bool, Container::Locals(r))
+            | (Type::Address, Container::Locals(r)) => match r.borrow().get(idx) {
+                Some(val) => print_value_impl(buf, env, val_ty, val),
                 None => Err(
                     PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
                         .with_message("ref index out of bounds".to_string()),
@@ -2475,30 +2500,32 @@ pub mod debug {
         }
     }
 
-    pub fn print_reference<B: Write>(
+    pub fn print_reference<B: Write, E: TypeEnv>(
         buf: &mut B,
-        val_ty: &FatType,
+        env: &E,
+        val_ty: &Type,
         r: &Reference,
     ) -> PartialVMResult<()> {
         match &r.0 {
-            ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
-            ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
+            ReferenceImpl::ContainerRef(r) => print_container_ref(buf, env, val_ty, r),
+            ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, env, val_ty, r),
         }
     }
 
-    pub fn print_locals<B: Write>(
+    pub fn print_locals<B: Write, E: TypeEnv>(
         buf: &mut B,
-        tys: &[FatType],
+        env: &E,
+        ty_args: &[Type],
         locals: &Locals,
     ) -> PartialVMResult<()> {
         // TODO: The number of spaces in the indent is currently hard coded.
         // Plan is to switch to the pretty crate for pretty printing.
-        if tys.is_empty() {
+        if ty_args.is_empty() {
             debug_writeln!(buf, "            (none) ")?;
         } else {
-            for (idx, (ty, val)) in tys.iter().zip(locals.0.borrow().iter()).enumerate() {
+            for (idx, (ty, val)) in ty_args.iter().zip(locals.0.borrow().iter()).enumerate() {
                 debug_write!(buf, "            [{}] ", idx)?;
-                print_value_impl(buf, ty, val)?;
+                print_value_impl(buf, env, ty, val)?;
                 debug_writeln!(buf)?;
             }
         }

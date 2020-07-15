@@ -18,7 +18,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::{
-        runtime_types::{StructType, Type, TypeConverter},
+        runtime_types::{StructType, Type, TypeConverter, TypeEnv},
         types::{FatStructType, FatType},
     },
 };
@@ -1009,22 +1009,20 @@ impl<'a> Resolver<'a> {
         self.loader.type_to_fat_type(ty)
     }
 
-    pub(crate) fn make_fat_type(
+    pub(crate) fn make_type(
         &self,
         token: &SignatureToken,
         type_context: &[Type],
-    ) -> PartialVMResult<FatType> {
+    ) -> PartialVMResult<Type> {
         match &self.binary {
             BinaryType::Module(module) => {
                 let binary = &module.module;
-                let ty = self
-                    .loader
+                self.loader
                     .module_cache
                     .lock()
                     .unwrap()
                     .make_type(binary, token)?
-                    .subst(type_context)?;
-                self.loader.type_to_fat_type(&ty)
+                    .subst(type_context)
             }
             // TODO: this may not be true at all when it comes to printing (locals for instance)
             BinaryType::Script(_) => unreachable!("Scripts cannot have type operations"),
@@ -1713,7 +1711,7 @@ impl Loader {
         Ok(struct_tag)
     }
 
-    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+    fn type_to_type_tag_impl(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         Ok(match ty {
             Type::Bool => TypeTag::Bool,
             Type::U8 => TypeTag::U8,
@@ -1803,10 +1801,6 @@ impl Loader {
         })
     }
 
-    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
-        self.type_to_type_layout_impl(ty, 1)
-    }
-
     fn struct_gidx_to_kind_info(
         &self,
         gidx: usize,
@@ -1891,10 +1885,6 @@ impl Loader {
         })
     }
 
-    pub(crate) fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
-        self.type_to_kind_info_impl(ty, 1)
-    }
-
     fn struct_to_fat_struct(
         &self,
         idx: usize,
@@ -1921,5 +1911,58 @@ impl Loader {
             ty_args,
             layout,
         })
+    }
+}
+
+impl TypeEnv for Loader {
+    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId> {
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        Ok(struct_type.module.clone())
+    }
+    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier> {
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        Ok(struct_type.name.clone())
+    }
+
+    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>> {
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        struct_type
+            .fields
+            .iter()
+            .map(|ty| ty.subst(ty_args))
+            .collect()
+    }
+
+    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+        self.type_to_type_tag_impl(ty)
+    }
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+        self.type_to_type_layout_impl(ty, 1)
+    }
+    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+        self.type_to_kind_info_impl(ty, 1)
+    }
+}
+
+impl<'a> TypeEnv for Resolver<'a> {
+    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId> {
+        self.loader.get_struct_module(gidx)
+    }
+    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier> {
+        self.loader.get_struct_name(gidx)
+    }
+
+    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>> {
+        self.loader.get_struct_field_tys(gidx, ty_args)
+    }
+
+    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+        self.loader.type_to_type_tag(ty)
+    }
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+        self.loader.type_to_type_layout(ty)
+    }
+    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+        self.loader.type_to_kind_info(ty)
     }
 }

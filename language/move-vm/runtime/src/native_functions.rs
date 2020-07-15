@@ -3,12 +3,18 @@
 
 use crate::{interpreter::Interpreter, loader::Resolver};
 use libra_types::account_config::CORE_CODE_ADDRESS;
-use move_core_types::{account_address::AccountAddress, gas_schedule::CostTable};
+use move_core_types::{
+    account_address::AccountAddress,
+    gas_schedule::CostTable,
+    identifier::Identifier,
+    language_storage::{ModuleId, TypeTag},
+    value::{MoveKindInfo, MoveTypeLayout},
+};
 use move_vm_natives::{account, debug, event, hash, lcs, signature, signer, vector};
 use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
-    loaded_data::{runtime_types::Type, types::FatType},
+    loaded_data::runtime_types::{Type, TypeEnv},
     natives::function::{NativeContext, NativeResult},
     values::Value,
 };
@@ -132,6 +138,29 @@ impl<'a> FunctionContext<'a> {
     }
 }
 
+impl<'a> TypeEnv for FunctionContext<'a> {
+    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId> {
+        self.resolver.get_struct_module(gidx)
+    }
+    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier> {
+        self.resolver.get_struct_name(gidx)
+    }
+
+    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>> {
+        self.resolver.get_struct_field_tys(gidx, ty_args)
+    }
+
+    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+        self.resolver.type_to_type_tag(ty)
+    }
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+        self.resolver.type_to_type_layout(ty)
+    }
+    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+        self.resolver.type_to_kind_info(ty)
+    }
+}
+
 impl<'a> NativeContext for FunctionContext<'a> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
@@ -150,13 +179,6 @@ impl<'a> NativeContext for FunctionContext<'a> {
         val: Value,
     ) -> PartialVMResult<()> {
         Ok(self.data_store.emit_event(guid, seq_num, ty, val))
-    }
-
-    fn convert_to_fat_types(&self, types: Vec<Type>) -> PartialVMResult<Vec<FatType>> {
-        types
-            .iter()
-            .map(|ty| self.resolver.type_to_fat_type(ty))
-            .collect::<PartialVMResult<_>>()
     }
 
     fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
