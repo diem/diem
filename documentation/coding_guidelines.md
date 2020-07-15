@@ -300,9 +300,8 @@ conditions to perform this conditional compilation:
   as the conditional test-only code.
 - the `fuzzing` custom feature, which is used to enable fuzzing and testing
 related code in downstream crates. Note that this must be passed explicitly to
-`cargo xtest` and `cargo x bench`. Never use this in `[dependencies]` or
-`[dev-dependencies]` unless the crate is only for testing, otherwise Cargo's
-feature unification may pollute production code with the extra testing/fuzzing code.
+`cargo xtest` and `cargo x bench`. Never use this in `[dependencies]` unless
+the crate is only for testing.
 
 As a consequence, it is recommended that you set up your test-only code in the following fashion.
 
@@ -336,24 +335,12 @@ For the sake of example, we'll consider you are defining a test-only helper func
     default = []
     fuzzing = ["foo_crate/fuzzing"]
     ```
-5. Update `x.toml` to run the unit tests passing in the features if needed.
-
-**Special case:** If a test-only crate (see below) is a dev-dependency of a production crate listed in the root
-`Cargo.toml`'s `default-members`, it needs to be marked optional for feature resolution to work properly. Do this by
-marking the dependency as optional and moving it to the `[dependencies]` section.
-
-```toml
-[dependencies]
-foo_crate = { path = "...", optional = true }
-```
-
-(This is a temporary workaround for a Cargo issue and is expected to be addressed with Cargo's [new feature
-resolver](https://github.com/rust-lang/cargo/pull/7820)).
 
 **For test-only crates:**
 
 Test-only crates do not create published artifacts. They consist of tests, benchmarks or other code that verifies
-the correctness or performance of published artifacts. Test-only crates are explicitly listed in `x.toml`.
+the correctness or performance of published artifacts. Test-only crates are
+explicitly listed in `x.toml` under `[workspace.test-only]`.
 
 These crates do not need to use the above setup. Instead, they can enable the `fuzzing` feature in production crates
 directly.
