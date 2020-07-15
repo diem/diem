@@ -31,18 +31,26 @@ pub fn encode_add_currency_to_account_script(currency: TypeTag) -> Script {
 }
 
 /// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`
-/// resource under `recovery_address`. Aborts if `to_recovery_account` and
-/// `to_recovery_address belong to different VASPs, if `recovery_address` does not have a
-/// `RecoveryAddress` resource, or if `to_recover_account` has already extracted its
-/// `KeyRotationCapability`.
+/// resource under `recovery_address`. ## Aborts * Aborts with
+/// `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` if `account` has already
+/// delegated its `KeyRotationCapability`. * Aborts with
+/// `RecoveryAddress:ENOT_A_RECOVERY_ADDRESS` if `recovery_address` does not have a
+/// `RecoveryAddress` resource. * Aborts with
+/// `RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION` if `to_recover_account` and
+/// `recovery_address` do not belong to the same VASP.
 pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountAddress) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 40, 8, 52, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 5, 0, 15, 82, 101, 99, 111, 118, 101, 114, 121, 65, 100, 100,
-            114, 101, 115, 115, 23, 97, 100, 100, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95,
-            99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 15, 7, 33, 107, 8,
+            140, 1, 16, 0, 0, 0, 1, 0, 2, 1, 0, 0, 3, 0, 1, 0, 1, 4, 2, 3, 0, 1, 6, 12, 1, 8, 0, 2,
+            8, 0, 5, 0, 2, 6, 12, 5, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 15,
+            82, 101, 99, 111, 118, 101, 114, 121, 65, 100, 100, 114, 101, 115, 115, 21, 75, 101,
+            121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105, 108, 105, 116,
+            121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111, 116, 97,
+            116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 23, 97, 100, 100,
+            95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116,
+            121, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 3, 5, 11, 0, 17, 0, 10, 1,
+            17, 1, 2,
         ],
         vec![],
         vec![TransactionArgument::Address(recovery_address)],
@@ -236,16 +244,22 @@ pub fn encode_create_parent_vasp_account_script(
 }
 
 /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
-/// `RecoveryAddress` resource under `recovery_account`. Aborts if `recovery_account` has
-/// delegated its `KeyRotationCapability`, already has a `RecoveryAddress` resource, or is
-/// not a VASP.
+/// `RecoveryAddress` resource under `account`. ## Aborts * Aborts with
+/// `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` if `account` has already
+/// delegated its `KeyRotationCapability`. * Aborts with `RecoveryAddress::ENOT_A_VASP` if
+/// `account` is not a ParentVASP or ChildVASP
 pub fn encode_create_recovery_address_script() -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 4, 7, 11, 24, 8, 35, 16, 0, 0,
-            0, 1, 0, 1, 0, 1, 6, 12, 0, 15, 82, 101, 99, 111, 118, 101, 114, 121, 65, 100, 100,
-            114, 101, 115, 115, 7, 112, 117, 98, 108, 105, 115, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 1, 0, 0, 1, 3, 11, 0, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 10, 5, 18, 12, 7, 30, 91, 8,
+            121, 16, 0, 0, 0, 1, 0, 2, 1, 0, 0, 3, 0, 1, 0, 1, 4, 2, 3, 0, 1, 6, 12, 1, 8, 0, 2, 6,
+            12, 8, 0, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 15, 82, 101, 99,
+            111, 118, 101, 114, 121, 65, 100, 100, 114, 101, 115, 115, 21, 75, 101, 121, 82, 111,
+            116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 101,
+            120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111,
+            110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 7, 112, 117, 98, 108, 105, 115,
+            104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3, 5, 10, 0, 11, 0, 17, 0,
+            17, 1, 2,
         ],
         vec![],
         vec![],
@@ -583,9 +597,14 @@ pub fn encode_rotate_authentication_key_with_nonce_script(
     )
 }
 
-/// Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either
-/// `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the
-/// `KeyRotationCapability` for `to_recover`.
+/// Rotate the authentication key of `account` to `new_key` using the
+/// `KeyRotationCapability` stored under `recovery_address`. ## Aborts * Aborts with
+/// `RecoveryAddress::ENOT_A_RECOVERY_ADDRESS` if `recovery_address` does not have a
+/// `RecoveryAddress` resource * Aborts with `RecoveryAddress::ECANNOT_ROTATE_KEY` if
+/// `account` is not `recovery_address` or `to_recover`. * Aborts with
+/// `LibraAccount::EMALFORMED_AUTHENTICATION_KEY` if `new_key` is not 32 bytes. * Aborts
+/// with `RecoveryAddress::ECANNOT_ROTATE_KEY` if `account` has not delegated its
+/// `KeyRotationCapability` to `recovery_address`.
 pub fn encode_rotate_authentication_key_with_recovery_address_script(
     recovery_address: AccountAddress,
     to_recover: AccountAddress,

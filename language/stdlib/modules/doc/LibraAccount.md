@@ -2283,8 +2283,7 @@ LibraAccount under
 <a name="0x1_LibraAccount_spec_get_key_rotation_cap"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address):
-    <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>&gt; {
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>&gt; {
     <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability
 }
 </code></pre>
