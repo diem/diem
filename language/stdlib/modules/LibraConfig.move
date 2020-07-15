@@ -92,7 +92,7 @@ module LibraConfig {
         config_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        // TODO: discuss and enable assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(Roles::has_libra_root_role(config_account), ENOT_LIBRA_ROOT);
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to(config_account, LibraConfig { payload });
