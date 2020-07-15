@@ -54,42 +54,10 @@ pub static TXN_TOTAL_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static TXN_VERIFICATION_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_txn_verification_seconds",
-        "Histogram of verification time per transaction"
-    )
-    .unwrap()
-});
-
 pub static TXN_VALIDATION_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         "libra_vm_txn_validation_seconds",
         "Histogram of validation time per transaction"
-    )
-    .unwrap()
-});
-
-pub static TXN_EXECUTION_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_txn_execution_seconds",
-        "Histogram of execution time per transaction"
-    )
-    .unwrap()
-});
-
-pub static TXN_PROLOGUE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_txn_prologue_seconds",
-        "Histogram of prologue time per transaction"
-    )
-    .unwrap()
-});
-
-pub static TXN_EPILOGUE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_txn_epilogue_seconds",
-        "Histogram of epilogue time per transaction"
     )
     .unwrap()
 });

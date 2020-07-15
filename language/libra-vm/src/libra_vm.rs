@@ -3,7 +3,6 @@
 
 use crate::{
     access_path_cache::AccessPathCache,
-    counters::*,
     data_cache::{RemoteStorage, StateViewCache},
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
@@ -222,7 +221,6 @@ impl LibraVMImpl {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let txn_expiration_time = txn_data.expiration_time();
         let chain_id = txn_data.chain_id();
-        let _timer = TXN_PROLOGUE_SECONDS.start_timer();
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -258,7 +256,6 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        let _timer = TXN_EPILOGUE_SECONDS.start_timer();
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -292,7 +289,6 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        let _timer = TXN_EPILOGUE_SECONDS.start_timer();
         session
             .execute_function(
                 &account_config::ACCOUNT_MODULE,
@@ -322,7 +318,6 @@ impl LibraVMImpl {
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-        let _timer = TXN_PROLOGUE_SECONDS.start_timer();
         session
             .execute_function(
                 &LIBRA_WRITESET_MANAGER_MODULE,
@@ -351,8 +346,6 @@ impl LibraVMImpl {
             lcs::to_bytes(change_set).map_err(|_| VMStatus::Error(StatusCode::INVALID_DATA))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-
-        let _timer = TXN_EPILOGUE_SECONDS.start_timer();
         session
             .execute_function(
                 &LIBRA_WRITESET_MANAGER_MODULE,

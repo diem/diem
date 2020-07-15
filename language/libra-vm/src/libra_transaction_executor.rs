@@ -149,7 +149,6 @@ impl LibraVM {
         // Run the validation logic
         {
             cost_strategy.disable_metering();
-            let _timer = TXN_VERIFICATION_SECONDS.start_timer();
             self.0.check_gas(txn_data)?;
             self.0.is_allowed_script(script)?;
             self.0.run_prologue(
@@ -162,7 +161,6 @@ impl LibraVM {
 
         // Run the execution logic
         {
-            let _timer = TXN_EXECUTION_SECONDS.start_timer();
             cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
