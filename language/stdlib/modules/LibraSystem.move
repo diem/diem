@@ -381,5 +381,10 @@ module LibraSystem {
         ensures result == (exists v in validators_vec_ref: v.addr == addr);
         ensures spec_validators_is_set(validators_vec_ref);
     }
+
+    spec module {
+        /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B23].
+        apply Roles::AbortsIfNotTreasuryCompliance{account: lr_account} to add_validator, remove_validator;
+    }
 }
 }

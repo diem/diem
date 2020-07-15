@@ -23,6 +23,7 @@
 -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_get_cur_microlibra_limit)
 -  [Function `set_microlibra_limit`](#0x1_DualAttestation_set_microlibra_limit)
 -  [Specification](#0x1_DualAttestation_Specification)
+    -  [Function `publish_credential`](#0x1_DualAttestation_Specification_publish_credential)
     -  [Function `rotate_base_url`](#0x1_DualAttestation_Specification_rotate_base_url)
     -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_Specification_rotate_compliance_public_key)
     -  [Function `compliance_public_key`](#0x1_DualAttestation_Specification_compliance_public_key)
@@ -650,6 +651,30 @@ Aborts if
 <a name="0x1_DualAttestation_Specification"></a>
 
 ## Specification
+
+
+<a name="0x1_DualAttestation_Specification_publish_credential"></a>
+
+### Function `publish_credential`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_publish_credential">publish_credential</a>(created: &signer, creator: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedDealer [B26].
+
+
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) &&
+    !<a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created));
+</code></pre>
+
 
 
 <a name="0x1_DualAttestation_Specification_rotate_base_url"></a>

@@ -410,6 +410,9 @@ module Libra {
         assert(Roles::has_designated_dealer_role(account), ENOT_DESIGNATED_DEALER);
         move_to(account, create_preburn<CoinType>(tc_account))
     }
+    spec fun publish_preburn_to_account {
+        pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
+    }
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -832,10 +835,10 @@ module Libra {
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
     /// `FromCoinType` to the new passed-in `lbr_exchange_rate`.
     public fun update_lbr_exchange_rate<FromCoinType>(
-        tr_account: &signer,
+        tc_account: &signer,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
-        assert(Roles::has_treasury_compliance_role(tr_account), ENOT_TREASURY_COMPLIANCE);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<FromCoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -846,8 +849,11 @@ module Libra {
                 new_to_lbr_exchange_rate: FixedPoint32::get_raw_value(*&currency_info.to_lbr_exchange_rate),
             }
         );
-
     }
+    spec fun update_lbr_exchange_rate {
+        pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
+    }
+
 
     /// Returns the (rough) exchange rate between `CoinType` and `LBR`
     public fun lbr_exchange_rate<CoinType>(): FixedPoint32
@@ -863,11 +869,11 @@ module Libra {
     /// disallowed until it is turned back on via this function. All coins
     /// start out in the default state of `can_mint = true`.
     public fun update_minting_ability<CoinType>(
-        tr_account: &signer,
+        tc_account: &signer,
         can_mint: bool,
         )
     acquires CurrencyInfo {
-        assert(Roles::has_treasury_compliance_role(tr_account), ENOT_TREASURY_COMPLIANCE);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
@@ -1003,6 +1009,26 @@ module Libra {
     /// TODO (dd): It would be great if we could prove that there is never a coin or a set of coins whose
     /// aggregate value exceeds the CoinInfo.total_value.  However, that property involves summations over
     /// all resources and is beyond the capabilities of the specification logic or the prover, currently.
+
+    // TODO: This schema is better to be in Roles, but put here to avoid an unused schema warning from Roles.
+    spec schema AbortsIfNotDesignatedDealer {
+        account: signer;
+        aborts_if !Roles::spec_has_designated_dealer_role_addr(Signer::spec_address_of(account));
+    }
+
+    spec module {
+        /// The permission "MintCurrency(type)" is granted to TreasuryCompliance [B12].
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
+
+        /// The permission "BurnCurrency(type)" is granted to TreasuryCompliance [B13].
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
+
+        /// The permission "PreburnCurrency(type)" is granted to DesignatedDealer [B14].
+        apply AbortsIfNotDesignatedDealer to publish_preburn_to_account<CoinType>;
+
+        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [B15].
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to update_lbr_exchange_rate<FromCoinType>;
+    }
 
     spec schema TotalValueRemainsSame<CoinType> {
         /// The total amount of currency stays constant. The antecedant excludes register_currency
