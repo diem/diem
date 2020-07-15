@@ -3,8 +3,8 @@
 
 use super::*;
 use crate::{pruner, LibraDB};
-use jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_crypto::hash::CryptoHash;
+use libra_jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_temppath::TempPath;
 use libra_types::{account_address::AccountAddress, account_state_blob::AccountStateBlob};
 use proptest::{collection::hash_map, prelude::*};

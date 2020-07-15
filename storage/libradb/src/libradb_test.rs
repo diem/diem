@@ -7,9 +7,9 @@ use crate::{
     schema::jellyfish_merkle_node::JellyfishMerkleNodeSchema,
     test_helper::{arb_blocks_to_commit, arb_mock_genesis},
 };
-#[allow(unused_imports)]
-use jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_crypto::hash::CryptoHash;
+#[allow(unused_imports)]
+use libra_jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_temppath::TempPath;
 #[allow(unused_imports)]
 use libra_types::{
