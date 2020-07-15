@@ -250,12 +250,13 @@ fn load_local_index(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u8> {
 
 /// Module internal function that manages deserialization of transactions.
 fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScriptMut> {
+    let binary_len = binary.len();
     let mut cursor = Cursor::new(binary);
     check_binary(&mut cursor)?;
     let table_count = load_table_count(&mut cursor)?;
     let mut tables: Vec<Table> = Vec::new();
     read_tables(&mut cursor, table_count, &mut tables)?;
-    let content_len = check_tables(&mut tables)?;
+    let content_len = check_tables(&mut tables, binary_len)?;
 
     let table_contents = read_table_contents(&mut cursor, content_len as usize)?;
 
@@ -271,12 +272,13 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
 
 /// Module internal function that manages deserialization of modules.
 fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModuleMut> {
+    let binary_len = binary.len();
     let mut cursor = Cursor::new(binary);
     check_binary(&mut cursor)?;
     let table_count = load_table_count(&mut cursor)?;
     let mut tables: Vec<Table> = Vec::new();
     read_tables(&mut cursor, table_count, &mut tables)?;
-    let content_len = check_tables(&mut tables)?;
+    let content_len = check_tables(&mut tables, binary_len)?;
 
     let table_contents = read_table_contents(&mut cursor, content_len as usize)?;
 
@@ -360,7 +362,7 @@ fn read_table_contents(cursor: &mut Cursor<&[u8]>, n: usize) -> BinaryLoaderResu
 /// Verify correctness of tables.
 ///
 /// Tables cannot have duplicates, must cover the entire blob and must be disjoint.
-fn check_tables(tables: &mut Vec<Table>) -> BinaryLoaderResult<u32> {
+fn check_tables(tables: &mut Vec<Table>, binary_len: usize) -> BinaryLoaderResult<u32> {
     // there is no real reason to pass a mutable reference but we are sorting next line
     tables.sort_by(|t1, t2| t1.offset.cmp(&t2.offset));
 
@@ -373,15 +375,16 @@ fn check_tables(tables: &mut Vec<Table>) -> BinaryLoaderResult<u32> {
         if table.count == 0 {
             return Err(PartialVMError::new(StatusCode::BAD_HEADER_TABLE));
         }
-        if let Some(checked_offset) = current_offset.checked_add(table.count) {
-            current_offset = checked_offset;
+        match current_offset.checked_add(table.count) {
+            Some(checked_offset) => current_offset = checked_offset,
+            None => return Err(PartialVMError::new(StatusCode::BAD_HEADER_TABLE)),
         }
         if !table_types.insert(table.kind) {
             return Err(PartialVMError::new(StatusCode::DUPLICATE_TABLE));
         }
-    }
-    if current_offset as u64 > TABLE_CONTENT_SIZE_MAX {
-        return Err(PartialVMError::new(StatusCode::BAD_HEADER_TABLE));
+        if current_offset as usize > binary_len {
+            return Err(PartialVMError::new(StatusCode::BAD_HEADER_TABLE));
+        }
     }
     Ok(current_offset)
 }
