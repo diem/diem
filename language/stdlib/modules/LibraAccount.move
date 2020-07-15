@@ -123,6 +123,7 @@ module LibraAccount {
     /// Attempting to send funds in (e.g.) LBR to an account that exists, but does not have a
     /// Balance<LBR> resource
     const EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
+    const EPAYER_DOESNT_HOLD_CURRENCY: u64 = 19;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -399,6 +400,7 @@ module LibraAccount {
         metadata: vector<u8>,
     ): Libra<Token> acquires Balance, AccountOperationsCapability, LibraAccount {
         let payer = cap.account_address;
+        assert(exists<Balance<Token>>(payer), EPAYER_DOESNT_HOLD_CURRENCY);
         let account_balance = borrow_global_mut<Balance<Token>>(payer);
         // Load the payer's account and emit an event to record the withdrawal
         Event::emit_event<SentPaymentEvent>(

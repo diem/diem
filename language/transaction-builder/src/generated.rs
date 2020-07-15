@@ -135,7 +135,19 @@ pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress
 /// balance of `child_initial_balance` in `CoinType` and an initial authentication_key
 /// `auth_key_prefix | child_address`. If `add_all_currencies` is true, the child address
 /// will have a zero balance in all available currencies in the system. This account will
-/// a child of the transaction sender, which must be a ParentVASP.
+/// a child of the transaction sender, which must be a ParentVASP. ## Aborts The
+/// transaction will abort: * If `parent_vasp` is not a parent vasp with error:
+/// `Roles::EINVALID_PARENT_ROLE` * If `child_address` already exists with error:
+/// `Roles::EROLE_ALREADY_ASSIGNED` * If `parent_vasp` already has 256 child accounts with
+/// error: `VASP::ETOO_MANY_CHILDREN` * If `parent_vasp` does not hold limits for
+/// `CoinType` with error: `VASP::ENOT_A_PARENT_VASP` * If `CoinType` is not a registered
+/// currency with error: `LibraAccount::ENOT_A_CURRENCY` * If `parent_vasp`'s withdrawal
+/// capability has been extracted with error:
+/// `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED` * If `parent_vasp` doesn't
+/// hold `CoinType` and `child_initial_balance > 0` with error:
+/// `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY` * If `parent_vasp` doesn't at least
+/// `child_initial_balance` of `CoinType` in its account balance with error:
+/// `LibraAccount::EINSUFFICIENT_BALANCE`
 pub fn encode_create_child_vasp_account_script(
     coin_type: TypeTag,
     child_address: AccountAddress,
