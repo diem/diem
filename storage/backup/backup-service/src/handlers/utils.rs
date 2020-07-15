@@ -5,7 +5,9 @@ use anyhow::Result;
 use bytes::Bytes;
 use hyper::Body;
 use libra_logger::prelude::*;
-use libra_metrics::{register_histogram_vec, HistogramVec};
+use libra_metrics::{
+    register_histogram_vec, register_int_counter_vec, HistogramVec, IntCounterVec,
+};
 use libradb::backup::backup_handler::BackupHandler;
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -21,30 +23,69 @@ pub(super) static LATENCY_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub(super) fn reply_with_lcs_bytes<R: Serialize>(record: &R) -> Result<Box<dyn Reply>> {
+pub(super) static THROUGHPUT_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_backup_service_sent_bytes",
+        "Backup service throughput in bytes.",
+        &["endpoint"]
+    )
+    .unwrap()
+});
+
+pub(super) fn reply_with_lcs_bytes<R: Serialize>(
+    endpoint: &str,
+    record: &R,
+) -> Result<Box<dyn Reply>> {
     let bytes = lcs::to_bytes(record)?;
+    THROUGHPUT_COUNTER
+        .with_label_values(&[endpoint])
+        .inc_by(bytes.len() as i64);
     Ok(Box::new(bytes))
+}
+
+pub(super) struct BytesSender {
+    endpoint: &'static str,
+    inner: hyper::body::Sender,
+}
+
+impl BytesSender {
+    fn new(endpoint: &'static str, inner: hyper::body::Sender) -> Self {
+        Self { endpoint, inner }
+    }
+
+    async fn send_data(&mut self, chunk: Bytes) -> Result<()> {
+        let n_bytes = chunk.len();
+        self.inner.send_data(chunk).await?;
+        THROUGHPUT_COUNTER
+            .with_label_values(&[self.endpoint])
+            .inc_by(n_bytes as i64);
+        Ok(())
+    }
+
+    fn abort(self) {
+        self.inner.abort()
+    }
 }
 
 pub(super) fn reply_with_async_channel_writer<G, F>(
     backup_handler: &BackupHandler,
+    endpoint: &'static str,
     get_channel_writer: G,
 ) -> Result<Box<dyn Reply>>
 where
-    G: FnOnce(BackupHandler, hyper::body::Sender) -> F,
+    G: FnOnce(BackupHandler, BytesSender) -> F,
     F: Future<Output = ()> + Send + 'static,
 {
     let (sender, body) = Body::channel();
+    let sender = BytesSender::new(endpoint, sender);
     let bh = backup_handler.clone();
     tokio::spawn(get_channel_writer(bh, sender));
 
     Ok(Box::new(Response::new(body)))
 }
 
-pub(super) async fn send_size_prefixed_lcs_bytes<I, R>(
-    iter_res: Result<I>,
-    mut sender: hyper::body::Sender,
-) where
+pub(super) async fn send_size_prefixed_lcs_bytes<I, R>(iter_res: Result<I>, mut sender: BytesSender)
+where
     I: Iterator<Item = Result<R>>,
     R: Serialize,
 {
@@ -58,7 +99,7 @@ pub(super) async fn send_size_prefixed_lcs_bytes<I, R>(
 
 async fn send_size_prefixed_lcs_bytes_impl<I, R>(
     iter_res: Result<I>,
-    sender: &mut hyper::body::Sender,
+    sender: &mut BytesSender,
 ) -> Result<()>
 where
     I: Iterator<Item = Result<R>>,

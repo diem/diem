@@ -12,11 +12,19 @@ use libra_types::transaction::Version;
 use libradb::backup::backup_handler::BackupHandler;
 use warp::{filters::BoxedFilter, reply::Reply, Filter};
 
+static LATEST_STATE_ROOT: &str = "latest_state_root";
+static STATE_RANGE_PROOF: &str = "state_range_proof";
+static STATE_SNAPSHOT: &str = "state_snapshot";
+static STATE_ROOT_PROOF: &str = "state_root_proof";
+static EPOCH_ENDING_LEDGER_INFOS: &str = "epoch_ending_ledger_infos";
+static TRANSACTIONS: &str = "transactions";
+static TRANSACTION_RANGE_PROOF: &str = "transaction_range_proof";
+
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {
     // GET latest_state_root
     let bh = backup_handler.clone();
     let latest_state_root = warp::path::end()
-        .map(move || reply_with_lcs_bytes(&bh.get_latest_state_root()?))
+        .map(move || reply_with_lcs_bytes(LATEST_STATE_ROOT, &bh.get_latest_state_root()?))
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
@@ -24,7 +32,10 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
     let bh = backup_handler.clone();
     let state_range_proof = warp::path!(Version / HashValue)
         .map(move |version, end_key| {
-            reply_with_lcs_bytes(&bh.get_account_state_range_proof(end_key, version)?)
+            reply_with_lcs_bytes(
+                STATE_RANGE_PROOF,
+                &bh.get_account_state_range_proof(end_key, version)?,
+            )
         })
         .map(unwrap_or_500)
         .recover(handle_rejection);
@@ -33,7 +44,7 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
     let bh = backup_handler.clone();
     let state_snapshot = warp::path!(Version)
         .map(move |version| {
-            reply_with_async_channel_writer(&bh, |bh, sender| {
+            reply_with_async_channel_writer(&bh, STATE_SNAPSHOT, |bh, sender| {
                 send_size_prefixed_lcs_bytes(bh.get_account_iter(version), sender)
             })
         })
@@ -43,7 +54,9 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
     // GET state_root_proof/<version>
     let bh = backup_handler.clone();
     let state_root_proof = warp::path!(Version)
-        .map(move |version| reply_with_lcs_bytes(&bh.get_state_root_proof(version)?))
+        .map(move |version| {
+            reply_with_lcs_bytes(STATE_ROOT_PROOF, &bh.get_state_root_proof(version)?)
+        })
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
@@ -53,13 +66,17 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .map(move |start_epoch, end_epoch| {
             // use async move block to group `bh` and the iterator into the same lifetime, since the
             // latter references the former.
-            reply_with_async_channel_writer(&bh, |bh, sender| async move {
-                send_size_prefixed_lcs_bytes(
-                    bh.get_epoch_ending_ledger_info_iter(start_epoch, end_epoch),
-                    sender,
-                )
-                .await
-            })
+            reply_with_async_channel_writer(
+                &bh,
+                EPOCH_ENDING_LEDGER_INFOS,
+                |bh, sender| async move {
+                    send_size_prefixed_lcs_bytes(
+                        bh.get_epoch_ending_ledger_info_iter(start_epoch, end_epoch),
+                        sender,
+                    )
+                    .await
+                },
+            )
         })
         .map(unwrap_or_500)
         .recover(handle_rejection);
@@ -70,7 +87,7 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .map(move |start_version, num_transactions| {
             // use async move block to group `bh` and the iterator into the same lifetime, since the
             // latter references the former.
-            reply_with_async_channel_writer(&bh, |bh, sender| async move {
+            reply_with_async_channel_writer(&bh, TRANSACTIONS, |bh, sender| async move {
                 send_size_prefixed_lcs_bytes(
                     bh.get_transaction_iter(start_version, num_transactions),
                     sender,
@@ -85,20 +102,23 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
     let bh = backup_handler;
     let transaction_range_proof = warp::path!(Version / Version)
         .map(move |first_version, last_version| {
-            reply_with_lcs_bytes(&bh.get_transaction_range_proof(first_version, last_version)?)
+            reply_with_lcs_bytes(
+                TRANSACTION_RANGE_PROOF,
+                &bh.get_transaction_range_proof(first_version, last_version)?,
+            )
         })
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
     // Route by endpoint name.
     let routes = warp::any()
-        .and(warp::path("latest_state_root").and(latest_state_root))
-        .or(warp::path("state_range_proof").and(state_range_proof))
-        .or(warp::path("state_snapshot").and(state_snapshot))
-        .or(warp::path("state_root_proof").and(state_root_proof))
-        .or(warp::path("epoch_ending_ledger_infos").and(epoch_ending_ledger_infos))
-        .or(warp::path("transactions").and(transactions))
-        .or(warp::path("transaction_range_proof").and(transaction_range_proof));
+        .and(warp::path(LATEST_STATE_ROOT).and(latest_state_root))
+        .or(warp::path(STATE_RANGE_PROOF).and(state_range_proof))
+        .or(warp::path(STATE_SNAPSHOT).and(state_snapshot))
+        .or(warp::path(STATE_ROOT_PROOF).and(state_root_proof))
+        .or(warp::path(EPOCH_ENDING_LEDGER_INFOS).and(epoch_ending_ledger_infos))
+        .or(warp::path(TRANSACTIONS).and(transactions))
+        .or(warp::path(TRANSACTION_RANGE_PROOF).and(transaction_range_proof));
 
     // Serve all routes for GET only.
     warp::get()
