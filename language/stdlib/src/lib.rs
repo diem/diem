@@ -8,6 +8,7 @@ use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use sha2::{Digest, Sha256};
 use std::{
+    collections::BTreeMap,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -21,7 +22,7 @@ pub const TRANSACTION_SCRIPTS: &str = "transaction_scripts";
 /// The output path under which compiled files will be put
 pub const COMPILED_OUTPUT_PATH: &str = "compiled";
 /// The file name for the compiled stdlib
-pub const COMPILED_STDLIB_NAME: &str = "stdlib";
+pub const COMPILED_STDLIB_DIR: &str = "stdlib";
 /// The extension for compiled files
 pub const COMPILED_EXTENSION: &str = "mv";
 /// The file name of the debug module
@@ -60,17 +61,20 @@ pub fn stdlib_files() -> Vec<String> {
         .collect()
 }
 
-pub fn build_stdlib() -> Vec<CompiledModule> {
+pub fn build_stdlib() -> BTreeMap<String, CompiledModule> {
     let (_, compiled_units) =
         move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
-    let mut modules = vec![];
-    for compiled_unit in compiled_units {
+    let mut modules = BTreeMap::new();
+    for (i, compiled_unit) in compiled_units.into_iter().enumerate() {
+        let name = compiled_unit.name();
         match compiled_unit {
             CompiledUnit::Module { module, .. } => {
                 verify_module(&module).expect("stdlib module failed to verify");
-                DependencyChecker::verify_module(&module, &modules)
+                DependencyChecker::verify_module(&module, modules.values())
                     .expect("stdlib module dependency failed to verify");
-                modules.push(module)
+                // Tag each module with its index in the module dependency order. Needed for
+                // when they are deserialized and verified later on.
+                modules.insert(format!("{}_{}", i, name), module);
             }
             CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
         }

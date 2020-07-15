@@ -6,6 +6,7 @@
 pub mod transaction_scripts;
 
 use bytecode_verifier::{verify_module, DependencyChecker};
+use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use stdlib::build_stdlib;
 use vm::file_format::CompiledModule;
@@ -14,12 +15,13 @@ pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";
 
 // The current stdlib that is freshly built. This will never be used in deployment so we don't need
 // to pull the same trick here in order to include this in the Rust binary.
-static FRESH_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(build_stdlib);
+static FRESH_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> =
+    Lazy::new(|| build_stdlib().values().cloned().collect());
 
 // This needs to be a string literal due to restrictions imposed by include_bytes.
 /// The compiled library needs to be included in the Rust binary due to Docker deployment issues.
 /// This is why we include it here.
-pub const COMPILED_STDLIB_BYTES: &[u8] = std::include_bytes!("../stdlib.mv");
+pub const COMPILED_STDLIB_DIR: Dir = include_dir!("stdlib");
 
 // The compiled version of the Move standard library.
 // Similarly to genesis, we keep a compiled version of the standard library and scripts around, and
@@ -31,14 +33,26 @@ pub const COMPILED_STDLIB_BYTES: &[u8] = std::include_bytes!("../stdlib.mv");
 // specified either by the MOVE_NO_USE_COMPILED env var, or by passing the "StdLibOptions::Fresh"
 // option to `stdlib_modules`.
 static COMPILED_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
-    let modules: Vec<CompiledModule> = lcs::from_bytes::<Vec<Vec<u8>>>(COMPILED_STDLIB_BYTES)
-        .unwrap()
-        .into_iter()
-        .map(|bytes| CompiledModule::deserialize(&bytes).unwrap())
+    let mut modules: Vec<(String, CompiledModule)> = COMPILED_STDLIB_DIR
+        .files()
+        .iter()
+        .map(|file| {
+            (
+                file.path().to_str().unwrap().to_string(),
+                CompiledModule::deserialize(&file.contents()).unwrap(),
+            )
+        })
         .collect();
 
+    // We need to verify modules based on their dependency order.
+    modules.sort_by_key(|(path, _)| {
+        let splits: Vec<_> = path.split('_').collect();
+        assert!(splits.len() == 2, "Invalid module name encountered");
+        splits[0].parse::<u64>().unwrap()
+    });
+
     let mut verified_modules = vec![];
-    for module in modules {
+    for (_, module) in modules.into_iter() {
         verify_module(&module).expect("stdlib module failed to verify");
         DependencyChecker::verify_module(&module, &verified_modules)
             .expect("stdlib module dependency failed to verify");
