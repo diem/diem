@@ -12,6 +12,7 @@ address 0x1 {
 /// amount of each coin is returned when an `LBR` coin is "unpacked."
 
 module LBR {
+    use 0x1::AccountLimits;
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
     use 0x1::CoreAddresses;
@@ -86,6 +87,7 @@ module LBR {
             1000,    // fractional_part = 10^3
             b"LBR"
         );
+        AccountLimits::publish_unrestricted_limits<LBR>(lr_account);
         let preburn_cap = Libra::create_preburn<LBR>(tc_account);
         let coin1 = ReserveComponent<Coin1> {
             ratio: FixedPoint32::create_from_rational(1, 2),

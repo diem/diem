@@ -5,7 +5,6 @@
 address 0x1 {
 module Genesis {
     use 0x1::AccountFreezing;
-    use 0x1::AccountLimits;
     use 0x1::VASP;
     use 0x1::ChainId;
     use 0x1::Coin1;
@@ -63,7 +62,6 @@ module Genesis {
 
         AccountFreezing::initialize(lr_account);
         LibraAccount::initialize(lr_account);
-        AccountLimits::initialize(lr_account);
         LibraAccount::create_libra_root_account(
             Signer::address_of(lr_account),
             copy dummy_auth_key_prefix,

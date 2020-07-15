@@ -65,6 +65,7 @@
         100,     // fractional_part = 10^2
         b"<a href="#0x1_Coin1">Coin1</a>"
     );
+    <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>&lt;<a href="#0x1_Coin1">Coin1</a>&gt;(lr_account);
 }
 </code></pre>
 

@@ -1,6 +1,7 @@
 address 0x1 {
 
 module Coin1 {
+    use 0x1::AccountLimits;
     use 0x1::Libra;
     use 0x1::FixedPoint32;
 
@@ -18,6 +19,7 @@ module Coin1 {
             100,     // fractional_part = 10^2
             b"Coin1"
         );
+        AccountLimits::publish_unrestricted_limits<Coin1>(lr_account);
     }
 }
 }
