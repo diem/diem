@@ -8,7 +8,7 @@ mod cpu_flamegraph;
 mod packet_loss_random_validators;
 mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
-mod reboot_random_validator;
+mod reboot_random_validators;
 mod recovery_time;
 mod twin_validator;
 mod versioning_test;
@@ -27,7 +27,7 @@ pub use performance_benchmark::{PerformanceBenchmark, PerformanceBenchmarkParams
 pub use performance_benchmark_three_region_simulation::{
     PerformanceBenchmarkThreeRegionSimulation, PerformanceBenchmarkThreeRegionSimulationParams,
 };
-pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
+pub use reboot_random_validators::{RebootRandomValidators, RebootRandomValidatorsParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 pub use twin_validator::{TwinValidators, TwinValidatorsParams};
 pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
