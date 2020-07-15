@@ -52,7 +52,7 @@ where
         Self::new(f(self.get(), other.get()))
     }
 
-    /// Apply a function `f` of two arguments to the carrier. Since `f` is not an endomophism, we
+    /// Apply a function `f` of two arguments to the carrier. Since `f` is not an endomorphism, we
     /// return the resulting value, as opposed to the result wrapped up in ourselves.
     fn app<T, F: Fn(GasCarrier, GasCarrier) -> T>(
         &self,
