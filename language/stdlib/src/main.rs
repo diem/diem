@@ -13,7 +13,7 @@ use std::{
 use stdlib::{
     build_stdlib, build_stdlib_doc, build_transaction_script_abi, build_transaction_script_doc,
     compile_script, filter_move_files, generate_rust_transaction_builders, save_binary,
-    COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_NAME,
+    COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_DIR,
     COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR, STD_LIB_DOC_DIR,
     TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
 };
@@ -61,20 +61,19 @@ fn main() {
         time_it("Creating stdlib blob", || {
             std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
             let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
-            module_path.push(COMPILED_STDLIB_NAME);
-            module_path.set_extension(COMPILED_EXTENSION);
-            let modules: Vec<Vec<u8>> = build_stdlib()
-                .into_iter()
-                .map(|module| {
-                    let mut ser = Vec::new();
-                    module.serialize(&mut ser).unwrap();
-                    ser
-                })
-                .collect();
-            let bytes = lcs::to_bytes(&modules).unwrap();
-            if save_binary(&module_path, &bytes) {
-                println!("Compiled module binary has changed");
-            };
+            module_path.push(COMPILED_STDLIB_DIR);
+            std::fs::remove_dir_all(&module_path).unwrap();
+            std::fs::create_dir_all(&module_path).unwrap();
+            for (name, module) in build_stdlib().into_iter() {
+                let mut bytes = Vec::new();
+                module.serialize(&mut bytes).unwrap();
+                module_path.push(name);
+                module_path.set_extension(COMPILED_EXTENSION);
+                if save_binary(&module_path, &bytes) {
+                    println!("Compiled module binary {:?} has changed", module_path);
+                };
+                module_path.pop();
+            }
         });
     }
 
