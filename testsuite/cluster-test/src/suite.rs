@@ -32,7 +32,7 @@ impl ExperimentSuite {
         let count = min(3, cluster.validator_instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
         for _ in 0..10 {
-            let b = Box::new(RebootRandomValidatorsParams { count }.build(cluster));
+            let b = Box::new(RebootRandomValidatorsParams::new(count, 0).build(cluster));
             experiments.push(b);
         }
         experiments.push(Box::new(

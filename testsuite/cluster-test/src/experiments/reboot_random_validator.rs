@@ -5,7 +5,7 @@
 
 use std::{collections::HashSet, fmt, time::Duration};
 
-use rand::Rng;
+use rand::seq::SliceRandom;
 
 use crate::{
     cluster::Cluster,
@@ -19,8 +19,23 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct RebootRandomValidatorsParams {
-    #[structopt(long, default_value = "10", help = "Number of nodes to reboot")]
-    pub count: usize,
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Number of validator nodes to reboot"
+    )]
+    count: usize,
+    #[structopt(long, default_value = "0", help = "Number of lsr nodes to reboot")]
+    lsr_count: usize,
+}
+
+impl RebootRandomValidatorsParams {
+    pub fn new(validator_count: usize, lsr_count: usize) -> Self {
+        Self {
+            count: validator_count,
+            lsr_count,
+        }
+    }
 }
 
 pub struct RebootRandomValidators {
@@ -37,13 +52,32 @@ impl ExperimentParam for RebootRandomValidatorsParams {
                 cluster.validator_instances().len()
             );
         }
-        let mut instances = Vec::with_capacity(self.count);
-        let mut all_instances = cluster.validator_instances().to_vec();
-        let mut rnd = rand::thread_rng();
-        for _i in 0..self.count {
-            let instance = all_instances.remove(rnd.gen_range(0, all_instances.len()));
-            instances.push(instance);
+
+        if self.lsr_count > cluster.lsr_instances().len() {
+            panic!(
+                "Can not reboot {} lsrs in cluster with {} instances",
+                self.count,
+                cluster.lsr_instances().len()
+            );
         }
+
+        let mut rnd = rand::thread_rng();
+        let mut instances = Vec::with_capacity(self.count + self.lsr_count);
+        instances.append(
+            &mut cluster
+                .validator_instances()
+                .choose_multiple(&mut rnd, self.count)
+                .cloned()
+                .collect(),
+        );
+        instances.append(
+            &mut cluster
+                .lsr_instances()
+                .choose_multiple(&mut rnd, self.lsr_count)
+                .cloned()
+                .collect(),
+        );
+
         Self::E { instances }
     }
 }
