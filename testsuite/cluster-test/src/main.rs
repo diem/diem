@@ -361,7 +361,7 @@ impl BasicSwarmUtil {
     pub async fn diag(&self) -> Result<()> {
         let emitter = TxEmitter::new(&self.cluster);
         let mut faucet_account: Option<AccountData> = None;
-        let instances: Vec<_> = self.cluster.all_instances().collect();
+        let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
             print!("Getting faucet account sequence number on {}...", instance);
             let account = emitter
@@ -710,13 +710,20 @@ impl ClusterTestRunner {
             "All nodes are now healthy. Checking json rpc endpoints of validators and full nodes"
         );
         loop {
-            let results = join_all(self.cluster.all_instances().map(Instance::try_json_rpc)).await;
+            let results = join_all(
+                self.cluster
+                    .validator_and_fullnode_instances()
+                    .map(Instance::try_json_rpc),
+            )
+            .await;
 
             if results.iter().all(Result::is_ok) {
                 break;
             }
             if Instant::now() > deadline {
-                for (instance, result) in zip(self.cluster.all_instances(), results) {
+                for (instance, result) in
+                    zip(self.cluster.validator_and_fullnode_instances(), results)
+                {
                     if let Err(err) = result {
                         warn!("Instance {} still unhealthy: {}", instance, err);
                     }

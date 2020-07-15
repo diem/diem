@@ -93,7 +93,7 @@ impl Experiment for ValidatorVersioning {
         update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
 
         info!("2. Send a transaction to make sure it is not rejected nor cause any fork");
-        let full_node = context.cluster.random_full_node_instance();
+        let full_node = context.cluster.random_fullnode_instance();
         let mut full_node_client = full_node.json_rpc_client();
         let mut account_1 = context.tx_emitter.take_account();
         let account_2 = context.tx_emitter.take_account();
@@ -186,10 +186,7 @@ impl Experiment for ValidatorVersioning {
 
         info!("8. Send a transaction to make sure it gets dropped by the full node mempool.");
 
-        let updated_full_node = context
-            .cluster
-            .random_full_node_instance()
-            .json_rpc_client();
+        let updated_full_node = context.cluster.random_fullnode_instance().json_rpc_client();
         if updated_full_node.submit_transaction(txn3).await.is_ok() {
             return Err(format_err!(
                 "Transaction should not be accepted by the full node."

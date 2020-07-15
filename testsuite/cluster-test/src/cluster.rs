@@ -86,7 +86,7 @@ impl Cluster {
         &self.validator_instances
     }
 
-    pub fn random_full_node_instance(&self) -> Instance {
+    pub fn random_fullnode_instance(&self) -> Instance {
         let mut rnd = rand::thread_rng();
         self.fullnode_instances
             .choose(&mut rnd)
@@ -112,6 +112,12 @@ impl Cluster {
             .chain(self.fullnode_instances.iter())
             .chain(self.lsr_instances.iter())
             .chain(self.vault_instances.iter())
+    }
+
+    pub fn validator_and_fullnode_instances(&self) -> impl Iterator<Item = &Instance> {
+        self.validator_instances
+            .iter()
+            .chain(self.fullnode_instances.iter())
     }
 
     pub fn into_validator_instances(self) -> Vec<Instance> {
@@ -211,6 +217,7 @@ impl Cluster {
     }
 
     pub fn find_instance_by_pod(&self, pod: &str) -> Option<&Instance> {
-        self.all_instances().find(|i| i.peer_name() == pod)
+        self.validator_and_fullnode_instances()
+            .find(|i| i.peer_name() == pod)
     }
 }
