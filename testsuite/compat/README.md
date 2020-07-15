@@ -47,7 +47,7 @@ Output of the above command will indicate which cluster it was able to lock, or 
 named `compat-0`, we can run an arbitrary workload against it:
 
 ```
-$ cargo run -p cli -- --url https://client.compat-0.aws.hlw3truzy4ls.com/ --waypoint <waypoint>
+$ cargo run -p cli -- --url https://client.compat-0.aws.hlw3truzy4ls.com/ --waypoint <waypoint> --chain-id <chain-id>
 ...
 > account create
 > account mint 0 100 LBR
