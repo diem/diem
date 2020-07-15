@@ -10,6 +10,8 @@
 -  [Function `initialize`](#0x1_LibraWriteSetManager_initialize)
 -  [Function `prologue`](#0x1_LibraWriteSetManager_prologue)
 -  [Function `epilogue`](#0x1_LibraWriteSetManager_epilogue)
+-  [Specification](#0x1_LibraWriteSetManager_Specification)
+    -  [Function `initialize`](#0x1_LibraWriteSetManager_Specification_initialize)
 
 
 
@@ -171,3 +173,29 @@
 
 
 </details>
+
+<a name="0x1_LibraWriteSetManager_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_LibraWriteSetManager_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraWriteSetManager_initialize">initialize</a>(account: &signer)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+The permission "SendWriteSetTransaction" is granted to LibraAccount [B19].
+
+
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+</code></pre>

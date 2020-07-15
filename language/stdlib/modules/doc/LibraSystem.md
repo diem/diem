@@ -906,3 +906,11 @@ pragma opaque = <b>true</b>;
 <b>ensures</b> result == (exists v in validators_vec_ref: v.addr == addr);
 <b>ensures</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(validators_vec_ref);
 </code></pre>
+
+
+
+The permission "{Add, Remove} Validator" is granted to LibraRoot [B23].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
+</code></pre>

@@ -91,6 +91,14 @@ module DualAttestation {
             expiration_date: U64_MAX,
         })
     }
+    spec fun publish_credential {
+        pragma aborts_if_is_partial = true;
+
+        // TODO(jkpark): Refactor this governance spec.
+        /// The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedDealer [B26].
+        aborts_if !Roles::spec_has_parent_VASP_role_addr(Signer::spec_address_of(created)) &&
+            !Roles::spec_has_designated_dealer_role_addr(Signer::spec_address_of(created));
+    }
 
     /// Rotate the base URL for `account` to `new_url`
     public fun rotate_base_url(account: &signer, new_url: vector<u8>) acquires Credential {
@@ -418,6 +426,5 @@ module DualAttestation {
         // TODO(shb): why does verification of LimitExists fail for only these two procedures?
         apply LimitExists to * except get_cur_microlibra_limit, compliance_public_key;
     }
-
 }
 }

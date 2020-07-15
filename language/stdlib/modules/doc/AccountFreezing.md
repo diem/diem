@@ -459,3 +459,10 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 <pre><code><b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt;
     <a href="#0x1_AccountFreezing_spec_account_is_not_frozen">spec_account_is_not_frozen</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>());
 </code></pre>
+
+
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B17].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
+</code></pre>

@@ -36,6 +36,13 @@ module LibraWriteSetManager {
             }
         );
     }
+    spec fun initialize {
+        pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
+
+        // TODO(jkpark): Refactor this governance spec.
+        /// The permission "SendWriteSetTransaction" is granted to LibraAccount [B19].
+        aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+    }
 
     fun prologue(
         account: &signer,

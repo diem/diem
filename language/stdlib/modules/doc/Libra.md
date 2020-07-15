@@ -61,6 +61,7 @@
     -  [Function `burn`](#0x1_Libra_Specification_burn)
     -  [Function `mint_with_capability`](#0x1_Libra_Specification_mint_with_capability)
     -  [Function `preburn_with_resource`](#0x1_Libra_Specification_preburn_with_resource)
+    -  [Function `publish_preburn_to_account`](#0x1_Libra_Specification_publish_preburn_to_account)
     -  [Function `preburn_to`](#0x1_Libra_Specification_preburn_to)
     -  [Function `burn_with_capability`](#0x1_Libra_Specification_burn_with_capability)
     -  [Function `burn_with_resource_cap`](#0x1_Libra_Specification_burn_with_resource_cap)
@@ -72,6 +73,7 @@
     -  [Function `register_currency`](#0x1_Libra_Specification_register_currency)
     -  [Function `register_SCS_currency`](#0x1_Libra_Specification_register_SCS_currency)
     -  [Function `currency_code`](#0x1_Libra_Specification_currency_code)
+    -  [Function `update_lbr_exchange_rate`](#0x1_Libra_Specification_update_lbr_exchange_rate)
     -  [Module Specification](#0x1_Libra_@Module_Specification)
         -  [Minting](#0x1_Libra_@Minting)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
@@ -1944,7 +1946,7 @@ Updates the
 <code>lbr_exchange_rate</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(tr_account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(tc_account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
 </code></pre>
 
 
@@ -1954,10 +1956,10 @@ Updates the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(
-    tr_account: &signer,
+    tc_account: &signer,
     lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;FromCoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -1968,7 +1970,6 @@ Updates the
             new_to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_get_raw_value">FixedPoint32::get_raw_value</a>(*&currency_info.to_lbr_exchange_rate),
         }
     );
-
 }
 </code></pre>
 
@@ -2020,7 +2021,7 @@ start out in the default state of
 <code>can_mint = <b>true</b></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(tr_account: &signer, can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(tc_account: &signer, can_mint: bool)
 </code></pre>
 
 
@@ -2030,11 +2031,11 @@ start out in the default state of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(
-    tr_account: &signer,
+    tc_account: &signer,
     can_mint: bool,
     )
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
@@ -2266,6 +2267,22 @@ Returns true if a BurnCapability for CoinType exists at addr.
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
                 == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) + coin.value;
 }
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_publish_preburn_to_account"></a>
+
+### Function `publish_preburn_to_account`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(account: &signer, tc_account: &signer)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
 </code></pre>
 
 
@@ -2536,6 +2553,22 @@ Returns the market cap of CoinType.
 </code></pre>
 
 
+
+<a name="0x1_Libra_Specification_update_lbr_exchange_rate"></a>
+
+### Function `update_lbr_exchange_rate`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(tc_account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
 **************** MODULE SPECIFICATION ****************
 
 <a name="0x1_Libra_@Module_Specification"></a>
@@ -2672,6 +2705,47 @@ another approach for expressing this invariant.
 TODO (dd): It would be great if we could prove that there is never a coin or a set of coins whose
 aggregate value exceeds the CoinInfo.total_value.  However, that property involves summations over
 all resources and is beyond the capabilities of the specification logic or the prover, currently.
+
+
+<a name="0x1_Libra_AbortsIfNotDesignatedDealer"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_AbortsIfNotDesignatedDealer">AbortsIfNotDesignatedDealer</a> {
+    account: signer;
+    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+}
+</code></pre>
+
+
+
+The permission "MintCurrency(type)" is granted to TreasuryCompliance [B12].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+The permission "BurnCurrency(type)" is granted to TreasuryCompliance [B13].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="#0x1_Libra_register_SCS_currency">register_SCS_currency</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+The permission "PreburnCurrency(type)" is granted to DesignatedDealer [B14].
+
+
+<pre><code><b>apply</b> <a href="#0x1_Libra_AbortsIfNotDesignatedDealer">AbortsIfNotDesignatedDealer</a> <b>to</b> <a href="#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [B15].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account} <b>to</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;;
+</code></pre>
+
+
 
 
 <a name="0x1_Libra_TotalValueRemainsSame"></a>

@@ -8,6 +8,7 @@
 -  [Struct `LibraVersion`](#0x1_LibraVersion_LibraVersion)
 -  [Function `initialize`](#0x1_LibraVersion_initialize)
 -  [Function `set`](#0x1_LibraVersion_set)
+-  [Specification](#0x1_LibraVersion_Specification)
 
 
 
@@ -104,3 +105,15 @@
 
 
 </details>
+
+<a name="0x1_LibraVersion_Specification"></a>
+
+## Specification
+
+
+The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B20].
+
+
+<pre><code><b>invariant</b> forall addr: address where exists&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;(addr):
+    addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+</code></pre>

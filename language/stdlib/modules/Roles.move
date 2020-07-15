@@ -348,45 +348,45 @@ module Roles {
     }
 
     spec schema AbortsIfNotLibraRoot {
-        creating_account: signer;
-        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(creating_account));
+        account: signer;
+        aborts_if !spec_has_libra_root_role_addr(Signer::spec_address_of(account));
     }
 
     spec schema AbortsIfNotTreasuryCompliance {
-        creating_account: signer;
-        aborts_if !spec_has_treasury_compliance_role_addr(Signer::spec_address_of(creating_account));
+        account: signer;
+        aborts_if !spec_has_treasury_compliance_role_addr(Signer::spec_address_of(account));
     }
 
     spec schema AbortsIfNotParentVASP {
-        creating_account: signer;
-        aborts_if !spec_has_parent_VASP_role_addr(Signer::spec_address_of(creating_account));
+        account: signer;
+        aborts_if !spec_has_parent_VASP_role_addr(Signer::spec_address_of(account));
     }
 
     spec module {
         /// Validator roles are only granted by LibraRoot [B4]. A new `RoldId` with `VALIDATOR_ROLE_ID()` is only
         /// published through `new_validator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: SPEC_VALIDATOR_ROLE_ID()} to * except new_validator_role;
-        apply AbortsIfNotLibraRoot to new_validator_role;
+        apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_role;
 
         /// ValidatorOperator roles are only granted by LibraRoot [B5]. A new `RoldId` with `VALIDATOR_OPERATOR_ROLE_ID()` is only
         /// published through `new_validator_operator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: SPEC_VALIDATOR_OPERATOR_ROLE_ID()} to * except new_validator_operator_role;
-        apply AbortsIfNotLibraRoot to new_validator_operator_role;
+        apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_operator_role;
 
         /// DesignatedDealer roles are only granted by TreasuryCompliance [B6](TODO: resolve the discrepancy). A new `RoldId` with `DESIGNATED_DEALER_ROLE_ID()` is only
         /// published through `new_designated_dealer_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: SPEC_DESIGNATED_DEALER_ROLE_ID()} to * except new_designated_dealer_role;
-        apply AbortsIfNotTreasuryCompliance to new_designated_dealer_role;
+        apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_designated_dealer_role;
 
         /// ParentVASP roles are only granted by LibraRoot [B7]. A new `RoldId` with `PARENT_VASP_ROLE_ID()` is only
         /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: SPEC_PARENT_VASP_ROLE_ID()} to * except new_parent_vasp_role;
-        apply AbortsIfNotLibraRoot to new_parent_vasp_role;
+        apply AbortsIfNotLibraRoot{account: creating_account} to new_parent_vasp_role;
 
         /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoldId` with `CHILD_VASP_ROLE_ID()` is only
         /// published through `new_child_vasp_role` which aborts if `creating_account` does not have the ParentVASP role.
         apply ThisRoleIsNotNewlyPublished{this: SPEC_CHILD_VASP_ROLE_ID()} to * except new_child_vasp_role;
-        apply AbortsIfNotParentVASP to new_child_vasp_role;
+        apply AbortsIfNotParentVASP{account: creating_account} to new_child_vasp_role;
 
         /// The LibraRoot role is globally unique [C2]. A `RoldId` with `LIBRA_ROOT_ROLE_ID()` can only exists in the
         /// `LIBRA_ROOT_ADDRESS()`. TODO: Verify that `LIBRA_ROOT_ADDRESS()` has a LibraRoot role after `Genesis::initialize`.

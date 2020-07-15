@@ -948,6 +948,34 @@ module LibraAccount {
         define spec_has_account_operations_cap(): bool {
             exists<AccountOperationsCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
+
+        define spec_has_key_rotation_cap(addr: address): bool {
+            Option::spec_is_some(global<LibraAccount>(addr).key_rotation_capability)
+        }
+
+        define spec_has_withdraw_cap(addr: address): bool {
+            Option::spec_is_some(global<LibraAccount>(addr).withdrawal_capability)
+        }
     }
+
+    spec schema EnsuresHasKeyRotationCap {
+        account: signer;
+        ensures spec_has_key_rotation_cap(Signer::spec_address_of(account));
+    }
+
+    spec schema EnsuresWithdrawalCap {
+        account: signer;
+        ensures spec_has_withdraw_cap(Signer::spec_address_of(account));
+    }
+
+    spec module {
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B27].
+        apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
+
+        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B28].
+        apply EnsuresWithdrawalCap{account: new_account} to make_account;
+    }
+
+
 }
 }

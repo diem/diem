@@ -154,6 +154,9 @@ module AccountFreezing {
         invariant !LibraTimestamp::spec_is_genesis() ==>
             spec_account_is_not_frozen(CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS());
 
+        /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B17].
+        apply Roles::AbortsIfNotTreasuryCompliance to freeze_account, unfreeze_account;
+
         // TODO: Need to decide the freezability of the roles such as Validator, ValidatorOperator, DesginatedDealer.
     }
 }

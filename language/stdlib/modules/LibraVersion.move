@@ -39,6 +39,12 @@ module LibraVersion {
             LibraVersion { major }
         );
     }
+
+    spec module {
+        /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B20].
+        invariant forall addr: address where exists<LibraVersion>(addr):
+            addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+    }
 }
 
 }

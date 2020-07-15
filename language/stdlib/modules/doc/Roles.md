@@ -916,8 +916,8 @@ will remain an account with role
 
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
-    creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
+    account: signer;
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 }
 </code></pre>
 
@@ -928,8 +928,8 @@ will remain an account with role
 
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a> {
-    creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
+    account: signer;
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 }
 </code></pre>
 
@@ -940,8 +940,8 @@ will remain an account with role
 
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotParentVASP">AbortsIfNotParentVASP</a> {
-    creating_account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
+    account: signer;
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 }
 </code></pre>
 
@@ -956,7 +956,7 @@ published through
 
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_validator_role;
-<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> <b>to</b> new_validator_role;
+<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account} <b>to</b> new_validator_role;
 </code></pre>
 
 
@@ -969,7 +969,7 @@ published through
 
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_validator_operator_role;
-<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> <b>to</b> new_validator_operator_role;
+<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account} <b>to</b> new_validator_operator_role;
 </code></pre>
 
 
@@ -982,7 +982,7 @@ published through
 
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_designated_dealer_role;
-<b>apply</b> <a href="#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a> <b>to</b> new_designated_dealer_role;
+<b>apply</b> <a href="#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a>{account: creating_account} <b>to</b> new_designated_dealer_role;
 </code></pre>
 
 
@@ -995,7 +995,7 @@ published through
 
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_parent_vasp_role;
-<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> <b>to</b> new_parent_vasp_role;
+<b>apply</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: creating_account} <b>to</b> new_parent_vasp_role;
 </code></pre>
 
 
@@ -1008,7 +1008,7 @@ published through
 
 
 <pre><code><b>apply</b> <a href="#0x1_Roles_ThisRoleIsNotNewlyPublished">ThisRoleIsNotNewlyPublished</a>{this: <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>()} <b>to</b> * <b>except</b> new_child_vasp_role;
-<b>apply</b> <a href="#0x1_Roles_AbortsIfNotParentVASP">AbortsIfNotParentVASP</a> <b>to</b> new_child_vasp_role;
+<b>apply</b> <a href="#0x1_Roles_AbortsIfNotParentVASP">AbortsIfNotParentVASP</a>{account: creating_account} <b>to</b> new_child_vasp_role;
 </code></pre>
 
 

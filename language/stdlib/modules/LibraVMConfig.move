@@ -2,6 +2,7 @@ address 0x1 {
 
 module LibraVMConfig {
     use 0x1::LibraConfig;
+    use 0x1::Roles;
 
     // The struct to hold all config data needed to operate the LibraVM.
     // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configruation.
@@ -94,11 +95,19 @@ module LibraVMConfig {
             },
         );
     }
+    spec fun initialize {
+        pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
+    }
 
     public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {
         let current_config = LibraConfig::get<LibraVMConfig>();
         current_config.publishing_option = publishing_option;
         LibraConfig::set<LibraVMConfig>(account, current_config);
+    }
+
+    spec module {
+        /// The permission "UpdateVMConfig" is granted to LibraRoot [B21].
+        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to initialize;
     }
 }
 }

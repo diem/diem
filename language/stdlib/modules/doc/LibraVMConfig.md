@@ -10,6 +10,8 @@
 -  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
 -  [Function `initialize`](#0x1_LibraVMConfig_initialize)
 -  [Function `set_publishing_option`](#0x1_LibraVMConfig_set_publishing_option)
+-  [Specification](#0x1_LibraVMConfig_Specification)
+    -  [Function `initialize`](#0x1_LibraVMConfig_Specification_initialize)
 
 
 
@@ -270,3 +272,30 @@
 
 
 </details>
+
+<a name="0x1_LibraVMConfig_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_LibraVMConfig_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+
+The permission "UpdateVMConfig" is granted to LibraRoot [B21].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> initialize;
+</code></pre>
