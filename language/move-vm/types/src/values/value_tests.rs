@@ -125,7 +125,7 @@ fn global_value_non_struct() -> PartialVMResult<()> {
 fn global_value() -> PartialVMResult<()> {
     let gv = GlobalValue::new(Value::struct_(Struct::pack(
         vec![Value::u8(100), Value::u64(200)],
-        false,
+        true,
     )))?;
 
     {
@@ -161,7 +161,7 @@ fn global_value() -> PartialVMResult<()> {
 fn global_value_nested() -> PartialVMResult<()> {
     let gv: GlobalValue = GlobalValue::new(Value::struct_(Struct::pack(
         vec![Value::struct_(Struct::pack(vec![Value::u64(100)], false))],
-        false,
+        true,
     )))?;
 
     {
