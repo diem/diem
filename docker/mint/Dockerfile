@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y procps
 #   GIVEN necessary environment arguments to run docker-run.sh
 ARG AC_PORT="8080"
 ARG AC_HOST="172.18.0.13"
+ARG CHAIN_ID="TESTING"
 ARG LOG_LEVEL="info"
 ARG CFG_NUM_VALIDATORS=5
 
@@ -75,7 +76,7 @@ FROM pre-test as prod
 # Mint proxy listening address
 EXPOSE 8000
 
-# Define CFG_SEED, AC_HOST and AC_PORT environment variables when running
+# Define CFG_SEED, AC_HOST, AC_PORT and CHAIN_ID environment variables when running
 CMD /opt/libra/bin/docker-run.sh
 
 ARG BUILD_DATE
