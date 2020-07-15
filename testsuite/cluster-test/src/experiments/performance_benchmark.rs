@@ -10,7 +10,7 @@ use crate::{
     tx_emitter::EmitJobRequest,
     util::unix_timestamp_now,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result, bail};
 use async_trait::async_trait;
 use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
@@ -134,6 +134,7 @@ impl Experiment for PerformanceBenchmark {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
+        bail!("TEST INDUCE FAILURE!!!");
         let futures: Vec<_> = self.down_validators.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
 

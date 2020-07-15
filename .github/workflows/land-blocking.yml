@@ -2,9 +2,9 @@
 name: Land-blocking Test
 
 on:
-  push:
+  pull_request:
     branches:
-      - auto
+      - master
 
 jobs:
   build-and-run-cluster-test:
@@ -19,16 +19,7 @@ jobs:
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
-      - name: Check kill switch
-        id: check_ks
-        run: |
-          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_TEST }} || ! .circleci/should_run_lbt.sh ; then
-            echo "::set-output name=should_run::false";
-          else
-            echo "::set-output name=should_run::true";
-          fi;
       - name: Build, tag and push images
-        if: steps.check_ks.outputs.should_run == 'true'
         run: |
           set +e
           date
@@ -50,7 +41,6 @@ jobs:
           echo "Build failed after retries"
           exit 1
       - name: Launch cluster test
-        if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
           set +e
@@ -70,29 +60,7 @@ jobs:
           else
             echo "report.json is empty or not found."
           fi
-          if [ $ret -ne 0 ]; then
-            jq -n \
-              --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
-          $(tail -5 $CTI_OUTPUT_LOG)" \
-              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-            '{
-              "attachments": [
-                {
-                  "text": $msg,
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "Visit Job",
-                      "url": $url
-                    }
-                  ]
-                }
-              ]
-            }' > /tmp/payload
-            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
-          fi
       - name: Post test results on PR
-        if: steps.check_ks.outputs.should_run == 'true'
         uses: actions/github-script@0.4.0
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
