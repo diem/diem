@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Function `add_recovery_rotation_capability`](#SCRIPT_add_recovery_rotation_capability)
+        -  [Aborts](#SCRIPT_@Aborts)
 
 
 
@@ -16,17 +17,26 @@
 Add the
 <code>KeyRotationCapability</code> for
 <code>to_recover_account</code> to the
-<code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code>
-resource under
+<code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under
 <code>recovery_address</code>.
-Aborts if
-<code>to_recovery_account</code> and
-<code>to_recovery_address belong <b>to</b> different VASPs, <b>if</b>
-</code>recovery_address
-<code> does not have a </code>RecoveryAddress
-<code> <b>resource</b>, or <b>if</b>
-</code>to_recover_account
-<code> has already extracted its </code>KeyRotationCapability`.
+
+
+<a name="SCRIPT_@Aborts"></a>
+
+#### Aborts
+
+* Aborts with
+<code>LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED</code> if
+<code>account</code> has already delegated its
+<code>KeyRotationCapability</code>.
+* Aborts with
+<code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a>:ENOT_A_RECOVERY_ADDRESS</code> if
+<code>recovery_address</code> does not have a
+<code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource.
+* Aborts with
+<code>RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION</code> if
+<code>to_recover_account</code> and
+<code>recovery_address</code> do not belong to the same VASP.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
@@ -39,7 +49,9 @@ Aborts if
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address) {
-    <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(to_recover_account, recovery_address)
+    <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(
+        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(to_recover_account), recovery_address
+    )
 }
 </code></pre>
 

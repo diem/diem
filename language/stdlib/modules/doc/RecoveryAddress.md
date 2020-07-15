@@ -78,7 +78,7 @@ Aborts if
 <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource, or is not a VASP.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer, rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>)
 </code></pre>
 
 
@@ -87,7 +87,7 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer, rotation_cap: KeyRotationCapability) {
     // Only VASPs can create a recovery address
     <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account)), ENOT_A_VASP);
     // put the rotation capability for the recovery account itself in `rotation_caps`. This
@@ -95,7 +95,6 @@ Aborts if
     // (1) It's not possible <b>to</b> get into a "recovery cycle" where A is the recovery account for
     //     B and B is the recovery account for A
     // (2) rotation_caps is always nonempty
-    <b>let</b> rotation_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(recovery_account);
     <b>assert</b>(*<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&rotation_cap)
          == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account), EKEY_ROTATION_DEPENDENCY_CYCLE);
     move_to(
@@ -139,20 +138,26 @@ Aborts if
     to_recover: address,
     new_key: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a> {
+    // Check that `recovery_address` has a `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b>
+    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), ENOT_A_RECOVERY_ADDRESS);
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    // Both the original owner `to_recover` of the KeyRotationCapability and the
-    // `recovery_address` can rotate the authentication key
-    <b>assert</b>(sender == recovery_address || sender == to_recover, ECANNOT_ROTATE_KEY);
+    <b>assert</b>(
+        // The original owner of a key rotation capability can rotate its own key
+        sender == to_recover ||
+        // The owner of the `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b> can rotate any key
+        sender == recovery_address,
+        ECANNOT_ROTATE_KEY
+    );
 
     <b>let</b> caps = &borrow_global&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
     <b>let</b> i = 0;
     <b>let</b> len = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(caps);
     <b>while</b> ({
         <b>spec</b> {
-            <b>assert</b> i &lt;= len + 1;
+            <b>assert</b> i &lt;= len;
             <b>assert</b> forall j in 0..i: caps[j].account_address != to_recover;
         };
-        (i &lt;= len)
+        (i &lt; len)
     })
     {
         <b>let</b> cap = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(caps, i);
@@ -163,7 +168,7 @@ Aborts if
         i = i + 1
     };
     <b>spec</b> {
-        <b>assert</b> i == len + 1;
+        <b>assert</b> i == len;
         <b>assert</b> forall j in 0..len: caps[j].account_address != to_recover;
     };
     // Couldn't find `to_recover` in the account recovery <b>resource</b>; <b>abort</b>
@@ -179,23 +184,18 @@ Aborts if
 
 ## Function `add_rotation_capability`
 
-Add the
-<code>KeyRotationCapability</code> for
-<code>to_recover_account</code> to the
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code>
-resource under
+Add
+<code>to_recover</code> to the
+<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under
 <code>recovery_address</code>.
 Aborts if
-<code>to_recovery_account</code> and
-<code>to_recovery_address belong <b>to</b> different VASPs, <b>if</b>
+<code>to_recover.address</code> and
+<code>recovery_address belong <b>to</b> different VASPs, or <b>if</b>
 </code>recovery_address
-<code> does not have a </code>RecoveryAddress
-<code> <b>resource</b>, or <b>if</b>
-</code>to_recover_account
-<code> has already extracted its </code>KeyRotationCapability`.
+<code> does not have a </code>RecoveryAddress` resource.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>, recovery_address: address)
 </code></pre>
 
 
@@ -204,21 +204,21 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: KeyRotationCapability, recovery_address: address)
 <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a> {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_recover_account);
+    // Check that `recovery_address` has a `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b>
+    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), ENOT_A_RECOVERY_ADDRESS);
     // Only accept the rotation capability <b>if</b> both accounts belong <b>to</b> the same <a href="VASP.md#0x1_VASP">VASP</a>
+    <b>let</b> to_recover_address = *<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&to_recover);
     <b>assert</b>(
-        <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(recovery_address) ==
-            <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(addr),
+        <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(recovery_address) == <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(to_recover_address),
         EINVALID_KEY_ROTATION_DELEGATION
     );
 
-    <b>let</b> caps = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
-    <b>let</b> rotation_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(to_recover_account);
-    <b>assert</b>(*<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&rotation_cap)
-         == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_recover_account), EINVALID_KEY_ROTATION_DELEGATION);
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(caps, rotation_cap);
+    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps,
+        to_recover
+    );
 }
 </code></pre>
 
@@ -399,7 +399,7 @@ Returns true if
 ### Function `publish`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer, rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>)
 </code></pre>
 
 
@@ -410,11 +410,9 @@ Returns true if
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
-    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<pre><code><b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
 <b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_spec_key_rotation_capability_address">LibraAccount::spec_key_rotation_capability_address</a>(rotation_cap) != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
 <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
 </code></pre>
 
@@ -447,19 +445,14 @@ Returns true if
 ### Function `add_rotation_capability`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>, recovery_address: address)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
-<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
-<b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address)
-       != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
-<b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
-    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
+<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
+<b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(<a href="LibraAccount.md#0x1_LibraAccount_spec_key_rotation_capability_address">LibraAccount::spec_key_rotation_capability_address</a>(to_recover));
 <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[
-    len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1].account_address == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account);
+    len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1] == to_recover;
 </code></pre>

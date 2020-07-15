@@ -920,8 +920,7 @@ module LibraAccount {
 
         /// Returns field `key_rotation_capability` of the
         /// LibraAccount under `addr`.
-        define spec_get_key_rotation_cap(addr: address):
-            Option<KeyRotationCapability> {
+        define spec_get_key_rotation_cap(addr: address): Option<KeyRotationCapability> {
             global<LibraAccount>(addr).key_rotation_capability
         }
 
