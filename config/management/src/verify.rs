@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants::VALIDATOR_CONFIG, error::Error, secure_backend::StorageLocation::LocalStorage,
-    SingleBackend,
+    constants::VALIDATOR_CONFIG,
+    error::Error,
+    secure_backend::{StorageLocation::LocalStorage, ValidatorBackend},
 };
 use executor::db_bootstrapper;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
@@ -40,7 +41,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 pub struct Verify {
     #[structopt(flatten)]
-    backend: SingleBackend,
+    backend: ValidatorBackend,
     /// If specified, compares the internal state to that of a
     /// provided genesis. Note, that a waypont might diverge from
     /// the provided genesis after execution has begun.
@@ -50,7 +51,10 @@ pub struct Verify {
 
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
-        let local_storage = self.backend.backend.create_storage(LocalStorage)?;
+        let local_storage = self
+            .backend
+            .validator_backend
+            .create_storage(LocalStorage)?;
         let mut buffer = String::new();
 
         writeln!(buffer, "Data stored in SecureStorage:").unwrap();

@@ -10,6 +10,7 @@ use std::{
     path::PathBuf,
     str::FromStr,
 };
+use structopt::StructOpt;
 
 pub const DISK: &str = "disk";
 pub const GITHUB: &str = "github";
@@ -161,6 +162,55 @@ impl TryInto<Storage> for SecureBackend {
         Ok((&config).into())
     }
 }
+
+macro_rules! secure_backend {
+    ($struct_name:ident, $field_name:ident, $struct_type:ty, $purpose:literal) => {
+        #[derive(Debug, StructOpt)]
+        pub struct $struct_name {
+            #[structopt(long,
+                help = concat!("Backend for ", $purpose),
+                long_help = concat!("Backend for ", $purpose, r#"
+
+Secure backends are represented as a semi-colon deliminted key value
+pair: "k0=v0;k1=v1;...".  The current supported formats are:
+    Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
+        an optional namespace: "namespace=NAMESPACE"
+        an optional server certificate: "ca_certificate=PATH_TO_CERT"
+    GitHub: "backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
+        an optional namespace: "namespace=NAMESPACE"
+    InMemory: "backend=memory"
+    OnDisk: "backend=disk;path=LOCAL_PATH"
+                "#)
+            )]
+            pub $field_name: $struct_type,
+        }
+    }
+}
+
+secure_backend!(
+    ValidatorBackend,
+    validator_backend,
+    SecureBackend,
+    "validator configuration"
+);
+secure_backend!(
+    SharedBackend,
+    shared_backend,
+    SecureBackend,
+    "shared information"
+);
+secure_backend!(
+    OptionalValidatorBackend,
+    validator_backend,
+    Option<SecureBackend>,
+    "validator configuration"
+);
+secure_backend!(
+    OptionalSharedBackend,
+    shared_backend,
+    Option<SecureBackend>,
+    "shared information"
+);
 
 #[allow(dead_code)]
 #[cfg(test)]

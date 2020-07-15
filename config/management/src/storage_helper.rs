@@ -61,44 +61,44 @@ impl StorageHelper {
 
     pub fn association_key(
         &self,
-        local_ns: &str,
-        remote_ns: &str,
+        validator_ns: &str,
+        shared_ns: &str,
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
                 association-key
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={shared_ns}\
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
         command.association_key()
     }
 
-    pub fn create_waypoint(&self, remote_ns: &str) -> Result<Waypoint, Error> {
+    pub fn create_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 management
                 create-waypoint
-                --local backend={backend};\
+                --shared-backend backend={backend};\
                     path={path}
-                --remote backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={validator_ns}\
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -110,7 +110,7 @@ impl StorageHelper {
             "
                 management
                 genesis
-                --backend backend={backend};\
+                --shared-backend backend={backend};\
                     path={path}
                 --path {genesis_path}
             ",
@@ -123,66 +123,74 @@ impl StorageHelper {
         command.genesis()
     }
 
-    pub fn insert_waypoint(&self, local_ns: &str, remote_ns: &str) -> Result<Waypoint, Error> {
+    pub fn insert_waypoint(&self, validator_ns: &str, shared_ns: &str) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 management
                 insert-waypoint
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}
+                    namespace={shared_ns}
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
         command.insert_waypoint()
     }
 
-    pub fn operator_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
+    pub fn operator_key(
+        &self,
+        validator_ns: &str,
+        shared_ns: &str,
+    ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
                 operator-key
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={shared_ns}\
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
         command.operator_key()
     }
 
-    pub fn owner_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
+    pub fn owner_key(
+        &self,
+        validator_ns: &str,
+        shared_ns: &str,
+    ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
                 management
                 owner-key
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={shared_ns}\
             ",
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -196,7 +204,7 @@ impl StorageHelper {
                 management
                 set-layout
                 --path {path}
-                --backend backend={backend};\
+                --shared-backend backend={backend};\
                     path={storage_path};\
                     namespace={ns}
             ",
@@ -213,26 +221,26 @@ impl StorageHelper {
     pub fn set_operator(
         &self,
         operator_name: &str,
-        local_ns: &str,
-        remote_ns: &str,
+        validator_ns: &str,
+        shared_ns: &str,
     ) -> Result<String, Error> {
         let args = format!(
             "
                 management
                 set-operator
                 --operator-name {operator_name}
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={shared_ns}\
             ",
             operator_name = operator_name,
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -245,8 +253,8 @@ impl StorageHelper {
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
         chain_id: ChainId,
-        local_ns: &str,
-        remote_ns: &str,
+        validator_ns: &str,
+        shared_ns: &str,
     ) -> Result<Transaction, Error> {
         let args = format!(
             "
@@ -256,12 +264,12 @@ impl StorageHelper {
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
                 --chain-id {chain_id}
-                --local backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
-                    namespace={local_ns}
-                --remote backend={backend};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
                     path={path};\
-                    namespace={remote_ns}\
+                    namespace={shared_ns}\
             ",
             owner_name = owner_name,
             validator_address = validator_address,
@@ -269,8 +277,8 @@ impl StorageHelper {
             chain_id = chain_id.id(),
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
-            local_ns = local_ns,
-            remote_ns = remote_ns,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -283,7 +291,7 @@ impl StorageHelper {
             "
                 management
                 verify
-                --backend backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
                     namespace={ns}
             ",
@@ -301,7 +309,7 @@ impl StorageHelper {
             "
                 management
                 verify
-                --backend backend={backend};\
+                --validator-backend backend={backend};\
                     path={path};\
                     namespace={ns}
                 --genesis-path {genesis_path}
