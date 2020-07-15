@@ -71,14 +71,6 @@ impl ExecutedBlock {
         &self.state_compute_result
     }
 
-    pub fn block_info(&self) -> BlockInfo {
-        self.block().gen_block_info(
-            self.compute_result().root_hash(),
-            self.compute_result().version(),
-            self.compute_result().epoch_state().clone(),
-        )
-    }
-
     pub fn maybe_signed_vote_proposal(&self) -> MaybeSignedVoteProposal {
         MaybeSignedVoteProposal {
             vote_proposal: VoteProposal::new(

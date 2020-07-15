@@ -119,15 +119,7 @@ impl BlockData {
 
     pub fn new_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
         assert!(ledger_info.ends_epoch());
-        let ancestor = BlockInfo::new(
-            ledger_info.epoch(),
-            0,                 /* round */
-            HashValue::zero(), /* parent block id */
-            ledger_info.transaction_accumulator_hash(),
-            ledger_info.version(),
-            ledger_info.timestamp_usecs(),
-            None,
-        );
+        let ancestor = BlockInfo::new_for_genesis(ledger_info);
 
         // Genesis carries a placeholder quorum certificate to its parent id with LedgerInfo
         // carrying information about version from the last LedgerInfo of previous epoch.

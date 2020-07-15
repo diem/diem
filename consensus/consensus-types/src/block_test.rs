@@ -47,7 +47,8 @@ fn test_nil_block() {
     let parent_block_info = nil_block.quorum_cert().certified_block();
     let nil_block_qc = gen_test_certificate(
         vec![&signer],
-        nil_block.gen_block_info(
+        BlockInfo::from_block(
+            nil_block,
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
             parent_block_info.next_epoch_state().cloned(),

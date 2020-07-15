@@ -43,6 +43,8 @@ pub struct BlockInfo {
 }
 
 impl BlockInfo {
+    /// Only use for tests to avoid unclear creation of BlockInfo
+    #[cfg(test)]
     pub fn new(
         epoch: u64,
         round: Round,
@@ -63,6 +65,52 @@ impl BlockInfo {
         }
     }
 
+    /// Used to create the proposed and parent BlockInfos for the genesis QC.
+    pub fn new_for_genesis(ledger_info: &LedgerInfo) -> Self {
+        Self {
+            ledger_info.epoch(),
+            ledger_info.round(),
+            id: HashValue::zero(),
+            ledger_info.transaction_accumulator_hash(),
+            ledger_info.version(),
+            ledger_info.timestamp_usecs(),
+            next_epoch_state: None,
+        }
+    }
+
+    /// Creates a BlockInfo from a Block structure. 
+    pub fn from_block(
+        block: &Block,
+        executed_state_id: HashValue,
+        version: Version,
+        next_epoch_state: Option<EpochState>,
+    ) -> Self {
+        Self {
+            block.epoch(),
+            block.round(),
+            block.id(),
+            executed_state_id,
+            version,
+            block.timestamp_usecs(),
+            next_epoch_state,
+        }
+    }
+
+    /// Creates a BlockInfo from an ExecutedBlock structure. 
+    /// Used to vote on a proposal's block.
+    pub fn from_executed_block(executed_block: &ExecutedBlock) -> Self {
+        Self {
+            executed_block.block().epoch(),
+            executed_block.block().round(),
+            executed_block.block().id(),
+            executed_block.compute_result().root_hash(),
+            executed_block.compute_result().version(),
+            executed_block.block().timestamp_usecs(),
+            executed_block.compute_result().epoch_state().clone(),
+        }
+    }
+
+    /// An empty BlockInfo, needed for LedgerInfo that commits to nothing.
     pub fn empty() -> Self {
         Self {
             epoch: 0,

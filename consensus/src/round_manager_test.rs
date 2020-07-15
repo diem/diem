@@ -426,7 +426,8 @@ fn sync_info_carried_on_timeout_vote() {
         let block_0_quorum_cert = gen_test_certificate(
             vec![&node.signer],
             // Follow MockStateComputer implementation
-            block_0.gen_block_info(
+            BlockInfo::from_block(
+                block_0,
                 parent_block_info.executed_state_id(),
                 parent_block_info.version(),
                 parent_block_info.next_epoch_state().cloned(),
@@ -737,7 +738,8 @@ fn sync_info_sent_on_stale_sync_info() {
     let block_0_quorum_cert = gen_test_certificate(
         vec![&nodes[0].signer, &nodes[1].signer],
         // Follow MockStateComputer implementation
-        block_0.gen_block_info(
+        BlockInfo::from_block(
+            block_0,
             parent_block_info.executed_state_id(),
             parent_block_info.version(),
             parent_block_info.next_epoch_state().cloned(),

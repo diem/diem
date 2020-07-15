@@ -262,11 +262,7 @@ fn test_insert_vote() {
     for (i, voter) in signers.iter().enumerate().take(10).skip(1) {
         let vote = Vote::new(
             VoteData::new(
-                block.block().gen_block_info(
-                    block.compute_result().root_hash(),
-                    block.compute_result().version(),
-                    block.compute_result().epoch_state().clone(),
-                ),
+                BlockInfo::from_executed_block(block),
                 block.quorum_cert().certified_block().clone(),
             ),
             voter.author(),
@@ -290,11 +286,7 @@ fn test_insert_vote() {
     let final_voter = &signers[0];
     let vote = Vote::new(
         VoteData::new(
-            block.block().gen_block_info(
-                block.compute_result().root_hash(),
-                block.compute_result().version(),
-                block.compute_result().epoch_state().clone(),
-            ),
+            BlockInfo::from_executed_block(block),
             block.quorum_cert().certified_block().clone(),
         ),
         final_voter.author(),

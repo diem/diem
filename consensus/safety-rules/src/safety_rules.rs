@@ -88,7 +88,8 @@ impl SafetyRules {
             )
             .map_err(|e| Error::InvalidAccumulatorExtension(e.to_string()))?;
         Ok(VoteData::new(
-            proposed_block.gen_block_info(
+            BlockInfo::from_block(
+                proposed_block,
                 new_tree.root_hash(),
                 new_tree.version(),
                 vote_proposal.next_epoch_state().cloned(),

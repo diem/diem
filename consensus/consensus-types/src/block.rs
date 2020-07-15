@@ -103,23 +103,6 @@ impl Block {
         self.block_data.timestamp_usecs()
     }
 
-    pub fn gen_block_info(
-        &self,
-        executed_state_id: HashValue,
-        version: Version,
-        next_epoch_state: Option<EpochState>,
-    ) -> BlockInfo {
-        BlockInfo::new(
-            self.epoch(),
-            self.round(),
-            self.id(),
-            executed_state_id,
-            version,
-            self.timestamp_usecs(),
-            next_epoch_state,
-        )
-    }
-
     pub fn block_data(&self) -> &BlockData {
         &self.block_data
     }
