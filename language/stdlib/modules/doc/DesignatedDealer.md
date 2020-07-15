@@ -225,10 +225,12 @@ multi-signer transactions in order to add a new currency to an existing DD.
         window_inflow: 0,
         tiers: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>(),
     });
-    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_0_DEFAULT);
-    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_1_DEFAULT);
-    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_2_DEFAULT);
-    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_3_DEFAULT);
+    // Add tier amounts in base_units of CoinType
+    <b>let</b> coin_scaling_factor = <a href="Libra.md#0x1_Libra_scaling_factor">Libra::scaling_factor</a>&lt;CoinType&gt;();
+    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_0_DEFAULT * coin_scaling_factor);
+    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_1_DEFAULT * coin_scaling_factor);
+    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_2_DEFAULT * coin_scaling_factor);
+    <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>&lt;CoinType&gt;(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
 }
 </code></pre>
 
@@ -342,7 +344,6 @@ multi-signer transactions in order to add a new currency to an existing DD.
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     <b>assert</b>(amount &gt; 0, EINVALID_MINT_AMOUNT);
     <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), ENOT_A_DD);
-    <b>assert</b>(tier_index &lt;= 4, EINVALID_TIER_INDEX);
 
     <a href="#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr, amount, tier_index);
     // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>

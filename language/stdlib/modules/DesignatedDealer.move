@@ -172,7 +172,6 @@ module DesignatedDealer {
         assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         assert(amount > 0, EINVALID_MINT_AMOUNT);
         assert(exists_at(dd_addr), ENOT_A_DD);
-        assert(tier_index <= 4, EINVALID_TIER_INDEX);
 
         validate_and_record_mint<CoinType>(dd_addr, amount, tier_index);
         // Send ReceivedMintEvent

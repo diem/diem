@@ -181,7 +181,7 @@ module Libra {
     const EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE: u64 = 7;
     const ENOT_A_REGISTERED_CURRENCY: u64 = 8;
     const ENOT_AN_SCS_CURRENCY: u64 = 9;
-    const EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE: u64 = 10;
+    const ENOT_DESIGNATED_DEALER: u64 = 10;
 
     ///////////////////////////////////////////////////////////////////////////
     // Initialization and granting of privileges
@@ -407,6 +407,7 @@ module Libra {
         tc_account: &signer
     ) acquires CurrencyInfo {
         assert(!is_synthetic_currency<CoinType>(), EIS_SYNTHETIC_CURRENCY);
+        assert(Roles::has_designated_dealer_role(account), ENOT_DESIGNATED_DEALER);
         move_to(account, create_preburn<CoinType>(tc_account))
     }
 
@@ -724,8 +725,7 @@ module Libra {
         fractional_part: u64,
         currency_code: vector<u8>,
     ) {
-        assert(Roles::has_treasury_compliance_role(tc_account),
-               EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         let (mint_cap, burn_cap) =
             register_currency<CoinType>(
                 lr_account,
