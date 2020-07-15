@@ -5,6 +5,7 @@
 //! meant to be triggered by other threads as they commit new data to the DB.
 
 use crate::{
+    metrics::LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION,
     schema::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
@@ -183,6 +184,8 @@ impl Worker {
                         "pruner.least_readable_state_version",
                         least_readable_version as usize,
                     );
+                    LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION
+                        .set(least_readable_version as i64);
 
                     // Try to purge the log.
                     if let Err(e) = self.maybe_purge_index() {

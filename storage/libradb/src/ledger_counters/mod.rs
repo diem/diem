@@ -1,31 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::OP_COUNTER;
-use libra_metrics::{register_int_gauge_vec, IntGaugeVec};
+use crate::{metrics::LIBRA_STORAGE_LEDGER, OP_COUNTER};
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 use num_variants::NumVariants;
-use once_cell::sync::Lazy;
 #[cfg(test)]
 use proptest::{collection::hash_map, prelude::*};
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-
-// register Prometheus counters
-pub static LIBRA_STORAGE_LEDGER: Lazy<IntGaugeVec> = Lazy::new(|| {
-    register_int_gauge_vec!(
-        // metric name
-        "libra_storage_ledger",
-        // metric description
-        "Libra storage ledger counters",
-        // metric labels (dimensions)
-        &["type"]
-    )
-    .unwrap()
-});
 
 /// Types of ledger counters.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, ToPrimitive, NumVariants)]
