@@ -8,8 +8,8 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use itertools::zip_eq;
-use jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use libra_crypto::hash::HashValue;
+use libra_jellyfish_merkle::iterator::JellyfishMerkleIterator;
 use libra_types::{
     account_state_blob::AccountStateBlob,
     ledger_info::LedgerInfoWithSignatures,

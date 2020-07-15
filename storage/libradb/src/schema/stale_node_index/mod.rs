@@ -20,7 +20,7 @@
 use crate::schema::{ensure_slice_len_eq, ensure_slice_len_gt, STALE_NODE_INDEX_CF_NAME};
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use jellyfish_merkle::{node_type::NodeKey, StaleNodeIndex};
+use libra_jellyfish_merkle::{node_type::NodeKey, StaleNodeIndex};
 use libra_types::transaction::Version;
 use schemadb::{
     define_schema,
