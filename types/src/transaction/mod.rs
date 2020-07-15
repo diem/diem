@@ -202,18 +202,12 @@ impl RawTransaction {
         write_set: WriteSet,
         chain_id: ChainId,
     ) -> Self {
-        RawTransaction {
+        Self::new_change_set(
             sender,
             sequence_number,
-            payload: TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
-            // Since write-set transactions bypass the VM, these fields aren't relevant.
-            max_gas_amount: 0,
-            gas_unit_price: 0,
-            gas_currency_code: LBR_NAME.to_owned(),
-            // Write-set transactions are special and important and shouldn't expire.
-            expiration_time: Duration::new(u64::max_value(), 0),
+            ChangeSet::new(write_set, vec![]),
             chain_id,
-        }
+        )
     }
 
     pub fn new_change_set(
@@ -225,7 +219,31 @@ impl RawTransaction {
         RawTransaction {
             sender,
             sequence_number,
-            payload: TransactionPayload::WriteSet(change_set),
+            payload: TransactionPayload::WriteSet(WriteSetPayload::Direct(change_set)),
+            // Since write-set transactions bypass the VM, these fields aren't relevant.
+            max_gas_amount: 0,
+            gas_unit_price: 0,
+            gas_currency_code: LBR_NAME.to_owned(),
+            // Write-set transactions are special and important and shouldn't expire.
+            expiration_time: Duration::new(u64::max_value(), 0),
+            chain_id,
+        }
+    }
+
+    pub fn new_writeset_script(
+        sender: AccountAddress,
+        sequence_number: u64,
+        script: Script,
+        signer: AccountAddress,
+        chain_id: ChainId,
+    ) -> Self {
+        RawTransaction {
+            sender,
+            sequence_number,
+            payload: TransactionPayload::WriteSet(WriteSetPayload::Script {
+                execute_as: signer,
+                script,
+            }),
             // Since write-set transactions bypass the VM, these fields aren't relevant.
             max_gas_amount: 0,
             gas_unit_price: 0,
@@ -314,11 +332,24 @@ impl RawTransaction {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
-    WriteSet(ChangeSet),
+    WriteSet(WriteSetPayload),
     /// A transaction that executes code.
     Script(Script),
     /// A transaction that publishes code.
     Module(Module),
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub enum WriteSetPayload {
+    /// Directly passing in the write set.
+    Direct(ChangeSet),
+    /// Generate the writeset by running a script.
+    Script {
+        /// Execute the script as the designated signer.
+        execute_as: AccountAddress,
+        /// Script body that gets executed.
+        script: Script,
+    },
 }
 
 /// A transaction that has been signed.

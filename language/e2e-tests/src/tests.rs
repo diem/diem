@@ -10,6 +10,7 @@
 //! benefit.
 
 mod account_universe;
+mod admin_script;
 mod create_account;
 mod data_store;
 mod execution_strategies;

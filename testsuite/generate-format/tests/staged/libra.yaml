@@ -185,7 +185,7 @@ TransactionPayload:
     0:
       WriteSet:
         NEWTYPE:
-          TYPENAME: ChangeSet
+          TYPENAME: WriteSetPayload
     1:
       Script:
         NEWTYPE:
@@ -247,3 +247,16 @@ WriteSetMut:
           TUPLE:
             - TYPENAME: AccessPath
             - TYPENAME: WriteOp
+WriteSetPayload:
+  ENUM:
+    0:
+      Direct:
+        NEWTYPE:
+          TYPENAME: ChangeSet
+    1:
+      Script:
+        STRUCT:
+          - execute_as:
+              TYPENAME: AccountAddress
+          - script:
+              TYPENAME: Script
