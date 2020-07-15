@@ -15,4 +15,4 @@ images of the validator node, faucet server and client.
 4. Retrieve the waypoint.txt from the mint container
   * Retrieve the docker container id ``` CONTAINER_ID=`docker ps | grep mint | awk '{print $1}'` ```
   * Retrieve the waypoint ``` WAYPOINT=`docker exec $CONTAINER_ID cat /opt/libra/etc/waypoint.txt` ```
-5. Run the client as follows: `cargo run -p cli --bin cli -- -u http://localhost:8080 -f localhost:9080 --waypoint $WAYPOINT`
+5. Run the client as follows: `cargo run -p cli --bin cli -- -u http://localhost:8080 -f localhost:9080 --waypoint $WAYPOINT --chain-id <chain id of the network>`

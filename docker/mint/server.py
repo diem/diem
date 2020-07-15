@@ -24,12 +24,14 @@ def create_client():
         ac_port = os.environ['AC_PORT']
         url = "http://{}:{}".format(ac_host, ac_port)
         waypoint = open("/opt/libra/etc/waypoint.txt", "r").readline()
+        chain_id = os.environ('CHAIN_ID')
 
         print("Connecting to ac on: {}".format(url))
-        cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {}".format(
+        cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {} --chain-id {}".format(
             url,
             "/opt/libra/etc/mint.key",
-            waypoint)
+            waypoint,
+            chain_id)
 
         application.client = pexpect.spawn(cmd)
         application.client.delaybeforesend = 0.1
