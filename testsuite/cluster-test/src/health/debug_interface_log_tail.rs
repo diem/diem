@@ -40,7 +40,7 @@ impl DebugPortLogWorker {
         let pending_messages = Arc::new(AtomicI64::new(0));
         let (trace_sender, trace_receiver) = mpsc::channel();
         let trace_enabled = Arc::new(AtomicBool::new(false));
-        for instance in cluster.all_instances() {
+        for instance in cluster.validator_and_fullnode_instances() {
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
             let client = instance.debug_interface_client();
