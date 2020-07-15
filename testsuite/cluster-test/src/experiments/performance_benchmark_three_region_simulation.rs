@@ -40,8 +40,8 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         // let num_nodes = self.cluster.validator_instances().len();
         // let split_country_num = 2 as usize;
         // let split_region_num = split_country_num / 2;
-        let (us, euro) = self.cluster.split_n_validators_random(28);
-        let (us_west, us_east) = us.split_n_validators_random(14);
+        let (us, euro) = self.cluster.split_n_validators_random(20);
+        let (us_west, us_east) = us.split_n_validators_random(10);
         three_region_simulation_effects_k8s(
             (
                 us_west.validator_instances().to_vec(),
@@ -49,9 +49,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 euro.validator_instances().to_vec(),
             ),
             (
-                Duration::from_millis(100), // us_east<->eu one way delay
-                Duration::from_millis(100), // us_west<->eu one way delay
-                Duration::from_millis(20), // us_west<->us_east one way delay
+                Duration::from_millis(200), // us_east<->eu one way delay
+                Duration::from_millis(200), // us_west<->eu one way delay
+                Duration::from_millis(200), // us_west<->us_east one way delay
             ),
             context.cluster_swarm,
         )
