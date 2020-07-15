@@ -17,12 +17,6 @@ pub const GITHUB: &str = "github";
 pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
-#[derive(Copy, Clone, Debug)]
-pub enum StorageLocation {
-    LocalStorage,
-    RemoteStorage,
-}
-
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
 /// only expected key is backend which defines which of the SecureBackends the parameters refer to.
 /// Some backends require parameters others do not, so that requires a conversion into the
@@ -41,13 +35,11 @@ impl SecureBackend {
 
     /// Creates and returns a new Storage instance using the SecureBackend.
     /// This method ensures the storage instance is available before returning.
-    pub fn create_storage(self, location: StorageLocation) -> Result<Storage, Error> {
-        let storage: Storage = self.try_into()?;
-        storage.available().map_err(|e| match location {
-            StorageLocation::LocalStorage => Error::LocalStorageUnavailable(e.to_string()),
-            StorageLocation::RemoteStorage => Error::RemoteStorageUnavailable(e.to_string()),
-        })?;
-
+    pub fn create_storage(&self, name: &'static str) -> Result<Storage, Error> {
+        let storage: Storage = self.clone().try_into()?;
+        storage
+            .available()
+            .map_err(|e| Error::StorageUnavailable(name, e.to_string()))?;
         Ok(storage)
     }
 
@@ -184,6 +176,12 @@ pair: "k0=v0;k1=v1;...".  The current supported formats are:
             )]
             pub $field_name: $struct_type,
         }
+
+        impl $struct_name {
+            pub fn name(&self) -> &'static str {
+                stringify!(struct_name)
+            }
+        }
     }
 }
 
@@ -193,18 +191,21 @@ secure_backend!(
     SecureBackend,
     "validator configuration"
 );
+
 secure_backend!(
     SharedBackend,
     shared_backend,
     SecureBackend,
     "shared information"
 );
+
 secure_backend!(
     OptionalValidatorBackend,
     validator_backend,
     Option<SecureBackend>,
     "validator configuration"
 );
+
 secure_backend!(
     OptionalSharedBackend,
     shared_backend,
