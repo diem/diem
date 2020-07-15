@@ -4,8 +4,11 @@
 use crate::{
     constants,
     error::Error,
-    secure_backend::StorageLocation::{LocalStorage, RemoteStorage},
-    SecureBackends,
+    secure_backend::{
+        SharedBackend,
+        StorageLocation::{LocalStorage, RemoteStorage},
+        ValidatorBackend,
+    },
 };
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
@@ -38,10 +41,12 @@ pub struct ValidatorConfig {
     validator_address: NetworkAddress,
     #[structopt(long)]
     fullnode_address: NetworkAddress,
-    #[structopt(flatten)]
-    backends: SecureBackends,
     #[structopt(long)]
     chain_id: ChainId,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
+    #[structopt(flatten)]
+    shared_backend: SharedBackend,
 }
 
 impl ValidatorConfig {
@@ -57,8 +62,11 @@ impl ValidatorConfig {
             self.create_validator_config_transaction(validator_config_script)?;
 
         // Write validator config to local storage to save for verification later on
-        let mut local_storage = self.backends.local.create_storage(LocalStorage)?;
-        local_storage
+        let mut validator_storage = self
+            .validator_backend
+            .validator_backend
+            .create_storage(LocalStorage)?;
+        validator_storage
             .set(
                 constants::VALIDATOR_CONFIG,
                 Value::Transaction(validator_config_tx.clone()),
@@ -68,25 +76,23 @@ impl ValidatorConfig {
             })?;
 
         // Save the owner account in local storage for deployment later on
-        local_storage
+        validator_storage
             .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
             .map_err(|e| Error::LocalStorageWriteError(OWNER_ACCOUNT, e.to_string()))?;
 
         // Upload the validator config to shared storage
-        match self.backends.remote {
-            None => return Err(Error::RemoteStorageMissing),
-            Some(remote_config) => {
-                let mut remote_storage = remote_config.create_storage(RemoteStorage)?;
-                remote_storage
-                    .set(
-                        constants::VALIDATOR_CONFIG,
-                        Value::Transaction(validator_config_tx.clone()),
-                    )
-                    .map_err(|e| {
-                        Error::RemoteStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
-                    })?;
-            }
-        };
+        let mut shared_storage = self
+            .shared_backend
+            .shared_backend
+            .create_storage(RemoteStorage)?;
+        shared_storage
+            .set(
+                constants::VALIDATOR_CONFIG,
+                Value::Transaction(validator_config_tx.clone()),
+            )
+            .map_err(|e| {
+                Error::RemoteStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
+            })?;
 
         Ok(validator_config_tx)
     }
@@ -98,10 +104,14 @@ impl ValidatorConfig {
         owner_account: AccountAddress,
     ) -> Result<Script, Error> {
         // Retrieve keys from local storage
-        let local_storage = self.backends.local.clone().create_storage(LocalStorage)?;
-        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &local_storage)?;
-        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &local_storage)?;
-        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local_storage)?;
+        let validator_storage = self
+            .validator_backend
+            .validator_backend
+            .clone()
+            .create_storage(LocalStorage)?;
+        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &validator_storage)?;
+        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &validator_storage)?;
+        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &validator_storage)?;
 
         // Only supports one address for now
         let addr_idx = 0;
@@ -162,9 +172,13 @@ impl ValidatorConfig {
 
     /// Creates and returns a signed validator-config transaction.
     fn create_validator_config_transaction(&self, script: Script) -> Result<Transaction, Error> {
-        let mut local_storage = self.backends.local.clone().create_storage(LocalStorage)?;
-        let operator_key = ed25519_from_storage(OPERATOR_KEY, &local_storage)?;
-        let operator_address_string = local_storage
+        let mut validator_storage = self
+            .validator_backend
+            .validator_backend
+            .clone()
+            .create_storage(LocalStorage)?;
+        let operator_key = ed25519_from_storage(OPERATOR_KEY, &validator_storage)?;
+        let operator_address_string = validator_storage
             .get(OPERATOR_ACCOUNT)
             .and_then(|v| v.value.string())
             .map_err(|e| Error::LocalStorageReadError(OPERATOR_ACCOUNT, e.to_string()))?;
@@ -186,7 +200,7 @@ impl ValidatorConfig {
             self.chain_id,
         );
 
-        let signature = local_storage
+        let signature = validator_storage
             .sign(OPERATOR_KEY, &raw_transaction)
             .map_err(|e| {
                 Error::LocalStorageSigningError("validator-config", OPERATOR_KEY, e.to_string())
@@ -199,21 +213,19 @@ impl ValidatorConfig {
     /// the validator-config command, and uses this key to derive an owner account address.
     /// If a remote storage path is not specified, returns an error.
     fn fetch_owner_account(&self) -> Result<AccountAddress, Error> {
-        match self.backends.remote.clone() {
-            None => Err(Error::RemoteStorageMissing),
-            Some(owner_config) => {
-                let owner_config = owner_config.set_namespace(self.owner_name.clone());
-
-                let owner_storage = owner_config.create_storage(RemoteStorage)?;
-                let owner_key = owner_storage
-                    .get(OWNER_KEY)
-                    .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?
-                    .value
-                    .ed25519_public_key()
-                    .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?;
-                Ok(account_address::from_public_key(&owner_key))
-            }
-        }
+        let owner_storage = self
+            .shared_backend
+            .shared_backend
+            .clone()
+            .set_namespace(self.owner_name.clone())
+            .create_storage(RemoteStorage)?;
+        let owner_key = owner_storage
+            .get(OWNER_KEY)
+            .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?
+            .value
+            .ed25519_public_key()
+            .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?;
+        Ok(account_address::from_public_key(&owner_key))
     }
 }
 

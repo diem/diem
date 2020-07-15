@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants, error::Error, secure_backend::StorageLocation::RemoteStorage, SingleBackend,
+    constants,
+    error::Error,
+    secure_backend::{SharedBackend, StorageLocation::RemoteStorage},
 };
 use libra_secure_storage::{KVStorage, Value};
 use serde::{Deserialize, Serialize};
@@ -52,7 +54,7 @@ pub struct SetLayout {
     #[structopt(long)]
     path: PathBuf,
     #[structopt(flatten)]
-    backend: SingleBackend,
+    backend: SharedBackend,
 }
 
 impl SetLayout {
@@ -60,7 +62,7 @@ impl SetLayout {
         let layout = Layout::from_disk(&self.path)?;
         let data = layout.to_toml()?;
 
-        let mut remote_storage = self.backend.backend.create_storage(RemoteStorage)?;
+        let mut remote_storage = self.backend.shared_backend.create_storage(RemoteStorage)?;
         remote_storage
             .set(constants::LAYOUT, Value::String(data))
             .map_err(|e| Error::RemoteStorageWriteError(constants::LAYOUT, e.to_string()))?;

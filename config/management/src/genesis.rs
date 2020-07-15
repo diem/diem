@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants, error::Error, layout::Layout, secure_backend::StorageLocation::RemoteStorage,
-    SingleBackend,
+    constants,
+    error::Error,
+    layout::Layout,
+    secure_backend::{SharedBackend, StorageLocation::RemoteStorage},
 };
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY, OWNER_KEY};
@@ -23,7 +25,7 @@ use vm_genesis::{OperatorAssignment, OperatorRegistration};
 #[derive(Debug, StructOpt)]
 pub struct Genesis {
     #[structopt(flatten)]
-    pub backend: SingleBackend,
+    pub backend: SharedBackend,
     #[structopt(long)]
     pub path: Option<PathBuf>,
 }
@@ -61,10 +63,9 @@ impl Genesis {
     /// Retrieves the association key from the remote storage. Note, at this point in time, genesis
     /// only supports a single association key.
     pub fn association_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
-        let association_config = self.backend.backend.clone();
-        let association_config = association_config.set_namespace(layout.association[0].clone());
-
-        let association_storage = association_config.create_storage(RemoteStorage)?;
+        let association_backend = self.backend.shared_backend.clone();
+        let association_backend = association_backend.set_namespace(layout.association[0].clone());
+        let association_storage = association_backend.create_storage(RemoteStorage)?;
 
         let association_key = association_storage
             .get(ASSOCIATION_KEY)
@@ -77,7 +78,7 @@ impl Genesis {
 
     /// Retrieves a layout from the remote storage.
     pub fn layout(&self) -> Result<Layout, Error> {
-        let common_config = self.backend.backend.clone();
+        let common_config = self.backend.shared_backend.clone();
         let common_config = common_config.set_namespace(constants::COMMON_NS.into());
 
         let common_storage = common_config.create_storage(RemoteStorage)?;
@@ -95,10 +96,10 @@ impl Genesis {
         let mut operator_assignments = Vec::new();
 
         for owner in layout.owners.iter() {
-            let owner_config = self.backend.backend.clone();
-            let owner_config = owner_config.set_namespace(owner.into());
+            let shared_backend = self.backend.shared_backend.clone();
+            let owner_backend = shared_backend.set_namespace(owner.into());
 
-            let owner_storage = owner_config.create_storage(RemoteStorage)?;
+            let owner_storage = owner_backend.create_storage(RemoteStorage)?;
 
             let owner_key = owner_storage
                 .get(OWNER_KEY)
@@ -129,10 +130,10 @@ impl Genesis {
     /// Retrieves the operator key from the remote storage using the given operator name, and uses
     /// this key to derive an operator account address.
     fn fetch_operator_account(&self, operator_name: String) -> Result<AccountAddress, Error> {
-        let operator_config = self.backend.backend.clone();
-        let operator_config = operator_config.set_namespace(operator_name);
+        let shared_backend = self.backend.shared_backend.clone();
+        let operator_backend = shared_backend.set_namespace(operator_name);
 
-        let operator_storage = operator_config.create_storage(RemoteStorage)?;
+        let operator_storage = operator_backend.create_storage(RemoteStorage)?;
 
         let operator_key = operator_storage
             .get(OPERATOR_KEY)
@@ -150,10 +151,10 @@ impl Genesis {
     ) -> Result<Vec<OperatorRegistration>, Error> {
         let mut registrations = Vec::new();
         for operator in layout.operators.iter() {
-            let operator_config = self.backend.backend.clone();
-            let operator_config = operator_config.set_namespace(operator.into());
+            let shared_backend = self.backend.shared_backend.clone();
+            let operator_backend = shared_backend.set_namespace(operator.into());
 
-            let operator_storage = operator_config.create_storage(RemoteStorage)?;
+            let operator_storage = operator_backend.create_storage(RemoteStorage)?;
 
             let operator_key = operator_storage
                 .get(OPERATOR_KEY)

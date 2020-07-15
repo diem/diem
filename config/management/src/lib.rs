@@ -20,7 +20,7 @@ pub mod config_builder;
 #[cfg(any(test, feature = "testing"))]
 mod storage_helper;
 
-use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
+use crate::{error::Error, layout::SetLayout};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use structopt::StructOpt;
@@ -231,42 +231,6 @@ impl Command {
     fn unexpected_command(self, expected: CommandName) -> Error {
         Error::UnexpectedCommand(expected, CommandName::from(&self))
     }
-}
-
-#[derive(Debug, StructOpt)]
-pub struct SecureBackends {
-    /// The local secure backend, this is the source of data. Secure
-    /// backends are represented as a semi-colon deliminted key value
-    /// pair: "k0=v0;k1=v1;...".  The current supported formats are:
-    ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
-    ///         an optional namespace: "namespace=NAMESPACE"
-    ///         an optional server certificate: "ca_certificate=PATH_TO_CERT"
-    ///     GitHub: "backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
-    ///         an optional namespace: "namespace=NAMESPACE"
-    ///     InMemory: "backend=memory"
-    ///     OnDisk: "backend=disk;path=LOCAL_PATH"
-    #[structopt(long, verbatim_doc_comment)]
-    local: SecureBackend,
-    /// The remote secure backend, this is where data is stored. See
-    /// the comments for the local backend for usage.
-    #[structopt(long)]
-    remote: Option<SecureBackend>,
-}
-
-#[derive(Debug, StructOpt)]
-pub struct SingleBackend {
-    /// The secure backend. Secure backends are represented as a semi-colon
-    /// deliminted key value pair: "k0=v0;k1=v1;...".
-    /// The current supported formats are:
-    ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
-    ///         an optional namespace: "namespace=NAMESPACE"
-    ///         an optional server certificate: "ca_certificate=PATH_TO_CERT"
-    ///     GitHub: "backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
-    ///         an optional namespace: "namespace=NAMESPACE"
-    ///     InMemory: "backend=memory"
-    ///     OnDisk: "backend=disk;path=LOCAL_PATH"
-    #[structopt(long, verbatim_doc_comment)]
-    pub backend: SecureBackend,
 }
 
 /// These tests depends on running Vault, which can be done by using the provided docker run script
