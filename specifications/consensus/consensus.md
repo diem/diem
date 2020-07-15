@@ -913,6 +913,10 @@ fn new(sync_info: SyncInfo) -> RoundState {
 * enter new round with quorum/timeout certificates
 * calculate timeout value as exponential of unhappy round gap
 * start timer to signal a local timeout of `round` after `timeout`
+* `timeout` should be reasonably large considering network latency and execution time, suggested value
+    * BASE_INTERVAL = 1 sec
+    * EXPONENT_BASE = 1.2
+    * MAX_EXPONENT = 6
 
 #### EpochState
 
