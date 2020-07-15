@@ -2,11 +2,7 @@ address 0x1 {
 
 module AccountLimits {
     use 0x1::LibraTimestamp;
-    use 0x1::Coin1::Coin1;
-    use 0x1::Coin2::Coin2;
-    use 0x1::LBR::LBR;
     use 0x1::Roles;
-    use 0x1::CoreAddresses;
     use 0x1::Signer;
 
     spec module {
@@ -61,7 +57,6 @@ module AccountLimits {
     const ENO_LIMITS_DEFINITION_EXISTS: u64 = 4;
     const ELIMITS_DEFINITION_ALREADY_EXISTS: u64 = 5;
 
-
     /// 24 hours in microseconds
     const ONE_DAY: u64 = 86400000000;
     const U64_MAX: u64 = 18446744073709551615u64;
@@ -72,15 +67,6 @@ module AccountLimits {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         AccountLimitMutationCapability{}
-    }
-
-    /// Initializes the account limits for accounts.
-    public fun initialize(lr_account: &signer) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_INITIALIZATION_ADDRESS);
-        publish_unrestricted_limits<LBR>(lr_account);
-        publish_unrestricted_limits<Coin1>(lr_account);
-        publish_unrestricted_limits<Coin2>(lr_account);
     }
 
     /// Determines if depositing `amount` of `CoinType` coins into the

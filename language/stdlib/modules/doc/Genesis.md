@@ -60,7 +60,6 @@
 
     <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(lr_account);
-    <a href="AccountLimits.md#0x1_AccountLimits_initialize">AccountLimits::initialize</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_create_libra_root_account">LibraAccount::create_libra_root_account</a>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account),
         <b>copy</b> dummy_auth_key_prefix,

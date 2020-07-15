@@ -9,7 +9,6 @@
 -  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
 -  [Resource `Window`](#0x1_AccountLimits_Window)
 -  [Function `grant_mutation_capability`](#0x1_AccountLimits_grant_mutation_capability)
--  [Function `initialize`](#0x1_AccountLimits_initialize)
 -  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
 -  [Function `publish_window`](#0x1_AccountLimits_publish_window)
@@ -205,35 +204,6 @@ need to be a unique capability.
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>{}
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_AccountLimits_initialize"></a>
-
-## Function `initialize`
-
-Initializes the account limits for accounts.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_INITIALIZATION_ADDRESS);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(lr_account);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(lr_account);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(lr_account);
 }
 </code></pre>
 
