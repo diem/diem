@@ -295,6 +295,23 @@ impl NetworkPlayground {
         msg_copies
     }
 
+    /// Return the round of a given message
+    fn get_message_round(&self, msg: ConsensusMsg) -> Option<u64> {
+        match msg {
+            ConsensusMsg::ProposalMsg(proposal_msg) => {
+                let unboxed = *proposal_msg;
+                Some(unboxed.proposal().round())
+            }
+
+            ConsensusMsg::VoteMsg(vote_msg) => {
+                let unboxed: VoteMsg = *vote_msg;
+                Some(unboxed.vote().vote_data().proposed().round())
+            }
+
+            _ => None,
+        }
+    }
+
     /// Returns true for any message
     pub fn take_all(_msg_copy: &(Author, ConsensusMsg)) -> bool {
         true
