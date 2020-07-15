@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::instance::Instance;
+use crate::instance::{Instance, ValidatorGroup};
 use config_builder::ValidatorConfig;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -219,5 +219,13 @@ impl Cluster {
     pub fn find_instance_by_pod(&self, pod: &str) -> Option<&Instance> {
         self.validator_and_fullnode_instances()
             .find(|i| i.peer_name() == pod)
+    }
+
+    pub fn instances_for_group(
+        &self,
+        validator_group: ValidatorGroup,
+    ) -> impl Iterator<Item = &Instance> {
+        self.all_instances()
+            .filter(move |v| v.validator_group() == validator_group)
     }
 }
