@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    constants,
-    error::Error,
-    secure_backend::{SharedBackend, StorageLocation::RemoteStorage},
-};
+use crate::{constants, error::Error, secure_backend::SharedBackend};
 use libra_secure_storage::{KVStorage, Value};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -62,10 +58,15 @@ impl SetLayout {
         let layout = Layout::from_disk(&self.path)?;
         let data = layout.to_toml()?;
 
-        let mut remote_storage = self.backend.shared_backend.create_storage(RemoteStorage)?;
+        let mut remote_storage = self
+            .backend
+            .shared_backend
+            .create_storage(self.backend.name())?;
         remote_storage
             .set(constants::LAYOUT, Value::String(data))
-            .map_err(|e| Error::RemoteStorageWriteError(constants::LAYOUT, e.to_string()))?;
+            .map_err(|e| {
+                Error::StorageWriteError(self.backend.name(), constants::LAYOUT, e.to_string())
+            })?;
 
         Ok(layout)
     }

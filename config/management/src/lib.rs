@@ -411,10 +411,10 @@ pub mod tests {
         let owner_name = "owner";
         let owner_key = Ed25519PrivateKey::generate_for_testing().public_key();
         let owner_account = account_address::from_public_key(&owner_key);
-        let mut remote_storage = storage_helper.storage(owner_name.into());
-        remote_storage
+        let mut shared_storage = storage_helper.storage(owner_name.into());
+        shared_storage
             .set(OWNER_KEY, Value::Ed25519PublicKey(owner_key))
-            .map_err(|e| Error::RemoteStorageWriteError(OWNER_KEY, e.to_string()))
+            .map_err(|e| Error::StorageWriteError("shared", OWNER_KEY, e.to_string()))
             .unwrap();
 
         // Operator calls the validator-config command
@@ -430,8 +430,8 @@ pub mod tests {
             .unwrap();
 
         // Verify that a validator config transaction was uploaded to the remote storage
-        let remote_storage = storage_helper.storage(remote_operator_ns.into());
-        let uploaded_config_tx = remote_storage
+        let shared_storage = storage_helper.storage(remote_operator_ns.into());
+        let uploaded_config_tx = shared_storage
             .get(constants::VALIDATOR_CONFIG)
             .unwrap()
             .value
@@ -472,10 +472,10 @@ pub mod tests {
         // Upload an operator key to the remote storage
         let operator_name = "operator";
         let operator_key = Ed25519PrivateKey::generate_for_testing().public_key();
-        let mut remote_storage = storage_helper.storage(operator_name.into());
-        remote_storage
+        let mut shared_storage = storage_helper.storage(operator_name.into());
+        shared_storage
             .set(OPERATOR_KEY, Value::Ed25519PublicKey(operator_key))
-            .map_err(|e| Error::RemoteStorageWriteError(OPERATOR_KEY, e.to_string()))
+            .map_err(|e| Error::StorageWriteError("shared", OPERATOR_KEY, e.to_string()))
             .unwrap();
 
         // Owner calls the set-operator command
@@ -484,8 +484,8 @@ pub mod tests {
             .unwrap();
 
         // Verify that a file setting the operator was uploaded to the remote storage
-        let remote_storage = storage_helper.storage(remote_owner_ns.into());
-        let uploaded_operator_name = remote_storage
+        let shared_storage = storage_helper.storage(remote_owner_ns.into());
+        let uploaded_operator_name = shared_storage
             .get(constants::VALIDATOR_OPERATOR)
             .unwrap()
             .value

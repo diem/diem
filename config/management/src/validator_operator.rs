@@ -4,7 +4,7 @@
 use crate::{
     constants,
     error::Error,
-    secure_backend::{SharedBackend, StorageLocation::RemoteStorage, ValidatorBackend},
+    secure_backend::{SharedBackend, ValidatorBackend},
 };
 use libra_global_constants::OPERATOR_KEY;
 use libra_secure_storage::{KVStorage, Value};
@@ -26,17 +26,19 @@ impl ValidatorOperator {
         let operator_name = self.get_and_verify_operator_name()?;
 
         // Upload the operator name to shared storage
+        let storage_name = self.shared_backend.name();
         let mut shared_storage = self
             .shared_backend
             .shared_backend
-            .create_storage(RemoteStorage)?;
+            .create_storage(storage_name)?;
+
         shared_storage
             .set(
                 constants::VALIDATOR_OPERATOR,
                 Value::String(operator_name.clone()),
             )
             .map_err(|e| {
-                Error::RemoteStorageWriteError(constants::VALIDATOR_OPERATOR, e.to_string())
+                Error::StorageWriteError(storage_name, constants::VALIDATOR_OPERATOR, e.to_string())
             })?;
 
         Ok(operator_name)
@@ -46,18 +48,20 @@ impl ValidatorOperator {
     /// If the named operator is not found (i.e., the operator has not uploaded a public key) return
     /// an error. Otherwise, return the operator name.
     fn get_and_verify_operator_name(&self) -> Result<String, Error> {
+        let storage_name = self.shared_backend.name();
         let operator_storage = self
             .shared_backend
             .shared_backend
             .clone()
             .set_namespace(self.operator_name.clone())
-            .create_storage(RemoteStorage)?;
+            .create_storage(storage_name)?;
+
         let _ = operator_storage
             .get(OPERATOR_KEY)
-            .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
+            .map_err(|e| Error::StorageReadError(storage_name, OPERATOR_KEY, e.to_string()))?
             .value
             .ed25519_public_key()
-            .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
+            .map_err(|e| Error::StorageReadError(storage_name, OPERATOR_KEY, e.to_string()))?;
         Ok(self.operator_name.clone())
     }
 }
