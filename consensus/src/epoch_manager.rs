@@ -134,7 +134,7 @@ impl EpochManager {
         // Timeout goes from initial_timeout to initial_timeout*11 in 6 steps
         let time_interval = Box::new(ExponentialTimeInterval::new(
             Duration::from_millis(self.config.round_initial_timeout_ms),
-            1.5,
+            1.2,
             6,
         ));
         RoundState::new(time_interval, time_service, timeout_sender)

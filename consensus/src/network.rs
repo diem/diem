@@ -9,7 +9,7 @@ use anyhow::{anyhow, ensure};
 use bytes::Bytes;
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
-    block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse},
+    block_retrieval::{BlockRetrievalRequest, BlockRetrievalResponse, MAX_BLOCKS_PER_REQUEST},
     common::Author,
     proposal_msg::ProposalMsg,
     sync_info::SyncInfo,
@@ -263,6 +263,13 @@ impl NetworkTask {
                 Event::RpcRequest((peer_id, msg, callback)) => match msg {
                     ConsensusMsg::BlockRetrievalRequest(request) => {
                         debug!("Received block retrieval request {}", request);
+                        if request.num_blocks() > MAX_BLOCKS_PER_REQUEST {
+                            warn!(
+                                "Ignore block retrieval with too many blocks: {}",
+                                request.num_blocks()
+                            );
+                            continue;
+                        }
                         let req_with_callback = IncomingBlockRetrievalRequest {
                             req: *request,
                             response_sender: callback,
