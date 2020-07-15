@@ -5,7 +5,7 @@ mod utils;
 
 use crate::handlers::utils::{
     handle_rejection, reply_with_async_channel_writer, reply_with_lcs_bytes,
-    send_size_prefixed_lcs_bytes, unwrap_or_500,
+    send_size_prefixed_lcs_bytes, unwrap_or_500, LATENCY_HISTOGRAM,
 };
 use libra_crypto::hash::HashValue;
 use libra_types::transaction::Version;
@@ -101,5 +101,13 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .or(warp::path("transaction_range_proof").and(transaction_range_proof));
 
     // Serve all routes for GET only.
-    warp::get().and(routes).boxed()
+    warp::get()
+        .and(routes)
+        .with(warp::log::custom(|info| {
+            let endpoint = info.path().split('/').nth(1).unwrap_or("-");
+            LATENCY_HISTOGRAM
+                .with_label_values(&[endpoint, info.status().as_str()])
+                .observe(info.elapsed().as_secs_f64())
+        }))
+        .boxed()
 }

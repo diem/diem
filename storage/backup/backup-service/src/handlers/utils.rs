@@ -5,10 +5,21 @@ use anyhow::Result;
 use bytes::Bytes;
 use hyper::Body;
 use libra_logger::prelude::*;
+use libra_metrics::{register_histogram_vec, HistogramVec};
 use libradb::backup::backup_handler::BackupHandler;
+use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::{convert::Infallible, future::Future};
 use warp::{reply::Response, Rejection, Reply};
+
+pub(super) static LATENCY_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_backup_service_latency_s",
+        "Backup service endpoint latency.",
+        &["endpoint", "status"]
+    )
+    .unwrap()
+});
 
 pub(super) fn reply_with_lcs_bytes<R: Serialize>(record: &R) -> Result<Box<dyn Reply>> {
     let bytes = lcs::to_bytes(record)?;
