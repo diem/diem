@@ -15,12 +15,12 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block::Block,
-    common::{Author, Payload},
+    common::{Author, Payload, Round},
 };
 use futures::channel::mpsc;
 use libra_config::{
     config::{
-        ConsensusProposerType::{self, FixedProposer, RotatingProposer},
+        ConsensusProposerType::{self, FixedProposer, RotatingProposer, RoundProposer},
         NodeConfig, WaypointConfig,
     },
     generator::{self, ValidatorSwarm},
@@ -137,6 +137,7 @@ impl SMRNode {
         num_twins: usize,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
+        round_proposers_idx: Option<HashMap<Round,usize>>
     ) -> (Vec<Self>, Vec<Author>) {
         assert!(num_nodes >= num_twins);
         let ValidatorSwarm { mut nodes } = generator::validator_swarm_for_testing(num_nodes);
@@ -155,8 +156,22 @@ impl SMRNode {
                 .collect(),
         );
 
-        // We don't add twins to ValidatorSet above because a node with
-        // twins should be treated the same at the consensus level
+        let proposer_type = match proposer_type {
+            RoundProposer(_) => {
+                let mut round_proposers: HashMap<Round,Author> = HashMap::new();
+                if round_proposers_idx.is_some() {
+                    for (round,idx) in round_proposers_idx.unwrap().iter() {
+                        round_proposers.insert(*round,nodes[*idx].validator_network.as_ref().unwrap().peer_id());
+                    }
+                }
+                RoundProposer(round_proposers)
+            },
+            _ => proposer_type
+        };
+
+        // We don't add twins to ValidatorSet or round_proposers above
+        // because a node with twins should be treated the same at the
+        // consensus level
         for i in 0..num_twins {
             let twin = nodes[i].clone();
             nodes.push(twin);
@@ -213,6 +228,7 @@ fn basic_start_test() {
         num_twins,
         &mut playground,
         RotatingProposer,
+        None
     );
     let genesis = Block::make_genesis_block_from_ledger_info(&nodes[0].storage.get_ledger_info());
     timed_block_on(&mut runtime, async {
@@ -261,7 +277,7 @@ fn drop_config_test() {
     let num_nodes = 4;
     let num_twins = 0;
     let (mut nodes, node_authors) =
-        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, FixedProposer);
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, FixedProposer, None);
 
     // 4 honest nodes
     let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
@@ -330,6 +346,7 @@ fn twins_vote_dedup_test() {
         num_twins,
         &mut playground,
         RotatingProposer,
+        None
     );
 
     // 4 honest nodes
