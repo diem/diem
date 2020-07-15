@@ -11,7 +11,7 @@ use crate::{
     OP_COUNTER,
 };
 use anyhow::Result;
-use jellyfish_merkle::StaleNodeIndex;
+use libra_jellyfish_merkle::StaleNodeIndex;
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use schemadb::{ReadOptions, SchemaBatch, SchemaIterator, DB};

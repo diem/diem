@@ -25,16 +25,16 @@ thiserror = "1.0.20"
 accumulator = { path = "../accumulator", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
-jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }
+libra-jellyfish-merkle = { path = "../jellyfish-merkle", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../../common/metrics", version = "0.1.0" }
-schemadb = { path = "../schemadb", version = "0.1.0" }
-storage-interface = { path = "../storage-interface", version = "0.1.0" }
-libra-types = { path = "../../types", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0", optional = true }
+libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 num-variants = { path = "../../common/num-variants", version = "0.1.0" }
+schemadb = { path = "../schemadb", version = "0.1.0" }
+storage-interface = { path = "../storage-interface", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.10.0"
@@ -45,4 +45,4 @@ libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.
 
 [features]
 default = []
-fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-temppath", "libra-crypto/fuzzing", "jellyfish-merkle/fuzzing", "libra-types/fuzzing"]
+fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-temppath", "libra-crypto/fuzzing", "libra-jellyfish-merkle/fuzzing", "libra-types/fuzzing"]

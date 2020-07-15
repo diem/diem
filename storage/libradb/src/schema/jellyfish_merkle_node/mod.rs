@@ -11,7 +11,7 @@
 use crate::schema::JELLYFISH_MERKLE_NODE_CF_NAME;
 use anyhow::Result;
 use byteorder::{BigEndian, WriteBytesExt};
-use jellyfish_merkle::node_type::{Node, NodeKey};
+use libra_jellyfish_merkle::node_type::{Node, NodeKey};
 use libra_types::transaction::Version;
 use schemadb::{
     define_schema,

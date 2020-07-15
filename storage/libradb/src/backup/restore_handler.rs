@@ -9,8 +9,8 @@ use crate::{
     transaction_store::TransactionStore,
 };
 use anyhow::{anyhow, ensure, Result};
-use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::HashValue;
+use libra_jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::definition::LeafCount,
