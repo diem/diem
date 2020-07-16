@@ -2729,6 +2729,8 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveKindInfo, &MoveType
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
+        println!("{:?}", self.layout);
+
         use MoveKindInfo as K;
         use MoveTypeLayout as L;
 
@@ -2812,6 +2814,17 @@ impl<'d> serde::de::DeserializeSeed<'d>
     ) -> Result<Self::Value, D::Error> {
         let (k, field_kinds) = self.kind_info;
         let field_layouts = self.layout.fields();
+        if field_layouts.len() != field_kinds.len() {
+            return Err(D::Error::custom(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    format!(
+                        "length mismatch. layout: {} kind_info: {}",
+                        field_layouts.len(),
+                        field_kinds.len(),
+                    ),
+                ),
+            ));
+        }
         let fields = deserializer.deserialize_tuple(
             field_layouts.len(),
             StructFieldVisitor(field_kinds, field_layouts),
@@ -2925,54 +2938,65 @@ pub mod prop {
     use move_core_types::value::{MoveStruct, MoveValue};
     use proptest::{collection::vec, prelude::*};
 
-    pub fn value_strategy_with_layout(layout: &FatType) -> impl Strategy<Value = Value> {
-        match layout {
-            FatType::U8 => any::<u8>().prop_map(Value::u8).boxed(),
-            FatType::U64 => any::<u64>().prop_map(Value::u64).boxed(),
-            FatType::U128 => any::<u128>().prop_map(Value::u128).boxed(),
-            FatType::Bool => any::<bool>().prop_map(Value::bool).boxed(),
-            FatType::Address => any::<AccountAddress>().prop_map(Value::address).boxed(),
-            FatType::Signer => any::<AccountAddress>().prop_map(Value::signer).boxed(),
+    pub fn value_strategy_with_layout_and_kind_info(
+        layout: &MoveTypeLayout,
+        kinfo: &MoveKindInfo,
+    ) -> impl Strategy<Value = Value> {
+        use MoveKind as T;
+        use MoveKindInfo as K;
+        use MoveTypeLayout as L;
 
-            FatType::Vector(layout) => match &**layout {
-                FatType::U8 => vec(any::<u8>(), 0..10)
+        match (layout, kinfo) {
+            (L::U8, K::Base(T::Copyable)) => any::<u8>().prop_map(Value::u8).boxed(),
+            (L::U64, K::Base(T::Copyable)) => any::<u64>().prop_map(Value::u64).boxed(),
+            (L::U128, K::Base(T::Copyable)) => any::<u128>().prop_map(Value::u128).boxed(),
+            (L::Bool, K::Base(T::Copyable)) => any::<bool>().prop_map(Value::bool).boxed(),
+            (L::Address, K::Base(T::Copyable)) => {
+                any::<AccountAddress>().prop_map(Value::address).boxed()
+            }
+            (L::Signer, K::Base(T::Resource)) => {
+                any::<AccountAddress>().prop_map(Value::signer).boxed()
+            }
+
+            (L::Vector(layout), K::Vector(k, ki)) => match (&**layout, *k) {
+                (L::U8, T::Copyable) => vec(any::<u8>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecU8(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
                     .boxed(),
-                FatType::U64 => vec(any::<u64>(), 0..10)
+                (L::U64, T::Copyable) => vec(any::<u64>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecU64(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
                     .boxed(),
-                FatType::U128 => vec(any::<u128>(), 0..10)
+                (L::U128, T::Copyable) => vec(any::<u128>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecU128(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
                     .boxed(),
-                FatType::Bool => vec(any::<bool>(), 0..10)
+                (L::Bool, T::Copyable) => vec(any::<bool>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecBool(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
                     .boxed(),
-                FatType::Address => vec(any::<AccountAddress>(), 0..10)
+                (L::Address, T::Copyable) => vec(any::<AccountAddress>(), 0..10)
                     .prop_map(|vals| {
                         Value(ValueImpl::Container(Container::VecAddress(Rc::new(
                             RefCell::new(vals),
                         ))))
                     })
                     .boxed(),
-                layout => {
-                    if layout.is_resource().unwrap() {
-                        vec(value_strategy_with_layout(layout), 0..10)
+                (layout, k) => {
+                    if k.is_resource() {
+                        vec(value_strategy_with_layout_and_kind_info(layout, ki), 0..10)
                             .prop_map(|vals| {
                                 Value(ValueImpl::Container(Container::VecR(Rc::new(
                                     RefCell::new(vals.into_iter().map(|val| val.0).collect()),
@@ -2980,7 +3004,7 @@ pub mod prop {
                             })
                             .boxed()
                     } else {
-                        vec(value_strategy_with_layout(layout), 0..10)
+                        vec(value_strategy_with_layout_and_kind_info(layout, ki), 0..10)
                             .prop_map(|vals| {
                                 Value(ValueImpl::Container(Container::VecC(Rc::new(
                                     RefCell::new(vals.into_iter().map(|val| val.0).collect()),
@@ -2991,80 +3015,110 @@ pub mod prop {
                 }
             },
 
-            FatType::Struct(struct_ty) => {
-                let is_resource = struct_ty.is_resource;
-                struct_ty
-                    .layout
+            (L::Struct(struct_layout), K::Struct(k, ks)) => {
+                let is_resource = k.is_resource();
+                struct_layout
+                    .fields()
                     .iter()
-                    .map(|layout| value_strategy_with_layout(layout))
+                    .zip(ks.iter())
+                    .map(|(layout, kinfo)| value_strategy_with_layout_and_kind_info(layout, kinfo))
                     .collect::<Vec<_>>()
                     .prop_map(move |vals| Value::struct_(Struct::pack(vals, is_resource)))
                     .boxed()
             }
 
-            FatType::Reference(..) | FatType::MutableReference(..) => {
-                panic!("cannot generate references for prop tests")
-            }
-
-            FatType::TyParam(..) => panic!("cannot generate type params for prop tests"),
+            _ => panic!(
+                "invalid layout and kinfo combination: {:?}, {:?}",
+                layout, kinfo
+            ),
         }
     }
 
-    pub fn layout_and_value_strategy() -> impl Strategy<Value = (FatType, Value)> {
-        any::<FatType>().no_shrink().prop_flat_map(|layout| {
-            let value_strategy = value_strategy_with_layout(&layout);
-            (Just(layout), value_strategy)
-        })
+    pub fn layout_and_kinfo_strategy() -> impl Strategy<Value = (MoveTypeLayout, MoveKindInfo)> {
+        use MoveKind as T;
+        use MoveKindInfo as K;
+        use MoveTypeLayout as L;
+
+        let leaf = prop_oneof![
+            1 => Just((L::U8, K::Base(T::Copyable))),
+            1 => Just((L::U64, K::Base(T::Copyable))),
+            1 => Just((L::U128, K::Base(T::Copyable))),
+            1 => Just((L::Bool, K::Base(T::Copyable))),
+            1 => Just((L::Address, K::Base(T::Copyable))),
+            1 => Just((L::Signer, K::Base(T::Resource))),
+        ];
+
+        leaf.prop_recursive(8, 32, 2, |inner| prop_oneof![
+            1 => inner.clone().prop_map(|(layout, kinfo)| (L::Vector(Box::new(layout)), K::Vector(kinfo.kind(), Box::new(kinfo)))),
+            1 => (any::<bool>(), vec(inner.clone(), 0..1)).prop_map(|(is_resource, v)| {
+                let mut f_layouts = vec![];
+                let mut f_kinfo = vec![];
+                for (layout, kinfo) in v {
+                    f_layouts.push(layout);
+                    f_kinfo.push(kinfo);
+                }
+                let layout = L::Struct(MoveStructLayout::new(f_layouts));
+                let is_resource = is_resource || f_kinfo.iter().any(|kinfo| kinfo.is_resource());
+                let kinfo = K::Struct(T::from_bool(is_resource), f_kinfo);
+                (layout, kinfo)
+            }),
+        ])
+    }
+
+    pub fn layout_kinfo_and_value_strategy(
+    ) -> impl Strategy<Value = (MoveTypeLayout, MoveKindInfo, Value)> {
+        layout_and_kinfo_strategy()
+            .no_shrink()
+            .prop_flat_map(|(layout, kinfo)| {
+                let value_strategy = value_strategy_with_layout_and_kind_info(&layout, &kinfo);
+                (Just(layout), Just(kinfo), value_strategy)
+            })
     }
 
     impl ValueImpl {
-        pub fn as_move_value(&self, ty: &FatType) -> MoveValue {
-            match (ty, &self) {
-                (FatType::U8, ValueImpl::U8(x)) => MoveValue::U8(*x),
-                (FatType::U64, ValueImpl::U64(x)) => MoveValue::U64(*x),
-                (FatType::U128, ValueImpl::U128(x)) => MoveValue::U128(*x),
-                (FatType::Bool, ValueImpl::Bool(x)) => MoveValue::Bool(*x),
-                (FatType::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
+        pub fn as_move_value(&self, layout: &MoveTypeLayout) -> MoveValue {
+            use MoveTypeLayout as L;
 
-                (FatType::Struct(ty), ValueImpl::Container(Container::StructC(r)))
-                | (FatType::Struct(ty), ValueImpl::Container(Container::StructR(r))) => {
+            match (layout, &self) {
+                (L::U8, ValueImpl::U8(x)) => MoveValue::U8(*x),
+                (L::U64, ValueImpl::U64(x)) => MoveValue::U64(*x),
+                (L::U128, ValueImpl::U128(x)) => MoveValue::U128(*x),
+                (L::Bool, ValueImpl::Bool(x)) => MoveValue::Bool(*x),
+                (L::Address, ValueImpl::Address(x)) => MoveValue::Address(*x),
+
+                (L::Struct(struct_layout), ValueImpl::Container(Container::StructC(r)))
+                | (L::Struct(struct_layout), ValueImpl::Container(Container::StructR(r))) => {
                     let mut fields = vec![];
-                    for (v, field_ty) in r.borrow().iter().zip(ty.layout.iter()) {
-                        fields.push(v.as_move_value(field_ty));
+                    for (v, field_layout) in r.borrow().iter().zip(struct_layout.fields().iter()) {
+                        fields.push(v.as_move_value(field_layout));
                     }
                     MoveValue::Struct(MoveStruct::new(fields))
                 }
 
-                (FatType::Vector(inner_ty), ValueImpl::Container(c)) => {
-                    MoveValue::Vector(match c {
-                        Container::VecU8(r) => {
-                            r.borrow().iter().map(|u| MoveValue::U8(*u)).collect()
-                        }
-                        Container::VecU64(r) => {
-                            r.borrow().iter().map(|u| MoveValue::U64(*u)).collect()
-                        }
-                        Container::VecU128(r) => {
-                            r.borrow().iter().map(|u| MoveValue::U128(*u)).collect()
-                        }
-                        Container::VecBool(r) => {
-                            r.borrow().iter().map(|u| MoveValue::Bool(*u)).collect()
-                        }
-                        Container::VecAddress(r) => {
-                            r.borrow().iter().map(|u| MoveValue::Address(*u)).collect()
-                        }
-                        Container::VecC(r) | Container::VecR(r) => r
-                            .borrow()
-                            .iter()
-                            .map(|v| v.as_move_value(inner_ty.as_ref()))
-                            .collect(),
-                        Container::StructC(_) | Container::StructR(_) => {
-                            panic!("got struct container when converting vec")
-                        }
-                        Container::Locals(_) => panic!("got locals container when converting vec"),
-                    })
-                }
+                (L::Vector(inner_layout), ValueImpl::Container(c)) => MoveValue::Vector(match c {
+                    Container::VecU8(r) => r.borrow().iter().map(|u| MoveValue::U8(*u)).collect(),
+                    Container::VecU64(r) => r.borrow().iter().map(|u| MoveValue::U64(*u)).collect(),
+                    Container::VecU128(r) => {
+                        r.borrow().iter().map(|u| MoveValue::U128(*u)).collect()
+                    }
+                    Container::VecBool(r) => {
+                        r.borrow().iter().map(|u| MoveValue::Bool(*u)).collect()
+                    }
+                    Container::VecAddress(r) => {
+                        r.borrow().iter().map(|u| MoveValue::Address(*u)).collect()
+                    }
+                    Container::VecC(r) | Container::VecR(r) => r
+                        .borrow()
+                        .iter()
+                        .map(|v| v.as_move_value(inner_layout.as_ref()))
+                        .collect(),
+                    Container::StructC(_) | Container::StructR(_) => {
+                        panic!("got struct container when converting vec")
+                    }
+                    Container::Locals(_) => panic!("got locals container when converting vec"),
+                }),
 
-                (FatType::Signer, ValueImpl::Container(Container::StructR(r))) => {
+                (L::Signer, ValueImpl::Container(Container::StructR(r))) => {
                     let v = r.borrow();
                     if v.len() != 1 {
                         panic!("Unexpected signer layout: {:?}", v);
@@ -3075,14 +3129,14 @@ pub mod prop {
                     }
                 }
 
-                (ty, val) => panic!("Cannot convert value {:?} as {:?}", val, ty),
+                (layout, val) => panic!("Cannot convert value {:?} as {:?}", val, layout),
             }
         }
     }
 
     impl Value {
-        pub fn as_move_value(&self, ty: &FatType) -> MoveValue {
-            self.0.as_move_value(ty)
+        pub fn as_move_value(&self, layout: &MoveTypeLayout) -> MoveValue {
+            self.0.as_move_value(layout)
         }
     }
 }
