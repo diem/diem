@@ -6,11 +6,6 @@ set -ex
 export RUST_BACKTRACE=full
 
 declare -a params
-if [ -z "${CHAIN_ID}" ]; then
-  echo "Docker run failed to start, please set required env var CHAIN_ID"
-  exit 1
-fi
-
 if [ -n "${CFG_SEED}" ]; then
     params+="-s $CFG_SEED "
 fi
