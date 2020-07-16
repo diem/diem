@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::NodeConfig;
-use libra_management::config_builder::FullnodeType;
+use libra_genesis_tool::config_builder::FullnodeType;
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::chain_id::ChainId;

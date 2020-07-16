@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, layout::Layout, storage_helper::StorageHelper};
+use crate::storage_helper::StorageHelper;
 use config_builder::BuildSwarm;
 use libra_config::{
     config::{
@@ -11,6 +11,10 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_management::{
+    constants::{COMMON_NS, LAYOUT},
+    layout::Layout,
+};
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};
@@ -64,13 +68,9 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .map(|i| (i.to_string() + OPERATOR_SHARED_NS))
             .collect();
 
-        let mut common_storage = self
-            .storage_helper
-            .storage(crate::constants::COMMON_NS.into());
+        let mut common_storage = self.storage_helper.storage(COMMON_NS.into());
         let layout_value = Value::String(layout.to_toml().unwrap());
-        common_storage
-            .set(crate::constants::LAYOUT, layout_value)
-            .unwrap();
+        common_storage.set(LAYOUT, layout_value).unwrap();
     }
 
     /// Association initializes its account and the libra root key.
@@ -166,7 +166,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
         let _ = self
             .storage_helper
-            .insert_waypoint(&local_ns, constants::COMMON_NS)
+            .insert_waypoint(&local_ns, COMMON_NS)
             .unwrap();
         let output = self
             .storage_helper
@@ -210,10 +210,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
         }
 
         // Create genesis and waypoint
-        let _ = self
-            .storage_helper
-            .create_waypoint(constants::COMMON_NS)
-            .unwrap();
+        let _ = self.storage_helper.create_waypoint(COMMON_NS).unwrap();
         for (i, config) in configs.iter_mut().enumerate() {
             self.finish_validator_config(i, config);
         }

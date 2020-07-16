@@ -7,13 +7,14 @@ use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform, ValidCryptoMaterial,
 };
+use libra_genesis_tool::config_builder::FullnodeType;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
-use libra_management::{config_builder::FullnodeType, constants};
+use libra_management::constants;
 use libra_network_address::{
     encrypted::{
         EncNetworkAddress, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,

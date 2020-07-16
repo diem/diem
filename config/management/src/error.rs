@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::CommandName;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -27,7 +26,7 @@ pub enum Error {
     #[error("Unable to parse file, {0}, error {1}")]
     UnableToParseFile(String, String),
     #[error("Unexpected command, expected {0}, found {1}")]
-    UnexpectedCommand(CommandName, CommandName),
+    UnexpectedCommand(String, String),
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
 }

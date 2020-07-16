@@ -1,12 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, Command};
+// FIXME: (gnazario) storage helper doesn't belong in the genesis tool, but it's attached to it right now
+
+use crate::command::Command;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, LIBRA_ROOT_KEY,
     OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
+use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
     CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
@@ -75,7 +78,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={shared_ns}\
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -96,7 +99,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={validator_ns}\
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
         );
@@ -114,7 +117,7 @@ impl StorageHelper {
                     path={path}
                 --path {genesis_path}
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             genesis_path = genesis_path.to_str().expect("Unable to parse genesis_path"),
         );
@@ -135,7 +138,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={shared_ns}
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -161,7 +164,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={shared_ns}\
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -187,7 +190,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={shared_ns}\
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -198,7 +201,11 @@ impl StorageHelper {
     }
 
     #[cfg(test)]
-    pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
+    pub fn set_layout(
+        &self,
+        path: &str,
+        namespace: &str,
+    ) -> Result<libra_management::layout::Layout, Error> {
         let args = format!(
             "
                 management
@@ -209,7 +216,7 @@ impl StorageHelper {
                     namespace={ns}
             ",
             path = path,
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             storage_path = self.path_string(),
             ns = namespace,
         );
@@ -237,7 +244,7 @@ impl StorageHelper {
                     namespace={shared_ns}\
             ",
             operator_name = operator_name,
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -275,7 +282,7 @@ impl StorageHelper {
             validator_address = validator_address,
             fullnode_address = fullnode_address,
             chain_id = chain_id.id(),
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
             shared_ns = shared_ns,
@@ -295,7 +302,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={ns}
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             ns = namespace,
         );
@@ -314,7 +321,7 @@ impl StorageHelper {
                     namespace={ns}
                 --genesis-path {genesis_path}
             ",
-            backend = crate::secure_backend::DISK,
+            backend = DISK,
             path = self.path_string(),
             ns = namespace,
             genesis_path = genesis_path.to_str().expect("Unable to parse genesis_path"),
