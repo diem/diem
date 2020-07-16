@@ -56,8 +56,6 @@ pub struct WorkspaceConfig {
     pub enforced_attributes: EnforcedAttributesConfig,
     /// Banned dependencies
     pub banned_deps: BannedDepsConfig,
-    /// Overlay config in this workspace
-    pub overlay: OverlayConfig,
     /// Test-only config in this workspace
     pub test_only: TestOnlyConfig,
     /// Subsets of this workspace
@@ -80,13 +78,6 @@ pub struct BannedDepsConfig {
     pub direct: HashMap<String, String>,
     /// Banned dependencies in the default build set
     pub default_build: HashMap<String, String>,
-}
-
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
-#[serde(rename_all = "kebab-case")]
-pub struct OverlayConfig {
-    /// A list of overlay feature names
-    pub features: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
