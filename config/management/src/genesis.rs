@@ -3,7 +3,7 @@
 
 use crate::{constants, error::Error, layout::Layout, secure_backend::SharedBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY, OWNER_KEY};
+use libra_global_constants::{LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY};
 use libra_secure_storage::KVStorage;
 use libra_types::{
     account_address,
@@ -64,12 +64,12 @@ impl Genesis {
         let association_storage = association_backend.create_storage(self.backend.name())?;
 
         let association_key = association_storage
-            .get(ASSOCIATION_KEY)
-            .map_err(|e| Error::StorageReadError(storage_name, ASSOCIATION_KEY, e.to_string()))?;
+            .get(LIBRA_ROOT_KEY)
+            .map_err(|e| Error::StorageReadError(storage_name, LIBRA_ROOT_KEY, e.to_string()))?;
         association_key
             .value
             .ed25519_public_key()
-            .map_err(|e| Error::StorageReadError(storage_name, ASSOCIATION_KEY, e.to_string()))
+            .map_err(|e| Error::StorageReadError(storage_name, LIBRA_ROOT_KEY, e.to_string()))
     }
 
     /// Retrieves a layout from the remote storage.

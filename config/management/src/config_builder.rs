@@ -189,7 +189,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
         let association_key = self
             .storage_helper
             .storage(ASSOCIATION_NS.into())
-            .export_private_key(libra_global_constants::ASSOCIATION_KEY)
+            .export_private_key(libra_global_constants::LIBRA_ROOT_KEY)
             .unwrap();
 
         // Upload both owner and operator keys to shared storage

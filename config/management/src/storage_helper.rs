@@ -4,7 +4,7 @@
 use crate::{error::Error, Command};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
-    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND,
+    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, LIBRA_ROOT_KEY,
     OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
@@ -44,7 +44,7 @@ impl StorageHelper {
         let mut storage = self.storage(namespace);
 
         // Initialize all keys in storage
-        storage.create_key(ASSOCIATION_KEY).unwrap();
+        storage.create_key(LIBRA_ROOT_KEY).unwrap();
         storage.create_key(CONSENSUS_KEY).unwrap();
         storage.create_key(EXECUTION_KEY).unwrap();
         storage.create_key(FULLNODE_NETWORK_KEY).unwrap();
