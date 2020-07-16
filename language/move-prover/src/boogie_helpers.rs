@@ -134,6 +134,16 @@ pub fn boogie_struct_type_value(
     )
 }
 
+/// Creates the name of the resource memory for the given struct.
+pub fn boogie_resource_memory_name(
+    env: &GlobalEnv,
+    module_id: ModuleId,
+    struct_id: StructId,
+) -> String {
+    let struct_env = env.get_module(module_id).into_struct(struct_id);
+    format!("{}_memory", boogie_struct_name(&struct_env))
+}
+
 /// Create boogie type value list, separated by comma.
 pub fn boogie_type_values(env: &GlobalEnv, args: &[Type]) -> String {
     args.iter()
@@ -141,10 +151,22 @@ pub fn boogie_type_values(env: &GlobalEnv, args: &[Type]) -> String {
         .join(", ")
 }
 
+/// Creates a type value array for given types.
+pub fn boogie_type_value_array(env: &GlobalEnv, args: &[Type]) -> String {
+    if args.is_empty() {
+        return "$EmptyTypeValueArray".to_string();
+    }
+    let mut map = String::from("$MapConstTypeValue($DefaultTypeValue())");
+    for (i, arg) in args.iter().enumerate() {
+        map = format!("{}[{} := {}]", map, i, boogie_type_value(env, arg));
+    }
+    format!("$TypeValueArray({}, {})", map, args.len())
+}
+
 /// Return boogie type for a local with given signature token.
 pub fn boogie_local_type(ty: &Type) -> String {
     if ty.is_reference() {
-        "$Reference".to_string()
+        "$Mutation".to_string()
     } else {
         "$Value".to_string()
     }

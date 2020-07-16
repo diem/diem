@@ -247,7 +247,7 @@ module DesignatedDealer {
     }
 
     spec module {
-        pragma verify = false;
+        pragma verify = true;
         define SPEC_MAX_NUM_TIERS(): u64 { 4 }
         define spec_window_length(): u64 { 86400000000 }
         apply SpecSchema<CoinType> to *<CoinType>;

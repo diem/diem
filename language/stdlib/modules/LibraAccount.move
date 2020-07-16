@@ -197,9 +197,6 @@ module LibraAccount {
         // from an existing balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
     }
-    spec fun staple_lbr {
-        pragma verify_duration_estimate = 100;
-    }
 
     /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
     /// LBR reserve, and deposit them to `cap.address`.
@@ -216,9 +213,6 @@ module LibraAccount {
         let payee_address = cap.account_address;
         deposit(payer_address, payee_address, coin1, x"", x"");
         deposit(payer_address, payee_address, coin2, x"", x"")
-    }
-    spec fun unstaple_lbr {
-        pragma verify_duration_estimate = 100;
     }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
@@ -322,9 +316,6 @@ module LibraAccount {
         // balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
     }
-    spec fun tiered_mint {
-        pragma verify_duration_estimate = 100;
-    }
 
     // Cancel the burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
@@ -421,10 +412,6 @@ module LibraAccount {
         dd: &signer, cap: &WithdrawCapability, amount: u64
     ) acquires Balance, AccountOperationsCapability, LibraAccount {
         Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
-    }
-    spec fun preburn {
-        // TODO(shb): this times out; investigate
-        pragma verify = false;
     }
 
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
