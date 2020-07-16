@@ -1693,7 +1693,7 @@ mod tests {
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             ChainId::test(),
-            "http://localhost:8080",
+            "http://localhost:8080/v1",
             &"",
             &"",
             false,

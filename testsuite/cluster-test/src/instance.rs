@@ -252,7 +252,7 @@ impl Instance {
     }
 
     pub fn json_rpc_url(&self) -> Url {
-        Url::from_str(&format!("http://{}:{}", self.ip(), self.ac_port())).expect("Invalid URL.")
+        Url::from_str(&format!("http://{}:{}/v1", self.ip(), self.ac_port())).expect("Invalid URL.")
     }
 
     fn k8s_backend(&self) -> &K8sInstanceInfo {
