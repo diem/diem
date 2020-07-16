@@ -34,20 +34,12 @@ executors:
       image: ubuntu-1604:202004-01
     resource_class: 2xlarge
 commands:
-  rust_setup:
-    description: Set rustc version
-    steps:
-      - run:
-          name: Set rustc version
-          command: |
-            rustup default stable
-            rustup update stable
   print_versions:
     description: Version Info
     steps:
       - run:
           name: Version Info
-          command: rustc --version; cargo --version; rustup --version
+          command: rustup --version ; rustc --version
   env_setup:
     description: Environment Setup
     steps:
@@ -59,6 +51,7 @@ commands:
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
+            echo 'export RUST_NIGHTLY=nightly-2020-07-08' >> $BASH_ENV
   install_deps:
     steps:
       - run:
@@ -66,7 +59,17 @@ commands:
           command: |
             sudo apt-get update
             sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+            rustup default `cat rust-toolchain`
             rustup component add clippy rustfmt
+            rustup toolchain install $RUST_NIGHTLY
+      - run:
+          name: Set cargo Environment
+          command: |
+            # Use nightly version of cargo to access the new feature resolver
+            echo 'export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)' >> $BASH_ENV
+            # Turn on the experimental feature resolver in cargo. See:
+            # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+            echo 'export CARGOFLAGS=-Zfeatures=all' >> $BASH_ENV
   install_code_coverage_deps:
     steps:
       - run:
@@ -74,7 +77,7 @@ commands:
           command: |
             sudo apt-get update
             sudo apt-get install lcov
-            cargo install --force grcov
+            $CARGO $CARGOFLAGS install --force grcov
   install_docker_linter:
     steps:
       - run:
@@ -97,7 +100,7 @@ commands:
           name: Install scccache
           command: |
             if ! [ -e /usr/local/cargo/bin/sccache ]; then
-              cargo install sccache --version=0.2.13
+              $CARGO $CARGOFLAGS install sccache --version=0.2.13
             else
               echo 'sccache binary is found. Skipping install.'
             fi
@@ -237,7 +240,6 @@ commands:
   build_setup:
     steps:
       - checkout
-      - rust_setup
       - print_versions
       - env_setup
       - install_deps
@@ -260,7 +262,7 @@ jobs:
       - install_sccache
       - run:
           name: Fetch workspace dependencies over network
-          command: cargo fetch
+          command: $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
   lint:
     executor: test-executor
@@ -272,13 +274,13 @@ jobs:
       - restore_sccache
       - run:
           name: cargo lint
-          command: cargo x lint
+          command: $CARGO $CARGOFLAGS x lint
       - run:
           name: cargo clippy
-          command: cargo xclippy --workspace --all-targets
+          command: $CARGO $CARGOFLAGS xclippy --workspace --all-targets
       - run:
           name: cargo fmt
-          command: cargo xfmt --check
+          command: $CARGO $CARGOFLAGS xfmt --check
       - save_sccache
   build-dev:
     executor: build-executor
@@ -289,21 +291,21 @@ jobs:
       - install_sccache
       - restore_sccache
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-swarm
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-swarm
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p cluster-test
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p cluster-test
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p libra-fuzzer
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-fuzzer
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p language-benchmarks
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p language-benchmarks
       - run:
-          command: RUST_BACKTRACE=1 cargo build -j 16 -p test-generation
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p test-generation
       - run:
           command: |
             rustup target add powerpc-unknown-linux-gnu
-            RUST_BACKTRACE=1 cargo build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - save_sccache
       - build_teardown
   build-release:
@@ -316,7 +318,7 @@ jobs:
       - restore_sccache
       - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 12 --release
+          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS  build -j 12 --release
       - save_sccache
       - build_teardown
   run-e2e-test:
@@ -339,7 +341,7 @@ jobs:
           # metadata is enabled, the tests can be distributed by run time to
           # speed up this job.
           command: |
-            RUST_BACKTRACE=1 cargo x test --package testsuite -- --list | \
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x test --package testsuite -- --list | \
               grep "::" | sed 's/: .*$//' > e2e_tests
             cat e2e_tests
             echo -e "Found $(wc -l e2e_tests) tests."
@@ -358,7 +360,7 @@ jobs:
               status=1
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
                 RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
-                  cargo x test --package testsuite -- $target --test-threads 1 --exact --nocapture
+                  $CARGO $CARGOFLAGS x test --package testsuite -- $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
                 if [[ $status != 0 ]] ; then
@@ -400,7 +402,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
+            RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS x test --jobs 12 --unit
       - save_sccache
   run-crypto-unit-test:
     executor: audit-executor
@@ -412,7 +414,7 @@ jobs:
           name: Run crypto unit tests
           command: |
             cd crypto/crypto && \
-            RUST_BACKTRACE=1 cargo test \
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test \
               --features='vanilla' \
               --no-default-features
   run-flaky-unit-test:
@@ -434,14 +436,14 @@ jobs:
       - run:
           name: Install Cargo Audit
           command: |
-            cargo install --force cargo-audit
+            $CARGO $CARGOFLAGS install --force cargo-audit
       - run:
           # NOTE ignored advisory rules
           # RUSTSEC-2018-0015 - term
           # RUSTSEC-2019-0031 - spin
           name: Audit crates
           command: |
-            cargo audit --deny-warnings \
+            $CARGO $CARGOFLAGS audit --deny-warnings \
               --ignore RUSTSEC-2018-0015 \
               --ignore RUSTSEC-2019-0031 \
               --ignore RUSTSEC-2020-0016
@@ -576,7 +578,7 @@ jobs:
           command: |
             # Use `RUSTC_BOOTSTRAP` in order to use the `--enable-index-page` flag of rustdoc
             # This is needed in order to generate a landing page `index.html` for workspaces
-            RUSTC_BOOTSTRAP=1 RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --no-deps --workspace --lib
+            RUSTC_BOOTSTRAP=1 RUSTDOCFLAGS="-Z unstable-options --enable-index-page" $CARGO $CARGOFLAGS doc --no-deps --workspace --lib
       - persist_to_workspace:
           root: target
           paths: doc
