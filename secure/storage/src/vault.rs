@@ -300,8 +300,8 @@ impl CryptoStorage for VaultStorage {
         version: Ed25519PublicKey,
         message: &T,
     ) -> Result<Ed25519Signature, Error> {
-        let vers = self.key_version(&name, &version)?;
         let name = self.crypto_name(name);
+        let vers = self.key_version(&name, &version)?;
         let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message)
             .map_err(|_| libra_crypto::traits::CryptoMaterialError::SerializationError)
