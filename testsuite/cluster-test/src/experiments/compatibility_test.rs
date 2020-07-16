@@ -45,9 +45,7 @@ pub async fn update_batch_instance(
             .map(|instance| {
                 let mut newer_config = instance.instance_config().clone();
                 newer_config.replace_tag(updated_tag.clone()).unwrap();
-                context
-                    .cluster_swarm
-                    .spawn_new_instance(newer_config, false)
+                context.cluster_swarm.spawn_new_instance(newer_config)
             })
             .collect();
         try_join_all(futures).await?;
@@ -61,9 +59,7 @@ pub async fn update_batch_instance(
         .map(|instance| {
             let mut newer_config = instance.instance_config().clone();
             newer_config.replace_tag(updated_tag.clone()).unwrap();
-            context
-                .cluster_swarm
-                .spawn_new_instance(newer_config, false)
+            context.cluster_swarm.spawn_new_instance(newer_config)
         })
         .collect();
     let instances = try_join_all(futures).await?;

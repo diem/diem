@@ -209,11 +209,7 @@ impl Experiment for PerformanceBenchmark {
 
         // Clean up
         drop(backup);
-        let futures: Vec<_> = self
-            .down_validators
-            .iter()
-            .map(|ic| ic.start(false))
-            .collect();
+        let futures: Vec<_> = self.down_validators.iter().map(|ic| ic.start()).collect();
         try_join_all(futures).await?;
 
         Ok(())
