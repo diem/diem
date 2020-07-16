@@ -48,14 +48,22 @@ pub fn bootstrap(
     let registry = Arc::new(build_registry());
     let service = JsonRpcService::new(libra_db, mp_sender, role);
 
-    let handler = warp::any()
-        .and(warp::path::end())
+    let base_route = warp::any()
         .and(warp::post())
         .and(warp::header::exact("content-type", "application/json"))
         .and(warp::body::json())
         .and(warp::any().map(move || service.clone()))
         .and(warp::any().map(move || Arc::clone(&registry)))
         .and_then(rpc_endpoint);
+
+    // For now we still allow user to use "/", but user should start to move to "/v1" soon
+    let route_root = warp::path::end().and(base_route.clone());
+
+    let route_v1 = warp::path::path("v1")
+        .and(warp::path::end())
+        .and(base_route);
+
+    let full_route = route_v1.or(route_root);
 
     // Ensure that we actually bind to the socket first before spawning the
     // server tasks. This helps in tests to prevent races where a client attempts
@@ -64,7 +72,7 @@ pub fn bootstrap(
     //
     // Note: we need to enter the runtime context first to actually bind, since
     //       tokio TcpListener can only be bound inside a tokio context.
-    let server = runtime.enter(move || warp::serve(handler).bind(address));
+    let server = runtime.enter(move || warp::serve(full_route).bind(address));
     runtime.handle().spawn(server);
     runtime
 }

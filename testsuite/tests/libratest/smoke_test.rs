@@ -130,7 +130,7 @@ impl TestEnvironment {
 
         ClientProxy::new(
             ChainId::test(),
-            &format!("http://localhost:{}", port),
+            &format!("http://localhost:{}/v1", port),
             &self.faucet_key.1,
             &self.faucet_key.1,
             false,

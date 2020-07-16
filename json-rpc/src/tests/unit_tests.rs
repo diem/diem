@@ -132,13 +132,24 @@ fn test_json_rpc_protocol() {
     assert_eq!(resp.status(), 404);
 
     // only post method is allowed
-    let url = format!("http://{}", address);
+    let url = format!("http://{}/v1", address);
     let resp = client.get(&url).send().unwrap();
     assert_eq!(resp.status(), 405);
 
     // empty payload is not allowed
     let resp = client.post(&url).send().unwrap();
     assert_eq!(resp.status(), 400);
+
+    // For now /v1 and / are both supported
+    {
+        let url_v1 = format!("http://{}", address);
+        let resp = client.post(&url_v1).send().unwrap();
+        assert_eq!(resp.status(), 400);
+
+        let url_v2 = format!("http://{}/v2", address);
+        let resp = client.post(&url_v2).send().unwrap();
+        assert_eq!(resp.status(), 404);
+    }
 
     // non json payload
     let resp = client.post(&url).body("non json").send().unwrap();
@@ -188,7 +199,7 @@ fn test_transaction_submission() {
     let address = format!("0.0.0.0:{}", port);
     let mut runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
     let client = JsonRpcAsyncClient::new(
-        reqwest::Url::from_str(format!("http://{}:{}", "127.0.0.1", port).as_str())
+        reqwest::Url::from_str(format!("http://{}:{}/v1", "127.0.0.1", port).as_str())
             .expect("invalid url"),
     );
 
@@ -636,7 +647,8 @@ fn create_database_client_and_runtime(
         mp_sender,
     );
     let client = JsonRpcAsyncClient::new(
-        reqwest::Url::from_str(format!("http://127.0.0.1:{}", port).as_str()).expect("invalid url"),
+        reqwest::Url::from_str(format!("http://127.0.0.1:{}/v1", port).as_str())
+            .expect("invalid url"),
     );
 
     (mock_db, client, runtime)
