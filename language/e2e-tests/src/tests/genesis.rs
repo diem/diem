@@ -8,6 +8,12 @@ use crate::{
 use libra_types::transaction::{Transaction, TransactionStatus};
 
 #[test]
+fn no_deletion_in_genesis() {
+    let genesis = GENESIS_CHANGE_SET.clone();
+    assert!(!genesis.write_set().iter().any(|(_, op)| op.is_deletion()))
+}
+
+#[test]
 fn execute_genesis_write_set() {
     let executor = FakeExecutor::no_genesis();
     let txn = Transaction::WaypointWriteSet(GENESIS_CHANGE_SET.clone());
