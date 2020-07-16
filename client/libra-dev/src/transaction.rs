@@ -26,7 +26,7 @@ use libra_types::{
         SignedTransaction, TransactionArgument, TransactionPayload,
     },
 };
-use std::{convert::TryFrom, ffi::CStr, slice, time::Duration};
+use std::{convert::TryFrom, ffi::CStr, slice};
 use transaction_builder::{
     encode_add_currency_to_account_script, encode_peer_to_peer_with_metadata_script,
     encode_rotate_dual_attestation_info_script, get_transaction_name,
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     max_gas_amount: u64,
     gas_unit_price: u64,
     gas_identifier: *const i8,
-    expiration_time_secs: u64,
+    expiration_timestamp_secs: u64,
     chain_id: u8,
     script_bytes: *const u8,
     script_len: usize,
@@ -78,7 +78,6 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
 
     let public_key = private_key.public_key();
     let sender_address = account_address::from_public_key(&public_key);
-    let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let payload = TransactionPayload::Script(script);
     let raw_txn = RawTransaction::new(
@@ -90,7 +89,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
         CStr::from_ptr(gas_identifier)
             .to_string_lossy()
             .into_owned(),
-        expiration_time,
+        expiration_timestamp_secs,
         ChainId::new(chain_id),
     );
 
@@ -317,7 +316,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     num_coins: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
-    expiration_time_secs: u64,
+    expiration_timestamp_secs: u64,
     metadata_bytes: *const u8,
     metadata_len: usize,
     metadata_signature_bytes: *const u8,
@@ -352,7 +351,6 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
             return LibraStatus::InvalidArgument;
         }
     };
-    let expiration_time = Duration::from_secs(expiration_time_secs);
 
     let metadata = if metadata_bytes.is_null() {
         vec![]
@@ -380,7 +378,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         max_gas_amount,
         gas_unit_price,
         LBR_NAME.to_owned(),
-        expiration_time,
+        expiration_timestamp_secs,
         ChainId::new(chain_id),
     );
 
@@ -504,7 +502,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
     let payload = signed_txn.payload();
     let max_gas_amount = signed_txn.max_gas_amount();
     let gas_unit_price = signed_txn.gas_unit_price();
-    let expiration_time_secs = signed_txn.expiration_time().as_secs();
+    let expiration_timestamp_secs = signed_txn.expiration_timestamp_secs();
     // TODO: this will not work with multisig transactions, where both the pubkey and signature
     // have different sizes than the ones expected here. We will either need LibraSignedTransaction
     // types for single and multisig authenticators or adapt the type to work  with both
@@ -587,7 +585,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
             payload,
             max_gas_amount,
             gas_unit_price,
-            expiration_time_secs,
+            expiration_timestamp_secs,
         },
         None => {
             let raw_txn_other = LibraRawTransaction {
@@ -599,7 +597,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                 },
                 max_gas_amount,
                 gas_unit_price,
-                expiration_time_secs,
+                expiration_timestamp_secs,
             };
             *out = LibraSignedTransaction {
                 raw_txn: raw_txn_other,
@@ -646,7 +644,7 @@ mod test {
         let amount = 100_000_000;
         let gas_unit_price = 123;
         let max_gas_amount = 1000;
-        let expiration_time_secs = 0;
+        let expiration_timestamp_secs = 0;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
         let coin_ident = std::ffi::CString::new(LBR_NAME).expect("Invalid ident");
@@ -685,7 +683,7 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 coin_ident.as_ptr(),
-                expiration_time_secs,
+                expiration_timestamp_secs,
                 ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
@@ -735,7 +733,7 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 coin_idnet.as_ptr(),
-                expiration_time_secs,
+                expiration_timestamp_secs,
                 ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
@@ -784,7 +782,7 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 coin_ident_2.as_ptr(),
-                expiration_time_secs,
+                expiration_timestamp_secs,
                 ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
@@ -988,7 +986,7 @@ mod test {
         let amount = 100_000_000;
         let gas_unit_price = 123;
         let max_gas_amount = 1000;
-        let expiration_time_secs = 0;
+        let expiration_timestamp_secs = 0;
 
         // get raw transaction in bytes
         let mut buf: u8 = 0;
@@ -1003,7 +1001,7 @@ mod test {
                 amount,
                 max_gas_amount,
                 gas_unit_price,
-                expiration_time_secs,
+                expiration_timestamp_secs,
                 vec![].as_ptr(),
                 0,
                 vec![].as_ptr(),
@@ -1073,7 +1071,7 @@ mod test {
         let amount = 10_000_000;
         let max_gas_amount = 10;
         let gas_unit_price = 1;
-        let expiration_time_secs = 5;
+        let expiration_timestamp_secs = 5;
         let metadata = vec![1, 2, 3];
         let metadata_signature = [0x1; 64].to_vec();
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
@@ -1093,7 +1091,7 @@ mod test {
                 max_gas_amount,
                 gas_unit_price,
                 LBR_NAME.to_owned(),
-                Duration::from_secs(expiration_time_secs),
+                expiration_timestamp_secs,
                 ChainId::test(),
             ),
             public_key.clone(),
@@ -1169,8 +1167,8 @@ mod test {
             Ed25519Signature::try_from(libra_signed_txn.signature.as_ref()).unwrap()
         );
         assert_eq!(
-            expiration_time_secs,
-            libra_signed_txn.raw_txn.expiration_time_secs
+            expiration_timestamp_secs,
+            libra_signed_txn.raw_txn.expiration_timestamp_secs
         );
     }
 }

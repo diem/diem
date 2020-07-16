@@ -25,7 +25,7 @@ use libra_types::{
     chain_id::ChainId,
     transaction::{RawTransaction, Script, SignedTransaction, Transaction},
 };
-use std::{convert::TryFrom, str::FromStr, time::Duration};
+use std::{convert::TryFrom, str::FromStr};
 use structopt::StructOpt;
 
 // TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
@@ -217,7 +217,7 @@ impl ValidatorConfig {
             constants::MAX_GAS_AMOUNT,
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),
-            Duration::from_secs(expiration_time),
+            expiration_time,
             self.chain_id,
         );
 

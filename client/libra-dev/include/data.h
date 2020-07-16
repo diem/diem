@@ -63,7 +63,7 @@ struct LibraRawTransaction {
     struct LibraTransactionPayload payload;
     uint64_t max_gas_amount;
     uint64_t gas_unit_price;
-    uint64_t expiration_time_secs;
+    uint64_t expiration_timestamp_secs;
 };
 
 struct LibraSignedTransaction {

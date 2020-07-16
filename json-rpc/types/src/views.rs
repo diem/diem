@@ -399,7 +399,7 @@ pub enum TransactionDataView {
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency: String,
-        expiration_time: u64,
+        expiration_timestamp_secs: u64,
         script_hash: String,
         script: ScriptView,
     },
@@ -460,7 +460,7 @@ impl From<Transaction> for TransactionDataView {
                     max_gas_amount: t.max_gas_amount(),
                     gas_unit_price: t.gas_unit_price(),
                     gas_currency: t.gas_currency_code().to_string(),
-                    expiration_time: t.expiration_time().as_secs(),
+                    expiration_timestamp_secs: t.expiration_timestamp_secs(),
                     script_hash,
                     script: t.into_raw_transaction().into_payload().into(),
                 })

@@ -32,7 +32,7 @@ use libra_types::{
     chain_id::ChainId,
     transaction::{RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument},
 };
-use std::{str::FromStr, time::Duration};
+use std::str::FromStr;
 use thiserror::Error;
 
 pub mod counters;
@@ -223,7 +223,7 @@ where
     ) -> Result<Ed25519PublicKey, Error> {
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
-        let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
+        let expiration = self.time_service.now() + self.txn_expiration_secs;
 
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
@@ -346,7 +346,7 @@ pub fn build_rotation_transaction(
     network_address: &RawEncNetworkAddress,
     fullnode_network_key: &x25519::PublicKey,
     fullnode_network_address: &RawNetworkAddress,
-    expiration: Duration,
+    expiration_timestamp_secs: u64,
     chain_id: ChainId,
 ) -> RawTransaction {
     let script = Script::new(
@@ -368,7 +368,7 @@ pub fn build_rotation_transaction(
         MAX_GAS_AMOUNT,
         GAS_UNIT_PRICE,
         LBR_NAME.to_owned(),
-        expiration,
+        expiration_timestamp_secs,
         chain_id,
     )
 }

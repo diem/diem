@@ -25,13 +25,12 @@ use libra_crypto::{
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-use serde::{de, ser, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     convert::TryFrom,
     fmt,
     fmt::{Display, Formatter},
-    time::Duration,
 };
 
 pub mod authenticator;
@@ -74,49 +73,16 @@ pub struct RawTransaction {
     gas_currency_code: String,
 
     // Expiration timestamp for this transaction. timestamp is represented
-    // as duration in seconds from Unix Epoch. If storage is queried and
+    // as u64 in seconds from Unix Epoch. If storage is queried and
     // the time returned is greater than or equal to this time and this
     // transaction has not been included, you can be certain that it will
     // never be included.
     // A transaction that doesn't expire is represented by a very large value like
     // u64::max_value().
-    #[serde(serialize_with = "serialize_duration")]
-    #[serde(deserialize_with = "deserialize_duration")]
-    expiration_time: Duration,
+    expiration_timestamp_secs: u64,
 
     // chain ID of the Libra network this transaction is intended for
     chain_id: ChainId,
-}
-
-// TODO(#1307)
-fn serialize_duration<S>(d: &Duration, serializer: S) -> std::result::Result<S::Ok, S::Error>
-where
-    S: ser::Serializer,
-{
-    serializer.serialize_u64(d.as_secs())
-}
-
-fn deserialize_duration<'de, D>(deserializer: D) -> std::result::Result<Duration, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    struct DurationVisitor;
-    impl<'de> de::Visitor<'de> for DurationVisitor {
-        type Value = Duration;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("Duration as u64")
-        }
-
-        fn visit_u64<E>(self, v: u64) -> std::result::Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(Duration::from_secs(v))
-        }
-    }
-
-    deserializer.deserialize_u64(DurationVisitor)
 }
 
 impl RawTransaction {
@@ -131,7 +97,7 @@ impl RawTransaction {
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency_code: String,
-        expiration_time: Duration,
+        expiration_timestamp_secs: u64,
         chain_id: ChainId,
     ) -> Self {
         RawTransaction {
@@ -141,7 +107,7 @@ impl RawTransaction {
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
-            expiration_time,
+            expiration_timestamp_secs,
             chain_id,
         }
     }
@@ -156,7 +122,7 @@ impl RawTransaction {
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency_code: String,
-        expiration_time: Duration,
+        expiration_timestamp_secs: u64,
         chain_id: ChainId,
     ) -> Self {
         RawTransaction {
@@ -166,7 +132,7 @@ impl RawTransaction {
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
-            expiration_time,
+            expiration_timestamp_secs,
             chain_id,
         }
     }
@@ -182,7 +148,7 @@ impl RawTransaction {
         max_gas_amount: u64,
         gas_unit_price: u64,
         gas_currency_code: String,
-        expiration_time: Duration,
+        expiration_timestamp_secs: u64,
         chain_id: ChainId,
     ) -> Self {
         RawTransaction {
@@ -192,7 +158,7 @@ impl RawTransaction {
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
-            expiration_time,
+            expiration_timestamp_secs,
             chain_id,
         }
     }
@@ -226,7 +192,7 @@ impl RawTransaction {
             gas_unit_price: 0,
             gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
-            expiration_time: Duration::new(u64::max_value(), 0),
+            expiration_timestamp_secs: u64::max_value(),
             chain_id,
         }
     }
@@ -250,7 +216,7 @@ impl RawTransaction {
             gas_unit_price: 0,
             gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
-            expiration_time: Duration::new(u64::max_value(), 0),
+            expiration_timestamp_secs: u64::max_value(),
             chain_id,
         }
     }
@@ -311,7 +277,7 @@ impl RawTransaction {
              \tmax_gas_amount: {}, \n\
              \tgas_unit_price: {}, \n\
              \tgas_currency_code: {}, \n\
-             \texpiration_time: {:#?}, \n\
+             \texpiration_timestamp_secs: {:#?}, \n\
              \tchain_id: {},
              }}",
             self.sender,
@@ -321,7 +287,7 @@ impl RawTransaction {
             self.max_gas_amount,
             self.gas_unit_price,
             self.gas_currency_code,
-            self.expiration_time,
+            self.expiration_timestamp_secs,
             self.chain_id,
         )
     }
@@ -470,8 +436,8 @@ impl SignedTransaction {
         &self.raw_txn.gas_currency_code
     }
 
-    pub fn expiration_time(&self) -> Duration {
-        self.raw_txn.expiration_time
+    pub fn expiration_timestamp_secs(&self) -> u64 {
+        self.raw_txn.expiration_timestamp_secs
     }
 
     pub fn raw_txn_bytes_len(&self) -> usize {

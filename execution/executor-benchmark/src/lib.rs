@@ -365,7 +365,7 @@ fn create_transaction(
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap();
-    let expiration_time = std::time::Duration::from_secs(now.as_secs() + 3600);
+    let expiration_time = now.as_secs() + 3600;
 
     let raw_txn = RawTransaction::new_script(
         sender,

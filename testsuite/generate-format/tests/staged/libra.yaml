@@ -100,7 +100,7 @@ RawTransaction:
     - max_gas_amount: U64
     - gas_unit_price: U64
     - gas_currency_code: STR
-    - expiration_time: U64
+    - expiration_timestamp_secs: U64
     - chain_id:
         TYPENAME: ChainId
 Script:

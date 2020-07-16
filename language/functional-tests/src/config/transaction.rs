@@ -8,7 +8,7 @@ use move_core_types::{
     parser::{parse_transaction_arguments, parse_type_tags},
     transaction_argument::TransactionArgument,
 };
-use std::{collections::BTreeSet, str::FromStr, time::Duration};
+use std::{collections::BTreeSet, str::FromStr};
 
 /// A partially parsed transaction argument.
 #[derive(Debug)]
@@ -120,7 +120,7 @@ pub struct Config<'a> {
     pub gas_price: Option<u64>,
     pub gas_currency_code: Option<String>,
     pub sequence_number: Option<u64>,
-    pub expiration_time: Option<Duration>,
+    pub expiration_timestamp_secs: Option<u64>,
 }
 
 impl<'a> Config<'a> {
@@ -134,7 +134,7 @@ impl<'a> Config<'a> {
         let mut gas_price = None;
         let mut gas_currency_code = None;
         let mut sequence_number = None;
-        let mut expiration_time = None;
+        let mut expiration_timestamp_secs = None;
 
         for entry in entries {
             match entry {
@@ -208,8 +208,8 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
-                Entry::ExpirationTime(sn) => match expiration_time {
-                    None => expiration_time = Some(Duration::from_secs(*sn)),
+                Entry::ExpirationTime(sn) => match expiration_timestamp_secs {
+                    None => expiration_timestamp_secs = Some(*sn),
                     Some(_) => {
                         return Err(
                             ErrorKind::Other("expiration time already set".to_string()).into()
@@ -228,7 +228,7 @@ impl<'a> Config<'a> {
             gas_price,
             gas_currency_code,
             sequence_number,
-            expiration_time,
+            expiration_timestamp_secs,
         })
     }
 

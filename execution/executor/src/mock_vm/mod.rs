@@ -314,7 +314,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         0,
         0,
         LBR_NAME.to_owned(),
-        std::time::Duration::from_secs(0),
+        0,
         ChainId::test(),
     );
 

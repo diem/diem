@@ -14,7 +14,6 @@ use crate::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use lcs::to_bytes;
-use std::time::Duration;
 
 #[test]
 fn test_access_path_canonical_serialization_example() {
@@ -83,7 +82,7 @@ fn test_raw_transaction_with_a_program_canonical_serialization_example() {
         10000,
         20000,
         LBR_NAME.to_owned(),
-        Duration::from_secs(86400),
+        86400,
         ChainId::test(),
     );
 

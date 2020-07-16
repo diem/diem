@@ -28,7 +28,7 @@ use move_core_types::{
     value::{MoveStructLayout, MoveTypeLayout},
 };
 use move_vm_types::values::{Struct, Value};
-use std::{collections::BTreeMap, str::FromStr, time::Duration};
+use std::{collections::BTreeMap, str::FromStr};
 use vm_genesis::GENESIS_KEYPAIR;
 
 // TTL is 86400s. Initial time was set to 0.
@@ -229,7 +229,7 @@ impl Account {
                 max_gas_amount,
                 gas_unit_price,
                 gas_currency_code,
-                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+                DEFAULT_EXPIRATION_TIME,
                 ChainId::test(),
             ),
             TransactionPayload::Script(script) => RawTransaction::new_script(
@@ -239,7 +239,7 @@ impl Account {
                 max_gas_amount,
                 gas_unit_price,
                 gas_currency_code,
-                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+                DEFAULT_EXPIRATION_TIME,
                 ChainId::test(),
             ),
         }
@@ -385,7 +385,7 @@ impl Account {
             gas_unit_price,
             gas_currency_code,
             // TTL is 86400s. Initial time was set to 0.
-            Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+            DEFAULT_EXPIRATION_TIME,
             ChainId::test(),
         )
     }
@@ -408,7 +408,7 @@ pub struct TransactionBuilder {
     pub max_gas_amount: Option<u64>,
     pub gas_unit_price: Option<u64>,
     pub gas_currency_code: Option<String>,
-    pub ttl: Option<Duration>,
+    pub ttl: Option<u64>,
 }
 
 impl TransactionBuilder {
@@ -460,7 +460,7 @@ impl TransactionBuilder {
     }
 
     pub fn ttl(mut self, ttl: u64) -> Self {
-        self.ttl = Some(Duration::from_secs(ttl));
+        self.ttl = Some(ttl);
         self
     }
 
@@ -474,8 +474,7 @@ impl TransactionBuilder {
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
                 .unwrap_or_else(|| LBR_NAME.to_owned()),
-            self.ttl
-                .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPIRATION_TIME)),
+            self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
             ChainId::test(),
         )
         .sign(&self.sender.privkey, self.sender.pubkey)

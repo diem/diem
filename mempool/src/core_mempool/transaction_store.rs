@@ -56,7 +56,7 @@ impl TransactionStore {
             // various indexes
             system_ttl_index: TTLIndex::new(Box::new(|t: &MempoolTransaction| t.expiration_time)),
             expiration_time_index: TTLIndex::new(Box::new(|t: &MempoolTransaction| {
-                t.txn.expiration_time()
+                Duration::from_secs(t.txn.expiration_timestamp_secs())
             })),
             priority_index: PriorityIndex::new(),
             timeline_index: TimelineIndex::new(),
@@ -198,7 +198,8 @@ impl TransactionStore {
             if let Some(current_version) = txns.get_mut(&txn.get_sequence_number()) {
                 if current_version.txn.max_gas_amount() == txn.txn.max_gas_amount()
                     && current_version.txn.payload() == txn.txn.payload()
-                    && current_version.txn.expiration_time() == txn.txn.expiration_time()
+                    && current_version.txn.expiration_timestamp_secs()
+                        == txn.txn.expiration_timestamp_secs()
                     && current_version.get_gas_price() < txn.get_gas_price()
                 {
                     if let Some(txn) = txns.remove(&txn.get_sequence_number()) {
