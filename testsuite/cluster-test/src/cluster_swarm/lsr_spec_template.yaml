@@ -22,6 +22,53 @@ spec:
         - -c
         - |
           set -x
+          mkdir -p /opt/libra/data/fluent-bit/
+          cat << EOF > /opt/libra/data/fluent-bit/parsers.conf
+          [PARSER]
+            Name        events
+            Format      json
+            Time_Key    timestamp
+            Time_Format %Y-%m-%d %H:%M:%S
+          EOF
+          cat << EOF > /opt/libra/data/fluent-bit/fluent-bit.conf
+          [SERVICE]
+              Flush         5
+              Log_Level     info
+              Daemon        off
+              Parsers_File  /opt/libra/data/fluent-bit/parsers.conf
+
+          [INPUT]
+              Name              tail
+              Tag               safety-rules
+              Path              /opt/libra/data/libra.log
+              Mem_Buf_Limit     200MB
+              Refresh_Interval  10
+              Skip_Long_Lines   On
+
+          [INPUT]
+              Name              tail
+              Tag               safety-rules-events
+              Path              /opt/libra/data/events.log
+              Mem_Buf_Limit     200MB
+              Refresh_Interval  10
+              Skip_Long_Lines   On
+              Parser            events
+
+          [FILTER]
+              Name record_modifier
+              Match *
+              Record kubernetes.pod_name {pod_name}
+
+          [OUTPUT]
+              Name            es
+              Match           *
+              Host            elasticsearch-master
+              Port            9200
+              Logstash_Format On
+              Replace_Dots    Off
+              Retry_Limit     False
+              Logstash_Prefix kubernetes_cluster
+          EOF
           if [[ {lsr_backend} = "vault" ]]; then
           while true; do
             health_out=$(wget --content-on-error -O- http://vault-{validator_index}.default.svc.cluster.local:8200/v1/sys/health)
@@ -64,6 +111,13 @@ spec:
         - name: RUST_BACKTRACE
           value: "1"
   containers:
+    - name: fluent-bit
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9
+      imagePullPolicy: IfNotPresent
+      command: ["/fluent-bit/bin/fluent-bit", "-c", "/opt/libra/data/fluent-bit/fluent-bit.conf"]
+      volumeMounts:
+      - mountPath: /opt/libra/data
+        name: libra-data
     - name: main
       image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_safety_rules:{image_tag}
       imagePullPolicy: Always
