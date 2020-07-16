@@ -6,8 +6,8 @@ use crate::{
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
-    stats,
-    tx_emitter::EmitJobRequest,
+    stats::PrometheusRangeView,
+    tx_emitter::{EmitJobRequest, TxStats},
     util::unix_timestamp_now,
 };
 use anyhow::{anyhow, Result};
@@ -163,6 +163,8 @@ impl Experiment for PerformanceBenchmark {
             }
         };
         let (stats, mut trace) = join!(emit_txn, capture_trace);
+
+        // Trace
         let trace_log = self.use_logs_for_trace;
         if trace_log {
             let start = start + chrono::Duration::seconds(60);
@@ -178,8 +180,6 @@ impl Experiment for PerformanceBenchmark {
                 }
             };
         }
-        drop(backup);
-        let stats = stats?;
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());
             let mut events = vec![];
@@ -198,30 +198,19 @@ impl Experiment for PerformanceBenchmark {
             info!("Tracing {}", node);
             trace_node(&events[..], &node);
         }
-        let end = unix_timestamp_now() - buffer;
-        let start = end - window + 2 * buffer;
-        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end);
-        let avg_txns_per_block = avg_txns_per_block
-            .map_err(|e| warn!("Failed to query avg_txns_per_block: {}", e))
-            .ok();
-        info!(
-            "Link to dashboard : {}",
-            context.prometheus.link_to_dashboard(start, end)
-        );
+
+        // Report
+        self.report(context, buffer, window, stats?).await?;
+
+        // Clean up
+        drop(backup);
         let futures: Vec<_> = self
             .down_validators
             .iter()
             .map(|ic| ic.start(false))
             .collect();
         try_join_all(futures).await?;
-        if let Some(avg_txns_per_block) = avg_txns_per_block {
-            context
-                .report
-                .report_metric(&self, "avg_txns_per_block", avg_txns_per_block);
-        }
-        context
-            .report
-            .report_txn_stats(self.to_string(), stats, window);
+
         Ok(())
     }
 
@@ -260,6 +249,33 @@ impl PerformanceBenchmark {
                 }
             })
         })))
+    }
+
+    async fn report(
+        &mut self,
+        context: &mut Context<'_>,
+        buffer: Duration,
+        window: Duration,
+        stats: TxStats,
+    ) -> Result<()> {
+        let end = unix_timestamp_now() - buffer;
+        let start = end - window + 2 * buffer;
+        info!(
+            "Link to dashboard : {}",
+            context.prometheus.link_to_dashboard(start, end)
+        );
+
+        let pv = PrometheusRangeView::new(&context.prometheus, start, end);
+        if let Some(avg_txns_per_block) = pv.avg_txns_per_block() {
+            context
+                .report
+                .report_metric(&self, "avg_txns_per_block", avg_txns_per_block);
+        }
+        context
+            .report
+            .report_txn_stats(self.to_string(), stats, window);
+
+        Ok(())
     }
 }
 
