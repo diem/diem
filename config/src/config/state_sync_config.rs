@@ -24,7 +24,7 @@ impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
             chunk_limit: 250,
-            long_poll_timeout_ms: 30000,
+            long_poll_timeout_ms: 10000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,
             sync_request_timeout_ms: 60_000,

@@ -257,13 +257,13 @@ impl NodeConfig {
         for network in &mut config.full_node_networks {
             network.load(RoleType::FullNode)?;
 
-            // Validate that a network isn't repeated
-            let network_id = network.network_id.clone();
+            // Check a validator network is not included in a list of full-node networks
+            let network_id = &network.network_id;
             invariant(
-                !network_ids.contains(&network_id),
-                format!("network_id {:?} was repeated", network_id),
+                !matches!(network_id, NetworkId::Validator),
+                "Included a validator network in full_node_networks".into(),
             )?;
-            network_ids.insert(network_id);
+            network_ids.insert(network_id.clone());
         }
         config.set_data_dir(config.data_dir().clone());
         Ok(config)

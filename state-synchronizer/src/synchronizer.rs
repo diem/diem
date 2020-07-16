@@ -16,7 +16,7 @@ use futures::{
 };
 use libra_config::{
     config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
-    network_id::NetworkId,
+    network_id::NodeNetworkId,
 };
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
@@ -44,7 +44,11 @@ pub struct StateSynchronizer {
 impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
-        network: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(
+            NodeNetworkId,
+            StateSynchronizerSender,
+            StateSynchronizerEvents,
+        )>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
@@ -74,7 +78,11 @@ impl StateSynchronizer {
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         runtime: Runtime,
-        network: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(
+            NodeNetworkId,
+            StateSynchronizerSender,
+            StateSynchronizerEvents,
+        )>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Waypoint,

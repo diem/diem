@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::network_id::NetworkId;
+use crate::network_id::{NetworkId, NodeNetworkId};
 use libra_types::PeerId;
 use serde::{Deserialize, Serialize};
 
@@ -38,11 +38,15 @@ impl UpstreamConfig {
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Identifier of a node, represented as (network_id, peer_id)
-pub struct PeerNetworkId(pub NetworkId, pub PeerId);
+pub struct PeerNetworkId(pub NodeNetworkId, pub PeerId);
 
 impl PeerNetworkId {
-    pub fn network_id(&self) -> NetworkId {
+    pub fn network_id(&self) -> NodeNetworkId {
         self.0.clone()
+    }
+
+    pub fn raw_network_id(&self) -> NetworkId {
+        self.0.network_id()
     }
 
     pub fn peer_id(&self) -> PeerId {
@@ -51,11 +55,17 @@ impl PeerNetworkId {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn random() -> Self {
-        Self(NetworkId::default(), PeerId::random())
+        Self(
+            NodeNetworkId::new(NetworkId::default(), 0),
+            PeerId::random(),
+        )
     }
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn random_validator() -> Self {
-        Self(NetworkId::Validator, PeerId::random())
+        Self(
+            NodeNetworkId::new(NetworkId::Validator, 0),
+            PeerId::random(),
+        )
     }
 }

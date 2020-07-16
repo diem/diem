@@ -12,7 +12,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::channel::{mpsc, oneshot};
 use libra_config::{
     config::{NetworkConfig, NodeConfig},
-    network_id::NetworkId,
+    network_id::{NetworkId, NodeNetworkId},
 };
 use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
 use network::{
@@ -79,7 +79,11 @@ impl MockSharedMempool {
         };
         let (_reconfig_event_publisher, reconfig_event_subscriber) =
             libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-        let network_handles = vec![(NetworkId::Validator, network_sender, network_events)];
+        let network_handles = vec![(
+            NodeNetworkId::new(NetworkId::Validator, 0),
+            network_sender,
+            network_events,
+        )];
 
         start_shared_mempool(
             runtime.handle(),
