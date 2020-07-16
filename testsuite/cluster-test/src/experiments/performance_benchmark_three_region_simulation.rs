@@ -49,15 +49,15 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 euro.validator_instances().to_vec(),
             ),
             (
-                Duration::from_millis(10), // us_east<->eu one way delay
-                Duration::from_millis(10), // us_west<->eu one way delay
-                Duration::from_millis(10), // us_west<->us_east one way delay
+                Duration::from_millis(50), // us_east<->eu one way delay
+                Duration::from_millis(50), // us_west<->eu one way delay
+                Duration::from_millis(50), // us_west<->us_east one way delay
             ),
             context.cluster_swarm,
         )
         .await?;
 
-        let window = Duration::from_secs(240);
+        let window = Duration::from_secs(120);
         let emit_job_request = if context.emit_to_validator {
             EmitJobRequest::for_instances(
                 context.cluster.validator_instances().to_vec(),
