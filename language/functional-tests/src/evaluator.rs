@@ -33,7 +33,6 @@ use move_core_types::{
 use std::{
     fmt::{self, Debug},
     str::FromStr,
-    time::Duration,
 };
 use vm::{
     errors::{Location, VMError},
@@ -269,7 +268,7 @@ struct TransactionParameters<'a> {
     pub max_gas_amount: u64,
     pub gas_unit_price: u64,
     pub gas_currency_code: String,
-    pub expiration_time: Duration,
+    pub expiration_timestamp_secs: u64,
 }
 
 /// Gets the transaction parameters from the current execution environment and the config.
@@ -317,9 +316,7 @@ fn get_transaction_parameters<'a>(
         gas_unit_price,
         gas_currency_code,
         // TTL is 86400s. Initial time was set to 0.
-        expiration_time: config
-            .expiration_time
-            .unwrap_or_else(|| Duration::from_secs(40000)),
+        expiration_timestamp_secs: config.expiration_timestamp_secs.unwrap_or_else(|| 40000),
     }
 }
 
@@ -341,7 +338,7 @@ fn make_script_transaction(
         params.max_gas_amount,
         params.gas_unit_price,
         params.gas_currency_code,
-        params.expiration_time,
+        params.expiration_timestamp_secs,
         ChainId::test(),
     )
     .sign(params.privkey, params.pubkey.clone())?
@@ -366,7 +363,7 @@ fn make_module_transaction(
         params.max_gas_amount,
         params.gas_unit_price,
         params.gas_currency_code,
-        params.expiration_time,
+        params.expiration_timestamp_secs,
         ChainId::test(),
     )
     .sign(params.privkey, params.pubkey.clone())?

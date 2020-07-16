@@ -135,7 +135,7 @@ struct TxnParams {
     // will never be included.
     // A transaction that doesn't expire is represented by a very large value like
     // u64::max_value().
-    pub expiration_timestamp: u64,
+    pub expiration_timestamp_secs: u64,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -198,7 +198,7 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
         g.txn_params.max_gas_amount,
         g.txn_params.gas_unit_price,
         g.txn_params.gas_currency_code,
-        std::time::Duration::new(g.txn_params.expiration_timestamp, 0),
+        g.txn_params.expiration_timestamp_secs,
         ChainId::from_str(&g.txn_params.chain_id).expect("Failed to convert str to ChainId"),
     );
     GenerateRawTxnResponse {

@@ -1343,7 +1343,7 @@ fn submit_new_transaction(
         constants::MAX_GAS_AMOUNT,
         constants::GAS_UNIT_PRICE,
         constants::GAS_CURRENCY_CODE.to_owned(),
-        Duration::from_secs(expiration_time),
+        expiration_time,
         ChainId::test(),
     );
 

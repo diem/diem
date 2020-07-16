@@ -28,7 +28,7 @@ fn test_invalid_signature() {
             0,
             0,
             LBR_NAME.to_owned(),
-            std::time::Duration::new(0, 0),
+            0,
             ChainId::test(),
         ),
         Ed25519PrivateKey::generate_for_testing().public_key(),

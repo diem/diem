@@ -34,7 +34,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc, time::Duration};
+use std::{cell::RefCell, collections::BTreeMap, convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
 use tokio::runtime::Runtime;
 use vm_validator::{
@@ -526,7 +526,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         &RawEncNetworkAddress::new(Vec::new()),
         &new_network_pubkey,
         &RawNetworkAddress::new(Vec::new()),
-        Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
+        node.time.now() + TXN_EXPIRATION_SECS,
         node_config.base.chain_id,
     );
     let txn1 = txn1

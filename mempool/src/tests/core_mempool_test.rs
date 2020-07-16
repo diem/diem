@@ -367,8 +367,7 @@ fn test_gc_ready_transaction() {
     add_txn(&mut pool, TestTransaction::new(1, 0, 1)).unwrap();
 
     // insert in the middle transaction that's going to be expired
-    let txn = TestTransaction::new(1, 1, 1)
-        .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
+    let txn = TestTransaction::new(1, 1, 1).make_signed_transaction_with_expiration_time(0);
     pool.add_txn(txn, 0, 1, 0, TimelineState::NotReady, false);
 
     // insert few transactions after it

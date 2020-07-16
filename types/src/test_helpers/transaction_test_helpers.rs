@@ -9,7 +9,7 @@ use crate::{
     write_set::WriteSet,
 };
 use libra_crypto::{ed25519::*, traits::*};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const TEST_GAS_PRICE: u64 = 0;
@@ -36,7 +36,7 @@ pub fn get_test_signed_module_publishing_transaction(
         MAX_GAS_AMOUNT,
         TEST_GAS_PRICE,
         LBR_NAME.to_owned(),
-        Duration::from_secs(expiration_time),
+        expiration_time,
         ChainId::test(),
     );
 
@@ -52,7 +52,7 @@ pub fn get_test_signed_transaction(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
-    expiration_time: u64,
+    expiration_timestamp_secs: u64,
     gas_unit_price: u64,
     gas_currency_code: String,
     max_gas_amount: Option<u64>,
@@ -64,7 +64,7 @@ pub fn get_test_signed_transaction(
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         gas_currency_code,
-        Duration::from_secs(expiration_time),
+        expiration_timestamp_secs,
         ChainId::test(),
     );
 
@@ -106,7 +106,7 @@ fn get_test_unchecked_transaction_(
     private_key: &Ed25519PrivateKey,
     public_key: Ed25519PublicKey,
     script: Option<Script>,
-    expiration_time: u64,
+    expiration_timestamp_secs: u64,
     gas_unit_price: u64,
     gas_currency_code: String,
     max_gas_amount: Option<u64>,
@@ -119,7 +119,7 @@ fn get_test_unchecked_transaction_(
         max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
         gas_unit_price,
         gas_currency_code,
-        Duration::from_secs(expiration_time),
+        expiration_timestamp_secs,
         chain_id,
     );
 

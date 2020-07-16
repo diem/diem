@@ -356,7 +356,7 @@ fn test_verify_account_state_and_event() {
             /* max_gas_amount = */ 0,
             /* gas_unit_price = */ 0,
             /* gas_currency_code = */ LBR_NAME.to_owned(),
-            /* expiration_time = */ std::time::Duration::new(0, 0),
+            /* expiration_timestamp_secs = */ 0,
             ChainId::test(),
         )
         .sign(&privkey, pubkey)

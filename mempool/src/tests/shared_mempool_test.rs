@@ -39,7 +39,6 @@ use std::{
     collections::{HashMap, HashSet},
     num::NonZeroUsize,
     sync::{Arc, Mutex, RwLock},
-    time::Duration,
 };
 use storage_interface::mock::MockDbReader;
 use tokio::runtime::{Builder, Runtime};
@@ -612,13 +611,12 @@ fn test_consensus_events_rejected_txns() {
     // txn 1: committed successfully
     // txn 2: not committed but older than gc block timestamp
     // txn 3: not committed and newer than block timestamp
-    let committed_txn = TestTransaction::new(0, 0, 1)
-        .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
+    let committed_txn =
+        TestTransaction::new(0, 0, 1).make_signed_transaction_with_expiration_time(0);
     let kept_txn = TestTransaction::new(1, 0, 1).make_signed_transaction(); // not committed or cleaned out by block timestamp gc
     let txns = vec![
         committed_txn.clone(),
-        TestTransaction::new(0, 1, 1)
-            .make_signed_transaction_with_expiration_time(Duration::from_secs(0)),
+        TestTransaction::new(0, 1, 1).make_signed_transaction_with_expiration_time(0),
         kept_txn.clone(),
     ];
     // add txns to mempool
@@ -662,13 +660,12 @@ fn test_state_sync_events_committed_txns() {
     // txn 1: committed successfully
     // txn 2: not committed but older than gc block timestamp
     // txn 3: not committed and newer than block timestamp
-    let committed_txn = TestTransaction::new(0, 0, 1)
-        .make_signed_transaction_with_expiration_time(Duration::from_secs(0));
+    let committed_txn =
+        TestTransaction::new(0, 0, 1).make_signed_transaction_with_expiration_time(0);
     let kept_txn = TestTransaction::new(1, 0, 1).make_signed_transaction(); // not committed or cleaned out by block timestamp gc
     let txns = vec![
         committed_txn.clone(),
-        TestTransaction::new(0, 1, 1)
-            .make_signed_transaction_with_expiration_time(Duration::from_secs(0)),
+        TestTransaction::new(0, 1, 1).make_signed_transaction_with_expiration_time(0),
         kept_txn.clone(),
     ];
     // add txns to mempool

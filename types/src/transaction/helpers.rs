@@ -27,10 +27,7 @@ pub fn create_unsigned_txn(
         max_gas_amount,
         gas_unit_price,
         gas_currency_code,
-        std::time::Duration::new(
-            (Utc::now().timestamp() + txn_expiration_duration_secs) as u64,
-            0,
-        ),
+        (Utc::now().timestamp() + txn_expiration_duration_secs) as u64,
         chain_id,
     )
 }

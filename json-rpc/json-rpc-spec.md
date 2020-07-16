@@ -184,7 +184,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
             ],
             "gas_used":0,
             "transaction":{
-                "expiration_time":1590680747,
+                "expiration_timestamp_secs":1590680747,
                 "gas_unit_price":0,
                 "max_gas_amount":1000000,
                 "public_key":"500a9002995e1af93bbdaf977385ed507b174bb3dc6936efd72612d56198a19d",
@@ -370,7 +370,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
         ],
         "gas_used":0,
         "transaction":{
-            "expiration_time":1590680747,
+            "expiration_timestamp_secs":1590680747,
             "gas_unit_price":0,
             "max_gas_amount":1000000,
             "public_key":"500a9002995e1af93bbdaf977385ed507b174bb3dc6936efd72612d56198a19d",
@@ -956,7 +956,7 @@ A transaction on the blockchain.
          "sequence_number": 0,
          "max_gas_amount": 7000,
          "gas_unit_price": 3,
-         "expiration_time": 1582007787665718,
+         "expiration_timestamp_secs": 1582007787665718,
       },
       "events": [] // empty because include_events is set to false
     }
@@ -1143,7 +1143,7 @@ User submitted transaction.
    </td>
   </tr>
   <tr>
-   <td>expiration_time
+   <td>expiration_timestamp_secs
    </td>
    <td>u64
    </td>

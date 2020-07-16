@@ -219,7 +219,7 @@ impl LibraVMImpl {
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
-        let txn_expiration_time = txn_data.expiration_time();
+        let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
         let chain_id = txn_data.chain_id();
         session
             .execute_function(
@@ -232,7 +232,7 @@ impl LibraVMImpl {
                     Value::vector_u8(txn_public_key),
                     Value::u64(txn_gas_price),
                     Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_time),
+                    Value::u64(txn_expiration_timestamp_secs),
                     Value::u8(chain_id.id()),
                 ],
                 txn_data.sender,

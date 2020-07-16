@@ -39,7 +39,7 @@ use proptest::{
     prelude::*,
 };
 use proptest_derive::Arbitrary;
-use std::{convert::TryFrom, iter::Iterator, time::Duration};
+use std::{convert::TryFrom, iter::Iterator};
 
 impl WriteOp {
     pub fn value_strategy() -> impl Strategy<Value = Self> {
@@ -295,7 +295,7 @@ fn new_raw_transaction(
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
-            Duration::from_secs(expiration_time_secs),
+            expiration_time_secs,
             chain_id,
         ),
         TransactionPayload::Script(script) => RawTransaction::new_script(
@@ -305,7 +305,7 @@ fn new_raw_transaction(
             max_gas_amount,
             gas_unit_price,
             gas_currency_code,
-            Duration::from_secs(expiration_time_secs),
+            expiration_time_secs,
             chain_id,
         ),
         TransactionPayload::WriteSet(WriteSetPayload::Direct(write_set)) => {
