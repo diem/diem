@@ -27,7 +27,9 @@ fn execution_correctness(
     } else {
         (None, None)
     };
+    // Timeout value of 5 seconds for network operations.
+    let timeout = 5;
     let execution_correctness_manager =
-        ExecutionCorrectnessManager::new_local(config.storage.address, prikey);
+        ExecutionCorrectnessManager::new_local(config.storage.address, prikey, timeout);
     (execution_correctness_manager.client(), pubkey)
 }
