@@ -114,7 +114,9 @@ fn thread(n: u64) {
         waypoint,
     )
     .into_cached();
-    let safety_rules_manager = SafetyRulesManager::new_thread(storage, false);
+    // Test value, in milliseconds
+    let timeout_ms = 5_000;
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage, false, timeout_ms);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -134,7 +136,9 @@ fn vault(n: u64) {
         waypoint,
     )
     .into_cached();
-    let safety_rules_manager = SafetyRulesManager::new_thread(storage, false);
+    // Test value in milliseconds.
+    let timeout_ms = 5_000;
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage, false, timeout_ms);
     lsr(safety_rules_manager.client(), signer, n);
 }
 

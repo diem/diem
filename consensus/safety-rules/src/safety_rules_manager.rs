@@ -67,7 +67,9 @@ pub struct SafetyRulesManager {
 impl SafetyRulesManager {
     pub fn new(config: &SafetyRulesConfig) -> Self {
         match &config.service {
-            SafetyRulesService::Process(conf) => return Self::new_process(conf.server_address()),
+            SafetyRulesService::Process(conf) => {
+                return Self::new_process(conf.server_address(), config.network_timeout_ms)
+            }
             SafetyRulesService::SpawnedProcess(_) => return Self::new_spawned_process(config),
             _ => (),
         };
@@ -79,7 +81,11 @@ impl SafetyRulesManager {
             SafetyRulesService::Serializer => {
                 Self::new_serializer(storage, verify_vote_proposal_signature)
             }
-            SafetyRulesService::Thread => Self::new_thread(storage, verify_vote_proposal_signature),
+            SafetyRulesService::Thread => Self::new_thread(
+                storage,
+                verify_vote_proposal_signature,
+                config.network_timeout_ms,
+            ),
             _ => panic!("Unimplemented SafetyRulesService: {:?}", config.service),
         }
     }
@@ -94,8 +100,8 @@ impl SafetyRulesManager {
         }
     }
 
-    pub fn new_process(server_addr: SocketAddr) -> Self {
-        let process_service = ProcessService::new(server_addr);
+    pub fn new_process(server_addr: SocketAddr, timeout_ms: u64) -> Self {
+        let process_service = ProcessService::new(server_addr, timeout_ms);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Process(process_service),
         }
@@ -124,8 +130,9 @@ impl SafetyRulesManager {
     pub fn new_thread(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
+        timeout_ms: u64,
     ) -> Self {
-        let thread = ThreadService::new(storage, verify_vote_proposal_signature);
+        let thread = ThreadService::new(storage, verify_vote_proposal_signature, timeout_ms);
         Self {
             internal_safety_rules: SafetyRulesWrapper::Thread(thread),
         }

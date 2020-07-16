@@ -11,6 +11,7 @@ pub struct SpawnedProcess {
     handle: Child,
     server_addr: SocketAddr,
     _config_path: TempPath,
+    network_timeout_ms: u64,
 }
 
 impl SpawnedProcess {
@@ -31,6 +32,7 @@ impl SpawnedProcess {
             handle: runner::run(&config_path.path()),
             server_addr,
             _config_path: config_path,
+            network_timeout_ms: config.network_timeout_ms,
         }
     }
 }
@@ -38,6 +40,9 @@ impl SpawnedProcess {
 impl RemoteService for SpawnedProcess {
     fn server_address(&self) -> SocketAddr {
         self.server_addr
+    }
+    fn network_timeout_ms(&self) -> u64 {
+        self.network_timeout_ms
     }
 }
 

@@ -8,31 +8,33 @@ use executor::Executor;
 use executor_types::Error;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer, TIMEOUT};
+use libra_secure_net::{NetworkClient, NetworkServer};
 use libra_vm::LibraVM;
 use std::net::SocketAddr;
 use storage_client::StorageClient;
 
 pub trait RemoteService {
     fn client(&self) -> SerializerClient {
-        let network_client = NetworkClient::new(self.server_address(), TIMEOUT);
+        let network_client = NetworkClient::new(self.server_address(), self.network_timeout());
         let service = Box::new(RemoteClient::new(network_client));
         SerializerClient::new_client(service)
     }
 
     fn server_address(&self) -> SocketAddr;
+    fn network_timeout(&self) -> u64;
 }
 
 pub fn execute(
     storage_addr: SocketAddr,
     listen_addr: SocketAddr,
     prikey: Option<Ed25519PrivateKey>,
+    network_timeout: u64,
 ) {
     let block_executor = Box::new(Executor::<LibraVM>::new(
-        StorageClient::new(&storage_addr, TIMEOUT).into(),
+        StorageClient::new(&storage_addr, network_timeout).into(),
     ));
     let mut serializer_service = SerializerService::new(block_executor, prikey);
-    let mut network_server = NetworkServer::new(listen_addr, TIMEOUT);
+    let mut network_server = NetworkServer::new(listen_addr, network_timeout);
 
     loop {
         if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {

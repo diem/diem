@@ -64,7 +64,10 @@ impl ExecutionCorrectnessManager {
     pub fn new(config: &NodeConfig) -> Self {
         match &config.execution.service {
             ExecutionCorrectnessService::Process(remote_service) => {
-                return Self::new_process(remote_service.server_address)
+                return Self::new_process(
+                    remote_service.server_address,
+                    config.execution.network_timeout_ms,
+                )
             }
             ExecutionCorrectnessService::SpawnedProcess(_) => {
                 return Self::new_spawned_process(config)
@@ -74,16 +77,16 @@ impl ExecutionCorrectnessManager {
 
         let execution_prikey = extract_execution_prikey(config);
         let storage_address = config.storage.address;
-        let timeout = config.storage.timeout;
+        let timeout_ms = config.storage.timeout_ms;
         match &config.execution.service {
             ExecutionCorrectnessService::Local => {
-                Self::new_local(storage_address, execution_prikey, timeout)
+                Self::new_local(storage_address, execution_prikey, timeout_ms)
             }
             ExecutionCorrectnessService::Serializer => {
-                Self::new_serializer(storage_address, execution_prikey, timeout)
+                Self::new_serializer(storage_address, execution_prikey, timeout_ms)
             }
             ExecutionCorrectnessService::Thread => {
-                Self::new_thread(storage_address, execution_prikey)
+                Self::new_thread(storage_address, execution_prikey, timeout_ms)
             }
             _ => unreachable!(
                 "Unimplemented ExecutionCorrectnessService: {:?}",
@@ -107,8 +110,8 @@ impl ExecutionCorrectnessManager {
         }
     }
 
-    pub fn new_process(server_addr: SocketAddr) -> Self {
-        let process_service = ProcessService::new(server_addr);
+    pub fn new_process(server_addr: SocketAddr, network_timeout: u64) -> Self {
+        let process_service = ProcessService::new(server_addr, network_timeout);
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Process(process_service),
         }
@@ -140,8 +143,9 @@ impl ExecutionCorrectnessManager {
     pub fn new_thread(
         storage_address: SocketAddr,
         execution_prikey: Option<Ed25519PrivateKey>,
+        network_timeout: u64,
     ) -> Self {
-        let thread = ThreadService::new(storage_address, execution_prikey);
+        let thread = ThreadService::new(storage_address, execution_prikey, network_timeout);
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Thread(thread),
         }

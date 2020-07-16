@@ -23,6 +23,8 @@ pub struct SafetyRulesConfig {
     pub service: SafetyRulesService,
     pub test: Option<SafetyRulesTestConfig>,
     pub verify_vote_proposal_signature: bool,
+    // Read/Write/Connect networking operation timeout in milliseconds.
+    pub network_timeout_ms: u64,
 }
 
 impl Default for SafetyRulesConfig {
@@ -33,6 +35,8 @@ impl Default for SafetyRulesConfig {
             service: SafetyRulesService::Thread,
             test: None,
             verify_vote_proposal_signature: true,
+            // Default value of 30seconds for a timeout
+            network_timeout_ms: 30_000,
         }
     }
 }

@@ -304,8 +304,9 @@ fn create_storage_service_and_executor(
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
 
     let _handle = start_storage_service_with_db(config, db.clone());
-    let executor =
-        Executor::new(StorageClient::new(&config.storage.address, config.storage.timeout).into());
+    let executor = Executor::new(
+        StorageClient::new(&config.storage.address, config.storage.timeout_ms).into(),
+    );
 
     (db, executor)
 }
