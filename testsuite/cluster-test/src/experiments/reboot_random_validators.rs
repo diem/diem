@@ -91,7 +91,7 @@ impl Experiment for RebootRandomValidators {
     async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
         let futures: Vec<_> = self.instances.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
-        let futures: Vec<_> = self.instances.iter().map(|ic| ic.start(false)).collect();
+        let futures: Vec<_> = self.instances.iter().map(|ic| ic.start()).collect();
         try_join_all(futures).await?;
         Ok(())
     }

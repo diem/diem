@@ -66,7 +66,8 @@ impl Experiment for RecoveryTime {
         info!("Stopping {}", self.instance);
         self.instance.stop().await?;
         info!("Deleting db and restarting node for {}", self.instance);
-        self.instance.start(true).await?;
+        self.instance.clean_data().await?;
+        self.instance.start().await?;
         info!("Waiting for instance to be up: {}", self.instance);
         self.instance
             .wait_json_rpc(Instant::now() + Duration::from_secs(120))

@@ -77,9 +77,18 @@ impl Experiment for TwinValidators {
                 new_twin_config.pod_name(),
                 inst
             );
+            context
+                .cluster_swarm
+                .clean_data(
+                    &context
+                        .cluster_swarm
+                        .get_node_name(&new_twin_config.pod_name())
+                        .await?,
+                )
+                .await?;
             let new_inst = context
                 .cluster_swarm
-                .spawn_new_instance(new_twin_config, true)
+                .spawn_new_instance(new_twin_config)
                 .await?;
             info!("Waiting for twin node to be up: {}", new_inst);
             new_inst
@@ -87,7 +96,7 @@ impl Experiment for TwinValidators {
                 .await?;
             info!("Twin node {} is up", new_inst);
             info!("Restarting origin validator {}", inst);
-            inst.start(false).await?;
+            inst.start().await?;
             new_instances.push(new_inst.clone());
         }
         let instances = self.instances.clone();

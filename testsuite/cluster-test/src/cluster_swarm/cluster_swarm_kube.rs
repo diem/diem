@@ -153,7 +153,6 @@ impl ClusterSwarmKube {
         seed_peer_ip: &str,
         safety_rules_addr: &str,
         cfg_overrides: &str,
-        delete_data: bool,
     ) -> Result<Pod> {
         let cfg_fullnode_seed = if num_fullnodes > 0 {
             CFG_FULLNODE_SEED
@@ -171,7 +170,6 @@ impl ClusterSwarmKube {
             image_tag = image_tag,
             node_name = node_name,
             cfg_overrides = cfg_overrides,
-            delete_data = delete_data,
             cfg_seed = CFG_SEED,
             cfg_seed_peer_ip = seed_peer_ip,
             cfg_safety_rules_addr = safety_rules_addr,
@@ -194,7 +192,6 @@ impl ClusterSwarmKube {
         image_tag: &str,
         seed_peer_ip: &str,
         cfg_overrides: &str,
-        delete_data: bool,
     ) -> Result<Pod> {
         let fluentbit_enabled = "true";
         let pod_yaml = format!(
@@ -206,7 +203,6 @@ impl ClusterSwarmKube {
             node_name = node_name,
             image_tag = image_tag,
             cfg_overrides = cfg_overrides,
-            delete_data = delete_data,
             cfg_seed = CFG_SEED,
             cfg_seed_peer_ip = seed_peer_ip,
             cfg_fullnode_seed = CFG_FULLNODE_SEED,
@@ -448,11 +444,7 @@ impl ClusterSwarmKube {
         ))
     }
 
-    pub async fn upsert_node(
-        &self,
-        instance_config: InstanceConfig,
-        delete_data: bool,
-    ) -> Result<Instance> {
+    pub async fn upsert_node(&self, instance_config: InstanceConfig) -> Result<Instance> {
         let pod_name = instance_config.pod_name();
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
@@ -479,7 +471,6 @@ impl ClusterSwarmKube {
                         .as_ref()
                         .unwrap_or(&"".to_string()),
                     &validator_config.config_overrides.iter().join(","),
-                    delete_data,
                 )?,
                 self.service_spec(pod_name.clone()),
             ),
@@ -493,7 +484,6 @@ impl ClusterSwarmKube {
                     &fullnode_config.image_tag,
                     &fullnode_config.seed_peer_ip,
                     &fullnode_config.config_overrides.iter().join(","),
-                    delete_data,
                 )?,
                 self.service_spec(pod_name.clone()),
             ),
@@ -654,16 +644,38 @@ impl ClusterSwarmKube {
         try_join_all(delete_futures).await?;
         Ok(())
     }
+
+    /// Runs command on the provided host in separate utility container based on cluster-test-util image
+    pub async fn util_cmd<S: AsRef<str>>(
+        &self,
+        command: S,
+        k8s_node: &str,
+        job_name: &str,
+    ) -> Result<()> {
+        self.run(
+            k8s_node,
+            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+            command.as_ref(),
+            job_name,
+        )
+        .await
+    }
 }
 
 #[async_trait]
 impl ClusterSwarm for ClusterSwarmKube {
-    async fn spawn_new_instance(
-        &self,
-        instance_config: InstanceConfig,
-        delete_data: bool,
-    ) -> Result<Instance> {
-        self.upsert_node(instance_config, delete_data).await
+    async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance> {
+        self.upsert_node(instance_config).await
+    }
+
+    async fn clean_data(&self, node: &str) -> Result<()> {
+        self.util_cmd("rm -rf /opt/libra/data/*", node, "clean-data")
+            .await
+    }
+
+    async fn get_node_name(&self, pod_name: &str) -> Result<String> {
+        let node = self.allocate_node(pod_name).await?;
+        Ok(node.name)
     }
 
     async fn get_grafana_baseurl(&self) -> Result<String> {
