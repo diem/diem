@@ -22,6 +22,7 @@ pub struct ExecutionConfig {
     pub genesis_file_location: PathBuf,
     pub service: ExecutionCorrectnessService,
     pub backend: SecureBackend,
+    pub network_timeout_ms: u64,
 }
 
 impl std::fmt::Debug for ExecutionConfig {
@@ -54,6 +55,8 @@ impl Default for ExecutionConfig {
             service: ExecutionCorrectnessService::Thread,
             backend: SecureBackend::InMemoryStorage,
             sign_vote_proposal: true,
+            // Default value of 30 seconds for the network timeout.
+            network_timeout_ms: 30_000,
         }
     }
 }

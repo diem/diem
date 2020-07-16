@@ -20,13 +20,13 @@ fn start_test_storage_with_client() -> (JoinHandle<()>, libra_temppath::TempPath
 
     let server_port = utils::get_available_port();
     config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-    // Test timeout of 5 secons
-    config.storage.timeout = 5;
+    // Test timeout of 5 seconds
+    config.storage.timeout_ms = 5_000;
 
     let db = Arc::new(LibraDB::new_for_test(&tmp_dir));
     let storage_server_handle = start_storage_service_with_db(&config, db);
 
-    let client = StorageClient::new(&config.storage.address, config.storage.timeout);
+    let client = StorageClient::new(&config.storage.address, config.storage.timeout_ms);
     (storage_server_handle, tmp_dir, client)
 }
 

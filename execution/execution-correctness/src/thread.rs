@@ -20,20 +20,27 @@ use std::{
 pub struct ThreadService {
     _child: JoinHandle<()>,
     server_addr: SocketAddr,
+    network_timeout: u64,
 }
 
 impl ThreadService {
-    pub fn new(storage_addr: SocketAddr, prikey: Option<Ed25519PrivateKey>) -> Self {
+    pub fn new(
+        storage_addr: SocketAddr,
+        prikey: Option<Ed25519PrivateKey>,
+        network_timeout: u64,
+    ) -> Self {
         let listen_port = utils::get_available_port();
         let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), listen_port);
         let server_addr = listen_addr;
 
-        let child =
-            thread::spawn(move || remote_service::execute(storage_addr, listen_addr, prikey));
+        let child = thread::spawn(move || {
+            remote_service::execute(storage_addr, listen_addr, prikey, network_timeout)
+        });
 
         Self {
             _child: child,
             server_addr,
+            network_timeout,
         }
     }
 }
@@ -41,5 +48,8 @@ impl ThreadService {
 impl RemoteService for ThreadService {
     fn server_address(&self) -> SocketAddr {
         self.server_addr
+    }
+    fn network_timeout(&self) -> u64 {
+        self.network_timeout
     }
 }

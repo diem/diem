@@ -27,7 +27,10 @@ fn execution_correctness(
     } else {
         (None, None)
     };
+    // Test value for network_timeout, in seconds.
+    let network_timeout_ms = 5_000;
+
     let execution_correctness_manager =
-        ExecutionCorrectnessManager::new_thread(config.storage.address, prikey);
+        ExecutionCorrectnessManager::new_thread(config.storage.address, prikey, network_timeout_ms);
     (execution_correctness_manager.client(), pubkey)
 }

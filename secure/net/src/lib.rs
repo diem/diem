@@ -23,12 +23,6 @@ use std::{
 };
 use thiserror::Error;
 
-/// Read, Write, Connect timeout in seconds.
-#[cfg(not(test))]
-pub const TIMEOUT: u64 = 30;
-#[cfg(test)]
-pub const TIMEOUT: u64 = 5;
-
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Already called shutdown")]
@@ -46,16 +40,16 @@ pub enum Error {
 pub struct NetworkClient {
     server: SocketAddr,
     stream: Option<NetworkStream>,
-    /// Read, Write, Connect timeout in seconds.
-    timeout: u64,
+    /// Read, Write, Connect timeout in milliseconds.
+    timeout_ms: u64,
 }
 
 impl NetworkClient {
-    pub fn new(server: SocketAddr, timeout: u64) -> Self {
+    pub fn new(server: SocketAddr, timeout_ms: u64) -> Self {
         Self {
             server,
             stream: None,
-            timeout,
+            timeout_ms,
         }
     }
 
@@ -91,7 +85,7 @@ impl NetworkClient {
 
     fn server(&mut self) -> Result<&mut NetworkStream, Error> {
         if self.stream.is_none() {
-            let timeout = std::time::Duration::from_secs(self.timeout);
+            let timeout = std::time::Duration::from_millis(self.timeout_ms);
             debug!("Attempting to connect to upstream {}", self.server);
             let mut stream = TcpStream::connect_timeout(&self.server, timeout);
 
@@ -104,7 +98,7 @@ impl NetworkClient {
 
             let stream = stream?;
             stream.set_nodelay(true)?;
-            self.stream = Some(NetworkStream::new(stream, self.timeout));
+            self.stream = Some(NetworkStream::new(stream, self.timeout_ms));
             debug!("Connection established to upstream {}", self.server);
         }
 
@@ -115,17 +109,17 @@ impl NetworkClient {
 pub struct NetworkServer {
     listener: Option<TcpListener>,
     stream: Option<NetworkStream>,
-    /// Read, Write, Connect timeout in seconds.
-    timeout: u64,
+    /// Read, Write, Connect timeout in milliseconds.
+    timeout_ms: u64,
 }
 
 impl NetworkServer {
-    pub fn new(listen: SocketAddr, timeout: u64) -> Self {
+    pub fn new(listen: SocketAddr, timeout_ms: u64) -> Self {
         let listener = TcpListener::bind(listen);
         Self {
             listener: Some(listener.unwrap()),
             stream: None,
-            timeout,
+            timeout_ms,
         }
     }
 
@@ -172,7 +166,7 @@ impl NetworkServer {
             let (stream, stream_addr) = listener.accept()?;
             debug!("Connection established with downstream {}", stream_addr);
             stream.set_nodelay(true)?;
-            self.stream = Some(NetworkStream::new(stream, self.timeout));
+            self.stream = Some(NetworkStream::new(stream, self.timeout_ms));
         }
 
         self.stream.as_mut().ok_or_else(|| Error::NoActiveStream)
@@ -186,8 +180,8 @@ struct NetworkStream {
 }
 
 impl NetworkStream {
-    pub fn new(stream: TcpStream, timeout: u64) -> Self {
-        let timeout = Some(std::time::Duration::from_secs(timeout));
+    pub fn new(stream: TcpStream, timeout_ms: u64) -> Self {
+        let timeout = Some(std::time::Duration::from_millis(timeout_ms));
         // These only fail if a duration of 0 is passed in.
         stream.set_read_timeout(timeout).unwrap();
         stream.set_write_timeout(timeout).unwrap();
@@ -288,6 +282,9 @@ mod test {
     use super::*;
     use libra_config::utils;
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    /// Read, Write, Connect timeout in milliseconds.
+    const TIMEOUT: u64 = 5_000;
 
     #[test]
     fn test_ping() {
