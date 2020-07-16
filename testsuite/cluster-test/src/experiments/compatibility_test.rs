@@ -61,6 +61,15 @@ pub async fn update_batch_instance(
     Ok(())
 }
 
+pub fn get_instance_list_str(batch: &[Instance]) -> String {
+    let mut nodes_list = String::from("");
+    for instance in batch.iter() {
+        nodes_list.push_str(&instance.to_string());
+        nodes_list.push_str(", ")
+    }
+    nodes_list
+}
+
 #[derive(StructOpt, Debug)]
 pub struct CompatiblityTestParams {
     #[structopt(
@@ -127,15 +136,31 @@ impl Experiment for CompatibilityTest {
             context.global_emit_job_request,
         );
         let job_duration = Duration::from_secs(3);
+        context.report.report_text(format!(
+            "Compatibility test results for {} ==> {} (PR)",
+            context.current_tag, self.updated_image_tag
+        ));
 
         // Generate some traffic
+        let msg = format!(
+            "1. All instances running {}, generating some traffic on network",
+            context.current_tag
+        );
+        info!("{}", msg);
+        context.report.report_text(msg);
         context
             .tx_emitter
             .emit_txn_for(job_duration, fullnode_txn_job.clone())
             .await
             .map_err(|e| anyhow::format_err!("Failed to generate traffic: {}", e))?;
 
-        info!("1. Changing the images for the first instance to validate storage");
+        let msg = format!(
+            "2. First validator {} ==> {}, to validate storage",
+            context.current_tag, self.updated_image_tag
+        );
+        info!("{}", msg);
+        info!("Upgrading validator: {}", self.first_node);
+        context.report.report_text(msg);
         let first_node = vec![self.first_node.clone()];
         update_batch_instance(context, &first_node, self.updated_image_tag.clone()).await?;
         context
@@ -147,11 +172,18 @@ impl Experiment for CompatibilityTest {
             .await
             .map_err(|e| anyhow::format_err!("Storage backwards compat broken: {}", e))?;
 
-        context
-            .report
-            .report_metric(self.to_string(), "storage_compat", 1.0);
-
-        info!("2. Changing images for the first batch to test consensus");
+        let msg = format!(
+            "3. First batch validators ({}) {} ==> {}, to test consensus",
+            self.first_batch.len(),
+            context.current_tag,
+            self.updated_image_tag
+        );
+        info!("{}", msg);
+        info!(
+            "Upgrading validators: {}",
+            get_instance_list_str(&self.first_batch)
+        );
+        context.report.report_text(msg);
         update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
@@ -159,11 +191,18 @@ impl Experiment for CompatibilityTest {
             .await
             .map_err(|e| anyhow::format_err!("Consensus backwards compat broken: {}", e))?;
 
-        context
-            .report
-            .report_metric(self.to_string(), "consensus_compat", 1.0);
-
-        info!("3. Changing images for the rest of the nodes");
+        let msg = format!(
+            "4. Second batch validators ({}) {} ==> {}, to upgrade rest of the validators",
+            self.second_batch.len(),
+            context.current_tag,
+            self.updated_image_tag
+        );
+        info!("{}", msg);
+        info!(
+            "Upgrading validators: {}",
+            get_instance_list_str(&self.second_batch)
+        );
+        context.report.report_text(msg);
         update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
@@ -173,7 +212,18 @@ impl Experiment for CompatibilityTest {
                 anyhow::format_err!("Failed to upgrade rest of validator images: {}", e)
             })?;
 
-        info!("4. Changing images for full nodes");
+        let msg = format!(
+            "5. All full nodes ({}) {} ==> {}, to finish the network upgrade",
+            self.full_nodes.len(),
+            context.current_tag,
+            self.updated_image_tag
+        );
+        info!("{}", msg);
+        info!(
+            "Upgrading full nodes: {}",
+            get_instance_list_str(&self.full_nodes)
+        );
+        context.report.report_text(msg);
         update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
@@ -190,14 +240,12 @@ impl Experiment for CompatibilityTest {
 
 impl fmt::Display for CompatibilityTest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Updating [")?;
-        for instance in self.first_batch.iter() {
-            write!(f, "{}, ", instance)?;
-        }
-        for instance in self.second_batch.iter() {
-            write!(f, "{}, ", instance)?;
-        }
-        write!(f, "]")?;
-        writeln!(f, "Updated Config: {:?}", self.updated_image_tag)
+        write!(
+            f,
+            "Compatibility test, phased upgrade to {} in batches of 1, {}, {}",
+            self.updated_image_tag,
+            self.first_batch.len(),
+            self.second_batch.len()
+        )
     }
 }
