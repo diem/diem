@@ -6,7 +6,7 @@ use anyhow::Result as AResult;
 use serde::{
     de::Error as DeError,
     ser::{SerializeSeq, SerializeTuple},
-    Deserialize,
+    Deserialize, Serialize,
 };
 use std::fmt::{self, Debug};
 
@@ -25,10 +25,10 @@ pub enum MoveValue {
     Signer(AccountAddress),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveStructLayout(Vec<MoveTypeLayout>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MoveTypeLayout {
     Bool,
     U8,
@@ -40,13 +40,13 @@ pub enum MoveTypeLayout {
     Signer,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum MoveKind {
     Copyable,
     Resource,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MoveKindInfo {
     Base(MoveKind),
     Vector(MoveKind, Box<MoveKindInfo>),
