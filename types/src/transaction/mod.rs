@@ -73,7 +73,8 @@ pub struct RawTransaction {
 
     gas_currency_code: String,
 
-    // Expiration time for this transaction.  If storage is queried and
+    // Expiration timestamp for this transaction. timestamp is represented
+    // as duration in seconds from Unix Epoch. If storage is queried and
     // the time returned is greater than or equal to this time and this
     // transaction has not been included, you can be certain that it will
     // never be included.
