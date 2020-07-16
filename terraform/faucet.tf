@@ -30,6 +30,7 @@ data "template_file" "ecs_faucet_definition" {
     faucet_image_repo    = local.faucet_image_repo
     faucet_image_tag_str = substr(var.image_tag, 0, 6) == "sha256" ? "@${local.faucet_image_tag}" : ":${local.faucet_image_tag}"
     ac_hosts             = join(",", aws_instance.validator.*.private_ip)
+    chain_id             = var.chain_id
     cfg_num_validators   = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
     cfg_seed             = var.config_seed
     log_level            = var.faucet_log_level

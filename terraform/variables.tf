@@ -50,6 +50,11 @@ variable "config_seed" {
   description = "Seed to be used by libra-config for"
 }
 
+variable "chain_id" {
+  default     = "DEVNET"
+  description = "Chain ID of this network"
+}
+
 variable "num_validators" {
   default     = 4
   description = "Number of validator nodes to run on this network"
