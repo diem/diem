@@ -269,25 +269,11 @@ impl ValueImpl {
 }
 
 impl Value {
-    // REVIEW: this allows primitive (including `Signer`) and vectors of them. Vectors can only
-    // be one level (a different organization of `ValueImpl` could give us that property in an
-    // efficient way). Conceptually if we serialize the value and deserialize according to
-    // the argument type we would have accomplished a proper check (reference handling aside...)
+    // Check that a `Value` is the constant represented by `SignatureToken`.
+    // Return false both if the signature is not for a constant, or value and signature
+    // don't match
     pub fn is_valid_arg(&self, sig: &SignatureToken) -> bool {
         match (sig, &self.0) {
-            (SignatureToken::U8, ValueImpl::U8(_)) => true,
-            (SignatureToken::U64, ValueImpl::U64(_)) => true,
-            (SignatureToken::U128, ValueImpl::U128(_)) => true,
-            (SignatureToken::Bool, ValueImpl::Bool(_)) => true,
-            (SignatureToken::Address, ValueImpl::Address(_)) => true,
-            (SignatureToken::Vector(ty), ValueImpl::Container(c)) => match (&**ty, c) {
-                (SignatureToken::Bool, Container::VecBool(_))
-                | (SignatureToken::U8, Container::VecU8(_))
-                | (SignatureToken::U64, Container::VecU64(_))
-                | (SignatureToken::U128, Container::VecU128(_))
-                | (SignatureToken::Address, Container::VecAddress(_)) => true,
-                _ => false,
-            },
             (
                 SignatureToken::Reference(inner_ty),
                 ValueImpl::ContainerRef(ContainerRef::Local(Container::StructR(r))),
@@ -297,34 +283,87 @@ impl Value {
                     && v.len() == 1
                     && matches!(&v[0], ValueImpl::Address(_))
             }
+            _ => self.0.check_constant(sig),
+        }
+    }
+
+    // Check that a `Value` is either a possible constant or a `Signer`.
+    // This function only filters obvious bad args. It is possible to fool
+    // this function to take inconsistent `Vector`s.
+    // `is_valid_arg` above makes the consistency check against the signature
+    // of the function invoked.
+    pub fn is_constant_or_signer_ref(&self) -> bool {
+        match &self.0 {
+            ValueImpl::ContainerRef(ContainerRef::Local(Container::StructR(r))) => {
+                let v = &*r.borrow();
+                v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
+            }
+            _ => self.0.is_constant(),
+        }
+    }
+}
+
+impl ValueImpl {
+    fn check_constant(&self, sig: &SignatureToken) -> bool {
+        match (sig, &self) {
+            (SignatureToken::U8, ValueImpl::U8(_))
+            | (SignatureToken::U64, ValueImpl::U64(_))
+            | (SignatureToken::U128, ValueImpl::U128(_))
+            | (SignatureToken::Bool, ValueImpl::Bool(_))
+            | (SignatureToken::Address, ValueImpl::Address(_)) => true,
+            (SignatureToken::Vector(ty), ValueImpl::Container(c)) => match (&**ty, c) {
+                (SignatureToken::Bool, Container::VecBool(_))
+                | (SignatureToken::U8, Container::VecU8(_))
+                | (SignatureToken::U64, Container::VecU64(_))
+                | (SignatureToken::U128, Container::VecU128(_))
+                | (SignatureToken::Address, Container::VecAddress(_)) => true,
+                (SignatureToken::Vector(inner), Container::VecC(values)) => {
+                    if !inner.is_constant() {
+                        return false;
+                    }
+                    for value in &*values.borrow() {
+                        if !value.check_constant(ty) {
+                            return false;
+                        }
+                    }
+                    true
+                }
+                _ => false,
+            },
             _ => false,
         }
     }
 
-    pub fn is_constant_or_signer_ref(&self) -> bool {
-        match &self.0 {
+    fn is_constant(&self) -> bool {
+        match self {
             ValueImpl::Bool(_)
             | ValueImpl::U8(_)
             | ValueImpl::U64(_)
             | ValueImpl::U128(_)
             | ValueImpl::Address(_) => true,
-            ValueImpl::Container(c) => {
-                match c {
-                    Container::VecBool(_)
-                    | Container::VecU8(_)
-                    | Container::VecU64(_)
-                    | Container::VecU128(_)
-                    | Container::VecAddress(_) => true,
-                    // TODO: we need to enable vector of vectors and move Value will change
-                    // to have a knowledge of vectors vs structs
-                    _ => false,
+            ValueImpl::Container(c) => match c {
+                Container::VecBool(_)
+                | Container::VecU8(_)
+                | Container::VecU64(_)
+                | Container::VecU128(_)
+                | Container::VecAddress(_) => true,
+                Container::VecC(values) => {
+                    // this is not verifying vector consistency because it cannot always.
+                    // It's simply checking that every elements in the vector is itself
+                    // a constant or a vector
+                    for value in &*values.borrow() {
+                        if !value.is_constant() {
+                            return false;
+                        }
+                    }
+                    true
                 }
-            }
-            ValueImpl::ContainerRef(ContainerRef::Local(Container::StructR(r))) => {
-                let v = &*r.borrow();
-                v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
-            }
-            _ => false,
+                Container::Locals(_)
+                | Container::StructC(_)
+                | Container::StructR(_)
+                | Container::VecR(_) => false,
+            },
+            ValueImpl::ContainerRef(_) | ValueImpl::IndexedRef(_) | ValueImpl::Invalid => false,
         }
     }
 }
@@ -1191,6 +1230,45 @@ impl Value {
         Self(ValueImpl::Container(Container::VecAddress(Rc::new(
             RefCell::new(it.into_iter().collect()),
         ))))
+    }
+
+    // Creates a vector with an iterator of values and a signature that describes
+    // the values. Only creates a vector of constant values and so a constant itself.
+    pub fn constant_vector_generic(
+        it: impl IntoIterator<Item = Value>,
+        inner: &SignatureToken,
+    ) -> PartialVMResult<Self> {
+        use SignatureToken as S;
+        // check that the signature is compatible with a vector of constants and not
+        // a specialized vector which has different entry points
+        match inner {
+            S::Bool | S::U8 | S::U64 | S::U128 | S::Address => {
+                return Err(
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
+                        "vector of primitives should use specialized constructor".to_string(),
+                    ),
+                );
+            }
+            _ => {
+                if !inner.is_constant() {
+                    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message("nested vector can only be constants".to_string()));
+                }
+            }
+        }
+        // check that each value is of the vector type
+        let mut values = vec![];
+        for value in it {
+            if !value.0.check_constant(inner) {
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                    .with_message("nested vector can only be constants".to_string()));
+            }
+            values.push(value.0);
+        }
+
+        Ok(Self(ValueImpl::Container(Container::VecC(Rc::new(
+            RefCell::new(values),
+        )))))
     }
 
     // REVIEW: This API can break

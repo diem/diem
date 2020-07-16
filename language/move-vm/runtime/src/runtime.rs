@@ -154,8 +154,9 @@ impl VMRuntime {
     }
 }
 
-/// Check that the transaction arguments are acceptable by the VM.
-/// Constants are the only arguments allowed.
+// Check that the transaction arguments are acceptable by the VM.
+// Constants and a reference to a `Signer` are the only arguments allowed.
+// This check is more of a rough filter to remove obvious bad arguments.
 fn check_args(args: &[Value]) -> PartialVMResult<()> {
     for val in args {
         if !val.is_constant_or_signer_ref() {

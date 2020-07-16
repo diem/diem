@@ -40,20 +40,14 @@ fn verify_constant(idx: usize, constant: &Constant) -> PartialVMResult<()> {
 }
 
 fn verify_constant_type(idx: usize, type_: &SignatureToken) -> PartialVMResult<()> {
-    use SignatureToken as S;
-    match type_ {
-        S::Bool | S::U8 | S::U64 | S::U128 | S::Address => Ok(()),
-        S::Vector(inner) => verify_constant_type(idx, inner),
-        S::Signer
-        | S::Struct(_)
-        | S::StructInstantiation(_, _)
-        | S::Reference(_)
-        | S::MutableReference(_)
-        | S::TypeParameter(_) => Err(verification_error(
+    if type_.is_constant() {
+        Ok(())
+    } else {
+        Err(verification_error(
             StatusCode::INVALID_CONSTANT_TYPE,
             IndexKind::ConstantPool,
             idx as TableIndex,
-        )),
+        ))
     }
 }
 

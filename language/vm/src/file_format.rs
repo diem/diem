@@ -739,6 +739,23 @@ impl SignatureToken {
         matches!(self, MutableReference(_))
     }
 
+    /// Returns true if the `SignatureToken` can represent a constant (as in representable in
+    /// the constants table).
+    pub fn is_constant(&self) -> bool {
+        use SignatureToken::*;
+
+        match self {
+            Bool | U8 | U64 | U128 | Address => true,
+            Vector(inner) => inner.is_constant(),
+            Signer
+            | Struct(_)
+            | StructInstantiation(_, _)
+            | Reference(_)
+            | MutableReference(_)
+            | TypeParameter(_) => false,
+        }
+    }
+
     /// Set the index to this one. Useful for random testing.
     ///
     /// Panics if this token doesn't contain a struct handle.

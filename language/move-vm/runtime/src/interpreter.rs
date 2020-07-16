@@ -1097,9 +1097,8 @@ impl Frame {
 }
 
 // Verify the the type of the arguments in input from the outside is restricted (`is_valid_arg()`)
-// TODO: we need to check the instantiation
-// TODO: specify the values allowed, we could try to match everything, this function should have
-// minimal or non existent policy (besides any type/value match) but it's tricky
+// and it honors the signature of the function invoked.
+// TODO: we need to check the instantiation, once we expose signatures with generic argument
 fn verify_args(signature: &Signature, _ty_args: &[Type], args: &[Value]) -> PartialVMResult<()> {
     if signature.len() != args.len() {
         return Err(

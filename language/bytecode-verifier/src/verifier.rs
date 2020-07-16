@@ -56,31 +56,10 @@ fn verify_main_signature_impl(script: &CompiledScript) -> PartialVMResult<()> {
     fn is_valid_arg_type(idx: usize, arg_type: &SignatureToken) -> bool {
         use SignatureToken as S;
         match arg_type {
-            S::Bool | S::U8 | S::U64 | S::U128 | S::Address => true,
-            S::Vector(inner) => match &**inner {
-                S::U8 => true,
-                S::Bool
-                | S::U64
-                | S::U128
-                | S::Address
-                | S::Signer
-                | S::Struct(_)
-                | S::Vector(_)
-                | S::StructInstantiation(_, _)
-                | S::Reference(_)
-                | S::MutableReference(_)
-                | S::TypeParameter(_) => false,
-            },
-
             // &signer is a type that can only be populated by the Move VM. And its value is filled
             // based on the sender of the transaction
             S::Reference(inner) => idx == 0 && matches!(&**inner, S::Signer),
-
-            S::Signer
-            | S::Struct(_)
-            | S::StructInstantiation(_, _)
-            | S::MutableReference(_)
-            | S::TypeParameter(_) => false,
+            _ => arg_type.is_constant(),
         }
     }
 
