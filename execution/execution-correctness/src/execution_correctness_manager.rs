@@ -14,7 +14,6 @@ use executor::Executor;
 use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_global_constants::EXECUTION_KEY;
-use libra_secure_net::TIMEOUT;
 use libra_secure_storage::{CryptoStorage, Storage};
 use libra_vm::LibraVM;
 use std::{
@@ -75,12 +74,13 @@ impl ExecutionCorrectnessManager {
 
         let execution_prikey = extract_execution_prikey(config);
         let storage_address = config.storage.address;
+        let timeout = config.storage.timeout;
         match &config.execution.service {
             ExecutionCorrectnessService::Local => {
-                Self::new_local(storage_address, execution_prikey)
+                Self::new_local(storage_address, execution_prikey, timeout)
             }
             ExecutionCorrectnessService::Serializer => {
-                Self::new_serializer(storage_address, execution_prikey)
+                Self::new_serializer(storage_address, execution_prikey, timeout)
             }
             ExecutionCorrectnessService::Thread => {
                 Self::new_thread(storage_address, execution_prikey)
@@ -95,9 +95,10 @@ impl ExecutionCorrectnessManager {
     pub fn new_local(
         storage_address: SocketAddr,
         execution_prikey: Option<Ed25519PrivateKey>,
+        timeout: u64,
     ) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            StorageClient::new(&storage_address, TIMEOUT).into(),
+            StorageClient::new(&storage_address, timeout).into(),
         ));
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Local(Arc::new(
@@ -116,9 +117,10 @@ impl ExecutionCorrectnessManager {
     pub fn new_serializer(
         storage_address: SocketAddr,
         execution_prikey: Option<Ed25519PrivateKey>,
+        timeout: u64,
     ) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            StorageClient::new(&storage_address, TIMEOUT).into(),
+            StorageClient::new(&storage_address, timeout).into(),
         ));
         let serializer_service = SerializerService::new(block_executor, execution_prikey);
         Self {
