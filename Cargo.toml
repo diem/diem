@@ -138,6 +138,7 @@ members = [
 #
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 default-members = [
+    "common/inject-error",
     "common/trace",
     "config/config-builder",
     "config/generate-key",

@@ -66,7 +66,6 @@ proptest = "proptest is only for testing and fuzzing"
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 [workspace.test-only]
 members = [
-    "common/inject-error",
     "common/libradoc",
     "common/proptest-helpers",
     "common/retrier",

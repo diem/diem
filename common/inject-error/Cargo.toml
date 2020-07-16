@@ -11,7 +11,7 @@ proc-macro = true
 
 [[bin]]
 name = "test"
-required-features = ["inject-error"]
+required-features = ["enable-inject-error"]
 
 [dependencies]
 quote = "1.0.7"
@@ -22,4 +22,5 @@ anyhow = "1.0.31"
 rand = "0.7.3"
 
 [features]
-inject-error = []
+# only used by the example binary
+enable-inject-error = []

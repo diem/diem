@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::NodeConfig;
+use libra_logger::prelude::*;
 use libra_types::PeerId;
 use std::{
     path::PathBuf,
@@ -54,6 +55,10 @@ fn main() {
             let peer_id = network.peer_id();
             setup_metrics(peer_id, &config);
         }
+    }
+
+    if cfg!(feature = "enable-inject-error") {
+        warn!("Running with enable-inject-error!");
     }
 
     let _node_handle = libra_node::main_node::setup_environment(&mut config);

@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! Inject non-deterministic anyhow::Error on annotated functions, it requires the dependency of rand
-//! and is only enabled when compiled with feature "inject-error" and **not** in cargo test.
+//! and is only enabled when compiled with feature "enable-inject-error" in the caller crate
+//! and **not** in cargo test.
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
@@ -42,27 +43,29 @@ pub fn inject_error(
     assert!(chance >= 0.0);
     let chance = (chance * 100.0) as u64;
     let original_func = parse_macro_input!(input as syn::ItemFn);
+    let fn_name = original_func.sig.ident.to_string();
     let mut injected_func = original_func.clone();
     let stmt0 = quote! {
         use rand::Rng;
     };
     let stmt1 = quote! {
        if rand::thread_rng().gen_range(0, 100) < #chance {
-           Err(anyhow::anyhow!("Injected error"))?;
+           Err(anyhow::anyhow!("Injected error from {} with chance {} in 100", #fn_name, #chance))?;
        }
     };
     injected_func
         .block
         .stmts
-        .insert(0, syn::parse2(stmt0).unwrap());
+        .insert(0, syn::parse2(stmt1).unwrap());
     injected_func
         .block
         .stmts
-        .insert(0, syn::parse2(stmt1).unwrap());
+        .insert(0, syn::parse2(stmt0).unwrap());
     let output = quote! {
-        #[cfg(any(test, not(feature="inject-error")))]
+        #[cfg(any(test, not(feature = "enable-inject-error")))]
         #original_func
-        #[cfg(all(not(test), feature="inject-error"))]
+
+        #[cfg(all(not(test), feature = "enable-inject-error"))]
         #injected_func
     };
     output.into()
