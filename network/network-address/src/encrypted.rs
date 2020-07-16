@@ -6,12 +6,22 @@ use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
 };
-use libra_crypto::{compat::Sha3_256, hkdf::Hkdf};
+use libra_crypto::{
+    compat::Sha3_256,
+    hkdf::Hkdf,
+    traits::{self, ValidCryptoMaterial, ValidCryptoMaterialStringExt},
+};
+use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
 use move_core_types::account_address::AccountAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
+use rand::{CryptoRng, Rng, RngCore};
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, mem};
+use std::{
+    convert::{TryFrom, TryInto},
+    mem,
+    str::FromStr,
+};
 use thiserror::Error;
 
 /// The length in bytes of the AES-256-GCM authentication tag.
@@ -24,15 +34,17 @@ pub const AES_GCM_NONCE_LEN: usize = 12;
 /// `derived_key`.
 pub const KEY_LEN: usize = 32;
 
-/// Convenient type alias for the `shared_val_netaddr_key` as an array.
-pub type Key = [u8; KEY_LEN];
+/// Type wrapper for the `shared_val_netaddr_key` as an array.
+#[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, Eq, PartialEq))]
+pub struct Key([u8; KEY_LEN]);
 pub type KeyVersion = u32;
 
 /// Constant key + version so we can push `EncNetworkAddress` everywhere
 /// without worrying about getting the key in the right places. these will be
 /// test-only soon.
 // TODO(philiphayes): feature gate for testing/fuzzing only
-pub const TEST_SHARED_VAL_NETADDR_KEY: Key = [0u8; KEY_LEN];
+pub const TEST_SHARED_VAL_NETADDR_KEY: Key = Key::new([0u8; KEY_LEN]);
 pub const TEST_SHARED_VAL_NETADDR_KEY_VERSION: KeyVersion = 0;
 
 /// We salt the HKDF for deriving the account keys to provide application
@@ -146,6 +158,83 @@ pub struct EncNetworkAddress {
 #[derive(Error, Debug)]
 #[error("error decrypting network address")]
 pub struct DecryptError;
+
+/////////
+// Key //
+/////////
+
+impl Key {
+    pub const fn new(key: [u8; KEY_LEN]) -> Self {
+        Self(key)
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0.as_ref()
+    }
+}
+
+impl traits::Length for Key {
+    fn length(&self) -> usize {
+        KEY_LEN
+    }
+}
+
+impl AsRef<[u8; KEY_LEN]> for Key {
+    fn as_ref(&self) -> &[u8; KEY_LEN] {
+        &self.0
+    }
+}
+
+impl From<[u8; KEY_LEN]> for Key {
+    fn from(key: [u8; KEY_LEN]) -> Self {
+        Self(key)
+    }
+}
+
+impl TryFrom<&[u8]> for Key {
+    type Error = traits::CryptoMaterialError;
+
+    fn try_from(key_slice: &[u8]) -> Result<Self, Self::Error> {
+        let key: [u8; KEY_LEN] = key_slice
+            .try_into()
+            .map_err(|_| traits::CryptoMaterialError::WrongLengthError)?;
+        Ok(Self(key))
+    }
+}
+
+impl traits::ValidCryptoMaterial for Key {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
+}
+
+impl FromStr for Key {
+    type Err = traits::CryptoMaterialError;
+
+    fn from_str(key_str: &str) -> Result<Self, Self::Err> {
+        ValidCryptoMaterialStringExt::from_encoded_string(key_str)
+    }
+}
+
+impl traits::Uniform for Key {
+    fn generate<R>(rng: &mut R) -> Self
+    where
+        R: RngCore + CryptoRng,
+    {
+        let key: [u8; KEY_LEN] = rng.gen();
+        Self(key)
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for Key {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        any::<[u8; 32]>().prop_map(Key::new).boxed()
+    }
+}
 
 //////////////////////////
 // RawEncNetworkAddress //
@@ -299,7 +388,9 @@ impl EncNetworkAddress {
     fn derive_key(shared_val_netaddr_key: &Key, account: &AccountAddress) -> Vec<u8> {
         let salt = Some(HKDF_SALT.as_ref());
         let info = Some(account.as_ref());
-        Hkdf::<Sha3_256>::extract_then_expand(salt, shared_val_netaddr_key, info, KEY_LEN).expect(
+        let ikm = shared_val_netaddr_key.as_slice();
+        let output_length = KEY_LEN;
+        Hkdf::<Sha3_256>::extract_then_expand(salt, ikm, info, output_length).expect(
             "HKDF_SHA3_256 extract_then_expand is infallible here since all inputs \
              have valid and well-defined lengths enforced by the type system",
         )
@@ -423,7 +514,7 @@ mod test {
             .unwrap_err();
 
         // modifying the shared_val_netaddr_key should cause decryption failure
-        let malicious_shared_val_netaddr_key = [0x88; KEY_LEN];
+        let malicious_shared_val_netaddr_key = Key::new([0x88; KEY_LEN]);
         enc_addr
             .clone()
             .decrypt(&malicious_shared_val_netaddr_key, &account, addr_idx)
