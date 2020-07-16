@@ -5,8 +5,7 @@ use crate::{account::AccountData, compile::compile_script_with_address, executor
 use bytecode_verifier::verify_module;
 use compiler::Compiler;
 use libra_types::{
-    account_config::LBR_NAME,
-    transaction::{Module, SignedTransaction, Transaction, TransactionPayload, TransactionStatus},
+    transaction::{Module, SignedTransaction, Transaction, TransactionStatus},
     vm_status::KeptVMStatus,
 };
 use vm::CompiledModule;
@@ -247,14 +246,12 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (CompiledModule, Signed
     verify_module(&module).expect("Module must verify");
     (
         module,
-        sender.account().create_signed_txn_impl(
-            *sender.address(),
-            TransactionPayload::Module(Module::new(module_blob)),
-            seq_num,
-            100_000,
-            0,
-            LBR_NAME.to_owned(),
-        ),
+        sender
+            .account()
+            .transaction()
+            .module(Module::new(module_blob))
+            .sequence_number(seq_num)
+            .sign(),
     )
 }
 
@@ -276,14 +273,12 @@ fn add_resource_txn(
     );
 
     let module = compile_script_with_address(sender.address(), "file_name", &program, extra_deps);
-    sender.account().create_signed_txn_impl(
-        *sender.address(),
-        module,
-        seq_num,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .account()
+        .transaction()
+        .script(module)
+        .sequence_number(seq_num)
+        .sign()
 }
 
 fn remove_resource_txn(
@@ -304,14 +299,12 @@ fn remove_resource_txn(
     );
 
     let module = compile_script_with_address(sender.address(), "file_name", &program, extra_deps);
-    sender.account().create_signed_txn_impl(
-        *sender.address(),
-        module,
-        seq_num,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .account()
+        .transaction()
+        .script(module)
+        .sequence_number(seq_num)
+        .sign()
 }
 
 fn borrow_resource_txn(
@@ -332,14 +325,12 @@ fn borrow_resource_txn(
     );
 
     let module = compile_script_with_address(sender.address(), "file_name", &program, extra_deps);
-    sender.account().create_signed_txn_impl(
-        *sender.address(),
-        module,
-        seq_num,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .account()
+        .transaction()
+        .script(module)
+        .sequence_number(seq_num)
+        .sign()
 }
 
 fn change_resource_txn(
@@ -360,12 +351,10 @@ fn change_resource_txn(
     );
 
     let module = compile_script_with_address(sender.address(), "file_name", &program, extra_deps);
-    sender.account().create_signed_txn_impl(
-        *sender.address(),
-        module,
-        seq_num,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .account()
+        .transaction()
+        .script(module)
+        .sequence_number(seq_num)
+        .sign()
 }

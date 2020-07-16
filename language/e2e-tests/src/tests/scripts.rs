@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account, account::AccountData, executor::FakeExecutor, gas_costs};
+use crate::{account, account::AccountData, executor::FakeExecutor};
 use libra_types::{
-    account_address::AccountAddress, account_config, on_chain_config::VMPublishingOption,
-    transaction::TransactionStatus, vm_status::KeptVMStatus,
+    account_address::AccountAddress,
+    account_config,
+    on_chain_config::VMPublishingOption,
+    transaction::{Script, TransactionStatus},
+    vm_status::KeptVMStatus,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{
@@ -24,16 +27,13 @@ fn script_code_unverifiable() {
     script.code.code = vec![Bytecode::LdU8(0), Bytecode::Add, Bytecode::Ret];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn = sender.account().create_signed_txn_with_args(
-        blob,
-        vec![],
-        vec![],
-        10,
-        gas_costs::TXN_RESERVED,
-        1,
-        account_config::LBR_NAME.to_owned(),
-    );
-
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(blob, vec![], vec![]))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
     // execute transaction
     let output = &executor.execute_transaction(txn);
     let status = output.status();
@@ -100,15 +100,13 @@ fn script_none_existing_module_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn = sender.account().create_signed_txn_with_args(
-        blob,
-        vec![],
-        vec![],
-        10,
-        gas_costs::TXN_RESERVED,
-        1,
-        account_config::LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(blob, vec![], vec![]))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
 
     // execute transaction
     let output = &executor.execute_transaction(txn);
@@ -176,15 +174,13 @@ fn script_non_existing_function_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn = sender.account().create_signed_txn_with_args(
-        blob,
-        vec![],
-        vec![],
-        10,
-        gas_costs::TXN_RESERVED,
-        1,
-        account_config::LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(blob, vec![], vec![]))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
 
     // execute transaction
     let output = &executor.execute_transaction(txn);
@@ -254,16 +250,13 @@ fn script_bad_sig_function_dep() {
     ];
     let mut blob = vec![];
     script.serialize(&mut blob).expect("script must serialize");
-    let txn = sender.account().create_signed_txn_with_args(
-        blob,
-        vec![],
-        vec![],
-        10,
-        gas_costs::TXN_RESERVED,
-        1,
-        account_config::LBR_NAME.to_owned(),
-    );
-
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(blob, vec![], vec![]))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
     // execute transaction
     let output = &executor.execute_transaction(txn);
     let status = output.status();

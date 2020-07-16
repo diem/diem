@@ -4,19 +4,16 @@
 use crate::{
     account::{Account, AccountData},
     executor::FakeExecutor,
-    gas_costs::TXN_RESERVED,
 };
 
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{self, LBR_NAME},
-    transaction::{
-        authenticator::AuthenticationKey, Script, TransactionArgument, TransactionPayload,
-    },
+    account_config::{self},
+    transaction::{authenticator::AuthenticationKey, Script, TransactionArgument},
 };
 
 use compiler::Compiler;
-use libra_types::{account_config::libra_root_address, transaction::WriteSetPayload};
+use libra_types::transaction::WriteSetPayload;
 
 #[test]
 fn admin_script_rotate_key() {
@@ -51,22 +48,19 @@ fn admin_script_rotate_key() {
             .into_script_blob("file_name", code)
             .expect("Failed to compile")
     };
-    let account = Account::new_genesis_account(libra_types::on_chain_config::config_address());
-    let txn = account.create_signed_txn_impl(
-        libra_root_address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Script {
+    let account = Account::new_libra_root();
+    let txn = account
+        .transaction()
+        .write_set(WriteSetPayload::Script {
             script: Script::new(
                 script_body,
                 vec![],
                 vec![TransactionArgument::U8Vector(new_key_hash.clone())],
             ),
             execute_as: *new_account.address(),
-        }),
-        1,
-        TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    );
+        })
+        .sequence_number(1)
+        .sign();
     executor.new_block();
     let output = executor.execute_and_apply(txn);
 

@@ -7,7 +7,7 @@ use compiler::Compiler;
 
 use libra_types::{
     account_address::AccountAddress,
-    transaction::{Module, Script, TransactionPayload},
+    transaction::{Module, Script},
 };
 use vm::CompiledModule;
 
@@ -17,16 +17,16 @@ pub fn compile_module_with_address(
     address: &AccountAddress,
     file_name: &str,
     code: &str,
-) -> TransactionPayload {
+) -> Module {
     let compiler = Compiler {
         address: *address,
         ..Compiler::default()
     };
-    TransactionPayload::Module(Module::new(
+    Module::new(
         compiler
             .into_module_blob(file_name, code)
             .expect("Module compilation failed"),
-    ))
+    )
 }
 
 /// Compile the provided Move code into a blob which can be used as the code to be executed
@@ -36,17 +36,17 @@ pub fn compile_script_with_address(
     file_name: &str,
     code: &str,
     extra_deps: Vec<CompiledModule>,
-) -> TransactionPayload {
+) -> Script {
     let compiler = Compiler {
         address: *address,
         extra_deps,
         ..Compiler::default()
     };
-    TransactionPayload::Script(Script::new(
+    Script::new(
         compiler
             .into_script_blob(file_name, code)
             .expect("Script compilation failed"),
         vec![],
         vec![],
-    ))
+    )
 }

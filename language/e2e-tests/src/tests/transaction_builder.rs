@@ -58,7 +58,11 @@ fn freeze_unfreeze_account() {
 
     // Execute freeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_freeze_account_script(3, *account.address()), 0),
+        blessed
+            .transaction()
+            .script(encode_freeze_account_script(3, *account.address()))
+            .sequence_number(0)
+            .sign(),
     );
 
     // Attempt rotate key txn from frozen account
@@ -75,7 +79,11 @@ fn freeze_unfreeze_account() {
 
     // Execute unfreeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_unfreeze_account_script(4, *account.address()), 1),
+        blessed
+            .transaction()
+            .script(encode_unfreeze_account_script(4, *account.address()))
+            .sequence_number(1)
+            .sign(),
     );
     // execute rotate key transaction from unfrozen account now succeeds
     let output = &executor.execute_transaction(txn);
@@ -97,30 +105,36 @@ fn create_parent_and_child_vasp() {
 
     // create a parent VASP
     let add_all_currencies = false;
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::lbr_type_tag(),
-            *parent.address(),
-            parent.auth_key_prefix(),
-            vec![],
-            vec![],
-            vasp_compliance_public_key.to_bytes().to_vec(),
-            add_all_currencies,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::lbr_type_tag(),
+                *parent.address(),
+                parent.auth_key_prefix(),
+                vec![],
+                vec![],
+                vasp_compliance_public_key.to_bytes().to_vec(),
+                add_all_currencies,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
     // create a child VASP with a zero balance
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account_script(
-            account_config::lbr_type_tag(),
-            *child.address(),
-            child.auth_key_prefix(),
-            add_all_currencies,
-            0,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::lbr_type_tag(),
+                *child.address(),
+                child.auth_key_prefix(),
+                add_all_currencies,
+                0,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     // check for zero balance
     assert_eq!(
         executor
@@ -132,13 +146,16 @@ fn create_parent_and_child_vasp() {
 
     let (_, new_compliance_public_key) = keygen.generate_keypair();
     // rotate parent's base_url and compliance public key
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_rotate_dual_attestation_info_script(
-            b"new_name".to_vec(),
-            new_compliance_public_key.to_bytes().to_vec(),
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_rotate_dual_attestation_info_script(
+                b"new_name".to_vec(),
+                new_compliance_public_key.to_bytes().to_vec(),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 }
 
 #[test]
@@ -154,25 +171,34 @@ fn create_child_vasp_all_currencies() {
 
     // create a parent VASP
     let add_all_currencies = true;
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
-            *parent.address(),
-            parent.auth_key_prefix(),
-            vec![],
-            vec![],
-            vasp_compliance_public_key.to_bytes().to_vec(),
-            add_all_currencies,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *parent.address(),
+                parent.auth_key_prefix(),
+                vec![],
+                vec![],
+                vasp_compliance_public_key.to_bytes().to_vec(),
+                add_all_currencies,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
     let amount = 100;
     // mint to the parent VASP
-    executor.execute_and_apply(dd.signed_script_txn(
-        encode_testnet_mint_script(account_config::coin1_tag(), *parent.address(), amount),
-        0,
-    ));
+    executor.execute_and_apply(
+        dd.transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *parent.address(),
+                amount,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     assert!(executor
         .read_balance_resource(&parent, account::coin1_currency_code())
@@ -224,25 +250,34 @@ fn create_child_vasp_with_balance() {
 
     // create a parent VASP
     let add_all_currencies = true;
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
-            *parent.address(),
-            parent.auth_key_prefix(),
-            vec![],
-            vec![],
-            vasp_compliance_public_key.to_bytes().to_vec(),
-            add_all_currencies,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *parent.address(),
+                parent.auth_key_prefix(),
+                vec![],
+                vec![],
+                vasp_compliance_public_key.to_bytes().to_vec(),
+                add_all_currencies,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
     let amount = 100;
     // mint to the parent VASP
-    executor.execute_and_apply(dd.signed_script_txn(
-        encode_testnet_mint_script(account_config::coin1_tag(), *parent.address(), amount),
-        0,
-    ));
+    executor.execute_and_apply(
+        dd.transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *parent.address(),
+                amount,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     assert_eq!(
         executor
@@ -295,58 +330,69 @@ fn dual_attestation_payment() {
 
     let payment_amount = COIN1_THRESHOLD;
 
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
-            *payment_sender.address(),
-            payment_sender.auth_key_prefix(),
-            vec![],
-            vec![],
-            sender_vasp_compliance_public_key.to_bytes().to_vec(),
-            false,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *payment_sender.address(),
+                payment_sender.auth_key_prefix(),
+                vec![],
+                vec![],
+                sender_vasp_compliance_public_key.to_bytes().to_vec(),
+                false,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
-            *payment_receiver.address(),
-            payment_receiver.auth_key_prefix(),
-            vec![],
-            vec![],
-            receiver_vasp_compliance_public_key.to_bytes().to_vec(),
-            false,
-        ),
-        2,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *payment_receiver.address(),
+                payment_receiver.auth_key_prefix(),
+                vec![],
+                vec![],
+                receiver_vasp_compliance_public_key.to_bytes().to_vec(),
+                false,
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
 
     // give `payment_sender` enough coins to make a `num_payments` payments at or above the dual
     // attestation threshold. We have to split this into multiple txes because DD -> VASP txes are
     // subject to the travel rule too!
     let num_payments = 5;
     for i in 0..num_payments {
-        executor.execute_and_apply(dd.signed_script_txn(
-            encode_testnet_mint_script(
-                account_config::coin1_tag(),
-                *payment_sender.address(),
-                COIN1_THRESHOLD - 1,
-            ),
-            i,
-        ));
+        executor.execute_and_apply(
+            dd.transaction()
+                .script(encode_testnet_mint_script(
+                    account_config::coin1_tag(),
+                    *payment_sender.address(),
+                    COIN1_THRESHOLD - 1,
+                ))
+                .sequence_number(i)
+                .sign(),
+        );
     }
 
     // create a child VASP with a balance of amount
-    executor.execute_and_apply(payment_sender.signed_script_txn(
-        encode_create_child_vasp_account_script(
-            account_config::coin1_tag(),
-            *sender_child.address(),
-            sender_child.auth_key_prefix(),
-            false,
-            10,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        payment_sender
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::coin1_tag(),
+                *sender_child.address(),
+                sender_child.auth_key_prefix(),
+                false,
+                10,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     {
         // Transaction >= 1_000_000 threshold goes through signature verification with valid signature, passes
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
@@ -368,32 +414,38 @@ fn dual_attestation_payment() {
             &receiver_vasp_compliance_private_key,
             &message,
         );
-        let output = executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_receiver.address(),
-                payment_amount,
-                ref_id,
-                signature.to_bytes().to_vec(),
-            ),
-            1,
-        ));
+        let output = executor.execute_and_apply(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    signature.to_bytes().to_vec(),
+                ))
+                .sequence_number(1)
+                .sign(),
+        );
         assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed));
     }
     {
         // transaction >= 1_000_000 (set in DualAttestation.move) threshold goes through signature verification but has an
         // structurally invalid signature. Fails.
         let ref_id = [0u8; 32].to_vec();
-        let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_receiver.address(),
-                payment_amount,
-                ref_id,
-                b"invalid signature".to_vec(),
-            ),
-            2,
-        ));
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    b"invalid signature".to_vec(),
+                ))
+                .sequence_number(2)
+                .sign(),
+        );
 
         assert!(matches!(
             output.status().status(),
@@ -421,16 +473,19 @@ fn dual_attestation_payment() {
             &sender_vasp_compliance_private_key,
             &message,
         );
-        let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_receiver.address(),
-                payment_amount,
-                ref_id,
-                signature.to_bytes().to_vec(),
-            ),
-            2,
-        ));
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    signature.to_bytes().to_vec(),
+                ))
+                .sequence_number(2)
+                .sign(),
+        );
 
         assert!(matches!(
             output.status().status(),
@@ -458,16 +513,19 @@ fn dual_attestation_payment() {
             &sender_vasp_compliance_private_key,
             &message,
         );
-        let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_receiver.address(),
-                payment_amount,
-                ref_id,
-                signature.to_bytes().to_vec(),
-            ),
-            2,
-        ));
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    signature.to_bytes().to_vec(),
+                ))
+                .sequence_number(2)
+                .sign(),
+        );
         assert!(matches!(
             output.status().status(),
             Ok(KeptVMStatus::MoveAbort(_, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE))
@@ -477,41 +535,50 @@ fn dual_attestation_payment() {
         // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
         // checking isn't performed on intra-vasp transfers
         // parent->child
-        executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *sender_child.address(),
-                payment_amount * 2,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            2,
-        ));
+        executor.execute_and_apply(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *sender_child.address(),
+                    payment_amount * 2,
+                    vec![0],
+                    b"what a bad signature".to_vec(),
+                ))
+                .sequence_number(2)
+                .sign(),
+        );
     }
     {
         // Checking isn't performed on intra-vasp transfers
         // child->parent
-        executor.execute_and_apply(sender_child.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_sender.address(),
-                payment_amount,
-                vec![0],
-                b"what a bad signature".to_vec(),
-            ),
-            0,
-        ));
+        executor.execute_and_apply(
+            sender_child
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_sender.address(),
+                    payment_amount,
+                    vec![0],
+                    b"what a bad signature".to_vec(),
+                ))
+                .sequence_number(0)
+                .sign(),
+        );
     }
     {
         // Rotate the parent VASP's compliance key and base URL
         let (_, new_compliance_public_key) = keygen.generate_keypair();
-        executor.execute_and_apply(payment_receiver.signed_script_txn(
-            encode_rotate_dual_attestation_info_script(
-                b"any base_url works".to_vec(),
-                new_compliance_public_key.to_bytes().to_vec(),
-            ),
-            0,
-        ));
+        executor.execute_and_apply(
+            payment_receiver
+                .transaction()
+                .script(encode_rotate_dual_attestation_info_script(
+                    b"any base_url works".to_vec(),
+                    new_compliance_public_key.to_bytes().to_vec(),
+                ))
+                .sequence_number(0)
+                .sign(),
+        );
     }
     {
         // This previously succeeded, but should now fail since their public key has changed
@@ -534,16 +601,19 @@ fn dual_attestation_payment() {
             &receiver_vasp_compliance_private_key,
             &message,
         );
-        let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_peer_to_peer_with_metadata_script(
-                account_config::coin1_tag(),
-                *payment_receiver.address(),
-                payment_amount,
-                ref_id,
-                signature.to_bytes().to_vec(),
-            ),
-            3,
-        ));
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    signature.to_bytes().to_vec(),
+                ))
+                .sequence_number(3)
+                .sign(),
+        );
         assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
     }
 }
@@ -573,120 +643,148 @@ fn dd_dual_attestation_payments() {
     let (_dd2_compliance_private_key, dd2_compliance_public_key) = keygen.generate_keypair();
 
     // create the VASP account
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::coin1_tag(),
-            *parent_vasp.address(),
-            parent_vasp.auth_key_prefix(),
-            vec![],
-            vec![],
-            parent_vasp_compliance_public_key.to_bytes().to_vec(),
-            false,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *parent_vasp.address(),
+                parent_vasp.auth_key_prefix(),
+                vec![],
+                vec![],
+                parent_vasp_compliance_public_key.to_bytes().to_vec(),
+                false,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     // create the DD1 account
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_create_designated_dealer_script(
-            account_config::coin1_tag(),
-            0,
-            *dd1.address(),
-            dd1.auth_key_prefix(),
-            vec![],
-            vec![],
-            dd1_compliance_public_key.to_bytes().to_vec(),
-            false,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        blessed
+            .transaction()
+            .script(encode_create_designated_dealer_script(
+                account_config::coin1_tag(),
+                0,
+                *dd1.address(),
+                dd1.auth_key_prefix(),
+                vec![],
+                vec![],
+                dd1_compliance_public_key.to_bytes().to_vec(),
+                false,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     // create the DD2 account
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_create_designated_dealer_script(
-            account_config::coin1_tag(),
-            0,
-            *dd2.address(),
-            dd1.auth_key_prefix(),
-            vec![],
-            vec![],
-            dd2_compliance_public_key.to_bytes().to_vec(),
-            false,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        blessed
+            .transaction()
+            .script(encode_create_designated_dealer_script(
+                account_config::coin1_tag(),
+                0,
+                *dd2.address(),
+                dd1.auth_key_prefix(),
+                vec![],
+                vec![],
+                dd2_compliance_public_key.to_bytes().to_vec(),
+                false,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
     // give DD1 some funds
-    executor.execute_and_apply(mint_dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *dd1.address(),
-            COIN1_THRESHOLD - 1,
-        ),
-        0,
-    ));
-    executor.execute_and_apply(mint_dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *dd1.address(),
-            COIN1_THRESHOLD - 1,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        mint_dd
+            .transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *dd1.address(),
+                COIN1_THRESHOLD - 1,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
+    executor.execute_and_apply(
+        mint_dd
+            .transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *dd1.address(),
+                COIN1_THRESHOLD - 1,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     // Give VASP some funds
-    executor.execute_and_apply(mint_dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *parent_vasp.address(),
-            COIN1_THRESHOLD - 1,
-        ),
-        2,
-    ));
-    executor.execute_and_apply(mint_dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *parent_vasp.address(),
-            COIN1_THRESHOLD - 1,
-        ),
-        3,
-    ));
+    executor.execute_and_apply(
+        mint_dd
+            .transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *parent_vasp.address(),
+                COIN1_THRESHOLD - 1,
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+    executor.execute_and_apply(
+        mint_dd
+            .transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *parent_vasp.address(),
+                COIN1_THRESHOLD - 1,
+            ))
+            .sequence_number(3)
+            .sign(),
+    );
 
     // DD <-> DD over threshold without attestation fails
     // Checking isn't performed on UHW->VASP
-    let output = executor.execute_transaction(dd1.signed_script_txn(
-        encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
-            *dd2.address(),
-            COIN1_THRESHOLD,
-            vec![0],
-            b"what a bad signature".to_vec(),
-        ),
-        0,
-    ));
+    let output = executor.execute_transaction(
+        dd1.transaction()
+            .script(encode_peer_to_peer_with_metadata_script(
+                account_config::coin1_tag(),
+                *dd2.address(),
+                COIN1_THRESHOLD,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
 
     // DD -> VASP over threshold without attestation fails
-    let output = executor.execute_transaction(dd1.signed_script_txn(
-        encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
-            *parent_vasp.address(),
-            COIN1_THRESHOLD,
-            vec![0],
-            b"what a bad signature".to_vec(),
-        ),
-        0, // didn't apply result of previous tx, so seq doesn't change
-    ));
+    let output = executor.execute_transaction(
+        dd1.transaction()
+            .script(encode_peer_to_peer_with_metadata_script(
+                account_config::coin1_tag(),
+                *parent_vasp.address(),
+                COIN1_THRESHOLD,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ))
+            .sequence_number(0) // didn't apply result of previous tx, so seq doesn't change
+            .sign(),
+    );
     assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
 
     // VASP -> DD over threshold without attestation fails
-    let output = executor.execute_transaction(parent_vasp.signed_script_txn(
-        encode_peer_to_peer_with_metadata_script(
-            account_config::coin1_tag(),
-            *dd1.address(),
-            COIN1_THRESHOLD,
-            vec![0],
-            b"what a bad signature".to_vec(),
-        ),
-        0,
-    ));
+    let output = executor.execute_transaction(
+        parent_vasp
+            .transaction()
+            .script(encode_peer_to_peer_with_metadata_script(
+                account_config::coin1_tag(),
+                *dd1.address(),
+                COIN1_THRESHOLD,
+                vec![0],
+                b"what a bad signature".to_vec(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
 }
 
@@ -701,27 +799,42 @@ fn publish_rotate_shared_ed25519_public_key() {
     // generate the key to initialize the SharedEd25519PublicKey resource
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (private_key1, public_key1) = keygen.generate_keypair();
-    executor.execute_and_apply(publisher.signed_script_txn(
-        encode_publish_shared_ed25519_public_key_script(public_key1.to_bytes().to_vec()),
-        0,
-    ));
+    executor.execute_and_apply(
+        publisher
+            .transaction()
+            .script(encode_publish_shared_ed25519_public_key_script(
+                public_key1.to_bytes().to_vec(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     // must rotate the key locally or sending subsequent txes will fail
     publisher.rotate_key(private_key1, public_key1);
 
     // send another transaction rotating to a new key
     let (private_key2, public_key2) = keygen.generate_keypair();
-    executor.execute_and_apply(publisher.signed_script_txn(
-        encode_rotate_shared_ed25519_public_key_script(public_key2.to_bytes().to_vec()),
-        1,
-    ));
+    executor.execute_and_apply(
+        publisher
+            .transaction()
+            .script(encode_rotate_shared_ed25519_public_key_script(
+                public_key2.to_bytes().to_vec(),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     // must rotate the key in account data or sending subsequent txes will fail
     publisher.rotate_key(private_key2, public_key2.clone());
 
     // test that sending still works
-    executor.execute_and_apply(publisher.signed_script_txn(
-        encode_rotate_shared_ed25519_public_key_script(public_key2.to_bytes().to_vec()),
-        2,
-    ));
+    executor.execute_and_apply(
+        publisher
+            .transaction()
+            .script(encode_rotate_shared_ed25519_public_key_script(
+                public_key2.to_bytes().to_vec(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
 }
 
 #[test]
@@ -738,99 +851,138 @@ fn recovery_address() {
 
     // create a parent VASP
     let add_all_currencies = false;
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::lbr_type_tag(),
-            *parent.address(),
-            parent.auth_key_prefix(),
-            vec![],
-            vec![],
-            vasp_compliance_public_key.to_bytes().to_vec(),
-            add_all_currencies,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::lbr_type_tag(),
+                *parent.address(),
+                parent.auth_key_prefix(),
+                vec![],
+                vec![],
+                vasp_compliance_public_key.to_bytes().to_vec(),
+                add_all_currencies,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
     // create a child VASP with a zero balance
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account_script(
-            account_config::lbr_type_tag(),
-            *child.address(),
-            child.auth_key_prefix(),
-            add_all_currencies,
-            0,
-        ),
-        0,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::lbr_type_tag(),
+                *child.address(),
+                child.auth_key_prefix(),
+                add_all_currencies,
+                0,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     // publish a recovery address under the parent
-    executor
-        .execute_and_apply(parent.signed_script_txn(encode_create_recovery_address_script(), 1));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(encode_create_recovery_address_script())
+            .sequence_number(1)
+            .sign(),
+    );
 
     // delegate authentication key of the child
-    executor.execute_and_apply(child.signed_script_txn(
-        encode_add_recovery_rotation_capability_script(*parent.address()),
-        0,
-    ));
+    executor.execute_and_apply(
+        child
+            .transaction()
+            .script(encode_add_recovery_rotation_capability_script(
+                *parent.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     // rotate authentication key from the parent
     let (privkey1, pubkey1) = keygen.generate_keypair();
     let new_authentication_key1 = AuthenticationKey::ed25519(&pubkey1).to_vec();
-    executor.execute_and_apply(parent.signed_script_txn(
-        encode_rotate_authentication_key_with_recovery_address_script(
-            *parent.address(),
-            *child.address(),
-            new_authentication_key1,
-        ),
-        2,
-    ));
+    executor.execute_and_apply(
+        parent
+            .transaction()
+            .script(
+                encode_rotate_authentication_key_with_recovery_address_script(
+                    *parent.address(),
+                    *child.address(),
+                    new_authentication_key1,
+                ),
+            )
+            .sequence_number(2)
+            .sign(),
+    );
 
     // rotate authentication key from the child
     let (_, pubkey2) = keygen.generate_keypair();
     let new_authentication_key2 = AuthenticationKey::ed25519(&pubkey2).to_vec();
     child.rotate_key(privkey1, pubkey1);
-    executor.execute_and_apply(child.signed_script_txn(
-        encode_rotate_authentication_key_with_recovery_address_script(
-            *parent.address(),
-            *child.address(),
-            new_authentication_key2,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        child
+            .transaction()
+            .script(
+                encode_rotate_authentication_key_with_recovery_address_script(
+                    *parent.address(),
+                    *child.address(),
+                    new_authentication_key2,
+                ),
+            )
+            .sequence_number(1)
+            .sign(),
+    );
 
     // create another VASP unrelated to parent/child
     let add_all_currencies = false;
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_parent_vasp_account_script(
-            account_config::lbr_type_tag(),
-            *other_vasp.address(),
-            other_vasp.auth_key_prefix(),
-            vec![],
-            vec![],
-            vasp_compliance_public_key.to_bytes().to_vec(),
-            add_all_currencies,
-        ),
-        2,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::lbr_type_tag(),
+                *other_vasp.address(),
+                other_vasp.auth_key_prefix(),
+                vec![],
+                vec![],
+                vasp_compliance_public_key.to_bytes().to_vec(),
+                add_all_currencies,
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
 
     // try to delegate other_vasp's rotation cap to child--should abort
-    let output = executor.execute_transaction(other_vasp.signed_script_txn(
-        encode_add_recovery_rotation_capability_script(*parent.address()),
-        0,
-    ));
+    let output = executor.execute_transaction(
+        other_vasp
+            .transaction()
+            .script(encode_add_recovery_rotation_capability_script(
+                *parent.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     assert_aborted_with(output, 3);
 
     // try to rotate child's key from other_vasp--should abort
     let (_, pubkey3) = keygen.generate_keypair();
     let new_authentication_key3 = AuthenticationKey::ed25519(&pubkey3).to_vec();
-    let output = executor.execute_transaction(other_vasp.signed_script_txn(
-        encode_rotate_authentication_key_with_recovery_address_script(
-            *parent.address(),
-            *child.address(),
-            new_authentication_key3,
-        ),
-        0,
-    ));
+    let output = executor.execute_transaction(
+        other_vasp
+            .transaction()
+            .script(
+                encode_rotate_authentication_key_with_recovery_address_script(
+                    *parent.address(),
+                    *child.address(),
+                    new_authentication_key3,
+                ),
+            )
+            .sequence_number(0)
+            .sign(),
+    );
     assert_aborted_with(output, 2);
 }
 

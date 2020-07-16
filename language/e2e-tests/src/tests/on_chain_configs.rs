@@ -5,14 +5,12 @@ use crate::{
     account::{self, Account, AccountData},
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
-    gas_costs::TXN_RESERVED,
     transaction_status_eq,
 };
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::{
-    account_config::LBR_NAME,
     on_chain_config::LibraVersion,
-    transaction::{TransactionArgument, TransactionStatus},
+    transaction::{Script, TransactionArgument, TransactionStatus},
     vm_status::KeptVMStatus,
 };
 use libra_vm::LibraVM;
@@ -29,15 +27,15 @@ fn initial_libra_version() {
     );
 
     let account = Account::new_genesis_account(libra_types::on_chain_config::config_address());
-    let txn = account.create_signed_txn_with_args(
-        StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
-        vec![],
-        vec![TransactionArgument::U64(2)],
-        1,
-        TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = account
+        .transaction()
+        .script(Script::new(
+            StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
+            vec![],
+            vec![TransactionArgument::U64(2)],
+        ))
+        .sequence_number(1)
+        .sign();
     executor.new_block();
     executor.execute_and_apply(txn);
 
@@ -59,15 +57,15 @@ fn drop_txn_after_reconfiguration() {
     );
 
     let account = Account::new_genesis_account(libra_types::on_chain_config::config_address());
-    let txn = account.create_signed_txn_with_args(
-        StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
-        vec![],
-        vec![TransactionArgument::U64(2)],
-        1,
-        TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = account
+        .transaction()
+        .script(Script::new(
+            StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
+            vec![],
+            vec![TransactionArgument::U64(2)],
+        ))
+        .sequence_number(1)
+        .sign();
     executor.new_block();
 
     let sender = AccountData::new(1_000_000, 10);
@@ -91,10 +89,16 @@ fn updated_limit_allows_txn() {
 
     // Execute updated dual attestation limit
     let new_micro_lbr_limit = 1_000_011;
-    let output = executor.execute_and_apply(blessed.signed_script_txn(
-        encode_update_dual_attestation_limit_script(3, new_micro_lbr_limit),
-        0,
-    ));
+    let output = executor.execute_and_apply(
+        blessed
+            .transaction()
+            .script(encode_update_dual_attestation_limit_script(
+                3,
+                new_micro_lbr_limit,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(KeptVMStatus::Executed)

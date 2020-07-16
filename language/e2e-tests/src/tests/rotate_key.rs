@@ -74,7 +74,7 @@ fn rotate_ed25519_multisig_key() {
     // create and publish sender
     let sender = AccountData::new(1_000_000, seq_number);
     executor.add_account_data(&sender);
-    let sender_address = sender.address();
+    let _sender_address = sender.address();
 
     // create a 1-of-2 multisig policy
     let mut keygen = KeyGen::from_seed([9u8; 32]);
@@ -100,7 +100,7 @@ fn rotate_ed25519_multisig_key() {
     seq_number += 1;
 
     // (2) send a tx signed by privkey 1
-    let txn1 = raw_rotate_key_txn(*sender_address, new_auth_key.to_vec(), seq_number);
+    let txn1 = raw_rotate_key_txn(sender.account(), new_auth_key.to_vec(), seq_number);
     let signature1 = MultiEd25519Signature::from(privkey1.sign(&txn1));
     let signed_txn1 =
         SignedTransaction::new_multisig(txn1, multi_ed_public_key.clone(), signature1);
@@ -113,7 +113,7 @@ fn rotate_ed25519_multisig_key() {
     seq_number += 1;
 
     // (3) send a tx signed by privkey 2
-    let txn2 = raw_rotate_key_txn(*sender_address, new_auth_key.to_vec(), seq_number);
+    let txn2 = raw_rotate_key_txn(sender.account(), new_auth_key.to_vec(), seq_number);
     let pubkey_index = 1;
     let signature2 =
         MultiEd25519Signature::new(vec![(privkey2.sign(&txn2), pubkey_index)]).unwrap();

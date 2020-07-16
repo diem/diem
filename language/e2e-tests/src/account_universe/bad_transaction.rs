@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::Account,
     account_universe::{AUTransactionGen, AccountUniverse},
     common_transactions::{empty_txn, EMPTY_SCRIPT},
     gas_costs,
@@ -14,7 +13,7 @@ use libra_crypto::{
 use libra_proptest_helpers::Index;
 use libra_types::{
     account_config::LBR_NAME,
-    transaction::{SignedTransaction, TransactionStatus},
+    transaction::{Script, SignedTransaction, TransactionStatus},
     vm_status::StatusCode,
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasConstants};
@@ -141,22 +140,18 @@ impl AUTransactionGen for InvalidAuthkeyGen {
     ) -> (SignedTransaction, (TransactionStatus, u64)) {
         let sender = universe.pick(self.sender).1;
 
-        let txn = Account::create_raw_txn_with_args(
-            *sender.account().address(),
-            EMPTY_SCRIPT.clone(),
-            vec![],
-            vec![],
-            sender.sequence_number,
-            gas_costs::TXN_RESERVED,
-            0,
-            LBR_NAME.to_owned(),
-        )
-        .sign(
-            &self.new_keypair.private_key,
-            self.new_keypair.public_key.clone(),
-        )
-        .unwrap()
-        .into_inner();
+        let txn = sender
+            .account()
+            .transaction()
+            .script(Script::new(EMPTY_SCRIPT.clone(), vec![], vec![]))
+            .sequence_number(sender.sequence_number)
+            .raw()
+            .sign(
+                &self.new_keypair.private_key,
+                self.new_keypair.public_key.clone(),
+            )
+            .unwrap()
+            .into_inner();
 
         (
             txn,
