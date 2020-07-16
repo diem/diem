@@ -12,7 +12,6 @@ full_node_networks:
     - discovery_method: "onchain"
       listen_address: "/ip4/0.0.0.0/tcp/6180"
       network_id: "public"
-      max_frame_size: 8388608 # 8 MiB
 
 upstream:
     networks:
