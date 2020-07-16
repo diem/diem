@@ -104,9 +104,9 @@ impl ValidatorConfig {
     }
 
     pub fn build_faucet_client(&self) -> Result<(Ed25519PrivateKey, Waypoint)> {
-        let (configs, faucet_key) = self.build_common(false)?;
+        let (configs, libra_root_key) = self.build_common(false)?;
         Ok((
-            faucet_key,
+            libra_root_key,
             configs[0]
                 .base
                 .waypoint
@@ -128,7 +128,7 @@ impl ValidatorConfig {
             }
         );
 
-        let (faucet_key, config_seed) = self.build_faucet_key();
+        let (libra_root_key, config_seed) = self.build_libra_root_key();
         let generator::ValidatorSwarm { mut nodes, .. } = generator::validator_swarm(
             &self.template,
             self.num_nodes,
@@ -149,7 +149,7 @@ impl ValidatorConfig {
         let operator_registrations = vm_genesis::operator_registrations(&nodes[..nodes_in_genesis]);
 
         let genesis = vm_genesis::encode_genesis_transaction(
-            faucet_key.public_key(),
+            libra_root_key.public_key(),
             &operator_assignments,
             &operator_registrations,
             self.template
@@ -183,14 +183,14 @@ impl ValidatorConfig {
             node.execution.genesis = genesis.clone();
         }
 
-        Ok((nodes, faucet_key))
+        Ok((nodes, libra_root_key))
     }
 
-    pub fn build_faucet_key(&self) -> (Ed25519PrivateKey, [u8; 32]) {
-        let mut faucet_rng = StdRng::from_seed(self.seed);
-        let faucet_key = Ed25519PrivateKey::generate(&mut faucet_rng);
-        let config_seed: [u8; 32] = faucet_rng.gen();
-        (faucet_key, config_seed)
+    pub fn build_libra_root_key(&self) -> (Ed25519PrivateKey, [u8; 32]) {
+        let mut seeded_rng = StdRng::from_seed(self.seed);
+        let libra_root_key = Ed25519PrivateKey::generate(&mut seeded_rng);
+        let config_seed: [u8; 32] = seeded_rng.gen();
+        (libra_root_key, config_seed)
     }
 
     fn build_safety_rules(&self, config: &mut NodeConfig) -> Result<()> {
