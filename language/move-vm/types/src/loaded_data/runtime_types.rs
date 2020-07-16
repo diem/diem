@@ -2,15 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_types::vm_status::StatusCode;
-use move_core_types::{
-    identifier::Identifier,
-    language_storage::{ModuleId, TypeTag},
-    value::{MoveKindInfo, MoveTypeLayout},
+use move_core_types::{identifier::Identifier, language_storage::ModuleId};
+use vm::{
+    errors::{PartialVMError, PartialVMResult},
+    file_format::{Kind, StructDefinitionIndex},
 };
-use vm::errors::{PartialVMError, PartialVMResult};
-
-use crate::loaded_data::types::FatType;
-use vm::file_format::{Kind, StructDefinitionIndex};
 
 pub const TYPE_DEPTH_MAX: usize = 256;
 
@@ -93,18 +89,4 @@ impl Type {
             1,
         )
     }
-}
-
-pub trait TypeConverter {
-    fn type_to_fat_type(&self, type_: &Type) -> PartialVMResult<FatType>;
-}
-
-pub trait TypeEnv {
-    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId>;
-    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier>;
-    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>>;
-
-    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag>;
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout>;
-    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo>;
 }

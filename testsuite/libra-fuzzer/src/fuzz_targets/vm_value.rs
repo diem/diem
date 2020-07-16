@@ -68,11 +68,9 @@ fn is_valid_kinfo(kinfo: &MoveKindInfo) -> bool {
     use MoveKindInfo as K;
 
     match kinfo {
-        K::Bool | K::U8 | K::U64 | K::U128 | K::Address | K::Signer => true,
-
+        K::Base(_) => true,
         K::Vector(_, inner) => is_valid_kinfo(inner),
-
-        K::Struct(_, field_info) => !field_info.is_empty() && field_infoiter().all(is_valid_kinfo),
+        K::Struct(_, field_info) => !field_info.is_empty() && field_info.iter().all(is_valid_kinfo),
     }
 }
 

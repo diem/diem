@@ -11,7 +11,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore,
-    loaded_data::runtime_types::{Type, TypeEnv},
+    loaded_data::runtime_types::Type,
     values::{GlobalValue, Value},
 };
 use std::collections::btree_map::BTreeMap;

@@ -29,7 +29,7 @@ pub fn native_print(
         let r = pop_arg!(args, Reference);
 
         let mut buf = String::new();
-        print_reference(&mut buf, context, &ty, &r)?;
+        print_reference(&mut buf, &r)?;
         println!("[debug] {}", buf);
     }
 

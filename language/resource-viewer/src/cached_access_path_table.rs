@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::fat_type::FatStructType;
 use anyhow::{anyhow, Result};
-use move_vm_types::loaded_data::types::FatStructType;
 use once_cell::sync::Lazy;
 use std::{collections::btree_map::BTreeMap, fs::File, io::Write, path::PathBuf};
 use vm_genesis::generate_genesis_type_mapping;
@@ -24,7 +24,7 @@ pub fn update_mapping() {
     module_file.write_all(b"\n").unwrap();
 }
 
-pub fn build_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
+pub(crate) fn build_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
     serde_json::from_slice::<Vec<(String, FatStructType)>>(STAGED_TYPE_MAP_BYTES)
         .unwrap()
         .into_iter()
@@ -32,7 +32,7 @@ pub fn build_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
         .collect()
 }
 
-pub fn resource_vec_to_type_tag(resource_vec: &[u8]) -> Result<FatStructType> {
+pub(crate) fn resource_vec_to_type_tag(resource_vec: &[u8]) -> Result<FatStructType> {
     STAGED_TYPE_MAP
         .get(resource_vec)
         .cloned()
