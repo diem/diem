@@ -25,9 +25,10 @@ use std::{
 /// Current supported protocol negotiation handshake version.
 ///
 /// See [`perform_handshake`] in `network/src/transport.rs`
-// TODO(philiphayes): ideally this constant lives somewhere in network/ ...
+// TODO(philiphayes): ideally these constants live somewhere in network/ ...
 // might need to extract into a separate network_constants crate or something.
 pub const HANDSHAKE_VERSION: u8 = 0;
+pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024;
 
 pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
@@ -75,7 +76,7 @@ impl NetworkConfig {
             network_id,
             seed_pubkeys: HashMap::default(),
             seed_addrs: HashMap::default(),
-            max_frame_size: 8 * 1024 * 1024, // TODO use constant
+            max_frame_size: MAX_FRAME_SIZE,
         };
         config.prepare_identity();
         config

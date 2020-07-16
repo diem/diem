@@ -33,7 +33,6 @@ full_node_networks:
                   from_disk: "/full/path/to/token"
       network_id:
           private: "vfn"
-      max_frame_size: 8388608 # 8 MiB
 
 validator_network:
     discovery_method: "onchain"
