@@ -122,7 +122,7 @@ impl ProcessedVMOutput {
         executed_trees: ExecutedTrees,
         epoch_state: Option<EpochState>,
     ) -> Self {
-        ProcessedVMOutput {
+        Self {
             transaction_data,
             executed_trees,
             epoch_state,

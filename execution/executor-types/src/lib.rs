@@ -120,7 +120,7 @@ pub struct StateComputeResult {
     /// The transaction info hashes of all success txns.
     transaction_info_hashes: Vec<HashValue>,
 
-    /// The signature of the VoteProposal corresponding to this block.
+    /// LEC-specific field: LEC's signature of the VoteProposal corresponding to this block.
     signature: Option<Ed25519Signature>,
 }
 
@@ -147,9 +147,7 @@ impl StateComputeResult {
             signature: None,
         }
     }
-}
 
-impl StateComputeResult {
     pub fn version(&self) -> Version {
         max(self.num_leaves, 1) - 1
     }

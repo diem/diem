@@ -675,58 +675,54 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block: (HashValue, Vec<Transaction>),
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
-        let (block_id, transactions) = block;
+        // TODO(mimoo): we should take a block directly instead of these
 
-        // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
-        // So we roll over the executed state until it's committed and we start new epoch.
-        let (output, state_compute_result) = if parent_block_id != self.committed_block_id()?
-            && self
-                .cache
-                .get_block(&parent_block_id)?
-                .lock()
-                .unwrap()
-                .output()
-                .has_reconfiguration()
-        {
-            let parent = self.cache.get_block(&parent_block_id)?;
+        // obtain block and parent block information
+        let (block_id, transactions) = block;
+        let parent = self.cache.get_block(&parent_block_id)?;
+        let parent_output = {
             let parent_block = parent.lock().unwrap();
-            let parent_output = parent_block.output();
+            parent_block.output().clone()
+        };
+
+        // Are we executing a reconfiguration suffix?
+        let reconfiguration_suffix = parent_output.has_reconfiguration();
+        let parent_is_committed = parent_block_id != self.committed_block_id()?;
+
+        let (output, state_compute_result) = if reconfiguration_suffix && !parent_is_committed {
             debug!(
                 "Received block {:x} which is a descendant of a reconfiguration block.",
                 block_id
             );
 
-            let output = ProcessedVMOutput::new(
-                vec![],
-                parent_output.executed_trees().clone(),
-                parent_output.epoch_state().clone(),
-            );
+            // if a block is a child of pending reconfiguration, it needs to be empty.
+            // So we roll over the parent executed state (until it's committed and we start new epoch).
+            let block_output = parent_output.clone();
 
             let parent_accu = parent_output.executed_trees().txn_accumulator();
-            let state_compute_result = output.compute_result(
+            let state_compute_result = block_output.compute_result(
                 parent_accu.frozen_subtree_roots().clone(),
                 parent_accu.num_leaves(),
             );
 
-            (output, state_compute_result)
+            (block_output, state_compute_result)
         } else {
             debug!("Received block {:x} to execute.", block_id);
-
             let _timer = OP_COUNTERS.timer("block_execute_time_s");
 
+            // get output of parent block
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
-
             let state_view = self.get_executed_state_view(
                 StateViewId::BlockExecution { block_id },
                 &parent_block_executed_trees,
             );
 
+            // execute block in VM, extending the parent state
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
                 let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
-
             trace_code_block!("executor::process_vm_outputs", {"block", block_id});
             let status: Vec<_> = vm_outputs
                 .iter()
@@ -737,6 +733,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 trace!("Execution status: {:?}", status);
             }
 
+            // process VM output
             let (account_to_state, account_to_proof) = state_view.into();
             let output = Self::process_vm_outputs(
                 account_to_state,
@@ -747,8 +744,8 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             )
             .map_err(|err| format_err!("Failed to execute block: {}", err))?;
 
+            // obtain StateComputeResult
             let parent_accu = parent_block_executed_trees.txn_accumulator();
-
             let state_compute_result = output.compute_result(
                 parent_accu.frozen_subtree_roots().clone(),
                 parent_accu.num_leaves(),
