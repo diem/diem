@@ -381,8 +381,8 @@ fn smoke_test_single_node_block_metadata() {
     let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
     // this script does 4 transactions
     test_smoke_script(swarm.get_validator_client(0, None));
-    let (_state, version) = client_proxy
-        .get_latest_account_state(&["q", &address.to_string()])
+    let (_account, version) = client_proxy
+        .get_latest_account(&["q", &address.to_string()])
         .unwrap();
     assert!(
         version > 4,

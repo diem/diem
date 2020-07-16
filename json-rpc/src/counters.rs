@@ -10,7 +10,7 @@ pub static REQUESTS: Lazy<IntGaugeVec> = Lazy::new(|| {
         "libra_client_service_requests_count",
         "Cumulative number of requests that JSON RPC client service receives",
         &[
-            "type",   // type of request, matches JSON RPC method name (e.g. "submit", "get_account_state")
+            "type",   // type of request, matches JSON RPC method name (e.g. "submit", "get_account")
             "result", // result of request: "success", "fail"
         ]
     )

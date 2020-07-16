@@ -96,7 +96,7 @@ impl Command for QueryCommandGetLatestAccountState {
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         println!(">> Getting latest account state");
-        match client.get_latest_account_state(&params) {
+        match client.get_latest_account(&params) {
             Ok((acc, version)) => println!(
                 "Latest account state is: \n \
                  Account: {:#?}\n \
