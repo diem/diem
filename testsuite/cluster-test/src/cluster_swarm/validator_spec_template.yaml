@@ -28,9 +28,6 @@ spec:
     - "-c"
     - |
       set -x;
-      if [[ {delete_data} = true ]]; then
-        rm -rf /opt/libra/data/*
-      fi
       if [[ {fluentbit_enabled} = true ]]; then
         libra_log_file="libra.log"
       else

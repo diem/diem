@@ -10,11 +10,13 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait ClusterSwarm: Send + Sync {
     /// Spawns a new instance.
-    async fn spawn_new_instance(
-        &self,
-        instance_config: InstanceConfig,
-        delete_data: bool,
-    ) -> Result<Instance>;
+    async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance>;
+
+    /// If deleting /opt/libra/data/* is required, call clean_date before calling
+    /// spawn_new_instance.
+    async fn clean_data(&self, node: &str) -> Result<()>;
+
+    async fn get_node_name(&self, pod_name: &str) -> Result<String>;
 
     async fn get_grafana_baseurl(&self) -> Result<String>;
 }

@@ -278,13 +278,20 @@ impl Instance {
     }
 
     /// Node must be stopped first
-    pub async fn start(&self, delete_data: bool) -> Result<()> {
+    pub async fn start(&self) -> Result<()> {
         let backend = self.k8s_backend();
         backend
             .kube
-            .upsert_node(backend.instance_config.clone(), delete_data)
+            .upsert_node(backend.instance_config.clone())
             .await
             .map(|_| ())
+    }
+
+    /// If deleting /opt/libra/data/* is required, call Instance::clean_date before calling
+    /// Instance::start.
+    pub async fn clean_data(&self) -> Result<()> {
+        self.util_cmd("rm -rf /opt/libra/data/*; ", "clean-data")
+            .await
     }
 
     pub fn instance_config(&self) -> &InstanceConfig {
