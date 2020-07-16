@@ -89,6 +89,7 @@ impl ClusterSwarmKube {
     fn lsr_spec(
         &self,
         validator_index: u32,
+        pod_name: &str,
         num_validators: u32,
         node_name: &str,
         image_tag: &str,
@@ -100,6 +101,7 @@ impl ClusterSwarmKube {
             num_validators = num_validators,
             image_tag = image_tag,
             node_name = node_name,
+            pod_name = pod_name,
             lsr_backend = lsr_backend,
             cfg_seed = CFG_SEED,
         );
@@ -488,6 +490,7 @@ impl ClusterSwarmKube {
             }
             LSR(lsr_config) => self.lsr_spec(
                 instance_config.validator_group.index_only(),
+                pod_name.as_str(),
                 lsr_config.num_validators,
                 &node.name,
                 &lsr_config.image_tag,
