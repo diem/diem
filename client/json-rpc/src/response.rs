@@ -39,7 +39,7 @@ impl TryFrom<(String, Value)> for JsonRpcResponse {
                 );
                 Ok(JsonRpcResponse::SubmissionResponse)
             }
-            "get_account_state" => {
+            "get_account" => {
                 let account = match value {
                     Value::Null => None,
                     _ => {

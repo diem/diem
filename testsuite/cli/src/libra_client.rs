@@ -105,16 +105,16 @@ impl LibraClient {
         }
     }
 
-    /// Retrieves account state
+    /// Retrieves account information
     /// - If `with_state_proof`, will also retrieve state proof from node and update trusted_state accordingly
-    pub fn get_account_state(
+    pub fn get_account(
         &mut self,
         account: AccountAddress,
         with_state_proof: bool,
     ) -> Result<(Option<AccountView>, Version)> {
         let client_version = self.trusted_state.latest_version();
         let mut batch = JsonRpcBatch::new();
-        batch.add_get_account_state_request(account);
+        batch.add_get_account_request(account);
         if with_state_proof {
             batch.add_get_state_proof_request(client_version);
         }
@@ -131,7 +131,7 @@ impl LibraClient {
                 Ok((account_view, self.trusted_state.latest_version()))
             }
             Err(e) => bail!(
-                "Failed to get account state for account address {} with error: {:?}",
+                "Failed to get account for account address {} with error: {:?}",
                 account,
                 e
             ),
@@ -322,7 +322,7 @@ impl LibraClient {
     }
 
     fn get_sequence_number(&mut self, account: AccountAddress) -> Result<u64> {
-        match self.get_account_state(account, true)?.0 {
+        match self.get_account(account, true)?.0 {
             None => bail!("No account found for address {:?}", account),
             Some(account_view) => Ok(account_view.sequence_number),
         }
@@ -335,7 +335,7 @@ impl LibraClient {
         limit: u64,
     ) -> Result<(Vec<EventView>, AccountView)> {
         // get event key from access_path
-        match self.get_account_state(access_path.address, false)?.0 {
+        match self.get_account(access_path.address, false)?.0 {
             None => bail!("No account found for address {:?}", access_path.address),
             Some(account_view) => {
                 let path = access_path.path;

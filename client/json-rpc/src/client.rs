@@ -40,9 +40,9 @@ impl JsonRpcBatch {
         Ok(())
     }
 
-    pub fn add_get_account_state_request(&mut self, address: AccountAddress) {
+    pub fn add_get_account_request(&mut self, address: AccountAddress) {
         self.add_request(
-            "get_account_state".to_string(),
+            "get_account".to_string(),
             vec![Value::String(address.to_string())],
         );
     }
@@ -140,13 +140,13 @@ impl JsonRpcAsyncClient {
         }
     }
 
-    pub async fn get_accounts_state(
+    pub async fn get_accounts(
         &self,
         accounts: &[AccountAddress],
     ) -> Result<Vec<Option<AccountView>>> {
         let mut batch = JsonRpcBatch::new();
         for account in accounts {
-            batch.add_get_account_state_request(*account);
+            batch.add_get_account_request(*account);
         }
         let exec_results = self.execute(batch).await?;
         let mut results = vec![];
@@ -155,10 +155,7 @@ impl JsonRpcAsyncClient {
             if let JsonRpcResponse::AccountResponse(r) = exec_result {
                 results.push(r);
             } else {
-                panic!(
-                    "Unexpected response for get_accounts_state {:?}",
-                    exec_result
-                )
+                panic!("Unexpected response for get_accounts {:?}", exec_result)
             }
         }
         ensure!(

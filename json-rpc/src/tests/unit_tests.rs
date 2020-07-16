@@ -164,13 +164,15 @@ fn test_json_rpc_protocol() {
     assert_eq!(fetch_error(resp), -32601);
 
     // invalid arguments
-    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [1, 2], "id": 1});
+    let request =
+        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
     assert_eq!(fetch_error(resp), -32000);
 
     // Response includes two mandatory field, regardless of errors
-    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [1, 2], "id": 1});
+    let request =
+        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
     let data: JsonMap = resp.json().unwrap();
@@ -237,7 +239,7 @@ fn test_transaction_submission() {
 
 // TODO: Once account configs are published in the mock DB this test can be turned back on
 //#[test]
-//fn test_get_account_state() {
+//fn test_get_account() {
 //    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1024);
 //
 //    // test case 1: single call
@@ -245,7 +247,7 @@ fn test_transaction_submission() {
 //    let expected_resource = AccountState::try_from(blob).unwrap();
 //
 //    let mut batch = JsonRpcBatch::default();
-//    batch.add_get_account_state_request(*first_account);
+//    batch.add_get_account_request(*first_account);
 //    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
 //    let account = AccountView::optional_from_response(result)
 //        .unwrap()
@@ -276,7 +278,7 @@ fn test_transaction_submission() {
 //            continue;
 //        }
 //        states.push(AccountState::try_from(blob).unwrap());
-//        batch.add_get_account_state_request(*account);
+//        batch.add_get_account_request(*account);
 //    }
 //
 //    let responses = runtime.block_on(client.execute(batch)).unwrap();

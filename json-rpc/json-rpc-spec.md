@@ -219,11 +219,11 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 
 
 
-## **get_account_state** - method
+## **get_account** - method
 
 **Description**
 
-Get the latest account state for a given account.
+Get the latest account information for a given account address.
 
 
 ### Parameters
@@ -261,7 +261,7 @@ Null - If account does not exist
 
 ```
 // Request: fetches account state for account address "0xc1fda0ec67c1b87bfb9e883e2080e530"
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account_state","params":["c1fda0ec67c1b87bfb9e883e2080e530"],"id":1}'
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account","params":["c1fda0ec67c1b87bfb9e883e2080e530"],"id":1}'
 
 
 // Response
@@ -501,7 +501,7 @@ Fetch the events for a given event stream.
    </td>
    <td>Globally unique identifier of an event stream.
 <p>
-Note: For sent and received events, a client can use <a href="#get_account_state---method">get_account_state</a> to get the event key of the event streams for a given user.
+Note: For sent and received events, a client can use <a href="#get_account---method">get_account</a> to get the event key of the event streams for a given user.
    </td>
   </tr>
   <tr>

@@ -1048,17 +1048,17 @@ impl ClientProxy {
         )
     }
 
-    /// Get the latest account state from validator.
-    pub fn get_latest_account_state(
+    /// Get the latest account information from validator.
+    pub fn get_latest_account(
         &mut self,
         space_delim_strings: &[&str],
     ) -> Result<(Option<AccountView>, Version)> {
         ensure!(
             space_delim_strings.len() == 2,
-            "Invalid number of arguments to get latest account state"
+            "Invalid number of arguments to get latest account"
         );
         let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        self.get_account_state_and_update(account)
+        self.get_account_and_update(account)
     }
 
     /// Get the latest annotated account resources from validator.
@@ -1304,12 +1304,12 @@ impl ClientProxy {
         }
     }
 
-    /// Get account state from validator and update status of account if it is cached locally.
-    fn get_account_state_and_update(
+    /// Get account from validator and update status of account if it is cached locally.
+    fn get_account_and_update(
         &mut self,
         address: AccountAddress,
     ) -> Result<(Option<AccountView>, Version)> {
-        let account_state = self.client.get_account_state(address, true)?;
+        let account = self.client.get_account(address, true)?;
         if self.address_to_ref_id.contains_key(&address) {
             let account_ref_id = self
                 .address_to_ref_id
@@ -1318,17 +1318,17 @@ impl ClientProxy {
             // assumption follows from invariant
             let mut account_data: &mut AccountData =
                 self.accounts.get_mut(*account_ref_id).unwrap_or_else(|| unreachable!("Local cache not consistent, reference id {} not available in local accounts", account_ref_id));
-            if account_state.0.is_some() {
+            if account.0.is_some() {
                 account_data.status = AccountStatus::Persisted;
             }
         };
-        Ok(account_state)
+        Ok(account)
     }
 
     /// Get account resource from validator and update status of account if it is cached locally.
     fn get_account_resource_and_update(&mut self, address: AccountAddress) -> Result<AccountView> {
-        let account_state = self.get_account_state_and_update(address)?;
-        if let Some(view) = account_state.0 {
+        let result = self.get_account_and_update(address)?;
+        if let Some(view) = result.0 {
             Ok(view)
         } else {
             bail!("No account exists at {:?}", address)
@@ -1346,7 +1346,7 @@ impl ClientProxy {
         authentication_key_opt: Option<Vec<u8>>,
     ) -> Result<AccountData> {
         let (sequence_number, authentication_key, status) = if sync_with_validator {
-            match client.get_account_state(address, true) {
+            match client.get_account(address, true) {
                 Ok(resp) => match resp.0 {
                     Some(account_view) => (
                         account_view.sequence_number,
@@ -1356,7 +1356,7 @@ impl ClientProxy {
                     None => (0, authentication_key_opt, AccountStatus::Local),
                 },
                 Err(e) => {
-                    error!("Failed to get account state from validator, error: {:?}", e);
+                    error!("Failed to get account from validator, error: {:?}", e);
                     (0, authentication_key_opt, AccountStatus::Unknown)
                 }
             }

@@ -405,9 +405,9 @@ impl TxEmitter {
     ) -> Result<u64> {
         let client = instance.json_rpc_client();
         let resp = client
-            .get_accounts_state(slice::from_ref(address))
+            .get_accounts(slice::from_ref(address))
             .await
-            .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
+            .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
         Ok(resp[0]
             .as_ref()
             .ok_or_else(|| format_err!("account does not exist"))?
@@ -571,9 +571,9 @@ async fn query_sequence_numbers(
     let mut result = vec![];
     for addresses_batch in addresses.chunks(20) {
         let resp = client
-            .get_accounts_state(addresses_batch)
+            .get_accounts(addresses_batch)
             .await
-            .map_err(|e| format_err!("[{:?}] get_accounts_state failed: {:?} ", client, e))?;
+            .map_err(|e| format_err!("[{:?}] get_accounts failed: {:?} ", client, e))?;
 
         for item in resp.into_iter() {
             result.push(
