@@ -58,7 +58,7 @@ struct TestEnvironment {
     validator_swarm: LibraSwarm,
     vfn_swarm: Option<LibraSwarm>,
     public_fn_swarm: Option<LibraSwarm>,
-    faucet_key: (Ed25519PrivateKey, String),
+    libra_root_key: (Ed25519PrivateKey, String),
     mnemonic_file: TempPath,
 }
 
@@ -88,7 +88,7 @@ impl TestEnvironment {
             validator_swarm,
             vfn_swarm: None,
             public_fn_swarm: None,
-            faucet_key: (key, key_path),
+            libra_root_key: (key, key_path),
             mnemonic_file,
         }
     }
@@ -131,8 +131,8 @@ impl TestEnvironment {
         ClientProxy::new(
             ChainId::test(),
             &format!("http://localhost:{}/v1", port),
-            &self.faucet_key.1,
-            &self.faucet_key.1,
+            &self.libra_root_key.1,
+            &self.libra_root_key.1,
             false,
             /* faucet server */ None,
             Some(mnemonic_file_path),
@@ -1304,8 +1304,8 @@ fn test_key_manager_consensus_rotation() {
     // Submit a reconfiguration so that the key rotation will be performed on-chain
     // let libra = get_libra_interface(&node_config);
     // let time_service = RealTimeService::new();
-    // let association_key = env.faucet_key.0;
-    // submit_new_reconfig(&libra, &time_service, &association_key).unwrap();
+    // let libra_root_key = env.libra_root_key.0;
+    // submit_new_reconfig(&libra, &time_service, &libra_root_key).unwrap();
     // sleep(Duration::from_secs(2));
 
     // Verify the consensus key has been rotated in secure storage and on-chain.
