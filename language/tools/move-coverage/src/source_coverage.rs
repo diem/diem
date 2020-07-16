@@ -80,7 +80,7 @@ impl SourceCoverageBuilder {
                         uncovered_locations: Vec::new(),
                     }),
                     Some(code_unit) => {
-                        module_map.and_then(|fn_map| match fn_map.function_maps.get(&fn_name) {
+                        module_map.map(|fn_map| match fn_map.function_maps.get(&fn_name) {
                             None => {
                                 let function_map = source_map
                                     .get_function_source_map(function_def_idx)
@@ -88,10 +88,10 @@ impl SourceCoverageBuilder {
                                 let mut uncovered_locations = vec![function_map.decl_location];
                                 uncovered_locations.extend(function_map.code_map.values());
 
-                                Some(FunctionSourceCoverage {
+                                FunctionSourceCoverage {
                                     fn_is_native: false,
                                     uncovered_locations,
-                                })
+                                }
                             }
                             Some(function_coverage) => {
                                 let uncovered_locations: Vec<_> = (0..code_unit.code.len())
@@ -110,10 +110,10 @@ impl SourceCoverageBuilder {
                                         }
                                     })
                                     .collect();
-                                Some(FunctionSourceCoverage {
+                                FunctionSourceCoverage {
                                     fn_is_native: false,
                                     uncovered_locations,
-                                })
+                                }
                             }
                         })
                     }

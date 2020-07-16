@@ -443,7 +443,7 @@ where
 
     fn reset_dial_state(&mut self, peer_id: &PeerId) {
         if let Some(dial_state) = self.dial_states.get_mut(peer_id) {
-            mem::replace(dial_state, DialState::new(self.backoff_strategy.clone()));
+            *dial_state = DialState::new(self.backoff_strategy.clone());
         }
     }
 

@@ -173,10 +173,10 @@ impl ModuleCache {
             let st = self.make_struct_type(module, struct_def, StructDefinitionIndex(idx as u16));
             self.structs.push(Arc::new(st));
         }
-        self.load_field_types(module, starting_idx).or_else(|err| {
+        self.load_field_types(module, starting_idx).map_err(|err| {
             // clean up the structs that were cached
             self.structs.truncate(starting_idx);
-            Err(err.finish(Location::Undefined))
+            err.finish(Location::Undefined)
         })?;
         for (idx, func) in module.function_defs().iter().enumerate() {
             let findex = FunctionDefinitionIndex(idx as TableIndex);
@@ -524,7 +524,7 @@ impl Loader {
         for dep in &dependencies {
             deps.push(dep.module());
         }
-        DependencyChecker::verify_script(&script, deps).and_then(|_| Ok(script))
+        DependencyChecker::verify_script(&script, deps).map(|_| script)
     }
 
     //

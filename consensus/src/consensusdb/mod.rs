@@ -162,7 +162,7 @@ impl ConsensusDB {
     fn get_blocks(&self) -> Result<HashMap<HashValue, Block>> {
         let mut iter = self.db.iter::<BlockSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.map(|value| value.and_then(|(k, v)| Ok((k, v.borrow_into_block().clone()))))
+        iter.map(|value| value.map(|(k, v)| (k, v.borrow_into_block().clone())))
             .collect::<Result<HashMap<HashValue, Block>>>()
     }
 

@@ -7,7 +7,7 @@ use vm::file_format::{CompiledModule, CompiledScript};
 
 pub trait Compiler {
     /// Compile a transaction script or module.
-    fn compile<Logger: FnMut(String) -> ()>(
+    fn compile<Logger: FnMut(String)>(
         &mut self,
         log: Logger,
         address: AccountAddress,

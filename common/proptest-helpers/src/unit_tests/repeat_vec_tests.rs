@@ -8,7 +8,7 @@ use proptest::{
 use proptest_derive::Arbitrary;
 use std::{
     collections::HashSet,
-    fmt, iter, mem,
+    fmt, iter,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -109,7 +109,7 @@ where
                 })
                 .collect()
         };
-        mem::replace(&mut self.items, new_items);
+        self.items = new_items;
     }
 
     fn get(&self, at: usize) -> Option<(&T, usize)> {
