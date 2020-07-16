@@ -29,6 +29,7 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
+use inject_error::inject_error;
 use libra_logger::prelude::*;
 use libra_trace::prelude::*;
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
@@ -276,6 +277,7 @@ impl RoundManager {
     /// Process the proposal message:
     /// 1. ensure after processing sync info, we're at the same round as the proposal
     /// 2. execute and decide whether to vode for the proposal
+    #[inject_error(probability = 0.05)]
     pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> anyhow::Result<()> {
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         if self
@@ -373,6 +375,7 @@ impl RoundManager {
     }
 
     /// Process the SyncInfo sent by peers to catch up to latest state.
+    #[inject_error(probability = 0.05)]
     pub async fn process_sync_info_msg(
         &mut self,
         sync_info: SyncInfo,
@@ -545,6 +548,7 @@ impl RoundManager {
     /// potential attacks).
     /// 2. Add the vote to the pending votes and check whether it finishes a QC.
     /// 3. Once the QC/TC successfully formed, notify the RoundState.
+    #[inject_error(probability = 0.05)]
     pub async fn process_vote_msg(&mut self, vote_msg: VoteMsg) -> anyhow::Result<()> {
         trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
@@ -642,6 +646,7 @@ impl RoundManager {
     ///
     /// The current version of the function is not really async, but keeping it this way for
     /// future possible changes.
+    #[inject_error(probability = 0.05)]
     pub async fn process_block_retrieval(
         &self,
         request: IncomingBlockRetrievalRequest,

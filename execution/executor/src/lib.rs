@@ -675,7 +675,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block: (HashValue, Vec<Transaction>),
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
-        let (block_id, transactions) = block;
+        let (block_id, mut transactions) = block;
 
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
         // So we roll over the executed state until it's committed and we start new epoch.
@@ -707,6 +707,9 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 parent_accu.frozen_subtree_roots().clone(),
                 parent_accu.num_leaves(),
             );
+
+            // Reset the reconfiguration suffix transactions to empty list.
+            transactions = vec![];
 
             (output, state_compute_result)
         } else {
