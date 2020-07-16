@@ -7,12 +7,12 @@ use crate::{
     Error, SafetyRules,
 };
 use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer};
+use libra_secure_net::{NetworkClient, NetworkServer, TIMEOUT};
 use std::net::SocketAddr;
 
 pub trait RemoteService {
     fn client(&self) -> SerializerClient {
-        let network_client = NetworkClient::new(self.server_address());
+        let network_client = NetworkClient::new(self.server_address(), TIMEOUT);
         let service = Box::new(RemoteClient::new(network_client));
         SerializerClient::new_client(service)
     }
@@ -27,7 +27,7 @@ pub fn execute(
 ) {
     let safety_rules = SafetyRules::new(storage, verify_vote_proposal_signature);
     let mut serializer_service = SerializerService::new(safety_rules);
-    let mut network_server = NetworkServer::new(listen_addr);
+    let mut network_server = NetworkServer::new(listen_addr, TIMEOUT);
 
     loop {
         if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {

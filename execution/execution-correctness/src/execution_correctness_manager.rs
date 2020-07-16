@@ -14,6 +14,7 @@ use executor::Executor;
 use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_global_constants::EXECUTION_KEY;
+use libra_secure_net::TIMEOUT;
 use libra_secure_storage::{CryptoStorage, Storage};
 use libra_vm::LibraVM;
 use std::{
@@ -96,7 +97,7 @@ impl ExecutionCorrectnessManager {
         execution_prikey: Option<Ed25519PrivateKey>,
     ) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            StorageClient::new(&storage_address).into(),
+            StorageClient::new(&storage_address, TIMEOUT).into(),
         ));
         Self {
             internal_execution_correctness: ExecutionCorrectnessWrapper::Local(Arc::new(
@@ -117,7 +118,7 @@ impl ExecutionCorrectnessManager {
         execution_prikey: Option<Ed25519PrivateKey>,
     ) -> Self {
         let block_executor = Box::new(Executor::<LibraVM>::new(
-            StorageClient::new(&storage_address).into(),
+            StorageClient::new(&storage_address, TIMEOUT).into(),
         ));
         let serializer_service = SerializerService::new(block_executor, execution_prikey);
         Self {
