@@ -22,3 +22,6 @@ mod runtime;
 pub mod session;
 #[macro_use]
 mod tracing;
+
+#[cfg(test)]
+mod unit_tests;
