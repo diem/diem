@@ -83,23 +83,6 @@ spec:
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
       EOF
-      touch /opt/libra/data/safety_rules_addr
-      if [[ {enable_lsr} = true ]]; then
-        CFG_LSR_IP=$(kubectl get pod/lsr-{index} -o=jsonpath='{{.status.podIP}}');
-        while [ -z "${{CFG_LSR_IP}}" ]; do
-          sleep 5;
-          CFG_LSR_IP=$(kubectl get pod/lsr-{index} -o=jsonpath='{{.status.podIP}}');
-          echo "Waiting for pod/lsr-{index} IP Address";
-        done;
-        echo "${{CFG_LSR_IP}}:6185" > /opt/libra/data/safety_rules_addr
-      fi
-      CFG_SEED_PEER_IP=$(kubectl get pod/val-0 -o=jsonpath='{{.status.podIP}}');
-      while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
-        sleep 5;
-        CFG_SEED_PEER_IP=$(kubectl get pod/val-0 -o=jsonpath='{{.status.podIP}}');
-        echo "Waiting for pod/val-0 IP Address";
-      done;
-      echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
       until [ $(kubectl get pods -l app=libra-validator | grep ^val | grep -e Init -e Running | wc -l) = "{num_validators}" ]; do
         sleep 3;
         echo "Waiting for all validator pods to be scheduled";
@@ -144,6 +127,10 @@ spec:
       value: "{num_fullnodes}"
     - name: CFG_SEED
       value: "{cfg_seed}"
+    - name: CFG_SEED_PEER_IP
+      value: "{cfg_seed_peer_ip}"
+    - name : CFG_SAFETY_RULES_ADDR_OR_DEFAULT
+      value: "{cfg_safety_rules_addr}"
     - name: CFG_FULLNODE_SEED
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
@@ -166,9 +153,8 @@ spec:
       - |
         set -x;
         export CFG_LISTEN_ADDR=$MY_POD_IP;
-        export CFG_SEED_PEER_IP=$(cat /opt/libra/data/seed_peer_ip);
         if [[ {enable_lsr} = true ]]; then
-          export CFG_SAFETY_RULES_ADDR=$(cat /opt/libra/data/safety_rules_addr);
+          export CFG_SAFETY_RULES_ADDR=$CFG_SAFETY_RULES_ADDR_OR_DEFAULT:6185;
         fi
         exec bash /docker-run-dynamic.sh &> /opt/libra/data/libra.log
   volumes:

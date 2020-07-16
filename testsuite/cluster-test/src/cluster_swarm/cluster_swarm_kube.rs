@@ -41,8 +41,8 @@ const ERROR_NOT_FOUND: u16 = 404;
 #[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
-    node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
     http_client: HttpClient,
+    pub node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
 }
 
 impl ClusterSwarmKube {
@@ -150,6 +150,8 @@ impl ClusterSwarmKube {
         enable_lsr: bool,
         node_name: &str,
         image_tag: &str,
+        seed_peer_ip: &str,
+        safety_rules_addr: &str,
         cfg_overrides: &str,
         delete_data: bool,
     ) -> Result<Pod> {
@@ -171,6 +173,8 @@ impl ClusterSwarmKube {
             cfg_overrides = cfg_overrides,
             delete_data = delete_data,
             cfg_seed = CFG_SEED,
+            cfg_seed_peer_ip = seed_peer_ip,
+            cfg_safety_rules_addr = safety_rules_addr,
             cfg_fullnode_seed = cfg_fullnode_seed,
             fluentbit_enabled = fluentbit_enabled,
         );
@@ -188,6 +192,7 @@ impl ClusterSwarmKube {
         num_validators: u32,
         node_name: &str,
         image_tag: &str,
+        seed_peer_ip: &str,
         cfg_overrides: &str,
         delete_data: bool,
     ) -> Result<Pod> {
@@ -203,6 +208,7 @@ impl ClusterSwarmKube {
             cfg_overrides = cfg_overrides,
             delete_data = delete_data,
             cfg_seed = CFG_SEED,
+            cfg_seed_peer_ip = seed_peer_ip,
             cfg_fullnode_seed = CFG_FULLNODE_SEED,
             fluentbit_enabled = fluentbit_enabled,
         );
@@ -414,7 +420,7 @@ impl ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
-    async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
+    pub async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
             Box::pin(async move { self.allocate_node_impl(pod_name).await })
         })
@@ -467,6 +473,11 @@ impl ClusterSwarmKube {
                     validator_config.enable_lsr,
                     &node.name,
                     &validator_config.image_tag,
+                    &validator_config.seed_peer_ip,
+                    validator_config
+                        .safety_rules_addr
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
                     &validator_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
@@ -480,6 +491,7 @@ impl ClusterSwarmKube {
                     fullnode_config.num_validators,
                     &node.name,
                     &fullnode_config.image_tag,
+                    &fullnode_config.seed_peer_ip,
                     &fullnode_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,

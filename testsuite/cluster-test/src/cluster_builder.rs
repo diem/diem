@@ -6,6 +6,7 @@ use crate::{
     cluster::Cluster,
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     instance::{
+        fullnode_pod_name, lsr_pod_name, validator_pod_name, vault_pod_name,
         ApplicationConfig::{Fullnode, Validator, Vault, LSR},
         FullnodeConfig, Instance, InstanceConfig, LSRConfig, ValidatorConfig, ValidatorGroup,
         VaultConfig,
@@ -94,7 +95,7 @@ impl ClusterBuilder {
         aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
             .await
             .map_err(|err| format_err!("{} scale up failed: {}", asg_name, err))?;
-        let ((validators, lsrs, vaults), fullnodes) = self
+        let (validators, lsrs, vaults, fullnodes) = self
             .spawn_validator_and_fullnode_set(
                 params.num_validators,
                 params.fullnodes_per_validator,
@@ -116,8 +117,8 @@ impl ClusterBuilder {
         Ok(cluster)
     }
 
-    /// Creates a set of validators with the given `image_tag`
-    pub async fn spawn_validator_set(
+    /// Creates a set of validators and fullnodes with the given parameters
+    pub async fn spawn_validator_and_fullnode_set(
         &self,
         num_validators: u32,
         num_fullnodes_per_validator: u32,
@@ -126,11 +127,18 @@ impl ClusterBuilder {
         image_tag: &str,
         config_overrides: &[String],
         delete_data: bool,
-    ) -> Result<(Vec<Instance>, Vec<Instance>, Vec<Instance>)> {
+    ) -> Result<(Vec<Instance>, Vec<Instance>, Vec<Instance>, Vec<Instance>)> {
         let mut lsrs = vec![];
         let mut vaults = vec![];
+
+        let mut lsrs_nodes = vec![];
         if enable_lsr {
             if lsr_backend == "vault" {
+                try_join_all((0..num_validators).map(|i| async move {
+                    let pod_name = vault_pod_name(i);
+                    self.cluster_swarm.allocate_node(&pod_name).await
+                }))
+                .await?;
                 let mut vault_instances: Vec<_> = (0..num_validators)
                     .map(|i| {
                         let vault_config = VaultConfig {};
@@ -145,6 +153,12 @@ impl ClusterBuilder {
                     .collect();
                 vaults.append(&mut vault_instances);
             }
+
+            lsrs_nodes = try_join_all((0..num_validators).map(|i| async move {
+                let pod_name = lsr_pod_name(i);
+                self.cluster_swarm.allocate_node(&pod_name).await
+            }))
+            .await?;
             let mut lsr_instances: Vec<_> = (0..num_validators)
                 .map(|i| {
                     let lsr_config = LSRConfig {
@@ -163,13 +177,27 @@ impl ClusterBuilder {
                 .collect();
             lsrs.append(&mut lsr_instances);
         }
+
+        let validator_nodes = try_join_all((0..num_validators).map(|i| async move {
+            let pod_name = validator_pod_name(i);
+            self.cluster_swarm.allocate_node(&pod_name).await
+        }))
+        .await?;
         let validators = (0..num_validators).map(|i| {
+            let seed_peer_ip = validator_nodes[0].internal_ip.clone();
+            let safety_rules_addr = if enable_lsr {
+                Some(lsrs_nodes[i as usize].internal_ip.clone())
+            } else {
+                None
+            };
             let validator_config = ValidatorConfig {
                 num_validators,
                 num_fullnodes: num_fullnodes_per_validator,
                 enable_lsr,
                 image_tag: image_tag.to_string(),
                 config_overrides: config_overrides.to_vec(),
+                seed_peer_ip,
+                safety_rules_addr,
             };
             self.cluster_swarm.spawn_new_instance(
                 InstanceConfig {
@@ -179,72 +207,49 @@ impl ClusterBuilder {
                 delete_data,
             )
         });
+
+        try_join_all((0..num_validators).flat_map(move |validator_index| {
+            (0..num_fullnodes_per_validator).map(move |fullnode_index| async move {
+                let pod_name = fullnode_pod_name(validator_index, fullnode_index);
+                self.cluster_swarm.allocate_node(&pod_name).await
+            })
+        }))
+        .await?;
+
+        let fullnodes =
+            validator_nodes
+                .iter()
+                .enumerate()
+                .flat_map(|(validator_index, validator_node)| {
+                    {
+                        (0..num_fullnodes_per_validator).map(move |fullnode_index| {
+                            let seed_peer_ip = validator_node.internal_ip.clone();
+                            let fullnode_config = FullnodeConfig {
+                                fullnode_index,
+                                num_fullnodes_per_validator,
+                                num_validators,
+                                image_tag: image_tag.to_string(),
+                                config_overrides: config_overrides.to_vec(),
+                                seed_peer_ip,
+                            };
+                            self.cluster_swarm.spawn_new_instance(
+                                InstanceConfig {
+                                    validator_group: ValidatorGroup::new_for_index(
+                                        validator_index as u32,
+                                    ),
+                                    application_config: Fullnode(fullnode_config),
+                                },
+                                delete_data,
+                            )
+                        })
+                    }
+                });
+
         try_join!(
             try_join_all(validators),
             try_join_all(lsrs),
             try_join_all(vaults),
-        )
-    }
-
-    /// Creates a set of fullnodes with the given `image_tag`
-    pub async fn spawn_fullnode_set(
-        &self,
-        num_validators: u32,
-        num_fullnodes_per_validator: u32,
-        image_tag: &str,
-        config_overrides: &[String],
-        delete_data: bool,
-    ) -> Result<Vec<Instance>> {
-        let fullnodes = (0..num_validators).flat_map(move |validator_index| {
-            (0..num_fullnodes_per_validator).map(move |fullnode_index| {
-                let fullnode_config = FullnodeConfig {
-                    fullnode_index,
-                    num_fullnodes_per_validator,
-                    num_validators,
-                    image_tag: image_tag.to_string(),
-                    config_overrides: config_overrides.to_vec(),
-                };
-                self.cluster_swarm.spawn_new_instance(
-                    InstanceConfig {
-                        validator_group: ValidatorGroup::new_for_index(validator_index),
-                        application_config: Fullnode(fullnode_config),
-                    },
-                    delete_data,
-                )
-            })
-        });
-        let fullnodes = try_join_all(fullnodes).await?;
-        Ok(fullnodes)
-    }
-
-    /// Creates a set of validators and fullnodes with the given parameters
-    pub async fn spawn_validator_and_fullnode_set(
-        &self,
-        num_validators: u32,
-        num_fullnodes_per_validator: u32,
-        enable_lsr: bool,
-        lsr_backend: &str,
-        image_tag: &str,
-        config_overrides: &[String],
-        delete_data: bool,
-    ) -> Result<((Vec<Instance>, Vec<Instance>, Vec<Instance>), Vec<Instance>)> {
-        try_join!(
-            self.spawn_validator_set(
-                num_validators,
-                num_fullnodes_per_validator,
-                enable_lsr,
-                lsr_backend,
-                image_tag,
-                config_overrides,
-                delete_data,
-            ),
-            self.spawn_fullnode_set(
-                num_validators,
-                num_fullnodes_per_validator,
-                image_tag,
-                config_overrides,
-                delete_data,
-            ),
+            try_join_all(fullnodes),
         )
     }
 }
