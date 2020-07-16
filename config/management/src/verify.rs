@@ -291,22 +291,13 @@ fn validator_account(
     };
 
     let account_arg = script.args()[0].clone();
-    let account = match account_arg {
-        TransactionArgument::Address(account) => account,
-        _ => {
-            return Err(Error::UnexpectedError(format!(
-                "Invalid account address script argument found: {:?}",
-                account_arg
-            )))
-        }
-    };
-
-    AccountAddress::try_from(account).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Unable to parse operator account: {}",
-            e.to_string()
-        ))
-    })
+    match account_arg {
+        TransactionArgument::Address(account) => Ok(account),
+        _ => Err(Error::UnexpectedError(format!(
+            "Unable to parse operator account: Invalid account address script argument found: {:?}",
+            account_arg
+        ))),
+    }
 }
 
 fn ed25519_from_storage(

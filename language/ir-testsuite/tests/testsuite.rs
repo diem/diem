@@ -30,7 +30,7 @@ impl IRCompiler {
 
 impl Compiler for IRCompiler {
     /// Compile a transaction script or module.
-    fn compile<Logger: FnMut(String) -> ()>(
+    fn compile<Logger: FnMut(String)>(
         &mut self,
         mut log: Logger,
         address: AccountAddress,

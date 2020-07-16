@@ -379,7 +379,7 @@ proptest! {
             li_with_sigs.ledger_info().clone(),
             BTreeMap::new(), /* empty signatures */
         );
-        ::std::mem::replace(bad_li_idx.get_mut(&mut lis_with_sigs), bad_li_with_sigs);
+        *bad_li_idx.get_mut(&mut lis_with_sigs) = bad_li_with_sigs;
 
         let change_proof = EpochChangeProof::new(lis_with_sigs, false /* more */);
         trusted_state

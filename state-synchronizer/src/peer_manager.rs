@@ -153,12 +153,12 @@ impl PeerManager {
             .collect();
         self.eligible_peers = eligible_peers;
         self.weighted_index = WeightedIndex::new(&weights)
-            .or_else(|err| {
+            .map_err(|err| {
                 error!(
                     "[state sync] (pick_peer) failed to compute weighted index, {:?}",
                     err
                 );
-                Err(err)
+                err
             })
             .ok();
     }

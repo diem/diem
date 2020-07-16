@@ -4102,7 +4102,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Type::Error
             }
         };
-        std::mem::replace(&mut self.subs, subs);
+        self.subs = subs;
         result
     }
 }

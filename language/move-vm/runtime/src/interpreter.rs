@@ -154,7 +154,7 @@ impl Interpreter {
                     }
                     let frame = self
                         .make_call_frame(func, vec![])
-                        .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
+                        .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
                         let err = self.set_location(err);
@@ -182,7 +182,7 @@ impl Interpreter {
                     }
                     let frame = self
                         .make_call_frame(func, ty_args)
-                        .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
+                        .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
                         let err = self.set_location(err);

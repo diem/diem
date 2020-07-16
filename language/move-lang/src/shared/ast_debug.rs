@@ -90,7 +90,7 @@ impl AstWriter {
         self.new_line();
     }
 
-    pub fn indent<F: FnOnce(&mut AstWriter) -> ()>(&mut self, inc: usize, f: F) {
+    pub fn indent<F: FnOnce(&mut AstWriter)>(&mut self, inc: usize, f: F) {
         self.new_line();
         self.margin += inc;
         f(self);
@@ -98,17 +98,13 @@ impl AstWriter {
         self.new_line();
     }
 
-    pub fn block<F: FnOnce(&mut AstWriter) -> ()>(&mut self, f: F) {
+    pub fn block<F: FnOnce(&mut AstWriter)>(&mut self, f: F) {
         self.write(" {");
         self.indent(4, f);
         self.write("}");
     }
 
-    pub fn annotate<F: FnOnce(&mut AstWriter) -> (), Annot: AstDebug>(
-        &mut self,
-        f: F,
-        annot: &Annot,
-    ) {
+    pub fn annotate<F: FnOnce(&mut AstWriter), Annot: AstDebug>(&mut self, f: F, annot: &Annot) {
         if self.verbose {
             self.write("(");
         }
@@ -145,7 +141,7 @@ impl AstWriter {
         }
     }
 
-    pub fn comma<T, F: FnMut(&mut AstWriter, T) -> ()>(
+    pub fn comma<T, F: FnMut(&mut AstWriter, T)>(
         &mut self,
         items: impl std::iter::IntoIterator<Item = T>,
         mut f: F,
@@ -156,7 +152,7 @@ impl AstWriter {
         })
     }
 
-    pub fn semicolon<T, F: FnMut(&mut AstWriter, T) -> ()>(
+    pub fn semicolon<T, F: FnMut(&mut AstWriter, T)>(
         &mut self,
         items: impl std::iter::IntoIterator<Item = T>,
         mut f: F,

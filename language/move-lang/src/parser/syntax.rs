@@ -707,10 +707,10 @@ fn parse_name_exp<'input>(tokens: &mut Lexer<'input>) -> Result<Exp_, Error> {
     let start_loc = tokens.start_loc();
     if tokens.peek() == Tok::Less && start_loc == n.loc.span().end().to_usize() {
         let loc = make_loc(tokens.file_name(), start_loc, start_loc);
-        tys = parse_optional_type_args(tokens).or_else(|mut e| {
+        tys = parse_optional_type_args(tokens).map_err(|mut e| {
             let msg = "Perhaps you need a blank space before this '<' operator?";
             e.push((loc, msg.to_owned()));
-            Err(e)
+            e
         })?;
     }
 
