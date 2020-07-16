@@ -20,7 +20,7 @@ pub struct AssociationKey {
 impl AssociationKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
         submit_key(
-            libra_global_constants::ASSOCIATION_KEY,
+            libra_global_constants::LIBRA_ROOT_KEY,
             None,
             self.validator_backend,
             self.shared_backend,
