@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
-
-use libra_management::Command;
+use libra_genesis_tool::command::Command;
 use structopt::StructOpt;
 
 fn main() {
