@@ -281,7 +281,7 @@ impl LibraSwarm {
         let config_path = &swarm_config_dir.as_ref().to_path_buf();
         let builder = FullnodeBuilder::new(
             upstream_config.config_files.clone(),
-            upstream_config.faucet_key_path.clone(),
+            upstream_config.libra_root_key_path.clone(),
             node_config,
             fn_type,
         );

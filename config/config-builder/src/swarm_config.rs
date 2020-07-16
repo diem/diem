@@ -14,13 +14,13 @@ pub trait BuildSwarm {
 
 pub struct SwarmConfig {
     pub config_files: Vec<PathBuf>,
-    pub faucet_key_path: PathBuf,
+    pub libra_root_key_path: PathBuf,
     pub waypoint: Waypoint,
 }
 
 impl SwarmConfig {
     pub fn build<T: BuildSwarm>(config_builder: &T, output_dir: &PathBuf) -> Result<Self> {
-        let (mut configs, faucet_key) = config_builder.build_swarm()?;
+        let (mut configs, libra_root_key) = config_builder.build_swarm()?;
         let mut config_files = vec![];
 
         for (index, config) in configs.iter_mut().enumerate() {
@@ -33,14 +33,14 @@ impl SwarmConfig {
             config_files.push(node_path);
         }
 
-        let faucet_key_path = output_dir.join("mint.key");
-        let serialized_keys = lcs::to_bytes(&faucet_key)?;
-        let mut key_file = File::create(&faucet_key_path)?;
+        let libra_root_key_path = output_dir.join("mint.key");
+        let serialized_keys = lcs::to_bytes(&libra_root_key)?;
+        let mut key_file = File::create(&libra_root_key_path)?;
         key_file.write_all(&serialized_keys)?;
 
         Ok(SwarmConfig {
             config_files,
-            faucet_key_path,
+            libra_root_key_path,
             waypoint: configs[0].base.waypoint.waypoint(),
         })
     }

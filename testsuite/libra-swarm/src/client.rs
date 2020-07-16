@@ -38,7 +38,7 @@ impl Drop for InteractiveClient {
 impl InteractiveClient {
     pub fn new_with_inherit_io(
         port: u16,
-        faucet_key_file_path: &Path,
+        libra_root_key_path: &Path,
         mnemonic_file_path: &Path,
         waypoint: Waypoint,
     ) -> Self {
@@ -54,9 +54,9 @@ impl InteractiveClient {
                     .arg(format!("http://localhost:{}", port))
                     .arg("-m")
                     .arg(
-                        faucet_key_file_path
+                        libra_root_key_path
                             .canonicalize()
-                            .expect("Unable to get canonical path of faucet key file")
+                            .expect("Unable to get canonical path of libra root key file")
                             .to_str()
                             .unwrap(),
                     )
