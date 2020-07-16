@@ -16,14 +16,14 @@ use libra_types::{
     chain_id::ChainId,
     event::EventHandle,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Module, RawTransaction, Script,
-        SignedTransaction, TransactionArgument, TransactionPayload, WriteSetPayload,
+        authenticator::AuthenticationKey, Module, RawTransaction, Script, SignedTransaction,
+        TransactionPayload, WriteSetPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
     identifier::{IdentStr, Identifier},
-    language_storage::{ResourceKey, StructTag, TypeTag},
+    language_storage::{ResourceKey, StructTag},
     move_resource::MoveResource,
     value::{MoveStructLayout, MoveTypeLayout},
 };
@@ -167,229 +167,6 @@ impl Account {
         AuthenticationKey::ed25519(&self.pubkey).prefix().to_vec()
     }
 
-    //
-    // Helpers to read data from an Account resource
-    //
-
-    //
-    // Helpers for transaction creation with Account instance as sender
-    //
-
-    /// Returns a [`SignedTransaction`] with a payload and this account as the sender.
-    ///
-    /// This is the most generic way to create a transaction for testing.
-    /// Max gas amount and gas unit price are ignored for WriteSet transactions.
-    pub fn create_user_txn(
-        &self,
-        payload: TransactionPayload,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> SignedTransaction {
-        Self::create_raw_user_txn(
-            *self.address(),
-            payload,
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-        .sign(&self.privkey, self.pubkey.clone())
-        .unwrap()
-        .into_inner()
-    }
-
-    pub fn create_raw_user_txn(
-        address: AccountAddress,
-        payload: TransactionPayload,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> RawTransaction {
-        match payload {
-            TransactionPayload::WriteSet(WriteSetPayload::Direct(writeset)) => {
-                RawTransaction::new_change_set(address, sequence_number, writeset, ChainId::test())
-            }
-            TransactionPayload::WriteSet(WriteSetPayload::Script {
-                execute_as: signer,
-                script,
-            }) => RawTransaction::new_writeset_script(
-                address,
-                sequence_number,
-                script,
-                signer,
-                ChainId::test(),
-            ),
-            TransactionPayload::Module(module) => RawTransaction::new_module(
-                address,
-                sequence_number,
-                module,
-                max_gas_amount,
-                gas_unit_price,
-                gas_currency_code,
-                DEFAULT_EXPIRATION_TIME,
-                ChainId::test(),
-            ),
-            TransactionPayload::Script(script) => RawTransaction::new_script(
-                address,
-                sequence_number,
-                script,
-                max_gas_amount,
-                gas_unit_price,
-                gas_currency_code,
-                DEFAULT_EXPIRATION_TIME,
-                ChainId::test(),
-            ),
-        }
-    }
-
-    /// Returns a [`SignedTransaction`] with the arguments defined in `args` and this account as
-    /// the sender.
-    pub fn create_signed_txn_with_args(
-        &self,
-        program: Vec<u8>,
-        ty_args: Vec<TypeTag>,
-        args: Vec<TransactionArgument>,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> SignedTransaction {
-        self.create_signed_txn_impl(
-            *self.address(),
-            TransactionPayload::Script(Script::new(program, ty_args, args)),
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-    }
-
-    pub fn create_raw_txn_with_args(
-        address: AccountAddress,
-        program: Vec<u8>,
-        ty_args: Vec<TypeTag>,
-        args: Vec<TransactionArgument>,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> RawTransaction {
-        Self::create_raw_txn_impl(
-            address,
-            TransactionPayload::Script(Script::new(program, ty_args, args)),
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-    }
-
-    /// Returns a [`SignedTransaction`] with the arguments defined in `args` and a custom sender.
-    ///
-    /// The transaction is signed with the key corresponding to this account, not the custom sender.
-    pub fn create_signed_txn_with_args_and_sender(
-        &self,
-        sender: AccountAddress,
-        program: Vec<u8>,
-        ty_args: Vec<TypeTag>,
-        args: Vec<TransactionArgument>,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> SignedTransaction {
-        self.create_signed_txn_impl(
-            sender,
-            TransactionPayload::Script(Script::new(program, ty_args, args)),
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-    }
-
-    pub fn create_raw_txn_with_args_and_sender(
-        sender: AccountAddress,
-        program: Vec<u8>,
-        ty_args: Vec<TypeTag>,
-        args: Vec<TransactionArgument>,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> RawTransaction {
-        Self::create_raw_txn_impl(
-            sender,
-            TransactionPayload::Script(Script::new(program, ty_args, args)),
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-    }
-
-    /// Returns a [`SignedTransaction`] with the arguments defined in `args` and a custom sender.
-    ///
-    /// The transaction is signed with the key corresponding to this account, not the custom sender.
-    pub fn create_signed_txn_impl(
-        &self,
-        sender: AccountAddress,
-        program: TransactionPayload,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> SignedTransaction {
-        Self::create_raw_txn_impl(
-            sender,
-            program,
-            sequence_number,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-        )
-        .sign(&self.privkey, self.pubkey.clone())
-        .unwrap()
-        .into_inner()
-    }
-
-    /// Create a transaction containing `script` signed by `sender` with default values for gas
-    /// cost, gas price, expiration time, and currency type.
-    pub fn signed_script_txn(&self, script: Script, sequence_number: u64) -> SignedTransaction {
-        self.create_signed_txn_impl(
-            *self.address(),
-            TransactionPayload::Script(script),
-            sequence_number,
-            gas_costs::TXN_RESERVED,
-            0, // gas price
-            LBR_NAME.to_owned(),
-        )
-    }
-
-    pub fn create_raw_txn_impl(
-        sender: AccountAddress,
-        program: TransactionPayload,
-        sequence_number: u64,
-        max_gas_amount: u64,
-        gas_unit_price: u64,
-        gas_currency_code: String,
-    ) -> RawTransaction {
-        RawTransaction::new(
-            sender,
-            sequence_number,
-            program,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-            // TTL is 86400s. Initial time was set to 0.
-            DEFAULT_EXPIRATION_TIME,
-            ChainId::test(),
-        )
-    }
-
     pub fn transaction(&self) -> TransactionBuilder {
         TransactionBuilder::new(self.clone())
     }
@@ -439,8 +216,8 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn write_set(mut self, w: ChangeSet) -> Self {
-        self.program = Some(TransactionPayload::WriteSet(WriteSetPayload::Direct(w)));
+    pub fn write_set(mut self, w: WriteSetPayload) -> Self {
+        self.program = Some(TransactionPayload::WriteSet(w));
         self
     }
 
@@ -464,13 +241,28 @@ impl TransactionBuilder {
         self
     }
 
+    pub fn raw(self) -> RawTransaction {
+        RawTransaction::new(
+            *self.sender.address(),
+            self.sequence_number.expect("sequence number not set"),
+            self.program.expect("transaction payload not set"),
+            self.max_gas_amount
+                .unwrap_or_else(|| gas_costs::TXN_RESERVED),
+            self.gas_unit_price.unwrap_or(0),
+            self.gas_currency_code
+                .unwrap_or_else(|| LBR_NAME.to_owned()),
+            self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
+            ChainId::test(),
+        )
+    }
+
     pub fn sign(self) -> SignedTransaction {
         RawTransaction::new(
             *self.sender.address(),
             self.sequence_number.expect("sequence number not set"),
             self.program.expect("transaction payload not set"),
             self.max_gas_amount
-                .unwrap_or_else(|| gas_costs::TXN_RESERVED * 2),
+                .unwrap_or_else(|| gas_costs::TXN_RESERVED),
             self.gas_unit_price.unwrap_or(0),
             self.gas_currency_code
                 .unwrap_or_else(|| LBR_NAME.to_owned()),

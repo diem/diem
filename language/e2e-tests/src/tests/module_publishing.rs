@@ -9,7 +9,7 @@ use crate::{
     transaction_status_eq,
 };
 use libra_types::{
-    account_config::{self, LBR_NAME},
+    account_config::{self},
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
     vm_status::{KeptVMStatus, StatusCode},
@@ -38,14 +38,13 @@ fn bad_module_address() {
     // compile with account 1's address
     let compiled_module = compile_module_with_address(account1.address(), "file_name", &program);
     // send with account 2's address
-    let txn = account2.account().create_signed_txn_impl(
-        *account2.address(),
-        compiled_module,
-        10,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let txn = account2
+        .account()
+        .transaction()
+        .module(compiled_module)
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
 
     // TODO: This is not verified for now.
     // verify and fail because the addresses don't match
@@ -82,23 +81,19 @@ fn duplicate_module() {
     );
     let compiled_module = compile_module_with_address(account.address(), "file_name", &program);
 
-    let txn1 = account.account().create_signed_txn_impl(
-        *account.address(),
-        compiled_module.clone(),
-        sequence_number,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let txn1 = account
+        .account()
+        .transaction()
+        .module(compiled_module.clone())
+        .sequence_number(sequence_number)
+        .sign();
 
-    let txn2 = account.account().create_signed_txn_impl(
-        *account.address(),
-        compiled_module,
-        sequence_number + 1,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let txn2 = account
+        .account()
+        .transaction()
+        .module(compiled_module)
+        .sequence_number(sequence_number + 1)
+        .sign();
 
     let output1 = executor.execute_transaction(txn1);
     executor.apply_write_set(output1.write_set());
@@ -133,15 +128,14 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
-    let txn = sender.account().create_signed_txn_impl(
-        *sender.address(),
-        random_script,
-        10,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let random_module = compile_module_with_address(sender.address(), "file_name", &program);
+    let txn = sender
+        .account()
+        .transaction()
+        .module(random_module)
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
 
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -165,16 +159,13 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
         ",
     );
 
-    let random_script =
+    let random_module =
         compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
-    let txn = sender.create_signed_txn_impl(
-        *sender.address(),
-        random_script,
-        1,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .transaction()
+        .module(random_module)
+        .sequence_number(1)
+        .sign();
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -199,14 +190,11 @@ pub fn test_publishing_no_modules_proper_sender() {
 
     let random_script =
         compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
-    let txn = sender.create_signed_txn_impl(
-        *sender.address(),
-        random_script,
-        1,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .transaction()
+        .module(random_script)
+        .sequence_number(1)
+        .sign();
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
@@ -220,7 +208,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
     let executor = FakeExecutor::whitelist_genesis();
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_libra_root();
+    let sender = Account::new_genesis_account(account_config::CORE_CODE_ADDRESS);
 
     let program = String::from(
         "
@@ -231,15 +219,11 @@ pub fn test_publishing_no_modules_core_code_sender() {
 
     let random_script =
         compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
-    let txn = sender.create_signed_txn_impl(
-        account_config::CORE_CODE_ADDRESS,
-        random_script,
-        0,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
-
+    let txn = sender
+        .transaction()
+        .module(random_script)
+        .sequence_number(1)
+        .sign();
     // Doesn't work because the core code address doesn't have a PublishModuleCapability
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
@@ -265,14 +249,12 @@ pub fn test_publishing_no_modules_invalid_sender() {
     );
 
     let random_script = compile_module_with_address(sender.address(), "file_name", &program);
-    let txn = sender.account().create_signed_txn_impl(
-        *sender.address(),
-        random_script,
-        10,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .account()
+        .transaction()
+        .module(random_script)
+        .sequence_number(10)
+        .sign();
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
@@ -297,14 +279,12 @@ pub fn test_publishing_allow_modules() {
     );
 
     let random_script = compile_module_with_address(sender.address(), "file_name", &program);
-    let txn = sender.account().create_signed_txn_impl(
-        *sender.address(),
-        random_script,
-        10,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .account()
+        .transaction()
+        .module(random_script)
+        .sequence_number(10)
+        .sign();
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),

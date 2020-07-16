@@ -13,18 +13,22 @@ fn validator_add() {
     let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
 
-    executor.execute_and_apply(libra_root_account.signed_script_txn(
-        encode_create_validator_account_script(
-            *validator_account.address(),
-            validator_account.auth_key_prefix(),
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_account_script(
+                *validator_account.address(),
+                validator_account.auth_key_prefix(),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     executor.new_block();
 
     executor.execute_and_apply(
-        validator_account.signed_script_txn(
-            encode_set_validator_config_script(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_config_script(
                 *validator_account.address(),
                 [
                     0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9,
@@ -36,14 +40,17 @@ fn validator_add() {
                 vec![],
                 vec![253; 32],
                 vec![],
-            ),
-            0,
-        ),
+            ))
+            .sequence_number(0)
+            .sign(),
     );
 
     let output = executor.execute_and_apply(
         libra_root_account
-            .signed_script_txn(encode_add_validator_script(*validator_account.address()), 2),
+            .transaction()
+            .script(encode_add_validator_script(*validator_account.address()))
+            .sequence_number(2)
+            .sign(),
     );
 
     assert_eq!(
@@ -62,18 +69,22 @@ fn validator_rotate_key_and_reconfigure() {
     let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
 
-    executor.execute_and_apply(libra_root_account.signed_script_txn(
-        encode_create_validator_account_script(
-            *validator_account.address(),
-            validator_account.auth_key_prefix(),
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_account_script(
+                *validator_account.address(),
+                validator_account.auth_key_prefix(),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     executor.new_block();
 
     let output = executor.execute_and_apply(
-        validator_account.signed_script_txn(
-            encode_set_validator_config_script(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_config_script(
                 *validator_account.address(),
                 [
                     0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9,
@@ -85,9 +96,9 @@ fn validator_rotate_key_and_reconfigure() {
                 vec![],
                 vec![253; 32],
                 vec![],
-            ),
-            0,
-        ),
+            ))
+            .sequence_number(0)
+            .sign(),
     );
     assert_eq!(
         output.status(),
@@ -96,7 +107,10 @@ fn validator_rotate_key_and_reconfigure() {
 
     let output = executor.execute_and_apply(
         libra_root_account
-            .signed_script_txn(encode_add_validator_script(*validator_account.address()), 2),
+            .transaction()
+            .script(encode_add_validator_script(*validator_account.address()))
+            .sequence_number(2)
+            .sign(),
     );
 
     assert_eq!(
@@ -111,8 +125,9 @@ fn validator_rotate_key_and_reconfigure() {
     executor.new_block();
 
     let output = executor.execute_and_apply(
-        validator_account.signed_script_txn(
-            encode_set_validator_config_and_reconfigure_script(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_config_and_reconfigure_script(
                 *validator_account.address(),
                 [
                     0x3d, 0x40, 0x17, 0xc3, 0xe8, 0x43, 0x89, 0x5a, 0x92, 0xb7, 0x0a, 0xa7, 0x4d,
@@ -124,9 +139,9 @@ fn validator_rotate_key_and_reconfigure() {
                 vec![],
                 vec![253; 32],
                 vec![],
-            ),
-            1,
-        ),
+            ))
+            .sequence_number(1)
+            .sign(),
     );
 
     assert_eq!(
@@ -146,44 +161,56 @@ fn validator_set_operator_set_key_reconfigure() {
     let validator_account = Account::new();
     let operator_account = Account::new();
 
-    let output = executor.execute_and_apply(libra_root_account.signed_script_txn(
-        encode_create_validator_operator_account_script(
-            *operator_account.address(),
-            operator_account.auth_key_prefix(),
-        ),
-        1,
-    ));
-
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    let output = executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_operator_account_script(
+                *operator_account.address(),
+                operator_account.auth_key_prefix(),
+            ))
+            .sequence_number(1)
+            .sign(),
     );
 
-    let output = executor.execute_and_apply(libra_root_account.signed_script_txn(
-        encode_create_validator_account_script(
-            *validator_account.address(),
-            validator_account.auth_key_prefix(),
-        ),
-        2,
-    ));
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(KeptVMStatus::Executed)
-    );
-    executor.new_block();
-
-    let output = executor.execute_and_apply(validator_account.signed_script_txn(
-        encode_set_validator_operator_script(*operator_account.address()),
-        0,
-    ));
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
     let output = executor.execute_and_apply(
-        operator_account.signed_script_txn(
-            encode_set_validator_config_script(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_account_script(
+                *validator_account.address(),
+                validator_account.auth_key_prefix(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
+    executor.new_block();
+
+    let output = executor.execute_and_apply(
+        validator_account
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                *operator_account.address(),
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
+
+    let output = executor.execute_and_apply(
+        operator_account
+            .transaction()
+            .script(encode_set_validator_config_script(
                 *validator_account.address(),
                 [
                     0x3d, 0x40, 0x17, 0xc3, 0xe8, 0x43, 0x89, 0x5a, 0x92, 0xb7, 0x0a, 0xa7, 0x4d,
@@ -195,9 +222,9 @@ fn validator_set_operator_set_key_reconfigure() {
                 vec![],
                 vec![253; 32],
                 vec![],
-            ),
-            0,
-        ),
+            ))
+            .sequence_number(0)
+            .sign(),
     );
 
     assert_eq!(
@@ -207,7 +234,10 @@ fn validator_set_operator_set_key_reconfigure() {
 
     let output = executor.execute_and_apply(
         libra_root_account
-            .signed_script_txn(encode_add_validator_script(*validator_account.address()), 3),
+            .transaction()
+            .script(encode_add_validator_script(*validator_account.address()))
+            .sequence_number(3)
+            .sign(),
     );
 
     assert_eq!(
@@ -222,8 +252,9 @@ fn validator_set_operator_set_key_reconfigure() {
     executor.new_block();
 
     let output = executor.execute_and_apply(
-        operator_account.signed_script_txn(
-            encode_set_validator_config_and_reconfigure_script(
+        operator_account
+            .transaction()
+            .script(encode_set_validator_config_and_reconfigure_script(
                 *validator_account.address(),
                 [
                     0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9,
@@ -235,9 +266,9 @@ fn validator_set_operator_set_key_reconfigure() {
                 vec![],
                 vec![253; 32],
                 vec![],
-            ),
-            1,
-        ),
+            ))
+            .sequence_number(1)
+            .sign(),
     );
 
     assert_eq!(

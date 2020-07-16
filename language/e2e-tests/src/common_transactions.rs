@@ -3,14 +3,13 @@
 
 //! Support for encoding transactions for common situations.
 
-use crate::{account::Account, gas_costs};
+use crate::account::Account;
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_types::{
-    account_address::AccountAddress,
     account_config,
-    account_config::{lbr_type_tag, LBR_NAME},
-    transaction::{RawTransaction, SignedTransaction, TransactionArgument},
+    account_config::lbr_type_tag,
+    transaction::{RawTransaction, Script, SignedTransaction, TransactionArgument},
 };
 use move_core_types::language_storage::TypeTag;
 use once_cell::sync::Lazy;
@@ -87,15 +86,14 @@ pub fn empty_txn(
     gas_unit_price: u64,
     gas_currency_code: String,
 ) -> SignedTransaction {
-    sender.create_signed_txn_with_args(
-        EMPTY_SCRIPT.to_vec(),
-        vec![],
-        vec![],
-        seq_num,
-        max_gas_amount,
-        gas_unit_price,
-        gas_currency_code,
-    )
+    sender
+        .transaction()
+        .script(Script::new(EMPTY_SCRIPT.to_vec(), vec![], vec![]))
+        .sequence_number(seq_num)
+        .max_gas_amount(max_gas_amount)
+        .gas_unit_price(gas_unit_price)
+        .gas_currency_code(&gas_currency_code)
+        .sign()
 }
 
 /// Returns a transaction to create a new account with the given arguments.
@@ -111,15 +109,15 @@ pub fn create_account_txn(
     args.push(TransactionArgument::U8Vector(new_account.auth_key_prefix()));
     args.push(TransactionArgument::U64(initial_amount));
 
-    sender.create_signed_txn_with_args(
-        CREATE_ACCOUNT_SCRIPT.to_vec(),
-        vec![type_tag],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .transaction()
+        .script(Script::new(
+            CREATE_ACCOUNT_SCRIPT.to_vec(),
+            vec![type_tag],
+            args,
+        ))
+        .sequence_number(seq_num)
+        .sign()
 }
 
 /// Returns a transaction to transfer coin from one account to another (possibly new) one, with the
@@ -137,52 +135,47 @@ pub fn peer_to_peer_txn(
     args.push(TransactionArgument::U8Vector(vec![]));
 
     // get a SignedTransaction
-    sender.create_signed_txn_with_args(
-        StdlibScript::PeerToPeerWithMetadata
-            .compiled_bytes()
-            .into_vec(),
-        vec![lbr_type_tag()],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED, // this is a default for gas
-        0,                       // this is a default for gas
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .transaction()
+        .script(Script::new(
+            StdlibScript::PeerToPeerWithMetadata
+                .compiled_bytes()
+                .into_vec(),
+            vec![lbr_type_tag()],
+            args,
+        ))
+        .sequence_number(seq_num)
+        .sign()
 }
 
 /// Returns a transaction to change the keys for the given account.
 pub fn rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> SignedTransaction {
     let args = vec![TransactionArgument::U8Vector(new_key_hash)];
-    sender.create_signed_txn_with_args(
-        StdlibScript::RotateAuthenticationKey
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .transaction()
+        .script(Script::new(
+            StdlibScript::RotateAuthenticationKey
+                .compiled_bytes()
+                .into_vec(),
+            vec![],
+            args,
+        ))
+        .sequence_number(seq_num)
+        .sign()
 }
 
 /// Returns a transaction to change the keys for the given account.
-pub fn raw_rotate_key_txn(
-    sender: AccountAddress,
-    new_key_hash: Vec<u8>,
-    seq_num: u64,
-) -> RawTransaction {
+pub fn raw_rotate_key_txn(sender: &Account, new_key_hash: Vec<u8>, seq_num: u64) -> RawTransaction {
     let args = vec![TransactionArgument::U8Vector(new_key_hash)];
-    Account::create_raw_txn_with_args(
-        sender,
-        StdlibScript::RotateAuthenticationKey
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    )
+    sender
+        .transaction()
+        .script(Script::new(
+            StdlibScript::RotateAuthenticationKey
+                .compiled_bytes()
+                .into_vec(),
+            vec![],
+            args,
+        ))
+        .sequence_number(seq_num)
+        .raw()
 }

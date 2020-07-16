@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{account::Account, executor::FakeExecutor, gas_costs};
+use crate::{account::Account, executor::FakeExecutor};
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, BurnEvent, COIN1_NAME},
-    transaction::{authenticator::AuthenticationKey, TransactionArgument},
+    transaction::{authenticator::AuthenticationKey, Script, TransactionArgument},
     vm_status::KeptVMStatus,
 };
 use move_core_types::{
@@ -26,20 +26,29 @@ fn burn_txn_fees() {
     let tc = Account::new_blessed_tc();
     let libra_root = Account::new_libra_root();
 
-    executor.execute_and_apply(libra_root.signed_script_txn(
-        encode_create_testing_account_script(
-            account_config::coin1_tag(),
-            *sender.address(),
-            sender.auth_key_prefix(),
-            false,
-        ),
-        1,
-    ));
+    executor.execute_and_apply(
+        libra_root
+            .transaction()
+            .script(encode_create_testing_account_script(
+                account_config::coin1_tag(),
+                *sender.address(),
+                sender.auth_key_prefix(),
+                false,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
-    executor.execute_and_apply(dd.signed_script_txn(
-        encode_testnet_mint_script(account_config::coin1_tag(), *sender.address(), 10_000_000),
-        0,
-    ));
+    executor.execute_and_apply(
+        dd.transaction()
+            .script(encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *sender.address(),
+                10_000_000,
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     let gas_used = {
         let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -47,17 +56,19 @@ fn burn_txn_fees() {
         let new_key_hash = AuthenticationKey::ed25519(&pubkey).to_vec();
         let args = vec![TransactionArgument::U8Vector(new_key_hash)];
         let status = executor.execute_and_apply(
-            sender.create_signed_txn_with_args(
-                StdlibScript::RotateAuthenticationKey
-                    .compiled_bytes()
-                    .into_vec(),
-                vec![],
-                args,
-                0,
-                gas_costs::TXN_RESERVED,
-                1,
-                COIN1_NAME.to_owned(),
-            ),
+            sender
+                .transaction()
+                .script(Script::new(
+                    StdlibScript::RotateAuthenticationKey
+                        .compiled_bytes()
+                        .into_vec(),
+                    vec![],
+                    args,
+                ))
+                .sequence_number(0)
+                .gas_unit_price(1)
+                .gas_currency_code(COIN1_NAME)
+                .sign(),
         );
         assert_eq!(status.status().status(), Ok(KeptVMStatus::Executed));
         status.gas_used()
@@ -70,8 +81,12 @@ fn burn_txn_fees() {
         type_params: vec![],
     });
 
-    let output =
-        executor.execute_and_apply(tc.signed_script_txn(encode_burn_txn_fees_script(coin1_ty), 0));
+    let output = executor.execute_and_apply(
+        tc.transaction()
+            .script(encode_burn_txn_fees_script(coin1_ty))
+            .sequence_number(0)
+            .sign(),
+    );
 
     let burn_events: Vec<_> = output
         .events()

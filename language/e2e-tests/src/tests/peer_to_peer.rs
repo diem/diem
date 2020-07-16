@@ -5,15 +5,14 @@ use crate::{
     account::{self, Account, AccountData},
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
-    gas_costs, transaction_status_eq,
+    transaction_status_eq,
 };
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::{
-    account_config::{self, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME},
+    account_config::{self, ReceivedPaymentEvent, SentPaymentEvent},
     on_chain_config::VMPublishingOption,
     transaction::{
-        Script, SignedTransaction, TransactionArgument, TransactionOutput, TransactionPayload,
-        TransactionStatus,
+        Script, SignedTransaction, TransactionArgument, TransactionOutput, TransactionStatus,
     },
     vm_status::{known_locations, KeptVMStatus},
 };
@@ -121,14 +120,12 @@ fn single_peer_to_peer_with_padding() {
         )
     };
 
-    let txn = sender.account().create_signed_txn_impl(
-        *sender.address(),
-        TransactionPayload::Script(padded_script),
-        10,
-        gas_costs::TXN_RESERVED, // this is a default for gas
-        0,
-        LBR_NAME.to_owned(),
-    );
+    let txn = sender
+        .account()
+        .transaction()
+        .script(padded_script)
+        .sequence_number(10)
+        .sign();
     let unpadded_txn = peer_to_peer_txn(sender.account(), receiver.account(), 10, transfer_amount);
     assert!(txn.raw_txn_bytes_len() > unpadded_txn.raw_txn_bytes_len());
     // execute transaction

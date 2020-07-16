@@ -9,12 +9,11 @@ use crate::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
-    account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
+    account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
     contract_event::ContractEvent,
     on_chain_config::new_epoch_event_key,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, TransactionPayload, TransactionStatus,
-        WriteSetPayload,
+        authenticator::AuthenticationKey, ChangeSet, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode},
     write_set::{WriteOp, WriteSetMut},
@@ -37,15 +36,12 @@ fn invalid_write_set_sender() {
     let new_account_data = AccountData::new(1000, 10);
     let write_set = new_account_data.to_writeset();
 
-    let writeset_txn = sender_account.account().create_signed_txn_impl(
-        *sender_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
-        0,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
-
+    let writeset_txn = sender_account
+        .account()
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(0)
+        .sign();
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
@@ -64,18 +60,14 @@ fn verify_and_execute_writeset() {
     let new_account_data = AccountData::new(0, 10);
     let write_set = new_account_data.to_writeset();
 
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
             write_set.clone(),
             vec![],
-        ))),
-        1,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
-
+        )))
+        .sequence_number(1)
+        .sign();
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
@@ -114,14 +106,11 @@ fn verify_and_execute_writeset() {
     );
 
     // (3) Cannot apply the writeset with future sequence number.
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
-        10,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(10)
+        .sign();
     let output = executor.execute_transaction(writeset_txn.clone());
     let status = output.status();
     assert!(status.is_discarded());
@@ -146,18 +135,15 @@ fn bad_writesets() {
 
     // (1) This WriteSet is signed by an arbitrary account rather than the libra root account. Should be
     // rejected.
-    let writeset_txn = new_account_data.account().create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+    let writeset_txn = new_account_data
+        .account()
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
             write_set.clone(),
             vec![],
-        ))),
-        1,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
-
+        )))
+        .sequence_number(1)
+        .sign();
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
@@ -166,18 +152,14 @@ fn bad_writesets() {
 
     // (2) The WriteSet contains a reconfiguration event, will be dropped.
     let event = ContractEvent::new(new_epoch_event_key(), 0, lbr_type_tag(), vec![]);
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
             write_set,
             vec![event],
-        ))),
-        1,
-        100_000,
-        1,
-        LBR_NAME.to_owned(),
-    );
-
+        )))
+        .sequence_number(1)
+        .sign();
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
@@ -199,15 +181,11 @@ fn bad_writesets() {
     let write_set = WriteSetMut::new(vec![(path, WriteOp::Value(vec![]))])
         .freeze()
         .unwrap();
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
-        1,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
-
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(1)
+        .sign();
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
@@ -229,15 +207,11 @@ fn bad_writesets() {
     let write_set = WriteSetMut::new(vec![(path, WriteOp::Value(vec![]))])
         .freeze()
         .unwrap();
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
-        1,
-        100_000,
-        0,
-        LBR_NAME.to_owned(),
-    );
-
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(1)
+        .sign();
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
@@ -267,14 +241,11 @@ fn transfer_and_execute_writeset() {
     let new_account_data = AccountData::new(0, 10);
     let write_set = new_account_data.to_writeset();
 
-    let writeset_txn = genesis_account.create_signed_txn_impl(
-        *genesis_account.address(),
-        TransactionPayload::WriteSet(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![]))),
-        1, // sequence number
-        100_000,
-        0, // gas unit price
-        LBR_NAME.to_owned(),
-    );
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(1)
+        .sign();
 
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
