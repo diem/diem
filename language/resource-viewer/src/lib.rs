@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{cached_access_path_table::resource_vec_to_type_tag, resolver::Resolver};
+use crate::{
+    cached_access_path_table::resource_vec_to_type_tag,
+    fat_type::{FatStructType, FatType},
+    resolver::Resolver,
+};
 use anyhow::{anyhow, Result};
 use libra_state_view::StateView;
 use libra_types::{
@@ -21,9 +25,9 @@ use std::{
 use vm::errors::{Location, PartialVMError};
 
 pub use cached_access_path_table::update_mapping;
-use move_vm_types::loaded_data::types::{FatStructType, FatType};
 
 mod cached_access_path_table;
+mod fat_type;
 mod module_cache;
 mod resolver;
 

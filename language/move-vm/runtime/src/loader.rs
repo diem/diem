@@ -17,10 +17,7 @@ use move_core_types::{
 };
 use move_vm_types::{
     data_store::DataStore,
-    loaded_data::{
-        runtime_types::{StructType, Type, TypeConverter, TypeEnv},
-        types::{FatStructType, FatType},
-    },
+    loaded_data::runtime_types::{StructType, Type},
 };
 use std::{
     collections::HashMap,
@@ -1001,14 +998,6 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    //
-    // FatType to be removed API
-    //
-
-    pub fn type_to_fat_type(&self, ty: &Type) -> PartialVMResult<FatType> {
-        self.loader.type_to_fat_type(ty)
-    }
-
     pub(crate) fn make_type(
         &self,
         token: &SignatureToken,
@@ -1028,12 +1017,12 @@ impl<'a> Resolver<'a> {
             BinaryType::Script(_) => unreachable!("Scripts cannot have type operations"),
         }
     }
-}
 
-// This is the unfortunate side effect of our type story. It will have to go soon...
-impl<'a> TypeConverter for Resolver<'a> {
-    fn type_to_fat_type(&self, ty: &Type) -> PartialVMResult<FatType> {
-        Resolver::type_to_fat_type(self, ty)
+    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+        self.loader.type_to_type_tag(ty)
+    }
+    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+        self.loader.type_to_type_layout(ty)
     }
 }
 
@@ -1652,31 +1641,6 @@ impl TypeCache {
 const VALUE_DEPTH_MAX: usize = 256;
 
 impl Loader {
-    fn type_to_fat_type(&self, ty: &Type) -> PartialVMResult<FatType> {
-        use Type::*;
-
-        Ok(match ty {
-            Bool => FatType::Bool,
-            U8 => FatType::U8,
-            U64 => FatType::U64,
-            U128 => FatType::U128,
-            Address => FatType::Address,
-            Signer => FatType::Signer,
-            Vector(ty) => FatType::Vector(Box::new(self.type_to_fat_type(ty)?)),
-            Struct(idx) => FatType::Struct(Box::new(self.struct_to_fat_struct(*idx, vec![])?)),
-            StructInstantiation(idx, instantiation) => {
-                let mut ty_args = vec![];
-                for inst in instantiation {
-                    ty_args.push(self.type_to_fat_type(inst)?);
-                }
-                FatType::Struct(Box::new(self.struct_to_fat_struct(*idx, ty_args)?))
-            }
-            Reference(ty) => FatType::Reference(Box::new(self.type_to_fat_type(ty)?)),
-            MutableReference(ty) => FatType::MutableReference(Box::new(self.type_to_fat_type(ty)?)),
-            TyParam(idx) => FatType::TyParam(*idx),
-        })
-    }
-
     fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<StructTag> {
         if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
             if let Some(struct_info) = struct_map.get(ty_args) {
@@ -1885,84 +1849,13 @@ impl Loader {
         })
     }
 
-    fn struct_to_fat_struct(
-        &self,
-        idx: usize,
-        ty_args: Vec<FatType>,
-    ) -> PartialVMResult<FatStructType> {
-        let struct_type = self.module_cache.lock().unwrap().struct_at(idx);
-        let address = *struct_type.module.address();
-        let module = struct_type.module.name().to_owned();
-        let name = struct_type.name.clone();
-        let is_resource = struct_type.is_resource;
-        let mut fields = vec![];
-        for field_type in &struct_type.fields {
-            fields.push(self.type_to_fat_type(field_type)?);
-        }
-        let mut layout = vec![];
-        for field in &fields {
-            layout.push(field.subst(&ty_args)?);
-        }
-        Ok(FatStructType {
-            address,
-            module,
-            name,
-            is_resource,
-            ty_args,
-            layout,
-        })
-    }
-}
-
-impl TypeEnv for Loader {
-    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId> {
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
-        Ok(struct_type.module.clone())
-    }
-    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier> {
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
-        Ok(struct_type.name.clone())
-    }
-
-    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>> {
-        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
-        struct_type
-            .fields
-            .iter()
-            .map(|ty| ty.subst(ty_args))
-            .collect()
-    }
-
-    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
+    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
         self.type_to_type_tag_impl(ty)
     }
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
+    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.type_to_type_layout_impl(ty, 1)
     }
-    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
+    pub(crate) fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
         self.type_to_kind_info_impl(ty, 1)
-    }
-}
-
-impl<'a> TypeEnv for Resolver<'a> {
-    fn get_struct_module(&self, gidx: usize) -> PartialVMResult<ModuleId> {
-        self.loader.get_struct_module(gidx)
-    }
-    fn get_struct_name(&self, gidx: usize) -> PartialVMResult<Identifier> {
-        self.loader.get_struct_name(gidx)
-    }
-
-    fn get_struct_field_tys(&self, gidx: usize, ty_args: &[Type]) -> PartialVMResult<Vec<Type>> {
-        self.loader.get_struct_field_tys(gidx, ty_args)
-    }
-
-    fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
-        self.loader.type_to_type_tag(ty)
-    }
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
-        self.loader.type_to_type_layout(ty)
-    }
-    fn type_to_kind_info(&self, ty: &Type) -> PartialVMResult<MoveKindInfo> {
-        self.loader.type_to_kind_info(ty)
     }
 }

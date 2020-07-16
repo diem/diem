@@ -16,13 +16,10 @@
 //! This module contains the declarations and utilities to implement a native
 //! function.
 
-use crate::{
-    gas_schedule::NativeCostIndex,
-    loaded_data::runtime_types::{Type, TypeEnv},
-    values::Value,
-};
-use move_core_types::gas_schedule::{
-    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits,
+use crate::{gas_schedule::NativeCostIndex, loaded_data::runtime_types::Type, values::Value};
+use move_core_types::{
+    gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
+    value::MoveTypeLayout,
 };
 use std::fmt::Write;
 use vm::errors::PartialVMResult;
@@ -33,7 +30,7 @@ use vm::errors::PartialVMResult;
 /// Normally a native function will only need the `CostTable`.
 /// The set of native functions and their linkage is entirely inside the MoveVM
 /// runtime.
-pub trait NativeContext: TypeEnv {
+pub trait NativeContext {
     /// Prints stack trace.
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()>;
     /// Gets cost table ref.
@@ -46,6 +43,8 @@ pub trait NativeContext: TypeEnv {
         ty: Type,
         val: Value,
     ) -> PartialVMResult<()>;
+    /// Get the a data layout via the type.
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout>;
     /// Whether a type is a resource or not.
     fn is_resource(&self, ty: &Type) -> PartialVMResult<bool>;
 }

@@ -401,18 +401,18 @@ impl Interpreter {
         }
         debug_write!(buf, "{}", func.name())?;
         let ty_args = frame.ty_args();
-        let mut fat_ty_args = vec![];
+        let mut ty_tags = vec![];
         for ty in ty_args {
-            fat_ty_args.push(resolver.type_to_fat_type(ty)?);
+            ty_tags.push(resolver.type_to_type_tag(ty)?);
         }
-        if !fat_ty_args.is_empty() {
+        if !ty_tags.is_empty() {
             debug_write!(buf, "<")?;
-            let mut it = fat_ty_args.iter();
-            if let Some(ty) = it.next() {
-                ty.debug_print(buf)?;
-                for ty in it {
+            let mut it = ty_tags.iter();
+            if let Some(tag) = it.next() {
+                debug_write!(buf, "{}", tag)?;
+                for tag in it {
                     debug_write!(buf, ", ")?;
-                    ty.debug_print(buf)?;
+                    debug_write!(buf, "{}", tag)?;
                 }
             }
             debug_write!(buf, ">")?;
@@ -442,7 +442,7 @@ impl Interpreter {
             for local in &func.locals().0 {
                 tys.push(resolver.make_type(local, ty_args)?);
             }
-            values::debug::print_locals(buf, resolver, &tys, &frame.locals)?;
+            values::debug::print_locals(buf, &frame.locals)?;
             debug_writeln!(buf)?;
         } else {
             debug_writeln!(buf, "            (none)")?;
@@ -466,7 +466,9 @@ impl Interpreter {
         for (idx, val) in self.operand_stack.0.iter().enumerate() {
             // TODO: Currently we do not know the types of the values on the operand stack.
             // Revisit.
-            debug_writeln!(buf, "    [{}] {}", idx, val)?;
+            debug_write!(buf, "    [{}] ", idx)?;
+            values::debug::print_value(buf, val)?;
+            debug_writeln!(buf)?;
         }
         Ok(())
     }
