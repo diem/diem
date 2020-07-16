@@ -2,16 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::prometheus::Prometheus;
-use anyhow::{format_err, Result};
+use anyhow::format_err;
 use std::time::Duration;
 
-pub fn avg_txns_per_block(prometheus: &Prometheus, start: Duration, end: Duration) -> Result<f64> {
-    prometheus
-        .query_range_avg(
+pub struct PrometheusRangeView<'a> {
+    prometheus: &'a Prometheus,
+    start: Duration,
+    end: Duration,
+}
+
+impl<'a> PrometheusRangeView<'a> {
+    pub fn new(prometheus: &'a Prometheus, start: Duration, end: Duration) -> Self {
+        Self {
+            prometheus,
+            start,
+            end,
+        }
+    }
+
+    pub fn avg_txns_per_block(&self) -> Option<f64> {
+        self.query_avg(
+            "txn_per_block",
             "irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])".to_string(),
-            &start,
-            &end,
-            10, /* step */
         )
-        .map_err(|e| format_err!("No txns_per_block data: {}", e))
+    }
+}
+
+impl<'a> PrometheusRangeView<'a> {
+    const STEP: u64 = 10;
+
+    fn query_avg(&self, name: &str, query: String) -> Option<f64> {
+        self.prometheus
+            .query_range_avg(query, &self.start, &self.end, Self::STEP)
+            .map_err(|e| format_err!("No {} data: {}", name, e))
+            .ok()
+    }
 }
