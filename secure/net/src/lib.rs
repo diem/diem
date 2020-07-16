@@ -51,11 +51,11 @@ pub struct NetworkClient {
 }
 
 impl NetworkClient {
-    pub fn new(server: SocketAddr) -> Self {
+    pub fn new(server: SocketAddr, timeout: u64) -> Self {
         Self {
             server,
             stream: None,
-            timeout: TIMEOUT,
+            timeout,
         }
     }
 
@@ -120,12 +120,12 @@ pub struct NetworkServer {
 }
 
 impl NetworkServer {
-    pub fn new(listen: SocketAddr) -> Self {
+    pub fn new(listen: SocketAddr, timeout: u64) -> Self {
         let listener = TcpListener::bind(listen);
         Self {
             listener: Some(listener.unwrap()),
             stream: None,
-            timeout: TIMEOUT,
+            timeout,
         }
     }
 
