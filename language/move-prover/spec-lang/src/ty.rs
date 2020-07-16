@@ -131,6 +131,15 @@ impl Type {
         }
     }
 
+    /// Require this to be a struct, if so extracts its content.
+    pub fn require_struct(&self) -> (ModuleId, StructId, &[Type]) {
+        if let Type::Struct(mid, sid, targs) = self {
+            (*mid, *sid, targs.as_slice())
+        } else {
+            panic!("expected a Type::Struct")
+        }
+    }
+
     /// Instantiates type parameters in this type.
     pub fn instantiate(&self, params: &[Type]) -> Type {
         if params.is_empty() {

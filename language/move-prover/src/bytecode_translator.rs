@@ -31,8 +31,9 @@ use vm::file_format::CodeOffset;
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
-        boogie_requires_well_formed, boogie_struct_name, boogie_struct_type_value,
-        boogie_type_value, boogie_type_values, boogie_well_formed_check, WellFormedMode,
+        boogie_requires_well_formed, boogie_resource_memory_name, boogie_struct_name,
+        boogie_type_value, boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
+        WellFormedMode,
     },
     cli::Options,
     spec_translator::{FunctionEntryPoint, SpecTranslator},
@@ -277,11 +278,7 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_struct_type(&self, struct_env: &StructEnv<'_>) {
         // Emit TypeName
         let struct_name = boogie_struct_name(&struct_env);
-        // Special treatment of well-known resource LibraAccount_T. The type_name
-        // is forward-declared in the prelude.
-        if struct_name != "$LibraAccount_T" {
-            emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
-        }
+        emitln!(self.writer, "const unique {}: $TypeName;", struct_name);
 
         // Emit FieldNames
         for (i, field_env) in struct_env.get_fields().enumerate() {
@@ -296,64 +293,35 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Emit TypeValue constructor function.
-        let type_args = struct_env
+        let type_params = struct_env
             .get_type_parameters()
             .iter()
             .enumerate()
             .map(|(i, _)| format!("$tv{}: $TypeValue", i))
             .join(", ");
+        let type_args = struct_env
+            .get_type_parameters()
+            .iter()
+            .enumerate()
+            .map(|(i, _)| Type::TypeParameter(i as u16))
+            .collect_vec();
+        let type_args_array = boogie_type_value_array(struct_env.module_env.env, &type_args);
+        let type_value = format!("$StructType({}, {})", struct_name, type_args_array);
+        emitln!(
+            self.writer,
+            "function {}_type_value({}): $TypeValue {{\n    {}\n}}",
+            struct_name,
+            type_params,
+            type_value
+        );
 
-        let mut param_types = String::from("$MapConstTypeValue($DefaultTypeValue())");
-        let type_param_count = struct_env.get_type_parameters().len();
-        for i in 0..type_param_count {
-            param_types = format!("{}[{} := $tv{}]", param_types, i, i);
-        }
-        let type_param_array = format!("$TypeValueArray({}, {})", param_types, type_param_count);
-        let mut field_types = String::from("$MapConstTypeValue($DefaultTypeValue())");
-        for field_env in struct_env.get_fields() {
-            field_types = format!(
-                "{}[{} := {}]",
-                field_types,
-                field_env.get_offset(),
-                boogie_type_value(self.module_env.env, &field_env.get_type())
-            );
-        }
-        let field_array = format!(
-            "$TypeValueArray({}, {})",
-            field_types,
-            struct_env.get_field_count()
+        // Emit memory variable.
+        let memory_name = boogie_resource_memory_name(
+            struct_env.module_env.env,
+            struct_env.module_env.get_id(),
+            struct_env.get_id(),
         );
-        let type_value = format!(
-            "$StructType({}, {}, {})",
-            struct_name, type_param_array, field_array
-        );
-        if struct_name == "$LibraAccount_T" {
-            // Special treatment of well-known resource LibraAccount_T. The type_value
-            // function is forward-declared in the prelude, here we only add an axiom for it.
-            emitln!(
-                self.writer,
-                "axiom {}_type_value() == {};",
-                struct_name,
-                type_value
-            );
-        } else if struct_name == "$LibraAccount_Balance" {
-            // Special treatment of well-known resource LibraAccount_Balance. The type_value
-            // function is forward-declared in the prelude, here we only add an axiom for it.
-            emitln!(
-                self.writer,
-                "axiom (forall $tv0: $TypeValue :: {}_type_value($tv0) == {});",
-                struct_name,
-                type_value
-            );
-        } else {
-            emitln!(
-                self.writer,
-                "function {}_type_value({}): $TypeValue {{\n    {}\n}}",
-                struct_name,
-                type_args,
-                type_value
-            );
-        }
+        emitln!(self.writer, "var {}: $Memory;", memory_name);
 
         // Emit invariant functions.
         let spec_translator =
@@ -830,7 +798,7 @@ impl<'env> ModuleTranslator<'env> {
         for (i, ty) in func_target.get_return_types().iter().enumerate() {
             let ret_str = format!("$ret{}", i);
             if ty.is_reference() {
-                emitln!(self.writer, "{} := $DefaultReference;", &ret_str);
+                emitln!(self.writer, "{} := $DefaultMutation;", &ret_str);
             } else {
                 emitln!(self.writer, "{} := $DefaultValue();", &ret_str);
             }
@@ -926,8 +894,19 @@ impl<'env> ModuleTranslator<'env> {
             WriteBack(_, dest, src) => {
                 use BorrowNode::*;
                 match dest {
-                    GlobalRoot(_) => {
-                        emitln!(self.writer, "call $WritebackToGlobal({});", str_local(*src));
+                    GlobalRoot(struct_decl) => {
+                        let memory = boogie_resource_memory_name(
+                            func_target.global_env(),
+                            struct_decl.module_id,
+                            struct_decl.struct_id,
+                        );
+                        emitln!(
+                            self.writer,
+                            "call {} := $WritebackToGlobal({}, {});",
+                            memory,
+                            memory,
+                            str_local(*src),
+                        );
                     }
                     LocalRoot(idx) => {
                         emitln!(
@@ -966,12 +945,11 @@ impl<'env> ModuleTranslator<'env> {
             SpecBlock(_, block_id) => {
                 self.generate_function_spec_inside_impl(func_target, *block_id);
             }
-            Label(_, label) => {
+            Bytecode::Label(_, label) => {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
                 if ctx.loop_targets.contains_key(label) {
                     emitln!(self.writer, "assume !$abort_flag;");
-                    emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
                     let targets = &ctx.loop_targets[label];
                     for idx in 0..func_target.get_local_count() {
                         if let Some(ref_proxy_idx) = func_target.get_ref_proxy_index(idx) {
@@ -979,7 +957,7 @@ impl<'env> ModuleTranslator<'env> {
                                 let ref_proxy_var_name = str_local(*ref_proxy_idx);
                                 let proxy_idx = func_target.get_proxy_index(idx).unwrap();
                                 emitln!(self.writer,
-                            "assume l#$Reference({}) == $Local({}) && p#$Reference({}) == $EmptyPath;",
+                            "assume l#$Mutation({}) == $Local({}) && p#$Mutation({}) == $EmptyPath;",
                             ref_proxy_var_name,
                             proxy_idx,
                             ref_proxy_var_name);
@@ -1315,27 +1293,29 @@ impl<'env> ModuleTranslator<'env> {
                     Exists(mid, sid, type_actuals) => {
                         let addr = srcs[0];
                         let dest = dests[0];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
                         emitln!(
                             self.writer,
-                            "call $tmp := $Exists({}, {});",
+                            "$tmp := $ResourceExists({}, {}, {});",
+                            memory,
+                            type_args,
                             str_local(addr),
-                            resource_type
                         );
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     BorrowGlobal(mid, sid, type_actuals) => {
                         let addr = srcs[0];
                         let dest = dests[0];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
                         emitln!(
                             self.writer,
-                            "call {} := $BorrowGlobal({}, {});",
+                            "call {} := $BorrowGlobal({}, {}, {});",
                             str_local(dest),
+                            memory,
                             str_local(addr),
-                            resource_type,
+                            type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
                         emit!(
@@ -1352,13 +1332,14 @@ impl<'env> ModuleTranslator<'env> {
                     GetGlobal(mid, sid, type_actuals) => {
                         let addr = srcs[0];
                         let dest = dests[0];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
                         emitln!(
                             self.writer,
-                            "call $tmp := $GetGlobal({}, {});",
+                            "call $tmp := $GetGlobal({}, {}, {});",
+                            memory,
                             str_local(addr),
-                            resource_type,
+                            type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
                         emit!(
@@ -1376,12 +1357,14 @@ impl<'env> ModuleTranslator<'env> {
                     MoveTo(mid, sid, type_actuals) => {
                         let value = srcs[0];
                         let signer = srcs[1];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
                         emitln!(
                             self.writer,
-                            "call $MoveTo({}, {}, {});",
-                            resource_type,
+                            "call {} := $MoveTo({}, {}, {}, {});",
+                            memory,
+                            memory,
+                            type_args,
                             str_local(value),
                             str_local(signer),
                         );
@@ -1390,13 +1373,15 @@ impl<'env> ModuleTranslator<'env> {
                     MoveFrom(mid, sid, type_actuals) => {
                         let src = srcs[0];
                         let dest = dests[0];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
+                        let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
                         emitln!(
                             self.writer,
-                            "call $tmp := $MoveFrom({}, {});",
+                            "call {}, $tmp := $MoveFrom({}, {}, {});",
+                            memory,
+                            memory,
                             str_local(src),
-                            resource_type,
+                            type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
                         emit!(

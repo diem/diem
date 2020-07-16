@@ -112,10 +112,6 @@ module LibraSystem {
 
         set_validator_set(validator_set);
     }
-    spec fun remove_validator {
-        // TODO(wrwg): function needs long to verify, only enable it with large timeout.
-        pragma verify_duration_estimate = 60;
-    }
 
     // For a calling validator's operator copy the information from ValidatorConfig into the ValidatorSet.
     // This function makes no changes to the size or the members of the set.
@@ -199,6 +195,10 @@ module LibraSystem {
             assert forall j in 0..size: validators[j].addr != addr;
         };
         return Option::none()
+    }
+    spec fun get_validator_index_ {
+        /// TODO(wrwg): turn this on once we have better support for loops.
+        pragma verify = false;
     }
 
     // Updates ith validator info, if nothing changed, return false.
@@ -297,7 +297,6 @@ module LibraSystem {
     }
 
     spec fun add_validator {
-        pragma verify_duration_estimate = 50;
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if spec_is_validator(account_address);
@@ -316,10 +315,6 @@ module LibraSystem {
             CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
         );
         ensures !spec_is_validator(account_address);
-    }
-
-    spec fun update_config_and_reconfigure {
-        pragma verify_duration_estimate = 100;
     }
 
     spec fun get_validator_set {
@@ -349,9 +344,6 @@ module LibraSystem {
     }
 
     spec fun get_validator_index_ {
-        /// > TODO(tzakian): Turn this back on once this no longer times
-        /// > out in tests
-        pragma verify = false;
         pragma opaque = true;
         requires module spec_validators_is_set(validators);
         aborts_if false;

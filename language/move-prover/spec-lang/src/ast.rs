@@ -38,7 +38,7 @@ pub struct SpecFunDecl {
     pub params: Vec<(Symbol, Type)>,
     pub result_type: Type,
     pub used_spec_vars: BTreeSet<(ModuleId, SpecVarId)>,
-    pub is_pure: bool,
+    pub used_memory: BTreeSet<(ModuleId, StructId)>,
     pub uninterpreted: bool,
     pub body: Option<Exp>,
 }
@@ -328,7 +328,6 @@ pub enum Operation {
     Trace,
     Update,
     Concat,
-    Sender,
     MaxU8,
     MaxU64,
     MaxU128,
@@ -360,7 +359,7 @@ impl Operation {
     {
         use Operation::*;
         match self {
-            Sender | Exists | Global => false,
+            Exists | Global => false,
             Function(mid, fid) => check_pure(*mid, *fid),
             _ => true,
         }

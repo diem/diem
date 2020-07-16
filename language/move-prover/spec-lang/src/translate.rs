@@ -426,20 +426,7 @@ impl<'env> Translator<'env> {
             let pred_t = &Type::Fun(vec![param_t.clone()], Box::new(bool_t.clone()));
             let pred_num_t = &Type::Fun(vec![num_t.clone()], Box::new(bool_t.clone()));
 
-            // Transaction metadata
-            add_builtin(
-                self,
-                self.builtin_fun_symbol("sender"),
-                SpecFunEntry {
-                    loc: loc.clone(),
-                    oper: Operation::Sender,
-                    type_params: vec![],
-                    arg_types: vec![],
-                    result_type: address_t.clone(),
-                },
-            );
-
-            // constants (max_u8(), etc.)
+            // Constants (max_u8(), etc.)
             add_builtin(
                 self,
                 self.builtin_fun_symbol("max_u8"),
@@ -1028,8 +1015,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             params,
             result_type,
             used_spec_vars: BTreeSet::new(),
+            used_memory: BTreeSet::new(),
             uninterpreted,
-            is_pure: true,
             body: None,
         };
         self.spec_funs.push(fun_decl);
@@ -1204,9 +1191,8 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             }
         }
 
-        // Perform post analyzes of spec var usage in spec functions.
-        self.compute_spec_var_usage();
-
+        // Perform post analyzes of state usage in spec functions.
+        self.compute_state_usage();
         // Perform post reduction of module invariants.
         self.reduce_module_invariants();
     }
@@ -2493,11 +2479,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 /// ## Spec Var Usage Analysis
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
-    /// Compute spec var usage of spec funs.
-    fn compute_spec_var_usage(&mut self) {
+    /// Compute state usage of spec funs.
+    fn compute_state_usage(&mut self) {
         let mut visited = BTreeSet::new();
         for idx in 0..self.spec_funs.len() {
-            self.compute_spec_var_usage_for_fun(&mut visited, idx);
+            self.compute_state_usage_for_fun(&mut visited, idx);
         }
         // Check for purity requirements. All data invariants must be pure expressions and
         // not depend on global state.
@@ -2506,10 +2492,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 // This is calling a function from another module we already have
                 // translated.
                 let module_env = self.parent.env.get_module(mid);
-                module_env.get_spec_fun(fid).is_pure
+                let fun_decl = module_env.get_spec_fun(fid);
+                fun_decl.used_spec_vars.is_empty() && fun_decl.used_memory.is_empty()
             } else {
                 // This is calling a function from the module we are currently translating.
-                self.spec_funs[fid.as_usize()].is_pure
+                let fun_decl = &self.spec_funs[fid.as_usize()];
+                fun_decl.used_spec_vars.is_empty() && fun_decl.used_memory.is_empty()
             }
         };
         for struct_spec in self.struct_specs.values() {
@@ -2525,10 +2513,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
     }
 
-    /// Compute spec var usage for a given spec fun, defined via its index into the spec_funs
+    /// Compute state usage for a given spec fun, defined via its index into the spec_funs
     /// vector of the currently translated module. This recursively computes the values for
     /// functions called from this one; the visited set is there to break cycles.
-    fn compute_spec_var_usage_for_fun(&mut self, visited: &mut BTreeSet<usize>, fun_idx: usize) {
+    fn compute_state_usage_for_fun(&mut self, visited: &mut BTreeSet<usize>, fun_idx: usize) {
         if !visited.insert(fun_idx) {
             return;
         }
@@ -2539,19 +2527,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let body = if self.spec_funs[fun_idx].body.is_some() {
             std::mem::replace(&mut self.spec_funs[fun_idx].body, None).unwrap()
         } else {
-            // No body: assume it is impure unless uninterpreted.
-            // We need a modifier to declare otherwise
-            self.spec_funs[fun_idx].is_pure = self.spec_funs[fun_idx].uninterpreted;
+            // No body: assume it is pure.
             return;
         };
 
         let mut used_spec_vars = BTreeSet::new();
-        let mut is_pure = true;
+        let mut used_memory = BTreeSet::new();
         body.visit(&mut |e: &Exp| {
             match e {
                 Exp::SpecVar(_, mid, vid) => {
                     used_spec_vars.insert((*mid, *vid));
-                    is_pure = false;
                 }
                 Exp::Call(_, Operation::Function(mid, fid), _) => {
                     if mid.to_usize() < self.parent.env.get_module_count() {
@@ -2560,20 +2545,27 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         let module_env = self.parent.env.get_module(*mid);
                         let fun_decl = module_env.get_spec_fun(*fid);
                         used_spec_vars.extend(&fun_decl.used_spec_vars);
-                        is_pure = is_pure && fun_decl.is_pure
+                        used_memory.extend(&fun_decl.used_memory);
                     } else {
                         // This is calling a function from the module we are currently translating.
                         // Need to recursively ensure we have computed used_spec_vars because of
                         // arbitrary call graphs, including cyclic.
-                        self.compute_spec_var_usage_for_fun(visited, fid.as_usize());
+                        self.compute_state_usage_for_fun(visited, fid.as_usize());
                         let fun_decl = &self.spec_funs[fid.as_usize()];
                         used_spec_vars.extend(&fun_decl.used_spec_vars);
-                        is_pure = is_pure && fun_decl.is_pure;
+                        used_memory.extend(&fun_decl.used_memory);
                     }
                 }
-                Exp::Call(_, Operation::Sender, _)
-                | Exp::Call(_, Operation::Global, _)
-                | Exp::Call(_, Operation::Exists, _) => is_pure = false,
+                Exp::Call(node_id, Operation::Global, _)
+                | Exp::Call(node_id, Operation::Exists, _) => {
+                    if !self.parent.env.has_errors() {
+                        // We would crash if the type is not valid, so only do this if no errors
+                        // have been reported so far.
+                        let ty = &self.instantiation_map.get(node_id).expect("type exists")[0];
+                        let (mid, sid, _) = ty.require_struct();
+                        used_memory.insert((mid, sid));
+                    }
+                }
                 _ => {}
             }
         });
@@ -2582,7 +2574,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let fun_decl = &mut self.spec_funs[fun_idx];
         fun_decl.body = Some(body);
         fun_decl.used_spec_vars = used_spec_vars;
-        fun_decl.is_pure = is_pure;
+        fun_decl.used_memory = used_memory;
     }
 }
 

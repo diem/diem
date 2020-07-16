@@ -16,8 +16,9 @@ use log::{debug, info, warn};
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-        boogie_local_type, boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name,
-        boogie_struct_type_value, boogie_type_value, boogie_well_formed_expr, WellFormedMode,
+        boogie_local_type, boogie_resource_memory_name, boogie_spec_fun_name, boogie_spec_var_name,
+        boogie_struct_name, boogie_type_value, boogie_type_value_array, boogie_well_formed_expr,
+        WellFormedMode,
     },
     cli::Options,
 };
@@ -138,7 +139,6 @@ pub struct SpecTranslator<'env> {
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum TraceItem {
     // Automatically traced items when `options.prover.debug_trace_exp` is on.
-    Sender,
     Local(bool, Symbol),
     SpecVar(bool, ModuleId, SpecVarId, Vec<Type>),
     Exp,
@@ -318,6 +318,12 @@ impl<'env> SpecTranslator<'env> {
                     &decl.type_,
                 )
             });
+            let mem_params = fun.used_memory.iter().map(|(mid, sid)| {
+                format!(
+                    "{}: $Memory",
+                    boogie_resource_memory_name(self.module_env().env, *mid, *sid)
+                )
+            });
             let type_params = fun
                 .type_params
                 .iter()
@@ -330,15 +336,9 @@ impl<'env> SpecTranslator<'env> {
                     boogie_local_type(ty)
                 )
             });
-            let state_params = if fun.is_pure {
-                vec![]
-            } else {
-                vec!["$m: $Memory, $txn: $Transaction".to_string()]
-            };
             self.writer.set_location(&fun.loc);
             let boogie_name = boogie_spec_fun_name(&self.module_env(), *id);
-            let param_list = state_params
-                .into_iter()
+            let param_list = mem_params
                 .chain(spec_var_params)
                 .chain(type_params)
                 .chain(params)
@@ -589,15 +589,11 @@ impl<'env> SpecTranslator<'env> {
                         .string(func_target.get_local_name(i));
                     emitln!(
                         self.writer,
-                        "assume l#$Reference({}) == $Param({});",
+                        "assume l#$Mutation({}) == $Param({});",
                         name,
                         i
                     );
-                    emitln!(
-                        self.writer,
-                        "assume size#Path(p#$Reference({})) == 0;",
-                        name
-                    );
+                    emitln!(self.writer, "assume size#Path(p#$Mutation({})) == 0;", name);
                 }
             }
         }
@@ -707,7 +703,6 @@ impl<'env> SpecTranslator<'env> {
     /// Assumes preconditions for function. This is used for the top-level verification
     /// entry point of a function.
     pub fn assume_preconditions(&self) {
-        emitln!(self.writer, "assume $Memory__is_well_formed($m);");
         let func_target = self.function_target();
         // Assume requires.
         let requires = func_target
@@ -814,12 +809,7 @@ impl<'env> SpecTranslator<'env> {
                 self.writer,
                 "{}_is_well_formed($ResourceValue(m, {}, a))",
                 boogie_struct_name(struct_env),
-                boogie_struct_type_value(
-                    &struct_env.module_env.env,
-                    struct_env.module_env.get_id(),
-                    struct_env.get_id(),
-                    &type_args
-                ),
+                boogie_type_value_array(struct_env.module_env.env, &type_args)
             );
             self.writer.unindent();
             emitln!(self.writer, ");");
@@ -1362,9 +1352,6 @@ impl<'env> SpecTranslator<'env> {
             Operation::Global => self.translate_resource_access(node_id, args),
             Operation::Exists => self.translate_resource_exists(node_id, args),
             Operation::Len => self.translate_primitive_call("$vlen_value", args),
-            Operation::Sender => self.trace_value(node_id, TraceItem::Sender, || {
-                emit!(self.writer, "$TxnSender($txn)")
-            }),
             Operation::All => self.translate_all_or_exists(&loc, true, args),
             Operation::Any => self.translate_all_or_exists(&loc, false, args),
             Operation::TypeValue => self.translate_type_value(node_id),
@@ -1411,12 +1398,7 @@ impl<'env> SpecTranslator<'env> {
         let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
-        let mut first = if !fun_decl.is_pure {
-            emit!(self.writer, "$m, $txn");
-            false
-        } else {
-            true
-        };
+        let mut first = true;
         let mut maybe_comma = || {
             if first {
                 first = false;
@@ -1424,6 +1406,11 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ", ");
             }
         };
+        for (mid, sid) in &fun_decl.used_memory {
+            maybe_comma();
+            let memory = boogie_resource_memory_name(self.module_env().env, *mid, *sid);
+            emit!(self.writer, &memory);
+        }
         for (mid, vid) in &fun_decl.used_spec_vars {
             maybe_comma();
             let declaring_module = self.module_env().env.get_module(*mid);
@@ -1475,8 +1462,14 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_access(&self, node_id: NodeId, args: &[Exp]) {
         self.trace_value(node_id, TraceItem::Exp, || {
             let rty = &self.module_env().get_node_instantiation(node_id)[0];
-            let type_value = self.translate_type(rty);
-            emit!(self.writer, "$ResourceValue($m, {}, ", type_value);
+            let (mid, sid, targs) = rty.require_struct();
+            let env = self.module_env().env;
+            emit!(
+                self.writer,
+                "$ResourceValue({}, {}, ",
+                boogie_resource_memory_name(env, mid, sid),
+                boogie_type_value_array(env, targs)
+            );
             self.translate_exp(&args[0]);
             emit!(self.writer, ")");
         });
@@ -1485,8 +1478,14 @@ impl<'env> SpecTranslator<'env> {
     fn translate_resource_exists(&self, node_id: NodeId, args: &[Exp]) {
         self.trace_value(node_id, TraceItem::Exp, || {
             let rty = &self.module_env().get_node_instantiation(node_id)[0];
-            let type_value = self.translate_type(rty);
-            emit!(self.writer, "$ResourceExists($m, {}, ", type_value);
+            let (mid, sid, targs) = rty.require_struct();
+            let env = self.module_env().env;
+            emit!(
+                self.writer,
+                "$ResourceExists({}, {}, ",
+                boogie_resource_memory_name(env, mid, sid),
+                boogie_type_value_array(env, targs)
+            );
             self.translate_exp(&args[0]);
             emit!(self.writer, ")");
         });
