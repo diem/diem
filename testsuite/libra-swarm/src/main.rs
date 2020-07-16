@@ -67,7 +67,7 @@ fn main() {
             .expect("Failed to launch full node swarm");
     }
 
-    let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
+    let libra_root_key_path = &validator_swarm.config.libra_root_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
     let waypoint = validator_config.base.waypoint.waypoint();
 
@@ -76,7 +76,7 @@ fn main() {
     println!(
         "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {:?}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
-        faucet_key_file_path,
+        libra_root_key_path,
         waypoint,
         ChainId::test().id()
     );
@@ -99,7 +99,7 @@ fn main() {
     println!("To run transaction generator run:");
     println!(
         "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
-        faucet_key_file_path, node_address_list,
+        libra_root_key_path, node_address_list,
     );
 
     let node_address_list = ports
@@ -110,7 +110,7 @@ fn main() {
     println!("To run health check:");
     println!(
         "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
-        faucet_key_file_path, node_address_list,
+        libra_root_key_path, node_address_list,
     );
 
     if let Some(ref swarm) = full_node_swarm {
@@ -119,7 +119,7 @@ fn main() {
         println!(
             "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {}",
             format!("http://localhost:{}", full_node_config.rpc.address.port()),
-            faucet_key_file_path,
+            libra_root_key_path,
             waypoint,
             ChainId::test().id(),
         );
@@ -132,7 +132,7 @@ fn main() {
         let port = validator_swarm.get_client_port(0);
         let client = client::InteractiveClient::new_with_inherit_io(
             port,
-            Path::new(&faucet_key_file_path),
+            Path::new(&libra_root_key_path),
             &tmp_mnemonic_file.path(),
             waypoint,
         );

@@ -76,10 +76,10 @@ impl TestEnvironment {
             .create_as_file()
             .expect("could not create temporary mnemonic_file_path");
 
-        let key = generate_key::load_key(&validator_swarm.config.faucet_key_path);
+        let key = generate_key::load_key(&validator_swarm.config.libra_root_key_path);
         let key_path = validator_swarm
             .config
-            .faucet_key_path
+            .libra_root_key_path
             .to_str()
             .expect("Unable to read faucet path")
             .to_string();
