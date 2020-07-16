@@ -6,6 +6,7 @@ use libra_config::{
     config::{PeerNetworkId, UpstreamConfig},
     network_id::NetworkId,
 };
+use netcore::transport::ConnectionOrigin;
 use rand::seq::SliceRandom;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
@@ -64,14 +65,14 @@ impl PeerManager {
     }
 
     // returns true if `peer` is discovered for first time, else false
-    pub fn add_peer(&self, peer: PeerNetworkId) -> bool {
+    pub fn add_peer(&self, peer: PeerNetworkId, origin: ConnectionOrigin) -> bool {
         let mut peer_info = self
             .peer_info
             .lock()
             .expect("failed to acquire peer_info lock");
         let is_new_peer = !peer_info.contains_key(&peer);
-        if self.is_upstream_peer(&peer) {
-            if peer.network_id() == NetworkId::Validator {
+        if self.is_upstream_peer(&peer, Some(origin)) {
+            if peer.raw_network_id() == NetworkId::Validator {
                 // For a validator network, resume broadcasting from previous state
                 // we can afford to not re-broadcast here since the transaction is already in a validator
                 peer_info
@@ -131,7 +132,7 @@ impl PeerManager {
             .iter()
             .filter_map(|(peer, state)| {
                 if state.is_alive {
-                    Some((peer.network_id(), peer))
+                    Some((peer.raw_network_id(), peer))
                 } else {
                     None
                 }
@@ -160,7 +161,7 @@ impl PeerManager {
 
             if let Some(chosen) = current_failover {
                 if let Some(candidate) = &failover_candidate {
-                    if chosen.network_id() == candidate.network_id()
+                    if chosen.raw_network_id() == candidate.raw_network_id()
                         && peer_info.get(chosen).expect("missing peer state").is_alive
                     {
                         // if current chosen failover peer is alive, then do not overwrite it
@@ -255,16 +256,34 @@ impl PeerManager {
         sync_state.broadcast_info.backoff_mode = backoff;
     }
 
-    pub fn is_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
-        self.upstream_config
-            .get_upstream_preference(peer.network_id())
-            .is_some()
+    // if the origin is provided, checks whether this peer is an upstream peer based on configured preferences and
+    // connection origin
+    // if the origin is not provided, checks whether this peer is an upstream peer that was seen before
+    pub fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: Option<ConnectionOrigin>) -> bool {
+        if let Some(origin) = origin {
+            if Self::is_public_downstream(peer.raw_network_id(), origin) {
+                false
+            } else {
+                self.upstream_config
+                    .get_upstream_preference(peer.raw_network_id())
+                    .is_some()
+            }
+        } else {
+            self.peer_info
+                .lock()
+                .expect("failed to acquire peer lock")
+                .contains_key(peer)
+        }
     }
 
     fn is_primary_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
         self.upstream_config
-            .get_upstream_preference(peer.network_id())
+            .get_upstream_preference(peer.raw_network_id())
             == Some(0)
+    }
+
+    fn is_public_downstream(network_id: NetworkId, origin: ConnectionOrigin) -> bool {
+        network_id == NetworkId::Public && origin == ConnectionOrigin::Inbound
     }
 
     pub fn get_peer_state(&self, peer: &PeerNetworkId) -> PeerSyncState {
@@ -285,11 +304,22 @@ impl PeerManager {
             return true;
         }
 
-        // checks whether this peer a chosen upstream failover peer
+        // checks whether this peer is a chosen upstream failover peer
+        // NOTE: originally mempool should only broadcast to one peer in the failover network. This is
+        // to avoid creating too much competition for traffic in the failover network, which is in most
+        // cases also used by other public clients
+        // However, currently for VFN's public on-chain discovery, there is the unfortunate possibility
+        // that it might discover and select itself as an upstream fallback peer, so the txns will be
+        // self-broadcasted and make no actual progress.
+        // So until self-connection is actively checked against for in the networking layer, mempool
+        // will temporarily broadcast to all peers in its selected failover network as well
         self.failover_peer
             .lock()
             .expect("failed to get failover peer")
             .deref()
-            == &Some(peer.clone())
+            .as_ref()
+            .map_or(false, |failover| {
+                failover.raw_network_id() == peer.raw_network_id()
+            })
     }
 }

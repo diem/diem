@@ -9,6 +9,7 @@ use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
     config::{NetworkConfig, NodeConfig, RoleType},
+    network_id::NodeNetworkId,
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -125,7 +126,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     let mut network_builders = Vec::new();
 
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
-    for (role, network_config) in network_configs {
+    for (idx, (role, network_config)) in network_configs.into_iter().enumerate() {
         // Perform common instantiation steps
         let mut network_builder =
             NetworkBuilder::create(node_config.base.chain_id, role, network_config);
@@ -134,15 +135,23 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // Create the endpoints to connect the Network to StateSynchronizer.
         let (state_sync_sender, state_sync_events) = network_builder
             .add_protocol_handler(state_synchronizer::network::network_endpoint_config());
-        state_sync_network_handles.push((network_id.clone(), state_sync_sender, state_sync_events));
+        state_sync_network_handles.push((
+            NodeNetworkId::new(network_id.clone(), idx),
+            state_sync_sender,
+            state_sync_events,
+        ));
 
-        // Create the endpoints t connect the Network to MemPool.
+        // Create the endpoints to connect the Network to mempool.
         let (mempool_sender, mempool_events) =
             network_builder.add_protocol_handler(libra_mempool::network::network_endpoint_config(
                 // TODO:  Make this configuration option more clear.
                 node_config.mempool.max_broadcasts_per_peer,
             ));
-        mempool_network_handles.push((network_id, mempool_sender, mempool_events));
+        mempool_network_handles.push((
+            NodeNetworkId::new(network_id, idx),
+            mempool_sender,
+            mempool_events,
+        ));
 
         match role {
             // Perform steps relevant specifically to Validator networks.

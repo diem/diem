@@ -13,7 +13,7 @@ use executor_types::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, StreamExt};
 use libra_config::{
     config::{GossipConfig, RoleType},
-    network_id::{NetworkContext, NetworkId},
+    network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
@@ -326,7 +326,7 @@ impl SynchronizerEnv {
                 vec![NetworkId::vfn_network(), NetworkId::Public]
             };
             let mut network_ids = vec![];
-            for network in networks {
+            for (idx, network) in networks.into_iter().enumerate() {
                 let peer_id = PeerId::random();
                 network_ids.push(peer_id);
 
@@ -350,7 +350,11 @@ impl SynchronizerEnv {
                 self.network_conn_event_notifs_txs
                     .insert(peer_id, conn_status_tx);
 
-                network_handles.push((network, network_sender, network_events));
+                network_handles.push((
+                    NodeNetworkId::new(network, idx),
+                    network_sender,
+                    network_events,
+                ));
             }
 
             self.multi_peer_ids.push(network_ids);
@@ -402,7 +406,7 @@ impl SynchronizerEnv {
             network_builder.build(self.runtime.handle().clone()).start();
             let peer_addr = network_builder.listen_address();
             self.peer_addresses.push(peer_addr);
-            network_handles.push((network_id, sender, events));
+            network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
         };
 
         let genesis_li = Self::genesis_li(&self.public_keys);
@@ -921,7 +925,7 @@ fn test_sync_pending_ledger_infos() {
 
 #[test]
 fn test_fn_failover() {
-    let mut env = SynchronizerEnv::new(5);
+    let mut env = SynchronizerEnv::new(6);
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
@@ -948,6 +952,15 @@ fn test_fn_failover() {
         );
     }
 
+    // connect one PFN to vfn 0
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        Waypoint::default(),
+        true,
+        Some(vec![NetworkId::Public]),
+    );
+
     // connect everyone
     let validator = (0, 1);
     let fn_0_vfn = (1, 0);
@@ -955,6 +968,7 @@ fn test_fn_failover() {
     let fn_1 = (2, 1);
     let fn_2 = (3, 1);
     let fn_3 = (4, 1);
+    let pfn = (5, 0);
 
     // vfn network:
     // validator discovers fn_0
@@ -969,6 +983,10 @@ fn test_fn_failover() {
         env.send_peer_event(fn_0_public, *peer, true, Inbound);
         env.send_peer_event(*peer, fn_0_public, true, Outbound);
     }
+
+    // connect pfn to vfn
+    env.send_peer_event(pfn, fn_0_public, true, Inbound);
+    env.send_peer_event(fn_0_public, pfn, true, Outbound);
 
     // commit some txns on v
     // check that fn_0 sends chunk requests to v only

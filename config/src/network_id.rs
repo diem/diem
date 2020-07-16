@@ -59,15 +59,33 @@ impl NetworkContext {
 }
 
 /// A representation of the network being used in communication.
-/// There should only be one of each NetworkId used for a single node, and handshakes should verify
-/// that the NetworkId being used is the same during a handshake, to effectively ensure communication
-/// is restricted to a network.  Network should be checked that it is not the `DEFAULT_NETWORK`
+/// There should only be one of each NetworkId used for a single node (except for NetworkId::Public),
+/// and handshakes should verify that the NetworkId being used is the same during a handshake,
+/// to effectively ensure communication is restricted to a network.  Network should be checked that
+/// it is not the `DEFAULT_NETWORK`
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename = "NetworkId", rename_all = "snake_case")]
 pub enum NetworkId {
     Validator,
     Public,
     Private(String),
+}
+
+/// An intra-node identifier for a network of a node unique for a network
+/// This extra layer on top of `NetworkId` mainly exists for the application-layer (e.g. mempool,
+/// state sync) to differentiate between multiple public
+/// networks that a node may belong to
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub struct NodeNetworkId(NetworkId, usize);
+
+impl NodeNetworkId {
+    pub fn new(network_id: NetworkId, num_id: usize) -> Self {
+        Self(network_id, num_id)
+    }
+
+    pub fn network_id(&self) -> NetworkId {
+        self.0.clone()
+    }
 }
 
 /// Default needed to handle downstream structs that use `Default`

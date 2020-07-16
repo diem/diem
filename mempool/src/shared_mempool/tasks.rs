@@ -268,6 +268,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
             peer, e
         );
     }
+    notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
 }
 
 fn gen_ack_response(request_id: String, results: Vec<SubmissionStatus>) -> MempoolSyncMsg {

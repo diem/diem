@@ -18,7 +18,7 @@ use futures::{
 };
 use libra_config::{
     config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
-    network_id::NetworkId,
+    network_id::NodeNetworkId,
 };
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
@@ -157,7 +157,7 @@ pub(crate) struct SyncCoordinator<T> {
     // waypoint a node is not going to be abl
     waypoint: Waypoint,
     // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<NetworkId, StateSynchronizerSender>,
+    network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
     // peers used for synchronization
     peer_manager: PeerManager,
     // Optional sync request to be called when the target sync is reached
@@ -177,7 +177,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        network_senders: HashMap<NetworkId, StateSynchronizerSender>,
+        network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
         role: RoleType,
         waypoint: Waypoint,
         config: StateSyncConfig,
@@ -211,7 +211,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(
         mut self,
-        network_handles: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network_handles: Vec<(
+            NodeNetworkId,
+            StateSynchronizerSender,
+            StateSynchronizerEvents,
+        )>,
     ) {
         let mut interval = interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
 
@@ -250,10 +254,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     match network_event {
                         Ok(event) => {
                             match event {
-                                Event::NewPeer(peer_id, _origin) => {
+                                Event::NewPeer(peer_id, origin) => {
                                     let peer = PeerNetworkId(network_id, peer_id);
                                     debug!("[state sync] new peer {:?}", peer);
-                                    self.peer_manager.enable_peer(peer);
+                                    self.peer_manager.enable_peer(peer, origin);
                                     self.check_progress();
                                 }
                                 Event::LostPeer(peer_id, _origin) => {

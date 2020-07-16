@@ -3,8 +3,12 @@
 
 use crate::counters;
 use itertools::Itertools;
-use libra_config::config::{PeerNetworkId, UpstreamConfig};
+use libra_config::{
+    config::{PeerNetworkId, UpstreamConfig},
+    network_id::NetworkId,
+};
 use libra_logger::prelude::*;
+use netcore::transport::ConnectionOrigin;
 use rand::{
     distributions::{Distribution, WeightedIndex},
     thread_rng,
@@ -81,8 +85,8 @@ impl PeerManager {
         }
     }
 
-    pub fn enable_peer(&mut self, peer: PeerNetworkId) {
-        if !self.is_upstream_peer(&peer) {
+    pub fn enable_peer(&mut self, peer: PeerNetworkId, origin: ConnectionOrigin) {
+        if !self.is_upstream_peer(&peer, origin) {
             return;
         }
 
@@ -182,7 +186,7 @@ impl PeerManager {
                 .peers
                 .iter()
                 .filter(|(_peer, peer_info)| peer_info.is_alive)
-                .map(|(peer, peer_info)| (peer.network_id(), (peer, peer_info)))
+                .map(|(peer, peer_info)| (peer.raw_network_id(), (peer, peer_info)))
                 .into_group_map();
 
             // find the first network with any live peers
@@ -242,10 +246,17 @@ impl PeerManager {
         self.update_score(&peer_to_penalize, PeerScoreUpdateType::TimeOut);
     }
 
-    fn is_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
-        self.upstream_config
-            .get_upstream_preference(peer.network_id())
-            .is_some()
+    fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
+        let is_network_upstream = self
+            .upstream_config
+            .get_upstream_preference(peer.raw_network_id())
+            .is_some();
+        // check for case whether the peer is a public downstream peer, even if the public network is upstream
+        if is_network_upstream && peer.raw_network_id() == NetworkId::Public {
+            origin == ConnectionOrigin::Outbound
+        } else {
+            is_network_upstream
+        }
     }
 
     #[cfg(test)]

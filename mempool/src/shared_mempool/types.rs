@@ -16,7 +16,7 @@ use futures::{
 };
 use libra_config::{
     config::{MempoolConfig, PeerNetworkId},
-    network_id::NetworkId,
+    network_id::NodeNetworkId,
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -45,7 +45,7 @@ where
 {
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub config: MempoolConfig,
-    pub network_senders: HashMap<NetworkId, MempoolNetworkSender>,
+    pub network_senders: HashMap<NodeNetworkId, MempoolNetworkSender>,
     pub db: Arc<dyn DbReader>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,
