@@ -143,7 +143,7 @@ impl ClusterBuilder {
                         )
                     })
                     .collect();
-                lsrs.append(&mut vault_instances);
+                vaults.append(&mut vault_instances);
             }
             let mut lsr_instances: Vec<_> = (0..num_validators)
                 .map(|i| {
@@ -161,7 +161,7 @@ impl ClusterBuilder {
                     )
                 })
                 .collect();
-            vaults.append(&mut lsr_instances);
+            lsrs.append(&mut lsr_instances);
         }
         let validators = (0..num_validators).map(|i| {
             let validator_config = ValidatorConfig {
@@ -179,10 +179,11 @@ impl ClusterBuilder {
                 delete_data,
             )
         });
-        let lsrs = try_join_all(lsrs).await?;
-        let vaults = try_join_all(vaults).await?;
-        let validators = try_join_all(validators).await?;
-        Ok((validators, lsrs, vaults))
+        try_join!(
+            try_join_all(validators),
+            try_join_all(lsrs),
+            try_join_all(vaults),
+        )
     }
 
     /// Creates a set of fullnodes with the given `image_tag`
