@@ -83,13 +83,6 @@ spec:
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
       EOF
-      CFG_SEED_PEER_IP=$(kubectl get pod/val-{validator_index} -o=jsonpath='{{.status.podIP}}');
-      while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
-        sleep 5;
-        CFG_SEED_PEER_IP=$(kubectl get pod/val-{validator_index} -o=jsonpath='{{.status.podIP}}');
-        echo "Waiting for pod/val-{validator_index} IP Address";
-      done;
-      echo -n "${{CFG_SEED_PEER_IP}}" > /opt/libra/data/seed_peer_ip
   containers:
   - name: fluent-bit
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9
@@ -122,6 +115,8 @@ spec:
       value: "{fullnode_index}"
     - name: CFG_SEED
       value: "{cfg_seed}"
+    - name: CFG_SEED_PEER_IP
+      value: "{cfg_seed_peer_ip}"
     - name: CFG_FULLNODE_SEED
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
@@ -144,7 +139,6 @@ spec:
       - |
         set -x;
         export CFG_LISTEN_ADDR=$MY_POD_IP;
-        export CFG_SEED_PEER_IP=$(cat /opt/libra/data/seed_peer_ip);
         exec bash /docker-run-dynamic-fullnode.sh &> /opt/libra/data/libra.log
   volumes:
   - name: data
