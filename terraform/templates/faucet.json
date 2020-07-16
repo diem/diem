@@ -11,8 +11,9 @@
         "environment": [
             {"name": "AC_PORT", "value": "8080"},
             {"name": "AC_HOST", "value": "${ac_hosts}"},
-	    {"name": "CFG_SEED", "value": "${cfg_seed}"},
-	    {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
+            {"name": "CHAIN_ID", "value": "${chain_id}"},
+	          {"name": "CFG_SEED", "value": "${cfg_seed}"},
+	          {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
             {"name": "LOG_LEVEL", "value": "${log_level}"}
         ]
     }
