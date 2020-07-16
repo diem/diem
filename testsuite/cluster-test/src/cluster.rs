@@ -55,7 +55,7 @@ impl Cluster {
         let seed = seed[..32].try_into().expect("Invalid seed");
         let mut validator_config = ValidatorConfig::new();
         validator_config.seed = seed;
-        let (mint_key, _) = validator_config.build_faucet_key();
+        let (mint_key, _) = validator_config.build_libra_root_key();
         KeyPair::from(mint_key)
     }
 

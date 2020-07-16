@@ -219,12 +219,12 @@ fn build_faucet(args: FaucetArgs) {
         config_builder.seed = seed[..32].try_into().expect("Invalid seed");
     }
 
-    let (faucet_key, waypoint) = config_builder
+    let (libra_root_key, waypoint) = config_builder
         .build_faucet_client()
         .expect("Unable to build faucet");
     let key_path = args.output_dir.join("mint.key");
     fs::create_dir_all(&args.output_dir).expect("Unable to create output directory");
-    generate_key::save_key(faucet_key, key_path);
+    generate_key::save_key(libra_root_key, key_path);
 
     let waypoint_path = args.output_dir.join("waypoint.txt");
     let mut file =

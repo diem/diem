@@ -227,7 +227,7 @@ pub enum FullnodeType {
 
 pub struct FullnodeBuilder {
     validator_config_path: Vec<PathBuf>,
-    faucet_key_path: PathBuf,
+    libra_root_key_path: PathBuf,
     template: NodeConfig,
     build_type: FullnodeType,
 }
@@ -235,13 +235,13 @@ pub struct FullnodeBuilder {
 impl FullnodeBuilder {
     pub fn new(
         validator_config_path: Vec<PathBuf>,
-        faucet_key_path: PathBuf,
+        libra_root_key_path: PathBuf,
         template: NodeConfig,
         build_type: FullnodeType,
     ) -> Self {
         Self {
             validator_config_path,
-            faucet_key_path,
+            libra_root_key_path,
             template,
             build_type,
         }
@@ -319,7 +319,7 @@ impl BuildSwarm for FullnodeBuilder {
             FullnodeType::ValidatorFullnode => self.build_vfn(),
             FullnodeType::PublicFullnode(num_nodes) => self.build_public_fn(num_nodes),
         }?;
-        let faucet_key = generate_key::load_key(&self.faucet_key_path);
-        Ok((configs, faucet_key))
+        let libra_root_key_path = generate_key::load_key(&self.libra_root_key_path);
+        Ok((configs, libra_root_key_path))
     }
 }

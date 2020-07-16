@@ -141,7 +141,7 @@ impl FullNodeConfig {
         // Don't randomize ports. Until we better separate genesis generation,
         // we don't want to accidentally randomize initial discovery set addresses.
         let randomize_validator_ports = false;
-        let (validator_configs, faucet_key) = self
+        let (validator_configs, libra_root_key) = self
             .validator_config
             .build_common(randomize_validator_ports)?;
         let validator_config = validator_configs.first().ok_or(Error::NoConfigs)?;
@@ -205,15 +205,15 @@ impl FullNodeConfig {
             }
         }
 
-        Ok((configs, faucet_key))
+        Ok((configs, libra_root_key))
     }
 }
 
 impl BuildSwarm for FullNodeConfig {
     fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let (mut configs, faucet_key) = self.build_internal(true)?;
+        let (mut configs, libra_root_key) = self.build_internal(true)?;
         configs.swap_remove(configs.len() - 1);
-        Ok((configs, faucet_key))
+        Ok((configs, libra_root_key))
     }
 }
 
