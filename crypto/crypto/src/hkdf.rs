@@ -80,11 +80,14 @@ use digest::{
     BlockInput, FixedOutput, Reset, Update,
 };
 
-use generic_array::typenum::Unsigned;
+use generic_array::typenum::{IsGreaterOrEqual, True, Unsigned, U32};
 use hmac::{Hmac, Mac, NewMac};
 
 use std::marker::PhantomData;
 use thiserror::Error;
+
+/// Hash function are not supported if their output is less than 32 bits.
+type DMinimumSize = U32;
 
 /// Structure representing the HKDF, capable of HKDF-Extract and HKDF-Expand operations, as defined
 /// in RFC 5869.
@@ -94,6 +97,7 @@ where
     D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
     D::BlockSize: ArrayLength<u8>,
     D::OutputSize: ArrayLength<u8>,
+    D::OutputSize: IsGreaterOrEqual<DMinimumSize, Output = True>,
 {
     _marker: PhantomData<D>,
 }
@@ -103,17 +107,10 @@ where
     D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
     D::BlockSize: ArrayLength<u8> + Clone,
     D::OutputSize: ArrayLength<u8>,
+    D::OutputSize: IsGreaterOrEqual<DMinimumSize, Output = True>,
 {
-    /// Minimum acceptable output length for the underlying hash function is 32 bytes.
-    const D_MINIMUM_SIZE: usize = 32;
-
     /// The RFC5869 HKDF-Extract operation.
     pub fn extract(salt: Option<&[u8]>, ikm: &[u8]) -> Result<Vec<u8>, HkdfError> {
-        let d_output_size = D::OutputSize::to_usize();
-        if d_output_size < Hkdf::<D>::D_MINIMUM_SIZE {
-            return Err(HkdfError::NotSupportedHashFunctionError);
-        }
-
         let mut hmac = match salt {
             Some(s) => Hmac::<D>::new_varkey(s).map_err(|_| HkdfError::MACKeyError)?,
             None => Hmac::<D>::new(&Default::default()),
@@ -181,12 +178,6 @@ pub enum HkdfError {
     /// HKDF expand output exceeds the maximum allowed or is zero.
     #[error("HKDF expand error - requested output size exceeds the maximum allowed or is zero")]
     InvalidOutputLengthError,
-    /// Hash function is not supported because its output is less than 32 bits.
-    #[error(
-        "HKDF error - the hash function is not supported because \
-         its output is less than 32 bits"
-    )]
-    NotSupportedHashFunctionError,
     /// PRK on HKDF-Expand should not be less than the underlying hash output bits.
     #[error(
         "HKDF expand error - the pseudorandom key input ('prk' in RFC 5869) \
