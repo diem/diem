@@ -39,7 +39,7 @@ impl ProcessClientWrapper {
             ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
         config.storage.address = storage_addr;
 
-        let execution_correctness_manager = ExecutionCorrectnessManager::new(&mut config);
+        let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
         let execution_correctness = execution_correctness_manager.client();
 
         Self {

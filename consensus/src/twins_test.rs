@@ -47,7 +47,7 @@ struct SMRNode {
 impl SMRNode {
     fn start(
         playground: &mut NetworkPlayground,
-        mut config: NodeConfig,
+        config: NodeConfig,
         smr_id: usize,
         storage: Arc<MockStorage>,
         twin_id: TwinId,
@@ -104,7 +104,7 @@ impl SMRNode {
         let (self_sender, self_receiver) = channel::new(1_024, &counters::PENDING_SELF_MESSAGES);
 
         let epoch_mgr = EpochManager::new(
-            &mut config,
+            &config,
             time_service,
             self_sender,
             network_sender,

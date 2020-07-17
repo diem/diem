@@ -19,7 +19,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-pub fn storage(config: &mut SafetyRulesConfig) -> PersistentSafetyStorage {
+pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {
     let backend = &config.backend;
     let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
     internal_storage
@@ -65,7 +65,7 @@ pub struct SafetyRulesManager {
 }
 
 impl SafetyRulesManager {
-    pub fn new(config: &mut SafetyRulesConfig) -> Self {
+    pub fn new(config: &SafetyRulesConfig) -> Self {
         match &config.service {
             SafetyRulesService::Process(conf) => return Self::new_process(conf.server_address()),
             SafetyRulesService::SpawnedProcess(_) => return Self::new_spawned_process(config),

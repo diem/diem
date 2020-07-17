@@ -15,8 +15,8 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(mut config: SafetyRulesConfig) -> Self {
-        let storage = safety_rules_manager::storage(&mut config);
+    pub fn new(config: SafetyRulesConfig) -> Self {
+        let storage = safety_rules_manager::storage(&config);
 
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
         let service = match &config.service {
