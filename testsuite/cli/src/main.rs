@@ -32,8 +32,9 @@ struct Args {
         long,
         help = "\
             Explicitly specify the chain ID of the network the CLI is connecting to: e.g.,
-            for mainnet: \"MAINNET\" or 0, pre-mainnet: \"PREMAINNET\" or 1,
-            testnet: \"TESTNET\" or 2, devnet: \"DEVNET\" or 3, local swarm: \"TESTING\" or 4
+            for mainnet: \"MAINNET\" or 1, testnet: \"TESTNET\" or 2, devnet: \"DEVNET\" or 3, \
+            local swarm: \"TESTING\" or 4
+            Note: Chain ID of 0 is not allowed
         "
     )]
     pub chain_id: ChainId,
