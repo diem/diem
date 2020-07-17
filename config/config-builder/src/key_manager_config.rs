@@ -6,11 +6,11 @@ use libra_config::config::{KeyManagerConfig as KMConfig, SecureBackend, Token, V
 use libra_types::chain_id::ChainId;
 
 pub struct KeyManagerConfig {
-    pub chain_id: ChainId,
     pub rotation_period_secs: Option<u64>,
     pub sleep_period_secs: Option<u64>,
     pub txn_expiration_secs: Option<u64>,
 
+    pub chain_id: ChainId,
     pub json_rpc_endpoint: String,
 
     pub vault_host: String,
@@ -24,10 +24,10 @@ impl Default for KeyManagerConfig {
     fn default() -> Self {
         let template = KMConfig::default();
         Self {
-            chain_id: ChainId::test(),
             rotation_period_secs: None,
             sleep_period_secs: None,
             txn_expiration_secs: None,
+            chain_id: ChainId::test(),
             json_rpc_endpoint: template.json_rpc_endpoint.clone(),
             vault_host: "127.0.0.1:8200".to_string(),
             vault_namespace: None,
@@ -73,12 +73,14 @@ mod test {
 
     #[test]
     fn verify_generation() {
+        let chain_id = ChainId::test();
         let json_rpc_endpoint = "http://127.12.12.12:7873";
         let rotation_period_secs = 100;
         let vault_host = "182.0.0.1:8080";
         let vault_token = "root_token";
 
         let mut key_manager_config = KeyManagerConfig::new();
+        key_manager_config.chain_id = chain_id;
         key_manager_config.json_rpc_endpoint = json_rpc_endpoint.into();
         key_manager_config.rotation_period_secs = Some(rotation_period_secs);
         key_manager_config.vault_host = vault_host.into();
@@ -86,6 +88,7 @@ mod test {
 
         let key_manager_config = key_manager_config.build().unwrap();
 
+        assert_eq!(chain_id, key_manager_config.chain_id);
         assert_eq!(json_rpc_endpoint, key_manager_config.json_rpc_endpoint);
         assert_eq!(
             rotation_period_secs,
