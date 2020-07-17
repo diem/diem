@@ -47,5 +47,13 @@ validator_network:
             ca_certificate: "/full/path/to/certificate"
             token:
                 from_disk: "/full/path/to/token"
+    shared_val_netaddr_keys:
+        type: "from_storage"
+        backend:
+            type: "vault"
+            server: "https://127.0.0.1:8200"
+            ca_certificate: "/full/path/to/certificate"
+            token:
+                from_disk: "/full/path/to/token"
     mutual_authentication: true
     max_frame_size: 8388608 # 8 MiB

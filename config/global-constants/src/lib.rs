@@ -18,6 +18,7 @@ pub const OPERATOR_KEY: &str = "operator";
 pub const OWNER_ACCOUNT: &str = "owner_account";
 pub const OWNER_KEY: &str = "owner";
 pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
+pub const SHARED_VAL_NETADDR_KEY: &str = "shared_val_netaddr_key";
 
 /// Definitions of global data items (e.g., as held in secure storage)
 pub const EPOCH: &str = "epoch";

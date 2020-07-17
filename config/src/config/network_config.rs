@@ -8,7 +8,7 @@ use crate::{
     utils,
 };
 use libra_crypto::{x25519, Uniform};
-use libra_network_address::NetworkAddress;
+use libra_network_address::{encrypted as netaddr, NetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{
@@ -30,6 +30,10 @@ use std::{
 pub const HANDSHAKE_VERSION: u8 = 0;
 pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024;
 
+// we don't currently support rotating this key, so we just assume key_version
+// is always 0. we will tackle rotation post-v1.
+pub const SHARED_VAL_NETADDR_KEY_VERSION: netaddr::KeyVersion = 0;
+
 pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
 
@@ -40,6 +44,7 @@ pub struct NetworkConfig {
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
     pub identity: Identity,
+    pub shared_val_netaddr_keys: SharedValNetAddrKeys,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: NetworkAddress,
@@ -70,6 +75,7 @@ impl NetworkConfig {
             connectivity_check_interval_ms: 5000,
             discovery_method: DiscoveryMethod::None,
             identity: Identity::None,
+            shared_val_netaddr_keys: SharedValNetAddrKeys::None,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             mutual_authentication: false,
             network_id,
@@ -122,7 +128,7 @@ impl NetworkConfig {
         match &self.identity {
             Identity::FromConfig(config) => Some(config.peer_id),
             Identity::FromStorage(config) => {
-                let storage: Storage = (&config.backend).into();
+                let storage = Storage::from(&config.backend);
                 let peer_id = storage
                     .get(&config.peer_id_name)
                     .expect("Unable to read peer id")
@@ -134,6 +140,45 @@ impl NetworkConfig {
             Identity::None => None,
         }
         .expect("peer id should be present")
+    }
+
+    pub fn shared_val_netaddr_keys(&mut self) -> HashMap<netaddr::KeyVersion, netaddr::Key> {
+        // The shared validator network address key is only used in the
+        // validator network. For all other cases, we'll just return an empty key
+        // map.
+        if self.network_id != NetworkId::Validator {
+            return HashMap::new();
+        }
+
+        let keys = match &mut self.shared_val_netaddr_keys {
+            SharedValNetAddrKeys::FromConfig { keys } => keys.drain().collect(),
+            SharedValNetAddrKeys::FromStorage { backend } => {
+                let storage = Storage::from(&*backend);
+                let key_bytes = storage
+                    .get(libra_global_constants::SHARED_VAL_NETADDR_KEY)
+                    .expect("Unable to read shared_val_netaddr_keys")
+                    .value
+                    .bytes()
+                    .expect("Expected bytes for shared_val_netaddr_keys");
+                let key = netaddr::Key::try_from(key_bytes.as_slice())
+                    .expect("Expected shared_val_netaddr_keys bytes to be well-formatted");
+
+                // TODO(philiphayes): add rotation + multiple keys support. for
+                // now just assume a constant version.
+                let key_version = SHARED_VAL_NETADDR_KEY_VERSION;
+
+                let mut keys = HashMap::new();
+                keys.insert(key_version, key);
+                keys
+            }
+            SharedValNetAddrKeys::None => HashMap::new(),
+        };
+
+        assert!(
+            !keys.is_empty(),
+            "shared_val_netaddr_keys should not be empty for validators"
+        );
+        keys
     }
 
     fn prepare_identity(&mut self) {
@@ -266,4 +311,17 @@ pub struct IdentityFromStorage {
     pub backend: SecureBackend,
     pub key_name: String,
     pub peer_id_name: String,
+}
+
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum SharedValNetAddrKeys {
+    FromConfig {
+        keys: HashMap<netaddr::KeyVersion, netaddr::Key>,
+    },
+    FromStorage {
+        backend: SecureBackend,
+    },
+    None,
 }
