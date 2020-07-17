@@ -11,11 +11,14 @@ use std::{
 /// A registry of named chain IDs
 /// Its main purpose is to improve human readability of reserved chain IDs in config files and CLI
 /// When signing transactions for such chains, the numerical chain ID should still be used
-/// (e.g. MAINNET has numeric chain ID 0, PREMAINNET has chain ID 1, etc)
+/// (e.g. MAINNET has numeric chain ID 1, PREMAINNET has chain ID 2, etc)
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
 pub enum NamedChain {
-    /// MAINNET is the Libra mainnet production chain and is reserved for 0
+    /// Users might accidentally initialize the ChainId field to 0, hence reserving ChainId 0 for accidental
+    /// initialization.
+    ACCIDENTAL_INITIALIZATION,
+    /// MAINNET is the Libra mainnet production chain and reserves ChainId 1.
     MAINNET,
     // The Libra chain below are non-reserved, non-production, and may change over time.  They are listed for convenience here.
     PREMAINNET,
