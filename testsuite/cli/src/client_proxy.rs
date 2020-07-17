@@ -454,7 +454,7 @@ impl ClientProxy {
             .map(|s| s == &"use_base_units")
             .unwrap_or(false);
         let num_coins = if !use_base_units {
-            self.convert_to_on_chain_represenation(space_delim_strings[2], mint_currency)?
+            self.convert_to_on_chain_representation(space_delim_strings[2], mint_currency)?
         } else {
             Self::convert_to_scaled_representation(space_delim_strings[2], 1, 1)?
         };
@@ -876,7 +876,7 @@ impl ClientProxy {
 
         let transfer_currency = space_delim_strings[4];
         let num_coins =
-            self.convert_to_on_chain_represenation(space_delim_strings[3], transfer_currency)?;
+            self.convert_to_on_chain_representation(space_delim_strings[3], transfer_currency)?;
 
         let gas_unit_price = if space_delim_strings.len() > 5 {
             Some(space_delim_strings[5].parse::<u64>().map_err(|error| {
@@ -1559,7 +1559,7 @@ impl ClientProxy {
     }
 
     /// convert number of coins (main unit) given as string to its on-chain represention
-    pub fn convert_to_on_chain_represenation(
+    pub fn convert_to_on_chain_representation(
         &mut self,
         input: &str,
         currency: &str,
