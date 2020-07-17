@@ -197,23 +197,18 @@ resource "aws_instance" "validator" {
   }
 }
 
-resource "random_id" "chain_id" {
-  byte_length = 2
-}
-
 locals {
   seed_peer_ip           = aws_instance.validator.0.private_ip
   validator_command      = var.log_to_file || var.enable_logstash ? jsonencode(["bash", "-c", "/docker-run-dynamic.sh >> ${var.log_path} 2>&1"]) : ""
   aws_elasticsearch_host = var.enable_logstash ? join(",", aws_elasticsearch_domain.logging.*.endpoint) : ""
   logstash_config        = "input { file { path => '${var.structlog_path}'\\n codec => 'json'\\n}}\\n filter {  json {  \\nsource => 'message'\\n}}\\n output {  amazon_es { \\nhosts => ['https://${local.aws_elasticsearch_host}']\\nregion => 'us-west-2'\\nindex => 'validator-logs-%%{+YYYY.MM.dd}'\\n}}"
-  chain_id               = "ecs-${terraform.workspace}-${random_id.chain_id.hex}"
 }
 
 data "template_file" "validator_config" {
   template = file("templates/validator.yaml")
 
   vars = {
-    chain_id = local.chain_id
+    chain_id = var.chain_id
   }
 }
 
