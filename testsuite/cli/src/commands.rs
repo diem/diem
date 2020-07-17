@@ -3,7 +3,7 @@
 
 use crate::{
     account_commands::AccountCommand, client_proxy::ClientProxy, dev_commands::DevCommand,
-    query_commands::QueryCommand, transfer_commands::TransferCommand,
+    info_commands::InfoCommand, query_commands::QueryCommand, transfer_commands::TransferCommand,
 };
 use anyhow::Error;
 use libra_metrics::counters::*;
@@ -48,6 +48,7 @@ pub fn get_commands(
         Arc::new(AccountCommand {}),
         Arc::new(QueryCommand {}),
         Arc::new(TransferCommand {}),
+        Arc::new(InfoCommand {}),
     ];
     if include_dev {
         commands.push(Arc::new(DevCommand {}));
