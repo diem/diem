@@ -9,7 +9,7 @@ use crate::{
         },
         transaction::{MempoolTransaction, TimelineState},
     },
-    OP_COUNTERS,
+    counters, OP_COUNTERS,
 };
 use anyhow::{format_err, Result};
 use libra_config::config::MempoolConfig;
@@ -138,9 +138,21 @@ impl TransactionStore {
     }
 
     fn track_indices(&self) {
-        OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
-        OP_COUNTERS.set("txn.parking_lot_index", self.parking_lot_index.size());
-        OP_COUNTERS.set("txn.priority_index", self.priority_index.size());
+        counters::CORE_MEMPOOL_INDEX_SIZE
+            .with_label_values(&[counters::SYSTEM_TTL_INDEX_LABEL])
+            .set(self.system_ttl_index.size() as i64);
+        counters::CORE_MEMPOOL_INDEX_SIZE
+            .with_label_values(&[counters::EXPIRATION_TIME_INDEX_LABEL])
+            .set(self.expiration_time_index.size() as i64);
+        counters::CORE_MEMPOOL_INDEX_SIZE
+            .with_label_values(&[counters::PRIORITY_INDEX_LABEL])
+            .set(self.priority_index.size() as i64);
+        counters::CORE_MEMPOOL_INDEX_SIZE
+            .with_label_values(&[counters::PARKING_LOT_INDEX_LABEL])
+            .set(self.parking_lot_index.size() as i64);
+        counters::CORE_MEMPOOL_INDEX_SIZE
+            .with_label_values(&[counters::TIMELINE_INDEX_LABEL])
+            .set(self.timeline_index.size() as i64);
     }
 
     /// checks if Mempool is full
@@ -233,6 +245,10 @@ impl TransactionStore {
                 if txn.timeline_state == TimelineState::NotReady {
                     self.timeline_index.insert(txn);
                 }
+
+                // remove txn from parking lot after it has been promoted to priority_index / timeline_index,
+                // i.e. txn status is ready
+                self.parking_lot_index.remove(txn);
                 sequence_number += 1;
             }
 
@@ -249,6 +265,7 @@ impl TransactionStore {
             trace!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
                 address, current_sequence_number, txns.len(), parking_lot_txns,
             );
+            self.track_indices();
         }
     }
 
@@ -393,5 +410,10 @@ impl TransactionStore {
 
     pub(crate) fn iter_queue(&self) -> PriorityQueueIter {
         self.priority_index.iter()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_parking_lot_size(&self) -> usize {
+        self.parking_lot_index.size()
     }
 }

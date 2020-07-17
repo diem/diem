@@ -241,6 +241,10 @@ impl TimelineIndex {
             self.timeline.remove(&timeline_id);
         }
     }
+
+    pub(crate) fn size(&self) -> usize {
+        self.timeline.len()
+    }
 }
 
 /// ParkingLotIndex keeps track of "not_ready" transactions
