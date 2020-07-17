@@ -3,9 +3,12 @@
 
 use crate::{constants, layout::Layout, storage_helper::StorageHelper};
 use config_builder::BuildSwarm;
-use libra_config::config::{
-    Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedAddresses,
-    WaypointConfig, HANDSHAKE_VERSION,
+use libra_config::{
+    config::{
+        DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService,
+        SecureBackend, SeedAddresses, WaypointConfig, HANDSHAKE_VERSION,
+    },
+    network_id::NetworkId,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
@@ -252,9 +255,15 @@ impl FullnodeBuilder {
         let mut full_node_config = self.template.clone_for_template();
         full_node_config.randomize_ports();
 
-        // The FN's first network is the external, public network, it needs to swap listen addresses
+        // The FN's external, public network needs to swap listen addresses
         // with the validator's VFN and to copy it's key access:
-        let pfn = &mut full_node_config.full_node_networks[0];
+        let pfn = &mut full_node_config
+            .full_node_networks
+            .iter_mut()
+            .find(|n| {
+                n.network_id == NetworkId::Public && n.discovery_method != DiscoveryMethod::Onchain
+            })
+            .expect("vfn missing external public network in config");
         let v_vfn = &mut validator_config.full_node_networks[0];
         pfn.identity = v_vfn.identity.clone();
         let temp_listen = v_vfn.listen_address.clone();
@@ -272,7 +281,11 @@ impl FullnodeBuilder {
         let mut seed_addrs = SeedAddresses::default();
         seed_addrs.insert(v_vfn_id, vec![v_vfn_network_address]);
 
-        let fn_vfn = &mut full_node_config.full_node_networks[1];
+        let fn_vfn = &mut full_node_config
+            .full_node_networks
+            .iter_mut()
+            .find(|n| matches!(n.network_id, NetworkId::Private(_)))
+            .expect("vfn missing vfn full node network in config");
         fn_vfn.seed_addrs = seed_addrs;
 
         Self::insert_waypoint_and_genesis(&mut full_node_config, &validator_config);
