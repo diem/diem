@@ -12,26 +12,26 @@ fi
 if [ -n "${CFG_CHAIN_ID}" ]; then
         params+="--chain-id ${CFG_CHAIN_ID} "
 fi
-if [ -n "${JSON_RPC_ENDPOINT}" ]; then
-    params+="--json-rpc-endpoint ${JSON_RPC_ENDPOINT} "
+if [ -n "${CFG_JSON_RPC_ENDPOINT}" ]; then
+    params+="--json-rpc-endpoint ${CFG_JSON_RPC_ENDPOINT} "
 fi
-if [ -n "${ROTATION_PERIOD_SECS}" ]; then
-    params+="--rotation-period-secs ${ROTATION_PERIOD_SECS} "
+if [ -n "${CFG_ROTATION_PERIOD_SECS}" ]; then
+    params+="--rotation-period-secs ${CFG_ROTATION_PERIOD_SECS} "
 fi
-if [ -n "${SLEEP_PERIOD_SECS}" ]; then
-    params+="--sleep-period-secs ${SLEEP_PERIOD_SECS} "
+if [ -n "${CFG_SLEEP_PERIOD_SECS}" ]; then
+    params+="--sleep-period-secs ${CFG_SLEEP_PERIOD_SECS} "
 fi
-if [ -n "${TXN_EXPIRATION_SECS}" ]; then
-    params+="--txn-expiration-secs ${TXN_EXPIRATION_SECS} "
+if [ -n "${CFG_TXN_EXPIRATION_SECS}" ]; then
+    params+="--txn-expiration-secs ${CFG_TXN_EXPIRATION_SECS} "
 fi
-if [ -n "${VAULT_HOST}" ]; then
-    params+="--vault-host ${VAULT_HOST} "
+if [ -n "${CFG_VAULT_HOST}" ]; then
+    params+="--vault-host ${CFG_VAULT_HOST} "
 fi
-if [ -n "${VAULT_TOKEN}" ]; then
-    params+="--vault-token ${VAULT_TOKEN} "
+if [ -n "${CFG_VAULT_NAMESPACE}" ]; then
+    params+="--vault-namespace ${CFG_VAULT_NAMESPACE} "
 fi
-if [ -n "${VAULT_NAMESPACE}" ]; then
-    params+="--vault-namespace ${VAULT_NAMESPACE} "
+if [ -n "${CFG_VAULT_TOKEN}" ]; then
+    params+="--vault-token ${CFG_VAULT_TOKEN} "
 fi
 
 /opt/libra/bin/config-builder key-manager \
