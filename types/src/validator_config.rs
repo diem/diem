@@ -3,7 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
+use libra_network_address::{RawEncNetworkAddress, RawNetworkAddress};
 use move_core_types::move_resource::MoveResource;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;

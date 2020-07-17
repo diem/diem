@@ -14,10 +14,8 @@ use libra_crypto::{
     PrivateKey, Uniform, ValidCryptoMaterial,
 };
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    RawNetworkAddress,
+    RawEncNetworkAddress, RawNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+    TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 use libra_types::{
     account_address, account_config,

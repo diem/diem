@@ -15,7 +15,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Un
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
-use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
+use libra_network_address::{RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{

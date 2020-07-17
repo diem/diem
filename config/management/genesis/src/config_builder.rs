@@ -15,7 +15,7 @@ use libra_management::{
     constants::{COMMON_NS, LAYOUT},
     layout::Layout,
 };
-use libra_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY;
+use libra_network_address::TEST_SHARED_VAL_NETADDR_KEY;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};

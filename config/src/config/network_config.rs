@@ -8,7 +8,7 @@ use crate::{
     utils,
 };
 use libra_crypto::{x25519, Uniform};
-use libra_network_address::{encrypted as netaddr, NetworkAddress};
+use libra_network_address::{self as netaddr, NetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{

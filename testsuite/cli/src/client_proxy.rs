@@ -19,8 +19,7 @@ use libra_json_rpc_client::views::{
 };
 use libra_logger::prelude::*;
 use libra_network_address::{
-    encrypted::{self as netaddr, RawEncNetworkAddress},
-    NetworkAddress, RawNetworkAddress,
+    self as netaddr, NetworkAddress, RawEncNetworkAddress, RawNetworkAddress,
 };
 use libra_temppath::TempPath;
 use libra_types::{

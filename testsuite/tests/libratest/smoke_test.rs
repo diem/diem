@@ -16,8 +16,7 @@ use libra_key_manager::{
 };
 use libra_management::constants;
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, RawEncNetworkAddress},
-    NetworkAddress, RawNetworkAddress,
+    EncNetworkAddress, NetworkAddress, RawEncNetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_secure_time::{RealTimeService, TimeService};

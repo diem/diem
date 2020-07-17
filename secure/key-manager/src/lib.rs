@@ -27,7 +27,7 @@ use crate::{
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::prelude::*;
-use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
+use libra_network_address::{RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{

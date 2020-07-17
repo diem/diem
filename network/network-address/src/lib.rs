@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::encrypted::{EncNetworkAddress, Key, KeyVersion};
 use libra_crypto::{
     traits::{CryptoMaterialError, ValidCryptoMaterialStringExt},
     x25519,
@@ -23,7 +22,12 @@ use std::{
 };
 use thiserror::Error;
 
-pub mod encrypted;
+mod encrypted;
+
+pub use encrypted::{
+    EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+    TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+};
 
 const MAX_DNS_NAME_SIZE: usize = 255;
 

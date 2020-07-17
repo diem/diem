@@ -11,7 +11,7 @@ use libra_global_constants::{
     WAYPOINT,
 };
 use libra_management::{error::Error, secure_backend::DISK};
-use libra_network_address::{encrypted as netaddr, NetworkAddress};
+use libra_network_address::{self as netaddr, NetworkAddress};
 use libra_secure_storage::{
     CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
 };

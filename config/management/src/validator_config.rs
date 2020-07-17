@@ -13,8 +13,7 @@ use libra_global_constants::{
     VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{
-    encrypted::{self as netaddr, RawEncNetworkAddress},
-    NetworkAddress, RawNetworkAddress,
+    self as netaddr, NetworkAddress, RawEncNetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};

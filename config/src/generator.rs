@@ -12,8 +12,7 @@ use crate::{
     network_id::NetworkId,
 };
 use libra_network_address::{
-    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
-    NetworkAddress,
+    NetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use std::iter;

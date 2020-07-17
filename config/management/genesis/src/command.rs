@@ -212,7 +212,7 @@ pub mod tests {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use libra_management::constants;
-    use libra_network_address::encrypted::{self as netaddr, TEST_SHARED_VAL_NETADDR_KEY};
+    use libra_network_address::{self as netaddr, TEST_SHARED_VAL_NETADDR_KEY};
     use libra_secure_storage::{CryptoStorage, KVStorage, Value};
     use libra_types::{
         account_address,

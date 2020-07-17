@@ -5,7 +5,7 @@ use libra_crypto::{
     traits::Uniform,
     x25519::{PrivateKey, PublicKey},
 };
-use libra_network_address as address;
+use libra_network_address as netaddr;
 use network::protocols::wire::{handshake, messaging};
 use rand::{rngs::StdRng, SeedableRng};
 use serde_reflection::{Registry, Result, Samples, Tracer, TracerConfig};
@@ -35,21 +35,21 @@ pub fn get_registry() -> Result<Registry> {
     trace_crypto_values(&mut tracer, &mut samples)?;
     tracer.trace_value(
         &mut samples,
-        &address::DnsName::from_str("example.com").unwrap(),
+        &netaddr::DnsName::from_str("example.com").unwrap(),
     )?;
-    tracer.trace_value(&mut samples, &address::NetworkAddress::mock())?;
+    tracer.trace_value(&mut samples, &netaddr::NetworkAddress::mock())?;
 
     // 2. Trace the main entry point(s) + every enum separately.
     tracer.trace_type::<messaging::v1::NetworkMessage>(&samples)?;
     tracer.trace_type::<handshake::v1::HandshakeMsg>(&samples)?;
-    tracer.trace_type::<address::NetworkAddress>(&samples)?;
-    tracer.trace_type::<address::RawNetworkAddress>(&samples)?;
-    tracer.trace_type::<address::encrypted::EncNetworkAddress>(&samples)?;
-    tracer.trace_type::<address::encrypted::RawEncNetworkAddress>(&samples)?;
+    tracer.trace_type::<netaddr::NetworkAddress>(&samples)?;
+    tracer.trace_type::<netaddr::RawNetworkAddress>(&samples)?;
+    tracer.trace_type::<netaddr::EncNetworkAddress>(&samples)?;
+    tracer.trace_type::<netaddr::RawEncNetworkAddress>(&samples)?;
 
     tracer.trace_type::<messaging::v1::ErrorCode>(&samples)?;
     tracer.trace_type::<handshake::v1::ProtocolId>(&samples)?;
-    tracer.trace_type::<address::Protocol>(&samples)?;
+    tracer.trace_type::<netaddr::Protocol>(&samples)?;
     tracer.trace_type::<libra_config::network_id::NetworkId>(&samples)?;
 
     tracer.registry()

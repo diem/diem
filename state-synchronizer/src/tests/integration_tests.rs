@@ -18,10 +18,8 @@ use libra_config::{
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
+    NetworkAddress, RawEncNetworkAddress, RawNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+    TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 use libra_types::{
     chain_id::ChainId, contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,

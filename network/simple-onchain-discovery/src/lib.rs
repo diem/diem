@@ -9,8 +9,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress},
-    NetworkAddress, RawNetworkAddress,
+    self as netaddr, EncNetworkAddress, NetworkAddress, RawEncNetworkAddress, RawNetworkAddress,
 };
 use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
 use move_core_types::account_address::AccountAddress;
@@ -51,7 +50,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 /// for the ConnectivityManager.
 pub struct ConfigurationChangeListener {
     role: RoleType,
-    shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
+    shared_val_netaddr_key_map: HashMap<netaddr::KeyVersion, netaddr::Key>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 }
@@ -62,7 +61,7 @@ pub fn gen_simple_discovery_reconfig_subscription(
 }
 
 fn decrypt_validator_netaddr(
-    shared_val_netaddr_key_map: &HashMap<KeyVersion, Key>,
+    shared_val_netaddr_key_map: &HashMap<netaddr::KeyVersion, netaddr::Key>,
     account: &AccountAddress,
     addr_idx: u32,
     raw_enc_addr: RawEncNetworkAddress,
@@ -87,7 +86,7 @@ fn decrypt_validator_netaddr(
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
 fn extract_updates(
     role: RoleType,
-    shared_val_netaddr_key_map: &HashMap<KeyVersion, Key>,
+    shared_val_netaddr_key_map: &HashMap<netaddr::KeyVersion, netaddr::Key>,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
     // TODO(philiphayes): remove this after removing explicit pubkey field
@@ -176,7 +175,7 @@ impl ConfigurationChangeListener {
     /// Creates a new ConfigurationListener
     pub fn new(
         role: RoleType,
-        shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
+        shared_val_netaddr_key_map: HashMap<netaddr::KeyVersion, netaddr::Key>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {

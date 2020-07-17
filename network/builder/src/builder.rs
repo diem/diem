@@ -17,10 +17,7 @@ use libra_config::{
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
-use libra_network_address::{
-    encrypted::{Key, KeyVersion},
-    NetworkAddress,
-};
+use libra_network_address::{self as netaddr, NetworkAddress};
 use libra_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
@@ -338,7 +335,7 @@ impl NetworkBuilder {
     fn add_configuration_change_listener(
         &mut self,
         role: RoleType,
-        shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
+        shared_val_netaddr_key_map: HashMap<netaddr::KeyVersion, netaddr::Key>,
     ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()

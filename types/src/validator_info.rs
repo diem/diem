@@ -7,10 +7,8 @@ use libra_crypto::Uniform;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
+    NetworkAddress, RawEncNetworkAddress, RawNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+    TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
