@@ -7,9 +7,11 @@
 
 use libra_config::config::KeyManagerConfig;
 use libra_key_manager::{
-    counters::COUNTERS, libra_interface::JsonRpcLibraInterface, Error, KeyManager,
+    counters::COUNTERS,
+    libra_interface::JsonRpcLibraInterface,
+    logging::{LogEntry, LogEvent, LogField},
+    Error, KeyManager,
 };
-use libra_logger::info;
 use libra_secure_push_metrics::MetricsPusher;
 use libra_secure_storage::Storage;
 use libra_secure_time::RealTimeService;
@@ -47,13 +49,14 @@ fn main() {
 }
 
 fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Result<(), Error> {
-    let libra_interface = create_libra_interface(key_manager_config.json_rpc_endpoint);
+    let json_rpc_endpoint = key_manager_config.json_rpc_endpoint;
+    let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint.clone());
     let storage: Storage = (&key_manager_config.secure_backend)
         .try_into()
         .expect("Unable to initialize storage");
     let time_service = RealTimeService::new();
 
-    KeyManager::new(
+    let mut key_manager = KeyManager::new(
         libra_interface,
         storage,
         time_service,
@@ -61,14 +64,12 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
         key_manager_config.chain_id,
-    )
-    .execute()
-}
-
-fn create_libra_interface(json_rpc_endpoint: String) -> JsonRpcLibraInterface {
-    info!(
-        "Creating a libra interface that talks to the JSON RPC endpoint at: {:?}.",
-        json_rpc_endpoint
     );
-    JsonRpcLibraInterface::new(json_rpc_endpoint)
+
+    key_manager.log(
+        LogEntry::Initialized,
+        Some(LogEvent::Success),
+        Some((LogField::JsonRpcEndpoint, json_rpc_endpoint)),
+    );
+    key_manager.execute()
 }
