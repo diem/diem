@@ -19,10 +19,14 @@
 //! KeyManager talks to its own storage through the `LibraSecureStorage::Storage trait.
 #![forbid(unsafe_code)]
 
-use crate::{counters::COUNTERS, libra_interface::LibraInterface};
+use crate::{
+    counters::COUNTERS,
+    libra_interface::LibraInterface,
+    logging::{LogEntry, LogEvent, LogField},
+};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
-use libra_logger::{error, info};
+use libra_logger::prelude::*;
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
@@ -37,6 +41,7 @@ use thiserror::Error;
 
 pub mod counters;
 pub mod libra_interface;
+pub mod logging;
 
 #[cfg(test)]
 mod tests;
@@ -127,32 +132,47 @@ where
     /// error will be returned by this method, upon which the key manager will flag the error and
     /// stop execution.
     pub fn execute(&mut self) -> Result<(), Error> {
-        info!("The key manager has been created and is starting execution.");
         loop {
-            info!("Checking the status of the keys.");
+            self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Pending), None);
+
             match self.execute_once() {
-                Ok(_) => {} // Expected case
+                Ok(_) => {
+                    self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Success), None);
+                }
                 Err(Error::LivenessError(last_value, current_value)) => {
                     // Log the liveness error, but don't throw the error up the call stack.
-                    error!(
-                        "Encountered error, but still continuing to execute: {}",
-                        Error::LivenessError(last_value, current_value).to_string()
+                    let error = Error::LivenessError(last_value, current_value).to_string();
+                    self.log(
+                        LogEntry::CheckKeyStatus,
+                        Some(LogEvent::Error),
+                        Some((LogField::LivenessError, error)),
                     );
                 }
                 Err(e) => {
                     // Unexpected error that we can't handle -- throw!
-                    error!(
-                        "Encountered error, cannot continue to operate: {}",
-                        e.to_string()
+                    self.log(
+                        LogEntry::CheckKeyStatus,
+                        Some(LogEvent::Error),
+                        Some((LogField::UnexpectedError, e.to_string())),
                     );
                     return Err(e);
                 }
             };
 
-            info!("Going to sleep for {} seconds.", self.sleep_period_secs);
-            COUNTERS.sleeps.inc();
-            self.time_service.sleep(self.sleep_period_secs);
+            self.sleep();
         }
+    }
+
+    fn sleep(&self) {
+        self.log(
+            LogEntry::Sleep,
+            Some(LogEvent::Pending),
+            Some((LogField::SleepDuration, self.sleep_period_secs.to_string())),
+        );
+        COUNTERS.sleeps.inc();
+        self.time_service.sleep(self.sleep_period_secs);
+
+        self.log(LogEntry::Sleep, Some(LogEvent::Success), None);
     }
 
     /// Checks the current state of the validator keys and performs any actions that might be
@@ -212,7 +232,11 @@ where
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let consensus_key = self.storage.rotate_key(CONSENSUS_KEY)?;
-        info!("Successfully rotated the consensus key in secure storage.");
+        self.log(
+            LogEntry::KeyRotatedInStorage,
+            Some(LogEvent::Success),
+            Some((LogField::ConsensusKey, consensus_key.to_string())),
+        );
         COUNTERS.completed_consensus_key_rotations.inc();
         self.submit_key_rotation_transaction(consensus_key)
     }
@@ -252,7 +276,11 @@ where
 
         self.libra
             .submit_transaction(Transaction::UserTransaction(signed_txn))?;
-        info!("Submitted the rotation transaction to the blockchain.");
+        self.log(
+            LogEntry::TransactionSubmission,
+            Some(LogEvent::Success),
+            None,
+        );
 
         Ok(consensus_key)
     }
@@ -284,6 +312,7 @@ where
 
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
+            self.log(LogEntry::WaitForReconfiguration, None, None);
             COUNTERS.waiting_on_consensus_reconfiguration.inc();
             return Ok(Action::NoAction);
         }
@@ -309,15 +338,19 @@ where
     pub fn perform_action(&mut self, action: Action) -> Result<(), Error> {
         match action {
             Action::FullKeyRotation => {
-                info!("A full consensus key rotation needs to be performed.");
+                self.log(LogEntry::FullKeyRotation, Some(LogEvent::Pending), None);
                 self.rotate_consensus_key().map(|_| ())
             }
             Action::SubmitKeyRotationTransaction => {
-                info!("The consensus key rotation transaction needs to be resubmitted");
+                self.log(
+                    LogEntry::TransactionSubmission,
+                    Some(LogEvent::Pending),
+                    None,
+                );
                 self.resubmit_consensus_key_transaction()
             }
             Action::NoAction => {
-                info!("No actions need to be performed.");
+                self.log(LogEntry::NoAction, None, None);
                 COUNTERS.no_actions_required.inc();
                 Ok(())
             }
@@ -334,6 +367,22 @@ where
                 .map_err(|e| Error::UnknownError(e.to_string())),
             Err(e) => Err(Error::MissingAccountAddress(e)),
         }
+    }
+
+    /// Logs to structured logging using the given log entry, event and data.
+    pub fn log(&self, entry: LogEntry, event: Option<LogEvent>, data: Option<(LogField, String)>) {
+        let mut log = logging::key_manager_log(entry);
+
+        // Append the specific event to the log
+        if let Some(event) = event {
+            log = log.data(LogField::Event.as_str(), event.as_str());
+        }
+        // Append the data field and data to the log
+        if let Some((field, data)) = data {
+            log = log.data(field.as_str(), data);
+        }
+
+        send_struct_log!(log);
     }
 }
 
