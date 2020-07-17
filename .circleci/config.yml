@@ -122,10 +122,12 @@ commands:
       - run:
           name: Generate date code for cache key
           # NOTE circle's built-in key does not support date
-          command: date +%Y%m%d > /tmp/date
+          command: |
+            cat rust-toolchain > /tmp/cache-key
+            date +%Y%m%d >> /tmp/cache-key
       - save_cache:
           name: Save sccache
-          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/date" }}
+          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
           paths:
             - "/home/circleci/.cache/sccache"
   restore_sccache:
@@ -133,10 +135,12 @@ commands:
     steps:
       - run:
           name: Generate date code for cache key
-          command: date +%Y%m%d > /tmp/date
+          command: |
+            cat rust-toolchain > /tmp/cache-key
+            date +%Y%m%d >> /tmp/cache-key
       - restore_cache:
           name: Restore sccache
-          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/date" }}
+          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
       - run:
           name: Show sccache
           command: sccache -s
