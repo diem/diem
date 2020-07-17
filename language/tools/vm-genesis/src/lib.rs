@@ -569,7 +569,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             let consensus_key = sr_test.consensus_key.as_ref().unwrap().public_key();
 
             let network = n.validator_network.as_ref().unwrap();
-            let identity_key = network.identity.public_key_from_config().unwrap();
+            let identity_key = network.identity_key().public_key();
 
             let addr = network
                 .discovery_method

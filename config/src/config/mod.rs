@@ -56,8 +56,7 @@ pub use test_config::*;
 /// This is used to set up the nodes and configure various parameters.
 /// The config file is broken up into sections for each module
 /// so that only that module can be passed around
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
@@ -202,34 +201,6 @@ impl NodeConfig {
         self.storage.set_data_dir(data_dir);
     }
 
-    /// This clones the underlying data except for the keys so that this config can be used as a
-    /// template for another config.
-    pub fn clone_for_template(&self) -> Self {
-        Self {
-            rpc: self.rpc.clone(),
-            base: self.base.clone(),
-            consensus: self.consensus.clone(),
-            debug_interface: self.debug_interface.clone(),
-            execution: self.execution.clone(),
-            full_node_networks: self
-                .full_node_networks
-                .iter()
-                .map(|c| c.clone_for_template())
-                .collect(),
-            logger: self.logger.clone(),
-            metrics: self.metrics.clone(),
-            mempool: self.mempool.clone(),
-            state_sync: self.state_sync.clone(),
-            storage: self.storage.clone(),
-            test: None,
-            upstream: self.upstream.clone(),
-            validator_network: self
-                .validator_network
-                .as_ref()
-                .map(|n| n.clone_for_template()),
-        }
-    }
-
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
@@ -309,7 +280,7 @@ impl NodeConfig {
     }
 
     pub fn random_with_template(template: &Self, rng: &mut StdRng) -> Self {
-        let mut config = template.clone_for_template();
+        let mut config = template.clone();
         config.random_internal(rng);
         config
     }

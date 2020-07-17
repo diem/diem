@@ -20,19 +20,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 /// keys be stored in key managers. If we make keys unclonable, then the configs must be mutable
 /// and that becomes a requirement strictly as a result of supporting test environments, which is
 /// undesirable. Hence this internal wrapper allows for keys to be clonable but only from configs.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct ConfigKey<T>
-where
-    T: PrivateKey + Serialize,
-{
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ConfigKey<T: PrivateKey + Serialize> {
     #[serde(bound(deserialize = "T: Deserialize<'de>"))]
     pub(crate) key: T,
 }
 
-impl<T> ConfigKey<T>
-where
-    T: DeserializeOwned + PrivateKey + Serialize,
-{
+impl<T: DeserializeOwned + PrivateKey + Serialize> ConfigKey<T> {
     pub(crate) fn new(key: T) -> Self {
         Self { key }
     }
@@ -46,23 +40,23 @@ where
     }
 }
 
-impl<T> Clone for ConfigKey<T>
-where
-    T: DeserializeOwned + PrivateKey + Serialize,
-{
+impl<T: DeserializeOwned + PrivateKey + Serialize> Clone for ConfigKey<T> {
     fn clone(&self) -> Self {
         lcs::from_bytes(&lcs::to_bytes(self).unwrap()).unwrap()
     }
 }
 
 #[cfg(test)]
-impl<T> Default for ConfigKey<T>
-where
-    T: PrivateKey + Serialize + libra_crypto::Uniform,
-{
+impl<T: PrivateKey + Serialize + libra_crypto::Uniform> Default for ConfigKey<T> {
     fn default() -> Self {
         Self {
             key: libra_crypto::Uniform::generate_for_testing(),
         }
+    }
+}
+
+impl<T: PrivateKey + Serialize> PartialEq for ConfigKey<T> {
+    fn eq(&self, other: &Self) -> bool {
+        lcs::to_bytes(&self).unwrap() == lcs::to_bytes(&other).unwrap()
     }
 }

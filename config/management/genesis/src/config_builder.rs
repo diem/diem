@@ -122,7 +122,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let local_ns = index.to_string() + OPERATOR_NS;
         let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
 
-        let mut config = self.template.clone_for_template();
+        let mut config = self.template.clone();
         config.randomize_ports();
 
         let validator_network = config.validator_network.as_mut().unwrap();
@@ -249,7 +249,7 @@ impl FullnodeBuilder {
 
     fn attach_validator_full_node(&self, validator_config: &mut NodeConfig) -> NodeConfig {
         // Create two vfns, we'll pass one to the validator later
-        let mut full_node_config = self.template.clone_for_template();
+        let mut full_node_config = self.template.clone();
         full_node_config.randomize_ports();
 
         // The FN's external, public network needs to swap listen addresses
@@ -314,7 +314,7 @@ impl FullnodeBuilder {
                 .ok_or_else(|| anyhow::format_err!("No validator config path"))?,
         )?;
         for _ in 0..num_nodes {
-            let mut fullnode_config = self.template.clone_for_template();
+            let mut fullnode_config = self.template.clone();
             fullnode_config.randomize_ports();
             Self::insert_waypoint_and_genesis(&mut fullnode_config, &validator_config);
             configs.push(fullnode_config);
