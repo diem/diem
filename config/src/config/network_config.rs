@@ -33,8 +33,7 @@ pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024;
 pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
 
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
     pub connectivity_check_interval_ms: u64,
@@ -84,22 +83,6 @@ impl NetworkConfig {
 }
 
 impl NetworkConfig {
-    /// This clones the underlying data except for the key so that this config can be used as a
-    /// template for another config.
-    pub fn clone_for_template(&self) -> Self {
-        Self {
-            connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            discovery_method: self.discovery_method.clone(),
-            identity: Identity::None,
-            listen_address: self.listen_address.clone(),
-            mutual_authentication: self.mutual_authentication,
-            network_id: self.network_id.clone(),
-            seed_pubkeys: self.seed_pubkeys.clone(),
-            seed_addrs: self.seed_addrs.clone(),
-            max_frame_size: self.max_frame_size,
-        }
-    }
-
     pub fn identity_key(&self) -> x25519::PrivateKey {
         let key = match &self.identity {
             Identity::FromConfig(config) => Some(config.key.clone().key),
@@ -245,8 +228,7 @@ pub struct GossipConfig {
     pub discovery_interval_ms: u64,
 }
 
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Identity {
     FromConfig(IdentityFromConfig),
@@ -267,19 +249,10 @@ impl Identity {
             peer_id_name,
         })
     }
-
-    pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
-        if let Identity::FromConfig(config) = self {
-            Some(config.key.public_key())
-        } else {
-            None
-        }
-    }
 }
 
 /// The identity is stored within the config.
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityFromConfig {
     pub key: ConfigKey<x25519::PrivateKey>,
@@ -287,8 +260,7 @@ pub struct IdentityFromConfig {
 }
 
 /// This represents an identity in a secure-storage as defined in NodeConfig::secure.
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityFromStorage {
     pub backend: SecureBackend,

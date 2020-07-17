@@ -180,10 +180,7 @@ impl FullNodeConfig {
             network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
             network.mutual_authentication = self.mutual_authentication;
 
-            let pubkey = network
-                .identity
-                .public_key_from_config()
-                .ok_or(Error::MissingNetworkKeyPairs)?;
+            let pubkey = network.identity_key().public_key();
             let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
             seed_pubkeys.insert(network.peer_id(), pubkey_set);
 

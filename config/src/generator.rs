@@ -66,10 +66,7 @@ pub fn build_seed_addrs(
     seed_config: &NetworkConfig,
     seed_base_addr: NetworkAddress,
 ) -> SeedAddresses {
-    let seed_pubkey = seed_config
-        .identity
-        .public_key_from_config()
-        .expect("Missing identity key");
+    let seed_pubkey = libra_crypto::PrivateKey::public_key(&seed_config.identity_key());
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
     let mut seed_addrs = SeedAddresses::default();
