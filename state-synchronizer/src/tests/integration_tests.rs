@@ -367,9 +367,9 @@ impl SynchronizerEnv {
                     vec![self.peer_addresses[new_peer_idx - 1].clone()],
                 );
             }
-            let authentication_mode =
-                AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
-            let pub_key = authentication_mode.public_key();
+            let key = self.network_keys[new_peer_idx].clone();
+            let pub_key = key.public_key();
+            let authentication_mode = AuthenticationMode::Mutual(key);
             let network_context = Arc::new(NetworkContext::new(
                 self.network_id.clone(),
                 RoleType::Validator,

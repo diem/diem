@@ -120,13 +120,13 @@ impl NetworkBuilder {
     pub fn create(chain_id: ChainId, role: RoleType, config: &NetworkConfig) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
+        let pubkey = libra_crypto::PrivateKey::public_key(&identity_key);
 
         let authentication_mode = if config.mutual_authentication {
             AuthenticationMode::Mutual(identity_key)
         } else {
             AuthenticationMode::ServerOnly(identity_key)
         };
-        let pubkey = authentication_mode.public_key();
 
         let network_context = Arc::new(NetworkContext::new(
             config.network_id.clone(),
