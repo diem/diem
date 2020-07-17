@@ -15,23 +15,38 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 17,
-  "iteration": 1565807898889,
+  "iteration": 1595032058505,
   "links": [],
   "panels": [
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 104,
+      "panels": [],
+      "title": "Basic",
+      "type": "row"
+    },
     {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 0
+        "y": 1
       },
+      "hiddenSeries": false,
       "id": 66,
       "legend": {
         "avg": false,
@@ -114,14 +129,16 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 0
+        "y": 1
       },
+      "hiddenSeries": false,
       "id": 67,
       "interval": "",
       "legend": {
@@ -205,14 +222,16 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 5,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 0
+        "y": 1
       },
+      "hiddenSeries": false,
       "id": 40,
       "legend": {
         "avg": false,
@@ -287,7 +306,11 @@
           "min": null,
           "show": false
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "aliasColors": {},
@@ -301,7 +324,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 100,
@@ -388,7 +411,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 8
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 101,
@@ -475,7 +498,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 8
+        "y": 9
       },
       "hiddenSeries": false,
       "id": 102,
@@ -552,11 +575,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 17
       },
       "id": 16,
       "panels": [
@@ -1876,369 +1900,1591 @@
       "type": "row"
     },
     {
-      "collapsed": false,
+      "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 18
       },
       "id": 85,
-      "panels": [],
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 18
+          },
+          "hiddenSeries": false,
+          "id": 70,
+          "interval": "",
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max(irate(storage_gauge{op=\"new_state_leaves\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+              "legendFormat": "accounts/txn",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Avg Account Updates per Transaction",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 18
+          },
+          "hiddenSeries": false,
+          "id": 71,
+          "interval": "",
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max(irate(storage_gauge{op=\"events_created\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
+              "legendFormat": "events/txn",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Avg Events Emits per Transaction",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 18
+          },
+          "hiddenSeries": false,
+          "id": 98,
+          "interval": "",
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "max(irate(storage_gauge{op=\"new_state_nodes\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"new_state_leaves\"}[10m])) - 1",
+              "legendFormat": "internal nodes/accounts",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Avg Internal Node Updates per Account Update",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Prometheus",
+          "fill": 0,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 26
+          },
+          "hiddenSeries": false,
+          "id": 52,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "label_replace(\n    avg by(op)(rate(schemadb_duration_sum{op=~\"db_put_bytes_.*\"}[10m])) / avg by(op)(rate(schemadb_duration_count{op=~\"db_put_bytes_.*\"}[10m])),\n    \"cf\", \"$1\", \"op\", \"db_put_bytes_(.*)\"\n)",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{cf}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Record size (key + value) by Column Family",
+          "tooltip": {
+            "shared": true,
+            "sort": 2,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "decbytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        }
+      ],
       "title": "Misc",
       "type": "row"
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
+      "collapsed": true,
+      "datasource": null,
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 1,
+        "w": 24,
         "x": 0,
-        "y": 18
+        "y": 19
       },
-      "id": 70,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
+      "id": 106,
+      "panels": [
         {
-          "expr": "max(irate(storage_gauge{op=\"new_state_leaves\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
-          "legendFormat": "accounts/txn",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg Account Updates per Transaction",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 20
+          },
+          "hiddenSeries": false,
+          "id": 108,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "api_name",
+          "repeatDirection": "h",
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_account_state_with_proof",
+              "value": "get_account_state_with_proof"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 18
-      },
-      "id": 71,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "max(irate(storage_gauge{op=\"events_created\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"latest_transaction_version\"}[10m]))",
-          "legendFormat": "events/txn",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg Events Emits per Transaction",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 20
+          },
+          "hiddenSeries": false,
+          "id": 109,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_account_state_with_proof_by_version",
+              "value": "get_account_state_with_proof_by_version"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 18
-      },
-      "id": 98,
-      "interval": "",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "max(irate(storage_gauge{op=\"new_state_nodes\"}[10m]) / ignoring(op) irate(storage_gauge{op=\"new_state_leaves\"}[10m])) - 1",
-          "legendFormat": "internal nodes/accounts",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg Internal Node Updates per Account Update",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 20
+          },
+          "hiddenSeries": false,
+          "id": 110,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_events",
+              "value": "get_events"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "Prometheus",
-      "fill": 0,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 26
-      },
-      "id": 52,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "label_replace(\n    avg by(op)(rate(schemadb_duration_sum{op=~\"db_put_bytes_.*\"}[10m])) / avg by(op)(rate(schemadb_duration_count{op=~\"db_put_bytes_.*\"}[10m])),\n    \"cf\", \"$1\", \"op\", \"db_put_bytes_(.*)\"\n)",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{cf}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Record size (key + value) by Column Family",
-      "tooltip": {
-        "shared": true,
-        "sort": 2,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "decbytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 27
+          },
+          "hiddenSeries": false,
+          "id": 111,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_latest_account_state",
+              "value": "get_latest_account_state"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 27
+          },
+          "hiddenSeries": false,
+          "id": 112,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_latest_ledger_info",
+              "value": "get_latest_ledger_info"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 27
+          },
+          "hiddenSeries": false,
+          "id": 113,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_latest_state_root",
+              "value": "get_latest_state_root"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 34
+          },
+          "hiddenSeries": false,
+          "id": 114,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_latest_tree_state",
+              "value": "get_latest_tree_state"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 34
+          },
+          "hiddenSeries": false,
+          "id": 115,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_startup_info",
+              "value": "get_startup_info"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 34
+          },
+          "hiddenSeries": false,
+          "id": 116,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_state_proof",
+              "value": "get_state_proof"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 0,
+            "y": 41
+          },
+          "hiddenSeries": false,
+          "id": 117,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_state_proof_with_ledger_info",
+              "value": "get_state_proof_with_ledger_info"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 8,
+            "y": 41
+          },
+          "hiddenSeries": false,
+          "id": 118,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "get_transactions",
+              "value": "get_transactions"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "api $api_name latency ",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 16,
+            "y": 41
+          },
+          "hiddenSeries": false,
+          "id": 119,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "maxPerRow": 3,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": null,
+          "repeatDirection": "h",
+          "repeatIteration": 1595032058505,
+          "repeatPanelId": 108,
+          "scopedVars": {
+            "api_name": {
+              "selected": false,
+              "text": "save_transactions",
+              "value": "save_transactions"
+            }
+          },
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "rate(libra_storage_api_latency_seconds_sum{api_name=\"$api_name\"}[1m]) / rate(libra_storage_api_latency_seconds_count{api_name=\"$api_name\"}[1m])",
+              "legendFormat": "{{peer_id}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "$api_name",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "s",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "title": "API Latency",
+      "type": "row"
     }
   ],
   "refresh": false,
-  "schemaVersion": 19,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2262,6 +3508,33 @@
         "query": "storage_gauge",
         "refresh": 1,
         "regex": "/op=\"cf_size_bytes_(\\w+)\"/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "Prometheus",
+        "definition": "libra_storage_api_latency_seconds_count",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "api_name",
+        "options": [],
+        "query": "libra_storage_api_latency_seconds_count",
+        "refresh": 1,
+        "regex": "/api_name=\"(\\w+)\"/",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
@@ -2304,5 +3577,5 @@
   "timezone": "",
   "title": "Storage",
   "uid": "2Q0p7AVWk",
-  "version": 2
+  "version": 1
 }

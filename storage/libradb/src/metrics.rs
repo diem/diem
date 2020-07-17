@@ -58,7 +58,7 @@ pub static LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION: Lazy<IntGauge> = L
 pub static LIBRA_STORAGE_API_LATENCY_SECONDS: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         // metric name
-        "libra_storage_api_letency_seconds",
+        "libra_storage_api_latency_seconds",
         // metric description
         "Libra storage api latency in seconds",
         // metric labels (dimensions)
