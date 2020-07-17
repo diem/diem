@@ -320,7 +320,7 @@ impl NodeConfig {
         if self.base.role == RoleType::Validator {
             test.random_account_key(rng);
             let peer_id = libra_types::account_address::from_public_key(
-                &test.owner_keypair.as_ref().unwrap().public_key(),
+                &test.owner_key.as_ref().unwrap().public_key(),
             );
 
             if self.validator_network.is_none() {

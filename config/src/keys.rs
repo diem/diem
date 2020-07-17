@@ -12,102 +12,57 @@
 //! while ignored during serialization.
 //!
 
-use libra_crypto::{PrivateKey, ValidCryptoMaterialStringExt};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use libra_crypto::PrivateKey;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-#[cfg(test)]
-use libra_crypto::Uniform;
-
-/// A KeyPair has a private key that can only be taken once,
-/// and a public key that can be cloned ad infinitum.
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
-#[derive(Debug, PartialEq)]
-pub struct KeyPair<T>
+/// ConfigKey places a clonable wrapper around PrivateKeys for config purposes only. The only time
+/// configs have keys is either for testing or for low security requirements. Libra recommends that
+/// keys be stored in key managers. If we make keys unclonable, then the configs must be mutable
+/// and that becomes a requirement strictly as a result of supporting test environments, which is
+/// undesirable. Hence this internal wrapper allows for keys to be clonable but only from configs.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct ConfigKey<T>
 where
-    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
+    T: PrivateKey + Serialize,
 {
-    private_key: Option<T>,
-    public_key: T::PublicKeyMaterial,
+    #[serde(bound(deserialize = "T: Deserialize<'de>"))]
+    pub(crate) key: T,
+}
+
+impl<T> ConfigKey<T>
+where
+    T: DeserializeOwned + PrivateKey + Serialize,
+{
+    pub(crate) fn new(key: T) -> Self {
+        Self { key }
+    }
+
+    pub fn private_key(&self) -> T {
+        self.clone().key
+    }
+
+    pub fn public_key(&self) -> T::PublicKeyMaterial {
+        libra_crypto::PrivateKey::public_key(&self.key)
+    }
+}
+
+impl<T> Clone for ConfigKey<T>
+where
+    T: DeserializeOwned + PrivateKey + Serialize,
+{
+    fn clone(&self) -> Self {
+        lcs::from_bytes(&lcs::to_bytes(self).unwrap()).unwrap()
+    }
 }
 
 #[cfg(test)]
-impl<T> Default for KeyPair<T>
+impl<T> Default for ConfigKey<T>
 where
-    T: PrivateKey + Serialize + Uniform + ValidCryptoMaterialStringExt,
+    T: PrivateKey + Serialize + libra_crypto::Uniform,
 {
     fn default() -> Self {
-        let private_key = T::generate_for_testing();
-        let public_key = private_key.public_key();
         Self {
-            private_key: Some(private_key),
-            public_key,
-        }
-    }
-}
-
-impl<T> KeyPair<T>
-where
-    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
-{
-    /// This transforms a private key into a keypair data structure.
-    pub fn load(private_key: T) -> Self {
-        let public_key = private_key.public_key();
-        Self {
-            private_key: Some(private_key),
-            public_key,
-        }
-    }
-
-    /// Takes the key from the data structure, calling this function a second time will return None.
-    pub fn take_private(&mut self) -> Option<T> {
-        self.private_key.take()
-    }
-
-    /// Returns the public key part. This always work, even after the private key was taken.
-    pub fn public_key(&self) -> T::PublicKeyMaterial {
-        self.public_key.clone()
-    }
-}
-
-//
-// Serialization and Deserialization functions
-//
-
-/// Serialization for a KeyPair only serializes the private key part (if present).
-impl<T> Serialize for KeyPair<T>
-where
-    T: PrivateKey + Serialize + ValidCryptoMaterialStringExt,
-{
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: Serialize + ValidCryptoMaterialStringExt,
-    {
-        match &self.private_key {
-            Some(key) => key.serialize(serializer),
-            None => serializer.serialize_str(""),
-        }
-    }
-}
-
-/// Deserializing a keypair only deserializes the private key, and dynamically derives the public key.
-impl<'de, T> Deserialize<'de> for KeyPair<T>
-where
-    T: PrivateKey + ValidCryptoMaterialStringExt,
-{
-    fn deserialize<D>(deserializer: D) -> std::result::Result<KeyPair<T>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        match T::deserialize(deserializer) {
-            Ok(private_key) => {
-                let public_key = private_key.public_key();
-                Ok(KeyPair {
-                    private_key: Some(private_key),
-                    public_key,
-                })
-            }
-            Err(err) => Err(err),
+            key: libra_crypto::Uniform::generate_for_testing(),
         }
     }
 }

@@ -36,13 +36,7 @@ impl ProcessClientWrapper {
         let mut config = NodeConfig::random().consensus.safety_rules;
         let test_config = config.test.as_mut().unwrap();
         let author = test_config.author;
-        let private_key = test_config
-            .consensus_keypair
-            .as_ref()
-            .unwrap()
-            .clone()
-            .take_private()
-            .unwrap();
+        let private_key = test_config.consensus_key.as_ref().unwrap().private_key();
         let signer = ValidatorSigner::new(author, private_key);
         let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
         test_config.waypoint = Some(waypoint);
@@ -52,11 +46,9 @@ impl ProcessClientWrapper {
         config.service = SafetyRulesService::SpawnedProcess(remote_service);
 
         let execution_private_key = test_config
-            .execution_keypair
+            .execution_key
             .as_ref()
-            .unwrap()
-            .clone()
-            .take_private();
+            .map(|key| key.private_key());
 
         let safety_rules_manager = SafetyRulesManager::new(&mut config);
         let safety_rules = safety_rules_manager.client();

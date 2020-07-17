@@ -3,7 +3,7 @@
 
 use crate::{
     config::{Error, RoleType, SecureBackend},
-    keys::KeyPair,
+    keys::ConfigKey,
     network_id::NetworkId,
     utils,
 };
@@ -100,9 +100,9 @@ impl NetworkConfig {
         }
     }
 
-    pub fn identity_key(&mut self) -> x25519::PrivateKey {
-        let key = match &mut self.identity {
-            Identity::FromConfig(config) => config.keypair.take_private(),
+    pub fn identity_key(&self) -> x25519::PrivateKey {
+        let key = match &self.identity {
+            Identity::FromConfig(config) => Some(config.key.clone().key),
             Identity::FromStorage(config) => {
                 let storage: Storage = (&config.backend).into();
                 let key = storage
@@ -165,7 +165,7 @@ impl NetworkConfig {
                 self.identity = Identity::from_config(key, peer_id);
             }
             Identity::FromConfig(config) => {
-                let pubkey = config.keypair.public_key();
+                let pubkey = config.key.public_key();
                 let peer_id = AuthenticationKey::try_from(pubkey.as_slice())
                     .unwrap()
                     .derived_address();
@@ -256,8 +256,8 @@ pub enum Identity {
 
 impl Identity {
     pub fn from_config(key: x25519::PrivateKey, peer_id: PeerId) -> Self {
-        let keypair = KeyPair::load(key);
-        Identity::FromConfig(IdentityFromConfig { keypair, peer_id })
+        let key = ConfigKey::new(key);
+        Identity::FromConfig(IdentityFromConfig { key, peer_id })
     }
 
     pub fn from_storage(key_name: String, peer_id_name: String, backend: SecureBackend) -> Self {
@@ -270,7 +270,7 @@ impl Identity {
 
     pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
         if let Identity::FromConfig(config) = self {
-            Some(config.keypair.public_key())
+            Some(config.key.public_key())
         } else {
             None
         }
@@ -282,8 +282,7 @@ impl Identity {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityFromConfig {
-    #[serde(rename = "key")]
-    pub keypair: KeyPair<x25519::PrivateKey>,
+    pub key: ConfigKey<x25519::PrivateKey>,
     pub peer_id: PeerId,
 }
 

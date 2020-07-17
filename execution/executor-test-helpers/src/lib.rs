@@ -72,15 +72,10 @@ pub fn gen_ledger_info_with_sigs(
 }
 
 pub fn extract_signer(config: &mut NodeConfig) -> ValidatorSigner {
-    let sr_test = config.consensus.safety_rules.test.as_mut().unwrap();
+    let sr_test = config.consensus.safety_rules.test.as_ref().unwrap();
     ValidatorSigner::new(
         sr_test.author,
-        sr_test
-            .consensus_keypair
-            .as_mut()
-            .unwrap()
-            .take_private()
-            .unwrap(),
+        sr_test.consensus_key.as_ref().unwrap().private_key(),
     )
 }
 

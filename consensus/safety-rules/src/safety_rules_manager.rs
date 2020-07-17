@@ -11,11 +11,7 @@ use crate::{
     thread::ThreadService,
     SafetyRules, TSafetyRules,
 };
-use libra_config::{
-    config::{SafetyRulesConfig, SafetyRulesService},
-    keys::KeyPair,
-};
-use libra_crypto::ed25519::Ed25519PrivateKey;
+use libra_config::config::{SafetyRulesConfig, SafetyRulesService};
 use libra_secure_storage::{KVStorage, Storage};
 use std::{
     convert::TryInto,
@@ -30,28 +26,19 @@ pub fn storage(config: &mut SafetyRulesConfig) -> PersistentSafetyStorage {
         .available()
         .expect("Storage is not available");
 
-    if let Some(test_config) = config.test.as_mut() {
+    if let Some(test_config) = &config.test {
         let author = test_config.author;
         let consensus_private_key = test_config
-            .consensus_keypair
-            .as_mut()
-            .expect("Missing consensus keypair in test config")
-            .take_private()
-            .expect("Failed to take Consensus private key, key absent or already read");
+            .consensus_key
+            .as_ref()
+            .expect("Missing consensus key in test config")
+            .private_key();
+        let execution_private_key = test_config
+            .execution_key
+            .as_ref()
+            .expect("Missing execution key in test config")
+            .private_key();
         let waypoint = test_config.waypoint.expect("No waypoint in config");
-
-        // Hack because Ed25519PrivateKey does not support clone / copy
-        let bytes = lcs::to_bytes(
-            &test_config
-                .execution_keypair
-                .as_ref()
-                .expect("Missing execution keypair in test config"),
-        )
-        .expect("lcs deserialization cannot fail");
-        let execution_private_key = lcs::from_bytes::<KeyPair<Ed25519PrivateKey>>(&bytes)
-            .expect("lcs serialization cannot fail")
-            .take_private()
-            .expect("Failed to take Execution private key, key absent or already read");
 
         PersistentSafetyStorage::initialize(
             internal_storage,

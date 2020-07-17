@@ -543,8 +543,8 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistra
         .iter()
         .map(|n| {
             let test_config = n.test.as_ref().unwrap();
-            let owner_key = test_config.owner_keypair.as_ref().unwrap().public_key();
-            let operator_key = test_config.operator_keypair.as_ref().unwrap().public_key();
+            let owner_key = test_config.owner_key.as_ref().unwrap().public_key();
+            let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
             let operator_account = account_address::from_public_key(&operator_key);
             let set_operator_script =
                 transaction_builder::encode_set_validator_operator_script(operator_account);
@@ -561,12 +561,12 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
         .iter()
         .map(|n| {
             let test_config = n.test.as_ref().unwrap();
-            let owner_key = test_config.owner_keypair.as_ref().unwrap().public_key();
+            let owner_key = test_config.owner_key.as_ref().unwrap().public_key();
             let owner_account = AuthenticationKey::ed25519(&owner_key).derived_address();
-            let operator_key = test_config.operator_keypair.as_ref().unwrap().public_key();
+            let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
 
             let sr_test = n.consensus.safety_rules.test.as_ref().unwrap();
-            let consensus_key = sr_test.consensus_keypair.as_ref().unwrap().public_key();
+            let consensus_key = sr_test.consensus_key.as_ref().unwrap().public_key();
 
             let network = n.validator_network.as_ref().unwrap();
             let identity_key = network.identity.public_key_from_config().unwrap();

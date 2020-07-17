@@ -39,7 +39,7 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) =
         ReconfigSubscription::subscribe_all(vec![VMConfig::CONFIG_ID], vec![]);
 
-    let (mut config, genesis_key) = config_builder::test_config();
+    let (config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
     bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
 
@@ -81,13 +81,12 @@ fn test_on_chain_config_pub_sub() {
     let validator_account = network_config.peer_id();
     let operator_key = config
         .test
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .operator_keypair
-        .as_mut()
+        .operator_key
+        .as_ref()
         .unwrap()
-        .take_private()
-        .unwrap();
+        .private_key();
     let operator_public_key = operator_key.public_key();
     let operator_account = account_address::from_public_key(&operator_public_key);
 

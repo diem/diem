@@ -11,10 +11,7 @@ use crate::{
     thread::ThreadService,
 };
 use executor::Executor;
-use libra_config::{
-    config::{ExecutionCorrectnessService, NodeConfig},
-    keys::KeyPair,
-};
+use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_global_constants::EXECUTION_KEY;
 use libra_secure_storage::{CryptoStorage, Storage};
@@ -30,18 +27,11 @@ pub fn extract_execution_prikey(config: &mut NodeConfig) -> Option<Ed25519Privat
     let backend = &config.execution.backend;
     let mut storage: Storage = backend.try_into().expect("Unable to initialize storage");
     if let Some(test_config) = config.test.as_ref() {
-        // Hack because Ed25519PrivateKey does not support clone / copy
-        let bytes = lcs::to_bytes(
-            &test_config
-                .execution_keypair
-                .as_ref()
-                .expect("Missing execution keypair in test config"),
-        )
-        .expect("lcs serialization cannot fail");
-        let private_key = lcs::from_bytes::<KeyPair<Ed25519PrivateKey>>(&bytes)
-            .expect("lcs deserialization cannot fail")
-            .take_private()
-            .expect("Failed to take Execution private key, key absent or already read");
+        let private_key = test_config
+            .execution_key
+            .as_ref()
+            .expect("Missing execution key in test config")
+            .private_key();
 
         storage
             .import_private_key(EXECUTION_KEY, private_key)
