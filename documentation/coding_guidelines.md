@@ -57,7 +57,7 @@ struct Point {
 
 The Libra codebase uses inclusive terminology (similar to other projects such as [the Linux kernel](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=49decddd39e5f6132ccd7d9fdc3d7c470b0061bb)).  The terms below are recommended when appropriate.
 * allowlist - a set of entities allowed access
-* denylist - a set of entities denied access
+* blocklist - a set of entities that are blocked from access
 * primary/leader/main - a primary entity
 * secondary/replica/follower - a secondary entity
 
