@@ -1,8 +1,28 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::{register_int_counter, register_int_counter_vec, IntCounter, IntCounterVec};
+use libra_metrics::{
+    register_int_counter, register_int_counter_vec, register_int_gauge_vec, IntCounter,
+    IntCounterVec, IntGaugeVec,
+};
 use once_cell::sync::Lazy;
+
+// Core mempool index labels
+pub const PRIORITY_INDEX_LABEL: &str = "priority";
+pub const EXPIRATION_TIME_INDEX_LABEL: &str = "expiration";
+pub const SYSTEM_TTL_INDEX_LABEL: &str = "system_ttl";
+pub const TIMELINE_INDEX_LABEL: &str = "timeline";
+pub const PARKING_LOT_INDEX_LABEL: &str = "parking_lot";
+
+/// Counter tracking size of various indices in core mempool
+pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_core_mempool_index_size",
+        "Size of a core mempool index",
+        &["index"]
+    )
+    .unwrap()
+});
 
 /// Counter of pending network events to Mempool
 pub static PENDING_MEMPOOL_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {

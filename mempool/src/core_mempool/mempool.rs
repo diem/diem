@@ -262,4 +262,9 @@ impl Mempool {
     ) -> Vec<(u64, SignedTransaction)> {
         self.transactions.filter_read_timeline(timeline_ids)
     }
+
+    #[cfg(test)]
+    pub fn get_parking_lot_size(&self) -> usize {
+        self.transactions.get_parking_lot_size()
+    }
 }
