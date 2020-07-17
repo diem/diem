@@ -20,7 +20,8 @@
             {"sourceVolume": "libra-data", "containerPath": "/opt/libra/data"}
         ],
         "environment": [
-	    {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
+            {"name": "CFG_BASE_CONFIG", "value": ${cfg_base_config}},
+            {"name": "CFG_LISTEN_ADDR", "value": "${cfg_listen_addr}"},
             {"name": "CFG_FULLNODE_INDEX", "value": "${cfg_fullnode_index}"},
             {"name": "CFG_NUM_VALIDATORS", "value": "${cfg_num_validators}"},
             {"name": "CFG_NUM_FULLNODES", "value": "${cfg_num_fullnodes}"},
