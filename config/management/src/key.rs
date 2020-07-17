@@ -10,14 +10,14 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-pub struct AssociationKey {
+pub struct LibraRootKey {
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
     #[structopt(flatten)]
     shared_backend: OptionalSharedBackend,
 }
 
-impl AssociationKey {
+impl LibraRootKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
         submit_key(
             libra_global_constants::LIBRA_ROOT_KEY,

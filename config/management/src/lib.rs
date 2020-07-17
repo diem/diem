@@ -41,8 +41,8 @@ pub mod constants {
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
-    #[structopt(about = "Submits an Ed25519PublicKey for the association")]
-    AssociationKey(crate::key::AssociationKey),
+    #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
+    LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Create a waypoint and optionally place it in a store")]
     CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
@@ -69,7 +69,7 @@ pub enum Command {
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
-    AssociationKey,
+    LibraRootKey,
     CreateWaypoint,
     Genesis,
     InsertWaypoint,
@@ -86,7 +86,7 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
-            Command::AssociationKey(_) => CommandName::AssociationKey,
+            Command::LibraRootKey(_) => CommandName::LibraRootKey,
             Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
@@ -105,7 +105,7 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
-            CommandName::AssociationKey => "association-key",
+            CommandName::LibraRootKey => "libra-root-key",
             CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
             CommandName::InsertWaypoint => "insert-waypoint",
@@ -125,7 +125,7 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match &self {
-            Command::AssociationKey(_) => self.association_key().unwrap().to_string(),
+            Command::LibraRootKey(_) => self.libra_root_key().unwrap().to_string(),
             Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
             Command::InsertWaypoint(_) => self.insert_waypoint().unwrap().to_string(),
@@ -144,10 +144,10 @@ impl Command {
         }
     }
 
-    pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
+    pub fn libra_root_key(self) -> Result<Ed25519PublicKey, Error> {
         match self {
-            Command::AssociationKey(association_key) => association_key.execute(),
-            _ => Err(self.unexpected_command(CommandName::AssociationKey)),
+            Command::LibraRootKey(libra_root_key) => libra_root_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::LibraRootKey)),
         }
     }
 
@@ -262,7 +262,7 @@ pub mod tests {
         // Each identity works in their own namespace
         // Alice, Bob, and Carol are owners.
         // Operator_Alice, Operator_Bob and Operator_Carol are operators.
-        // Dave is the association.
+        // Dave is the libra root.
         // Each user will upload their contents to *_ns + "shared"
         // Common is used by the technical staff for coordination.
         let alice_ns = "alice";
@@ -279,7 +279,7 @@ pub mod tests {
         let layout_text = "\
             operators = [\"operator_alice_shared\", \"operator_bob_shared\", \"operator_carol_shared\"]\n\
             owners = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
-            association = [\"dave_shared\"]\n\
+            libra_root = [\"dave_shared\"]\n\
         ";
 
         let temppath = libra_temppath::TempPath::new();
@@ -296,10 +296,10 @@ pub mod tests {
             )
             .unwrap();
 
-        // Step 2) Upload the association key:
+        // Step 2) Upload the libra root key:
         helper.initialize(dave_ns.into());
         helper
-            .association_key(dave_ns, &(dave_ns.to_string() + shared))
+            .libra_root_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
 
         // Step 3) Upload each owner key:
@@ -376,7 +376,7 @@ pub mod tests {
         let layout_text = "\
             operators = [\"alice\", \"bob\"]\n\
             owners = [\"carol\"]\n\
-            association = [\"dave\"]\n\
+            libra_root = [\"dave\"]\n\
         ";
         file.write_all(&layout_text.to_string().into_bytes())
             .unwrap();

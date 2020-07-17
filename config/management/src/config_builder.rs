@@ -15,8 +15,8 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};
 
-const ASSOCIATION_NS: &str = "association";
-const ASSOCIATION_SHARED_NS: &str = "association_shared";
+const LIBRA_ROOT_NS: &str = "libra_root";
+const LIBRA_ROOT_SHARED_NS: &str = "libra_root_shared";
 const OPERATOR_NS: &str = "_operator";
 const OPERATOR_SHARED_NS: &str = "_operator_shared";
 const OWNER_NS: &str = "_owner";
@@ -56,7 +56,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
     /// Association uploads the validator layout to shared storage.
     fn create_layout(&self) {
         let mut layout = Layout::default();
-        layout.association = vec![ASSOCIATION_SHARED_NS.into()];
+        layout.libra_root = vec![LIBRA_ROOT_SHARED_NS.into()];
         layout.owners = (0..self.num_validators)
             .map(|i| (i.to_string() + OWNER_SHARED_NS))
             .collect();
@@ -73,11 +73,11 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .unwrap();
     }
 
-    /// Association initializes its account and key.
-    fn create_association(&self) {
-        self.storage_helper.initialize(ASSOCIATION_NS.into());
+    /// Association initializes its account and the libra root key.
+    fn create_libra_root(&self) {
+        self.storage_helper.initialize(LIBRA_ROOT_NS.into());
         self.storage_helper
-            .association_key(ASSOCIATION_NS, ASSOCIATION_SHARED_NS)
+            .libra_root_key(LIBRA_ROOT_NS, LIBRA_ROOT_SHARED_NS)
             .unwrap();
     }
 
@@ -188,10 +188,10 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.create_layout();
-        self.create_association();
-        let association_key = self
+        self.create_libra_root();
+        let libra_root_key = self
             .storage_helper
-            .storage(ASSOCIATION_NS.into())
+            .storage(LIBRA_ROOT_NS.into())
             .export_private_key(libra_global_constants::LIBRA_ROOT_KEY)
             .unwrap();
 
@@ -218,7 +218,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
             self.finish_validator_config(i, config);
         }
 
-        Ok((configs, association_key))
+        Ok((configs, libra_root_key))
     }
 }
 
