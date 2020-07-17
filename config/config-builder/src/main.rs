@@ -102,12 +102,12 @@ struct FullNodeArgs {
 
 #[derive(Debug, StructOpt)]
 struct KeyManagerArgs {
-    #[structopt(long)]
-    /// Defines which chain version libra will use
-    chain_id: Option<ChainId>,
     #[structopt(long, parse(from_os_str))]
     /// The data directory for the configs (e.g. /opt/libra/etc).
     data_dir: PathBuf,
+    #[structopt(long)]
+    /// Specifies the blockchain ID for transaction generation by the key manager.
+    chain_id: Option<ChainId>,
     #[structopt(long)]
     /// Specifies the JSON RPC endpoint for the key manager to communicate with.
     json_rpc_endpoint: String,
@@ -324,13 +324,13 @@ fn build_key_manager(args: KeyManagerArgs) {
     }
 
     let mut config_builder = KeyManagerConfig::new();
-    if let Some(chain_id) = args.chain_id {
-        config_builder.chain_id = chain_id;
-    }
     config_builder.rotation_period_secs = args.rotation_period_secs;
     config_builder.sleep_period_secs = args.sleep_period_secs;
     config_builder.txn_expiration_secs = args.txn_expiration_secs;
 
+    if let Some(chain_id) = args.chain_id {
+        config_builder.chain_id = chain_id;
+    }
     config_builder.json_rpc_endpoint = args.json_rpc_endpoint.clone();
 
     config_builder.vault_host = args.vault_host.clone();
