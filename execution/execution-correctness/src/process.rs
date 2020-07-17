@@ -15,8 +15,8 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(mut config: NodeConfig) -> Self {
-        let prikey = execution_correctness_manager::extract_execution_prikey(&mut config);
+    pub fn new(config: NodeConfig) -> Self {
+        let prikey = execution_correctness_manager::extract_execution_prikey(&config);
         Self { config, prikey }
     }
 

@@ -66,7 +66,7 @@ fn get_initial_data_and_qc(db: &dyn DbReader) -> (RecoveryData, QuorumCert) {
 }
 
 fn build_inserter(
-    config: &mut NodeConfig,
+    config: &NodeConfig,
     initial_data: RecoveryData,
     lec_client: Box<dyn ExecutionCorrectness + Send + Sync>,
 ) -> TreeInserter {
@@ -109,12 +109,12 @@ fn test_executor_restart() {
     config_path.create_as_file().unwrap();
     config.save_config(&config_path).unwrap();
 
-    let execution_correctness_manager = ExecutionCorrectnessManager::new(&mut config);
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
     let (initial_data, qc) = get_initial_data_and_qc(&*db);
 
     let mut inserter = build_inserter(
-        &mut config,
+        &config,
         initial_data,
         execution_correctness_manager.client(),
     );
@@ -137,7 +137,7 @@ fn test_executor_restart() {
 
     config = NodeConfig::load(&config_path).unwrap();
     // Restart LEC and make sure we can continue to append to the current tree.
-    let _execution_correctness_manager = ExecutionCorrectnessManager::new(&mut config);
+    let _execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
     //       ╭--> A1--> A2--> A3
     // Genesis--> B1--> B2
@@ -164,12 +164,12 @@ fn test_block_store_restart() {
     config_path.create_as_file().unwrap();
     config.save_config(&config_path).unwrap();
 
-    let execution_correctness_manager = ExecutionCorrectnessManager::new(&mut config);
+    let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
     {
         let (initial_data, qc) = get_initial_data_and_qc(&*db);
         let mut inserter = build_inserter(
-            &mut config,
+            &config,
             initial_data,
             execution_correctness_manager.client(),
         );
@@ -193,7 +193,7 @@ fn test_block_store_restart() {
         config = NodeConfig::load(&config_path).unwrap();
         let (initial_data, qc) = get_initial_data_and_qc(&*db);
         let mut inserter = build_inserter(
-            &mut config,
+            &config,
             initial_data,
             execution_correctness_manager.client(),
         );

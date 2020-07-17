@@ -117,7 +117,7 @@ impl NetworkBuilder {
     }
 
     /// Create a new NetworkBuilder based on the provided configuration.
-    pub fn create(chain_id: ChainId, role: RoleType, config: &mut NetworkConfig) -> NetworkBuilder {
+    pub fn create(chain_id: ChainId, role: RoleType, config: &NetworkConfig) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
 

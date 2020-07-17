@@ -82,7 +82,7 @@ pub struct EpochManager {
 
 impl EpochManager {
     pub fn new(
-        node_config: &mut NodeConfig,
+        node_config: &NodeConfig,
         time_service: Arc<dyn TimeService>,
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
@@ -93,7 +93,7 @@ impl EpochManager {
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
-        let sr_config = &mut node_config.consensus.safety_rules;
+        let sr_config = &node_config.consensus.safety_rules;
         let safety_rules_manager = SafetyRulesManager::new(sr_config);
         Self {
             author,

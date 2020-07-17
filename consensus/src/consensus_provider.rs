@@ -25,7 +25,7 @@ use tokio::runtime::{self, Runtime};
 
 /// Helper function to start consensus based on configuration and return the runtime
 pub fn start_consensus(
-    node_config: &mut NodeConfig,
+    node_config: &NodeConfig,
     network_sender: ConsensusNetworkSender,
     network_events: ConsensusNetworkEvents,
     state_sync_client: Arc<StateSyncClient>,

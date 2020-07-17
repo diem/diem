@@ -50,7 +50,7 @@ impl ProcessClientWrapper {
             .as_ref()
             .map(|key| key.private_key());
 
-        let safety_rules_manager = SafetyRulesManager::new(&mut config);
+        let safety_rules_manager = SafetyRulesManager::new(&config);
         let safety_rules = safety_rules_manager.client();
 
         Self {

@@ -23,7 +23,7 @@ use std::{
 };
 use storage_client::StorageClient;
 
-pub fn extract_execution_prikey(config: &mut NodeConfig) -> Option<Ed25519PrivateKey> {
+pub fn extract_execution_prikey(config: &NodeConfig) -> Option<Ed25519PrivateKey> {
     let backend = &config.execution.backend;
     let mut storage: Storage = backend.try_into().expect("Unable to initialize storage");
     if let Some(test_config) = config.test.as_ref() {
@@ -61,7 +61,7 @@ pub struct ExecutionCorrectnessManager {
 }
 
 impl ExecutionCorrectnessManager {
-    pub fn new(config: &mut NodeConfig) -> Self {
+    pub fn new(config: &NodeConfig) -> Self {
         match &config.execution.service {
             ExecutionCorrectnessService::Process(remote_service) => {
                 return Self::new_process(remote_service.server_address)

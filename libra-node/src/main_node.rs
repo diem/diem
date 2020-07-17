@@ -58,7 +58,7 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     NodeDebugService::new(addr)
 }
 
-pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
+pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
     // cause confusion, otherwise the threads would have their parent's name.
     rayon::ThreadPoolBuilder::new()
@@ -114,12 +114,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig
-    let mut network_configs: Vec<(RoleType, &mut NetworkConfig)> = node_config
+    let mut network_configs: Vec<(RoleType, &NetworkConfig)> = node_config
         .full_node_networks
-        .iter_mut()
+        .iter()
         .map(|network_config| (RoleType::FullNode, network_config))
         .collect();
-    if let Some(network_config) = node_config.validator_network.as_mut() {
+    if let Some(network_config) = node_config.validator_network.as_ref() {
         network_configs.push((RoleType::Validator, network_config));
     }
 
