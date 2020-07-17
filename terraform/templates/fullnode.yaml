@@ -1,2 +1,3 @@
 base:
   chain_id: "${chain_id}"
+  role: "full_node"
