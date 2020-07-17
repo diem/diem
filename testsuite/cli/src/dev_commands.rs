@@ -312,7 +312,7 @@ impl Command for DevCommandRegisterValidator {
         vec!["register_validator"]
     }
     fn get_params_help(&self) -> &'static str {
-        "<validator_account_address> <validator_account_private_key> <consensus_public_key> <network_signing_key> <network_identity_key> <network_address> <fullnode_identity_key> <fullnode_network_address>"
+        "<validator_account_address> <validator_account_private_key> <shared_val_netaddr_key_version> <shared_val_netaddr_key> <consensus_public_key> <network_address> <fullnode_network_address>"
     }
 
     fn get_description(&self) -> &'static str {
@@ -320,7 +320,7 @@ impl Command for DevCommandRegisterValidator {
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() != 9 {
+        if params.len() != 8 {
             println!("Invalid number of arguments to register validator");
             return;
         }

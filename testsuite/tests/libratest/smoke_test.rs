@@ -16,10 +16,7 @@ use libra_key_manager::{
 };
 use libra_management::constants;
 use libra_network_address::{
-    encrypted::{
-        EncNetworkAddress, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
-        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
+    encrypted::{EncNetworkAddress, RawEncNetworkAddress},
     NetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
@@ -1561,24 +1558,26 @@ fn test_network_key_rotation() {
         .iter()
         .map(|node_config| get_libra_interface(node_config))
         .collect();
-    let node_config = (&node_configs).first().unwrap();
+    let node_config = node_configs.first().unwrap();
+    let validator_network = node_config.validator_network.as_ref().unwrap();
 
     // Load validator's on disk storage
-    let mut storage: Storage = if let Identity::FromStorage(storage_identity) =
-        &node_config.validator_network.as_ref().unwrap().identity
-    {
-        (&storage_identity.backend).try_into().unwrap()
-    } else {
-        panic!("Couldn't load identity from storage");
-    };
+    let mut storage: Storage =
+        if let Identity::FromStorage(storage_identity) = &validator_network.identity {
+            (&storage_identity.backend).try_into().unwrap()
+        } else {
+            panic!("Couldn't load identity from storage");
+        };
+
+    // Load the shared_val_netaddr_keys from secure storage
+    let shared_key_map = validator_network.shared_val_netaddr_keys();
 
     // Setup an RPC endpoint so we can talk to the node
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let validator_account = validator_network.peer_id();
     let libra = (&libra_interfaces).first().unwrap();
 
     // Rotate key in storage
     storage.rotate_key(VALIDATOR_NETWORK_KEY).unwrap();
-    let validator_network = node_config.clone().validator_network.unwrap();
     let new_network_key = validator_network.identity_key();
     let new_public_key = new_network_key.public_key();
 
@@ -1590,9 +1589,11 @@ fn test_network_key_rotation() {
     let addr_idx = 0;
     let enc_addr =
         EncNetworkAddress::try_from(&validator_config.validator_network_address).unwrap();
+    let key_version = enc_addr.key_version();
+    let shared_val_netaddr_key = shared_key_map.get(&key_version).unwrap();
     let prev_seq_num = enc_addr.seq_num();
     let raw_addr = enc_addr
-        .decrypt(&TEST_SHARED_VAL_NETADDR_KEY, &validator_account, addr_idx)
+        .decrypt(&shared_val_netaddr_key, &validator_account, addr_idx)
         .unwrap();
     let mut addr = NetworkAddress::try_from(&raw_addr).unwrap();
 
@@ -1606,8 +1607,8 @@ fn test_network_key_rotation() {
     let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
     let seq_num = prev_seq_num + 1;
     let enc_addr = raw_addr.encrypt(
-        &TEST_SHARED_VAL_NETADDR_KEY,
-        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        &shared_val_netaddr_key,
+        key_version,
         &validator_account,
         seq_num,
         addr_idx,

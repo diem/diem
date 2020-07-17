@@ -12,16 +12,14 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
     traits::ValidCryptoMaterial,
-    x25519, ValidCryptoMaterialStringExt,
+    ValidCryptoMaterialStringExt,
 };
 use libra_json_rpc_client::views::{
     AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
 };
 use libra_logger::prelude::*;
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
+    encrypted::{self as netaddr, RawEncNetworkAddress},
     NetworkAddress, RawNetworkAddress,
 };
 use libra_temppath::TempPath;
@@ -663,47 +661,59 @@ impl ClientProxy {
             space_delim_strings[0]
         );
         ensure!(
-            space_delim_strings.len() == 9,
+            space_delim_strings.len() == 8,
             "Invalid number of arguments for registering validator"
         );
 
         // parse args
-        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
-        let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
-        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_address = NetworkAddress::from_str(space_delim_strings[5])?;
-        let raw_network_address = RawNetworkAddress::try_from(&network_address)?;
-        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[6])?;
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let account_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
+
+        let shared_val_netaddr_key_version = netaddr::KeyVersion::from_str(space_delim_strings[3])?;
+        let shared_val_netaddr_key = netaddr::Key::from_str(space_delim_strings[4])?;
+
+        let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[5])?;
+        let validator_network_address = NetworkAddress::from_str(space_delim_strings[6])?;
         let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[7])?;
+
+        let validator_network_identity_public_key = validator_network_address
+            .find_noise_proto()
+            .ok_or_else(|| format_err!("Missing noise public key in validator network address"))?;
+        let fullnode_network_identity_public_key = fullnode_network_address
+            .find_noise_proto()
+            .ok_or_else(|| format_err!("Missing noise public key in fullnode network address"))?;
+
+        let raw_validator_network_address =
+            RawNetworkAddress::try_from(&validator_network_address)?;
         let raw_fullnode_network_address = RawNetworkAddress::try_from(&fullnode_network_address)?;
 
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,
-            address,
+            account,
             true,
-            Some(KeyPair::from(private_key)),
+            Some(KeyPair::from(account_key)),
             None,
         )?;
 
         let seq_num = sender.sequence_number;
         let addr_idx = 0;
 
-        let enc_network_address = raw_network_address.encrypt(
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            &address,
+        let enc_validator_network_address = raw_validator_network_address.encrypt(
+            &shared_val_netaddr_key,
+            shared_val_netaddr_key_version,
+            &account,
             seq_num,
             addr_idx,
         );
-        let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
+        let raw_enc_validator_network_address =
+            RawEncNetworkAddress::try_from(&enc_validator_network_address)?;
 
         let program = encode_set_validator_config_script(
-            address,
+            account,
             consensus_public_key.to_bytes().to_vec(),
-            network_identity_key.to_bytes(),
-            raw_enc_network_address.into(),
-            fullnode_identity_key.to_bytes(),
+            validator_network_identity_public_key.to_bytes(),
+            raw_enc_validator_network_address.into(),
+            fullnode_network_identity_public_key.to_bytes(),
             raw_fullnode_network_address.into(),
         );
         let txn = self.create_txn_to_submit(
