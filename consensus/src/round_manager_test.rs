@@ -266,6 +266,13 @@ impl NodeSetup {
             _ => panic!("Unexpected Network Event"),
         }
     }
+
+    pub async fn next_message(&mut self) -> ConsensusMsg {
+        match self.all_events.next().await.unwrap().unwrap() {
+            Event::Message((_, msg)) => msg,
+            _ => panic!("Unexpected Network Event"),
+        }
+    }
 }
 
 #[test]
@@ -830,7 +837,11 @@ fn sync_on_partial_newer_sync_info() {
         // QuorumCert added
         assert_eq!(*node.block_store.highest_quorum_cert(), block_4_qc);
         // Help remote message sent
-        let _ = node.next_sync_info().await;
+        // Due to the asynchronous channel, the order of the sync info and next proposal is not fixed.
+        // We assert one of them is the sync info we expect.
+        let m1 = node.next_message().await;
+        let m2 = node.next_message().await;
+        assert!(matches!(m1, ConsensusMsg::SyncInfo(_)) || matches!(m2, ConsensusMsg::SyncInfo(_)));
     });
 }
 
