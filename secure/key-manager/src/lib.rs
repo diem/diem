@@ -140,7 +140,7 @@ where
                     self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Success), None);
                 }
                 Err(Error::LivenessError(last_value, current_value)) => {
-                    // Log the liveness error, but don't throw the error up the call stack.
+                    // Log the liveness error and continue to execute.
                     let error = Error::LivenessError(last_value, current_value).to_string();
                     self.log(
                         LogEntry::CheckKeyStatus,
@@ -149,13 +149,12 @@ where
                     );
                 }
                 Err(e) => {
-                    // Unexpected error that we can't handle -- throw!
+                    // Log the unexpected error and continue to execute.
                     self.log(
                         LogEntry::CheckKeyStatus,
                         Some(LogEvent::Error),
                         Some((LogField::UnexpectedError, e.to_string())),
                     );
-                    return Err(e);
                 }
             };
 
