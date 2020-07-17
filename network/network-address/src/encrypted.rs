@@ -35,8 +35,10 @@ pub const AES_GCM_NONCE_LEN: usize = 12;
 pub const KEY_LEN: usize = 32;
 
 /// Type wrapper for the `shared_val_netaddr_key` as an array.
-#[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, Eq, PartialEq))]
+// TODO(philiphayes): key should not be cloneable, but until we have a ref-counted
+// secure key box, we need to clone the keys to get them out of the network config
+#[derive(DeserializeKey, SilentDisplay, SilentDebug, SerializeKey, Clone)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Eq, PartialEq))]
 pub struct Key([u8; KEY_LEN]);
 pub type KeyVersion = u32;
 

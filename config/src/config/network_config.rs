@@ -142,7 +142,7 @@ impl NetworkConfig {
         .expect("peer id should be present")
     }
 
-    pub fn shared_val_netaddr_keys(&mut self) -> HashMap<netaddr::KeyVersion, netaddr::Key> {
+    pub fn shared_val_netaddr_keys(&self) -> HashMap<netaddr::KeyVersion, netaddr::Key> {
         // The shared validator network address key is only used in the
         // validator network. For all other cases, we'll just return an empty key
         // map.
@@ -150,8 +150,8 @@ impl NetworkConfig {
             return HashMap::new();
         }
 
-        let keys = match &mut self.shared_val_netaddr_keys {
-            SharedValNetAddrKeys::FromConfig { keys } => keys.drain().collect(),
+        let keys = match &self.shared_val_netaddr_keys {
+            SharedValNetAddrKeys::FromConfig { keys } => keys.clone(),
             SharedValNetAddrKeys::FromStorage { backend } => {
                 let storage = Storage::from(&*backend);
                 let key_bytes = storage

@@ -212,6 +212,7 @@ pub mod tests {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use libra_management::constants;
+    use libra_network_address::encrypted::{self as netaddr, TEST_SHARED_VAL_NETADDR_KEY};
     use libra_secure_storage::{CryptoStorage, KVStorage, Value};
     use libra_types::{
         account_address,
@@ -219,6 +220,7 @@ pub mod tests {
         transaction::{TransactionArgument, TransactionPayload},
     };
     use std::{
+        convert::TryFrom,
         fs::File,
         io::{Read, Write},
     };
@@ -308,6 +310,7 @@ pub mod tests {
                     &owner_name,
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                    TEST_SHARED_VAL_NETADDR_KEY,
                     ChainId::test(),
                     &ns,
                     &ns_shared,
@@ -388,11 +391,24 @@ pub mod tests {
                 owner_name,
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                TEST_SHARED_VAL_NETADDR_KEY,
                 ChainId::test(),
                 local_operator_ns,
                 remote_operator_ns,
             )
             .unwrap();
+
+        // Verify that the shared_val_netaddr_key was uploaded to local storage
+        let validator_storage = storage_helper.storage(local_operator_ns.into());
+        let shared_val_netaddr_key = validator_storage
+            .get(libra_global_constants::SHARED_VAL_NETADDR_KEY)
+            .unwrap()
+            .value
+            .bytes()
+            .unwrap();
+        let shared_val_netaddr_key =
+            netaddr::Key::try_from(shared_val_netaddr_key.as_slice()).unwrap();
+        assert_eq!(shared_val_netaddr_key, TEST_SHARED_VAL_NETADDR_KEY);
 
         // Verify that a validator config transaction was uploaded to the remote storage
         let shared_storage = storage_helper.storage(remote_operator_ns.into());

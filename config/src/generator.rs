@@ -6,12 +6,17 @@
 
 use crate::{
     config::{
-        DiscoveryMethod, NetworkConfig, NodeConfig, SeedAddresses, TestConfig, HANDSHAKE_VERSION,
+        DiscoveryMethod, NetworkConfig, NodeConfig, SeedAddresses, SharedValNetAddrKeys,
+        TestConfig, HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
-use libra_network_address::NetworkAddress;
+use libra_network_address::{
+    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
+    NetworkAddress,
+};
 use rand::{rngs::StdRng, SeedableRng};
+use std::iter;
 
 pub struct ValidatorSwarm {
     pub nodes: Vec<NodeConfig>,
@@ -32,11 +37,17 @@ pub fn validator_swarm(
             node.randomize_ports();
         }
 
-        // For a validator node, any of its validator peers are considered an upstream peer
         let network = node.validator_network.as_mut().unwrap();
         network.discovery_method = DiscoveryMethod::gossip(network.listen_address.clone());
         network.mutual_authentication = true;
         network.network_id = NetworkId::Validator;
+        network.shared_val_netaddr_keys = SharedValNetAddrKeys::FromConfig {
+            keys: iter::once((
+                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+                TEST_SHARED_VAL_NETADDR_KEY,
+            ))
+            .collect(),
+        };
 
         nodes.push(node);
     }

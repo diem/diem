@@ -4,13 +4,14 @@
 // FIXME: (gnazario) storage helper doesn't belong in the genesis tool, but it's attached to it right now
 
 use crate::command::Command;
-use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_crypto::{ed25519::Ed25519PublicKey, traits::ValidCryptoMaterialStringExt};
 use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, LIBRA_ROOT_KEY,
-    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, SHARED_VAL_NETADDR_KEY, VALIDATOR_NETWORK_KEY,
+    WAYPOINT,
 };
 use libra_management::{error::Error, secure_backend::DISK};
-use libra_network_address::NetworkAddress;
+use libra_network_address::{encrypted as netaddr, NetworkAddress};
 use libra_secure_storage::{
     CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
 };
@@ -60,6 +61,9 @@ impl StorageHelper {
         storage.set(LAST_VOTED_ROUND, Value::U64(0)).unwrap();
         storage.set(PREFERRED_ROUND, Value::U64(0)).unwrap();
         storage.set(WAYPOINT, Value::String("".into())).unwrap();
+        storage
+            .set(SHARED_VAL_NETADDR_KEY, Value::Bytes(vec![]))
+            .unwrap();
     }
 
     pub fn libra_root_key(
@@ -259,6 +263,7 @@ impl StorageHelper {
         owner_name: &str,
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
+        shared_val_netaddr_key: netaddr::Key,
         chain_id: ChainId,
         validator_ns: &str,
         shared_ns: &str,
@@ -270,6 +275,7 @@ impl StorageHelper {
                 --owner-name {owner_name}
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
+                --shared-val-netaddr-key {shared_val_netaddr_key}
                 --chain-id {chain_id}
                 --validator-backend backend={backend};\
                     path={path};\
@@ -281,6 +287,7 @@ impl StorageHelper {
             owner_name = owner_name,
             validator_address = validator_address,
             fullnode_address = fullnode_address,
+            shared_val_netaddr_key = shared_val_netaddr_key.to_encoded_string().unwrap(),
             chain_id = chain_id.id(),
             backend = DISK,
             path = self.path_string(),

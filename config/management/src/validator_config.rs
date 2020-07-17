@@ -6,16 +6,14 @@ use crate::{
     error::Error,
     secure_backend::{SharedBackend, ValidatorBackend},
 };
-use libra_config::config::HANDSHAKE_VERSION;
+use libra_config::config::{HANDSHAKE_VERSION, SHARED_VAL_NETADDR_KEY_VERSION};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
     VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
+    encrypted::{self as netaddr, RawEncNetworkAddress},
     NetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
@@ -37,6 +35,8 @@ pub struct ValidatorConfig {
     validator_address: NetworkAddress,
     #[structopt(long)]
     fullnode_address: NetworkAddress,
+    #[structopt(long)]
+    shared_val_netaddr_key: netaddr::Key,
     #[structopt(long)]
     chain_id: ChainId,
     #[structopt(flatten)]
@@ -87,6 +87,20 @@ impl ValidatorConfig {
                 )
             })?;
 
+        // Import the shared_val_netaddr_key to local storage
+        validator_storage
+            .set(
+                libra_global_constants::SHARED_VAL_NETADDR_KEY,
+                Value::Bytes(self.shared_val_netaddr_key.as_slice().to_vec()),
+            )
+            .map_err(|e| {
+                Error::StorageWriteError(
+                    self.validator_backend.name(),
+                    libra_global_constants::SHARED_VAL_NETADDR_KEY,
+                    e.to_string(),
+                )
+            })?;
+
         // Upload the validator config to shared storage
         let mut shared_storage = self
             .shared_backend
@@ -127,6 +141,8 @@ impl ValidatorConfig {
         let validator_network_key =
             x25519_from_storage(VALIDATOR_NETWORK_KEY, &validator_storage, storage_name)?;
 
+        // Assume a constant key version for now, we'll support rotation + multiple keys later.
+        let shared_val_netaddr_key_version = SHARED_VAL_NETADDR_KEY_VERSION;
         // Only supports one address for now
         let addr_idx = 0;
 
@@ -147,8 +163,8 @@ impl ValidatorConfig {
         // current sequence number by querying the blockchain.
         let sequence_number = 0;
         let enc_validator_address = raw_validator_address.encrypt(
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            &self.shared_val_netaddr_key,
+            shared_val_netaddr_key_version,
             &owner_account,
             sequence_number,
             addr_idx,

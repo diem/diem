@@ -6,7 +6,7 @@ use config_builder::BuildSwarm;
 use libra_config::{
     config::{
         DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService,
-        SecureBackend, SeedAddresses, WaypointConfig, HANDSHAKE_VERSION,
+        SecureBackend, SeedAddresses, SharedValNetAddrKeys, WaypointConfig, HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
@@ -15,6 +15,7 @@ use libra_management::{
     constants::{COMMON_NS, LAYOUT},
     layout::Layout,
 };
+use libra_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};
@@ -135,6 +136,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
                 &(index.to_string() + OWNER_SHARED_NS),
                 validator_network_address,
                 fullnode_network_address,
+                TEST_SHARED_VAL_NETADDR_KEY,
                 self.template.base.chain_id,
                 &local_ns,
                 &remote_ns,
@@ -146,6 +148,9 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             libra_global_constants::OWNER_ACCOUNT.into(),
             self.secure_backend(&local_ns, "validator"),
         );
+        validator_network.shared_val_netaddr_keys = SharedValNetAddrKeys::FromStorage {
+            backend: self.secure_backend(&local_ns, "validator"),
+        };
         fullnode_network.identity = Identity::from_storage(
             libra_global_constants::FULLNODE_NETWORK_KEY.into(),
             libra_global_constants::OWNER_ACCOUNT.into(),
