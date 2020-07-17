@@ -155,7 +155,7 @@ cargo run -p libra-management -- \
     --owner-name OWNER_NAME \
     --validator-address '/dns/DNS/tcp/PORT' \
     --fullnode-address '/dns/DNS/tcp/PORT' \
-    --shared-val-netaddr-key 00000000000000000000000000000000 \
+    --shared-val-netaddr-key 0000000000000000000000000000000000000000000000000000000000000000 \
     --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
     --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
 ```
