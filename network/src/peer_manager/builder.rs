@@ -47,20 +47,6 @@ pub enum AuthenticationMode {
     Mutual(x25519::PrivateKey),
 }
 
-impl AuthenticationMode {
-    /// Convenience method to retrieve the public key for the auth mode's inner
-    /// network identity key.
-    ///
-    /// Note: this only works because all auth modes are Noise-based.
-    pub fn public_key(&self) -> x25519::PublicKey {
-        match self {
-            AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
-                key.public_key()
-            }
-        }
-    }
-}
-
 struct TransportContext {
     chain_id: ChainId,
     direct_send_protocols: Vec<ProtocolId>,
