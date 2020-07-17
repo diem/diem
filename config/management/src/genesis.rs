@@ -28,12 +28,12 @@ pub struct Genesis {
 impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
-        let association_key = self.association_key(&layout)?;
+        let libra_root_key = self.libra_root_key(&layout)?;
         let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let genesis = vm_genesis::encode_genesis_transaction(
-            association_key,
+            libra_root_key,
             &operator_assignments,
             &operator_registrations,
             Some(libra_types::on_chain_config::VMPublishingOption::open()), // TODO: intended?
@@ -55,18 +55,17 @@ impl Genesis {
         Ok(genesis)
     }
 
-    /// Retrieves the association key from the remote storage. Note, at this point in time, genesis
-    /// only supports a single association key.
-    pub fn association_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
+    /// Retrieves the libra root key from the remote storage. Note, at this point in time, genesis
+    /// only supports a single libra root key.
+    pub fn libra_root_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
         let storage_name = self.backend.name();
-        let association_backend = self.backend.shared_backend.clone();
-        let association_backend = association_backend.set_namespace(layout.association[0].clone());
-        let association_storage = association_backend.create_storage(self.backend.name())?;
-
-        let association_key = association_storage
+        let libra_root_backend = self.backend.shared_backend.clone();
+        let libra_root_backend = libra_root_backend.set_namespace(layout.libra_root[0].clone());
+        let libra_root_storage = libra_root_backend.create_storage(self.backend.name())?;
+        let libra_root_key = libra_root_storage
             .get(LIBRA_ROOT_KEY)
             .map_err(|e| Error::StorageReadError(storage_name, LIBRA_ROOT_KEY, e.to_string()))?;
-        association_key
+        libra_root_key
             .value
             .ed25519_public_key()
             .map_err(|e| Error::StorageReadError(storage_name, LIBRA_ROOT_KEY, e.to_string()))

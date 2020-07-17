@@ -19,7 +19,7 @@ The process for starting organization of the planned and current functionality i
   * Association sets up a secure-backend for data uploads, `association drive`.
     The association then distributes credentials for each node owner and
     validator operator.
-  * The association generates its `association key` and shares the public key
+  * The association generates its `libra root key` and shares the public key
     to the association drive.
   * Each OW will generate a private `owner key` and share the public key to the
     association drive.
@@ -84,7 +84,7 @@ access to the `repo` scope. This token must be stored locally on their disk in
 a file accessible to the management tool.
 
 Finally, each participant should initialize their respective key:
-`association`, `owner`, or `operator` in a secure storage solution. How this is
+`libra_root`, `owner`, or `operator` in a secure storage solution. How this is
 done is outside the scope of this document.
 
 The remainder of this section specifies distinct behaviors for each role.
@@ -102,7 +102,7 @@ cargo run -p libra-management -- \
 * Each Member of the Association will upload their key to GitHub:
 ```
 cargo run -p libra-management -- \
-    association-key \
+    libra-root-key \
     --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
     --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
 ```
@@ -111,7 +111,7 @@ The layout is a toml configuration file of the following format:
 ```
 [operator] = ["alice", "bob"]
 [owner] = ["carol", "dave"]
-[association] = ["erin"]
+[libra_root] = ["erin"]
 ```
 where each field maps to a role as described in this document.
 

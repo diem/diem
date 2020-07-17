@@ -59,7 +59,7 @@ impl StorageHelper {
         storage.set(WAYPOINT, Value::String("".into())).unwrap();
     }
 
-    pub fn association_key(
+    pub fn libra_root_key(
         &self,
         validator_ns: &str,
         shared_ns: &str,
@@ -67,7 +67,7 @@ impl StorageHelper {
         let args = format!(
             "
                 management
-                association-key
+                libra-root-key
                 --validator-backend backend={backend};\
                     path={path};\
                     namespace={validator_ns}
@@ -82,7 +82,7 @@ impl StorageHelper {
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        command.association_key()
+        command.libra_root_key()
     }
 
     pub fn create_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
