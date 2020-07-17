@@ -42,7 +42,7 @@ data "template_file" "fullnode_config" {
   template = file("templates/fullnode.yaml")
 
   vars = {
-    chain_id = local.chain_id
+    chain_id = var.chain_id
   }
 }
 
