@@ -30,12 +30,11 @@ impl ProcessClientWrapper {
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
         let mut config = NodeConfig::random();
-        let mut test_config = config.test.as_ref().unwrap().clone();
+        let test_config = config.test.as_ref().unwrap().clone();
         let prikey = test_config
-            .execution_keypair
-            .as_mut()
-            .unwrap()
-            .take_private();
+            .execution_key
+            .as_ref()
+            .map(|key| key.private_key());
         config.execution.service =
             ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
         config.storage.address = storage_addr;

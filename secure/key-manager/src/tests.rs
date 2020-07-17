@@ -391,22 +391,22 @@ fn setup_secure_storage(
     let test_config = config.clone().test.unwrap();
 
     // Initialize the owner key and account address in storage
-    let mut owner_keypair = test_config.owner_keypair.unwrap();
-    let owner_prikey = Value::Ed25519PrivateKey(owner_keypair.take_private().unwrap());
+    let owner_key = test_config.owner_key.unwrap();
+    let owner_prikey = Value::Ed25519PrivateKey(owner_key.private_key());
     sec_storage.set(OWNER_KEY, owner_prikey).unwrap();
 
-    let owner_account = libra_types::account_address::from_public_key(&owner_keypair.public_key());
+    let owner_account = libra_types::account_address::from_public_key(&owner_key.public_key());
     sec_storage
         .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
         .unwrap();
 
     // Initialize the operator key and account address in storage
-    let mut operator_keypair = test_config.operator_keypair.unwrap();
-    let operator_prikey = Value::Ed25519PrivateKey(operator_keypair.take_private().unwrap());
+    let operator_key = test_config.operator_key.unwrap();
+    let operator_prikey = Value::Ed25519PrivateKey(operator_key.private_key());
     sec_storage.set(OPERATOR_KEY, operator_prikey).unwrap();
 
     let operator_account =
-        libra_types::account_address::from_public_key(&operator_keypair.public_key());
+        libra_types::account_address::from_public_key(&operator_key.public_key());
     sec_storage
         .set(
             OPERATOR_ACCOUNT,
@@ -416,8 +416,7 @@ fn setup_secure_storage(
 
     // Initialize the consensus key in storage
     let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
-    let consensus_keypair = sr_test_config.consensus_keypair.as_ref().unwrap();
-    let consensus_prikey = consensus_keypair.clone().take_private().unwrap();
+    let consensus_prikey = sr_test_config.consensus_key.as_ref().unwrap().private_key();
     sec_storage
         .set(
             crate::CONSENSUS_KEY,

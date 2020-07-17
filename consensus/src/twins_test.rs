@@ -143,11 +143,7 @@ impl SMRNode {
                     let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
                     ValidatorInfo::new_with_test_network_keys(
                         sr_test_config.author,
-                        sr_test_config
-                            .consensus_keypair
-                            .as_ref()
-                            .unwrap()
-                            .public_key(),
+                        sr_test_config.consensus_key.as_ref().unwrap().public_key(),
                         1,
                     )
                 })

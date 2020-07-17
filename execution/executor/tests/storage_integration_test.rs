@@ -62,14 +62,14 @@ fn test_reconfiguration() {
 
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
-    let keys = config
+    let validator_pubkey = config
         .test
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .owner_keypair
-        .as_mut()
-        .unwrap();
-    let validator_pubkey = keys.public_key();
+        .owner_key
+        .as_ref()
+        .unwrap()
+        .public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     assert!(
         auth_key.derived_address() == validator_account,
@@ -126,11 +126,12 @@ fn test_reconfiguration() {
     // txn3 = rotate the validator's consensus pubkey
     let operator_key = config
         .test
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .operator_keypair
-        .as_mut()
-        .unwrap();
+        .operator_key
+        .as_ref()
+        .unwrap()
+        .private_key();
     let operator_account = account_address::from_public_key(&operator_key.public_key());
 
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
@@ -139,7 +140,7 @@ fn test_reconfiguration() {
     let txn3 = get_test_signed_transaction(
         operator_account,
         /* sequence_number = */ 0,
-        operator_key.take_private().unwrap(),
+        operator_key.clone(),
         operator_key.public_key(),
         Some(encode_set_validator_config_and_reconfigure_script(
             validator_account,
@@ -256,15 +257,15 @@ fn test_change_publishing_option_to_custom() {
     let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
-    let keys = config
+    let validator_privkey = config
         .test
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .owner_keypair
-        .as_mut()
-        .unwrap();
-    let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public_key();
+        .owner_key
+        .as_ref()
+        .unwrap()
+        .private_key();
+    let validator_pubkey = validator_privkey.public_key();
 
     let signer = extract_signer(&mut config);
 
@@ -425,15 +426,15 @@ fn test_extend_whitelist() {
     let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
-    let keys = config
+    let validator_privkey = config
         .test
-        .as_mut()
+        .as_ref()
         .unwrap()
-        .owner_keypair
-        .as_mut()
-        .unwrap();
-    let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public_key();
+        .owner_key
+        .as_ref()
+        .unwrap()
+        .private_key();
+    let validator_pubkey = validator_privkey.public_key();
     let signer = extract_signer(&mut config);
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     assert!(

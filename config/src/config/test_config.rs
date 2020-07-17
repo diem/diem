@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::keys::KeyPair;
+use crate::keys::ConfigKey;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::{
@@ -11,19 +11,13 @@ use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
-type ExecutionKeyPair = KeyPair<Ed25519PrivateKey>;
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct TestConfig {
     pub auth_key: Option<AuthenticationKey>,
-    #[serde(rename = "operator_private_key")]
-    pub operator_keypair: Option<AccountKeyPair>,
-    #[serde(rename = "owner_private_key")]
-    pub owner_keypair: Option<AccountKeyPair>,
-    #[serde(rename = "execution_private_key")]
-    pub execution_keypair: Option<ExecutionKeyPair>,
+    pub operator_key: Option<ConfigKey<Ed25519PrivateKey>>,
+    pub owner_key: Option<ConfigKey<Ed25519PrivateKey>>,
+    pub execution_key: Option<ConfigKey<Ed25519PrivateKey>>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
     #[serde(skip)]
@@ -32,14 +26,13 @@ pub struct TestConfig {
     pub publishing_option: Option<VMPublishingOption>,
 }
 
-#[cfg(any(test, feature = "fuzzing"))]
 impl Clone for TestConfig {
     fn clone(&self) -> Self {
         Self {
             auth_key: self.auth_key,
-            operator_keypair: self.operator_keypair.clone(),
-            owner_keypair: self.owner_keypair.clone(),
-            execution_keypair: self.execution_keypair.clone(),
+            operator_key: self.operator_key.clone(),
+            owner_key: self.owner_key.clone(),
+            execution_key: self.execution_key.clone(),
             temp_dir: None,
             publishing_option: self.publishing_option.clone(),
         }
@@ -48,10 +41,10 @@ impl Clone for TestConfig {
 
 impl PartialEq for TestConfig {
     fn eq(&self, other: &Self) -> bool {
-        self.operator_keypair == other.operator_keypair
-            && self.owner_keypair == other.owner_keypair
+        self.operator_key == other.operator_key
+            && self.owner_key == other.owner_key
             && self.auth_key == other.auth_key
-            && self.execution_keypair == other.execution_keypair
+            && self.execution_key == other.execution_key
     }
 }
 
@@ -59,9 +52,9 @@ impl TestConfig {
     pub fn open_module() -> Self {
         Self {
             auth_key: None,
-            operator_keypair: None,
-            owner_keypair: None,
-            execution_keypair: None,
+            operator_key: None,
+            owner_key: None,
+            execution_key: None,
             temp_dir: None,
             publishing_option: Some(VMPublishingOption::open()),
         }
@@ -72,9 +65,9 @@ impl TestConfig {
         temp_dir.create_as_dir().expect("error creating tempdir");
         Self {
             auth_key: None,
-            operator_keypair: None,
-            owner_keypair: None,
-            execution_keypair: None,
+            operator_key: None,
+            owner_key: None,
+            execution_key: None,
             temp_dir: Some(temp_dir),
             publishing_option: None,
         }
@@ -83,15 +76,15 @@ impl TestConfig {
     pub fn random_account_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate(rng);
         self.auth_key = Some(AuthenticationKey::ed25519(&privkey.public_key()));
-        self.operator_keypair = Some(AccountKeyPair::load(privkey));
+        self.operator_key = Some(ConfigKey::new(privkey));
 
         let privkey = Ed25519PrivateKey::generate(rng);
-        self.owner_keypair = Some(AccountKeyPair::load(privkey));
+        self.owner_key = Some(ConfigKey::new(privkey));
     }
 
     pub fn random_execution_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate(rng);
-        self.execution_keypair = Some(ExecutionKeyPair::load(privkey));
+        self.execution_key = Some(ConfigKey::new(privkey));
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {
@@ -108,9 +101,9 @@ mod test {
     fn verify_test_config_equality_using_keys() {
         // Create default test config without keys
         let mut test_config = TestConfig::new_with_temp_dir();
-        assert_eq!(test_config.operator_keypair, None);
-        assert_eq!(test_config.owner_keypair, None);
-        assert_eq!(test_config.execution_keypair, None);
+        assert_eq!(test_config.operator_key, None);
+        assert_eq!(test_config.owner_key, None);
+        assert_eq!(test_config.execution_key, None);
 
         // Clone the config and verify equality
         let mut clone_test_config = test_config.clone();
@@ -126,9 +119,9 @@ mod test {
 
         // Copy keys across configs
         clone_test_config.auth_key = test_config.auth_key;
-        clone_test_config.execution_keypair = test_config.execution_keypair.clone();
-        clone_test_config.operator_keypair = test_config.operator_keypair.clone();
-        clone_test_config.owner_keypair = test_config.owner_keypair.clone();
+        clone_test_config.execution_key = test_config.execution_key.clone();
+        clone_test_config.operator_key = test_config.operator_key.clone();
+        clone_test_config.owner_key = test_config.owner_key.clone();
 
         // Verify both configs are identical
         assert_eq!(clone_test_config, test_config);

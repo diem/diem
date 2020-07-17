@@ -1578,7 +1578,7 @@ fn test_network_key_rotation() {
 
     // Rotate key in storage
     storage.rotate_key(VALIDATOR_NETWORK_KEY).unwrap();
-    let mut validator_network = node_config.clone().validator_network.unwrap();
+    let validator_network = node_config.clone().validator_network.unwrap();
     let new_network_key = validator_network.identity_key();
     let new_public_key = new_network_key.public_key();
 
