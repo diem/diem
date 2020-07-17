@@ -19,6 +19,7 @@ jobs:
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=PREV_TAG::land_$(git rev-parse --short=8 origin/master)"
       - name: Check kill switch
         id: check_ks
         run: |
@@ -49,6 +50,22 @@ jobs:
           done
           echo "Build failed after retries"
           exit 1
+      - name: Determine which cluster-test suite to run
+        if: steps.check_ks.outputs.should_run == 'true'
+        run: |
+          set +e
+          commit_message=$(git log -1 --pretty=oneline)
+          echo $commit_message | grep '\[breaking\]'
+          if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
+            echo "Compat killswitch activated! Will run land_blocking suite"
+            echo "::set-env name=TEST_COMPAT::0"
+          elif [ $? -eq 0 ]; then
+            echo "Breaking change detected! Will run land_blocking suite"
+            echo "::set-env name=TEST_COMPAT::0"
+          else
+            echo "Will run land_blocking_compat suite"
+            echo "::set-env name=TEST_COMPAT::1"
+          fi
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
@@ -57,11 +74,23 @@ jobs:
           date
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
-          ./scripts/cti \
-            --tag ${TEST_TAG} \
-            -E RUST_LOG=debug \
-            --report report.json \
-            --suite land_blocking
+          if [ $TEST_COMPAT -eq 1 ]; then
+            ./scripts/cti \
+              --tag ${PREV_TAG} \
+              --cluster-test-tag ${TEST_TAG} \
+              -E RUST_LOG=debug \
+              -E BATCH_SIZE=15 \
+              -E UPDATE_TO_TAG=${TEST_TAG} \
+              -E DISABLE_FN_UPGRADE=1 \
+              --report report.json \
+              --suite land_blocking_compat
+          else
+            ./scripts/cti \
+              --tag ${TEST_TAG} \
+              -E RUST_LOG=debug \
+              --report report.json \
+              --suite land_blocking
+          fi
           ret=$?
           echo "::set-env name=CTI_EXIT_CODE::$ret"
           if [ -s "report.json" ]; then
@@ -168,13 +197,22 @@ jobs:
             }
             // Add repro cmd to message
             try {
-              body += "\nRepro cmd:\n";
-              body += `
-                ./scripts/cti --tag ${env_vars.TEST_TAG} --run bench
-              `;
+              if (parseInt(env_vars.TEST_COMPAT) === 1) {
+                body += "\nRepro cmd:\n";
+                body += `
+                  ./scripts/cti --tag ${env_vars.PREV_TAG} --cluster-test-tag ${env_vars.TEST_TAG} \\ \n
+                      -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${env_vars.TEST_TAG} -E DISABLE_FN_UPGRADE=1 \\ \n
+                      --suite land_blocking_compat
+                `;
+              } else {
+                body += "\nRepro cmd:\n";
+                body += `
+                  ./scripts/cti --tag ${env_vars.TEST_TAG} --suite land_blocking
+                `;
+              }
             } catch (err) {
               if (err.code === 'ReferenceError') {
-                console.error("env var $LIBRA_GIT_REV is not set.");
+                console.error("One of the following env vars is not set: $TEST_COMPAT, $TEST_TAG, $PREV_TAG");
               } else {
                 body += "[GHA DEBUG]\nFound error in actions/github-script\n";
                 body += err;
