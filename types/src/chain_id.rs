@@ -11,14 +11,15 @@ use std::{
 /// A registry of named chain IDs
 /// Its main purpose is to improve human readability of reserved chain IDs in config files and CLI
 /// When signing transactions for such chains, the numerical chain ID should still be used
-/// (e.g. MAINNET has numeric chain ID 0, PREMAINNET has chain ID 1, etc)
+/// (e.g. MAINNET has numeric chain ID 1, TESTNET has chain ID 2, etc)
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
 pub enum NamedChain {
-    /// MAINNET is the Libra mainnet production chain and is reserved for 0
-    MAINNET,
+    /// Users might accidentally initialize the ChainId field to 0, hence reserving ChainId 0 for accidental
+    /// initialization.
+    /// MAINNET is the Libra mainnet production chain and is reserved for 1
+    MAINNET = 1,
     // The Libra chain below are non-reserved, non-production, and may change over time.  They are listed for convenience here.
-    PREMAINNET,
     TESTNET,
     DEVNET,
     TESTING,
@@ -29,7 +30,6 @@ impl NamedChain {
         // TODO implement custom macro that derives FromStr impl for enum (similar to libra/common/num-variants)
         let reserved_chain = match s {
             "MAINNET" => NamedChain::MAINNET,
-            "PREMAINNET" => NamedChain::PREMAINNET,
             "TESTNET" => NamedChain::TESTNET,
             "DEVNET" => NamedChain::DEVNET,
             "TESTING" => NamedChain::TESTING,
@@ -109,6 +109,7 @@ impl FromStr for ChainId {
 
 impl ChainId {
     pub fn new(id: u8) -> Self {
+        assert!(id > 0, "cannot have chain ID with 0");
         Self(id)
     }
 

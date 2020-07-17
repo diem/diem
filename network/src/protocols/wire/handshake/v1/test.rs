@@ -42,7 +42,7 @@ fn represents_same_network() {
     assert!(!h1.verify(&h2));
     let h2 = HandshakeMsg::new(chain_id, NetworkId::Public);
     assert!(!h1.verify(&h2));
-    let h2 = HandshakeMsg::new(ChainId::new(0), network_id);
+    let h2 = HandshakeMsg::new(ChainId::new(chain_id.id() + 1), network_id);
     assert!(!h1.verify(&h2));
 }
 
