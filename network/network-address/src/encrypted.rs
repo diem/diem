@@ -59,7 +59,7 @@ pub const TEST_SHARED_VAL_NETADDR_KEY_VERSION: KeyVersion = 0;
 /// also equal to the hash value `SHA3-256(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT")`.
 ///
 /// ```
-/// use libra_network_address::encrypted::HKDF_SALT;
+/// use libra_network_address::HKDF_SALT;
 /// use libra_crypto::hash::HashValue;
 ///
 /// let derived_salt = HashValue::sha3_256_of(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT");

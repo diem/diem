@@ -25,8 +25,8 @@ use thiserror::Error;
 mod encrypted;
 
 pub use encrypted::{
-    EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
-    TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress, HKDF_SALT,
+    TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 
 const MAX_DNS_NAME_SIZE: usize = 255;
