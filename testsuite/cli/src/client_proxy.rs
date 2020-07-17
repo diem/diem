@@ -739,6 +739,7 @@ impl ClientProxy {
                 .get_txn_by_acc_seq(account, sequence_number - 1, true)
             {
                 Ok(Some(txn_view)) => {
+                    println!();
                     if txn_view.vm_status == VMStatusView::Executed {
                         println!("transaction executed!");
                         if txn_view.events.is_empty() {
@@ -753,6 +754,7 @@ impl ClientProxy {
                     }
                 }
                 Err(e) => {
+                    println!();
                     println!("Response with error: {:?}", e);
                 }
                 _ => {

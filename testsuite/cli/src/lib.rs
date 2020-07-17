@@ -23,6 +23,7 @@ pub mod client_proxy;
 /// Command struct to interact with client.
 pub mod commands;
 mod dev_commands;
+mod info_commands;
 /// Client wrapper to connect to validator.
 mod libra_client;
 mod query_commands;
