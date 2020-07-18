@@ -11,6 +11,5 @@ error: post-condition does not hold
     =         check = <redacted>,
     =         value = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/marketcap_generic.move:63:10: deposit_invalid
     =     at tests/sources/functional/marketcap_generic.move:62:18: deposit_invalid
     =     at tests/sources/functional/marketcap_generic.move:63:27: deposit_invalid

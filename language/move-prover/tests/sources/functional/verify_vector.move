@@ -82,7 +82,7 @@ module VerifyVector {
     spec fun verify_model_swap {
         aborts_if i >= len(v);
         aborts_if j >= len(v);
-        ensures v == old(update(update(v,i,v[j]),j,v[i]));
+        ensures v == old(update_vector(update_vector(v,i,v[j]),j,v[i]));
     }
 
     // Return an vector of size one containing `e`
@@ -329,7 +329,7 @@ module VerifyVector {
     spec fun verify_swap_remove {
         aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
-        ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
+        ensures v == old(update_vector(v,i,v[len(v)-1])[0..len(v)-1]);
         ensures old(v[i]) == result;
     }
 
@@ -342,7 +342,7 @@ module VerifyVector {
     spec fun verify_model_swap_remove {
         aborts_if i >= len(v);
         ensures len(v) == len(old(v)) - 1;
-        ensures v == old(update(v,i,v[len(v)-1])[0..len(v)-1]);
+        ensures v == old(update_vector(v,i,v[len(v)-1])[0..len(v)-1]);
         ensures old(v[i]) == result;
     }
 }

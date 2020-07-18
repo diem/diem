@@ -36,3 +36,36 @@ error: precondition does not hold at this call
     =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller
     =         r = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
+
+error: data invariant does not hold
+
+    ┌── tests/sources/functional/mut_ref_accross_modules.move:21:9 ───
+    │
+ 21 │         invariant value > 0;
+    │         ^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/mut_ref_accross_modules.move:111:6: private_to_public_caller_invalid_data_invariant
+    =         r = <redacted>,
+    =         x = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:34:5: new (entry)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:37:9: new
+    =         x = <redacted>,
+    =         r = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:35:17: new
+    =     at tests/sources/functional/mut_ref_accross_modules.move:36:23: new
+    =     at tests/sources/functional/mut_ref_accross_modules.move:37:9: new
+    =     at tests/sources/functional/mut_ref_accross_modules.move:34:16: new
+    =     at tests/sources/functional/mut_ref_accross_modules.move:116:14: private_to_public_caller_invalid_data_invariant
+    =     at tests/sources/functional/mut_ref_accross_modules.move:117:14: private_to_public_caller_invalid_data_invariant
+    =     at tests/sources/functional/mut_ref_accross_modules.move:72:5: private_decrement
+    =         x = <redacted>,
+    =         r = <redacted>,
+    =         r = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:73:27: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:72:5: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:74:17: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:72:9: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:111:6: private_to_public_caller_invalid_data_invariant

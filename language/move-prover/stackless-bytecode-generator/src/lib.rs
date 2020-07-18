@@ -19,6 +19,7 @@ pub mod stackless_bytecode;
 pub mod stackless_bytecode_generator;
 pub mod stackless_control_flow_graph;
 pub mod test_instrumenter;
+pub mod usage_analysis;
 pub mod writeback_analysis;
 
 #[cfg(test)]

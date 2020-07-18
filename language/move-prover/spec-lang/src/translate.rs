@@ -37,13 +37,14 @@ use vm::{
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, LocalVarDecl, ModuleName, Operation, PropertyBag,
-        QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl, SpecVarDecl, Value,
+        Condition, ConditionKind, Exp, GlobalInvariant, LocalVarDecl, ModuleName, Operation,
+        PropertyBag, QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl,
+        SpecVarDecl, Value,
     },
     env::{
-        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SchemaId,
-        SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
-        CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
+        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, QualifiedId,
+        SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
+        CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -499,7 +500,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("update"),
+                self.builtin_fun_symbol("update_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Update,
@@ -510,7 +511,29 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("concat"),
+                self.builtin_fun_symbol("empty_vector"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Empty,
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![],
+                    result_type: vector_t.clone(),
+                },
+            );
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("singleton_vector"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Single,
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![param_t.clone()],
+                    result_type: vector_t.clone(),
+                },
+            );
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("concat_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Concat,
@@ -1475,7 +1498,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
                 et
             }
-            Module => ExpTranslator::new(self),
+            Module => {
+                if let Some(ConditionKind::InvariantUpdate) = &kind_opt {
+                    ExpTranslator::new_with_old(self, true)
+                } else {
+                    ExpTranslator::new(self)
+                }
+            }
             Schema(name) => {
                 let entry = self
                     .parent
@@ -2531,12 +2560,30 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             return;
         };
 
+        let (used_spec_vars, used_memory) = self.compute_state_usage_for_exp(Some(visited), &body);
+        let fun_decl = &mut self.spec_funs[fun_idx];
+        fun_decl.body = Some(body);
+        fun_decl.used_spec_vars = used_spec_vars;
+        fun_decl.used_memory = used_memory;
+    }
+
+    /// Computes state usage for an expression. If the visited_opt is available, this recurses
+    /// to compute the usage for any functions called. Otherwise it assumes this information is
+    /// already computed.
+    fn compute_state_usage_for_exp(
+        &mut self,
+        mut visited_opt: Option<&mut BTreeSet<usize>>,
+        exp: &Exp,
+    ) -> (
+        BTreeSet<QualifiedId<SpecVarId>>,
+        BTreeSet<QualifiedId<StructId>>,
+    ) {
         let mut used_spec_vars = BTreeSet::new();
         let mut used_memory = BTreeSet::new();
-        body.visit(&mut |e: &Exp| {
+        exp.visit(&mut |e: &Exp| {
             match e {
                 Exp::SpecVar(_, mid, vid) => {
-                    used_spec_vars.insert((*mid, *vid));
+                    used_spec_vars.insert(mid.qualified(*vid));
                 }
                 Exp::Call(_, Operation::Function(mid, fid), _) => {
                     if mid.to_usize() < self.parent.env.get_module_count() {
@@ -2549,8 +2596,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     } else {
                         // This is calling a function from the module we are currently translating.
                         // Need to recursively ensure we have computed used_spec_vars because of
-                        // arbitrary call graphs, including cyclic.
-                        self.compute_state_usage_for_fun(visited, fid.as_usize());
+                        // arbitrary call graphs, including cyclic. If visted_opt is not set,
+                        // we know we already computed this.
+                        if let Some(visited) = &mut visited_opt {
+                            self.compute_state_usage_for_fun(visited, fid.as_usize());
+                        }
                         let fun_decl = &self.spec_funs[fid.as_usize()];
                         used_spec_vars.extend(&fun_decl.used_spec_vars);
                         used_memory.extend(&fun_decl.used_memory);
@@ -2563,18 +2613,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                         // have been reported so far.
                         let ty = &self.instantiation_map.get(node_id).expect("type exists")[0];
                         let (mid, sid, _) = ty.require_struct();
-                        used_memory.insert((mid, sid));
+                        used_memory.insert(mid.qualified(sid));
                     }
                 }
                 _ => {}
             }
         });
-
-        // Store result back.
-        let fun_decl = &mut self.spec_funs[fun_idx];
-        fun_decl.body = Some(body);
-        fun_decl.used_spec_vars = used_spec_vars;
-        fun_decl.used_memory = used_memory;
+        (used_spec_vars, used_memory)
     }
 }
 
@@ -2584,36 +2629,63 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Reduce module invariants by making them requires/ensures on each function.
     fn reduce_module_invariants(&mut self) {
         for mut cond in self.module_spec.conditions.iter().cloned().collect_vec() {
-            assert_eq!(cond.kind, ConditionKind::Invariant);
-            // An Invariant on module level becomes an InvariantModule on function level
-            // (which is then further reduced to a pair of RequiresModule and Ensures).
-            // Only public functions receive it.
-            cond.kind = ConditionKind::InvariantModule;
-            for qname in self
+            if self
                 .parent
-                .fun_table
-                .keys()
-                .filter(|qn| qn.module_name == self.module_name)
-                .cloned()
-                .collect_vec()
+                .env
+                .is_property_true(&cond.properties, CONDITION_GLOBAL_PROP)
+                .unwrap_or(false)
             {
-                let entry = self.parent.fun_table.get(&qname).unwrap();
-                if entry.is_public {
-                    let context = SpecBlockContext::Function(qname);
-                    // Create a property marking this as injected.
-                    let context_properties = self.add_bool_property(
-                        PropertyBag::default(),
-                        CONDITION_INJECTED_PROP,
-                        true,
+                // Global invariant, attach to environment.
+                let (spec_var_usage, mem_usage) = self.compute_state_usage_for_exp(None, &cond.exp);
+                let id = self.parent.env.new_global_id();
+                let Condition { loc, exp, .. } = cond;
+                self.parent.env.add_global_invariant(GlobalInvariant {
+                    id,
+                    loc,
+                    kind: cond.kind,
+                    spec_var_usage,
+                    mem_usage,
+                    declaring_module: self.module_id,
+                    cond: exp,
+                });
+            } else {
+                if cond.kind != ConditionKind::Invariant {
+                    self.parent.error(
+                        &cond.loc,
+                        "only `invariant` allowed unless marked as `[global]`",
                     );
-                    // The below should not generate an error because of the above assert.
-                    self.add_conditions_to_context(
-                        &context,
-                        &cond.loc.clone(),
-                        vec![cond.clone()],
-                        context_properties,
-                        "[internal] (included via module level invariant) not allowed in this context",
-                    )
+                    continue;
+                }
+                // An Invariant on module level becomes an InvariantModule on function level
+                // (which is then further reduced to a pair of RequiresModule and Ensures).
+                // Only public functions receive it.
+                cond.kind = ConditionKind::InvariantModule;
+                for qname in self
+                    .parent
+                    .fun_table
+                    .keys()
+                    .filter(|qn| qn.module_name == self.module_name)
+                    .cloned()
+                    .collect_vec()
+                {
+                    let entry = self.parent.fun_table.get(&qname).unwrap();
+                    if entry.is_public {
+                        let context = SpecBlockContext::Function(qname);
+                        // Create a property marking this as injected.
+                        let context_properties = self.add_bool_property(
+                            PropertyBag::default(),
+                            CONDITION_INJECTED_PROP,
+                            true,
+                        );
+                        // The below should not generate an error because of the above assert.
+                        self.add_conditions_to_context(
+                            &context,
+                            &cond.loc.clone(),
+                            vec![cond.clone()],
+                            context_properties,
+                            "[internal] (included via module level invariant) not allowed in this context",
+                        )
+                    }
                 }
             }
         }

@@ -88,7 +88,7 @@ spec module {
 
     /// Returns the `withdrawal_capability` of LibraAccount under `addr`.
     define spec_get_withdraw_cap(addr: address): WithdrawCapability {
-        Option::spec_value_inside(global<LibraAccount>(addr).withdrawal_capability)
+        Option::spec_get(global<LibraAccount>(addr).withdrawal_capability)
     }
 
     /// Returns the value of balance under addr.

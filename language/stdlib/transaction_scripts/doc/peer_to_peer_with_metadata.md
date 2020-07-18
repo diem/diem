@@ -212,7 +212,7 @@ Returns the
 
 
 <pre><code><b>define</b> <a href="#SCRIPT_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): WithdrawCapability {
-    <a href="../../modules/doc/Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(<b>global</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability)
+    <a href="../../modules/doc/Option.md#0x1_Option_spec_get">Option::spec_get</a>(<b>global</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability)
 }
 </code></pre>
 

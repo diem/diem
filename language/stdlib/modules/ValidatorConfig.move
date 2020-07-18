@@ -86,7 +86,7 @@ module ValidatorConfig {
         /// and returns the addr itself otherwise.
         define spec_get_operator(addr: address): address {
             if (spec_has_operator(addr)) {
-                Option::spec_value_inside(global<ValidatorConfig>(addr).operator_account)
+                Option::spec_get(global<ValidatorConfig>(addr).operator_account)
             } else {
                 addr
             }
@@ -167,6 +167,7 @@ module ValidatorConfig {
     }
 
     spec fun is_valid {
+        pragma opaque = true;
         aborts_if false;
         ensures result == spec_is_valid(addr);
     }
@@ -198,6 +199,7 @@ module ValidatorConfig {
     }
 
     spec fun get_config {
+        pragma opaque = true;
         aborts_if !spec_exists_config(addr);
         aborts_if !spec_has_config(addr);
         ensures result == spec_get_config(addr);
@@ -206,7 +208,7 @@ module ValidatorConfig {
     spec module {
         /// Returns the config published under addr.
         define spec_get_config(addr: address): Config {
-            Option::spec_value_inside(global<ValidatorConfig>(addr).config)
+            Option::spec_get(global<ValidatorConfig>(addr).config)
         }
     }
 
@@ -220,6 +222,7 @@ module ValidatorConfig {
     }
 
     spec fun get_operator {
+        pragma opaque = true;
         aborts_if !spec_exists_config(addr);
         ensures result == spec_get_operator(addr);
     }

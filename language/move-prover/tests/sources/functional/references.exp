@@ -11,14 +11,12 @@ error: function does not abort under this condition
     =         b = <redacted>,
     =         b_ref = <redacted>
     =     at tests/sources/functional/references.move:59:13: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:60:31: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:61:15: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:60:13: mut_ref_incorrect
     =     at tests/sources/functional/references.move:43:5: mut_b
     =         b = <redacted>,
     =         result = <redacted>
     =     at tests/sources/functional/references.move:44:16: mut_b
     =     at tests/sources/functional/references.move:43:9: mut_b
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:63:29: mut_ref_incorrect
     =     at tests/sources/functional/references.move:62:9: mut_ref_incorrect
     =     at tests/sources/functional/references.move:63:18: mut_ref_incorrect

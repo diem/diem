@@ -22,6 +22,7 @@
 -  [Function `remove`](#0x1_Vector_remove)
 -  [Function `swap_remove`](#0x1_Vector_swap_remove)
 -  [Specification](#0x1_Vector_Specification)
+    -  [Function `singleton`](#0x1_Vector_Specification_singleton)
     -  [Module specifications](#0x1_Vector_@Module_specifications)
     -  [Function `reverse`](#0x1_Vector_Specification_reverse)
     -  [Function `append`](#0x1_Vector_Specification_append)
@@ -501,6 +502,34 @@ Aborts if
 <a name="0x1_Vector_Specification"></a>
 
 ## Specification
+
+
+<a name="0x1_Vector_Specification_singleton"></a>
+
+### Function `singleton`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_singleton">singleton</a>&lt;Element&gt;(e: Element): vector&lt;Element&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_Vector_spec_singleton">spec_singleton</a>(e);
+</code></pre>
+
+
+
+
+<a name="0x1_Vector_spec_singleton"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Vector_spec_singleton">spec_singleton</a>&lt;Element&gt;(e: Element): vector&lt;Element&gt; {
+    singleton_vector(e)
+}
+</code></pre>
+
 
 
 <a name="0x1_Vector_@Module_specifications"></a>

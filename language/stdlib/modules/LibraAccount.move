@@ -614,6 +614,10 @@ module LibraAccount {
         );
         make_account(new_dd_account, auth_key_prefix)
     }
+    spec fun create_designated_dealer {
+        // TODO(wrwg): timeout
+        pragma verify = false;
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // VASP methods
@@ -917,7 +921,7 @@ module LibraAccount {
         /// `KeyRotationCapability` for itself.
         define spec_holds_own_key_rotation_cap(addr: address): bool {
             Option::spec_is_some(spec_get_key_rotation_cap(addr))
-            && addr == Option::spec_value_inside(
+            && addr == Option::spec_get(
                 spec_get_key_rotation_cap(addr)).account_address
         }
 

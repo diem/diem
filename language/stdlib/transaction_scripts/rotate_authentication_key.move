@@ -27,7 +27,7 @@ spec fun rotate_authentication_key {
     aborts_if LibraAccount::spec_delegated_key_rotation_capability(Signer::spec_address_of(account));
     /// `account` must hold its own rotation capability
     aborts_if LibraAccount::spec_key_rotation_capability_address(
-                Option::spec_value_inside(
+                Option::spec_get(
                     LibraAccount::spec_get_key_rotation_cap(Signer::spec_address_of(account))
               )) != Signer::spec_address_of(account);
     /// `new_key`'s length must be `32`.

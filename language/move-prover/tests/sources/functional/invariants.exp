@@ -20,8 +20,8 @@ error: data invariant does not hold
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
     =     at tests/sources/functional/invariants.move:113:13: lifetime_invalid_R
-    =     at tests/sources/functional/invariants.move:114:21: lifetime_invalid_R
-    =     at tests/sources/functional/invariants.move:115:26: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:114:13: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:115:13: lifetime_invalid_R
     =     at tests/sources/functional/invariants.move:116:18: lifetime_invalid_R
 
 error: data invariant does not hold
@@ -42,8 +42,8 @@ error: data invariant does not hold
      =     at tests/sources/functional/invariants.move:166:11: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:154:11: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
-     =     at tests/sources/functional/invariants.move:156:19: lifetime_invalid_S_branching
-     =     at tests/sources/functional/invariants.move:157:19: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:156:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:157:11: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:163:11: lifetime_invalid_S_branching

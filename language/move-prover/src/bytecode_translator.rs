@@ -31,12 +31,12 @@ use vm::file_format::CodeOffset;
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
-        boogie_requires_well_formed, boogie_resource_memory_name, boogie_struct_name,
-        boogie_type_value, boogie_type_value_array, boogie_type_values, boogie_well_formed_check,
-        WellFormedMode,
+        boogie_requires_well_formed, boogie_resource_memory_name,
+        boogie_saved_resource_memory_name, boogie_struct_name, boogie_type_value,
+        boogie_type_value_array, boogie_type_values, boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
-    spec_translator::{FunctionEntryPoint, SpecTranslator},
+    spec_translator::{FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
 use spec_lang::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
@@ -222,6 +222,23 @@ impl<'env> ModuleTranslator<'env> {
         }
     }
 
+    fn new_spec_translator_for_module(&self) -> SpecTranslator<'_> {
+        self.new_spec_translator(self.module_env.clone(), false)
+    }
+
+    fn new_spec_translator<E>(&self, env: E, supports_native_old: bool) -> SpecTranslator<'_>
+    where
+        E: Into<SpecEnv<'env>>,
+    {
+        SpecTranslator::new(
+            self.writer,
+            env,
+            self.targets,
+            self.options,
+            supports_native_old,
+        )
+    }
+
     fn set_top_level_verify(&self, value: bool) {
         *self.in_toplevel_verify.borrow_mut() = value;
     }
@@ -245,8 +262,7 @@ impl<'env> ModuleTranslator<'env> {
         );
         self.writer
             .set_location(&self.module_env.env.internal_loc());
-        let spec_translator =
-            SpecTranslator::new(self.writer, self.module_env.clone(), self.options, false);
+        let spec_translator = self.new_spec_translator_for_module();
         spec_translator.translate_spec_vars();
         spec_translator.translate_spec_funs();
         self.translate_structs();
@@ -315,19 +331,18 @@ impl<'env> ModuleTranslator<'env> {
             type_value
         );
 
-        // Emit memory variable.
-        let memory_name = boogie_resource_memory_name(
+        // Emit memory variables.
+        let memory_name =
+            boogie_resource_memory_name(struct_env.module_env.env, struct_env.get_qualified_id());
+        emitln!(self.writer, "var {}: $Memory;", memory_name);
+        let saved_memory_name = boogie_saved_resource_memory_name(
             struct_env.module_env.env,
-            struct_env.module_env.get_id(),
-            struct_env.get_id(),
+            struct_env.get_qualified_id(),
         );
-        emit!(self.writer, "var {}: $Memory", memory_name);
-        let spec_translator =
-            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
-        spec_translator.translate_memory_constraint();
-        emitln!(self.writer, ";");
+        emitln!(self.writer, "var {}: $Memory;", saved_memory_name);
 
         // Emit invariant functions.
+        let spec_translator = self.new_spec_translator(struct_env.clone(), false);
         spec_translator.translate_invariant_functions();
     }
 
@@ -411,8 +426,7 @@ impl<'env> ModuleTranslator<'env> {
         );
 
         // Insert invariant code.
-        let spec_translator =
-            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        let spec_translator = self.new_spec_translator(struct_env.clone(), false);
         spec_translator.emit_pack_invariants("$struct");
 
         self.writer.unindent();
@@ -445,8 +459,7 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         // Insert invariant checking code.
-        let spec_translator =
-            SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        let spec_translator = self.new_spec_translator(struct_env.clone(), false);
         spec_translator.emit_unpack_invariants("$struct");
 
         self.writer.unindent();
@@ -663,7 +676,7 @@ impl<'env> ModuleTranslator<'env> {
         func_target: &FunctionTarget<'_>,
         entry_point: FunctionEntryPoint,
     ) {
-        SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
+        self.new_spec_translator(func_target.clone(), true)
             .translate_conditions(entry_point);
     }
 
@@ -673,7 +686,7 @@ impl<'env> ModuleTranslator<'env> {
         func_target: &FunctionTarget<'_>,
         block_id: SpecBlockId,
     ) {
-        SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
+        self.new_spec_translator(func_target.clone(), true)
             .translate_conditions_inside_impl(block_id);
     }
 
@@ -695,8 +708,7 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_function_args_well_formed(func_target);
 
         // Translate assumptions specific to this entry point.
-        let spec_translator =
-            SpecTranslator::new(self.writer, func_target.clone(), self.options, false);
+        let spec_translator = self.new_spec_translator(func_target.clone(), false);
         spec_translator.translate_entry_point_assumptions(entry_point);
 
         // Generate call to inlined function.
@@ -897,17 +909,21 @@ impl<'env> ModuleTranslator<'env> {
                 use BorrowNode::*;
                 match dest {
                     GlobalRoot(struct_decl) => {
-                        let memory = boogie_resource_memory_name(
-                            func_target.global_env(),
-                            struct_decl.module_id,
-                            struct_decl.struct_id,
-                        );
+                        let memory = struct_decl.module_id.qualified(struct_decl.struct_id);
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.save_memory_for_update_invariants(memory);
+                        let memory_name =
+                            boogie_resource_memory_name(func_target.global_env(), memory);
                         emitln!(
                             self.writer,
                             "call {} := $WritebackToGlobal({}, {});",
-                            memory,
-                            memory,
+                            memory_name,
+                            memory_name,
                             str_local(*src),
+                        );
+                        spec_translator.emit_global_invariants_for_memory(
+                            false, // assert
+                            memory,
                         );
                     }
                     LocalRoot(idx) => {
@@ -1042,30 +1058,34 @@ impl<'env> ModuleTranslator<'env> {
                             src,
                             str_local(src)
                         );
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                str_local(dest).as_str(),
-                                &func_target.get_local_type(dest),
-                                // At the begining of a borrow, invariant holds.
-                                WellFormedMode::WithInvariant,
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    str_local(dest).as_str(),
+                                    &func_target.get_local_type(dest),
+                                    // At the begining of a borrow, invariant holds.
+                                    WellFormedMode::WithInvariant,
+                                )
+                            );
+                        }
                     }
                     ReadRef => {
                         let src = srcs[0];
                         let dest = dests[0];
                         emitln!(self.writer, "call $tmp := $ReadRef({});", str_local(src));
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                "$tmp",
-                                &func_target.get_local_type(dest),
-                                WellFormedMode::Default
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    "$tmp",
+                                    &func_target.get_local_type(dest),
+                                    WellFormedMode::Default
+                                )
+                            );
+                        }
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     WriteRef => {
@@ -1117,13 +1137,15 @@ impl<'env> ModuleTranslator<'env> {
                                 .iter()
                                 .map(|dest_idx| {
                                     let dest = str_local(*dest_idx).to_string();
-                                    let dest_type = &func_target.get_local_type(*dest_idx);
-                                    dest_type_assumptions.push(boogie_well_formed_check(
-                                        self.module_env.env,
-                                        &dest,
-                                        dest_type,
-                                        WellFormedMode::Default,
-                                    ));
+                                    if self.options.prover.assume_wellformed_on_access {
+                                        let dest_type = &func_target.get_local_type(*dest_idx);
+                                        dest_type_assumptions.push(boogie_well_formed_check(
+                                            self.module_env.env,
+                                            &dest,
+                                            dest_type,
+                                            WellFormedMode::Default,
+                                        ));
+                                    }
                                     dest
                                 })
                                 .join(", "),
@@ -1250,15 +1272,17 @@ impl<'env> ModuleTranslator<'env> {
                             str_local(src),
                             boogie_field_name(field_env)
                         );
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                str_local(dest).as_str(),
-                                &func_target.get_local_type(dest),
-                                WellFormedMode::Default
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    str_local(dest).as_str(),
+                                    &func_target.get_local_type(dest),
+                                    WellFormedMode::Default
+                                )
+                            );
+                        }
                     }
                     GetField(mid, sid, _, field_offset) => {
                         let src = srcs[0];
@@ -1281,22 +1305,25 @@ impl<'env> ModuleTranslator<'env> {
                             str_local(src),
                             boogie_field_name(field_env)
                         );
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                "$tmp",
-                                &func_target.get_local_type(dest),
-                                WellFormedMode::Default
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    "$tmp",
+                                    &func_target.get_local_type(dest),
+                                    WellFormedMode::Default
+                                )
+                            );
+                        }
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     Exists(mid, sid, type_actuals) => {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
+                        let memory =
+                            boogie_resource_memory_name(self.module_env.env, mid.qualified(*sid));
                         emitln!(
                             self.writer,
                             "$tmp := $ResourceExists({}, {}, {});",
@@ -1310,7 +1337,8 @@ impl<'env> ModuleTranslator<'env> {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
+                        let memory =
+                            boogie_resource_memory_name(self.module_env.env, mid.qualified(*sid));
                         emitln!(
                             self.writer,
                             "call {} := $BorrowGlobal({}, {}, {});",
@@ -1320,22 +1348,25 @@ impl<'env> ModuleTranslator<'env> {
                             type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                str_local(dest).as_str(),
-                                &func_target.get_local_type(dest),
-                                // At the beginning of a borrow, invariants always hold
-                                WellFormedMode::WithInvariant,
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    str_local(dest).as_str(),
+                                    &func_target.get_local_type(dest),
+                                    // At the beginning of a borrow, invariants always hold
+                                    WellFormedMode::WithInvariant,
+                                )
+                            );
+                        }
                     }
                     GetGlobal(mid, sid, type_actuals) => {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
+                        let memory =
+                            boogie_resource_memory_name(self.module_env.env, mid.qualified(*sid));
                         emitln!(
                             self.writer,
                             "call $tmp := $GetGlobal({}, {}, {});",
@@ -1344,58 +1375,76 @@ impl<'env> ModuleTranslator<'env> {
                             type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                "$tmp",
-                                &func_target.get_local_type(dest),
-                                // At the beginning of a borrow, invariants always hold
-                                WellFormedMode::WithInvariant,
-                            )
-                        );
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    "$tmp",
+                                    &func_target.get_local_type(dest),
+                                    // At the beginning of a borrow, invariants always hold
+                                    WellFormedMode::WithInvariant,
+                                )
+                            );
+                        }
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
                     MoveTo(mid, sid, type_actuals) => {
                         let value = srcs[0];
                         let signer = srcs[1];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
+                        let memory = mid.qualified(*sid);
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.save_memory_for_update_invariants(memory);
+                        let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
                         emitln!(
                             self.writer,
                             "call {} := $MoveTo({}, {}, {}, {});",
-                            memory,
-                            memory,
+                            memory_name,
+                            memory_name,
                             type_args,
                             str_local(value),
                             str_local(signer),
                         );
                         emitln!(self.writer, &propagate_abort());
+                        spec_translator.emit_global_invariants_for_memory(
+                            false, // assert
+                            memory,
+                        );
                     }
                     MoveFrom(mid, sid, type_actuals) => {
                         let src = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory = boogie_resource_memory_name(self.module_env.env, *mid, *sid);
+                        let memory = mid.qualified(*sid);
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.save_memory_for_update_invariants(memory);
+                        let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
                         emitln!(
                             self.writer,
                             "call {}, $tmp := $MoveFrom({}, {}, {});",
-                            memory,
-                            memory,
+                            memory_name,
+                            memory_name,
                             str_local(src),
                             type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
-                        emit!(
-                            self.writer,
-                            &boogie_well_formed_check(
-                                self.module_env.env,
-                                "$tmp",
-                                &func_target.get_local_type(dest),
-                                WellFormedMode::Default
-                            )
-                        );
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
+                        if self.options.prover.assume_wellformed_on_access {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    "$tmp",
+                                    &func_target.get_local_type(dest),
+                                    WellFormedMode::Default
+                                )
+                            );
+                        }
+                        spec_translator.emit_global_invariants_for_memory(
+                            false, // assert
+                            memory,
+                        );
                     }
                     CastU8 => {
                         let src = srcs[0];

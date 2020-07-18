@@ -99,7 +99,7 @@ If the sending account doesn't exist this will abort
 
 
 <pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_key_rotation_capability_address">LibraAccount::spec_key_rotation_capability_address</a>(
-            <a href="../../modules/doc/Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(
+            <a href="../../modules/doc/Option.md#0x1_Option_spec_get">Option::spec_get</a>(
                 <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
           )) != <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 </code></pre>
