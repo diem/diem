@@ -9,6 +9,9 @@ if [ -n "${KEY_MANAGER_CONFIG}" ]; then # Path to key manager config
     echo "${KEY_MANAGER_CONFIG}" > /opt/libra/etc/key_manager.yaml
     params+="--template /opt/libra/etc/key_manager.yaml "
 fi
+if [ -n "${CFG_CHAIN_ID}" ]; then
+        params+="--chain-id ${CFG_CHAIN_ID} "
+fi
 if [ -n "${JSON_RPC_ENDPOINT}" ]; then
     params+="--json-rpc-endpoint ${JSON_RPC_ENDPOINT} "
 fi

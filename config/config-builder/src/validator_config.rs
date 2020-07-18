@@ -29,8 +29,9 @@ pub struct ValidatorConfig {
     pub advertised_address: NetworkAddress,
     pub build_waypoint: bool,
     pub bootstrap: NetworkAddress,
-    pub node_index: usize,
+    pub chain_id: ChainId,
     pub listen_address: NetworkAddress,
+    pub node_index: usize,
     pub num_nodes: usize,
     pub num_nodes_in_genesis: Option<usize>,
     pub safety_rules_addr: Option<SocketAddr>,
@@ -40,7 +41,6 @@ pub struct ValidatorConfig {
     pub safety_rules_token: Option<String>,
     pub seed: [u8; 32],
     pub template: NodeConfig,
-    pub chain_id: ChainId,
 }
 
 impl Default for ValidatorConfig {
@@ -49,8 +49,9 @@ impl Default for ValidatorConfig {
             advertised_address: NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap(),
             bootstrap: NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap(),
             build_waypoint: true,
-            node_index: 0,
+            chain_id: ChainId::test(),
             listen_address: NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap(),
+            node_index: 0,
             num_nodes: 1,
             num_nodes_in_genesis: None,
             safety_rules_addr: None,
@@ -60,7 +61,6 @@ impl Default for ValidatorConfig {
             safety_rules_token: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
-            chain_id: ChainId::test(),
         }
     }
 }

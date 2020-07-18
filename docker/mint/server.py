@@ -24,7 +24,7 @@ def create_client():
         ac_port = os.environ['AC_PORT']
         url = "http://{}:{}".format(ac_host, ac_port)
         waypoint = open("/opt/libra/etc/waypoint.txt", "r").readline()
-        chain_id = os.environ['CHAIN_ID']
+        chain_id = os.environ['CFG_CHAIN_ID']
 
         print("Connecting to ac on: {}".format(url))
         cmd = "/opt/libra/bin/cli --url {} -m {} --waypoint {} --chain-id {}".format(
