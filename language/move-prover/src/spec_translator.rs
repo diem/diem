@@ -790,31 +790,40 @@ impl<'env> SpecTranslator<'env> {
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
+    }
 
-        if struct_env.is_resource() && self.options.prover.resource_wellformed_axiom {
-            // Emit axiom that for all addresses, this resource as stored in global memory
-            // is well-formed.
-            emit!(self.writer, "axiom (forall m: $Memory, a: $Value");
-            let mut type_args = vec![];
-            for i in 0..struct_env.get_type_parameters().len() {
-                emit!(self.writer, ", $tv{}: $TypeValue", i);
-                type_args.push(Type::TypeParameter(i as u16));
-            }
-            emitln!(
-                self.writer,
-                " :: $Memory__is_well_formed(m) && is#$Address(a) ==> "
-            );
-            self.writer.indent();
-            emitln!(
-                self.writer,
-                "{}_is_well_formed($ResourceValue(m, {}, a))",
-                boogie_struct_name(struct_env),
-                boogie_type_value_array(struct_env.module_env.env, &type_args)
-            );
-            self.writer.unindent();
-            emitln!(self.writer, ");");
-            emitln!(self.writer);
+    /// Generates a well-formedness constraint on global memory of a struct, for being
+    /// attached to a global variable declaration.
+    pub fn translate_memory_constraint(&self) {
+        if !self.options.prover.global_memory_wellformed_constraint {
+            return;
         }
+        let struct_env = self.struct_env();
+        emitln!(self.writer, " where");
+        self.writer.indent();
+        let memory_name = boogie_resource_memory_name(
+            struct_env.module_env.env,
+            struct_env.module_env.get_id(),
+            struct_env.get_id(),
+        );
+        emit!(self.writer, "(forall a: $Value");
+        let mut type_args = vec![];
+        for i in 0..struct_env.get_type_parameters().len() {
+            emit!(self.writer, ", $tv{}: $TypeValue", i);
+            type_args.push(Type::TypeParameter(i as u16));
+        }
+        emitln!(self.writer, " :: is#$Address(a) ==> ");
+        self.writer.indent();
+        emitln!(
+            self.writer,
+            "{}_is_well_formed($ResourceValue({}, {}, a))",
+            boogie_struct_name(struct_env),
+            memory_name,
+            boogie_type_value_array(struct_env.module_env.env, &type_args)
+        );
+        self.writer.unindent();
+        emit!(self.writer, ")");
+        self.writer.unindent();
     }
 
     /// Determines whether a before-update invariant is generated for this struct.
