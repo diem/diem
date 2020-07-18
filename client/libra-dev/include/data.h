@@ -64,6 +64,7 @@ struct LibraRawTransaction {
     uint64_t max_gas_amount;
     uint64_t gas_unit_price;
     uint64_t expiration_timestamp_secs;
+    uint8_t chain_id;
 };
 
 struct LibraSignedTransaction {
@@ -123,13 +124,14 @@ enum LibraStatus libra_LibraAccountResource_from(const uint8_t *buf, size_t len,
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
  * @param[in] gas_unit_price is the maximal price can be paid per gas.
  * @param[in] gas_identifier is the identifier of the coin to be used as gas.
- * @param[in] expiration_time_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] expiration_timestamp_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] chain_id is the chain id for this Transaction.
  * @param[in] script_bytes is the script bytes for given transaction.
  * @param[in] script_len is the length of script_bytes array.
  * @param[out] ptr_buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] ptr_len is the length of the signed transaction memory buffer.
 */
-enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], uint64_t sequence, uint64_t max_gas_amount, uint64_t gas_unit_price, const char* gas_identifier, uint64_t expiration_time_secs, const uint8_t *script_bytes, size_t script_len, uint8_t **ptr_buf, size_t *ptr_len);
+enum LibraStatus libra_SignedTransactionBytes_from(const uint8_t sender_private_key[LIBRA_PRIVKEY_SIZE], uint64_t sequence, uint64_t max_gas_amount, uint64_t gas_unit_price, const char* gas_identifier, uint64_t expiration_time_secs, uint8_t chain_id, const uint8_t *script_bytes, size_t script_len, uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
  *  Get script bytes for a P2P transaction
@@ -160,29 +162,18 @@ enum LibraStatus libra_TransactionP2PScript_from(const uint8_t receiver[LIBRA_AD
 enum LibraStatus libra_TransactionAddCurrencyScript_from(const char* identifier, uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
- *  Get script bytes for rotating compliance public key of VASP
- *  Encode a program that rotates `vasp_root_addr`'s compliance public key to `new_key`
- *
- * To get the serialized script in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
- * and call free on the memory address with `libra_free_bytes_buffer`.
- * @param[in] new_key_bytes is the bytes of new compliance public key.
- * @param[out] ptr_buf is the pointer that will be filled with the memory address of the script allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
- * @param[out] ptr_len is the length of the script memory buffer.
-*/
-enum LibraStatus libra_TransactionRotateCompliancePublicKeyScript_from(const uint8_t new_key_bytes[LIBRA_PUBKEY_SIZE], uint8_t **ptr_buf, size_t *ptr_len);
-
-/*!
  *  Get script bytes for rotating base url of VASP
- *  Encode a program that rotates `vasp_root_addr`'s base URL to `new_url`.
+ *  Encode a program that rotates `vasp_root_addr`'s base URL to `new_url` and compliance public key to `new_key`.
  *
  * To get the serialized script in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
  * and call free on the memory address with `libra_free_bytes_buffer`.
  * @param[in] new_url_bytes is the bytes of new base URL for the VASP.
  * @param[in] new_url_len is the length of new_key_bytes array.
+ * @param[in] new_key_bytes is the array that contains new key for the VASP.
  * @param[out] ptr_buf is the pointer that will be filled with the memory address of the script allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] ptr_len is the length of the script memory buffer.
 */
-enum LibraStatus libra_TransactionRotateBaseURLScript_from(const uint8_t* new_url_bytes, size_t new_url_len, uint8_t **ptr_buf, size_t *ptr_len);
+enum LibraStatus libra_TransactionRotateDualAttestationInfoScript_from(const uint8_t* new_url_bytes, size_t new_url_len, const uint8_t new_key_bytes[LIBRA_PUBKEY_SIZE], uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
  * Function to free the allocation memory in rust for bytes
@@ -213,12 +204,13 @@ enum LibraStatus libra_LibraSignedTransaction_from(const uint8_t *buf, size_t le
  * @param[in] max_gas_amount is the maximal total gas specified by wallet to spend for this transaction.
  * @param[in] gas_unit_price is the maximal price can be paid per gas.
  * @param[in] expiration_time_secs is the time this TX remain valid, the format is unix timestamp.
+ * @param[in] chain_id is the chain id for this Transaction.
  * @param[in] metadata_bytes is the metadata bytes for given transaction.
  * @param[in] metadata_len is the length of metadata_bytes array.
  * @param[out] buf is the pointer that will be filled with the memory address of the transaction allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
  * @param[out] len is the length of the raw transaction memory buffer.
 */
-enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_ADDRESS_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, const uint8_t* metadata_bytes, size_t metadata_len, const uint8_t* metadata_signature_bytes, size_t metadata_signature_len, uint8_t **buf, size_t *len);
+enum LibraStatus libra_RawTransactionBytes_from(const uint8_t sender[LIBRA_ADDRESS_SIZE], const uint8_t receiver[LIBRA_ADDRESS_SIZE], uint64_t sequence, uint64_t num_coins, uint64_t max_gas_amount, uint64_t gas_unit_price, uint64_t expiration_time_secs, uint8_t chain_id, const uint8_t* metadata_bytes, size_t metadata_len, const uint8_t* metadata_signature_bytes, size_t metadata_signature_len, uint8_t **buf, size_t *len);
 
 /*!
  * This function takes in a raw transaction, public key and signature in bytes, and return a signed transaction in bytes.
