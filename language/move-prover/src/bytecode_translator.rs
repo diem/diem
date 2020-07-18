@@ -321,11 +321,13 @@ impl<'env> ModuleTranslator<'env> {
             struct_env.module_env.get_id(),
             struct_env.get_id(),
         );
-        emitln!(self.writer, "var {}: $Memory;", memory_name);
-
-        // Emit invariant functions.
+        emit!(self.writer, "var {}: $Memory", memory_name);
         let spec_translator =
             SpecTranslator::new(self.writer, struct_env.clone(), self.options, false);
+        spec_translator.translate_memory_constraint();
+        emitln!(self.writer, ";");
+
+        // Emit invariant functions.
         spec_translator.translate_invariant_functions();
     }
 

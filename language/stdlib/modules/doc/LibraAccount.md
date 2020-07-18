@@ -59,12 +59,8 @@
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
     -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_Specification_should_track_limits_for_account)
-    -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
-    -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
-    -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
-    -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
@@ -2019,38 +2015,6 @@ a writeset transaction is committed.
 
 
 
-<a name="0x1_LibraAccount_Specification_staple_lbr"></a>
-
-### Function `staple_lbr`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_staple_lbr">staple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify_duration_estimate = 100;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_unstaple_lbr"></a>
-
-### Function `unstaple_lbr`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unstaple_lbr">unstaple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify_duration_estimate = 100;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_Specification_deposit"></a>
 
 ### Function `deposit`
@@ -2115,22 +2079,6 @@ a writeset transaction is committed.
 
 
 
-<a name="0x1_LibraAccount_Specification_tiered_mint"></a>
-
-### Function `tiered_mint`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify_duration_estimate = 100;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_Specification_withdraw_from_balance"></a>
 
 ### Function `withdraw_from_balance`
@@ -2185,22 +2133,6 @@ a writeset transaction is committed.
     <b>ensures</b> balance.coin.value == <b>old</b>(balance.coin.value) - amount;
     <b>ensures</b> result.value == amount;
 }
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_preburn"></a>
-
-### Function `preburn`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_preburn">preburn</a>&lt;Token&gt;(dd: &signer, cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

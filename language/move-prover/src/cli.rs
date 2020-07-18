@@ -105,8 +105,10 @@ pub struct ProverOptions {
     pub stable_test_output: bool,
     /// Scope of what functions to verify.
     pub verify_scope: VerificationScope,
-    /// Whether to emit global axiom that resources are well-formed.
+    /// [deprecated] Whether to emit global axiom that resources are well-formed.
     pub resource_wellformed_axiom: bool,
+    /// Whether to emit a constraint for global memory variables to be type well-formed.
+    pub global_memory_wellformed_constraint: bool,
     /// Whether to automatically debug trace values of specification expression leafs.
     pub debug_trace: bool,
 }
@@ -120,7 +122,8 @@ impl Default for ProverOptions {
             omit_model_debug: false,
             stable_test_output: false,
             verify_scope: VerificationScope::Public,
-            resource_wellformed_axiom: true,
+            resource_wellformed_axiom: false,
+            global_memory_wellformed_constraint: false,
             debug_trace: false,
         }
     }

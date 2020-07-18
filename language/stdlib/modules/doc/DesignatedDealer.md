@@ -17,6 +17,8 @@
 -  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_validate_and_record_mint)
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 -  [Specification](#0x1_DesignatedDealer_Specification)
+    -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
+    -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
@@ -463,6 +465,42 @@ that amount that can be minted according to the bounds for the
 ## Specification
 
 
+<a name="0x1_DesignatedDealer_Specification_publish_designated_dealer_credential"></a>
+
+### Function `publish_designated_dealer_credential`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer, add_all_currencies: bool)
+</code></pre>
+
+
+
+TODO(wrwg): times out with 40s
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_add_currency"></a>
+
+### Function `add_currency`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
+</code></pre>
+
+
+
+TODO(wrwg): times out with 40s
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+
 <a name="0x1_DesignatedDealer_Specification_add_tier"></a>
 
 ### Function `add_tier`
@@ -507,8 +545,11 @@ that amount that can be minted according to the bounds for the
 
 
 
+TODO(wrwg): times out with 40s
 
-<pre><code><b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr); <b>old</b>(dealer.window_start) &lt;= dealer.window_start};
+
+<pre><code>pragma verify = <b>false</b>;
+<b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr); <b>old</b>(dealer.window_start) &lt;= dealer.window_start};
 <b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
         {<b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
             (dealer.window_start == current_time && dealer.window_inflow == amount) ||
@@ -563,7 +604,7 @@ that amount that can be minted according to the bounds for the
 
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify = <b>true</b>;
 <a name="0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS"></a>
 <b>define</b> <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>(): u64 { 4 }
 <a name="0x1_DesignatedDealer_spec_window_length"></a>
