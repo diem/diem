@@ -51,7 +51,9 @@ commands:
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
-            echo 'export RUST_NIGHTLY=nightly-2020-07-08' >> $BASH_ENV
+            export RUST_NIGHTLY=$(cat cargo-toolchain)
+            echo 'export RUST_NIGHTLY='${RUST_NIGHTLY} >> $BASH_ENV
+
   install_deps:
     steps:
       - run:
@@ -65,11 +67,12 @@ commands:
       - run:
           name: Set cargo Environment
           command: |
+            # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
+            export CARGOFLAGS=$(cat cargo-flags)
+            echo 'export CARGOFLAGS='${CARGOFLAGS} >> $BASH_ENV
             # Use nightly version of cargo to access the new feature resolver
             echo 'export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)' >> $BASH_ENV
             # Turn on the experimental feature resolver in cargo. See:
-            # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
-            echo 'export CARGOFLAGS=-Zfeatures=all' >> $BASH_ENV
   install_code_coverage_deps:
     steps:
       - run:
@@ -622,8 +625,6 @@ jobs:
       - run:
           name: should pre build docker images (targeting a release branch)?
           command: |
-            export RELEASE_BRANCH_PATTERN='^v[0-9]+-release$'
-            export TEST_BRANCH_PATTERN="^testflow[0-9]+$"
             export commit_message=$( git log -1 --pretty=%B )
             export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
             if [ -z $pr_num ]; then
@@ -631,9 +632,13 @@ jobs:
               exit 1
             fi
             curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
-            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
-            if [[ $TARGET_BRANCH =~ $RELEASE_BRANCH_PATTERN ]] || [[ $TARGET_BRANCH =~ $TEST_BRANCH_PATTERN ]]; then
-              export BRANCH=$TARGET_BRANCH
+            export BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
+
+            export IS_RELEASE=$( if [[ "$BRANCH" =~ "^v[0-9|.]+-release$" ]]; then echo true; else echo false; fi )
+            export IS_TEST=$( if [[ "$BRANCH" =~ "^testflow[0-9|.]+$" ]]; then echo true; else echo false; fi )
+            export IS_PRE_RELEASE=$( if [[ "$BRANCH" =~ "^premainnet-[0-9|.]+$" ]]; then echo true; else echo false; fi )
+
+            if [[ $IS_RELEASE || $IS_TEST || $IS_PRE_RELEASE ]] ; then
               echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker/update_or_build.sh -u -p -b ${BRANCH} -n client
               docker/update_or_build.sh -u -p -b ${BRANCH} -n init
@@ -679,16 +684,18 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - terraform:
           filters:
             branches:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - prefetch-crates
       - lint:
           requires:
@@ -697,8 +704,9 @@ workflows:
             branches:
               ignore:
                 - gh-pages
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-0.[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - build-dev:
           requires:
             - prefetch-crates
@@ -707,8 +715,9 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - build-release:
           requires:
             - prefetch-crates
@@ -717,8 +726,9 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - run-e2e-test:
           requires:
             - prefetch-crates
@@ -727,8 +737,9 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - run-unit-test:
           requires:
             - prefetch-crates
@@ -737,8 +748,9 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
@@ -747,8 +759,9 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - build-docs:
           requires:
             - lint
@@ -756,8 +769,9 @@ workflows:
             branches:
               ignore:
                 - gh-pages
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
       - deploy-docs:
           requires:
             - build-docs
@@ -779,8 +793,9 @@ workflows:
           filters:
             branches:
               only:
-                - /^testflow[\d]+$/
-                - /^v[\d]+-release$/
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
 
   scheduled-workflow:
     triggers:
