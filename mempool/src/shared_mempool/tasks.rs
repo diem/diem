@@ -204,6 +204,7 @@ pub(crate) async fn process_client_transaction_submission<V>(
 ) where
     V: TransactionValidation,
 {
+    debug!("txn from client : {:?}", transaction);
     let mut statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(&statuses, None);
@@ -394,7 +395,8 @@ fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>)
         None => "client".to_string(),
     };
     for (mempool_status, vm_status) in results.iter() {
-        if vm_status.is_some() {
+        if let Some(vm_status) = vm_status {
+            debug!("txn failed with VM error {:?}", vm_status);
             // log vm validation failure
             counters::SHARED_MEMPOOL_TRANSACTIONS_PROCESSED
                 .with_label_values(&["validation_failed".to_string().deref(), &sender])
