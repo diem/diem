@@ -1,5 +1,0 @@
-base:
-  chain_id: "${chain_id}"
-
-validator_network:
-  mutual_authentication: true

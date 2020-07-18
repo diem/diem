@@ -3,8 +3,10 @@
 
 use anyhow::Result;
 use libra_config::config::{KeyManagerConfig as KMConfig, SecureBackend, Token, VaultConfig};
+use libra_types::chain_id::ChainId;
 
 pub struct KeyManagerConfig {
+    pub chain_id: ChainId,
     pub rotation_period_secs: Option<u64>,
     pub sleep_period_secs: Option<u64>,
     pub txn_expiration_secs: Option<u64>,
@@ -22,6 +24,7 @@ impl Default for KeyManagerConfig {
     fn default() -> Self {
         let template = KMConfig::default();
         Self {
+            chain_id: ChainId::test(),
             rotation_period_secs: None,
             sleep_period_secs: None,
             txn_expiration_secs: None,
@@ -41,6 +44,7 @@ impl KeyManagerConfig {
 
     pub fn build(&self) -> Result<KMConfig> {
         let mut key_manager_config = self.template.clone();
+        key_manager_config.chain_id = self.chain_id;
         key_manager_config.json_rpc_endpoint = self.json_rpc_endpoint.clone();
         key_manager_config.secure_backend = SecureBackend::Vault(VaultConfig {
             ca_certificate: None,

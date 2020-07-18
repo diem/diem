@@ -6,10 +6,12 @@ set -ex
 export RUST_BACKTRACE=full
 
 declare -a params
+if [ -n "${CFG_CHAIN_ID}" ]; then
+        params+="--chain-id ${CFG_CHAIN_ID} "
+fi
 if [ -n "${CFG_SEED}" ]; then
     params+="-s $CFG_SEED "
 fi
-
 if [ -n "${CFG_NUM_VALIDATORS}" ]; then # Total number of nodes in this network
 	  params+="-n ${CFG_NUM_VALIDATORS} "
 fi

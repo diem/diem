@@ -8,6 +8,9 @@ if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
 	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.yaml
 	    params+="-t /opt/libra/etc/base.yaml "
 fi
+if [ -n "${CFG_CHAIN_ID}" ]; then
+        params+="--chain-id ${CFG_CHAIN_ID} "
+fi
 if [ -n "${CFG_LISTEN_ADDR}" ]; then # Advertised listen address for network config
 	    params+="-a /ip4/${CFG_LISTEN_ADDR}/tcp/6180 "
 fi
@@ -48,7 +51,6 @@ if [ -n "${CFG_FULLNODE_SEED}" ]; then # We have a full node seed, add fullnode 
 	    fullnode_params+="-n ${CFG_NUM_VALIDATORS} "
 	    fullnode_params+="-f ${CFG_NUM_FULLNODES} "
 	    fullnode_params+="-c ${CFG_FULLNODE_SEED} "
-
 
 	/opt/libra/bin/config-builder full-node extend \
 	    --data-dir /opt/libra/data/common \

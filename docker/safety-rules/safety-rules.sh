@@ -9,6 +9,9 @@ if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
 	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.yaml
 	    params+="-t /opt/libra/etc/base.yaml "
 fi
+if [ -n "${CFG_CHAIN_ID}" ]; then
+        params+="--chain-id ${CFG_CHAIN_ID} "
+fi
 if [ -n "${CFG_NODE_INDEX}" ]; then
 	    params+="-i ${CFG_NODE_INDEX} "
 fi
