@@ -488,7 +488,7 @@ impl ClientProxy {
             } else {
                 // We can't determine the account state. So try and create the account, but
                 // if it already exists don't error.
-                let _ = self.association_transaction_with_local_libra_root_account(
+                let _result = self.association_transaction_with_local_libra_root_account(
                     TransactionPayload::Script(script),
                     true,
                 );
@@ -1444,14 +1444,14 @@ impl ClientProxy {
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
         let mut sender_mut = self.libra_root_account.as_mut().unwrap();
-        let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
+        self.client.submit_transaction(Some(&mut sender_mut), txn)?;
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
                 self.libra_root_account.as_ref().unwrap().sequence_number,
             )?;
         }
-        resp
+        Ok(())
     }
 
     fn association_transaction_with_local_testnet_dd_account(
@@ -1467,7 +1467,7 @@ impl ClientProxy {
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
         let mut sender_mut = self.testnet_designated_dealer_account.as_mut().unwrap();
-        let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
+        self.client.submit_transaction(Some(&mut sender_mut), txn)?;
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
@@ -1477,7 +1477,7 @@ impl ClientProxy {
                     .sequence_number,
             )?;
         }
-        resp
+        Ok(())
     }
 
     fn mint_coins_with_faucet_service(
