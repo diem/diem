@@ -118,6 +118,7 @@ impl JsonRpcBatch {
 #[derive(Debug)]
 pub enum JsonRpcAsyncClientError {
     ClientError(reqwest::Error),
+    InvalidArgument(String),
     InvalidServerResponse(String),
 }
 
@@ -136,7 +137,8 @@ impl JsonRpcAsyncClientError {
                 }
                 false
             }
-            JsonRpcAsyncClientError::InvalidServerResponse(_) => false,
+            JsonRpcAsyncClientError::InvalidServerResponse(_)
+            | JsonRpcAsyncClientError::InvalidArgument(_) => false,
         }
     }
 }
@@ -216,7 +218,7 @@ impl JsonRpcAsyncClient {
         let mut batch = JsonRpcBatch::new();
         batch
             .add_submit_request(txn)
-            .map_err(|e| JsonRpcAsyncClientError::InvalidServerResponse(e.to_string()))?;
+            .map_err(|e| JsonRpcAsyncClientError::InvalidArgument(e.to_string()))?;
         let mut exec_result = self.execute(batch).await?;
         assert!(exec_result.len() == 1);
         exec_result
