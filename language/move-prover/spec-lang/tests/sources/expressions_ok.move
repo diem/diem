@@ -29,19 +29,22 @@ module M {
       r
     }
 
+    /* Produces an error as we have disallowed shadowing for now.
+     * TODO(wrwg): reactivate once we allow shadowing again
     define let_shadows(): num {
       let x = true;
       let b = !x;
       let x = 1;
       x
     }
+    */
 
     define lambdas(p1: |num|bool, p2: |num|bool): |num|bool {
       |x| p1(x) && p2(x)
     }
 
     define call_lambdas(x: num): bool {
-      let f = lambdas(|x| x > 0, |x| x < 10);
+      let f = lambdas(|y| y > 0, |y| y < 10);
       f(x)
     }
 

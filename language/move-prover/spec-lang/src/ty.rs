@@ -8,7 +8,11 @@ use crate::{
     env::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
 };
-use std::{collections::BTreeMap, fmt, fmt::Formatter};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    fmt::Formatter,
+};
 
 /// Represents a type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
@@ -109,6 +113,15 @@ impl Type {
             }
         }
         false
+    }
+
+    /// Skip reference type.
+    pub fn skip_reference(&self) -> &Type {
+        if let Type::Reference(_, bt) = self {
+            &*bt
+        } else {
+            self
+        }
     }
 
     /// If this is a struct type, replace the type instantiation.
@@ -223,6 +236,32 @@ impl Type {
             Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) => false,
         }
     }
+
+    /// Get the unbound type variables in the type.
+    pub fn get_vars(&self) -> BTreeSet<u16> {
+        let mut vars = BTreeSet::new();
+        self.internal_get_vars(&mut vars);
+        vars
+    }
+
+    fn internal_get_vars(&self, vars: &mut BTreeSet<u16>) {
+        use Type::*;
+        match self {
+            Var(id) => {
+                vars.insert(*id);
+            }
+            Tuple(ts) => ts.iter().for_each(|t| t.internal_get_vars(vars)),
+            Fun(ts, r) => {
+                r.internal_get_vars(vars);
+                ts.iter().for_each(|t| t.internal_get_vars(vars));
+            }
+            Struct(_, _, ts) => ts.iter().for_each(|t| t.internal_get_vars(vars)),
+            Vector(et) => et.internal_get_vars(vars),
+            Reference(_, bt) => bt.internal_get_vars(vars),
+            TypeDomain(bt) => bt.internal_get_vars(vars),
+            Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) => {}
+        }
+    }
 }
 
 impl Substitution {
@@ -231,6 +270,11 @@ impl Substitution {
         Self {
             subs: BTreeMap::new(),
         }
+    }
+
+    /// Binds the type variables.
+    pub fn bind(&mut self, var: u16, ty: Type) {
+        self.subs.insert(var, ty);
     }
 
     /// Specializes the type, substituting all variables bound in this substitution.

@@ -30,12 +30,13 @@ pub struct SpecVarDecl {
     pub type_: Type,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SpecFunDecl {
     pub loc: Loc,
     pub name: Symbol,
     pub type_params: Vec<(Symbol, Type)>,
     pub params: Vec<(Symbol, Type)>,
+    pub context_params: Option<Vec<(Symbol, bool)>>,
     pub result_type: Type,
     pub used_spec_vars: BTreeSet<QualifiedId<SpecVarId>>,
     pub used_memory: BTreeSet<QualifiedId<StructId>>,
@@ -261,6 +262,14 @@ impl Exp {
         }
     }
 
+    pub fn node_ids(&self) -> Vec<NodeId> {
+        let mut ids = vec![];
+        self.visit(&mut |e| {
+            ids.push(e.node_id());
+        });
+        ids
+    }
+
     /// Visits expression, calling visitor on each sub-expression, depth first.
     pub fn visit<F>(&self, visitor: &mut F)
     where
@@ -280,7 +289,14 @@ impl Exp {
                 }
             }
             Lambda(_, _, body) => body.visit(visitor),
-            Block(_, _, body) => body.visit(visitor),
+            Block(_, decls, body) => {
+                for decl in decls {
+                    if let Some(def) = &decl.binding {
+                        def.visit(visitor);
+                    }
+                }
+                body.visit(visitor)
+            }
             IfElse(_, c, t, e) => {
                 c.visit(visitor);
                 t.visit(visitor);
