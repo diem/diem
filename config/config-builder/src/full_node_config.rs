@@ -11,7 +11,7 @@ use libra_config::{
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
-use libra_types::transaction::Transaction;
+use libra_types::{chain_id::ChainId, transaction::Transaction};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{collections::HashSet, str::FromStr};
 
@@ -55,6 +55,11 @@ impl Default for FullNodeConfig {
 impl FullNodeConfig {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn chain_id(&mut self, chain_id: ChainId) -> &mut Self {
+        self.validator_config.chain_id = chain_id;
+        self
     }
 
     pub fn num_validator_nodes(&mut self, nodes: usize) -> &mut Self {

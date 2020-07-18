@@ -6,6 +6,7 @@
 use config_builder::{FullNodeConfig, KeyManagerConfig, ValidatorConfig};
 use libra_config::config::{KeyManagerConfig as KMConfig, NodeConfig, PersistableConfig};
 use libra_network_address::NetworkAddress;
+use libra_types::chain_id::ChainId;
 use std::{convert::TryInto, fs, fs::File, io::Write, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
@@ -51,6 +52,9 @@ enum FullNodeCommand {
 
 #[derive(Debug, StructOpt)]
 struct FullNodeArgs {
+    #[structopt(long)]
+    /// Defines which chain version libra will use
+    chain_id: Option<u8>,
     // Describe the validator networrk
     #[structopt(short = "n", long, default_value = "1")]
     /// Specify the number of Validators to configure in the genesis blob.
@@ -95,6 +99,9 @@ struct FullNodeArgs {
 
 #[derive(Debug, StructOpt)]
 struct KeyManagerArgs {
+    #[structopt(long)]
+    /// Defines which chain version libra will use
+    chain_id: Option<u8>,
     #[structopt(long, parse(from_os_str))]
     /// The data directory for the configs (e.g. /opt/libra/etc).
     data_dir: PathBuf,
@@ -150,6 +157,9 @@ struct ValidatorArgs {
 
 #[derive(Debug, StructOpt)]
 struct ValidatorCommonArgs {
+    #[structopt(long)]
+    /// Defines which chain version libra will use
+    chain_id: Option<u8>,
     #[structopt(short = "d", long, parse(from_os_str))]
     /// The data directory for the configs (e.g. /opt/libra/etc).
     data_dir: PathBuf,
@@ -274,6 +284,7 @@ fn build_full_node(command: FullNodeCommand) {
 
 fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     let mut config_builder = FullNodeConfig::new();
+    args.chain_id.map(|v| config_builder.chain_id(ChainId::new(v)));
     config_builder.advertised_address = args.advertised.clone();
     config_builder.bootstrap = args.bootstrap.clone();
     config_builder.full_node_index = args.full_node_index;
@@ -305,6 +316,7 @@ fn build_key_manager(args: KeyManagerArgs) {
     }
 
     let mut config_builder = KeyManagerConfig::new();
+    args.chain_id.map(|v| config_builder.chain_id = ChainId::new(v));
     config_builder.rotation_period_secs = args.rotation_period_secs;
     config_builder.sleep_period_secs = args.sleep_period_secs;
     config_builder.txn_expiration_secs = args.txn_expiration_secs;
@@ -367,6 +379,7 @@ fn build_validator(args: ValidatorArgs) {
 fn safety_rules_common(args: &ValidatorCommonArgs) -> ValidatorConfig {
     let mut config_builder = ValidatorConfig::new();
 
+    args.chain_id.map(|v| config_builder.chain_id = ChainId::new(v));
     config_builder.node_index = args.validator_index;
     config_builder.num_nodes = args.validators;
     config_builder.safety_rules_addr = args.safety_rules_addr;

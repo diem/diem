@@ -51,7 +51,8 @@ variable "config_seed" {
 }
 
 variable "chain_id" {
-  default     = "DEVNET"
+  # Default is for DEVNET
+  default     = 5
   description = "Chain ID of this network"
 }
 

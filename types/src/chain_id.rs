@@ -21,8 +21,8 @@ pub enum NamedChain {
     MAINNET = 1,
     // The Libra chain below are non-reserved, non-production, and may change over time.  They are listed for convenience here.
     TESTNET,
-    DEVNET,
-    TESTING,
+    DEVNET = 5,
+    TESTING = 6,
 }
 
 impl NamedChain {
