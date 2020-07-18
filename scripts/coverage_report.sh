@@ -90,6 +90,10 @@ export RUST_MIN_STACK=8388608 # 8 * 1024 * 1024
 echo "Cleaning project..."
 (cd "$TEST_DIR"; cargo clean)
 
+export RUST_NIGHTLY=$(cat cargo-toolchain)
+export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
+export CARGOFLAGS=$(cat cargo-flags)
+
 echo check ulimits
 ulimit -a
 
@@ -106,7 +110,7 @@ while read -r line; do
         fi
         # Don't fail out of the loop here. We just want to run the test binary
         # to collect its profile data.  Also note which crates fail under coverage.
-        ( cd "$dirline" && pwd && RUST_BACKTRACE=1 cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
+        ( cd "$dirline" && pwd && RUST_BACKTRACE=1 ${CARGO} ${CARGOFLAGS}  xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
