@@ -591,14 +591,17 @@ TODO(wrwg): this currently does not verify. It probably never did as it was timi
 
 
 <pre><code>pragma verify = <b>false</b>;
-<b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr); <b>old</b>(dealer.window_start) &lt;= dealer.window_start};
-<b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-        {<b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
-            (dealer.window_start == current_time && dealer.window_inflow == amount) ||
-            (<b>old</b>(dealer.window_start) == dealer.window_start && dealer.window_inflow == <b>old</b>(dealer.window_inflow) + amount)
-        }};
-<b>ensures</b> tier_index &lt; len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers);
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_inflow &lt;= <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers[tier_index];
+<a name="0x1_DesignatedDealer_dealer$3"></a>
+<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<a name="0x1_DesignatedDealer_current_time$4"></a>
+<b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
+<b>ensures</b> <b>old</b>(dealer.window_start) &lt;= dealer.window_start;
+<b>ensures</b>
+    dealer.window_start == current_time && dealer.window_inflow == amount ||
+    (<b>old</b>(dealer.window_start) == dealer.window_start &&
+        dealer.window_inflow == <b>old</b>(dealer.window_inflow) + amount);
+<b>ensures</b> tier_index &lt; len(<b>old</b>(dealer).tiers);
+<b>ensures</b> dealer.window_inflow &lt;= <b>old</b>(dealer).tiers[tier_index];
 </code></pre>
 
 

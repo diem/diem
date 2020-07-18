@@ -854,6 +854,10 @@ fn spec_member(
                 type_: t,
             }
         }
+        PM::Let { name, def: pdef } => {
+            let def = exp_(context, pdef);
+            EM::Let { name, def }
+        }
         PM::Include { exp: pexp } => EM::Include {
             exp: exp_(context, pexp),
         },
@@ -1436,6 +1440,7 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
         // And will error in the move prover
         M::Function { .. }
         | M::Variable { .. }
+        | M::Let { .. }
         | M::Include { .. }
         | M::Apply { .. }
         | M::Pragma { .. } => (),

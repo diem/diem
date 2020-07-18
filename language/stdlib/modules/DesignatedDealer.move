@@ -203,14 +203,15 @@ module DesignatedDealer {
         /// (which it does not any longer)
         pragma verify = false;
         // modifies global<TierInfo<CoinType>>@dd_addr.{window_start, window_inflow, mint_event_handle}
-        ensures {let dealer = global<TierInfo<CoinType>>(dd_addr); old(dealer.window_start) <= dealer.window_start};
-        ensures {let dealer = global<TierInfo<CoinType>>(dd_addr);
-                {let current_time = LibraTimestamp::spec_now_microseconds();
-                    (dealer.window_start == current_time && dealer.window_inflow == amount) ||
-                    (old(dealer.window_start) == dealer.window_start && dealer.window_inflow == old(dealer.window_inflow) + amount)
-                }};
-        ensures tier_index < len(old(global<TierInfo<CoinType>>(dd_addr)).tiers);
-        ensures global<TierInfo<CoinType>>(dd_addr).window_inflow <= old(global<TierInfo<CoinType>>(dd_addr)).tiers[tier_index];
+        let dealer = global<TierInfo<CoinType>>(dd_addr);
+        let current_time = LibraTimestamp::spec_now_microseconds();
+        ensures old(dealer.window_start) <= dealer.window_start;
+        ensures
+            dealer.window_start == current_time && dealer.window_inflow == amount ||
+            (old(dealer.window_start) == dealer.window_start &&
+                dealer.window_inflow == old(dealer.window_inflow) + amount);
+        ensures tier_index < len(old(dealer).tiers);
+        ensures dealer.window_inflow <= old(dealer).tiers[tier_index];
     }
 
     public fun exists_at(dd_addr: address): bool {

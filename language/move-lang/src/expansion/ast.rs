@@ -146,6 +146,10 @@ pub enum SpecBlockMember_ {
         type_parameters: Vec<(Name, Kind)>,
         type_: Type,
     },
+    Let {
+        name: Name,
+        def: Exp,
+    },
     Include {
         exp: Exp,
     },
@@ -506,6 +510,10 @@ impl AstDebug for SpecBlockMember_ {
                 type_parameters.ast_debug(w);
                 w.write(": ");
                 type_.ast_debug(w);
+            }
+            SpecBlockMember_::Let { name, def } => {
+                w.write(&format!("let {} = ", name));
+                def.ast_debug(w);
             }
             SpecBlockMember_::Include { exp } => {
                 w.write("include ");
