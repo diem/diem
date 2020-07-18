@@ -30,6 +30,7 @@ use stackless_bytecode_generator::{
     packref_analysis::PackrefAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
     test_instrumenter::TestInstrumenter,
+    usage_analysis::UsageProcessor,
     writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
@@ -232,6 +233,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     res.add_processor(PackrefAnalysisProcessor::new());
     res.add_processor(EliminateMutRefsProcessor::new());
     res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
+    res.add_processor(UsageProcessor::new());
 
     res
 }

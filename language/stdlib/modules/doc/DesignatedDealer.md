@@ -17,8 +17,8 @@
 -  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_validate_and_record_mint)
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 -  [Specification](#0x1_DesignatedDealer_Specification)
+    -  [Resource `TierInfo`](#0x1_DesignatedDealer_Specification_TierInfo)
     -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
-    -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
@@ -465,6 +465,48 @@ that amount that can be minted according to the bounds for the
 ## Specification
 
 
+<a name="0x1_DesignatedDealer_Specification_TierInfo"></a>
+
+### Resource `TierInfo`
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<dl>
+<dt>
+
+<code>window_start: u64</code>
+</dt>
+<dd>
+ Time window start in microseconds
+</dd>
+<dt>
+
+<code>window_inflow: u64</code>
+</dt>
+<dd>
+ The minted inflow during this time window
+</dd>
+<dt>
+
+<code>tiers: vector&lt;u64&gt;</code>
+</dt>
+<dd>
+ 0-indexed array of tier upperbounds
+</dd>
+</dl>
+
+
+
+<pre><code><b>invariant</b> len(tiers) &lt;= <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>();
+<b>invariant</b> forall i in 0..len(tiers), j in 0..len(tiers) where i &lt; j: tiers[i] &lt; tiers[j];
+</code></pre>
+
+
+
 <a name="0x1_DesignatedDealer_Specification_publish_designated_dealer_credential"></a>
 
 ### Function `publish_designated_dealer_credential`
@@ -475,25 +517,7 @@ that amount that can be minted according to the bounds for the
 
 
 
-TODO(wrwg): times out with 40s
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_Specification_add_currency"></a>
-
-### Function `add_currency`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
-</code></pre>
-
-
-
-TODO(wrwg): times out with 40s
+TODO(wrwg): times out
 
 
 <pre><code>pragma verify = <b>false</b>;
@@ -545,7 +569,8 @@ TODO(wrwg): times out with 40s
 
 
 
-TODO(wrwg): times out with 40s
+TODO(wrwg): this currently does not verify. It probably never did as it was timing out in the past
+(which it does not any longer)
 
 
 <pre><code>pragma verify = <b>false</b>;
@@ -590,24 +615,9 @@ TODO(wrwg): times out with 40s
 
 
 
-<a name="0x1_DesignatedDealer_SpecSchema"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_SpecSchema">SpecSchema</a>&lt;CoinType&gt; {
-    <b>invariant</b> <b>module</b> forall x: address where exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x): len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x).tiers) &lt;= <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>();
-    <b>invariant</b> <b>module</b> forall x: address where exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x):
-                     forall i: u64, j: u64 where 0 &lt;= i && i &lt; j && j &lt; len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x).tiers):
-                        <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x).tiers[i] &lt; <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(x).tiers[j];
-}
-</code></pre>
-
-
-
-
 <pre><code>pragma verify = <b>true</b>;
 <a name="0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS"></a>
 <b>define</b> <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>(): u64 { 4 }
 <a name="0x1_DesignatedDealer_spec_window_length"></a>
 <b>define</b> <a href="#0x1_DesignatedDealer_spec_window_length">spec_window_length</a>(): u64 { 86400000000 }
-<b>apply</b> <a href="#0x1_DesignatedDealer_SpecSchema">SpecSchema</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;;
 </code></pre>

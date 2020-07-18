@@ -50,7 +50,7 @@ module M {
     }
 
     define vector_builtins(v: vector<num>): bool {
-      len(v) > 2 && (forall x in v: x > 0) && (exists x in v: x > 10) && update(v, 2, 23)[2] == 23
+      len(v) > 2 && (forall x in v: x > 0) && (exists x in v: x > 10) && update_vector(v, 2, 23)[2] == 23
     }
 
     define range_builtins(v: vector<num>): bool {

@@ -29,13 +29,13 @@
     -  [Function `is_vasp`](#0x1_VASP_Specification_is_vasp)
     -  [Function `is_same_vasp`](#0x1_VASP_Specification_is_same_vasp)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
-    -  [Each children has a parent](#0x1_VASP_@Each_children_has_a_parent)
-        -  [Privileges](#0x1_VASP_@Privileges)
+        -  [Post Genesis](#0x1_VASP_@Post_Genesis)
+    -  [Existence of Parents](#0x1_VASP_@Existence_of_Parents)
+        -  [Mutation](#0x1_VASP_@Mutation)
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
         -  [Parent does not change](#0x1_VASP_@Parent_does_not_change)
         -  [Aborts conditions shared between functions.](#0x1_VASP_@Aborts_conditions_shared_between_functions.)
-        -  [The VASPOperationsResource should be published under the LibraRoot address after genesis](#0x1_VASP_@The_VASPOperationsResource_should_be_published_under_the_LibraRoot_address_after_genesis)
 
 
 
@@ -514,8 +514,8 @@ Aborts if
 <b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))
      == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))) + 1;
 <b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
-<b>ensures</b> TRACE(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child)))
-     == TRACE(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
+<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child))
+     == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
 </code></pre>
 
 
@@ -623,12 +623,6 @@ Spec version of
 
 
 
-TODO(wrwg): Because the
-<code><a href="#0x1_VASP_ChildHasParent">ChildHasParent</a></code> invariant currently lets the prover hang,
-we make this function opaque and specify the *expected* result. We know its true
-because of the way ChildVASP is published, but can't verify this right now. This
-enables verification of code which checks is_child or is_vasp.
-
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>ensures</b> result == <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr);
@@ -680,29 +674,6 @@ Spec version of
 </code></pre>
 
 
-This is a stronger version of
-<code><a href="#0x1_VASP_is_vasp">Self::is_vasp</a></code> which also handles the potential abortion
-if the VASP under
-<code>addr</code> would not be well-formed (i.e. a child which has not parent).
-This is used in specification of callers for e.g.
-<code><a href="#0x1_VASP_parent_address">Self::parent_address</a></code>.
-
-> TODO(wrwg): We would really like to have the fact that each child has a parent encoded
-> as a data invariant. We currently have formulated it as a module invariant, but this is
-> not clean because this invariant is only enforced after program points we have made a
-> a call to VASP functions.
-
-
-<a name="0x1_VASP_spec_is_valid_vasp"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_valid_vasp">spec_is_valid_vasp</a>(addr: address): bool {
-    <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr)
-        || <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr) && <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr)
-}
-</code></pre>
-
-
 
 <a name="0x1_VASP_Specification_is_same_vasp"></a>
 
@@ -746,47 +717,38 @@ Spec version of
 
 
 
-<a name="0x1_VASP_@Each_children_has_a_parent"></a>
+<a name="0x1_VASP_@Post_Genesis"></a>
 
-### Each children has a parent
-
-
-
-<a name="0x1_VASP_ChildHasParent"></a>
-
-> TODO(wrwg): this property currently causes timeouts/long running verification for multiple
-> functions in this module. Investigate why.
+#### Post Genesis
 
 
-<pre><code><b>schema</b> <a href="#0x1_VASP_ChildHasParent">ChildHasParent</a> {
-    <b>invariant</b> <b>module</b> <b>true</b> /*forall a: address: <a href="#0x1_VASP_spec_child_has_parent">spec_child_has_parent</a>(a)*/;
-}
+
+<code><a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a></code> is published under the LibraRoot address after genesis.
+
+
+<pre><code><b>invariant</b> [<b>global</b>]
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_up">LibraTimestamp::spec_is_up</a>() ==&gt;
+        exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
 
 
 
+<a name="0x1_VASP_@Existence_of_Parents"></a>
 
-<pre><code><b>apply</b> <a href="#0x1_VASP_ChildHasParent">ChildHasParent</a> <b>to</b> *, *&lt;CoinType&gt;;
-</code></pre>
-
-
-Returns true if the
-<code>addr</code>, when a ChildVASP, has a ParentVASP.
+### Existence of Parents
 
 
-<a name="0x1_VASP_spec_child_has_parent"></a>
 
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_child_has_parent">spec_child_has_parent</a>(addr: address): bool {
-    <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr) ==&gt; <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr)
-}
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall child_addr: address where <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(child_addr):
+        <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(child_addr).parent_vasp_addr);
 </code></pre>
 
 
 
-<a name="0x1_VASP_@Privileges"></a>
+<a name="0x1_VASP_@Mutation"></a>
 
-#### Privileges
+#### Mutation
 
 Only a parent VASP calling publish_child_vast_credential can create
 child VASP.
@@ -804,6 +766,8 @@ previous state.
 </code></pre>
 
 
+
+TODO(wrwg): this should be replaced by a modifies clause
 
 
 <pre><code><b>apply</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b>
@@ -839,6 +803,8 @@ previous state.
 
 
 
+TODO(wrwg): this should be replaced by a modifies clause
+
 
 <pre><code><b>apply</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> <b>to</b> * <b>except</b> publish_child_vasp_credential;
 </code></pre>
@@ -861,24 +827,6 @@ Returns the number of children under
 <a name="0x1_VASP_@Parent_does_not_change"></a>
 
 #### Parent does not change
-
-
-
-<a name="0x1_VASP_ParentRemainsSame"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_VASP_ParentRemainsSame">ParentRemainsSame</a> {
-    <b>ensures</b> forall child_addr: address
-        where <b>old</b>(<a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(child_addr)):
-            <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr)) == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_VASP_ParentRemainsSame">ParentRemainsSame</a> <b>to</b> *;
-</code></pre>
 
 
 
@@ -919,21 +867,4 @@ Returns the number of children under
 
 
 <pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> num_children;
-</code></pre>
-
-
-
-<a name="0x1_VASP_@The_VASPOperationsResource_should_be_published_under_the_LibraRoot_address_after_genesis"></a>
-
-#### The VASPOperationsResource should be published under the LibraRoot address after genesis
-
-
-
-<a name="0x1_VASP_spec_is_published"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_published">spec_is_published</a>(): bool {
-    exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
-}
-<b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_VASP_spec_is_published">spec_is_published</a>();
 </code></pre>

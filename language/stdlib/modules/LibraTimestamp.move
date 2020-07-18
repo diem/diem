@@ -105,6 +105,11 @@ module LibraTimestamp {
             !exists<TimeHasStarted>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
 
+        /// Helper to express !is_genesis.
+        define spec_is_up(): bool {
+            !spec_is_genesis()
+        }
+
         /// Specification version of the `Self::is_not_initialized` function.
         define spec_is_not_initialized(): bool {
             !spec_root_ctm_initialized() || spec_now_microseconds() == 0

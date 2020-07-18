@@ -260,6 +260,10 @@ function {{backend.func_inline}} $RemoveValueArray(a: $ValueArray): $ValueArray 
     )
 }
 
+function {{backend.func_inline}} $SingleValueArray(v: $Value): $ValueArray {
+    $ValueArray($MapConstValue($DefaultValue())[0 := v], 1)
+}
+
 function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int): $ValueArray {
     (
         var l := l#$ValueArray(a) - 1;
@@ -349,7 +353,7 @@ function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
 
 // Generate a stratified version of IsEqual for depth of {{backend.stratification_depth}}.
 {{#stratified}}
-function {{backend.aggressive_backend.func_inline}} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
+function {{backend.aggressive_func_inline}} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
     (v1 == v2) ||
     (is#$Vector(v1) &&
      is#$Vector(v2) &&
@@ -371,7 +375,7 @@ function {:inline} $IsEqual(v1: $Value, v2: $Value): bool {
 // Generate stratified ReadValue for the depth of {{backend.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_backend.func_inline}} $ReadValue_{{@this_suffix}}(p: $Path, v: $Value) : $Value {
+function {{backend.aggressive_func_inline}} $ReadValue_{{@this_suffix}}(p: $Path, v: $Value) : $Value {
     if ({{@this_level}} == size#$Path(p)) then
         v
     else
@@ -390,7 +394,7 @@ function {:inline} $ReadValue(p: $Path, v: $Value): $Value {
 // Generate stratified $UpdateValue for the depth of {{backend.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_backend.func_inline}} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
+function {{backend.aggressive_func_inline}} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
     (var poffset := offset + {{@this_level}};
     if (poffset == size#$Path(p)) then
         new_v
@@ -411,7 +415,7 @@ function {:inline} $UpdateValue(p: $Path, offset: int, v: $Value, new_v: $Value)
 // Generate stratified $IsPathPrefix for the depth of {{backend.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_backend.func_inline}} $IsPathPrefix_{{@this_suffix}}(p1: $Path, p2: $Path): bool {
+function {{backend.aggressive_func_inline}} $IsPathPrefix_{{@this_suffix}}(p1: $Path, p2: $Path): bool {
     if ({{@this_level}} == size#$Path(p1)) then
         true
     else if (p#$Path(p1)[{{@this_level}}] == p#$Path(p2)[{{@this_level}}]) then
@@ -432,7 +436,7 @@ function {:inline} $IsPathPrefix(p1: $Path, p2: $Path): bool {
 // Generate stratified $ConcatPath for the depth of {{backend.stratification_depth}}.
 
 {{#stratified}}
-function {{backend.aggressive_backend.func_inline}} $ConcatPath_{{@this_suffix}}(p1: $Path, p2: $Path): $Path {
+function {{backend.aggressive_func_inline}} $ConcatPath_{{@this_suffix}}(p1: $Path, p2: $Path): $Path {
     if ({{@this_level}} == size#$Path(p2)) then
         p1
     else
@@ -472,6 +476,9 @@ function {:inline} $push_back_vector(v: $Value, elem: $Value): $Value {
 }
 function {:inline} $pop_back_vector(v: $Value): $Value {
     $Vector($RemoveValueArray(v#$Vector(v)))
+}
+function {:inline} $single_vector(v: $Value): $Value {
+    $Vector($SingleValueArray(v))
 }
 function {:inline} $append_vector(v1: $Value, v2: $Value): $Value {
     $Vector($ConcatValueArray(v#$Vector(v1), v#$Vector(v2)))

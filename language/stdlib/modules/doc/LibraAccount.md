@@ -64,6 +64,7 @@
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
+    -  [Function `create_designated_dealer`](#0x1_LibraAccount_Specification_create_designated_dealer)
 
 
 
@@ -2202,6 +2203,22 @@ a writeset transaction is committed.
 
 
 
+<a name="0x1_LibraAccount_Specification_create_designated_dealer"></a>
+
+### Function `create_designated_dealer`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+
 
 <pre><code>pragma verify;
 </code></pre>
@@ -2232,7 +2249,7 @@ Returns true if the LibraAccount at
 
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr: address): bool {
     <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
-    && addr == <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(
+    && addr == <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(
         <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address
 }
 <a name="0x1_LibraAccount_spec_key_rotation_capability_address"></a>

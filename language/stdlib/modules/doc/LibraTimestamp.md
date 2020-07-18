@@ -330,6 +330,18 @@ Specification version of the
 </code></pre>
 
 
+Helper to express !is_genesis.
+
+
+<a name="0x1_LibraTimestamp_spec_is_up"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_up">spec_is_up</a>(): bool {
+    !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>()
+}
+</code></pre>
+
+
 Specification version of the
 <code><a href="#0x1_LibraTimestamp_is_not_initialized">Self::is_not_initialized</a></code> function.
 

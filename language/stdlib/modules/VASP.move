@@ -92,8 +92,8 @@ module VASP {
         ensures spec_get_num_children(Signer::spec_address_of(parent))
              == old(spec_get_num_children(Signer::spec_address_of(parent))) + 1;
         ensures spec_is_child_vasp(Signer::spec_address_of(child));
-        ensures TRACE(spec_parent_address(Signer::spec_address_of(child)))
-             == TRACE(Signer::spec_address_of(parent));
+        ensures spec_parent_address(Signer::spec_address_of(child))
+             == Signer::spec_address_of(parent);
     }
 
     /// Return `true` if `addr` is a parent or child VASP whose parent VASP account contains an
@@ -174,10 +174,6 @@ module VASP {
         exists<ChildVASP>(addr)
     }
     spec fun is_child {
-        /// TODO(wrwg): Because the `ChildHasParent` invariant currently lets the prover hang,
-        /// we make this function opaque and specify the *expected* result. We know its true
-        /// because of the way ChildVASP is published, but can't verify this right now. This
-        /// enables verification of code which checks is_child or is_vasp.
         pragma opaque = true;
         ensures result == spec_is_child_vasp(addr);
     }
@@ -200,19 +196,6 @@ module VASP {
         /// Spec version of `Self::is_vasp`.
         define spec_is_vasp(addr: address): bool {
             spec_is_parent_vasp(addr) || spec_is_child_vasp(addr)
-        }
-
-        /// This is a stronger version of `Self::is_vasp` which also handles the potential abortion
-        /// if the VASP under `addr` would not be well-formed (i.e. a child which has not parent).
-        /// This is used in specification of callers for e.g. `Self::parent_address`.
-        ///
-        /// > TODO(wrwg): We would really like to have the fact that each child has a parent encoded
-        /// > as a data invariant. We currently have formulated it as a module invariant, but this is
-        /// > not clean because this invariant is only enforced after program points we have made a
-        /// > a call to VASP functions.
-        define spec_is_valid_vasp(addr: address): bool {
-            spec_is_parent_vasp(addr)
-                || spec_is_child_vasp(addr) && spec_is_parent_vasp(global<ChildVASP>(addr).parent_vasp_addr)
         }
     }
 
@@ -246,24 +229,25 @@ module VASP {
         pragma verify = true;
     }
 
-    /// # Each children has a parent
+    /// ## Post Genesis
 
-    spec schema ChildHasParent {
-        /// > TODO(wrwg): this property currently causes timeouts/long running verification for multiple
-        /// > functions in this module. Investigate why.
-        invariant module true /*forall a: address: spec_child_has_parent(a)*/;
-    }
     spec module {
-        apply ChildHasParent to *, *<CoinType>;
+        /// `VASPOperationsResource` is published under the LibraRoot address after genesis.
+        invariant [global]
+            LibraTimestamp::spec_is_up() ==>
+                exists<VASPOperationsResource>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+    }
 
-        /// Returns true if the `addr`, when a ChildVASP, has a ParentVASP.
-        define spec_child_has_parent(addr: address): bool {
-            spec_is_child_vasp(addr) ==> spec_is_parent_vasp(global<ChildVASP>(addr).parent_vasp_addr)
-        }
+    /// # Existence of Parents
+
+    spec module {
+        invariant [global]
+            forall child_addr: address where spec_is_child_vasp(child_addr):
+                spec_is_parent_vasp(global<ChildVASP>(child_addr).parent_vasp_addr);
     }
 
 
-    /// ## Privileges
+    /// ## Mutation
 
     /// Only a parent VASP calling publish_child_vast_credential can create
     /// child VASP.
@@ -273,6 +257,7 @@ module VASP {
         ensures forall a: address : exists<ChildVASP>(a) == old(exists<ChildVASP>(a));
     }
     spec module {
+        /// TODO(wrwg): this should be replaced by a modifies clause
         apply ChildVASPsDontChange to *<T>, * except
             publish_child_vasp_credential;
     }
@@ -293,6 +278,7 @@ module VASP {
     }
 
     spec module {
+        /// TODO(wrwg): this should be replaced by a modifies clause
         apply NumChildrenRemainsSame to * except publish_child_vasp_credential;
 
         /// Returns the number of children under `parent`.
@@ -303,15 +289,8 @@ module VASP {
 
     /// ## Parent does not change
 
-    spec schema ParentRemainsSame {
-        ensures forall child_addr: address
-            where old(spec_is_child_vasp(child_addr)):
-                old(spec_parent_address(child_addr)) == spec_parent_address(child_addr);
-    }
-
     spec module {
-        apply ParentRemainsSame to *;
-    }
+     }
 
     /// ## Aborts conditions shared between functions.
 
@@ -333,14 +312,7 @@ module VASP {
         apply AbortsIfParentIsNotParentVASP to num_children;
     }
 
-    /// ## The VASPOperationsResource should be published under the LibraRoot address after genesis
-    spec module {
-        define spec_is_published(): bool {
-            exists<VASPOperationsResource>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
-        }
 
-        invariant !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
-    }
 }
 
 }

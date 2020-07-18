@@ -522,7 +522,7 @@ and returns the addr itself otherwise.
 
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(addr: address): address {
     <b>if</b> (<a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(addr)) {
-        <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account)
+        <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account)
     } <b>else</b> {
         addr
     }
@@ -593,7 +593,8 @@ Returns true if there a config published under addr.
 
 
 
-<pre><code><b>aborts_if</b> <b>false</b>;
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(addr);
 </code></pre>
 
@@ -646,7 +647,8 @@ Returns true if addr is a valid validator.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
 <b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(addr);
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr);
 </code></pre>
@@ -660,7 +662,7 @@ Returns the config published under addr.
 
 
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> {
-    <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
 
@@ -677,7 +679,8 @@ Returns the config published under addr.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(addr);
 </code></pre>
 

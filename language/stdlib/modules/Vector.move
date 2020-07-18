@@ -40,6 +40,17 @@ module Vector {
         push_back(&mut v, e);
         v
     }
+    spec fun singleton {
+        // TODO(wrwg): when using opaque here, we get verification errors.
+        // pragma opaque;
+        aborts_if false;
+        ensures result == spec_singleton(e);
+    }
+    spec module {
+        define spec_singleton<Element>(e: Element): vector<Element> {
+            singleton_vector(e)
+        }
+    }
 
     /// Reverses the order of the elements in the vector `v` in place.
     public fun reverse<Element>(v: &mut vector<Element>) {

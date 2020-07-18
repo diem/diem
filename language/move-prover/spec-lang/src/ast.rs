@@ -17,7 +17,7 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use crate::env::{FunId, SchemaId, TypeParameter};
+use crate::env::{FunId, GlobalId, QualifiedId, SchemaId, TypeParameter};
 
 // =================================================================================================
 /// # Declarations
@@ -37,8 +37,8 @@ pub struct SpecFunDecl {
     pub type_params: Vec<(Symbol, Type)>,
     pub params: Vec<(Symbol, Type)>,
     pub result_type: Type,
-    pub used_spec_vars: BTreeSet<(ModuleId, SpecVarId)>,
-    pub used_memory: BTreeSet<(ModuleId, StructId)>,
+    pub used_spec_vars: BTreeSet<QualifiedId<SpecVarId>>,
+    pub used_memory: BTreeSet<QualifiedId<StructId>>,
     pub uninterpreted: bool,
     pub body: Option<Exp>,
 }
@@ -114,7 +114,7 @@ impl ConditionKind {
     /// Returns true if this condition is allowed on a module.
     pub fn allowed_on_module(&self) -> bool {
         use ConditionKind::*;
-        matches!(self, Invariant)
+        matches!(self, Invariant | InvariantUpdate)
     }
 }
 
@@ -215,6 +215,18 @@ pub enum SpecBlockTarget {
     Function(ModuleId, FunId),
     FunctionCode(ModuleId, FunId, usize),
     Schema(ModuleId, SchemaId, Vec<TypeParameter>),
+}
+
+/// Describes a global invariant.
+#[derive(Debug, Clone)]
+pub struct GlobalInvariant {
+    pub id: GlobalId,
+    pub loc: Loc,
+    pub kind: ConditionKind,
+    pub mem_usage: BTreeSet<QualifiedId<StructId>>,
+    pub spec_var_usage: BTreeSet<QualifiedId<SpecVarId>>,
+    pub declaring_module: ModuleId,
+    pub cond: Exp,
 }
 
 // =================================================================================================
@@ -326,6 +338,8 @@ pub enum Operation {
     Exists,
     Old,
     Trace,
+    Empty,
+    Single,
     Update,
     Concat,
     MaxU8,

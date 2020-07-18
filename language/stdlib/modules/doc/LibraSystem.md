@@ -22,8 +22,8 @@
 -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
 -  [Specification](#0x1_LibraSystem_Specification)
+    -  [Struct `LibraSystem`](#0x1_LibraSystem_Specification_LibraSystem)
     -  [Function `initialize_validator_set`](#0x1_LibraSystem_Specification_initialize_validator_set)
-    -  [Specifications for individual functions](#0x1_LibraSystem_@Specifications_for_individual_functions)
     -  [Function `set_validator_set`](#0x1_LibraSystem_Specification_set_validator_set)
     -  [Function `add_validator`](#0x1_LibraSystem_Specification_add_validator)
     -  [Function `remove_validator`](#0x1_LibraSystem_Specification_remove_validator)
@@ -34,10 +34,9 @@
     -  [Function `validator_set_size`](#0x1_LibraSystem_Specification_validator_set_size)
     -  [Function `get_ith_validator_address`](#0x1_LibraSystem_Specification_get_ith_validator_address)
     -  [Function `get_validator_index_`](#0x1_LibraSystem_Specification_get_validator_index_)
-    -  [Module specifications](#0x1_LibraSystem_@Module_specifications)
-        -  [Validator set is indeed a set](#0x1_LibraSystem_@Validator_set_is_indeed_a_set)
     -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_Specification_update_ith_validator_info_)
     -  [Function `is_validator_`](#0x1_LibraSystem_Specification_is_validator_)
+    -  [Module specifications](#0x1_LibraSystem_@Module_specifications)
 
 
 
@@ -560,6 +559,44 @@
 ## Specification
 
 
+<a name="0x1_LibraSystem_Specification_LibraSystem"></a>
+
+### Struct `LibraSystem`
+
+
+<pre><code><b>struct</b> <a href="#0x1_LibraSystem">LibraSystem</a>
+</code></pre>
+
+
+
+<dl>
+<dt>
+
+<code>scheme: u8</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>validators: vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">LibraSystem::ValidatorInfo</a>&gt;</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+Validators have unique addresses.
+
+
+<pre><code><b>invariant</b>
+    forall i in 0..len(validators), j in 0..len(validators):
+        validators[i].addr == validators[j].addr ==&gt; i == j;
+</code></pre>
+
+
+
 <a name="0x1_LibraSystem_Specification_initialize_validator_set"></a>
 
 ### Function `initialize_validator_set`
@@ -568,11 +605,6 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer)
 </code></pre>
 
-
-
-<a name="0x1_LibraSystem_@Specifications_for_individual_functions"></a>
-
-### Specifications for individual functions
 
 
 
@@ -620,14 +652,6 @@
 
 
 
-TODO(wrwg): times out with 40s
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
 
 <pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
@@ -647,14 +671,6 @@ TODO(wrwg): times out with 40s
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(lr_account: &signer, account_address: address)
-</code></pre>
-
-
-
-TODO(wrwg): times out with 40s
-
-
-<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 
@@ -681,10 +697,10 @@ TODO(wrwg): times out with 40s
 
 
 
-TODO(wrwg): times out with 40s
+Overrides module default. Remove this once this function is specified.
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma aborts_if_is_strict = <b>false</b>;
 </code></pre>
 
 
@@ -700,8 +716,20 @@ TODO(wrwg): times out with 40s
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<pre><code>pragma opaque;
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> result == <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+</code></pre>
+
+
+
+
+<a name="0x1_LibraSystem_spec_get_validator_set"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators
+}
 </code></pre>
 
 
@@ -717,8 +745,20 @@ TODO(wrwg): times out with 40s
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<pre><code>pragma opaque;
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> result == <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr);
+</code></pre>
+
+
+
+
+<a name="0x1_LibraSystem_spec_is_validator"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr: address): bool {
+    exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): v.addr == addr
+}
 </code></pre>
 
 
@@ -734,7 +774,8 @@ TODO(wrwg): times out with 40s
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<pre><code>pragma opaque;
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr);
 </code></pre>
 
@@ -751,7 +792,8 @@ TODO(wrwg): times out with 40s
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<pre><code>pragma opaque;
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> result == len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
 </code></pre>
 
@@ -768,7 +810,8 @@ TODO(wrwg): times out with 40s
 
 
 
-<pre><code><b>aborts_if</b> i &gt;= len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
+<pre><code>pragma opaque;
+<b>aborts_if</b> i &gt;= len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> result == <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()[i].addr;
 </code></pre>
@@ -788,96 +831,9 @@ TODO(wrwg): times out with 40s
 TODO(wrwg): turn this on once we have better support for loops.
 
 
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_@Module_specifications"></a>
-
-### Module specifications
-
-
-
-<pre><code>pragma verify = <b>true</b>, aborts_if_is_strict = <b>true</b>;
-</code></pre>
-
-
-Returns the validator set stored under libra root address.
-
-
-<a name="0x1_LibraSystem_spec_get_validator_set"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators
-}
-</code></pre>
-
-
-Returns true if there is a validator with address
-<code>addr</code>
-in the validator set.
-
-
-<a name="0x1_LibraSystem_spec_is_validator"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr: address): bool {
-    exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): v.addr == addr
-}
-</code></pre>
-
-
-Returns true if the given validator vector is a set,
-meaning that all the validators have unique addresses.
-
-
-<a name="0x1_LibraSystem_spec_validators_is_set"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(v: vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;): bool {
-    forall ii: u64, jj: u64 where
-        0 &lt;= ii && ii &lt; len(v) && 0 &lt;= jj && jj &lt; len(v) && ii != jj:
-            v[ii].addr != v[jj].addr
-}
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_@Validator_set_is_indeed_a_set"></a>
-
-#### Validator set is indeed a set
-
-
-
-<a name="0x1_LibraSystem_ValidatorsHaveUniqueAddresses"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_LibraSystem_ValidatorsHaveUniqueAddresses">ValidatorsHaveUniqueAddresses</a> {
-    <b>invariant</b> <b>module</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_LibraSystem_ValidatorsHaveUniqueAddresses">ValidatorsHaveUniqueAddresses</a> <b>to</b> <b>public</b> *;
-</code></pre>
-
-
-
-
-<pre><code>pragma opaque = <b>true</b>;
-<b>requires</b> <b>module</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(validators);
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(result) ==
-    (forall v in validators: v.addr != addr);
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(result) ==&gt;
-    validators[<a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(result)].addr == addr;
-<b>ensures</b> <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(result) ==&gt;
-    (forall j in 0..len(validators) where j != <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(result):
-        validators[j].addr != addr);
+<pre><code>pragma verify = <b>false</b>, opaque;
+<b>ensures</b> exists i in 0..len(validators) where validators[i].addr == addr: result == <a href="Option.md#0x1_Option_spec_some">Option::spec_some</a>(i);
+<b>ensures</b> (forall i in 0..len(validators): validators[i].addr != addr) ==&gt; result == <a href="Option.md#0x1_Option_spec_none">Option::spec_none</a>();
 </code></pre>
 
 
@@ -915,17 +871,22 @@ meaning that all the validators have unique addresses.
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma opaque;
 <b>aborts_if</b> <b>false</b>;
-<b>requires</b> <b>module</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(validators_vec_ref);
 <b>ensures</b> result == (exists v in validators_vec_ref: v.addr == addr);
-<b>ensures</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(validators_vec_ref);
 </code></pre>
 
+
+
+<a name="0x1_LibraSystem_@Module_specifications"></a>
+
+### Module specifications
+
+
+
+<pre><code>pragma verify = <b>true</b>, aborts_if_is_strict = <b>true</b>;
+</code></pre>
 
 
 The permission "{Add, Remove} Validator" is granted to LibraRoot [B23].
-
-
-<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
-</code></pre>
+TODO(wrwg): this does not verify after we removed timeouts

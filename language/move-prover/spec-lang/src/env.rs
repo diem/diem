@@ -34,7 +34,10 @@ use vm::{
 };
 
 use crate::{
-    ast::{ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl, Value},
+    ast::{
+        GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl,
+        Value,
+    },
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Type},
 };
@@ -95,6 +98,9 @@ pub const CONDITION_INJECTED_PROP: &str = "$injected";
 /// Property which can be attached to conditions to make them exported into the VC context
 /// even if they are injected.
 pub const CONDITION_EXPORT_PROP: &str = "export";
+
+/// Property which can be attached to a module invariant to make it global.
+pub const CONDITION_GLOBAL_PROP: &str = "global";
 
 /// Abstract property which can be used together with an opaque specification. An abstract
 /// property is not verified against the implementation, but will be used for the
@@ -211,6 +217,13 @@ pub struct NodeId(RawIndex);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct GlobalId(usize);
 
+// Some identifier qualified by a module.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct QualifiedId<Id> {
+    pub module_id: ModuleId,
+    pub id: Id,
+}
+
 impl FunId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
@@ -301,6 +314,15 @@ impl GlobalId {
     }
 }
 
+impl ModuleId {
+    pub fn qualified<Id>(self, id: Id) -> QualifiedId<Id> {
+        QualifiedId {
+            module_id: self,
+            id,
+        }
+    }
+}
+
 // =================================================================================================
 /// # Verification Scope
 
@@ -362,6 +384,12 @@ pub struct GlobalEnv {
     module_data: Vec<ModuleData>,
     /// A counter for issuing global ids.
     global_id_counter: RefCell<usize>,
+    /// A map of global invariants.
+    global_invariants: BTreeMap<GlobalId, GlobalInvariant>,
+    /// A map from spec vars to global invariants which refer to them.
+    global_invariants_for_spec_var: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<GlobalId>>,
+    /// A map from global memories to global invariants which refer to them.
+    global_invariants_for_memory: BTreeMap<QualifiedId<StructId>, BTreeSet<GlobalId>>,
 }
 
 /// Information about a verification condition stored in the environment.
@@ -426,6 +454,9 @@ impl GlobalEnv {
             symbol_pool: SymbolPool::new(),
             module_data: vec![],
             global_id_counter: RefCell::new(0),
+            global_invariants: Default::default(),
+            global_invariants_for_memory: Default::default(),
+            global_invariants_for_spec_var: Default::default(),
         }
     }
 
@@ -594,6 +625,37 @@ impl GlobalEnv {
         {
             emit(writer, &Config::default(), &self.source_files, diag).expect("emit must not fail");
         }
+    }
+
+    /// Adds a global invariant to this environment.
+    pub fn add_global_invariant(&mut self, inv: GlobalInvariant) {
+        let id = inv.id;
+        for spec_var in &inv.spec_var_usage {
+            self.global_invariants_for_spec_var
+                .entry(*spec_var)
+                .or_insert_with(BTreeSet::new)
+                .insert(id);
+        }
+        for memory in &inv.mem_usage {
+            self.global_invariants_for_memory
+                .entry(*memory)
+                .or_insert_with(BTreeSet::new)
+                .insert(id);
+        }
+        self.global_invariants.insert(id, inv);
+    }
+
+    /// Get global invariant by id.
+    pub fn get_global_invariant(&self, id: GlobalId) -> Option<&GlobalInvariant> {
+        self.global_invariants.get(&id)
+    }
+
+    /// Return the global invariants which refer to the given memory.
+    pub fn get_global_invariants_for_memory(&self, memory: QualifiedId<StructId>) -> Vec<GlobalId> {
+        self.global_invariants_for_memory
+            .get(&memory)
+            .map(|ids| ids.iter().cloned().collect_vec())
+            .unwrap_or_else(Default::default)
     }
 
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
@@ -1393,9 +1455,14 @@ impl<'env> StructEnv<'env> {
         &self.data.spec.properties
     }
 
-    /// Gets the definition index associated with this struct.
+    /// Gets the id associated with this struct.
     pub fn get_id(&self) -> StructId {
         StructId(self.data.name)
+    }
+
+    /// Gets the qualified id of this struct.
+    pub fn get_qualified_id(&self) -> QualifiedId<StructId> {
+        self.module_env.get_id().qualified(self.get_id())
     }
 
     /// Determines whether this struct is native.
@@ -1679,6 +1746,11 @@ impl<'env> FunctionEnv<'env> {
     /// Gets the id of this function.
     pub fn get_id(&self) -> FunId {
         FunId(self.data.name)
+    }
+
+    /// Gets the qualified id of this function.
+    pub fn get_qualified_id(&self) -> QualifiedId<FunId> {
+        self.module_env.get_id().qualified(self.get_id())
     }
 
     /// Get documentation associated with this function.

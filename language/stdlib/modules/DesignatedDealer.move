@@ -19,6 +19,7 @@ module DesignatedDealer {
 
     /// The `TierInfo` resource holds the information needed to track which
     /// tier a mint to a DD needs to be in.
+    // Preburn published at top level in Libra.move
     resource struct TierInfo<CoinType> {
         /// Time window start in microseconds
         window_start: u64,
@@ -27,7 +28,10 @@ module DesignatedDealer {
         /// 0-indexed array of tier upperbounds
         tiers: vector<u64>,
     }
-    // Preburn published at top level in Libra.move
+    spec struct TierInfo {
+        invariant len(tiers) <= SPEC_MAX_NUM_TIERS();
+        invariant forall i in 0..len(tiers), j in 0..len(tiers) where i < j: tiers[i] < tiers[j];
+    }
 
     /// Message for mint events
     struct ReceivedMintEvent {
@@ -83,7 +87,7 @@ module DesignatedDealer {
         };
     }
     spec fun publish_designated_dealer_credential {
-        /// TODO(wrwg): times out with 40s
+        /// TODO(wrwg): times out
         pragma verify = false;
     }
 
@@ -113,7 +117,7 @@ module DesignatedDealer {
         add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
     }
     spec fun add_currency {
-        /// TODO(wrwg): times out with 40s
+        // TODO(wrwg): times out
         pragma verify = false;
     }
 
@@ -195,7 +199,8 @@ module DesignatedDealer {
     }
 
     spec fun tiered_mint {
-        /// TODO(wrwg): times out with 40s
+        /// TODO(wrwg): this currently does not verify. It probably never did as it was timing out in the past
+        /// (which it does not any longer)
         pragma verify = false;
         // modifies global<TierInfo<CoinType>>@dd_addr.{window_start, window_inflow, mint_event_handle}
         ensures {let dealer = global<TierInfo<CoinType>>(dd_addr); old(dealer.window_start) <= dealer.window_start};
@@ -249,18 +254,10 @@ module DesignatedDealer {
         }
     }
 
-    spec schema SpecSchema<CoinType> {
-        invariant module forall x: address where exists<TierInfo<CoinType>>(x): len(global<TierInfo<CoinType>>(x).tiers) <= SPEC_MAX_NUM_TIERS();
-        invariant module forall x: address where exists<TierInfo<CoinType>>(x):
-                         forall i: u64, j: u64 where 0 <= i && i < j && j < len(global<TierInfo<CoinType>>(x).tiers):
-                            global<TierInfo<CoinType>>(x).tiers[i] < global<TierInfo<CoinType>>(x).tiers[j];
-    }
-
     spec module {
         pragma verify = true;
         define SPEC_MAX_NUM_TIERS(): u64 { 4 }
         define spec_window_length(): u64 { 86400000000 }
-        apply SpecSchema<CoinType> to *<CoinType>;
     }
 }
 }

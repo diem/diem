@@ -206,7 +206,6 @@ module RecoveryAddress {
     }
 
     spec fun rotate_authentication_key {
-        pragma verify = false; // TODO: turned off due to a timeout
         aborts_if !spec_is_recovery_address(recovery_address);
         aborts_if !exists<LibraAccount::LibraAccount>(to_recover);
         aborts_if len(new_key) != 32;
