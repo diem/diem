@@ -245,7 +245,7 @@ pub unsafe extern "C" fn libra_TransactionAddCurrencyScript_from(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn libra_TransactionRotateDualAttestationInfo_from(
+pub unsafe extern "C" fn libra_TransactionRotateDualAttestationInfoScript_from(
     new_url_bytes: *const u8,
     new_url_len: usize,
     new_key_bytes: *const u8,
@@ -312,11 +312,11 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     sender: *const u8,
     receiver: *const u8,
     sequence: u64,
-    chain_id: u8,
     num_coins: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
     expiration_timestamp_secs: u64,
+    chain_id: u8,
     metadata_bytes: *const u8,
     metadata_len: usize,
     metadata_signature_bytes: *const u8,
@@ -503,6 +503,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
     let max_gas_amount = signed_txn.max_gas_amount();
     let gas_unit_price = signed_txn.gas_unit_price();
     let expiration_timestamp_secs = signed_txn.expiration_timestamp_secs();
+    let chain_id = signed_txn.chain_id().id();
     // TODO: this will not work with multisig transactions, where both the pubkey and signature
     // have different sizes than the ones expected here. We will either need LibraSignedTransaction
     // types for single and multisig authenticators or adapt the type to work  with both
@@ -586,6 +587,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
             max_gas_amount,
             gas_unit_price,
             expiration_timestamp_secs,
+            chain_id,
         },
         None => {
             let raw_txn_other = LibraRawTransaction {
@@ -598,6 +600,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
                 max_gas_amount,
                 gas_unit_price,
                 expiration_timestamp_secs,
+                chain_id,
             };
             *out = LibraSignedTransaction {
                 raw_txn: raw_txn_other,
@@ -932,7 +935,7 @@ mod test {
 
     /// Generate a RotateDualAttestationInfo Script and deserialize
     #[test]
-    fn test_lcs_rotate_base_url_transaction_script() {
+    fn test_lcs_rotate_dual_attestationInfo_transaction_script() {
         let new_url = b"new_name".to_vec();
         let private_key = Ed25519PrivateKey::generate_for_testing();
         let new_compliance_public_key = private_key.public_key();
@@ -942,7 +945,7 @@ mod test {
         let mut script_len: usize = 0;
 
         let script_result = unsafe {
-            libra_TransactionRotateDualAttestationInfo_from(
+            libra_TransactionRotateDualAttestationInfoScript_from(
                 new_url.as_ptr(),
                 new_url.len(),
                 new_compliance_public_key.to_bytes().as_ptr(),
@@ -997,11 +1000,11 @@ mod test {
                 sender_address.as_ref().as_ptr(),
                 receiver_address.as_ref().as_ptr(),
                 sequence,
-                ChainId::test().id(),
                 amount,
                 max_gas_amount,
                 gas_unit_price,
                 expiration_timestamp_secs,
+                ChainId::test().id(),
                 vec![].as_ptr(),
                 0,
                 vec![].as_ptr(),
