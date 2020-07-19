@@ -25,7 +25,13 @@ use std::{
 
 pub fn storage(config: &mut SafetyRulesConfig) -> PersistentSafetyStorage {
     let backend = &config.backend;
-    let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
+    let mut internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
+    internal_storage = if let Storage::VaultStorage(_) = &internal_storage {
+        Storage::CachedStorage(libra_secure_storage::CachedStorage::new(internal_storage))
+    } else {
+        internal_storage
+    };
+
     internal_storage
         .available()
         .expect("Storage is not available");
