@@ -16,13 +16,14 @@ use libra_json_rpc_client::{
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
 use libra_json_rpc_types::views::{
-    JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+    JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
 };
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
+    chain_id::ChainId,
     contract_event::ContractEvent,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
@@ -189,6 +190,10 @@ fn test_json_rpc_protocol() {
     let data: JsonMap = resp.json().unwrap();
     assert!(data.get(JSONRPC_LIBRA_LEDGER_VERSION).is_some());
     assert!(data.get(JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS).is_some());
+    assert_eq!(
+        data.get(JSONRPC_LIBRA_CHAIN_ID).expect("must have"),
+        ChainId::test().id()
+    );
 }
 
 #[test]

@@ -9,6 +9,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     block_info::BlockInfo,
+    chain_id::ChainId,
     contract_event::ContractEvent,
     epoch_change::EpochChangeProof,
     event::EventKey,
@@ -33,7 +34,13 @@ pub fn test_bootstrap(
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
-    crate::bootstrap(address, libra_db, mp_sender, RoleType::Validator)
+    crate::bootstrap(
+        address,
+        libra_db,
+        mp_sender,
+        RoleType::Validator,
+        ChainId::test(),
+    )
 }
 
 /// Lightweight mock of LibraDB

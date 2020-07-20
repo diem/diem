@@ -20,6 +20,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{from_currency_code_string, CurrencyInfoResource},
     account_state::AccountState,
+    chain_id::ChainId,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::MempoolStatusCode,
@@ -37,19 +38,30 @@ pub(crate) struct JsonRpcService {
     db: Arc<dyn DbReader>,
     mempool_sender: MempoolClientSender,
     role: RoleType,
+    chain_id: ChainId,
 }
 
 impl JsonRpcService {
-    pub fn new(db: Arc<dyn DbReader>, mempool_sender: MempoolClientSender, role: RoleType) -> Self {
+    pub fn new(
+        db: Arc<dyn DbReader>,
+        mempool_sender: MempoolClientSender,
+        role: RoleType,
+        chain_id: ChainId,
+    ) -> Self {
         Self {
             db,
             mempool_sender,
             role,
+            chain_id,
         }
     }
 
     pub fn get_latest_ledger_info(&self) -> Result<LedgerInfoWithSignatures> {
         self.db.get_latest_ledger_info()
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.chain_id
     }
 }
 

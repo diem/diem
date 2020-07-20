@@ -9,10 +9,10 @@ use crate::{
 use futures::future::join_all;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_json_rpc_types::views::{
-    JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+    JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
 };
 use libra_mempool::MempoolClientSender;
-use libra_types::ledger_info::LedgerInfoWithSignatures;
+use libra_types::{chain_id::ChainId, ledger_info::LedgerInfoWithSignatures};
 use serde_json::{map::Map, Value};
 use std::{net::SocketAddr, sync::Arc};
 use storage_interface::DbReader;
@@ -37,6 +37,7 @@ pub fn bootstrap(
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
+    chain_id: ChainId,
 ) -> Runtime {
     let runtime = Builder::new()
         .thread_name("rpc-")
@@ -46,7 +47,7 @@ pub fn bootstrap(
         .expect("[rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
-    let service = JsonRpcService::new(libra_db, mp_sender, role);
+    let service = JsonRpcService::new(libra_db, mp_sender, role, chain_id);
 
     let base_route = warp::any()
         .and(warp::post())
@@ -83,7 +84,13 @@ pub fn bootstrap_from_config(
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
-    bootstrap(config.rpc.address, libra_db, mp_sender, config.base.role)
+    bootstrap(
+        config.rpc.address,
+        libra_db,
+        mp_sender,
+        config.base.role,
+        config.base.chain_id,
+    )
 }
 
 /// JSON RPC entry point
@@ -143,6 +150,10 @@ async fn rpc_request_handler(
     response.insert(
         JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS.to_string(),
         Value::Number(timestamp.into()),
+    );
+    response.insert(
+        JSONRPC_LIBRA_CHAIN_ID.to_string(),
+        Value::Number(service.chain_id().id().into()),
     );
 
     match req {
