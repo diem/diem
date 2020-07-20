@@ -69,7 +69,7 @@ impl StorageHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 libra-root-key
                 --validator-backend backend={backend};\
                     path={path};\
@@ -91,7 +91,7 @@ impl StorageHelper {
     pub fn create_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 create-waypoint
                 --shared-backend backend={backend};\
                     path={path}
@@ -111,7 +111,7 @@ impl StorageHelper {
     pub fn genesis(&self, genesis_path: &Path) -> Result<Transaction, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 genesis
                 --shared-backend backend={backend};\
                     path={path}
@@ -129,7 +129,7 @@ impl StorageHelper {
     pub fn insert_waypoint(&self, validator_ns: &str, shared_ns: &str) -> Result<Waypoint, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 insert-waypoint
                 --validator-backend backend={backend};\
                     path={path};\
@@ -155,7 +155,7 @@ impl StorageHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 operator-key
                 --validator-backend backend={backend};\
                     path={path};\
@@ -181,7 +181,7 @@ impl StorageHelper {
     ) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 owner-key
                 --validator-backend backend={backend};\
                     path={path};\
@@ -208,7 +208,7 @@ impl StorageHelper {
     ) -> Result<libra_management::layout::Layout, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 set-layout
                 --path {path}
                 --shared-backend backend={backend};\
@@ -233,7 +233,7 @@ impl StorageHelper {
     ) -> Result<String, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 set-operator
                 --operator-name {operator_name}
                 --validator-backend backend={backend};\
@@ -265,7 +265,7 @@ impl StorageHelper {
     ) -> Result<Transaction, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 validator-config
                 --owner-name {owner_name}
                 --validator-address {validator_address}
@@ -296,7 +296,7 @@ impl StorageHelper {
     pub fn verify(&self, namespace: &str) -> Result<String, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 verify
                 --validator-backend backend={backend};\
                     path={path};\
@@ -314,7 +314,7 @@ impl StorageHelper {
     pub fn verify_genesis(&self, namespace: &str, genesis_path: &Path) -> Result<String, Error> {
         let args = format!(
             "
-                management
+                libra-genesis-tool
                 verify
                 --validator-backend backend={backend};\
                     path={path};\
