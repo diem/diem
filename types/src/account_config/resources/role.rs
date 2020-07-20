@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_config::resources::{ChildVASP, Credential, ParentVASP, PreburnResource};
+use crate::account_config::resources::{
+    ChildVASP, Credential, DesignatedDealer, ParentVASP, PreburnResource,
+};
 use move_core_types::identifier::Identifier;
 use serde::{Deserialize, Serialize};
 use std::collections::btree_map::BTreeMap;
@@ -17,7 +19,7 @@ pub enum AccountRole {
     DesignatedDealer {
         dd_credential: Credential,
         preburn_balances: BTreeMap<Identifier, PreburnResource>,
-        // TODO DesignatedDealer resource (tiered mint events)
+        designated_dealer: DesignatedDealer,
     },
     Unknown,
     // TODO: add other roles

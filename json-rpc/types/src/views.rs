@@ -7,7 +7,8 @@ use libra_types::{
     account_config::{
         AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
         CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
+        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent,
+        UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -66,6 +67,7 @@ pub enum AccountRoleView {
         expiration_time: u64,
         compliance_key: BytesView,
         preburn_balances: Vec<AmountView>,
+        received_mint_events_key: BytesView,
     },
 }
 
@@ -165,6 +167,11 @@ pub enum EventDataView {
         proposer: BytesView,
         proposed_time: u64,
     },
+    #[serde(rename = "receivedmint")]
+    ReceivedMint {
+        amount: AmountView,
+        destination_address: BytesView,
+    },
     #[serde(rename = "unknown")]
     Unknown {},
 }
@@ -245,6 +252,21 @@ impl From<(u64, ContractEvent)> for EventView {
                 })
             } else {
                 Err(format_err!("Unable to parse MintEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(ReceivedMintEvent::struct_tag()) {
+            if let Ok(received_mint_event) = ReceivedMintEvent::try_from(&event) {
+                let amount_view = AmountView::new(
+                    received_mint_event.amount(),
+                    received_mint_event.currency_code().as_str(),
+                );
+                let destination_address =
+                    BytesView::from(received_mint_event.destination_address().as_ref());
+                Ok(EventDataView::ReceivedMint {
+                    amount: amount_view,
+                    destination_address,
+                })
+            } else {
+                Err(format_err!("Unable to parse ReceivedMintEvent"))
             }
         } else if event.type_tag() == &TypeTag::Struct(PreburnEvent::struct_tag()) {
             if let Ok(preburn_event) = PreburnEvent::try_from(&event) {
@@ -490,6 +512,7 @@ impl From<AccountRole> for AccountRoleView {
             AccountRole::DesignatedDealer {
                 dd_credential,
                 preburn_balances,
+                designated_dealer,
             } => AccountRoleView::DesignatedDealer {
                 human_name: dd_credential.human_name().to_string(),
                 base_url: dd_credential.base_url().to_string(),
@@ -501,6 +524,9 @@ impl From<AccountRole> for AccountRoleView {
                         AmountView::new(balance.coin(), &currency_code.as_str())
                     })
                     .collect(),
+                received_mint_events_key: BytesView::from(
+                    designated_dealer.received_mint_events().key().as_bytes(),
+                ),
             },
         }
     }

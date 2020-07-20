@@ -101,11 +101,13 @@ impl AccountState {
             match (
                 self.get_resource(&Credential::resource_path()),
                 self.get_preburn_balances(&currency_codes),
+                self.get_resource(&DesignatedDealer::resource_path()),
             ) {
-                (Ok(Some(dd_credential)), Ok(preburn_balances)) => {
+                (Ok(Some(dd_credential)), Ok(preburn_balances), Ok(Some(designated_dealer))) => {
                     Ok(Some(AccountRole::DesignatedDealer {
                         dd_credential,
                         preburn_balances,
+                        designated_dealer,
                     }))
                 }
                 _ => Ok(None),
