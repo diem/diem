@@ -70,6 +70,8 @@ fn broadcast_single_peer<V>(peer: PeerNetworkId, backoff: bool, smp: &mut Shared
 where
     V: TransactionValidation,
 {
+    let start_time = Instant::now();
+    // TODO log latency here for broadcast
     let peer_manager = &smp.peer_manager;
 
     let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
@@ -163,15 +165,27 @@ where
             peer, e
         );
     } else {
-        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST.inc_by(txns_ct as i64);
+        let broadcast_time = Instant::now();
+        let peer_id = &peer.peer_id().to_string();
+        counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
+            .with_label_values(&[peer_id])
+            .observe(txns_ct as f64);
+        counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
+            .with_label_values(&[peer_id, &request_id])
+            .inc();
         peer_manager.update_peer_broadcast(
             peer,
             request_id,
             batch_timeline_ids,
             new_timeline_id,
             earliest_timeline_id,
+            broadcast_time,
         );
         notify_subscribers(SharedMempoolNotification::Broadcast, &smp.subscribers);
+        let broadcast_latency = start_time.elapsed();
+        counters::SHARED_MEMPOOL_BROADCAST_LATENCY
+            .with_label_values(&[peer_id])
+            .observe(broadcast_latency.as_secs_f64());
     }
 
     next_backoff
@@ -204,6 +218,9 @@ pub(crate) async fn process_client_transaction_submission<V>(
 ) where
     V: TransactionValidation,
 {
+    let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
+        .with_label_values(&["client"])
+        .start_timer();
     let mut statuses =
         process_incoming_transactions(&smp, vec![transaction], TimelineState::NotReady).await;
     log_txn_process_results(&statuses, None);
@@ -233,6 +250,9 @@ pub(crate) async fn process_transaction_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
+    let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
+        .with_label_values(&[&peer.peer_id().to_string()])
+        .start_timer();
     // process transactions and log the result
     let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
     log_txn_process_results(&results, Some(peer.peer_id()));
@@ -312,10 +332,17 @@ where
 {
     let mut statuses = vec![];
 
+    let start_storage_read = Instant::now();
+    // track latency: fetching seq number
     let seq_numbers = transactions
         .iter()
         .map(|t| get_account_sequence_number(smp.db.as_ref(), t.sender()))
         .collect::<Vec<_>>();
+    // track latency for storage read fetching sequence number
+    let storage_read_latency = start_storage_read.elapsed();
+    counters::PROCESS_TXN_BREAKDOWN_LATENCY
+        .with_label_values(&[counters::FETCH_SEQ_NUM_LABEL])
+        .observe(storage_read_latency.as_secs_f64() / transactions.len() as f64);
 
     let transactions: Vec<_> = transactions
         .into_iter()
@@ -341,6 +368,10 @@ where
         })
         .collect();
 
+    // track latency: VM validation
+    let vm_validation_timer = counters::PROCESS_TXN_BREAKDOWN_LATENCY
+        .with_label_values(&[counters::VM_VALIDATION_LABEL])
+        .start_timer();
     let validation_results = transactions
         .iter()
         .map(|t| {
@@ -350,6 +381,7 @@ where
                 .validate_transaction(t.0.clone())
         })
         .collect::<Vec<_>>();
+    vm_validation_timer.stop_and_record();
 
     {
         let mut mempool = smp
@@ -423,32 +455,40 @@ pub(crate) async fn process_state_sync_request(
     mempool: Arc<Mutex<CoreMempool>>,
     req: CommitNotification,
 ) {
+    let start_time = Instant::now();
+    counters::MEMPOOL_SERVICE_TXNS
+        .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL])
+        .observe(req.transactions.len() as f64);
     commit_txns(&mempool, req.transactions, req.block_timestamp_usecs, false).await;
     // send back to callback
-    if let Err(e) = req
+    let result = if let Err(e) = req
         .callback
         .send(Ok(CommitResponse {
             msg: "".to_string(),
         }))
         .map_err(|_| {
             format_err!("[shared mempool] timeout on callback sending response to Mempool request")
-        })
-    {
+        }) {
         error!(
             "[shared mempool] failed to send back CommitResponse with error: {:?}",
             e
         );
-    }
+        counters::REQUEST_FAIL_LABEL
+    } else {
+        counters::REQUEST_SUCCESS_LABEL
+    };
+    let latency = start_time.elapsed();
+    counters::MEMPOOL_SERVICE_LATENCY
+        .with_label_values(&[counters::COMMIT_STATE_SYNC_LABEL, result])
+        .observe(latency.as_secs_f64());
 }
 
 pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req: ConsensusRequest) {
-    let (resp, callback) = match req {
-        ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
-            let block_size = cmp::max(max_block_size, 1);
-            counters::MEMPOOL_SERVICE
-                .with_label_values(&["get_block", "requested"])
-                .inc_by(block_size as i64);
+    //start latency timer
+    let start_time = Instant::now();
 
+    let (resp, callback, counter_label) = match req {
+        ConsensusRequest::GetBlockRequest(max_block_size, transactions, callback) => {
             let exclude_transactions: HashSet<TxnPointer> = transactions
                 .iter()
                 .map(|txn| (txn.sender, txn.sequence_number))
@@ -462,27 +502,50 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
                     .duration_since(UNIX_EPOCH)
                     .expect("Timestamp generated is before UNIX_EPOCH");
                 mempool.gc_by_expiration_time(curr_time);
+                let block_size = cmp::max(max_block_size, 1);
                 txns = mempool.get_block(block_size, exclude_transactions);
             }
-            let transactions = txns.drain(..).map(SignedTransaction::into).collect();
+            counters::MEMPOOL_SERVICE_TXNS
+                .with_label_values(&[counters::GET_BLOCK_LABEL])
+                .observe(txns.len() as f64);
+            txns.len();
+            let pulled_block = txns.drain(..).map(SignedTransaction::into).collect();
 
-            (ConsensusResponse::GetBlockResponse(transactions), callback)
+            (
+                ConsensusResponse::GetBlockResponse(pulled_block),
+                callback,
+                counters::GET_BLOCK_LABEL,
+            )
         }
         ConsensusRequest::RejectNotification(transactions, callback) => {
             // handle rejected txns
+            counters::MEMPOOL_SERVICE_TXNS
+                .with_label_values(&[counters::COMMIT_CONSENSUS_LABEL])
+                .observe(transactions.len() as f64);
             commit_txns(mempool, transactions, 0, true).await;
-            (ConsensusResponse::CommitResponse(), callback)
+            (
+                ConsensusResponse::CommitResponse(),
+                callback,
+                counters::COMMIT_CONSENSUS_LABEL,
+            )
         }
     };
     // send back to callback
-    if let Err(e) = callback.send(Ok(resp)).map_err(|_| {
+    let result = if let Err(e) = callback.send(Ok(resp)).map_err(|_| {
         format_err!("[shared mempool] timeout on callback sending response to Mempool request")
     }) {
         error!(
             "[shared mempool] failed to send back mempool response with error: {:?}",
             e
         );
-    }
+        counters::REQUEST_FAIL_LABEL
+    } else {
+        counters::REQUEST_SUCCESS_LABEL
+    };
+    let latency = start_time.elapsed();
+    counters::MEMPOOL_SERVICE_LATENCY
+        .with_label_values(&[counter_label, result])
+        .observe(latency.as_secs_f64());
 }
 
 async fn commit_txns(

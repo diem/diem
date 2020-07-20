@@ -29,7 +29,7 @@ use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTran
 use std::{
     ops::Deref,
     sync::{Arc, Mutex},
-    time::Duration,
+    time::{Duration, Instant},
 };
 use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
@@ -68,6 +68,9 @@ pub(crate) async fn coordinator<V>(
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
+                let _ = counters::TASK_SPAWN_LATENCY
+                .with_label_values(&[counters::CLIENT_EVENT_LABEL])
+                .start_timer();
                 bounded_executor
                 .spawn(tasks::process_client_transaction_submission(
                     smp.clone(),
@@ -80,12 +83,18 @@ pub(crate) async fn coordinator<V>(
                 tasks::process_consensus_request(&mempool, msg).await;
             }
             msg = state_sync_requests.select_next_some() => {
+                let _ = counters::TASK_SPAWN_LATENCY
+                    .with_label_values(&[counters::STATE_SYNC_EVENT_LABEL])
+                    .start_timer();
                 tokio::spawn(tasks::process_state_sync_request(mempool.clone(), msg));
             }
             config_update = mempool_reconfig_events.select_next_some() => {
+                let _ = counters::TASK_SPAWN_LATENCY
+                    .with_label_values(&[counters::RECONFIG_EVENT_LABEL])
+                    .start_timer();
                 bounded_executor
-                .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
-                .await;
+                    .spawn(tasks::process_config_update(config_update, smp.validator.clone()))
+                    .await;
             },
             (peer, backoff) = scheduled_broadcasts.select_next_some() => {
                 tasks::execute_broadcast(peer, backoff, &mut smp, &mut scheduled_broadcasts, executor.clone());
@@ -129,6 +138,9 @@ pub(crate) async fn coordinator<V>(
                                             true => TimelineState::NonQualified,
                                             false => TimelineState::NotReady,
                                         };
+                                        let _ = counters::TASK_SPAWN_LATENCY
+                                            .with_label_values(&[counters::PEER_BROADCAST_EVENT_LABEL])
+                                            .start_timer();
                                         bounded_executor
                                             .spawn(tasks::process_transaction_broadcast(
                                                 smp_clone,
@@ -140,7 +152,8 @@ pub(crate) async fn coordinator<V>(
                                             .await;
                                     }
                                     MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
-                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff);
+                                        let ack_timestamp = Instant::now();
+                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff, ack_timestamp);
                                     }
                                 };
                             }
