@@ -9,7 +9,7 @@ use crate::{
     experiments::{
         CompatiblityTestParams, CpuFlamegraphParams, Experiment, ExperimentParam,
         PerformanceBenchmarkParams, PerformanceBenchmarkThreeRegionSimulationParams,
-        RebootRandomValidatorsParams, RecoveryTimeParams,
+        RebootRandomValidatorsParams, RecoveryTimeParams, TwinValidatorsParams,
     },
 };
 use anyhow::{format_err, Result};
@@ -47,8 +47,7 @@ impl ExperimentSuite {
         experiments.push(Box::new(
             PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
         ));
-        // TODO, comment it out to unblock CI during investigation
-        // experiments.push(Box::new(TwinValidatorsParams { pair: 1 }.build(cluster)));
+        experiments.push(Box::new(TwinValidatorsParams { pair: 1 }.build(cluster)));
         experiments.push(Box::new(
             CpuFlamegraphParams { duration_secs: 60 }.build(cluster),
         ));
