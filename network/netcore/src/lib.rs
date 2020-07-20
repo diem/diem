@@ -9,5 +9,4 @@
 
 pub mod compat;
 pub mod framing;
-pub mod negotiate;
 pub mod transport;
