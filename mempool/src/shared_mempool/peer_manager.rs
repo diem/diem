@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::counters;
 use itertools::Itertools;
 use libra_config::{
     config::{PeerNetworkId, UpstreamConfig},
@@ -12,6 +13,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet},
     ops::{Deref, DerefMut},
     sync::Mutex,
+    time::Instant,
 };
 
 /// stores only peers that receive txns from this node
@@ -38,7 +40,7 @@ pub(crate) struct PeerManager {
 #[derive(Clone)]
 pub struct BroadcastInfo {
     // broadcasts that have not been ACK'ed for yet
-    pub sent_batches: HashMap<String, Vec<u64>>,
+    pub sent_batches: HashMap<String, BatchInfo>,
     // timeline IDs of all txns that need to be retried and ACKed for
     pub total_retry_txns: BTreeSet<u64>,
     // whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals
@@ -53,6 +55,14 @@ impl BroadcastInfo {
             backoff_mode: false,
         }
     }
+}
+
+#[derive(Clone)]
+pub struct BatchInfo {
+    /// Timeline IDs of broadcasted txns
+    pub timeline_ids: Vec<u64>,
+    /// timestamp of broadcast
+    pub timestamp: Instant,
 }
 
 impl PeerManager {
@@ -192,6 +202,8 @@ impl PeerManager {
         timeline_id: u64,
         // timeline ID of first txn in timeline, used to remove potentially expired retry_txns
         earliest_timeline_id: u64,
+        // timestamp of broadcast
+        timestamp: Instant,
     ) {
         let mut peer_info = self
             .peer_info
@@ -199,10 +211,13 @@ impl PeerManager {
             .expect("failed to acquire peer_info lock");
 
         let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
-        sync_state
-            .broadcast_info
-            .sent_batches
-            .insert(batch_id, batch);
+        sync_state.broadcast_info.sent_batches.insert(
+            batch_id,
+            BatchInfo {
+                timeline_ids: batch,
+                timestamp,
+            },
+        );
         sync_state.timeline_id = std::cmp::max(sync_state.timeline_id, timeline_id);
 
         // clean up expired retriable txns
@@ -223,6 +238,8 @@ impl PeerManager {
         batch_id: String,
         retry_txns: Vec<u64>,
         backoff: bool,
+        // timestamp of ACK received
+        timestamp: Instant,
     ) {
         let mut peer_info = self
             .peer_info
@@ -232,12 +249,24 @@ impl PeerManager {
         let sync_state = peer_info.get_mut(&peer).expect("missing peer sync state");
 
         if let Some(batch) = sync_state.broadcast_info.sent_batches.remove(&batch_id) {
+            // update ACK counter
+            counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
+                .with_label_values(&[&peer.peer_id().to_string(), &batch_id])
+                .dec();
+
+            // track broadcast roundtrip latency
+            if let Some(rtt) = timestamp.checked_duration_since(batch.timestamp) {
+                counters::SHARED_MEMPOOL_BROADCAST_RTT
+                    .with_label_values(&[&peer.peer_id().to_string(), &batch_id])
+                    .observe(rtt.as_secs_f64());
+            }
+
             // convert retry_txns from index within a batch to actual timeline ID of txn
             let retry_timeline_ids = retry_txns
                 .iter()
-                .filter_map(|batch_index| batch.get(*batch_index as usize).cloned())
+                .filter_map(|batch_index| batch.timeline_ids.get(*batch_index as usize).cloned())
                 .collect::<HashSet<_>>();
-            for timeline_id in batch.into_iter() {
+            for timeline_id in batch.timeline_ids.into_iter() {
                 if retry_timeline_ids.contains(&timeline_id) {
                     // add this retriable txn's timeline ID to peer info's retry_txns
                     sync_state
