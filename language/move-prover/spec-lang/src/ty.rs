@@ -5,7 +5,7 @@
 
 use crate::{
     ast::QualifiedSymbol,
-    env::{GlobalEnv, ModuleEnv, ModuleId, StructEnv, StructId},
+    env::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
 };
 use std::{

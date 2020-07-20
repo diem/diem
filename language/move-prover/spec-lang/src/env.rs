@@ -132,11 +132,8 @@ pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 
-/// Pragma indicating that the function will run the smoke test for constant global states
-pub const CONST_EXP_TEST_PRAGMA: &str = "const_exp_test";
-
 /// Pragma indicating that the function will run the specification check for constant global states
-pub const CONST_FIELD_TEST_PRAGMA: &str = "const_exp_test";
+pub const CONST_FIELD_TEST_PRAGMA: &str = "const_field_test";
 
 /// Pragma listing the addresses that the constant field check will check against
 pub const CONST_SC_ADDR: &str = "const_sc_addr";
@@ -1925,6 +1922,24 @@ impl<'env> FunctionEnv<'env> {
             return n;
         }
         default()
+    }
+
+    /// Returns true iff there is a specification check pragma turned on
+    pub fn is_pragma_spec_check(&self) -> bool {
+        let env = self.module_env.env;
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, ALWAYS_ABORTS_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, CONST_FIELD_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, CONST_SUBEXP_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, WRITEREF_TEST_PRAGMA) {
+            if b { return true }
+        }
+        false
     }
 
     /// Returns true if this function is native. The function is also marked as native

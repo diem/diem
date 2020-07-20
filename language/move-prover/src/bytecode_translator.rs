@@ -530,6 +530,8 @@ impl<'env> ModuleTranslator<'env> {
         let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
         let entries = if func_target.is_public() {
             vec![DirectInterModule, DirectIntraModule, Indirect]
+        } else if func_target.func_env.is_pragma_spec_check() {
+            vec![Indirect]
         } else {
             vec![DirectIntraModule, Indirect]
         };
@@ -544,6 +546,30 @@ impl<'env> ModuleTranslator<'env> {
                 self.generate_function_stub(&st, entry_point, Definition, distribution);
             }
             emitln!(self.writer);
+        }
+
+        // If the function has been annotated with rewritten specifications
+        // (or code), then generate the corresponding specification check functions
+        if func_target.data.rewritten_spec.len() > 0 {
+            // generate the _smoke_test version of the function which creates a new procedure
+            // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
+            for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
+                // generate the mutated program for this spec if one exists
+                let mutated_bytecode = func_target.data.get_spec_code(spec);
+                if mutated_bytecode.is_some() {
+                    let index = spec
+                        .rewritten_code_index
+                        .expect("Couldn't find rewritten_code_index from spec containing mutation.");
+                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(index));
+                    self.generate_inline_function_body(func_target, mutated_bytecode);
+                }
+
+                self.generate_smoke_test_function_sig(i, func_target);
+                self.generate_function_spec_check_body(func_target, spec);
+            }
+
+            // Do not do any verification in specification check mode
+            return;
         }
 
         // If the function is not verified, or the timeout is less than the estimated time,
@@ -620,7 +646,7 @@ impl<'env> ModuleTranslator<'env> {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
         emit!(
             self.writer,
-            "procedure {}_smoke_test_{} ({}) returns ({})",
+            "procedure {}_smoke_test_{} ({}) returns ({})\n",
             boogie_function_name(func_target.func_env),
             test_number,
             args,
@@ -814,6 +840,10 @@ impl<'env> ModuleTranslator<'env> {
         spec: &Spec,
     ) {
         let conds = &spec.conditions;
+
+        // Find the specification check assertion
+        // Only one is allowed at a time because Boogie is not
+        // gauranteed to return all errors in a procedure
         let spec_check_opt = conds
             .iter()
             .find(|cond| match cond.kind {
@@ -821,8 +851,6 @@ impl<'env> ModuleTranslator<'env> {
                 | ConditionKind::EnsuresSmokeTest => true,
                 _ => false,
             });
-        // Check that there is at most one ensures specification
-        // Boogie is not gauranteed to return all errors
         let spec_check = spec_check_opt
             .expect("There should be at least one assertion for the specification check.");
 
@@ -835,6 +863,8 @@ impl<'env> ModuleTranslator<'env> {
             .set_location(&self.module_env.env.internal_loc());
         emitln!(self.writer, "{");
         self.writer.indent();
+
+        self.generate_function_args_well_formed(func_target);
 
         // Generate assumes for top-level verification entry
         // (a) init prelude specific stuff.

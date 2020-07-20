@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
 use crate::{
     function_target::FunctionTargetData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
@@ -36,7 +35,6 @@ use spec_lang::{
         BOOL_TYPE,
         ADDRESS_TYPE,
     },
-    symbol::Symbol,
 };
 use codespan::{Span, ByteOffset};
 
@@ -63,7 +61,7 @@ impl FunctionTargetProcessor for TestInstrumenter {
         func_env: &FunctionEnv<'_>,
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
-        if !func_env.should_verify(self.verification_scope) {
+        if func_env.should_verify(self.verification_scope) {
             // Do not instrument if function is in verification scope.
             return data;
         }
@@ -141,7 +139,6 @@ impl TestInstrumenter {
             .get_structs();
         for struct_env in struct_envs {
             // For every struct, add condition that struct fields don't change
-
             if struct_env.get_field_count() == 1
                 || !self.can_mutate(data, &struct_env.get_id()) {
                 // Ignore struct with no fields (except the dummy field) and functions
@@ -149,26 +146,10 @@ impl TestInstrumenter {
                 continue;
             }
 
-            // Check if the struct's generic parameters are defined in the function
-            let func_type_params_set = func_env
-                .get_named_type_parameters()
-                .iter()
-                .map(|tp| tp.0)
-                .collect::<BTreeSet<Symbol>>();
-            let contains_params = struct_env
-                .get_named_type_parameters()
-                .iter()
-                .fold(true, |acc, tp| {
-                    acc && func_type_params_set.contains(&tp.0)
-                });
-            if !contains_params {
-                // Parameters are not all defined so it cannot not possibly
-                // change this struct
-                continue;
-            }
-
             // Check if the struct is moved to the top level of the global store
-            if !self.is_top_level_struct(&targets, &data, &struct_env) {
+            // and if the current procedure modifies the struct
+            if !self.is_top_level_struct(&targets, &data, &struct_env) ||
+                !self.code_has_borrow_global(&data.code, &struct_env.module_env.get_id(), &struct_env.get_id()) {
                 continue;
             }
 
@@ -222,30 +203,58 @@ impl TestInstrumenter {
         let func_envs = struct_env
             .module_env
             .get_functions();
-        // Check if any function has a move_to<T>, where T is `struct_env`
-        for bytecode in &data.code {
-            if self.is_struct_move_to(&bytecode, struct_env.module_env.get_id(), struct_env.get_id()) {
-                return true;
-            }
+        let module_id = struct_env.module_env.get_id();
+        let struct_id = struct_env.get_id();
+        // Check if the current function has a move_to<T>, where T is the struct described
+        // by `struct_env`
+        if self.code_has_move_to(&data.code, &module_id, &struct_id) {
+            return true;
         }
+        // Check if the other functions has a move_to<T>, where T is the struct described
+        // by `struct_env`
         for func_env in func_envs {
             if !targets.has_target(&func_env) {
                 continue;
             }
-            for bytecode in &targets.get_target(&func_env).data.code {
-                if self.is_struct_move_to(&bytecode, struct_env.module_env.get_id(), struct_env.get_id()) {
-                    return true;
-                }
+            if self.code_has_move_to(&targets.get_target(&func_env).data.code, &module_id, &struct_id) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn code_has_move_to(&self, code: &Vec<Bytecode>, module_id: &ModuleId, struct_id: &StructId) -> bool {
+        for bytecode in code {
+            if self.is_struct_move_to(&bytecode, module_id, struct_id) {
+                return true;
             }
         }
         false
     }
 
     /// Helper function to check if the bytecode is a move_to with the given struct
-    fn is_struct_move_to(&self, bytecode: &Bytecode, module_id: ModuleId, struct_id: StructId) -> bool {
+    fn is_struct_move_to(&self, bytecode: &Bytecode, module_id: &ModuleId, struct_id: &StructId) -> bool {
         match bytecode {
             Bytecode::Call(_, _, Operation::MoveTo(module_id_, struct_id_, _), _) =>
-                module_id == *module_id_ && struct_id == *struct_id_,
+                module_id == module_id_ && struct_id == struct_id_,
+            _ => false,
+        }
+    }
+
+    fn code_has_borrow_global(&self, code: &Vec<Bytecode>, module_id: &ModuleId, struct_id: &StructId) -> bool {
+        for bytecode in code {
+            if self.is_struct_borrow_global(&bytecode, module_id, struct_id) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Helper function to check if the bytecode is a move_to with the given struct
+    fn is_struct_borrow_global(&self, bytecode: &Bytecode, module_id: &ModuleId, struct_id: &StructId) -> bool {
+        match bytecode {
+            Bytecode::Call(_, _, Operation::BorrowGlobal(module_id_, struct_id_, _), _) =>
+                module_id == module_id_ && struct_id == struct_id_,
             _ => false,
         }
     }
@@ -373,6 +382,9 @@ impl TestInstrumenter {
 // WriteRef mutation testing
 
 impl TestInstrumenter {
+
+    /// Injects a $DefaultValue in place of the source value for each WriteRef
+    /// in the function code.
     fn instrument_writeref(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
         let module_env = &func_env.module_env;
         let preconds = self.get_smoke_test_preconditions(func_env);

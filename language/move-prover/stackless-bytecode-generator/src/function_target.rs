@@ -219,6 +219,10 @@ impl<'env> FunctionTarget<'env> {
         self.func_env.is_pragma_true(name, default)
     }
 
+    pub fn is_pragma_spec_check(&self) -> bool {
+        self.func_env.is_pragma_spec_check()
+    }
+
     /// Gets the bytecode.
     pub fn get_bytecode(&self) -> &[Bytecode] {
         &self.data.code
