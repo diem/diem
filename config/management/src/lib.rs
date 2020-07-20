@@ -9,6 +9,7 @@ pub mod json_rpc;
 pub mod key;
 pub mod layout;
 pub mod secure_backend;
+pub mod storage;
 pub mod validator_config;
 pub mod validator_operator;
 pub mod verify;
