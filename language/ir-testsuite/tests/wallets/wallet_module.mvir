@@ -14,7 +14,7 @@ module ApprovalGroup {
         // the threshold policy
         threshold: u64,
 
-        // Recipient address whitelist policy ...
+        // Recipient address allowlist policy ...
 
     }
 

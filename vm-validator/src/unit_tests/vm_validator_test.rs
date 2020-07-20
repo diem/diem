@@ -254,7 +254,7 @@ fn test_validate_unknown_script() {
     assert_eq!(ret.status().unwrap(), StatusCode::UNKNOWN_SCRIPT);
 }
 
-// Make sure that we can publish non-whitelisted modules from the association address
+// Make sure that we can publish non-allowlisted modules from the association address
 #[cfg(not(feature = "allow_custom_transaction_scripts"))]
 #[cfg(not(feature = "custom_modules"))]
 #[test]
@@ -274,7 +274,7 @@ fn test_validate_module_publishing() {
     assert_eq!(ret.status(), None);
 }
 
-// Make sure that we can't publish non-whitelisted modules
+// Make sure that we can't publish non-allowlisted modules
 #[cfg(not(feature = "allow_custom_transaction_scripts"))]
 #[cfg(not(feature = "custom_modules"))]
 #[test]

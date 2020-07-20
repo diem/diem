@@ -40,13 +40,13 @@ The functional testing framework is very convenient, but can't express all of th
 - Add or edit the relevant `.move` file under [modules](modules/)
 - [Build](#building) your changes and address compiler errors as needed
 - Once the stdlib builds, add new functional [tests](#testing)
-- If you have added a new `public` function that is intended to be called from a user-submitted transaction, make sure you introduce a new transaction script and add it to the whitelist (see [below](#transaction-scripts))
+- If you have added a new `public` function that is intended to be called from a user-submitted transaction, make sure you introduce a new transaction script and add it to the allowlist (see [below](#transaction-scripts))
 
 ### Transaction Scripts
 
 - Add or edit the relevant `.move` file under [transaction scripts](transaction_scripts)
 - [Build](#building) your changes and address compiler errors as needed
-- If you have added a new script, extend the `StdlibScript` enum and script whitelist (`all()` function) [here](src/stdlib.rs). Don't forget to `git add` the compiled binary for the new script (`your_script.mv` [here](staged/transaction_scripts)).
+- If you have added a new script, extend the `StdlibScript` enum and script allowlist (`all()` function) [here](src/stdlib.rs). Don't forget to `git add` the compiled binary for the new script (`your_script.mv` [here](staged/transaction_scripts)).
 - In addition, add a Rust wrapper for your script [here](../transaction-builder/src/lib.rs) to allow client code and tests to create the script.
 - Add or modify tests for the script under the end-to-end [tests](../e2e-tests/src/tests/transaction_builder.rs)
 - If you have added a new script, don't forget to `git add` the new script binary

@@ -348,7 +348,7 @@ fn test_change_publishing_option_to_custom() {
     }
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
-    // Transaction 1 is committed as it's in the whitelist
+    // Transaction 1 is committed as it's in the allowlist
     let txn1 = db
         .reader
         .get_txn_by_account(treasury_compliance_account, 0, current_version, false)
@@ -415,7 +415,7 @@ fn test_change_publishing_option_to_custom() {
 }
 
 #[test]
-fn test_extend_whitelist() {
+fn test_extend_allowlist() {
     // Publishing Option is set to locked at genesis.
     let (mut config, genesis_key) = config_builder::test_config();
 
@@ -481,9 +481,9 @@ fn test_extend_whitelist() {
     // Create a dummy block prologue transaction that will bump the timer.
     let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
-    // Add script1 to whitelist.
-    let new_whitelist = {
-        let mut existing_list = StdlibScript::whitelist();
+    // Add script1 to allowlist.
+    let new_allowlist = {
+        let mut existing_list = StdlibScript::allowlist();
         existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
         existing_list
     };
@@ -494,7 +494,7 @@ fn test_extend_whitelist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_modify_publishing_option_script(
-            VMPublishingOption::locked(new_whitelist),
+            VMPublishingOption::locked(new_allowlist),
         )),
     );
 
@@ -528,7 +528,7 @@ fn test_extend_whitelist() {
     }
     let current_version = li.ledger_info().version();
     assert_eq!(current_version, 3);
-    // Transaction 1 is committed as it's in the whitelist
+    // Transaction 1 is committed as it's in the allowlist
     let t1 = db
         .reader
         .get_txn_by_account(treasury_compliance_account, 0, current_version, false)
@@ -542,7 +542,7 @@ fn test_extend_whitelist() {
         .unwrap();
     assert!(t2.is_none());
 
-    // Now that the PublishingOption is modified to whitelist with script1 allowed, we can resubmit
+    // Now that the PublishingOption is modified to allowlist with script1 allowed, we can resubmit
     // the script again.
 
     let txn2 = get_test_signed_transaction(

@@ -345,9 +345,9 @@ fn verify_simple_payment() {
 }
 
 #[test]
-pub fn test_whitelist() {
+pub fn test_allowlist() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::whitelist_genesis();
+    let mut executor = FakeExecutor::allowlist_genesis();
     // create an empty transaction
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);

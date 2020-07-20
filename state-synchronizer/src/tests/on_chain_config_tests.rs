@@ -93,13 +93,13 @@ fn test_on_chain_config_pub_sub() {
     // Create a dummy block prologue transaction that will bump the timer.
     let txn1 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
-    // Add a script to whitelist.
-    let new_whitelist = {
-        let mut existing_list = StdlibScript::whitelist();
+    // Add a script to allowlist.
+    let new_allowlist = {
+        let mut existing_list = StdlibScript::allowlist();
         existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
         existing_list
     };
-    let vm_publishing_option = VMPublishingOption::locked(new_whitelist);
+    let vm_publishing_option = VMPublishingOption::locked(new_allowlist);
 
     let txn2 = get_test_signed_transaction(
         genesis_account,
