@@ -4,7 +4,8 @@
 use crate::{
     account_config::{
         BurnEvent, CancelBurnEvent, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
+        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent,
+        UpgradeEvent,
     },
     event::EventKey,
     ledger_info::LedgerInfo,
@@ -140,6 +141,17 @@ impl TryFrom<&ContractEvent> for MintEvent {
     fn try_from(event: &ContractEvent) -> Result<Self> {
         if event.type_tag != TypeTag::Struct(MintEvent::struct_tag()) {
             anyhow::bail!("Expected MintEvent")
+        }
+        Self::try_from_bytes(&event.event_data)
+    }
+}
+
+impl TryFrom<&ContractEvent> for ReceivedMintEvent {
+    type Error = Error;
+
+    fn try_from(event: &ContractEvent) -> Result<Self> {
+        if event.type_tag != TypeTag::Struct(ReceivedMintEvent::struct_tag()) {
+            anyhow::bail!("Expected ReceivedMintEvent")
         }
         Self::try_from_bytes(&event.event_data)
     }
