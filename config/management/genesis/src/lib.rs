@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 pub mod command;
+mod json_rpc;
 
 #[cfg(any(test, feature = "testing"))]
 mod storage_helper;
