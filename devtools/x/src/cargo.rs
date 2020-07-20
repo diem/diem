@@ -20,25 +20,38 @@ pub struct Cargo {
 impl Cargo {
     pub fn new<S: AsRef<OsStr>>(cargo_config: &CargoConfig, command: S) -> Self {
         // run rustup to find correct toolchain
-        let cargo_binary = String::from_utf8(
-            Command::new("rustup")
-                .arg("which")
-                .arg("--toolchain")
-                .arg(&cargo_config.toolchain)
-                .arg("cargo")
-                .output()
-                .unwrap_or_else(|_| {
-                    panic!(
-                        "failed to find cargo for toolchain {} via rustup",
-                        &cargo_config.toolchain
-                    )
-                })
-                .stdout,
-        )
-        .expect("got bad utf8 from rustup output");
+        let output = Command::new("rustup")
+            .arg("which")
+            .arg("--toolchain")
+            .arg(&cargo_config.toolchain)
+            .arg("cargo")
+            .output()
+            .expect("failed to execute rustup which");
+        let (cargo_binary, cargo_flags) = if output.status.success() {
+            (
+                String::from_utf8(output.stdout)
+                    .expect("error parsing rustup which output into utf8"),
+                &cargo_config.flags,
+            )
+        } else {
+            println!(
+                "WARN: Rust toolchain {} not installed; falling back to legacy Cargo resolver.",
+                cargo_config.toolchain,
+            );
+            println!(
+                "WARN: Run `rustup toolchain install {}` to use the new resolver.",
+                cargo_config.toolchain,
+            );
+            ("cargo".to_string(), &None)
+        };
+
+        println!(
+            "cargo_binary = {}, cargo_flags = {:?}",
+            cargo_binary, cargo_flags
+        );
 
         let mut inner = Command::new(str::trim(&cargo_binary));
-        if let Some(flags) = &cargo_config.flags {
+        if let Some(flags) = &cargo_flags {
             inner.arg(&flags);
         }
         inner.arg(command);
