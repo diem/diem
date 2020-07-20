@@ -53,7 +53,6 @@ commands:
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
             export RUST_NIGHTLY=$(cat cargo-toolchain)
             echo 'export RUST_NIGHTLY='${RUST_NIGHTLY} >> $BASH_ENV
-
   install_deps:
     steps:
       - run:
@@ -313,19 +312,6 @@ jobs:
           command: |
             rustup target add powerpc-unknown-linux-gnu
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
-      - save_sccache
-      - build_teardown
-  build-release:
-    executor: test-executor
-    description: Release Build
-    steps:
-      - build_setup
-      - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
-      - run:
-          name: Build release
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS  build -j 12 --release
       - save_sccache
       - build_teardown
   run-e2e-test:
@@ -708,17 +694,6 @@ workflows:
                 - /^premainnet-0.[\d|.]+$/
                 - /^v[\d|.]+-release$/
       - build-dev:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
-      - build-release:
           requires:
             - prefetch-crates
           filters:

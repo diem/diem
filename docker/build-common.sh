@@ -12,6 +12,7 @@ export RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse
 export RUST_NIGHTLY=$(cat cargo-toolchain)
 export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
 export CARGOFLAGS=$(cat cargo-flags)
+export CARGO_PROFILE_RELEASE_LTO=true # override lto setting to turn on fully for release builds
 
 ${CARGO} ${CARGOFLAGS} build --release -p libra-genesis-tool -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper -p backup-cli -p cluster-test "$@"
 
