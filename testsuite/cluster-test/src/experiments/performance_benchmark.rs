@@ -235,7 +235,8 @@ impl PerformanceBenchmark {
         const COMMAND: &str = "while true; do \
             /opt/libra/bin/db-backup one-shot backup \
             --max-chunk-size 1073741824 --backup-service-port 7777 \
-            --state-version $(/opt/libra/bin/db-backup one-shot query  --backup-service-port 7777 --latest-version | sed -n 's/latest-version: //p') \
+            state-snapshot \
+            --state-version $(/opt/libra/bin/db-backup one-shot query --backup-service-port 7777 --latest-version | sed -n 's/latest-version: //p') \
             local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX); \
             done";
 
