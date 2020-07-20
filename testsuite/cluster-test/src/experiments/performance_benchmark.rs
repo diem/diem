@@ -266,6 +266,8 @@ impl PerformanceBenchmark {
         );
 
         let pv = PrometheusRangeView::new(&context.prometheus, start, end);
+
+        // Transaction stats
         if let Some(avg_txns_per_block) = pv.avg_txns_per_block() {
             context
                 .report
@@ -274,6 +276,18 @@ impl PerformanceBenchmark {
         context
             .report
             .report_txn_stats(self.to_string(), stats, window);
+
+        // Backup throughput
+        if self.backup {
+            let bytes_per_sec = pv.avg_backup_bytes_per_second().unwrap_or(0.0);
+            context
+                .report
+                .report_metric(&self, "avg_backup_bytes_per_second", bytes_per_sec);
+            context.report.report_text(format!(
+                "{}: Average backup throughput: {:.0} Bps",
+                self, bytes_per_sec
+            ));
+        }
 
         Ok(())
     }
