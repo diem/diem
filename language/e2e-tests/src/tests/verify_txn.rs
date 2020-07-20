@@ -6,7 +6,7 @@ use crate::{
     assert_prologue_disparity, assert_prologue_parity,
     compile::compile_module_with_address,
     executor::FakeExecutor,
-    transaction_status_eq,
+    gas_costs, transaction_status_eq,
 };
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
@@ -682,4 +682,31 @@ fn test_dependency_fails_verification() {
         }
         _ => panic!("Failed to find missing dependency in bytecode verifier"),
     }
+}
+
+#[test]
+fn charge_gas_invalid_args() {
+    let mut fake_executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(1_000_000, 0);
+    fake_executor.add_account_data(&sender);
+
+    // get a SignedTransaction
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(
+            StdlibScript::PeerToPeerWithMetadata
+                .compiled_bytes()
+                .into_vec(),
+            vec![account_config::lbr_type_tag()],
+            // Don't pass any arguments
+            vec![],
+        ))
+        .sequence_number(0)
+        .max_gas_amount(gas_costs::TXN_RESERVED)
+        .sign();
+
+    let output = fake_executor.execute_transaction(txn);
+    assert!(!output.status().is_discarded());
+    assert!(output.gas_used() > 0);
 }
