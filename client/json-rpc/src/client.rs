@@ -131,6 +131,10 @@ impl JsonRpcAsyncClientError {
                 //  if e.is_request() {
                 //      return true;
                 //  }
+                if e.is_timeout() {
+                    return true;
+                }
+
                 if let Some(status) = e.status() {
                     // Returned status code indicates a server error
                     return status.is_server_error();
@@ -151,7 +155,13 @@ impl std::convert::From<JsonRpcAsyncClientError> for anyhow::Error {
 
 impl std::fmt::Display for JsonRpcAsyncClientError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "JsonRpcAsyncClientError {}", self)
+        match self {
+            JsonRpcAsyncClientError::InvalidArgument(e) => write!(f, "InvalidArgument: {}", e),
+            JsonRpcAsyncClientError::ClientError(e) => write!(f, "ClientError: {}", e.to_string()),
+            JsonRpcAsyncClientError::InvalidServerResponse(e) => {
+                write!(f, "InvalidServerResponse {}", e)
+            }
+        }
     }
 }
 
@@ -326,5 +336,35 @@ fn fetch_id(response: &Value) -> Result<usize> {
     match response.get("id") {
         Some(id) => Ok(serde_json::from_value::<usize>(id.clone())?),
         None => Err(format_err!("request id is missing")),
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use reqwest::{blocking::ClientBuilder, Url};
+
+    #[test]
+    fn test_error_is_retriable() {
+        let server_err = JsonRpcAsyncClientError::InvalidServerResponse(
+            "test invalid server response".to_string(),
+        );
+        // Reqwest error's builder is private to the crate, so send out a
+        // fake request that should fail to get an error
+        let test_client = ClientBuilder::new()
+            .timeout(Duration::from_millis(1))
+            .build()
+            .unwrap();
+        let req_err = test_client
+            .get(Url::parse("http://192.108.0.1").unwrap())
+            .send()
+            .unwrap_err();
+        let client_err = JsonRpcAsyncClientError::ClientError(req_err);
+        let arg_err = JsonRpcAsyncClientError::InvalidArgument("test invalid argument".to_string());
+        // Make sure display is implemented correctly for error enum
+        println!("{}", client_err);
+        assert_eq!(server_err.is_retriable(), false);
+        assert_eq!(arg_err.is_retriable(), false);
+        assert_eq!(client_err.is_retriable(), true);
     }
 }
