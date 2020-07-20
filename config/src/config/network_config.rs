@@ -313,8 +313,7 @@ pub struct IdentityFromStorage {
     pub peer_id_name: String,
 }
 
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum SharedValNetAddrKeys {
     FromConfig {
