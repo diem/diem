@@ -14,7 +14,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // set alice to change bob's key
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, {{bob}}, {{alice}});
     }
 }
 

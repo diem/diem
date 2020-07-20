@@ -31,7 +31,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_operator(account, 0x0);
+        ValidatorConfig::set_operator(account, {{bob}}, 0x0);
     }
 }
 // check: EXECUTED
@@ -42,7 +42,7 @@ script {
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_operator(account, Signer::address_of(account))
+        ValidatorConfig::set_operator(account, {{bob}}, Signer::address_of(account))
     }
 }
 // check: EXECUTED
@@ -53,7 +53,7 @@ script {
     use 0x1::ValidatorConfig;
     // delegate to alice
     fun main(account: &signer) {
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, {{bob}}, {{alice}});
         ValidatorConfig::remove_operator(account);
     }
 }

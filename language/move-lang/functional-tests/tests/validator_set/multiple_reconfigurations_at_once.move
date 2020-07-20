@@ -13,7 +13,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // set bob to be alice's operator
-        ValidatorConfig::set_operator(account, {{bob}});
+        ValidatorConfig::set_operator(account, {{alice}}, {{bob}});
     }
 }
 
@@ -25,7 +25,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // set dave to be viola's operator
-        ValidatorConfig::set_operator(account, {{dave}});
+        ValidatorConfig::set_operator(account, {{viola}}, {{dave}});
     }
 }
 

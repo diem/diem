@@ -9,6 +9,8 @@
 -  [Function `publish`](#0x1_RecoveryAddress_publish)
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
+-  [Function `add_rotation_capability_explicitly`](#0x1_RecoveryAddress_add_rotation_capability_explicitly)
+-  [Function `restore_rotation_capability`](#0x1_RecoveryAddress_restore_rotation_capability)
 -  [Specification](#0x1_RecoveryAddress_Specification)
     -  [Module specifications](#0x1_RecoveryAddress_@Module_specifications)
         -  [RecoveryAddress has its own KeyRotationCapability](#0x1_RecoveryAddress_@RecoveryAddress_has_its_own_KeyRotationCapability)
@@ -88,8 +90,9 @@ Aborts if
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer, rotation_cap: KeyRotationCapability) {
-    // Only VASPs can create a recovery address
-    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account)), ENOT_A_VASP);
+    // Only VASPs or libra_root can create a recovery address
+    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account)) ||
+           <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(recovery_account), EINVALID_TRANSACTION_SENDER);
     // put the rotation capability for the recovery account itself in `rotation_caps`. This
     // <b>ensures</b> two things:
     // (1) It's not possible <b>to</b> get into a "recovery cycle" where A is the recovery account for
@@ -219,6 +222,77 @@ Aborts if
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps,
         to_recover
     );
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_RecoveryAddress_add_rotation_capability_explicitly"></a>
+
+## Function `add_rotation_capability_explicitly`
+
+In case when the signer can get a key rotation capability explicitly, it can add it to
+its recover address resource. This is used in validator account creation to place
+the key rotation capability into the libra_root account.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability_explicitly">add_rotation_capability_explicitly</a>(account: &signer, rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability_explicitly">add_rotation_capability_explicitly</a>(account: &signer, rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>)
+    <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a> {
+    <b>let</b> caps = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)).rotation_caps;
+    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(caps, rotation_cap);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_RecoveryAddress_restore_rotation_capability"></a>
+
+## Function `restore_rotation_capability`
+
+The original onwer of the key rotation capability
+may restore the key rotation capability and return
+it from the recovery account to its own account.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_restore_rotation_capability">restore_rotation_capability</a>(account: &signer, recovery_address: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_restore_rotation_capability">restore_rotation_capability</a>(account: &signer, recovery_address: address) <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a>  {
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    // Make sure the recovery_address's KeyRotation capability cannot be restored
+    // for reasons explained in the publish function.
+    <b>assert</b>(addr != recovery_address, EINVALID_TRANSACTION_SENDER);
+    <b>let</b> caps = &borrow_global&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
+    <b>let</b> i = 0;
+    <b>let</b> len = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(caps);
+    <b>while</b> (i &lt;= len) {
+        <b>let</b> cap = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(caps, i);
+        <b>if</b> (<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(cap) == &addr) {
+            <b>let</b> cap  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps, i);
+            <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(cap);
+            <b>return</b>
+        };
+        i = i + 1
+    };
 }
 </code></pre>
 

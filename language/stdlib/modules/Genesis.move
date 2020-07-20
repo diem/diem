@@ -20,11 +20,12 @@ module Genesis {
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionTimeout;
     use 0x1::LibraVersion;
+    use 0x1::LibraVMConfig;
     use 0x1::LibraWriteSetManager;
+    use 0x1::RecoveryAddress;
+    use 0x1::Roles;
     use 0x1::Signer;
     use 0x1::TransactionFee;
-    use 0x1::Roles;
-    use 0x1::LibraVMConfig;
 
     fun initialize(
         lr_account: &signer,
@@ -97,6 +98,9 @@ module Genesis {
         let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
         LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(lr_rotate_key_cap);
+
+        // Make LibraRoot be the RecoveryAddress to allow validator owners to delegate to it
+        RecoveryAddress::publish(lr_account, LibraAccount::extract_key_rotation_capability(lr_account));
 
         LibraVMConfig::initialize(
             lr_account,

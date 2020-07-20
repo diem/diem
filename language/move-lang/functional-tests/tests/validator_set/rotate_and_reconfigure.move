@@ -11,7 +11,7 @@ script {
     use 0x1::LibraSystem;
     fun main(account: &signer) {
         // register alice as bob's delegate
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, {{bob}}, {{alice}});
 
         // assert bob is a validator
         assert(ValidatorConfig::is_valid({{bob}}) == true, 98);

@@ -521,6 +521,38 @@ module LibraAccount {
         };
     }
 
+    fun make_account_no_key_rotation_cap(
+        new_account: signer,
+        auth_key_prefix: vector<u8>,
+    ) {
+        let new_account_addr = Signer::address_of(&new_account);
+        // cannot create an account at the reserved address 0x0
+        assert(new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(), ECANNOT_CREATE_AT_VM_RESERVED);
+
+        // (1) publish LibraAccount
+        let authentication_key = auth_key_prefix;
+        Vector::append(
+            &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
+        );
+        assert(Vector::length(&authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
+        move_to(
+            &new_account,
+            LibraAccount {
+                authentication_key,
+                withdrawal_capability: Option::some(
+                    WithdrawCapability {
+                        account_address: new_account_addr
+                }),
+                key_rotation_capability: Option::none(),
+                received_events: Event::new_event_handle<ReceivedPaymentEvent>(&new_account),
+                sent_events: Event::new_event_handle<SentPaymentEvent>(&new_account),
+                sequence_number: 0,
+            }
+        );
+        AccountFreezing::create(&new_account);
+        destroy_signer(new_account);
+    }
+
     /// Creates a new account with account at `new_account_address` with a balance of
     /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`. If
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
@@ -874,6 +906,21 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
     // Proof of concept code used for Validator and ValidatorOperator roles management
     ///////////////////////////////////////////////////////////////////////////
+
+    public fun create_validator_account_and_extract_key_rotation_cap(
+        creator_account: &signer,
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+    ): KeyRotationCapability {
+        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        ValidatorConfig::publish(&new_account, creator_account);
+        make_account_no_key_rotation_cap(new_account, auth_key_prefix);
+        KeyRotationCapability {
+            account_address: new_account_address
+        }
+    }
 
     public fun create_validator_account(
         creator_account: &signer,

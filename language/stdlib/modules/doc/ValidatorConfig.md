@@ -189,7 +189,7 @@
 Sets a new operator account, preserving the old config.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(sender: &signer, validator_account: address, operator_account: address)
 </code></pre>
 
 
@@ -198,9 +198,18 @@ Sets a new operator account, preserving the old config.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    (borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(sender)).operator_account = <a href="Option.md#0x1_Option_some">Option::some</a>(operator_account);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(
+    sender: &signer,
+    validator_account: address,
+    operator_account: address
+) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
+    <b>assert</b>(
+        <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(sender) ||
+            <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender) == validator_account,
+        EINVALID_TRANSACTION_SENDER
+    );
+    (borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account)).operator_account =
+        <a href="Option.md#0x1_Option_some">Option::some</a>(operator_account);
 }
 </code></pre>
 
@@ -488,15 +497,15 @@ Returns true if a ValidatorConfig resource exists under addr.
 ### Function `set_operator`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(sender: &signer, validator_account: address, operator_account: address)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) == operator_account;
+<pre><code><b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(validator_account);
+<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(validator_account);
+<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(validator_account) == operator_account;
 </code></pre>
 
 

@@ -5,12 +5,24 @@
 //! account: bob, 1000000, 0, validator
 //! account: carrol, 1000000, 0, validator
 
+//! sender: libraroot
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        // test libraroot may rotate operator
+        ValidatorConfig::set_operator(account, {{bob}}, {{carrol}});
+    }
+}
+
+// check: EXECUTED
+
+//! new-transaction
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // register alice as bob's delegate
-        ValidatorConfig::set_operator(account, {{alice}});
+        ValidatorConfig::set_operator(account, {{bob}}, {{alice}});
     }
 }
 

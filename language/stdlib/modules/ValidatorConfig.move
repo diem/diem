@@ -65,15 +65,24 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Sets a new operator account, preserving the old config.
-    public fun set_operator(account: &signer, operator_account: address) acquires ValidatorConfig {
-        let sender = Signer::address_of(account);
-        (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
+    public fun set_operator(
+        sender: &signer,
+        validator_account: address,
+        operator_account: address
+    ) acquires ValidatorConfig {
+        assert(
+            Roles::has_libra_root_role(sender) ||
+                Signer::address_of(sender) == validator_account,
+            EINVALID_TRANSACTION_SENDER
+        );
+        (borrow_global_mut<ValidatorConfig>(validator_account)).operator_account =
+            Option::some(operator_account);
     }
 
     spec fun set_operator {
-        aborts_if !spec_exists_config(Signer::spec_address_of(account));
-        ensures spec_has_operator(Signer::spec_address_of(account));
-        ensures spec_get_operator(Signer::spec_address_of(account)) == operator_account;
+        aborts_if !spec_exists_config(validator_account);
+        ensures spec_has_operator(validator_account);
+        ensures spec_get_operator(validator_account) == operator_account;
     }
 
     spec module {

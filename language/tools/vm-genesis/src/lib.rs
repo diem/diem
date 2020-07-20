@@ -544,10 +544,11 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistra
         .map(|n| {
             let test_config = n.test.as_ref().unwrap();
             let owner_key = test_config.owner_keypair.as_ref().unwrap().public_key();
+            let owner_account = account_address::from_public_key(&owner_key);
             let operator_key = test_config.operator_keypair.as_ref().unwrap().public_key();
             let operator_account = account_address::from_public_key(&operator_key);
             let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script(operator_account);
+                transaction_builder::encode_set_validator_operator_script(owner_account, operator_account);
 
             (owner_key, set_operator_script)
         })

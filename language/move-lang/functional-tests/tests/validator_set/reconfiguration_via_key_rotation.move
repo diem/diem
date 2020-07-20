@@ -9,7 +9,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // set bob to change alice's key
-        ValidatorConfig::set_operator(account, {{bob}});
+        ValidatorConfig::set_operator(account, {{alice}}, {{bob}});
     }
 }
 
@@ -21,7 +21,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // set dave to change vivian's key
-        ValidatorConfig::set_operator(account, {{dave}});
+        ValidatorConfig::set_operator(account, {{vivian}}, {{dave}});
     }
 }
 

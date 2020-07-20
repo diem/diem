@@ -96,6 +96,9 @@
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&lr_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(lr_rotate_key_cap);
 
+    // Make LibraRoot be the <a href="RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a> <b>to</b> allow validator owners <b>to</b> delegate <b>to</b> it
+    <a href="RecoveryAddress.md#0x1_RecoveryAddress_publish">RecoveryAddress::publish</a>(lr_account, <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(lr_account));
+
     <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">LibraVMConfig::initialize</a>(
         lr_account,
         publishing_option,

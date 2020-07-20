@@ -193,15 +193,10 @@ fn validator_set_operator_set_key_reconfigure() {
     );
     executor.new_block();
 
-    let output = executor.execute_and_apply(
-        validator_account
-            .transaction()
-            .script(encode_set_validator_operator_script(
-                *operator_account.address(),
-            ))
-            .sequence_number(0)
-            .sign(),
-    );
+    let output = executor.execute_and_apply(validator_account.signed_script_txn(
+        encode_set_validator_operator_script(*validator_account.address(), *operator_account.address()),
+        0,
+    ));
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(KeptVMStatus::Executed)

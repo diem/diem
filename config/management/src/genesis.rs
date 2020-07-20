@@ -118,8 +118,12 @@ impl Genesis {
                 .unwrap();
 
             let operator_account = self.fetch_operator_account(operator_name)?;
+            let owner_account = account_address::from_public_key(&owner_key);
             let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script(operator_account);
+                transaction_builder::encode_set_validator_operator_script(
+                    owner_account,
+                    operator_account
+                );
 
             operator_assignments.push((owner_key, set_operator_script));
         }

@@ -29,6 +29,7 @@
 -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_extract_key_rotation_capability)
 -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_restore_key_rotation_capability)
 -  [Function `add_currencies_for_account`](#0x1_LibraAccount_add_currencies_for_account)
+-  [Function `make_account_no_key_rotation_cap`](#0x1_LibraAccount_make_account_no_key_rotation_cap)
 -  [Function `make_account`](#0x1_LibraAccount_make_account)
 -  [Function `create_libra_root_account`](#0x1_LibraAccount_create_libra_root_account)
 -  [Function `create_treasury_compliance_account`](#0x1_LibraAccount_create_treasury_compliance_account)
@@ -55,6 +56,7 @@
 -  [Function `success_epilogue`](#0x1_LibraAccount_success_epilogue)
 -  [Function `failure_epilogue`](#0x1_LibraAccount_failure_epilogue)
 -  [Function `bump_sequence_number`](#0x1_LibraAccount_bump_sequence_number)
+-  [Function `create_validator_account_and_extract_key_rotation_cap`](#0x1_LibraAccount_create_validator_account_and_extract_key_rotation_cap)
 -  [Function `create_validator_account`](#0x1_LibraAccount_create_validator_account)
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
@@ -1025,6 +1027,58 @@ Return the key rotation capability to the account it originally came from
 
 </details>
 
+<a name="0x1_LibraAccount_make_account_no_key_rotation_cap"></a>
+
+## Function `make_account_no_key_rotation_cap`
+
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_make_account_no_key_rotation_cap">make_account_no_key_rotation_cap</a>(new_account: signer, auth_key_prefix: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_make_account_no_key_rotation_cap">make_account_no_key_rotation_cap</a>(
+    new_account: signer,
+    auth_key_prefix: vector&lt;u8&gt;,
+) {
+    <b>let</b> new_account_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&new_account);
+    // cannot create an account at the reserved address 0x0
+    <b>assert</b>(new_account_addr != <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), ECANNOT_CREATE_AT_VM_RESERVED);
+
+    // (1) publish <a href="#0x1_LibraAccount">LibraAccount</a>
+    <b>let</b> authentication_key = auth_key_prefix;
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(
+        &<b>mut</b> authentication_key, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(<a href="Signer.md#0x1_Signer_borrow_address">Signer::borrow_address</a>(&new_account))
+    );
+    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
+    move_to(
+        &new_account,
+        <a href="#0x1_LibraAccount">LibraAccount</a> {
+            authentication_key,
+            withdrawal_capability: <a href="Option.md#0x1_Option_some">Option::some</a>(
+                <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a> {
+                    account_address: new_account_addr
+            }),
+            key_rotation_capability: <a href="Option.md#0x1_Option_none">Option::none</a>(),
+            received_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a>&gt;(&new_account),
+            sent_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraAccount_SentPaymentEvent">SentPaymentEvent</a>&gt;(&new_account),
+            sequence_number: 0,
+        }
+    );
+    <a href="AccountFreezing.md#0x1_AccountFreezing_create">AccountFreezing::create</a>(&new_account);
+    <a href="#0x1_LibraAccount_destroy_signer">destroy_signer</a>(new_account);
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_LibraAccount_make_account"></a>
 
 ## Function `make_account`
@@ -1908,6 +1962,41 @@ a writeset transaction is committed.
 <pre><code><b>fun</b> <a href="#0x1_LibraAccount_bump_sequence_number">bump_sequence_number</a>(signer: &signer) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a> {
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(signer));
     sender_account.sequence_number = sender_account.sequence_number + 1;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_create_validator_account_and_extract_key_rotation_cap"></a>
+
+## Function `create_validator_account_and_extract_key_rotation_cap`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_account_and_extract_key_rotation_cap">create_validator_account_and_extract_key_rotation_cap</a>(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;): <a href="#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_account_and_extract_key_rotation_cap">create_validator_account_and_extract_key_rotation_cap</a>(
+    creator_account: &signer,
+    new_account_address: address,
+    auth_key_prefix: vector&lt;u8&gt;,
+): <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> {
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(creator_account), ENOT_LIBRA_ROOT);
+    <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
+    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account, creator_account);
+    <a href="#0x1_LibraAccount_make_account_no_key_rotation_cap">make_account_no_key_rotation_cap</a>(new_account, auth_key_prefix);
+    <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> {
+        account_address: new_account_address
+    }
 }
 </code></pre>
 

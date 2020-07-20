@@ -1,6 +1,7 @@
 address 0x1 {
 module RecoveryAddress {
     use 0x1::LibraAccount::{Self, KeyRotationCapability};
+    use 0x1::Roles;
     use 0x1::Signer;
     use 0x1::VASP;
     use 0x1::Vector;
@@ -23,14 +24,16 @@ module RecoveryAddress {
     const EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
     const EACCOUNT_NOT_RECOVERABLE: u64 = 4;
     const ENOT_A_RECOVERY_ADDRESS: u64 = 5;
+    const EINVALID_TRANSACTION_SENDER: u64 = 6;
 
     /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
     /// `RecoveryAddress` resource under  `recovery_account`.
     /// Aborts if `recovery_account` has delegated its `KeyRotationCapability`, already has a
     /// `RecoveryAddress` resource, or is not a VASP.
     public fun publish(recovery_account: &signer, rotation_cap: KeyRotationCapability) {
-        // Only VASPs can create a recovery address
-        assert(VASP::is_vasp(Signer::address_of(recovery_account)), ENOT_A_VASP);
+        // Only VASPs or libra_root can create a recovery address
+        assert(VASP::is_vasp(Signer::address_of(recovery_account)) ||
+               Roles::has_libra_root_role(recovery_account), EINVALID_TRANSACTION_SENDER);
         // put the rotation capability for the recovery account itself in `rotation_caps`. This
         // ensures two things:
         // (1) It's not possible to get into a "recovery cycle" where A is the recovery account for
@@ -108,6 +111,37 @@ module RecoveryAddress {
             &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps,
             to_recover
         );
+    }
+
+    /// In case when the signer can get a key rotation capability explicitly, it can add it to
+    /// its recover address resource. This is used in validator account creation to place
+    /// the key rotation capability into the libra_root account.
+    public fun add_rotation_capability_explicitly(account: &signer, rotation_cap: LibraAccount::KeyRotationCapability)
+        acquires RecoveryAddress {
+        let caps = &mut borrow_global_mut<RecoveryAddress>(Signer::address_of(account)).rotation_caps;
+        Vector::push_back(caps, rotation_cap);
+    }
+
+    /// The original onwer of the key rotation capability
+    /// may restore the key rotation capability and return
+    /// it from the recovery account to its own account.
+    public fun restore_rotation_capability(account: &signer, recovery_address: address) acquires RecoveryAddress  {
+        let addr = Signer::address_of(account);
+        // Make sure the recovery_address's KeyRotation capability cannot be restored
+        // for reasons explained in the publish function.
+        assert(addr != recovery_address, EINVALID_TRANSACTION_SENDER);
+        let caps = &borrow_global<RecoveryAddress>(recovery_address).rotation_caps;
+        let i = 0;
+        let len = Vector::length(caps);
+        while (i <= len) {
+            let cap = Vector::borrow(caps, i);
+            if (LibraAccount::key_rotation_capability_address(cap) == &addr) {
+                let cap  = Vector::swap_remove(&mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps, i);
+                LibraAccount::restore_key_rotation_capability(cap);
+                return
+            };
+            i = i + 1
+        };
     }
 
     // ****************** SPECIFICATIONS *******************
