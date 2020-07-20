@@ -19,10 +19,11 @@ pub enum NamedChain {
     /// initialization.
     /// MAINNET is the Libra mainnet production chain and is reserved for 1
     MAINNET = 1,
-    // The Libra chain below are non-reserved, non-production, and may change over time.  They are listed for convenience here.
-    TESTNET,
-    DEVNET = 5,
-    TESTING = 6,
+    // Even though these CHAIN IDs do not correspond to MAINNET, changing them should be avoided since they
+    // can break test environments for various organisations.
+    TESTNET = 2,
+    DEVNET = 3,
+    TESTING = 4,
 }
 
 impl NamedChain {
