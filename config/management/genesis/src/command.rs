@@ -29,7 +29,7 @@ pub enum Command {
     #[structopt(about = "Sets the validator operator chosen by the owner")]
     SetOperator(libra_management::validator_operator::ValidatorOperator),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
-    ValidatorConfig(libra_management::validator_config::ValidatorConfig),
+    ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
     Verify(libra_management::verify::Verify),
 }

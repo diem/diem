@@ -2,280 +2,201 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    constants,
-    error::Error,
-    secure_backend::{SharedBackend, ValidatorBackend},
+    constants, error::Error, json_rpc::JsonRpcClientWrapper, secure_backend::SecureBackend,
+    storage::StorageWrapper, TransactionContext,
 };
-use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
-    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_KEY,
     VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
+    encrypted::{EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress},
     NetworkAddress, RawNetworkAddress,
 };
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::{self, AccountAddress},
     chain_id::ChainId,
-    transaction::{RawTransaction, Script, SignedTransaction, Transaction},
+    transaction::{RawTransaction, Script, SignedTransaction},
+    validator_config::ValidatorConfig,
 };
 use std::{convert::TryFrom, str::FromStr};
-use structopt::StructOpt;
 
-// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
-#[derive(Debug, StructOpt)]
-pub struct ValidatorConfig {
-    #[structopt(long)]
-    owner_name: String,
-    #[structopt(long)]
-    validator_address: NetworkAddress,
-    #[structopt(long)]
-    fullnode_address: NetworkAddress,
-    #[structopt(long)]
-    chain_id: ChainId,
-    #[structopt(flatten)]
-    validator_backend: ValidatorBackend,
-    #[structopt(flatten)]
-    shared_backend: SharedBackend,
+pub fn fetch_keys_from_storage(
+    storage_name: &'static str,
+    backend: &SecureBackend,
+) -> Result<(Ed25519PublicKey, x25519::PublicKey, x25519::PublicKey), Error> {
+    let storage = StorageWrapper::new(storage_name, &backend)?;
+    let consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
+    let fullnode_network_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
+    let validator_network_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
+    Ok((consensus_key, fullnode_network_key, validator_network_key))
 }
 
-impl ValidatorConfig {
-    pub fn execute(self) -> Result<Transaction, Error> {
-        // Fetch the owner key from remote storage using the owner_name and derive an address
-        let owner_account = self.fetch_owner_account()?;
-
-        // Create the validator config script for the validator node
-        let validator_config_script = self.create_validator_config_script(owner_account)?;
-
-        // Create and sign the validator-config transaction
-        let validator_config_tx =
-            self.create_validator_config_transaction(validator_config_script)?;
-
-        // Write validator config to local storage to save for verification later on
-        let mut validator_storage = self
-            .validator_backend
-            .validator_backend
-            .create_storage(self.validator_backend.name())?;
-
-        validator_storage
-            .set(
-                constants::VALIDATOR_CONFIG,
-                Value::Transaction(validator_config_tx.clone()),
-            )
-            .map_err(|e| {
-                Error::StorageWriteError(
-                    self.validator_backend.name(),
-                    constants::VALIDATOR_CONFIG,
-                    e.to_string(),
-                )
-            })?;
-
-        // Save the owner account in local storage for deployment later on
-        validator_storage
-            .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
-            .map_err(|e| {
-                Error::StorageWriteError(
-                    self.validator_backend.name(),
-                    OWNER_ACCOUNT,
-                    e.to_string(),
-                )
-            })?;
-
-        // Upload the validator config to shared storage
-        let mut shared_storage = self
-            .shared_backend
-            .shared_backend
-            .create_storage(self.shared_backend.name())?;
-        shared_storage
-            .set(
-                constants::VALIDATOR_CONFIG,
-                Value::Transaction(validator_config_tx.clone()),
-            )
-            .map_err(|e| {
-                Error::StorageWriteError(
-                    self.shared_backend.name(),
-                    constants::VALIDATOR_CONFIG,
-                    e.to_string(),
-                )
-            })?;
-
-        Ok(validator_config_tx)
-    }
-
-    /// Creates and returns a validator config script using the keys stored in local storage. The
-    /// validator address will be the given owner account address.
-    fn create_validator_config_script(
-        &self,
-        owner_account: AccountAddress,
-    ) -> Result<Script, Error> {
-        // Retrieve keys from local storage
-        let storage_name = self.validator_backend.name();
-        let validator_storage = self
-            .validator_backend
-            .validator_backend
-            .clone()
-            .create_storage(storage_name)?;
-        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &validator_storage, storage_name)?;
-        let fullnode_network_key =
-            x25519_from_storage(FULLNODE_NETWORK_KEY, &validator_storage, storage_name)?;
-        let validator_network_key =
-            x25519_from_storage(VALIDATOR_NETWORK_KEY, &validator_storage, storage_name)?;
-
-        // Only supports one address for now
-        let addr_idx = 0;
-
-        // Append ln-noise-ik and ln-handshake protocols to base network addresses
-        // and encrypt the validator address.
-        let validator_address = self
-            .validator_address
-            .clone()
-            .append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
-        let raw_validator_address =
-            RawNetworkAddress::try_from(&validator_address).map_err(|e| {
-                Error::UnexpectedError(format!(
-                    "error serializing validator address: \"{}\", error: {}",
-                    validator_address, e
-                ))
-            })?;
-        // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
-        // current sequence number by querying the blockchain.
-        let sequence_number = 0;
-        let enc_validator_address = raw_validator_address.encrypt(
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            &owner_account,
-            sequence_number,
-            addr_idx,
-        );
-        let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
-            .map_err(|e| {
-                Error::UnexpectedError(format!(
-                    "error serializing encrypted validator address: {:?}, error: {}",
-                    enc_validator_address, e
-                ))
-            })?;
-        let fullnode_address = self
-            .fullnode_address
-            .clone()
-            .append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address).map_err(|e| {
-            Error::UnexpectedError(format!(
-                "error serializing fullnode address: \"{}\", error: {}",
-                fullnode_address, e
-            ))
-        })?;
-
-        // Generate the validator config script
-        // TODO(philiphayes): remove network identity pubkey field from struct when
-        // transition complete
-        Ok(transaction_builder::encode_set_validator_config_script(
-            owner_account,
-            consensus_key.to_bytes().to_vec(),
-            validator_network_key.to_bytes(),
-            raw_enc_validator_address.into(),
-            fullnode_network_key.to_bytes(),
-            raw_fullnode_address.into(),
+/// Encodes and encrypts a validator address
+pub fn encode_validator_address(
+    address: NetworkAddress,
+    owner_account: &AccountAddress,
+    sequence_number: u64,
+    key: &Key,
+    version: KeyVersion,
+    addr_idx: u32,
+) -> Result<RawEncNetworkAddress, Error> {
+    let raw_address = encode_address(address)?;
+    let enc_address =
+        raw_address.encrypt(key, version, owner_account, sequence_number + 1, addr_idx);
+    RawEncNetworkAddress::try_from(&enc_address).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "error serializing encrypted address: '{:?}', error: {}",
+            enc_address, e
         ))
-    }
-
-    /// Creates and returns a signed validator-config transaction.
-    fn create_validator_config_transaction(&self, script: Script) -> Result<Transaction, Error> {
-        let storage_name = self.validator_backend.name();
-        let mut validator_storage = self
-            .validator_backend
-            .validator_backend
-            .clone()
-            .create_storage(storage_name)?;
-        let operator_key = ed25519_from_storage(OPERATOR_KEY, &validator_storage, storage_name)?;
-        let operator_address_string = validator_storage
-            .get(OPERATOR_ACCOUNT)
-            .and_then(|v| v.value.string())
-            .map_err(|e| {
-                Error::StorageReadError(
-                    self.validator_backend.name(),
-                    OPERATOR_ACCOUNT,
-                    e.to_string(),
-                )
-            })?;
-        let operator_address = AccountAddress::from_str(&operator_address_string)
-            .map_err(|e| Error::BackendParsingError(e.to_string()))?;
-
-        // TODO(joshlind): In genesis the sequence number is irrelevant. After genesis we need to
-        // obtain the current sequence number by querying the blockchain.
-        let sequence_number = 0;
-        let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
-        let raw_transaction = RawTransaction::new_script(
-            operator_address,
-            sequence_number,
-            script,
-            constants::MAX_GAS_AMOUNT,
-            constants::GAS_UNIT_PRICE,
-            constants::GAS_CURRENCY_CODE.to_owned(),
-            expiration_time,
-            self.chain_id,
-        );
-
-        let signature = validator_storage
-            .sign(OPERATOR_KEY, &raw_transaction)
-            .map_err(|e| {
-                Error::StorageSigningError(
-                    self.validator_backend.name(),
-                    "validator-config",
-                    OPERATOR_KEY,
-                    e.to_string(),
-                )
-            })?;
-        let signed_txn = SignedTransaction::new(raw_transaction, operator_key, signature);
-        Ok(Transaction::UserTransaction(signed_txn))
-    }
-
-    /// Retrieves the owner key from the remote storage using the owner name given by
-    /// the validator-config command, and uses this key to derive an owner account address.
-    /// If a remote storage path is not specified, returns an error.
-    fn fetch_owner_account(&self) -> Result<AccountAddress, Error> {
-        let owner_storage = self
-            .shared_backend
-            .shared_backend
-            .clone()
-            .set_namespace(self.owner_name.clone())
-            .create_storage(self.shared_backend.name())?;
-        let owner_key = owner_storage
-            .get(OWNER_KEY)
-            .map_err(|e| {
-                Error::StorageReadError(self.shared_backend.name(), OWNER_KEY, e.to_string())
-            })?
-            .value
-            .ed25519_public_key()
-            .map_err(|e| {
-                Error::StorageReadError(self.shared_backend.name(), OWNER_KEY, e.to_string())
-            })?;
-        Ok(account_address::from_public_key(&owner_key))
-    }
+    })
 }
 
-fn ed25519_from_storage(
-    key_name: &'static str,
-    storage: &Storage,
-    storage_name: &'static str,
-) -> Result<Ed25519PublicKey, Error> {
-    Ok(storage
-        .get_public_key(key_name)
-        .map_err(|e| Error::StorageReadError(storage_name, key_name, e.to_string()))?
-        .public_key)
+// Decodes adn decrypts the validator address
+pub fn decode_validator_address(
+    address: RawEncNetworkAddress,
+    account: &AccountAddress,
+    key: &Key,
+    addr_idx: u32,
+) -> Result<NetworkAddress, Error> {
+    let enc_addr = EncNetworkAddress::try_from(&address).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decode network address {}",
+            e.to_string()
+        ))
+    })?;
+    let raw_addr = enc_addr.decrypt(key, account, addr_idx).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decrypt network address {}",
+            e.to_string()
+        ))
+    })?;
+    NetworkAddress::try_from(&raw_addr).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decode network address {}",
+            e.to_string()
+        ))
+    })
 }
 
-fn x25519_from_storage(
-    key_name: &'static str,
-    storage: &Storage,
+/// Encode an address into bytes
+pub fn encode_address(address: NetworkAddress) -> Result<RawNetworkAddress, Error> {
+    RawNetworkAddress::try_from(&address).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "error serializing address: '{}', error: {}",
+            address, e
+        ))
+    })
+}
+
+pub fn create_validator_config_script(
+    validator_account: AccountAddress,
+    validator_config: ValidatorConfig,
+) -> Script {
+    // Generate the validator config script
+    // TODO(philiphayes): remove network identity pubkey field from struct when
+    // transition complete
+    let consensus_key = validator_config.consensus_public_key;
+    let validator_network_address = validator_config.validator_network_address;
+    let validator_network_key = validator_config.validator_network_identity_public_key;
+    let full_node_network_key = validator_config.full_node_network_identity_public_key;
+    let full_node_network_address = validator_config.full_node_network_address;
+    transaction_builder::encode_set_validator_config_script(
+        validator_account,
+        consensus_key.to_bytes().to_vec(),
+        validator_network_key.to_bytes(),
+        validator_network_address.into(),
+        full_node_network_key.to_bytes(),
+        full_node_network_address.into(),
+    )
+}
+
+pub fn create_validator_config_and_reconfigure_script(
+    validator_account: AccountAddress,
+    validator_config: ValidatorConfig,
+) -> Script {
+    // Generate the validator config script
+    // TODO(philiphayes): remove network identity pubkey field from struct when
+    // transition complete
+    let consensus_key = validator_config.consensus_public_key;
+    let validator_network_address = validator_config.validator_network_address;
+    let validator_network_key = validator_config.validator_network_identity_public_key;
+    let full_node_network_key = validator_config.full_node_network_identity_public_key;
+    let full_node_network_address = validator_config.full_node_network_address;
+    transaction_builder::encode_set_validator_config_and_reconfigure_script(
+        validator_account,
+        consensus_key.to_bytes().to_vec(),
+        validator_network_key.to_bytes(),
+        validator_network_address.into(),
+        full_node_network_key.to_bytes(),
+        full_node_network_address.into(),
+    )
+}
+
+pub fn create_transaction(
     storage_name: &'static str,
-) -> Result<x25519::PublicKey, Error> {
-    let edkey = ed25519_from_storage(key_name, storage, storage_name)?;
-    x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
-        .map_err(|e| Error::UnexpectedError(e.to_string()))
+    backend: &SecureBackend,
+    sequence_number: u64,
+    chain_id: ChainId,
+    script_name: &'static str,
+    script: Script,
+) -> Result<SignedTransaction, Error> {
+    let mut storage = StorageWrapper::new(storage_name, &backend)?;
+    let operator_address_string = storage.string(OPERATOR_ACCOUNT)?;
+    let operator_address = AccountAddress::from_str(&operator_address_string)
+        .map_err(|e| Error::BackendParsingError(e.to_string()))?;
+
+    let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
+    let raw_transaction = RawTransaction::new_script(
+        operator_address,
+        sequence_number,
+        script,
+        constants::MAX_GAS_AMOUNT,
+        constants::GAS_UNIT_PRICE,
+        constants::GAS_CURRENCY_CODE.to_owned(),
+        expiration_time,
+        chain_id,
+    );
+    storage.sign(OPERATOR_KEY, script_name, raw_transaction)
+}
+
+/// Retrieves the owner key from the remote storage using the owner name given by
+/// the validator-config command, and uses this key to derive an owner account address.
+/// If a remote storage path is not specified, returns an error.
+pub fn owner_from_key(
+    storage_name: &'static str,
+    backend: &SecureBackend,
+    owner_name: String,
+) -> Result<AccountAddress, Error> {
+    let storage = StorageWrapper::new_with_namespace(storage_name, owner_name, backend)?;
+    let owner_key = storage.ed25519_key(OWNER_KEY)?;
+    Ok(account_address::from_public_key(&owner_key))
+}
+
+pub fn update_config_and_reconfigure(
+    storage_name: &'static str,
+    backend: &SecureBackend,
+    client: &JsonRpcClientWrapper,
+    owner_account: AccountAddress,
+    chain_id: u8,
+    sequence_number: u64,
+    validator_config: ValidatorConfig,
+) -> Result<TransactionContext, Error> {
+    let validator_config_script =
+        create_validator_config_and_reconfigure_script(owner_account, validator_config);
+
+    // Create and sign the validator-config transaction
+    let validator_config_tx = create_transaction(
+        storage_name,
+        backend,
+        sequence_number,
+        ChainId::new(chain_id),
+        "validator-config",
+        validator_config_script,
+    )?;
+
+    // Submit transaction to JSON-RPC
+    client.submit_transaction(validator_config_tx)
 }
