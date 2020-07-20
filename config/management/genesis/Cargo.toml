@@ -37,6 +37,10 @@ storage-interface = { path = "../../../storage/storage-interface", version = "0.
 transaction-builder = { path = "../../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../../language/tools/vm-genesis", version = "0.1.0" }
 
+[dev-dependencies]
+libra-config = { path = "../..", version = "0.1.0", features = ["fuzzing"]}
+
+
 [features]
 testing = []
 fuzzing = ["libra-config/fuzzing"]
