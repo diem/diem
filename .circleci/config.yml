@@ -638,7 +638,7 @@ jobs:
             export IS_TEST=$( if [[ "$BRANCH" =~ "^testflow[0-9|.]+$" ]]; then echo true; else echo false; fi )
             export IS_PRE_RELEASE=$( if [[ "$BRANCH" =~ "^premainnet-[0-9|.]+$" ]]; then echo true; else echo false; fi )
 
-            if [[ $IS_RELEASE || $IS_TEST || $IS_PRE_RELEASE ]] ; then
+            if [[ $IS_RELEASE  == true ]] || [[ $IS_TEST == true ]] || [[ $IS_PRE_RELEASE == true ]] ; then
               echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker/update_or_build.sh -u -p -b ${BRANCH} -n client
               docker/update_or_build.sh -u -p -b ${BRANCH} -n init
