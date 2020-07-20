@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 pub mod command;
 mod json_rpc;
+mod validator_config;
 
 #[cfg(any(test, feature = "testing"))]
 mod storage_helper;
