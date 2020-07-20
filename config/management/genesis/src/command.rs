@@ -21,9 +21,9 @@ pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
     OwnerKey(libra_management::key::OwnerKey),
     #[structopt(about = "Read account state from JSON-RPC endpoint")]
-    ReadAccountState(libra_management::json_rpc::ReadAccountState),
+    ReadAccountState(crate::json_rpc::ReadAccountState),
     #[structopt(about = "Submit a transaction to the blockchain")]
-    SubmitTransaction(libra_management::json_rpc::SubmitTransaction),
+    SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(libra_management::layout::SetLayout),
     #[structopt(about = "Sets the validator operator chosen by the owner")]
