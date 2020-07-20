@@ -112,7 +112,7 @@ fn duplicate_module() {
 }
 
 #[test]
-pub fn test_publishing_no_modules_non_whitelist_script() {
+pub fn test_publishing_no_modules_non_allowlist_script() {
     // create a FakeExecutor with a genesis from file
     let mut executor =
         FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
@@ -145,7 +145,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
 }
 
 #[test]
-pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
+pub fn test_publishing_no_modules_non_allowlist_script_proper_sender() {
     // create a FakeExecutor with a genesis from file
     let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::custom_scripts());
 
@@ -176,7 +176,7 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
 #[test]
 pub fn test_publishing_no_modules_proper_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::whitelist_genesis();
+    let executor = FakeExecutor::allowlist_genesis();
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_libra_root();
@@ -205,7 +205,7 @@ pub fn test_publishing_no_modules_proper_sender() {
 #[test]
 pub fn test_publishing_no_modules_core_code_sender() {
     // create a FakeExecutor with a genesis from file
-    let executor = FakeExecutor::whitelist_genesis();
+    let executor = FakeExecutor::allowlist_genesis();
 
     // create a transaction trying to publish a new module.
     let sender = Account::new_genesis_account(account_config::CORE_CODE_ADDRESS);
@@ -235,7 +235,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
 #[test]
 pub fn test_publishing_no_modules_invalid_sender() {
     // create a FakeExecutor with a genesis from file
-    let mut executor = FakeExecutor::whitelist_genesis();
+    let mut executor = FakeExecutor::allowlist_genesis();
 
     // create a transaction trying to publish a new module.
     let sender = AccountData::new(1_000_000, 10);

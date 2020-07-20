@@ -140,7 +140,7 @@ fn handle_error<T>(e: syntax::ParseError<Loc, anyhow::Error>, code_str: &str) ->
 #[cfg(test)]
 mod tests {
     #[test]
-    fn verify_character_whitelist() {
+    fn verify_character_allowlist() {
         let mut good_chars = (0x20..=0x7E).collect::<Vec<u8>>();
         good_chars.push(0x0A);
         good_chars.push(0x09);
@@ -149,14 +149,14 @@ mod tests {
         bad_chars.append(&mut (0x0B..=0x1F).collect::<Vec<_>>());
         bad_chars.push(0x7F);
 
-        // Test to make sure that all the characters that are in the whitelist pass.
+        // Test to make sure that all the characters that are in the allowlist pass.
         {
             let s = std::str::from_utf8(&good_chars)
                 .expect("Failed to construct string containing an invalid character. This shouldn't happen.");
             assert!(super::verify_string(s).is_ok());
         }
 
-        // Test to make sure that we fail for all characters not in the whitelist.
+        // Test to make sure that we fail for all characters not in the allowlist.
         for bad_char in bad_chars {
             good_chars.push(bad_char);
             let s = std::str::from_utf8(&good_chars)

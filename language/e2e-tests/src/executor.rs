@@ -71,11 +71,11 @@ impl FakeExecutor {
         Self::from_genesis(GENESIS_CHANGE_SET_FRESH.clone().write_set())
     }
 
-    pub fn whitelist_genesis() -> Self {
+    pub fn allowlist_genesis() -> Self {
         Self::custom_genesis(
             stdlib_modules(StdLibOptions::Compiled).to_vec(),
             None,
-            VMPublishingOption::locked(StdlibScript::whitelist()),
+            VMPublishingOption::locked(StdlibScript::allowlist()),
         )
     }
 
@@ -84,7 +84,7 @@ impl FakeExecutor {
     /// `CustomScript`.
     pub fn from_genesis_with_options(publishing_options: VMPublishingOption) -> Self {
         if let ScriptPublishingOption::Locked(_) = publishing_options.script_option {
-            panic!("Whitelisted transactions are not supported as a publishing option")
+            panic!("Allowlisted transactions are not supported as a publishing option")
         }
 
         Self::custom_genesis(

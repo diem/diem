@@ -11,10 +11,10 @@ use move_core_types::gas_schedule::{CostTable, GasConstants};
 use serde::{Deserialize, Serialize};
 
 /// Defines and holds the publishing policies for the VM. There are three possible configurations:
-/// 1. No module publishing, only whitelisted scripts are allowed.
+/// 1. No module publishing, only allowlisted scripts are allowed.
 /// 2. No module publishing, custom scripts are allowed.
 /// 3. Both module publishing and custom scripts are allowed.
-/// We represent these as an enum instead of a struct since whitelisting and module/script
+/// We represent these as an enum instead of a struct since allowlisting and module/script
 /// publishing are mutually exclusive options.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VMPublishingOption {
@@ -24,7 +24,7 @@ pub struct VMPublishingOption {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ScriptPublishingOption {
-    /// Only allow scripts on a whitelist to be run
+    /// Only allow scripts in an allowlist to be run
     Locked(Vec<[u8; SCRIPT_HASH_LENGTH]>),
     /// Allow both custom scripts
     CustomScripts,
@@ -39,9 +39,9 @@ pub enum ModulePublishingOption {
 }
 
 impl VMPublishingOption {
-    pub fn locked(whitelist: Vec<[u8; SCRIPT_HASH_LENGTH]>) -> Self {
+    pub fn locked(allowlist: Vec<[u8; SCRIPT_HASH_LENGTH]>) -> Self {
         Self {
-            script_option: ScriptPublishingOption::Locked(whitelist),
+            script_option: ScriptPublishingOption::Locked(allowlist),
             module_option: ModulePublishingOption::LimitedSender(vec![libra_root_address()]),
         }
     }
@@ -70,16 +70,16 @@ impl VMPublishingOption {
     pub fn is_allowed_module(&self, module_sender: &AccountAddress) -> bool {
         match &self.module_option {
             ModulePublishingOption::Open => true,
-            ModulePublishingOption::LimitedSender(whitelist) => whitelist.contains(module_sender),
+            ModulePublishingOption::LimitedSender(allowlist) => allowlist.contains(module_sender),
         }
     }
 
     pub fn is_allowed_script(&self, program: &[u8]) -> bool {
         match &self.script_option {
             ScriptPublishingOption::CustomScripts => true,
-            ScriptPublishingOption::Locked(whitelist) => {
+            ScriptPublishingOption::Locked(allowlist) => {
                 let hash_value = HashValue::sha3_256_of(program);
-                whitelist.contains(hash_value.as_ref())
+                allowlist.contains(hash_value.as_ref())
             }
         }
     }

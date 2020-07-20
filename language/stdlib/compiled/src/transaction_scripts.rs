@@ -3,8 +3,8 @@
 
 //! Rust representation of a Move transaction script that can be executed on the Libra blockchain.
 //! Libra does not allow arbitrary transaction scripts; only scripts whose hashes are present in
-//! the on-chain script whitelist. The genesis whitelist is derived from this file, and the
-//! `Stdlib` script enum will be modified to reflect changes in the on-chain whitelist as time goes
+//! the on-chain script allowlist. The genesis allowlist is derived from this file, and the
+//! `Stdlib` script enum will be modified to reflect changes in the on-chain allowlist as time goes
 //! on.
 
 use anyhow::{anyhow, Error, Result};
@@ -112,9 +112,9 @@ impl StdlibScript {
         ]
     }
 
-    /// Construct the whitelist of script hashes used to determine whether a transaction script can
+    /// Construct the allowlist of script hashes used to determine whether a transaction script can
     /// be executed on the Libra blockchain
-    pub fn whitelist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
+    pub fn allowlist() -> Vec<[u8; SCRIPT_HASH_LENGTH]> {
         StdlibScript::all()
             .iter()
             .map(|script| *script.compiled_bytes().hash().as_ref())

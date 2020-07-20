@@ -482,7 +482,7 @@ pub enum StatusCode {
     INVALID_WRITE_SET = 9,
     // Length of program field in raw transaction exceeded max length
     EXCEEDED_MAX_TRANSACTION_SIZE = 10,
-    // This script is not on our whitelist of script.
+    // This script is not in our allowlist of scripts.
     UNKNOWN_SCRIPT = 11,
     // Transaction is trying to publish a new module.
     UNKNOWN_MODULE = 12,
