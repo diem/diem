@@ -66,10 +66,8 @@ impl<'a> CostStrategy<'a> {
 
     /// Return the gas left.
     pub fn remaining_gas(&self) -> GasUnits<GasCarrier> {
-        self.gas_left.map(|gas| {
-            (gas + (self.cost_table.gas_constants.gas_unit_scaling_factor - 1))
-                / self.cost_table.gas_constants.gas_unit_scaling_factor
-        })
+        self.gas_left
+            .map(|gas| gas / self.cost_table.gas_constants.gas_unit_scaling_factor)
     }
 
     /// Charge a given amount of gas and fail if not enough gas units are left.
