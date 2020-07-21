@@ -154,6 +154,8 @@ fn test_that_cpp_code_compiles() {
         .arg("-g")
         .arg("-c")
         .arg(dir.path().join("libra_builder.cpp"))
+        .arg("-o")
+        .arg(dir.path().join("libra_builder.o"))
         .status()
         .unwrap();
     assert!(status.success());
