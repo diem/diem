@@ -179,6 +179,7 @@ impl ValidatorConfig {
                 test_config.waypoint = maybe_waypoint;
             }
 
+            node.base.chain_id = self.chain_id;
             node.base.waypoint = waypoint.clone();
             node.execution.genesis = genesis.clone();
         }
