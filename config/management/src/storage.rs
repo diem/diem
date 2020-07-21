@@ -5,6 +5,7 @@ use crate::{error::Error, secure_backend::SecureBackend};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_types::{
+    account_address::AccountAddress,
     transaction::{RawTransaction, SignedTransaction, Transaction},
     waypoint::Waypoint,
 };
@@ -48,6 +49,11 @@ impl StorageWrapper {
             .get(name)
             .map(|v| v.value)
             .map_err(|e| Error::StorageReadError(self.storage_name, name, e.to_string()))
+    }
+
+    pub fn account_address(&self, name: &'static str) -> Result<AccountAddress, Error> {
+        let value = self.string(name)?;
+        AccountAddress::from_str(&value).map_err(|e| Error::BackendParsingError(e.to_string()))
     }
 
     pub fn string(&self, name: &'static str) -> Result<String, Error> {

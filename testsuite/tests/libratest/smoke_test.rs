@@ -1513,9 +1513,8 @@ fn test_network_key_rotation() {
     let libra = (&libra_interfaces).first().unwrap();
 
     let last_reconfig = libra.last_reconfiguration().unwrap();
-    let (transaction_context, new_network_key) = op_tool
-        .rotate_validator_network_key(validator_account, backend)
-        .unwrap();
+    let (transaction_context, new_network_key) =
+        op_tool.rotate_validator_network_key(backend).unwrap();
 
     // Ensure all nodes have been reconfigured
     wait_for_all_nodes(&libra_interfaces, |libra| {

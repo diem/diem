@@ -157,7 +157,7 @@ impl TryInto<Storage> for SecureBackend {
 
 macro_rules! secure_backend {
     ($struct_name:ident, $field_name:ident, $struct_type:ty, $purpose:literal) => {
-        #[derive(Debug, StructOpt)]
+        #[derive(Clone, Debug, StructOpt)]
         pub struct $struct_name {
             #[structopt(long,
                 help = concat!("Backend for ", $purpose),

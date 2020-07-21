@@ -1,173 +1,142 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::x25519;
-use libra_global_constants::VALIDATOR_NETWORK_KEY;
+use libra_global_constants::{OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY};
 use libra_management::{
-    error::Error,
-    json_rpc::JsonRpcClientWrapper,
-    secure_backend::{SharedBackend, ValidatorBackend},
-    storage::StorageWrapper,
-    validator_config::{
-        decode_validator_address, encode_address, encode_validator_address,
-        update_config_and_reconfigure,
-    },
-    TransactionContext,
+    error::Error, json_rpc::JsonRpcClientWrapper, storage::StorageWrapper, TransactionContext,
 };
 use libra_network_address::{
-    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
-    NetworkAddress,
+    encrypted::{EncNetworkAddress, Key, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY},
+    NetworkAddress, Protocol, RawNetworkAddress,
 };
-use libra_types::{account_address::AccountAddress, validator_config::ValidatorConfig};
+use libra_types::account_address::AccountAddress;
+use std::convert::TryFrom;
 use structopt::StructOpt;
-
-#[derive(Debug, StructOpt)]
-pub struct GetValidatorConfig {
-    #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080")]
-    host: String,
-    #[structopt(long, help = "Owner account address")]
-    account: AccountAddress,
-}
-
-impl GetValidatorConfig {
-    pub fn execute(self) -> Result<ValidatorConfig, Error> {
-        let client = JsonRpcClientWrapper::new(self.host);
-        client.validator_config(self.account)
-    }
-}
 
 // TODO: Load all chain IDs from the host
 #[derive(Debug, StructOpt)]
 pub struct SetValidatorConfig {
-    #[structopt(long, help = "Chain Id representing the chain (one byte)")]
-    chain_id: u8,
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080")]
     host: String,
-    #[structopt(long, help = "Owner account address")]
-    owner_account: AccountAddress,
+    #[structopt(flatten)]
+    validator_config: libra_management::validator_config::ValidatorConfig,
     #[structopt(long, help = "Validator Network Address")]
     validator_address: Option<NetworkAddress>,
     #[structopt(long, help = "Full Node Network Address")]
     fullnode_address: Option<NetworkAddress>,
-    #[structopt(flatten)]
-    validator_backend: ValidatorBackend,
-    #[structopt(flatten)]
-    shared_backend: SharedBackend,
 }
 
 impl SetValidatorConfig {
     pub fn execute(self) -> Result<TransactionContext, Error> {
-        let idx_addr = 0;
-        let storage_name = self.validator_backend.name();
+        let storage = StorageWrapper::new(
+            self.validator_config.validator_backend.name(),
+            &self.validator_config.validator_backend.validator_backend,
+        )?;
+        let owner_account = storage.account_address(OWNER_ACCOUNT)?;
 
-        // Get current sequence number
         let client = JsonRpcClientWrapper::new(self.host);
-        let sequence_number = client.sequence_number(self.owner_account)?;
+        let sequence_number = client.sequence_number(owner_account)?;
 
-        // Update validator or full node address accordingly
-        let mut validator_config = client.validator_config(self.owner_account)?;
-        if let Some(validator_address) = self.validator_address {
-            let validator_address = validator_address.append_prod_protos(
-                validator_config.validator_network_identity_public_key,
-                HANDSHAKE_VERSION,
-            );
-            validator_config.validator_network_address = encode_validator_address(
-                validator_address,
-                &self.owner_account,
-                sequence_number,
+        // Retrieve the current validator / fullnode addresses and update accordingly
+        let validator_config = client.validator_config(owner_account)?;
+        let validator_address = if let Some(validator_address) = self.validator_address {
+            validator_address
+        } else {
+            decode_validator_address(
+                validator_config.validator_network_address,
+                &owner_account,
                 &TEST_SHARED_VAL_NETADDR_KEY,
-                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                idx_addr,
+                0, // addr_idx
             )?
         };
 
-        if let Some(fullnode_address) = self.fullnode_address {
-            let fullnode_address = fullnode_address.append_prod_protos(
-                validator_config.full_node_network_identity_public_key,
-                HANDSHAKE_VERSION,
-            );
-            validator_config.full_node_network_address = encode_address(fullnode_address)?;
+        let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
+            fullnode_address
+        } else {
+            decode_address(validator_config.full_node_network_address)?
         };
 
-        // Submit the transaction with a reconfigure
-        update_config_and_reconfigure(
-            storage_name,
-            &self.validator_backend.validator_backend,
-            &client,
-            self.owner_account,
-            self.chain_id,
+        let txn = self.validator_config.build_transaction(
             sequence_number,
-            validator_config,
-        )
+            fullnode_address,
+            validator_address,
+            true,
+        )?;
+        client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
     }
 }
 
 #[derive(Debug, StructOpt)]
 pub struct RotateValidatorNetworkKey {
-    #[structopt(long, help = "Chain Id representing the chain (one byte)")]
-    chain_id: u8,
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
     host: String,
-    #[structopt(long, help = "Owner account address")]
-    owner_account: AccountAddress,
     #[structopt(flatten)]
-    validator_backend: ValidatorBackend,
+    validator_config: libra_management::validator_config::ValidatorConfig,
 }
 
 impl RotateValidatorNetworkKey {
     pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        let idx_addr = 0;
-        let storage_name = self.validator_backend.name();
-
-        // Get current sequence number
-        let client = JsonRpcClientWrapper::new(self.host);
-
-        // TODO: This should be in a single call for both validator config and sequence number
-        let sequence_number = client.sequence_number(self.owner_account)?;
-
-        let mut validator_config = client.validator_config(self.owner_account)?;
-        let mut validator_address = decode_validator_address(
-            validator_config.validator_network_address,
-            &self.owner_account,
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            idx_addr,
-        )?;
-
         let mut storage = StorageWrapper::new(
-            self.validator_backend.name(),
-            &self.validator_backend.validator_backend,
+            self.validator_config.validator_backend.name(),
+            &self.validator_config.validator_backend.validator_backend,
         )?;
+        let key = storage.rotate_key(VALIDATOR_NETWORK_KEY)?;
+        let key = StorageWrapper::x25519(key)?;
 
-        // Rotate key in storage and network address
-        let new_validator_network_key = storage.rotate_key(VALIDATOR_NETWORK_KEY)?;
-        let new_validator_network_key = StorageWrapper::x25519(new_validator_network_key)?;
-        validator_address.rotate_noise_public_key(
-            &validator_config.validator_network_identity_public_key,
-            &new_validator_network_key,
-        );
-        let raw_enc_validator_address = encode_validator_address(
-            validator_address,
-            &self.owner_account,
-            sequence_number,
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            idx_addr,
-        )?;
-        validator_config.validator_network_identity_public_key = new_validator_network_key;
-        validator_config.validator_network_address = raw_enc_validator_address;
+        let set_validator_config = SetValidatorConfig {
+            host: self.host,
+            validator_config: self.validator_config,
+            validator_address: None,
+            fullnode_address: None,
+        };
 
-        // Submit the transaction with a reconfigure
-        let transaction_context = update_config_and_reconfigure(
-            storage_name,
-            &self.validator_backend.validator_backend,
-            &client,
-            self.owner_account,
-            self.chain_id,
-            sequence_number,
-            validator_config,
-        )?;
-
-        Ok((transaction_context, new_validator_network_key))
+        set_validator_config.execute().map(|txn_ctx| (txn_ctx, key))
     }
+}
+
+fn decode_validator_address(
+    address: RawEncNetworkAddress,
+    account: &AccountAddress,
+    key: &Key,
+    addr_idx: u32,
+) -> Result<NetworkAddress, Error> {
+    let enc_addr = EncNetworkAddress::try_from(&address).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decode network address {}",
+            e.to_string()
+        ))
+    })?;
+    let raw_addr = enc_addr.decrypt(key, account, addr_idx).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decrypt network address {}",
+            e.to_string()
+        ))
+    })?;
+    decode_address(raw_addr)
+}
+
+fn decode_address(raw_address: RawNetworkAddress) -> Result<NetworkAddress, Error> {
+    let network_address = NetworkAddress::try_from(&raw_address).map_err(|e| {
+        Error::UnexpectedError(format!(
+            "Failed to decode network address {}",
+            e.to_string()
+        ))
+    })?;
+    let protocols = network_address
+        .as_slice()
+        .iter()
+        .filter(|protocol| match protocol {
+            Protocol::Dns(_)
+            | Protocol::Dns4(_)
+            | Protocol::Dns6(_)
+            | Protocol::Ip4(_)
+            | Protocol::Ip6(_)
+            | Protocol::Memory(_)
+            | Protocol::Tcp(_) => true,
+            _ => false,
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    Ok(NetworkAddress::try_from(protocols).unwrap())
 }

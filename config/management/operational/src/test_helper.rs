@@ -24,7 +24,6 @@ impl OperationalTool {
 
     pub fn set_validator_config(
         &self,
-        owner_account: AccountAddress,
         validator_address: Option<NetworkAddress>,
         fullnode_address: Option<NetworkAddress>,
     ) -> Result<TransactionContext, Error> {
@@ -35,11 +34,9 @@ impl OperationalTool {
                 {validator_address}
                 --chain-id {chain_id}
                 --host {host}
-                --owner-account {owner_account}
             ",
             command = command(TOOL_NAME, CommandName::SetValidatorConfig),
             host = self.host,
-            owner_account = owner_account,
             chain_id = self.chain_id.id(),
             fullnode_address = optional_arg("fullnode-address", fullnode_address),
             validator_address = optional_arg("validator-address", validator_address),
@@ -51,19 +48,16 @@ impl OperationalTool {
 
     pub fn rotate_validator_network_key(
         &self,
-        owner_account: AccountAddress,
         backend: &config::SecureBackend,
     ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
         let args = format!(
             "
                 {command}
-                --owner-account {owner_account}
                 --chain-id {chain_id}
                 --host {host}
                 --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::RotateValidatorNetworkKey),
-            owner_account = owner_account,
             host = self.host,
             chain_id = self.chain_id.id(),
             backend_args = backend_args(backend)?,
