@@ -43,3 +43,9 @@ compile_error!(
     "no dalek arithmetic backend cargo feature enabled! \
      please enable one of: fiat, vanilla"
 );
+
+#[cfg(all(feature = "fiat", feature = "vanilla"))]
+compile_error!(
+    "at most one dalek arithmetic backend cargo feature should be enabled! \
+     please enable one of: fiat, vanilla"
+);
