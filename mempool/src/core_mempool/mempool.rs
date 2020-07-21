@@ -18,7 +18,7 @@ use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},
-    transaction::SignedTransaction,
+    transaction::{GovernanceRole, SignedTransaction},
 };
 use std::{
     cmp::max,
@@ -116,7 +116,7 @@ impl Mempool {
         rankin_score: u64,
         db_sequence_number: u64,
         timeline_state: TimelineState,
-        is_governance_txn: bool,
+        governance_role: GovernanceRole,
     ) -> MempoolStatus {
         trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
@@ -155,7 +155,7 @@ impl Mempool {
             gas_amount,
             rankin_score,
             timeline_state,
-            is_governance_txn,
+            governance_role,
         );
 
         let status = self.transactions.insert(txn_info, sequence_number);

@@ -11,7 +11,8 @@ use libra_types::{
     account_config::{self, RoleId},
     on_chain_config::{LibraVersion, VMConfig},
     transaction::{
-        SignatureCheckedTransaction, SignedTransaction, TransactionPayload, VMValidatorResult,
+        GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
+        VMValidatorResult,
     },
     vm_status::{convert_prologue_runtime_error, StatusCode, VMStatus},
 };
@@ -22,10 +23,6 @@ use move_core_types::{
 };
 
 use move_vm_types::gas_schedule::CostStrategy;
-
-/// Any transation sent from an account with a role id below this cutoff will be priorited over
-/// other transactions.
-const PRIORITIZED_TRANSACTION_ROLE_CUTOFF: u64 = 5;
 
 #[derive(Clone)]
 pub struct LibraVMValidator(LibraVMImpl);
@@ -107,7 +104,7 @@ impl VMValidator for LibraVMValidator {
                     return VMValidatorResult::new(
                         Some(StatusCode::INVALID_GAS_SPECIFIER),
                         gas_price,
-                        false,
+                        GovernanceRole::NonGovernanceRole,
                     )
                 }
             };
@@ -116,14 +113,24 @@ impl VMValidator for LibraVMValidator {
         let signature_verified_txn = if let Ok(t) = transaction.check_signature() {
             t
         } else {
-            return VMValidatorResult::new(Some(StatusCode::INVALID_SIGNATURE), gas_price, false);
+            return VMValidatorResult::new(
+                Some(StatusCode::INVALID_SIGNATURE),
+                gas_price,
+                GovernanceRole::NonGovernanceRole,
+            );
         };
 
-        let is_prioritized_txn = is_prioritized_txn(txn_sender, &data_cache);
+        let account_role = get_account_role(txn_sender, &data_cache);
         let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
         {
             Ok(price) => price,
-            Err(err) => return VMValidatorResult::new(Some(err.status_code()), gas_price, false),
+            Err(err) => {
+                return VMValidatorResult::new(
+                    Some(err.status_code()),
+                    gas_price,
+                    GovernanceRole::NonGovernanceRole,
+                )
+            }
         };
 
         let res = match self.verify_transaction_impl(
@@ -153,19 +160,19 @@ impl VMValidator for LibraVMValidator {
         VMValidatorResult::new(
             res.map(|s| s.status_code()),
             normalized_gas_price,
-            is_prioritized_txn,
+            account_role,
         )
     }
 }
 
-fn is_prioritized_txn(sender: AccountAddress, remote_cache: &StateViewCache) -> bool {
+fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> GovernanceRole {
     let role_access_path = create_access_path(sender, RoleId::struct_tag());
     if let Ok(Some(blob)) = remote_cache.get(&role_access_path) {
         return lcs::from_bytes::<account_config::RoleId>(&blob)
-            .map(|role_id| role_id.role_id() < PRIORITIZED_TRANSACTION_ROLE_CUTOFF)
-            .unwrap_or(false);
+            .map(|role_id| GovernanceRole::from_role_id(role_id.role_id()))
+            .unwrap_or(GovernanceRole::NonGovernanceRole);
     }
-    false
+    GovernanceRole::NonGovernanceRole
 }
 
 fn normalize_gas_price(

@@ -6,7 +6,7 @@ use crate::{
     account_config::LBR_NAME,
     chain_id::ChainId,
     transaction::{
-        RawTransaction, Script, SignedTransaction, Transaction, TransactionInfo,
+        GovernanceRole, RawTransaction, Script, SignedTransaction, Transaction, TransactionInfo,
         TransactionListWithProof, TransactionPayload, TransactionWithProof,
     },
 };
@@ -36,6 +36,22 @@ fn test_invalid_signature() {
     );
     txn.check_signature()
         .expect_err("signature checking should fail");
+}
+
+#[test]
+fn test_role_ordering() {
+    use GovernanceRole::*;
+    assert!(LibraRoot.priority() > TreasuryCompliance.priority());
+    assert!(LibraRoot.priority() > Validator.priority());
+    assert!(LibraRoot.priority() > ValidatorOperator.priority());
+    assert!(LibraRoot.priority() > DesignatedDealer.priority());
+
+    assert!(TreasuryCompliance.priority() > Validator.priority());
+    assert!(TreasuryCompliance.priority() > ValidatorOperator.priority());
+    assert!(TreasuryCompliance.priority() > DesignatedDealer.priority());
+
+    assert!(Validator.priority() == ValidatorOperator.priority());
+    assert!(Validator.priority() == DesignatedDealer.priority());
 }
 
 proptest! {

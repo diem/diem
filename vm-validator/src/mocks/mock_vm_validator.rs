@@ -7,7 +7,7 @@ use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     on_chain_config::OnChainConfigPayload,
-    transaction::{SignedTransaction, VMValidatorResult},
+    transaction::{GovernanceRole, SignedTransaction, VMValidatorResult},
     vm_status::StatusCode,
 };
 use libra_vm::VMValidator;
@@ -22,7 +22,7 @@ impl VMValidator for MockVMValidator {
         _transaction: SignedTransaction,
         _state_view: &dyn StateView,
     ) -> VMValidatorResult {
-        VMValidatorResult::new(None, 0, false)
+        VMValidatorResult::new(None, 0, GovernanceRole::NonGovernanceRole)
     }
 }
 
@@ -35,7 +35,7 @@ impl TransactionValidation for MockVMValidator {
                 return Ok(VMValidatorResult::new(
                     Some(StatusCode::INVALID_SIGNATURE),
                     0,
-                    false,
+                    GovernanceRole::NonGovernanceRole,
                 ))
             }
         };
@@ -70,7 +70,11 @@ impl TransactionValidation for MockVMValidator {
         } else {
             None
         };
-        Ok(VMValidatorResult::new(ret, 0, false))
+        Ok(VMValidatorResult::new(
+            ret,
+            0,
+            GovernanceRole::NonGovernanceRole,
+        ))
     }
 
     fn restart(&mut self, _config: OnChainConfigPayload) -> Result<()> {

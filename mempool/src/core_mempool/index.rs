@@ -3,7 +3,7 @@
 
 /// This module provides various indexes used by Mempool
 use crate::core_mempool::transaction::{MempoolTransaction, TimelineState};
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, transaction::GovernanceRole};
 use std::{
     cmp::Ordering,
     collections::{btree_set::Iter, BTreeMap, BTreeSet},
@@ -53,7 +53,7 @@ impl PriorityIndex {
             expiration_time: txn.expiration_time,
             address: txn.get_sender(),
             sequence_number: txn.get_sequence_number(),
-            is_governance_txn: txn.is_governance_txn,
+            governance_role: txn.governance_role,
         }
     }
 
@@ -73,7 +73,7 @@ pub struct OrderedQueueKey {
     pub expiration_time: Duration,
     pub address: AccountAddress,
     pub sequence_number: u64,
-    pub is_governance_txn: bool,
+    pub governance_role: GovernanceRole,
 }
 
 impl PartialOrd for OrderedQueueKey {
@@ -84,7 +84,11 @@ impl PartialOrd for OrderedQueueKey {
 
 impl Ord for OrderedQueueKey {
     fn cmp(&self, other: &OrderedQueueKey) -> Ordering {
-        match self.is_governance_txn.cmp(&other.is_governance_txn) {
+        match self
+            .governance_role
+            .priority()
+            .cmp(&other.governance_role.priority())
+        {
             Ordering::Equal => {}
             ordering => return ordering,
         }
