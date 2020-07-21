@@ -30,10 +30,14 @@ fn end_to_end() {
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
+    let latest_tree_state = src_db.get_latest_tree_state().unwrap();
+    let version = latest_tree_state.num_transactions - 1;
+    let state_root_hash = latest_tree_state.account_state_root_hash;
+
     let port = get_available_port();
     let mut rt = start_backup_service(port, src_db);
     let client = Arc::new(BackupServiceClient::new(port));
-    let (version, state_root_hash) = rt.block_on(client.get_latest_state_root()).unwrap();
+
     let manifest_handle = rt
         .block_on(
             StateSnapshotBackupController::new(
