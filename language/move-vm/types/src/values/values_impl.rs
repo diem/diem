@@ -318,7 +318,7 @@ impl ValueImpl {
                 | (SignatureToken::U128, Container::VecU128(_))
                 | (SignatureToken::Address, Container::VecAddress(_)) => true,
                 (SignatureToken::Vector(inner), Container::VecC(values)) => {
-                    if !inner.is_constant() {
+                    if !inner.is_valid_for_constant() {
                         return false;
                     }
                     for value in &*values.borrow() {
@@ -1250,7 +1250,7 @@ impl Value {
                 );
             }
             _ => {
-                if !inner.is_constant() {
+                if !inner.is_valid_for_constant() {
                     return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                         .with_message("nested vector can only be constants".to_string()));
                 }

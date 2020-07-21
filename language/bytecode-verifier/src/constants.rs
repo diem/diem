@@ -40,7 +40,7 @@ fn verify_constant(idx: usize, constant: &Constant) -> PartialVMResult<()> {
 }
 
 fn verify_constant_type(idx: usize, type_: &SignatureToken) -> PartialVMResult<()> {
-    if type_.is_constant() {
+    if type_.is_valid_for_constant() {
         Ok(())
     } else {
         Err(verification_error(

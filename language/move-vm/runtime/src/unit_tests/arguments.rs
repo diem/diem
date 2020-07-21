@@ -22,6 +22,8 @@ use vm::{
     },
 };
 
+// make a script with a given signature for main. The main just return, cannot
+// pass resources or the verifier will fail as being still on the stack (args)
 fn make_script(signature: Signature) -> Vec<u8> {
     let mut blob = vec![];
     CompiledScriptMut {
@@ -49,6 +51,11 @@ fn make_script(signature: Signature) -> Vec<u8> {
     blob
 }
 
+// make a script with a given signature for main. The main just return; cannot
+// define resources in signature or the verifier will fail with resource not being consumed.
+// The script has an imported struct that can be used in main's signature.
+// Dependencies check happens after main signature check, so we should expect
+// a signature check error.
 fn make_script_with_imports(signature: Signature) -> Vec<u8> {
     let mut blob = vec![];
     CompiledScriptMut {
@@ -87,39 +94,19 @@ fn make_script_with_imports(signature: Signature) -> Vec<u8> {
     blob
 }
 
-struct RemoteStore {}
-
-impl RemoteCache for RemoteStore {
-    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
-        Ok(None)
-    }
-
-    fn get_resource(
-        &self,
-        _address: &AccountAddress,
-        _tag: &TypeTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        Ok(None)
-    }
-}
-
-fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
-    let move_vm = MoveVM::new();
-    let remote_view = RemoteStore {};
-    let mut session = move_vm.new_session(&remote_view);
-    let cost_table = zero_cost_schedule();
-    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
-    session.execute_script(
-        script,
-        vec![],
-        args,
-        AccountAddress::random(),
-        &mut cost_strategy,
-    )
-}
-
-fn make_script_with_signer(signature: Signature) -> Vec<u8> {
+// make a script with an external function that has the same signature as
+// the main. That allows us to pass resources and make the verifier happy that
+// they are consumed.
+// Dependencies check happens after main signature check, so we should expect
+// a signature check error.
+fn make_script_consuming_args(signature: Signature) -> Vec<u8> {
     let mut blob = vec![];
+    let mut code = vec![];
+    for loc_idx in 0..signature.len() {
+        code.push(Bytecode::MoveLoc(loc_idx as u8));
+        code.push(Bytecode::Call(FunctionHandleIndex(0)));
+    }
+    code.push(Bytecode::Ret);
     CompiledScriptMut {
         module_handles: vec![ModuleHandle {
             address: AddressIdentifierIndex(0),
@@ -155,16 +142,43 @@ fn make_script_with_signer(signature: Signature) -> Vec<u8> {
         parameters: SignatureIndex(1),
         code: CodeUnit {
             locals: SignatureIndex(0),
-            code: vec![
-                Bytecode::MoveLoc(0),
-                Bytecode::Call(FunctionHandleIndex(0)),
-                Bytecode::Ret,
-            ],
+            code,
         },
     }
     .serialize(&mut blob)
     .expect("script must serialize");
     blob
+}
+
+struct RemoteStore {}
+
+impl RemoteCache for RemoteStore {
+    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+        Ok(None)
+    }
+
+    fn get_resource(
+        &self,
+        _address: &AccountAddress,
+        _tag: &TypeTag,
+    ) -> PartialVMResult<Option<Vec<u8>>> {
+        Ok(None)
+    }
+}
+
+fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
+    let move_vm = MoveVM::new();
+    let remote_view = RemoteStore {};
+    let mut session = move_vm.new_session(&remote_view);
+    let cost_table = zero_cost_schedule();
+    let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
+    session.execute_script(
+        script,
+        vec![],
+        args,
+        AccountAddress::random(),
+        &mut cost_strategy,
+    )
 }
 
 #[test]
@@ -259,8 +273,8 @@ fn check_main_signature() {
             .major_status(),
         StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
     );
-    // `Signer` in signature
-    let script = make_script_with_signer(Signature(vec![SignatureToken::Signer]));
+    // `Signer` in signature (not `&Signer`)
+    let script = make_script_consuming_args(Signature(vec![SignatureToken::Signer]));
     assert_eq!(
         call_script(script, vec![Value::u128(0)])
             .err()
@@ -269,7 +283,7 @@ fn check_main_signature() {
         StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
     );
     // vector of `Signer` in signature
-    let script = make_script_with_signer(Signature(vec![SignatureToken::Vector(Box::new(
+    let script = make_script_consuming_args(Signature(vec![SignatureToken::Vector(Box::new(
         SignatureToken::Signer,
     ))]));
     assert_eq!(
@@ -300,7 +314,7 @@ fn check_main_signature() {
     let script = make_script(Signature(vec![SignatureToken::Vector(Box::new(
         SignatureToken::Bool,
     ))]));
-    call_script(script, vec![Value::vector_bool(vec![true, false])]).expect("good signature");
+    call_script(script, vec![Value::vector_bool(vec![true, false])]).expect("vector<bool> is good");
     let script = make_script(Signature(vec![
         SignatureToken::Bool,
         SignatureToken::Vector(Box::new(SignatureToken::U8)),
@@ -314,7 +328,7 @@ fn check_main_signature() {
             Value::address(AccountAddress::random()),
         ],
     )
-    .expect("good signature");
+    .expect("vector<u8> is good");
     // signer ref
     let script = make_script(Signature(vec![
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
@@ -325,7 +339,7 @@ fn check_main_signature() {
         script,
         vec![Value::bool(false), Value::address(AccountAddress::random())],
     )
-    .expect("good signature");
+    .expect("&Signer first argument is good");
     let script = make_script(Signature(vec![
         SignatureToken::Bool,
         SignatureToken::Vector(Box::new(SignatureToken::U8)),
@@ -350,12 +364,12 @@ fn check_main_signature() {
         addresses,
         &SignatureToken::Vector(Box::new(SignatureToken::Address)),
     )
-    .expect("build vector<vector<address>>");
+    .expect("vector<vector<address>> can be built");
     call_script(
         script,
         vec![Value::bool(true), Value::vector_u8(vec![0, 1]), values],
     )
-    .expect("good signature");
+    .expect("vector<vector<address>> is good");
 }
 
 #[test]
@@ -364,17 +378,23 @@ fn check_constant_args() {
     // Simple arguments
     //
 
-    // error: wrong arg
+    // U128 arg, success
     let script = make_script(Signature(vec![SignatureToken::U128]));
-    call_script(script, vec![Value::u128(0)]).expect("good u128 failed");
+    call_script(script, vec![Value::u128(0)]).expect("u128 is good");
 
-    // error: no args
+    // error: no args - missing arg comes as type mismatch
     let script = make_script(Signature(vec![SignatureToken::U64]));
-    call_script(script, vec![]).expect_err("missing arguments");
+    assert_eq!(
+        call_script(script, vec![]).err().unwrap().major_status(),
+        StatusCode::TYPE_MISMATCH,
+    );
 
-    // error: too many args
+    // error: too many args - too many args comes as type mismatch
     let script = make_script(Signature(vec![SignatureToken::Bool]));
-    call_script(script, vec![Value::bool(true), Value::u8(0)]).expect_err("too many arguments");
+    assert_eq!(
+        call_script(script, vec![]).err().unwrap().major_status(),
+        StatusCode::TYPE_MISMATCH,
+    );
 
     //
     // Vector arguments
@@ -386,13 +406,13 @@ fn check_constant_args() {
     ))]));
     // empty vector
     call_script(script.clone(), vec![Value::vector_address(vec![])])
-        .expect("good vector<address> failed");
+        .expect("empty vector<address> is good");
     // one elem vector
     call_script(
         script.clone(),
         vec![Value::vector_address(vec![AccountAddress::random()])],
     )
-    .expect("good vector<address> failed");
+    .expect("vector<address> is good");
     // multiple elems vector
     call_script(
         script.clone(),
@@ -404,12 +424,23 @@ fn check_constant_args() {
             AccountAddress::random(),
         ])],
     )
-    .expect("good vector<address> failed");
-    // wrong vector
-    call_script(script.clone(), vec![Value::vector_bool(vec![true])])
-        .expect_err("bad vector<address>");
-    // bad arg
-    call_script(script, vec![Value::u128(12)]).expect_err("bad argument");
+    .expect("multiple vector<address> is good");
+    // wrong vector vector<bool> passed for vector<address>
+    assert_eq!(
+        call_script(script.clone(), vec![Value::vector_bool(vec![true])])
+            .err()
+            .unwrap()
+            .major_status(),
+        StatusCode::TYPE_MISMATCH,
+    );
+    // wrong U128 passed for vector<address>
+    assert_eq!(
+        call_script(script, vec![Value::u128(12)])
+            .err()
+            .unwrap()
+            .major_status(),
+        StatusCode::TYPE_MISMATCH,
+    );
 
     // vector of vector
     let script = make_script(Signature(vec![SignatureToken::Vector(Box::new(
@@ -421,7 +452,7 @@ fn check_constant_args() {
         &SignatureToken::Vector(Box::new(SignatureToken::U8)),
     )
     .expect("create vector of vector");
-    call_script(script.clone(), vec![arg]).expect("good empty vector<vector<u8>>");
+    call_script(script.clone(), vec![arg]).expect("empty vector<vector<u8>> is good");
     // multiple elements vector
     let inner = vec![
         Value::vector_u8(vec![0, 1]),
@@ -433,7 +464,13 @@ fn check_constant_args() {
         &SignatureToken::Vector(Box::new(SignatureToken::U8)),
     )
     .expect("create vector of vector");
-    call_script(script.clone(), vec![arg]).expect("good vector<vector<u8>>");
-    // bad arg
-    call_script(script, vec![Value::u8(12)]).expect_err("bad argument");
+    call_script(script.clone(), vec![arg]).expect("vector<vector<u8>> is good");
+    // wrong U8 passed for vector<U8>
+    assert_eq!(
+        call_script(script, vec![Value::u8(12)])
+            .err()
+            .unwrap()
+            .major_status(),
+        StatusCode::TYPE_MISMATCH,
+    );
 }
