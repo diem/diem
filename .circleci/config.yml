@@ -71,7 +71,7 @@ commands:
             export CARGOFLAGS=$(cat cargo-flags)
             echo 'export CARGOFLAGS='${CARGOFLAGS} >> $BASH_ENV
             # Use nightly version of cargo to access the new feature resolver
-            echo 'export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)' >> $BASH_ENV
+            echo 'export CARGO=$(rustup which cargo --toolchain $RUST_NIGHTLY)' >> $BASH_ENV
             # Turn on the experimental feature resolver in cargo. See:
   install_code_coverage_deps:
     steps:
