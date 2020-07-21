@@ -741,12 +741,12 @@ impl SignatureToken {
 
     /// Returns true if the `SignatureToken` can represent a constant (as in representable in
     /// the constants table).
-    pub fn is_constant(&self) -> bool {
+    pub fn is_valid_for_constant(&self) -> bool {
         use SignatureToken::*;
 
         match self {
             Bool | U8 | U64 | U128 | Address => true,
-            Vector(inner) => inner.is_constant(),
+            Vector(inner) => inner.is_valid_for_constant(),
             Signer
             | Struct(_)
             | StructInstantiation(_, _)

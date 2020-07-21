@@ -59,7 +59,7 @@ fn verify_main_signature_impl(script: &CompiledScript) -> PartialVMResult<()> {
             // &signer is a type that can only be populated by the Move VM. And its value is filled
             // based on the sender of the transaction
             S::Reference(inner) => idx == 0 && matches!(&**inner, S::Signer),
-            _ => arg_type.is_constant(),
+            _ => arg_type.is_valid_for_constant(),
         }
     }
 
