@@ -251,13 +251,13 @@ impl PeerManager {
         if let Some(batch) = sync_state.broadcast_info.sent_batches.remove(&batch_id) {
             // update ACK counter
             counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-                .with_label_values(&[&peer.peer_id().to_string(), &batch_id])
+                .with_label_values(&[&peer.peer_id().to_string()])
                 .dec();
 
             // track broadcast roundtrip latency
             if let Some(rtt) = timestamp.checked_duration_since(batch.timestamp) {
                 counters::SHARED_MEMPOOL_BROADCAST_RTT
-                    .with_label_values(&[&peer.peer_id().to_string(), &batch_id])
+                    .with_label_values(&[&peer.peer_id().to_string()])
                     .observe(rtt.as_secs_f64());
             }
 
