@@ -20,7 +20,7 @@ mod counters;
 mod methods;
 mod runtime;
 
-pub use libra_json_rpc_types::{errors, views};
+pub use libra_json_rpc_types::{errors, response, views};
 
 pub use runtime::{bootstrap, bootstrap_from_config};
 
