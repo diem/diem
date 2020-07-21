@@ -6,7 +6,7 @@ use crate::{
     state_store::StateStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use itertools::zip_eq;
 use libra_crypto::hash::HashValue;
 use libra_jellyfish_merkle::iterator::JellyfishMerkleIterator;
@@ -16,7 +16,8 @@ use libra_types::{
     proof::{SparseMerkleRangeProof, TransactionAccumulatorRangeProof, TransactionInfoWithProof},
     transaction::{Transaction, TransactionInfo, Version},
 };
-use std::sync::Arc;
+use serde::{export::Formatter, Deserialize, Serialize};
+use std::{fmt::Display, sync::Arc};
 
 /// `BackupHandler` provides functionalities for LibraDB data backup.
 #[derive(Clone)]
@@ -103,10 +104,28 @@ impl BackupHandler {
             .get_account_state_range_proof(rightmost_key, version)
     }
 
-    /// Gets the latest version and state root hash.
-    pub fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
-        let (version, txn_info) = self.ledger_store.get_latest_transaction_info()?;
-        Ok((version, txn_info.state_root_hash()))
+    /// Gets the epoch, commited version, and synced version of the DB.
+    pub fn get_db_state(&self) -> Result<Option<DbState>> {
+        self.ledger_store
+            .get_startup_info()?
+            .map(|s| {
+                Ok(DbState {
+                    epoch: s.get_epoch_state().epoch,
+                    committed_version: s
+                        .committed_tree_state
+                        .num_transactions
+                        .checked_sub(1)
+                        .ok_or_else(|| anyhow!("Bootstrapped DB has no transactions."))?,
+                    synced_version: s
+                        .synced_tree_state
+                        .as_ref()
+                        .unwrap_or_else(|| &s.committed_tree_state)
+                        .num_transactions
+                        .checked_sub(1)
+                        .ok_or_else(|| anyhow!("Bootstrapped DB has no transactions."))?,
+                })
+            })
+            .transpose()
     }
 
     /// Gets the proof of the state root at specified version.
@@ -131,5 +150,22 @@ impl BackupHandler {
     ) -> Result<EpochEndingLedgerInfoIter> {
         self.ledger_store
             .get_epoch_ending_ledger_info_iter(start_epoch, end_epoch)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DbState {
+    pub epoch: u64,
+    pub committed_version: Version,
+    pub synced_version: Version,
+}
+
+impl Display for DbState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "epoch: {}, committed_version: {}, synced_version: {}",
+            self.epoch, self.committed_version, self.synced_version,
+        )
     }
 }

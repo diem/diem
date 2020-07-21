@@ -12,7 +12,7 @@ use libra_types::transaction::Version;
 use libradb::backup::backup_handler::BackupHandler;
 use warp::{filters::BoxedFilter, reply::Reply, Filter};
 
-static LATEST_STATE_ROOT: &str = "latest_state_root";
+static DB_STATE: &str = "db_state";
 static STATE_RANGE_PROOF: &str = "state_range_proof";
 static STATE_SNAPSHOT: &str = "state_snapshot";
 static STATE_ROOT_PROOF: &str = "state_root_proof";
@@ -21,10 +21,10 @@ static TRANSACTIONS: &str = "transactions";
 static TRANSACTION_RANGE_PROOF: &str = "transaction_range_proof";
 
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {
-    // GET latest_state_root
+    // GET db_state
     let bh = backup_handler.clone();
-    let latest_state_root = warp::path::end()
-        .map(move || reply_with_lcs_bytes(LATEST_STATE_ROOT, &bh.get_latest_state_root()?))
+    let db_state = warp::path::end()
+        .map(move || reply_with_lcs_bytes(DB_STATE, &bh.get_db_state()?))
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
@@ -112,7 +112,7 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
 
     // Route by endpoint name.
     let routes = warp::any()
-        .and(warp::path(LATEST_STATE_ROOT).and(latest_state_root))
+        .and(warp::path(DB_STATE).and(db_state))
         .or(warp::path(STATE_RANGE_PROOF).and(state_range_proof))
         .or(warp::path(STATE_SNAPSHOT).and(state_snapshot))
         .or(warp::path(STATE_ROOT_PROOF).and(state_root_proof))

@@ -5,6 +5,7 @@ use anyhow::Result;
 use futures::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::transaction::Version;
+use libradb::backup::backup_handler::DbState;
 use structopt::StructOpt;
 use tokio::prelude::*;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
@@ -51,12 +52,9 @@ impl BackupServiceClient {
             .compat())
     }
 
-    pub async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
+    pub async fn get_db_state(&self) -> Result<Option<DbState>> {
         let mut buf = Vec::new();
-        self.get("latest_state_root")
-            .await?
-            .read_to_end(&mut buf)
-            .await?;
+        self.get("db_state").await?.read_to_end(&mut buf).await?;
         Ok(lcs::from_bytes(&buf)?)
     }
 

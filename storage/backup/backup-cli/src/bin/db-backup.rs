@@ -37,10 +37,10 @@ struct OneShotQueryOpt {
     #[structopt(flatten)]
     client: BackupServiceClientOpt,
     #[structopt(
-        long = "latest-version",
-        help = "Queries the latest version of the ledger."
+        long,
+        help = "Queries the latest epoch, committed version and synced version of the DB."
     )]
-    latest_version: bool,
+    db_state: bool,
 }
 
 #[derive(StructOpt)]
@@ -84,9 +84,12 @@ async fn main() -> Result<()> {
         Command::OneShot(one_shot_cmd) => match one_shot_cmd {
             OneShotCommand::Query(opt) => {
                 let client = BackupServiceClient::new_with_opt(opt.client);
-                if opt.latest_version {
-                    let (v, _) = client.get_latest_state_root().await?;
-                    println!("latest-version: {}", v);
+                if opt.db_state {
+                    if let Some(db_state) = client.get_db_state().await? {
+                        println!("{}", db_state)
+                    } else {
+                        println!("DB not bootstrapped.")
+                    }
                 }
             }
             OneShotCommand::Backup(opt) => {
