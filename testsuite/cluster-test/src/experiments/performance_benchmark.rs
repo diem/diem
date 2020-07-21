@@ -94,6 +94,11 @@ impl PerformanceBenchmarkParams {
             backup: false,
         }
     }
+
+    pub fn enable_db_backup(mut self) -> Self {
+        self.backup = true;
+        self
+    }
 }
 
 impl ExperimentParam for PerformanceBenchmarkParams {
