@@ -14,7 +14,10 @@ use libra_config::{
     config::{NetworkConfig, NodeConfig},
     network_id::{NetworkId, NodeNetworkId},
 };
-use libra_types::{mempool_status::MempoolStatusCode, transaction::SignedTransaction};
+use libra_types::{
+    mempool_status::MempoolStatusCode,
+    transaction::{GovernanceRole, SignedTransaction},
+};
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
@@ -123,7 +126,7 @@ impl MockSharedMempool {
                         txn.gas_unit_price(),
                         0,
                         TimelineState::NotReady,
-                        false,
+                        GovernanceRole::NonGovernanceRole,
                     )
                     .code
                     != MempoolStatusCode::Accepted

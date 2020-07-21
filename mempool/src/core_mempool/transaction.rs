@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{GovernanceRole, SignedTransaction},
+};
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -12,7 +15,7 @@ pub struct MempoolTransaction {
     pub gas_amount: u64,
     pub ranking_score: u64,
     pub timeline_state: TimelineState,
-    pub is_governance_txn: bool,
+    pub governance_role: GovernanceRole,
 }
 
 impl MempoolTransaction {
@@ -22,7 +25,7 @@ impl MempoolTransaction {
         gas_amount: u64,
         ranking_score: u64,
         timeline_state: TimelineState,
-        is_governance_txn: bool,
+        governance_role: GovernanceRole,
     ) -> Self {
         Self {
             txn,
@@ -30,7 +33,7 @@ impl MempoolTransaction {
             ranking_score,
             expiration_time,
             timeline_state,
-            is_governance_txn,
+            governance_role,
         }
     }
     pub(crate) fn get_sequence_number(&self) -> u64 {

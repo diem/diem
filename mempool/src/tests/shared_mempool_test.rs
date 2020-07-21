@@ -25,7 +25,10 @@ use libra_config::{
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
 use libra_network_address::NetworkAddress;
-use libra_types::{transaction::SignedTransaction, PeerId};
+use libra_types::{
+    transaction::{GovernanceRole, SignedTransaction},
+    PeerId,
+};
 use netcore::transport::ConnectionOrigin;
 use network::{
     peer_manager::{
@@ -263,7 +266,7 @@ impl SharedMempoolNetwork {
                 transaction.gas_unit_price(),
                 0,
                 TimelineState::NotReady,
-                false,
+                GovernanceRole::NonGovernanceRole,
             );
         }
     }

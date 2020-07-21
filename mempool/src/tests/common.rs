@@ -10,7 +10,7 @@ use libra_types::{
     account_config::LBR_NAME,
     chain_id::ChainId,
     mempool_status::MempoolStatusCode,
-    transaction::{RawTransaction, Script, SignedTransaction},
+    transaction::{GovernanceRole, RawTransaction, Script, SignedTransaction},
 };
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
@@ -37,7 +37,7 @@ pub struct TestTransaction {
     pub(crate) address: usize,
     pub(crate) sequence_number: u64,
     pub(crate) gas_price: u64,
-    pub(crate) is_governance_txn: bool,
+    pub(crate) governance_role: GovernanceRole,
 }
 
 impl TestTransaction {
@@ -46,7 +46,7 @@ impl TestTransaction {
             address,
             sequence_number,
             gas_price,
-            is_governance_txn: false,
+            governance_role: GovernanceRole::NonGovernanceRole,
         }
     }
 
@@ -112,7 +112,7 @@ pub(crate) fn add_txns_to_mempool(
             txn.gas_unit_price(),
             0,
             TimelineState::NotReady,
-            transaction.is_governance_txn,
+            transaction.governance_role,
         );
         transactions.push(txn);
     }
@@ -131,7 +131,7 @@ pub(crate) fn add_signed_txn(pool: &mut CoreMempool, transaction: SignedTransact
             transaction.gas_unit_price(),
             0,
             TimelineState::NotReady,
-            false,
+            GovernanceRole::NonGovernanceRole,
         )
         .code
     {

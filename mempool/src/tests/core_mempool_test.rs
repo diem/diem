@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use libra_config::config::NodeConfig;
-use libra_types::transaction::SignedTransaction;
+use libra_types::transaction::{GovernanceRole, SignedTransaction};
 use std::{
     collections::HashSet,
     time::{Duration, SystemTime},
@@ -67,41 +67,57 @@ fn test_transaction_ordering() {
 
 #[test]
 fn test_ordering_of_governance_transactions() {
-    let (mut pool, mut consensus) = setup_mempool();
+    let gov_roles = vec![
+        GovernanceRole::LibraRoot,
+        GovernanceRole::TreasuryCompliance,
+        GovernanceRole::Validator,
+        GovernanceRole::ValidatorOperator,
+        GovernanceRole::DesignatedDealer,
+    ];
 
-    let txn1 = TestTransaction::new(0, 0, 100);
-    let txn2 = TestTransaction::new(1, 0, 200);
-    let mut gov_txn1 = TestTransaction::new(2, 0, 2);
-    let mut gov_txn2 = TestTransaction::new(3, 0, 1);
-    gov_txn1.is_governance_txn = true;
-    gov_txn2.is_governance_txn = true;
+    for role1 in &gov_roles {
+        for role2 in &gov_roles {
+            let (mut pool, mut consensus) = setup_mempool();
+            let txn1 = TestTransaction::new(0, 0, 100);
+            let txn2 = TestTransaction::new(1, 0, 200);
+            let mut gov_txn1 = TestTransaction::new(2, 0, 2);
+            let mut gov_txn2 = TestTransaction::new(3, 0, 1);
+            gov_txn1.governance_role = *role1;
+            gov_txn2.governance_role = *role2;
 
-    let _ = add_txns_to_mempool(
-        &mut pool,
-        vec![
-            txn1.clone(),
-            txn2.clone(),
-            gov_txn1.clone(),
-            gov_txn2.clone(),
-        ],
-    );
+            let _ = add_txns_to_mempool(
+                &mut pool,
+                vec![
+                    txn1.clone(),
+                    txn2.clone(),
+                    gov_txn1.clone(),
+                    gov_txn2.clone(),
+                ],
+            );
 
-    assert_eq!(
-        consensus.get_block(&mut pool, 1),
-        vec!(gov_txn1.make_signed_transaction())
-    );
-    assert_eq!(
-        consensus.get_block(&mut pool, 1),
-        vec!(gov_txn2.make_signed_transaction())
-    );
-    assert_eq!(
-        consensus.get_block(&mut pool, 1),
-        vec!(txn2.make_signed_transaction())
-    );
-    assert_eq!(
-        consensus.get_block(&mut pool, 1),
-        vec!(txn1.make_signed_transaction())
-    );
+            // If the first role is "less than" the second then we should swap them since the
+            // second txn should have higher priority.
+            if role1.priority() < role2.priority() {
+                std::mem::swap(&mut gov_txn1, &mut gov_txn2);
+            }
+            assert_eq!(
+                consensus.get_block(&mut pool, 1),
+                vec!(gov_txn1.make_signed_transaction())
+            );
+            assert_eq!(
+                consensus.get_block(&mut pool, 1),
+                vec!(gov_txn2.make_signed_transaction())
+            );
+            assert_eq!(
+                consensus.get_block(&mut pool, 1),
+                vec!(txn2.make_signed_transaction())
+            );
+            assert_eq!(
+                consensus.get_block(&mut pool, 1),
+                vec!(txn1.make_signed_transaction())
+            );
+        }
+    }
 }
 
 #[test]
@@ -374,7 +390,14 @@ fn test_gc_ready_transaction() {
 
     // insert in the middle transaction that's going to be expired
     let txn = TestTransaction::new(1, 1, 1).make_signed_transaction_with_expiration_time(0);
-    pool.add_txn(txn, 0, 1, 0, TimelineState::NotReady, false);
+    pool.add_txn(
+        txn,
+        0,
+        1,
+        0,
+        TimelineState::NotReady,
+        GovernanceRole::NonGovernanceRole,
+    );
 
     // insert few transactions after it
     // They supposed to be ready because there's sequential path from 0 to them
@@ -416,7 +439,7 @@ fn test_clean_stuck_transactions() {
         1,
         db_sequence_number,
         TimelineState::NotReady,
-        false,
+        GovernanceRole::NonGovernanceRole,
     );
     let block = pool.get_block(10, HashSet::new());
     assert_eq!(block.len(), 1);
