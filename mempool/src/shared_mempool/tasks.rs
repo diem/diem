@@ -70,8 +70,8 @@ fn broadcast_single_peer<V>(peer: PeerNetworkId, backoff: bool, smp: &mut Shared
 where
     V: TransactionValidation,
 {
+    // start timer for tracking broadcast latency
     let start_time = Instant::now();
-    // TODO log latency here for broadcast
     let peer_manager = &smp.peer_manager;
 
     let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
