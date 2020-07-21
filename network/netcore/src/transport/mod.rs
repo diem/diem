@@ -15,13 +15,11 @@ use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use serde::Serialize;
-use std::time::Duration;
 
 pub mod and_then;
 pub mod boxed;
 pub mod memory;
 pub mod tcp;
-pub mod timeout;
 
 /// Origin of how a Connection was established.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize)]
@@ -134,17 +132,5 @@ pub trait TransportExt: Transport {
         Fut: Future<Output = Result<O, Self::Error>>,
     {
         and_then::AndThen::new(self, f)
-    }
-
-    /// Wraps a [`Transport`] with a timeout to the
-    /// [Inbound](Transport::Inbound) and [Outbound](Transport::Outbound)
-    /// connection futures.
-    ///
-    /// Note: The timeout does not apply to the [Listener](Transport::Listener) stream.
-    fn with_timeout(self, timeout: Duration) -> timeout::TimeoutTransport<Self>
-    where
-        Self: Sized,
-    {
-        timeout::TimeoutTransport::new(self, timeout)
     }
 }
