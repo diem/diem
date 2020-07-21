@@ -8,6 +8,7 @@ use crate::{
             TimelineIndex,
         },
         transaction::{MempoolTransaction, TimelineState},
+        ttl_cache::TtlCache,
     },
     counters, OP_COUNTERS,
 };
@@ -368,24 +369,44 @@ impl TransactionStore {
     }
 
     /// GC old transactions
-    pub(crate) fn gc_by_system_ttl(&mut self) {
+    pub(crate) fn gc_by_system_ttl(
+        &mut self,
+        metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
+    ) {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("init timestamp failure");
 
-        self.gc(now, true);
+        self.gc(now, true, metrics_cache);
     }
 
     /// GC old transactions based on client-specified expiration time
-    pub(crate) fn gc_by_expiration_time(&mut self, block_time: Duration) {
-        self.gc(block_time, false);
+    pub(crate) fn gc_by_expiration_time(
+        &mut self,
+        block_time: Duration,
+        metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
+    ) {
+        self.gc(block_time, false, metrics_cache);
     }
 
-    fn gc(&mut self, now: Duration, by_system_ttl: bool) {
-        let (index_name, index) = if by_system_ttl {
-            ("gc.system_ttl_index", &mut self.system_ttl_index)
+    fn gc(
+        &mut self,
+        now: Duration,
+        by_system_ttl: bool,
+        metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
+    ) {
+        let (metric_label, index_name, index) = if by_system_ttl {
+            (
+                counters::GC_SYSTEM_TTL_LABEL,
+                "gc.system_ttl_index",
+                &mut self.system_ttl_index,
+            )
         } else {
-            ("gc.expiration_time_index", &mut self.expiration_time_index)
+            (
+                counters::GC_CLIENT_EXP_LABEL,
+                "gc.expiration_time_index",
+                &mut self.expiration_time_index,
+            )
         };
         OP_COUNTERS.inc(index_name);
 
@@ -399,8 +420,21 @@ impl TransactionStore {
                 }
                 if let Some(txn) = txns.remove(&key.sequence_number) {
                     let is_active = self.priority_index.contains(&txn);
-                    let status = if is_active { "active" } else { "parked" };
+                    let status = if is_active {
+                        counters::GC_ACTIVE_TXN_LABEL
+                    } else {
+                        counters::GC_PARKED_TXN_LABEL
+                    };
                     OP_COUNTERS.inc(&format!("{}.{}", index_name, status));
+                    let account = txn.get_sender();
+                    let sequence_number = txn.get_sequence_number();
+                    if let Some(&creation_time) = metrics_cache.get(&(account, sequence_number)) {
+                        if let Ok(time_delta) = SystemTime::now().duration_since(creation_time) {
+                            counters::CORE_MEMPOOL_GC_LATENCY
+                                .with_label_values(&[metric_label, status])
+                                .observe(time_delta.as_secs_f64());
+                        }
+                    }
                     self.index_remove(&txn);
                 }
             }

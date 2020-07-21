@@ -171,7 +171,7 @@ where
             .with_label_values(&[peer_id])
             .observe(txns_ct as f64);
         counters::SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT
-            .with_label_values(&[peer_id, &request_id])
+            .with_label_values(&[peer_id])
             .inc();
         peer_manager.update_peer_broadcast(
             peer,

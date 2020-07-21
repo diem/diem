@@ -14,6 +14,19 @@ pub const SYSTEM_TTL_INDEX_LABEL: &str = "system_ttl";
 pub const TIMELINE_INDEX_LABEL: &str = "timeline";
 pub const PARKING_LOT_INDEX_LABEL: &str = "parking_lot";
 
+// Core mempool commit stages labels
+pub const GET_BLOCK_STAGE_LABEL: &str = "get_block";
+pub const COMMIT_ACCEPTED_LABEL: &str = "commit_accepted";
+pub const COMMIT_REJECTED_LABEL: &str = "commit_rejected";
+
+// Core mempool GC type labels
+pub const GC_SYSTEM_TTL_LABEL: &str = "system_ttl";
+pub const GC_CLIENT_EXP_LABEL: &str = "client_expiration";
+
+// Core mempool GC txn status label
+pub const GC_ACTIVE_TXN_LABEL: &str = "active";
+pub const GC_PARKED_TXN_LABEL: &str = "parked";
+
 // Mempool service request type labels
 pub const GET_BLOCK_LABEL: &str = "get_block";
 pub const COMMIT_STATE_SYNC_LABEL: &str = "commit_accepted";
@@ -39,6 +52,26 @@ pub static CORE_MEMPOOL_INDEX_SIZE: Lazy<IntGaugeVec> = Lazy::new(|| {
         "libra_core_mempool_index_size",
         "Size of a core mempool index",
         &["index"]
+    )
+    .unwrap()
+});
+
+/// Counter tracking latency of txns reaching various stages in committing
+/// (e.g. time from txn entering core mempool to being pulled in consensus block)
+pub static CORE_MEMPOOL_TXN_COMMIT_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_core_mempool_txn_commit_latency",
+        "Latency of txn reaching various stages in core mempool after insertion",
+        &["stage"]
+    )
+    .unwrap()
+});
+
+pub static CORE_MEMPOOL_GC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_core_mempool_gc_latency",
+        "Latency of core mempool garbage collection",
+        &["type", "status"]
     )
     .unwrap()
 });
@@ -108,7 +141,7 @@ pub static SHARED_MEMPOOL_BROADCAST_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_broadcast_latency",
         "Latency of mempool executing broadcast to another peer",
-        &["sender"]
+        &["recipient"]
     )
     .unwrap()
 });
@@ -118,7 +151,7 @@ pub static SHARED_MEMPOOL_BROADCAST_RTT: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_shared_mempool_broadcast_roundtrip_latency",
         "Time elapsed between sending a broadcast and receiving an ACK for that broadcast",
-        &["recipient", "broadcast_id"]
+        &["recipient"]
     )
     .unwrap()
 });
@@ -128,7 +161,7 @@ pub static SHARED_MEMPOOL_PENDING_BROADCASTS_COUNT: Lazy<IntGaugeVec> = Lazy::ne
     register_int_gauge_vec!(
         "libra_shared_mempool_pending_broadcasts_count",
         "Number of mempool broadcasts not ACK'ed for yet",
-        &["recipient", "broadcast_id"]
+        &["recipient"]
     )
     .unwrap()
 });
