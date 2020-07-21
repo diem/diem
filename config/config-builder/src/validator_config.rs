@@ -41,6 +41,7 @@ pub struct ValidatorConfig {
     pub safety_rules_token: Option<String>,
     pub seed: [u8; 32],
     pub template: NodeConfig,
+    pub vault_network_timeout_ms: u64,
 }
 
 impl Default for ValidatorConfig {
@@ -61,6 +62,7 @@ impl Default for ValidatorConfig {
             safety_rules_token: None,
             seed: DEFAULT_SEED,
             template: NodeConfig::default(),
+            vault_network_timeout_ms: 30_000,
         }
     }
 }
@@ -221,6 +223,7 @@ impl ValidatorConfig {
                             .clone(),
                     ),
                     renew_ttl_secs: None,
+                    network_timeout_ms: self.vault_network_timeout_ms,
                 }),
                 _ => return Err(Error::InvalidSafetyRulesBackend(backend.to_string()).into()),
             };

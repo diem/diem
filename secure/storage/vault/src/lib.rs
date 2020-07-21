@@ -22,9 +22,6 @@ use ureq::Response;
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod fuzzing;
 
-/// Request timeout for vault operations
-const TIMEOUT: u64 = 10_000;
-
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
     #[error("Http error: {1}")]
@@ -98,10 +95,16 @@ pub struct Client {
     host: String,
     token: String,
     tls_config: Option<Arc<rustls::ClientConfig>>,
+    network_timeout_ms: u64,
 }
 
 impl Client {
-    pub fn new(host: String, token: String, ca_certificate: Option<String>) -> Self {
+    pub fn new(
+        host: String,
+        token: String,
+        ca_certificate: Option<String>,
+        network_timeout_ms: u64,
+    ) -> Self {
         let tls_config = if let Some(certificate) = ca_certificate {
             let mut tls_config = rustls::ClientConfig::new();
             // First try the certificate as a DER encoded cert, then as a PEM, and then panic.
@@ -120,6 +123,7 @@ impl Client {
             host,
             token,
             tls_config,
+            network_timeout_ms,
         }
     }
 
@@ -352,7 +356,7 @@ impl Client {
     }
 
     fn upgrade_request_without_token(&self, mut request: ureq::Request) -> ureq::Request {
-        request.timeout_connect(TIMEOUT);
+        request.timeout_connect(self.network_timeout_ms);
         if let Some(tls_config) = self.tls_config.as_ref() {
             request.set_tls_config(tls_config.clone());
         }

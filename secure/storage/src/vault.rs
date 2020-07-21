@@ -37,9 +37,10 @@ impl VaultStorage {
         namespace: Option<String>,
         certificate: Option<String>,
         renew_ttl_secs: Option<u32>,
+        network_timeout_ms: u64,
     ) -> Self {
         Self {
-            client: Client::new(host, token, certificate),
+            client: Client::new(host, token, certificate, network_timeout_ms),
             namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),

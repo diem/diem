@@ -5,6 +5,8 @@ use anyhow::Result;
 use libra_config::config::{KeyManagerConfig as KMConfig, SecureBackend, Token, VaultConfig};
 use libra_types::chain_id::ChainId;
 
+const DEFAULT_NETWORK_TIMEOUT_MS: u64 = 30_000;
+
 pub struct KeyManagerConfig {
     pub rotation_period_secs: Option<u64>,
     pub sleep_period_secs: Option<u64>,
@@ -15,6 +17,7 @@ pub struct KeyManagerConfig {
 
     pub vault_host: String,
     pub vault_namespace: Option<String>,
+    pub vault_network_timeout_ms: Option<u64>,
     pub vault_token: String,
 
     pub template: KMConfig,
@@ -31,6 +34,7 @@ impl Default for KeyManagerConfig {
             json_rpc_endpoint: template.json_rpc_endpoint.clone(),
             vault_host: "127.0.0.1:8200".to_string(),
             vault_namespace: None,
+            vault_network_timeout_ms: Some(DEFAULT_NETWORK_TIMEOUT_MS),
             vault_token: "root_token".to_string(),
             template,
         }
@@ -52,6 +56,9 @@ impl KeyManagerConfig {
             server: self.vault_host.clone(),
             token: Token::FromConfig(self.vault_token.clone()),
             renew_ttl_secs: None,
+            network_timeout_ms: self
+                .vault_network_timeout_ms
+                .unwrap_or(DEFAULT_NETWORK_TIMEOUT_MS),
         });
 
         if let Some(rotation_period_secs) = &self.rotation_period_secs {

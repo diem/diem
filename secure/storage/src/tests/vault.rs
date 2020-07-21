@@ -13,6 +13,7 @@ use libra_vault_client::dev::{self, ROOT_TOKEN};
 const VAULT_NAMESPACE_1: &str = "namespace_1";
 const VAULT_NAMESPACE_2: &str = "namespace_2";
 const VAULT_NAMESPACE_3: &str = "namespace_3";
+const VAULT_NETWORK_TIMEOUT_MS: u64 = 5_000;
 
 /// This holds the canonical list of vault storage tests. This is required because vault tests
 /// cannot currently be run in parallel, as each test uses the same vault instance and
@@ -63,7 +64,14 @@ fn test_suite_multiple_namespaces() {
 /// Creates and initializes a VaultStorage instance for testing. If a namespace is specified, the
 /// instance will perform all storage operations under that namespace.
 fn create_vault_with_namespace(namespace: Option<String>) -> VaultStorage {
-    VaultStorage::new(dev::test_host(), ROOT_TOKEN.into(), namespace, None, None)
+    VaultStorage::new(
+        dev::test_host(),
+        ROOT_TOKEN.into(),
+        namespace,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    )
 }
 
 /// Initializes test policies for a VaultStorage instance and checks the instance is
@@ -129,14 +137,28 @@ fn test_vault_key_value_policies() {
     assert_eq!(storage.get::<u64>("full").unwrap().value, 4);
 
     let writer_token = storage.create_token(vec![&writer]).unwrap();
-    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, ttl);
+    let mut writer = VaultStorage::new(
+        dev::test_host(),
+        writer_token,
+        None,
+        None,
+        ttl,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     assert_eq!(writer.get::<u64>("anyone").unwrap().value, 1);
     assert_eq!(writer.get::<u64>("root"), Err(Error::PermissionDenied));
     assert_eq!(writer.get::<u64>("partial").unwrap().value, 3);
     assert_eq!(writer.get::<u64>("full").unwrap().value, 4);
 
     let reader_token = storage.create_token(vec![&reader]).unwrap();
-    let mut reader = VaultStorage::new(dev::test_host(), reader_token, None, None, ttl);
+    let mut reader = VaultStorage::new(
+        dev::test_host(),
+        reader_token,
+        None,
+        None,
+        ttl,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     assert_eq!(reader.get::<u64>("anyone").unwrap().value, 1);
     assert_eq!(reader.get::<u64>("root"), Err(Error::PermissionDenied));
     assert_eq!(reader.get::<u64>("partial").unwrap().value, 3);
@@ -195,7 +217,14 @@ fn test_vault_crypto_policies() {
 
     // Verify exporter policy
     let exporter_token = storage.create_token(vec![&exporter]).unwrap();
-    let mut exporter_store = VaultStorage::new(dev::test_host(), exporter_token, None, None, None);
+    let mut exporter_store = VaultStorage::new(
+        dev::test_host(),
+        exporter_token,
+        None,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     exporter_store.export_private_key(key_name).unwrap();
     exporter_store.get_public_key(key_name).unwrap_err();
     exporter_store.rotate_key(key_name).unwrap_err();
@@ -203,7 +232,15 @@ fn test_vault_crypto_policies() {
 
     // Verify noone policy
     let noone_token = storage.create_token(vec![&noone]).unwrap();
-    let mut noone_store = VaultStorage::new(dev::test_host(), noone_token, None, None, None);
+    let mut noone_store = VaultStorage::new(
+        dev::test_host(),
+        noone_token,
+        None,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
+
     noone_store.export_private_key(key_name).unwrap_err();
     noone_store.get_public_key(key_name).unwrap_err();
     noone_store.rotate_key(key_name).unwrap_err();
@@ -211,7 +248,14 @@ fn test_vault_crypto_policies() {
 
     // Verify reader policy
     let reader_token = storage.create_token(vec![&reader]).unwrap();
-    let mut reader_store = VaultStorage::new(dev::test_host(), reader_token, None, None, None);
+    let mut reader_store = VaultStorage::new(
+        dev::test_host(),
+        reader_token,
+        None,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     reader_store.export_private_key(key_name).unwrap_err();
     assert_eq!(
         reader_store.get_public_key(key_name).unwrap().public_key,
@@ -222,7 +266,14 @@ fn test_vault_crypto_policies() {
 
     // Verify rotater policy
     let rotater_token = storage.create_token(vec![&rotater]).unwrap();
-    let mut rotater_store = VaultStorage::new(dev::test_host(), rotater_token, None, None, None);
+    let mut rotater_store = VaultStorage::new(
+        dev::test_host(),
+        rotater_token,
+        None,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     rotater_store.export_private_key(key_name).unwrap_err();
     assert_eq!(
         rotater_store.get_public_key(key_name).unwrap().public_key,
@@ -235,7 +286,14 @@ fn test_vault_crypto_policies() {
 
     // Verify signer policy
     let signer_token = storage.create_token(vec![&signer]).unwrap();
-    let mut signer_store = VaultStorage::new(dev::test_host(), signer_token, None, None, None);
+    let mut signer_store = VaultStorage::new(
+        dev::test_host(),
+        signer_token,
+        None,
+        None,
+        None,
+        VAULT_NETWORK_TIMEOUT_MS,
+    );
     signer_store.export_private_key(key_name).unwrap_err();
     signer_store.get_public_key(key_name).unwrap_err();
     signer_store.rotate_key(key_name).unwrap_err();

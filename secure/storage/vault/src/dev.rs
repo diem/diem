@@ -41,6 +41,7 @@ pub const ROOT_TOKEN: &str = "root_token";
 pub struct VaultRunner {
     _child: Child,
     host: String,
+    network_timeout_ms: u64,
 }
 
 impl VaultRunner {
@@ -69,6 +70,8 @@ impl VaultRunner {
         Ok(Self {
             _child: child,
             host,
+            // Set a default value of 5 seconds for the network timoeut.
+            network_timeout_ms: 5_000,
         })
     }
 
@@ -119,7 +122,12 @@ impl VaultRunner {
     }
 
     pub fn client(&self) -> Client {
-        Client::new(self.host().to_string(), self.root_token().to_string(), None)
+        Client::new(
+            self.host().to_string(),
+            self.root_token().to_string(),
+            None,
+            self.network_timeout_ms,
+        )
     }
 }
 
@@ -141,7 +149,7 @@ fn run_vault() {
 #[test]
 fn run_test_vault() {
     if let Some(host) = test_host_safe() {
-        Client::new(host, ROOT_TOKEN.to_string(), None)
+        Client::new(host, ROOT_TOKEN.to_string(), None, 5_000)
             .unsealed()
             .unwrap();
     }

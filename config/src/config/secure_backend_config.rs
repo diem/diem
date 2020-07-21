@@ -45,6 +45,8 @@ pub struct VaultConfig {
     /// renewed up to that many seconds more. If this is not specified, the lease will not
     /// automatically be renewed.
     pub renew_ttl_secs: Option<u32>,
+    /// Network Timeout in milliseconds.
+    pub network_timeout_ms: u64,
     /// Vault's URL, note: only HTTP is currently supported.
     pub server: String,
     /// The authorization token for accessing secrets
@@ -170,6 +172,7 @@ impl From<&SecureBackend> for Storage {
                     .as_ref()
                     .map(|_| config.ca_certificate().unwrap()),
                 config.renew_ttl_secs,
+                config.network_timeout_ms,
             )),
         }
     }
@@ -193,6 +196,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                network_timeout_ms: 5_000,
             },
         };
 
@@ -201,6 +205,7 @@ vault:
     server: "127.0.0.1:8200"
     token:
         from_config: "test"
+    network_timeout_ms: 5000
         "#;
 
         let de_from_config: Config = serde_yaml::from_str(text_from_config).unwrap();
@@ -218,6 +223,7 @@ vault:
                 ca_certificate: None,
                 token: Token::FromDisk(PathBuf::from("/token")),
                 renew_ttl_secs: None,
+                network_timeout_ms: 5_000,
             },
         };
 
@@ -226,6 +232,7 @@ vault:
     server: "127.0.0.1:8200"
     token:
         from_disk: "/token"
+    network_timeout_ms: 5000
         "#;
 
         let de_from_disk: Config = serde_yaml::from_str(text_from_disk).unwrap();

@@ -8,6 +8,7 @@ base:
             ca_certificate: "/full/path/to/certificate"
             token:
                 from_disk: "/full/path/to/token"
+            network_timeout_ms: 5000
 
 execution:
     genesis_file_location: "relative/path/to/genesis"
@@ -24,6 +25,7 @@ full_node_networks:
               ca_certificate: "/full/path/to/certificate"
               token:
                   from_disk: "/full/path/to/token"
+              network_timeout_ms: 5000
       network_id: "public"
     - listen_address: "/ip4/0.0.0.0/tcp/7180"
       network_id:

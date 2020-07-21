@@ -11,6 +11,7 @@ use tempfile::NamedTempFile;
 
 const VAULT_HOST: &str = "http://localhost:8200";
 const VAULT_TOKEN: &str = "root_token";
+const VAULT_NETWORK_TIMEOUT_MS: u64 = 5_000;
 
 /// Execute an in order series of blocks (0 <- 1 <- 2 <- 3 and commit 0 and continue to rotate
 /// left, appending new blocks on the right, committing the left most block
@@ -126,6 +127,7 @@ fn vault(n: u64) {
         None,
         None,
         None,
+        VAULT_NETWORK_TIMEOUT_MS,
     );
     storage.reset_and_clear().unwrap();
 
@@ -153,6 +155,7 @@ pub fn benchmark(c: &mut Criterion) {
         None,
         None,
         None,
+        VAULT_NETWORK_TIMEOUT_MS,
     );
 
     let enable_vault = if storage.available().is_err() {

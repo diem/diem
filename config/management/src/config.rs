@@ -177,6 +177,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                network_timeout_ms: 5_000,
             }),
             validator_backend: SecureBackend::Vault(VaultConfig {
                 namespace: None,
@@ -184,6 +185,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                network_timeout_ms: 5_000,
             }),
         };
 
@@ -195,11 +197,13 @@ shared_backend:
     server: "127.0.0.1:8200"
     token:
         from_config: "test"
+    network_timeout_ms: 5000
 validator_backend:
     type: "vault"
     server: "127.0.0.1:8200"
     token:
         from_config: "test"
+    network_timeout_ms: 5000
         "#;
 
         let de_config: Config = serde_yaml::from_str(config_text).unwrap();
