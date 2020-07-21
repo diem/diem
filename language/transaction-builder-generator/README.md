@@ -26,24 +26,29 @@ The tool will also generate and install type definitions for Libra types such as
 In practice, hashing and signing Libra transactions additionally requires a runtime library for Libra Canonical Serialization ("LCS").
 Such a library will be installed together with the Libra types.
 
+
 ## Supported Languages
 
 The following languages are currently supported:
 
-* Python3
+* Python 3
 
-* C++17
+* C++ 17
 
-* Rust
+* Java 8
+
+* Rust (NOTE: Code generation of dependency-free Rust is experimental. Consider using the libraries of the Libra repository instead.)
 
 
 ## Quick Start
 
-From the root of the Libra repository:
+From the root of the Libra repository, run `cargo build -p transaction-builder-generator`.
 
-* Run `cargo build -p transaction-builder-generator`.
+You may browse command line options with `target/debug/generate-transaction-builders --help`.
 
-* To install Python3 modules `serde`, `lcs`, `libra_types`, and `libra_stdlib` into a target directory `$DEST`, run:
+### Python
+
+To install Python3 modules `serde`, `lcs`, `libra_types`, and `libra_stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language python3 \
@@ -52,8 +57,15 @@ target/debug/generate-transaction-builders \
     --target-source-dir "$DEST" \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
+Next, you may copy and execute the [Python demo file](examples/python3/stdlib_demo.py) with:
+```
+cp language/transaction-builder-generator/examples/python3/stdlib_demo.py "$DEST"
+PYTHONPATH="$PYTHONPATH:$DEST" python3 "$DEST/stdlib_demo.py"
+```
 
-* To install C++ files `serde.hpp`, `lcs.hpp`, `libra_types.hpp`, `libra_stdlib.hpp`, `libra_stdlib.cpp` into a target directory `$DEST`, run:
+### C++
+
+To install C++ files `serde.hpp`, `lcs.hpp`, `libra_types.hpp`, `libra_stdlib.hpp`, `libra_stdlib.cpp` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language cpp \
@@ -62,18 +74,16 @@ target/debug/generate-transaction-builders \
     --target-source-dir "$DEST" \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
-
-* To install Rust crates `libra-types` and `libra-stdlib` into a target directory `$DEST`, run:
-```bash
-target/debug/generate-transaction-builders \
-    --language rust \
-    --module-name libra-stdlib \
-    --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
-    --target-source-dir "$DEST" \
-    "language/stdlib/compiled/transaction_scripts/abi"
+Next, you may copy and execute the [C++ demo file](examples/cpp/stdlib_demo.cpp) with:
+```
+cp language/transaction-builder-generator/examples/cpp/stdlib_demo.cpp "$DEST"
+clang++ --std=c++17 -I "$DEST" "$DEST/libra_stdlib.cpp" "$DEST/stdlib_demo.cpp" -o "$DEST/stdlib_demo"
+"$DEST/stdlib_demo"
 ```
 
-* To install Java source packages `com.facebook.serde`, `com.facebook.lcs`, `org.libra.types`, and a class `org.libra.stdlib.Stdlib` into a target directory `$DEST`, run:
+### Java
+
+To install Java source packages `com.facebook.serde`, `com.facebook.lcs`, `org.libra.types`, and a class `org.libra.stdlib.Stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language java \
@@ -82,8 +92,25 @@ target/debug/generate-transaction-builders \
     --target-source-dir "$DEST" \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
+Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.java) with:
+```
+cp language/transaction-builder-generator/examples/java/StdlibDemo.java "$DEST"
+(find "$DEST" -name "*.java" | xargs javac -cp "$DEST")
+java -cp "$DEST" StdlibDemo
+```
 
-More command line options are available with `target/debug/generate-transaction-builders --help`.
+### Rust (experimental)
+
+To install dependency-free Rust crates `libra-types` and `libra-stdlib` into a target directory `$DEST`, run:
+```bash
+target/debug/generate-transaction-builders \
+    --language rust \
+    --module-name libra-stdlib \
+    --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
+    --target-source-dir "$DEST" \
+    "language/stdlib/compiled/transaction_scripts/abi"
+```
+Next, you may copy and execute the [Rust demo file](examples/rust/stdlib_demo.rs). (See [unit test](tests/generation.rs) for details.)
 
 
 ## Adding Support for a New Language
