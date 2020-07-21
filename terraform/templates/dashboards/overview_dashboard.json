@@ -651,7 +651,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool_duration_sum{op='e2e.latency'}[1m])/irate(mempool_duration_count{op='e2e.latency'}[1m])  ",
+          "expr": "irate(libra_core_mempool_txn_commit_latency_sum{stage=~\"commit_accepted|commit_rejected\"}[1m])/irate(libra_core_mempool_txn_commit_latency_count{stage=~\"commit_accepted|commit_rejected\"}[1m])",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -838,7 +838,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(mempool{op=~\"gc.system_ttl_index.active|gc.expiration_time_index.active\"}[1m])",
+          "expr": "irate(libra_core_mempool_gc_latency_count{status=\"active\"}[1m])",
           "format": "time_series",
           "instant": false,
           "interval": "",
