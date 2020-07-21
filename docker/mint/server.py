@@ -68,7 +68,7 @@ def send_transaction():
             "a m {} {} {} use_base_units".format(auth_key, amount, currency_code))
         application.client.expect("Mint request submitted", timeout=2)
 
-        application.client.sendline("a la")
+        application.client.sendline("q as 000000000000000000000000000000dd")
         application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
         application.client.terminate(True)
     except pexpect.exceptions.ExceptionPexpect:
