@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{JsonRpcError, ServerCode},
+    errors::{InvalidArguments, JsonRpcError, ServerCode},
     tests::utils::{test_bootstrap, MockLibraDB},
 };
 use futures::{channel::mpsc::channel, StreamExt};
@@ -15,8 +15,11 @@ use libra_json_rpc_client::{
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
-use libra_json_rpc_types::views::{
-    JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+use libra_json_rpc_types::{
+    response::JsonRpcErrorResponse,
+    views::{
+        JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+    },
 };
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
@@ -160,27 +163,56 @@ fn test_json_rpc_protocol() {
     let request = serde_json::json!({"jsonrpc": "1.0", "method": "add", "params": [1, 2], "id": 1});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
-    assert_eq!(fetch_error(resp), -32600);
+    assert_eq!(error_code(resp), -32600);
 
     // invalid request id
     let request =
         serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": true});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
-    assert_eq!(fetch_error(resp), -32600);
+    assert_eq!(error_code(resp), -32600);
 
     // invalid rpc method
     let request = serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
-    assert_eq!(fetch_error(resp), -32601);
+    assert_eq!(error_code(resp), -32601);
 
-    // invalid arguments
+    // invalid arguments: too many arguments
     let request =
         serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
-    assert_eq!(fetch_error(resp), -32000);
+    let error_resp: JsonRpcErrorResponse = resp.json().unwrap();
+    assert_eq!(error_resp.error.code, -32602);
+    assert_eq!(error_resp.error.message, "Invalid params");
+
+    let invalid_args: InvalidArguments = error_resp.error.as_invalid_arguments().unwrap();
+    assert_eq!(invalid_args.required, 1);
+    assert_eq!(invalid_args.optional, 0);
+    assert_eq!(invalid_args.given, 2);
+
+    // invalid arguments: not enough arguments
+    let request =
+        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [], "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    assert_eq!(resp.status(), 200);
+    assert_eq!(error_code(resp), -32602);
+
+    // invalid arguments: too many arguments for a method has optional arguments
+    let request =
+        serde_json::json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [1, 2], "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    assert_eq!(resp.status(), 200);
+
+    let error_resp: JsonRpcErrorResponse = resp.json().unwrap();
+    assert_eq!(error_resp.error.code, -32602);
+    assert_eq!(error_resp.error.message, "Invalid params");
+
+    let invalid_args: InvalidArguments = error_resp.error.as_invalid_arguments().unwrap();
+    assert_eq!(invalid_args.required, 0);
+    assert_eq!(invalid_args.optional, 1);
+    assert_eq!(invalid_args.given, 2);
 
     // Response includes two mandatory field, regardless of errors
     let request =
@@ -242,8 +274,7 @@ fn test_transaction_submission() {
     if let Err(e) = response {
         if let Some(error) = e.downcast_ref::<JsonRpcError>() {
             assert_eq!(error.code, ServerCode::VmValidationError as i16);
-            let status_code: StatusCode =
-                serde_json::from_value(error.data.as_ref().unwrap().clone()).unwrap();
+            let status_code: StatusCode = error.as_status_code().unwrap();
             assert_eq!(status_code, StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST);
         } else {
             panic!("unexpected error format");
@@ -691,12 +722,7 @@ fn execute_batch_and_get_first_response(
         .unwrap()
 }
 
-fn fetch_error(resp: reqwest::blocking::Response) -> i16 {
-    let data: JsonMap = resp.json().unwrap();
-    let error: JsonMap = serde_json::from_value(data.get("error").unwrap().clone()).unwrap();
-    assert_eq!(
-        data.get("jsonrpc").unwrap(),
-        &serde_json::Value::String("2.0".to_string())
-    );
-    serde_json::from_value(error.get("code").unwrap().clone()).unwrap()
+fn error_code(resp: reqwest::blocking::Response) -> i16 {
+    let err_resp: JsonRpcErrorResponse = resp.json().unwrap();
+    err_resp.error.code
 }

@@ -196,7 +196,7 @@ async fn rpc_request_handler(
         _ => {
             set_response_error(
                 &mut response,
-                JsonRpcError::invalid_params(),
+                JsonRpcError::invalid_params(None),
                 Some(LABEL_INVALID_PARAMS),
             );
             return Value::Object(response);

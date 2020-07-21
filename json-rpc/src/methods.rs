@@ -3,7 +3,7 @@
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::{
-    errors::JsonRpcError,
+    errors::{ErrorData, InvalidArguments, JsonRpcError},
     views::{
         AccountStateWithProofView, AccountView, BlockMetadata, CurrencyInfoView, EventView,
         StateProofView, TransactionView,
@@ -76,10 +76,19 @@ pub(crate) struct JsonRpcRequest {
 }
 
 impl JsonRpcRequest {
-    /// Returns the request parameter at the given index. Note: this method should not panic with
-    /// an out of bounds error, as the number of request parameters has already been checked.
+    /// Returns the request parameter at the given index.
+    /// Returns Null if given index is out of bounds.
     fn get_param(&self, index: usize) -> Value {
-        self.params[index].clone()
+        self.get_param_with_default(index, Value::Null)
+    }
+
+    /// Returns the request parameter at the given index.
+    /// Returns default Value if given index is out of bounds.
+    fn get_param_with_default(&self, index: usize, default: Value) -> Value {
+        if self.params.len() > index {
+            return self.params[index].clone();
+        }
+        default
     }
 
     fn version(&self) -> u64 {
@@ -356,29 +365,32 @@ async fn get_network_status(service: JsonRpcService, _request: JsonRpcRequest) -
 /// Builds registry of all available RPC methods
 /// To register new RPC method, add it via `register_rpc_method!` macros call
 /// Note that RPC method name will equal to name of function
+#[allow(unused_comparisons)]
 pub(crate) fn build_registry() -> RpcRegistry {
     let mut registry = RpcRegistry::new();
-    register_rpc_method!(registry, "submit", submit, 1);
-    register_rpc_method!(registry, "get_metadata", get_metadata, 1);
-    register_rpc_method!(registry, "get_account", get_account, 1);
-    register_rpc_method!(registry, "get_transactions", get_transactions, 3);
+    register_rpc_method!(registry, "submit", submit, 1, 0);
+    register_rpc_method!(registry, "get_metadata", get_metadata, 0, 1);
+    register_rpc_method!(registry, "get_account", get_account, 1, 0);
+    register_rpc_method!(registry, "get_transactions", get_transactions, 3, 0);
     register_rpc_method!(
         registry,
         "get_account_transaction",
         get_account_transaction,
-        3
+        3,
+        0
     );
-    register_rpc_method!(registry, "get_events", get_events, 3);
-    register_rpc_method!(registry, "get_currencies", currencies_info, 0);
+    register_rpc_method!(registry, "get_events", get_events, 3, 0);
+    register_rpc_method!(registry, "get_currencies", currencies_info, 0, 0);
 
-    register_rpc_method!(registry, "get_state_proof", get_state_proof, 1);
+    register_rpc_method!(registry, "get_state_proof", get_state_proof, 1, 0);
     register_rpc_method!(
         registry,
         "get_account_state_with_proof",
         get_account_state_with_proof,
-        3
+        3,
+        0
     );
-    register_rpc_method!(registry, "get_network_status", get_network_status, 0);
+    register_rpc_method!(registry, "get_network_status", get_network_status, 0, 0);
 
     registry
 }
