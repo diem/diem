@@ -225,11 +225,16 @@ impl Experiment for CompatibilityTest {
         );
         context.report.report_text(msg);
         update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
-        context
-            .tx_emitter
-            .emit_txn_for(job_duration, fullnode_txn_job)
-            .await
-            .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
+
+        // XXX: wait extra time for fullnodes
+        info!("Waiting for fullnodes to sync up fully");
+        time::delay_for(Duration::from_secs(60)).await;
+
+        // context
+        //     .tx_emitter
+        //     .emit_txn_for(job_duration, fullnode_txn_job)
+        //     .await
+        //     .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
         Ok(())
     }
 

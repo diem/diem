@@ -32,7 +32,7 @@ impl ExperimentSuite {
         let count = min(3, cluster.validator_instances().len() / 3);
         // Reboot different sets of 3 validators *100 times
         for _ in 0..10 {
-            let b = Box::new(RebootRandomValidatorsParams::new(count, 0).build(cluster));
+            let b = Box::new(RebootRandomValidatorsParams::new(count, 0, 0).build(cluster));
             experiments.push(b);
         }
         experiments.push(Box::new(
@@ -85,6 +85,20 @@ impl ExperimentSuite {
         Self { experiments }
     }
 
+    fn new_reboot_suite(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(
+            RebootRandomValidatorsParams {
+                count: 0,
+                lsr_count: 0,
+                fn_count: 30,
+            }
+            .build(cluster),
+        ));
+        experiments.extend(Self::new_land_blocking_suite(cluster).experiments);
+        Self { experiments }
+    }
+
     fn new_land_blocking_compat_suite(cluster: &Cluster) -> Result<Self> {
         let count: usize = match env::var("BATCH_SIZE") {
             Ok(val) => val
@@ -110,6 +124,7 @@ impl ExperimentSuite {
         match name {
             "perf" => Ok(Self::new_perf_suite(cluster)),
             "pre_release" => Ok(Self::new_pre_release(cluster)),
+            "reboot_perf" => Ok(Self::new_reboot_suite(cluster)),
             "land_blocking" => Ok(Self::new_land_blocking_suite(cluster)),
             "land_blocking_compat" => Self::new_land_blocking_compat_suite(cluster),
             other => Err(format_err!("Unknown suite: {}", other)),
