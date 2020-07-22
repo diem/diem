@@ -18,7 +18,7 @@ impl Command for AccountCommand {
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         let commands: Vec<Box<dyn Command>> = vec![
-            Box::new(AccountCommandCreate {}),
+            Box::new(AccountCommandCreateLocal {}),
             Box::new(AccountCommandListAccounts {}),
             Box::new(AccountCommandRecoverWallet {}),
             Box::new(AccountCommandWriteRecovery {}),
@@ -30,25 +30,25 @@ impl Command for AccountCommand {
     }
 }
 
-/// Sub command to create a random account. The account will not be saved on chain.
-pub struct AccountCommandCreate {}
+/// Sub command to create a random local keypair and account index. This does not have any on-chain effect.
+pub struct AccountCommandCreateLocal {}
 
-impl Command for AccountCommandCreate {
+impl Command for AccountCommandCreateLocal {
     fn get_aliases(&self) -> Vec<&'static str> {
         vec!["create", "c"]
     }
     fn get_description(&self) -> &'static str {
-        "Create an account. Returns reference ID to use in other operations"
+        "Create a local account--no on-chain effect. Returns reference ID to use in other operations"
     }
     fn execute(&self, client: &mut ClientProxy, _params: &[&str]) {
-        println!(">> Creating/retrieving next account from wallet");
+        println!(">> Creating/retrieving next local account from wallet");
         match client.create_next_account(true) {
             Ok(account_data) => println!(
-                "Created/retrieved account #{} address {}",
+                "Created/retrieved local account #{} address {}",
                 account_data.index,
                 hex::encode(account_data.address)
             ),
-            Err(e) => report_error("Error creating account", e),
+            Err(e) => report_error("Error creating local account", e),
         }
     }
 }
@@ -120,7 +120,7 @@ impl Command for AccountCommandListAccounts {
     }
 }
 
-/// Sub command to mint account.
+/// Sub command to transfer coins from the faucet address to a recipient, creating an account at the recipient address if it does not already exist.
 pub struct AccountCommandMint {}
 
 impl Command for AccountCommandMint {
@@ -131,31 +131,30 @@ impl Command for AccountCommandMint {
         "<receiver_account_ref_id>|<receiver_account_address> <number_of_coins> <currency_code> [use_base_units (default=false)]"
     }
     fn get_description(&self) -> &'static str {
-        "Mint coins to the account. Suffix 'b' is for blocking"
+        "Send currency of the given type from the faucet address to the given recipient address. Creates an account at the recipient address if one does not already exist. Suffix 'b' is for blocking"
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() < 4 || params.len() > 5 {
             println!("Invalid number of arguments for mint");
             return;
         }
-        println!(">> Minting coins");
         let is_blocking = blocking_cmd(params[0]);
         match client.mint_coins(&params, is_blocking) {
             Ok(_) => {
                 if is_blocking {
-                    println!("Finished minting!");
+                    println!("Finished sending coins from faucet!");
                 } else {
                     // If this value is updated, it must also be changed in
                     // setup_scripts/docker/mint/server.py
-                    println!("Mint request submitted");
+                    println!("Request submitted to faucet");
                 }
             }
-            Err(e) => report_error("Error minting coins", e),
+            Err(e) => report_error("Error transferring coins from faucet", e),
         }
     }
 }
 
-/// Sub command for adding a currency to an account
+/// Sub command for adding a zero balance in a particular currency to an account.
 pub struct AccountCommandAddCurrency {}
 
 impl Command for AccountCommandAddCurrency {
@@ -170,22 +169,22 @@ impl Command for AccountCommandAddCurrency {
     }
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
         if params.len() < 3 {
-            println!("Invalid number of arguments for adding currency");
+            println!("Invalid number of arguments for adding currency to account");
             return;
         }
-        println!(">> Adding currency");
+        println!(">> Adding zero balance in currency to account");
         let is_blocking = blocking_cmd(params[0]);
         match client.add_currency(&params, is_blocking) {
             Ok(_) => {
                 if is_blocking {
-                    println!("Finished adding currency!");
+                    println!("Finished adding currency to account!");
                 } else {
                     // If this value is updated, it must also be changed in
                     // setup_scripts/docker/mint/server.py
                     println!("Currency addition request submitted");
                 }
             }
-            Err(e) => report_error("Error adding currency", e),
+            Err(e) => report_error("Error adding zero balance in currency to account", e),
         }
     }
 }
