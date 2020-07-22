@@ -96,7 +96,9 @@ members = [
     "testsuite/libra-swarm",
 ]
 
-# Interesting subsets of the workspace, in this case representing parts of the TCB.
+# Interesting subsets of the workspace, These are used for generating and
+# checking dependency summaries.
+
 [workspace.subsets.lsr]
 # The Libra safety rules TCB.
 members = [
@@ -106,5 +108,17 @@ members = [
 [workspace.subsets.lec]
 # The Libra execution correctness TCB.
 members = [
-    "execution/execution-correctness"
+    "execution/execution-correctness",
+]
+
+[workspace.subsets.release]
+# The Libra release binaries
+members = [
+    "config/config-builder",
+    "config/management/genesis",
+    "consensus/safety-rules",
+    "execution/db-bootstrapper",
+    "libra-node",
+    "secure/key-manager",
+    "storage/backup/backup-cli",
 ]
