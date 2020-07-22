@@ -21,7 +21,7 @@ module FooConfig {
 
 //! new-transaction
 //! sender: libraroot
-//! args: b"0100010000000000000000000000000a550c18",
+//! args: x"0100010000000000000000000000000a550c18",
 // Step 2: Change option to CustomScript
 script {
 use 0x1::LibraVMConfig;
