@@ -25,11 +25,25 @@ use std::{convert::TryFrom, ops::Deref, str::FromStr, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncWrite};
 
+/// String returned by a specific storage implementation to identify a backup, probably a folder name
+/// which is exactly the same with the backup name we pass into `create_backup()`
+/// This is created and returned by the storage when `create_backup()`, passed back to the storage
+/// when `create_for_write()` and persisted nowhere (once a backup is created, files are referred to
+/// by `FileHandle`s).
 pub type BackupHandle = String;
 pub type BackupHandleRef = str;
+
+/// URI pointing to a file in a backup storage, like "s3:///bucket/path/file".
+/// These are created by the storage when `create_for_write()`, stored in manifests by the backup
+/// controller, and passed back to the storage when `open_for_read()` by the restore controller
+/// to retrieve a file referred to in the manifest.
 pub type FileHandle = String;
 pub type FileHandleRef = str;
 
+/// Through this, the backup controller promises to the storage the names passed to
+/// `create_backup()` and `create_for_write()` don't contain funny characters tricky to deal with
+/// in shell commands.
+/// Specifically, names follow the pattern "\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,126}\z"
 #[cfg_attr(test, derive(Debug, Hash, Eq, PartialEq))]
 pub struct ShellSafeName(String);
 
