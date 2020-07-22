@@ -15,6 +15,7 @@ mod check;
 mod clippy;
 mod config;
 mod context;
+mod diff_summary;
 mod fix;
 mod fmt;
 mod generate_summaries;
@@ -56,6 +57,9 @@ enum Command {
     #[structopt(name = "generate-summaries")]
     /// Generate build summaries for important subsets
     GenerateSummaries(generate_summaries::Args),
+    #[structopt(name = "diff-summary")]
+    /// Diff build summaries for important subsets
+    DiffSummary(diff_summary::Args),
 }
 
 fn main() -> Result<()> {
@@ -92,5 +96,6 @@ fn main() -> Result<()> {
         Command::Bench(args) => bench::run(args, xctx),
         Command::Lint(args) => lint::run(args, xctx),
         Command::GenerateSummaries(args) => generate_summaries::run(args, xctx),
+        Command::DiffSummary(args) => diff_summary::run(args, xctx),
     }
 }
