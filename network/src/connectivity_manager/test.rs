@@ -101,6 +101,15 @@ fn gen_peer() -> (
     (peer_id, pubkey, pubkeys, addr)
 }
 
+async fn get_connected_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
+    let (queue_size_tx, queue_size_rx) = oneshot::channel();
+    conn_mgr_reqs_tx
+        .send(ConnectivityRequest::GetConnectedSize(queue_size_tx))
+        .await
+        .unwrap();
+    queue_size_rx.await.unwrap()
+}
+
 async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
     let (queue_size_tx, queue_size_rx) = oneshot::channel();
     conn_mgr_reqs_tx
@@ -446,17 +455,21 @@ fn addr_change() {
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");
         ticker_tx.send(()).await.unwrap();
-
-        // We expect the peer which changed its address to also disconnect.
+        let connected_size = get_connected_size(&mut conn_mgr_reqs_tx).await;
+        assert_eq!(1, connected_size);
+        // We expect the peer which changed its address to also disconnect. (even if the address doesn't match storage)
         info!("Sending lost peer notification for other peer at old address");
         send_lost_peer_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
             other_peer_id,
-            other_addr,
+            other_addr_new.clone(),
             DisconnectReason::ConnectionLost,
         )
         .await;
+
+        let connected_size = get_connected_size(&mut conn_mgr_reqs_tx).await;
+        assert_eq!(0, connected_size);
 
         // Trigger connectivity check.
         info!("Sending tick to trigger connectivity check");

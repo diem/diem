@@ -116,6 +116,9 @@ pub enum ConnectivityRequest {
     UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(DiscoverySource, HashMap<PeerId, HashSet<x25519::PublicKey>>),
+    /// Gets current size of connected peers. This is useful in tests.
+    #[serde(skip)]
+    GetConnectedSize(oneshot::Sender<usize>),
     /// Gets current size of dial queue. This is useful in tests.
     #[serde(skip)]
     GetDialQueueSize(oneshot::Sender<usize>),
@@ -468,6 +471,9 @@ where
             ConnectivityRequest::GetDialQueueSize(sender) => {
                 sender.send(self.dial_queue.len()).unwrap();
             }
+            ConnectivityRequest::GetConnectedSize(sender) => {
+                sender.send(self.connected.len()).unwrap();
+            }
         }
     }
 
@@ -597,19 +603,23 @@ where
                 self.dial_queue.remove(&peer_id);
             }
             peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _origin, _reason) => {
-                match self.connected.get(&peer_id) {
-                    Some(curr_addr) if *curr_addr == addr => {
-                        // Remove node from connected peers list.
-                        self.connected.remove(&peer_id);
-                    }
-                    _ => {
-                        debug!(
-                            "{} Ignoring stale lost peer event for peer: {}, addr: {}",
-                            self.network_context,
-                            peer_id.short_str(),
-                            addr
-                        );
-                    }
+                if let Some(stored_addr) = self.connected.get(&peer_id) {
+                    // Remove node from connected peers list.
+                    info!(
+                        "{} Removing peer '{}' addr: {}, vs event addr: {}",
+                        self.network_context,
+                        peer_id.short_str(),
+                        stored_addr,
+                        addr
+                    );
+                    self.connected.remove(&peer_id);
+                } else {
+                    debug!(
+                        "{} Ignoring stale lost peer event for peer: {}, addr: {}",
+                        self.network_context,
+                        peer_id.short_str(),
+                        addr
+                    );
                 }
             }
         }
