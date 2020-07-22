@@ -2484,7 +2484,7 @@ dependencies = [
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde-generate 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde-generate 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5020,7 +5020,7 @@ dependencies = [
 
 [[package]]
 name = "serde-generate"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "include_dir 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5030,6 +5030,7 @@ dependencies = [
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "textwrap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6059,6 +6060,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
+ "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6066,11 +6068,12 @@ name = "transaction-builder-generator"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
- "serde-generate 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde-generate 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6990,7 +6993,7 @@ dependencies = [
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)" = "5317f7588f0a5078ee60ef675ef96735a1442132dc645eb1d12c018620ed8cd3"
-"checksum serde-generate 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "582443c3fcb3fa68f2ee5776756ad183f28d10f6cf368b2c8bc60feed8d30d0b"
+"checksum serde-generate 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8b456c155d5cfce88876a401d0c1d268d55c2a1f982abf6e119d1d5fd6e1b32f"
 "checksum serde-name 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "92bb32dbe1df50291d7d00b5e573acb2c70b783baf3d1bce2d19c86be11c709e"
 "checksum serde-reflection 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d0724ee4d089608c6f22bb25058e73e56d8ecd6506628b635b5a2ed6c94c9e21"
 "checksum serde-value 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5a65a7291a8a568adcae4c10a677ebcedbc6c9cec91c054dee2ce40b0e3290eb"

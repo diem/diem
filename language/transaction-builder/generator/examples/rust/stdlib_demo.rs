@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_canonical_serialization as lcs;
-use libra_stdlib::encode_peer_to_peer_with_metadata_script;
+use libra_stdlib::{encode_peer_to_peer_with_metadata_script, ScriptCall};
 use libra_types::{AccountAddress, Identifier, TypeTag, StructTag};
+use serde_bytes::ByteBuf as Bytes;
 
 fn main() {
     let token = TypeTag::Struct(StructTag {
@@ -16,7 +17,16 @@ fn main() {
                                 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22]);
     let amount = 1234567;
     let script =
-        encode_peer_to_peer_with_metadata_script(token, payee, amount, Vec::new(), Vec::new());
+        encode_peer_to_peer_with_metadata_script(token, payee.clone(), amount, Bytes::from(Vec::new()), Bytes::from(Vec::new()));
+
+    let call = ScriptCall::decode(&script);
+    match call {
+        Some(ScriptCall::PeerToPeerWithMetadata { amount: a, payee: p, .. }) => {
+            assert_eq!(a, amount);
+            assert_eq!(p, payee);
+        }
+        _ => panic!("unexpected type of script"),
+    }
 
     let output = lcs::to_bytes(&script).unwrap();
     for o in output {
