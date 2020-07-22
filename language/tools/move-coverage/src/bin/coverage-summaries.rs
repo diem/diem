@@ -36,7 +36,7 @@ struct Args {
     /// Whether function coverage summaries should be displayed
     #[structopt(long = "summarize-functions", short = "f")]
     pub summarize_functions: bool,
-    /// The path to the standard library binary for Move
+    /// The path to the standard library binary directory for Move
     #[structopt(long = "stdlib-path", short = "s")]
     pub stdlib_path: Option<String>,
     /// Output CSV data of coverage
@@ -47,13 +47,10 @@ struct Args {
 fn get_modules(args: &Args) -> Vec<CompiledModule> {
     let mut modules = Vec::new();
     if let Some(stdlib_path) = &args.stdlib_path {
-        let stdlib_bytes = fs::read(stdlib_path).expect("Unable to read bytecode file");
-        let stdlib_modules = lcs::from_bytes::<Vec<Vec<u8>>>(&stdlib_bytes)
-            .expect("Unable to deserialize stdlib")
-            .into_iter()
-            .map(|bytes| {
-                CompiledModule::deserialize(&bytes).expect("Module blob can't be deserialized")
-            });
+        let stdlib_modules = fs::read_dir(stdlib_path).unwrap().map(|file| {
+            let bytes = fs::read(file.unwrap().path()).unwrap();
+            CompiledModule::deserialize(&bytes).expect("Module blob can't be deserialized")
+        });
         modules.extend(stdlib_modules);
     }
 
