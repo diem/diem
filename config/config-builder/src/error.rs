@@ -11,6 +11,8 @@ pub enum Error {
     InvalidSafetyRulesBackend(String),
     #[error("Missing configs only found {}", found)]
     MissingConfigs { found: usize },
+    #[error("Missing public fallback network for vfn")]
+    MissingFallbackNetwork,
     #[error("Missing full node network")]
     MissingFullNodeNetwork,
     #[error("Network config is missing network keypairs")]
@@ -21,6 +23,8 @@ pub enum Error {
     MissingSafetyRulesToken,
     #[error("Config does not contain a validator network")]
     MissingValidatorNetwork,
+    #[error("Missing vfn network for a vfn")]
+    MissingValidatorFullNodeNetwork,
     #[error("Unable to find any configs")]
     NoConfigs,
     #[error("network size should be at least 1")]

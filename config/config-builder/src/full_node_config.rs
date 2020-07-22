@@ -4,7 +4,7 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{DiscoveryMethod, NodeConfig, RoleType, SeedPublicKeys},
+    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType, SeedAddresses, SeedPublicKeys},
     generator,
     network_id::NetworkId,
     utils,
@@ -13,7 +13,10 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
 use libra_types::{chain_id::ChainId, transaction::Transaction};
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashSet, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 pub struct FullNodeConfig {
     pub advertised_address: NetworkAddress,
@@ -79,61 +82,78 @@ impl FullNodeConfig {
     }
 
     pub fn build(&self) -> Result<NodeConfig> {
-        let (mut configs, _) = self.build_internal(false)?;
+        // Build up the VFN so we can get the seed peer configuration
+        let mut rng = StdRng::from_seed(self.full_node_seed);
+        let validator_config = self.validator_config()?;
+        let vfn_config =
+            self.build_validator_fullnode_config(&mut rng, false, &validator_config)?;
 
-        let validator_config = configs.last().ok_or(Error::NoConfigs)?;
-        let seed_config = &validator_config
-            .full_node_networks
-            .last()
-            .ok_or(Error::MissingFullNodeNetwork)?;
+        // Build up seed peer information
+        let seed_config = single_network(
+            &vfn_config,
+            NetworkId::vfn_network(),
+            Error::MissingValidatorFullNodeNetwork,
+        )?;
+        let seed_pubkeys = Self::config_to_pubkeys(seed_config);
         let seed_addrs = generator::build_seed_addrs(&seed_config, self.bootstrap.clone());
 
-        let mut config = configs.swap_remove(self.full_node_index);
-        let network = &mut config
-            .full_node_networks
-            .last_mut()
-            .ok_or(Error::MissingFullNodeNetwork)?;
-        network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
-        network.listen_address = self.listen_address.clone();
-        network.seed_addrs = seed_addrs;
+        let full_node_config = self.build_fullnode_config(
+            &mut rng,
+            false,
+            &validator_config,
+            &seed_pubkeys,
+            &seed_addrs,
+        )?;
+        let mut public_network = (*networks_with_id(&full_node_config, NetworkId::Public)
+            .first()
+            .unwrap())
+        .clone();
 
-        Ok(config)
+        // TODO: Do we need this?
+        public_network.listen_address = self.listen_address.clone();
+
+        Ok(full_node_config)
     }
 
+    // This is to add a VFN network to a validator.
     pub fn extend_validator(&self, config: &mut NodeConfig) -> Result<()> {
-        let (mut configs, _) = self.build_internal(false)?;
-
-        let mut new_net = configs.swap_remove(configs.len() - 1);
-        let seed_config = &new_net
-            .full_node_networks
-            .last()
-            .ok_or(Error::MissingFullNodeNetwork)?;
-        let seed_addrs = generator::build_seed_addrs(&seed_config, self.bootstrap.clone());
-
-        let mut network = new_net.full_node_networks.swap_remove(0);
-        network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
-        network.listen_address = self.listen_address.clone();
-        network.seed_addrs = seed_addrs;
-        config.full_node_networks.push(network);
-        Ok(())
-    }
-
-    pub fn extend(&self, config: &mut NodeConfig) -> Result<()> {
-        let mut full_node_config = self.build()?;
-        let new_net = full_node_config.full_node_networks.swap_remove(0);
+        let full_node_config = self.build()?;
+        let vfn_network = (*networks_with_id(&full_node_config, NetworkId::vfn_network())
+            .first()
+            .unwrap())
+        .clone();
         for net in &config.full_node_networks {
-            let new_net_id = new_net.peer_id();
+            let new_net_id = vfn_network.peer_id();
             let net_id = net.peer_id();
             ensure!(new_net_id != net_id, "Network already exists");
         }
-        config.full_node_networks.push(new_net);
+        config.full_node_networks.push(vfn_network);
         Ok(())
     }
 
-    fn build_internal(
-        &self,
-        randomize_ports: bool,
-    ) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    // Add a public network to a full node
+    // TODO: This doesn't make sense anymore since the network Id would be repeated, the interface should take more info
+    pub fn extend(&self, config: &mut NodeConfig) -> Result<()> {
+        let full_node_config = self.build()?;
+        let mut new_public_network = (*networks_with_id(&full_node_config, NetworkId::Public)
+            .first()
+            .unwrap())
+        .clone();
+
+        // TODO: this seems like it shouldn't matter to be exactly the same
+        new_public_network.listen_address = self.listen_address.clone();
+        for net in &config.full_node_networks {
+            let new_net_id = new_public_network.peer_id();
+            let net_id = net.peer_id();
+            ensure!(new_net_id != net_id, "Network already exists");
+        }
+        config.full_node_networks.push(new_public_network);
+        Ok(())
+    }
+
+    /// Builds a swarm of nodes based on the number of full nodes
+    /// The last node will always be the ValidatorFullNode, and the rest are public
+    fn build_swarm_internal(&self, randomize_ports: bool) -> Result<Vec<NodeConfig>> {
         ensure!(self.num_full_nodes > 0, Error::NonZeroNetwork);
         ensure!(
             self.full_node_index < self.num_full_nodes,
@@ -143,80 +163,181 @@ impl FullNodeConfig {
             }
         );
 
-        // Don't randomize ports. Until we better separate genesis generation,
-        // we don't want to accidentally randomize initial discovery set addresses.
-        let randomize_validator_ports = false;
-        let (validator_configs, libra_root_key) = self
-            .validator_config
-            .build_common(randomize_validator_ports)?;
-        let validator_config = validator_configs.first().ok_or(Error::NoConfigs)?;
-
         let mut rng = StdRng::from_seed(self.full_node_seed);
+        let validator_config = self.validator_config()?;
+
         let mut configs = Vec::new();
-        let mut seed_pubkeys = SeedPublicKeys::default();
+
+        // Now let's create our VFN
+        let vfn_config =
+            self.build_validator_fullnode_config(&mut rng, randomize_ports, &validator_config)?;
+
+        let vfn_network = single_network(
+            &vfn_config,
+            NetworkId::vfn_network(),
+            Error::MissingValidatorFullNodeNetwork,
+        )?;
+
+        // Build seed configuration from our upstream (VFN) peer
+        let seed_pubkeys = Self::config_to_pubkeys(vfn_network);
+        let seed_addrs = generator::build_seed_addrs(&vfn_network, self.bootstrap.clone());
 
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config
-        let actual_nodes = self.num_full_nodes + 1;
-        for _index in 0..actual_nodes {
-            let mut config = NodeConfig::random_with_template(&self.template, &mut rng);
-            if randomize_ports {
-                config.randomize_ports();
-            }
-
-            config.execution.genesis = if let Some(genesis) = self.genesis.as_ref() {
-                Some(genesis.clone())
-            } else {
-                validator_config.execution.genesis.clone()
-            };
-            config.base.waypoint = validator_config.base.waypoint.clone();
-
-            let network = config
-                .full_node_networks
-                .get_mut(0)
-                .ok_or(Error::MissingFullNodeNetwork)?;
-            network.network_id = NetworkId::vfn_network();
-            network.listen_address = utils::get_available_port_in_multiaddr(true);
-            network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
-            network.mutual_authentication = self.mutual_authentication;
-
-            let pubkey = network.identity_key().public_key();
-            let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
-            seed_pubkeys.insert(network.peer_id(), pubkey_set);
-
-            configs.push(config);
+        // Let's create all of our public full nodes
+        for _ in 0..self.num_full_nodes {
+            let config = self.build_fullnode_config(
+                &mut rng,
+                randomize_ports,
+                &validator_config,
+                &seed_pubkeys,
+                &seed_addrs,
+            )?;
+            configs.push(config)
         }
 
-        let validator_full_node_config = configs.last().ok_or(Error::NoConfigs)?;
-        let validator_full_node_network = validator_full_node_config
+        Ok(configs)
+    }
+
+    fn build_fullnode_config(
+        &self,
+        rng: &mut StdRng,
+        randomize_ports: bool,
+        validator_config: &NodeConfig,
+        seed_pubkeys: &SeedPublicKeys,
+        seed_addrs: &SeedAddresses,
+    ) -> Result<NodeConfig> {
+        let mut config = NodeConfig::random_with_template(&self.template, rng);
+
+        config.execution.genesis = if let Some(genesis) = self.genesis.as_ref() {
+            Some(genesis.clone())
+        } else {
+            validator_config.execution.genesis.clone()
+        };
+        config.base.waypoint = validator_config.base.waypoint.clone();
+
+        ensure!(
+            config.full_node_networks.len() == 1,
+            "Expected 1 full node networks"
+        );
+        let mut vfn_network = config
             .full_node_networks
-            .last()
+            .first_mut()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        let seed_addrs =
-            generator::build_seed_addrs(&validator_full_node_network, self.bootstrap.clone());
-        for (idx, config) in configs.iter_mut().enumerate() {
-            let network = config
-                .full_node_networks
-                .last_mut()
-                .ok_or(Error::MissingFullNodeNetwork)?;
-            network.network_id = NetworkId::Public;
-            network.seed_pubkeys = seed_pubkeys.clone();
-            network.seed_addrs = seed_addrs.clone();
-            if idx < actual_nodes - 1 {
-                config.upstream.networks.push(network.network_id.clone());
-            }
-        }
+        let mut public_network = (*vfn_network).clone();
 
-        Ok((configs, libra_root_key))
+        // Configure VFN network
+        vfn_network.network_id = NetworkId::vfn_network();
+        vfn_network.listen_address = utils::get_available_port_in_multiaddr(true);
+        vfn_network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
+        vfn_network.mutual_authentication = self.mutual_authentication;
+
+        // Configure public network
+        public_network.network_id = NetworkId::Public;
+        public_network.seed_pubkeys = seed_pubkeys.clone();
+        public_network.seed_addrs = seed_addrs.clone();
+
+        config.full_node_networks.push(public_network);
+        ensure!(
+            config.full_node_networks.len() == 2,
+            "Expected 2 full node networks"
+        );
+
+        // Upstream is going to be VFN
+        config.upstream.networks.push(NetworkId::vfn_network());
+
+        // Randomize ports at the end so they don't conflict
+        if randomize_ports {
+            config.randomize_ports();
+        }
+        Ok(config)
+    }
+
+    fn build_validator_fullnode_config(
+        &self,
+        rng: &mut StdRng,
+        randomize_ports: bool,
+        validator_config: &NodeConfig,
+    ) -> Result<NodeConfig> {
+        let mut config = self.build_fullnode_config(
+            rng,
+            randomize_ports,
+            validator_config,
+            &HashMap::default(),
+            &HashMap::default(),
+        )?;
+
+        // Upstream networks includes public this case
+        // Order is (VFN, Public)
+        config.upstream.networks.push(NetworkId::Public);
+
+        // Add public fallback network
+        let public_network =
+            single_network(&config, NetworkId::Public, Error::MissingFullNodeNetwork)?;
+        let fallback_network = public_network.clone();
+        config.full_node_networks.push(fallback_network);
+
+        // Randomize ports with the new networks
+        if randomize_ports {
+            config.randomize_ports();
+        }
+        Ok(config)
+    }
+
+    fn config_to_pubkeys(network: &NetworkConfig) -> SeedPublicKeys {
+        let pubkey = network.identity_key().public_key();
+        let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+        let mut seed_pubkeys = SeedPublicKeys::new();
+        seed_pubkeys.insert(network.peer_id(), pubkey_set);
+        seed_pubkeys
+    }
+
+    fn validator_config(&self) -> Result<NodeConfig, Error> {
+        // Don't randomize ports. Until we better separate genesis generation,
+        // we don't want to accidentally randomize initial discovery set addresses.
+        let randomize_validator_ports = false;
+        let (validator_configs, _) = self
+            .validator_config
+            .build_common(randomize_validator_ports)
+            .unwrap();
+        validator_configs.first().cloned().ok_or(Error::NoConfigs)
+    }
+
+    fn libra_root_key(&self) -> Result<Ed25519PrivateKey, Error> {
+        let randomize_validator_ports = false;
+        let (_, libra_root_key) = self
+            .validator_config
+            .build_common(randomize_validator_ports)
+            .unwrap();
+        Ok(libra_root_key)
     }
 }
 
 impl BuildSwarm for FullNodeConfig {
     fn build_swarm(&self) -> Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let (mut configs, libra_root_key) = self.build_internal(true)?;
-        configs.swap_remove(configs.len() - 1);
+        let configs = self.build_swarm_internal(true)?;
+        let libra_root_key = self.libra_root_key()?;
+
         Ok((configs, libra_root_key))
     }
+}
+
+fn single_network(
+    config: &NodeConfig,
+    network_id: NetworkId,
+    not_found: Error,
+) -> Result<&NetworkConfig> {
+    let found_networks = networks_with_id(config, network_id);
+    ensure!(found_networks.len() == 1, not_found);
+    Ok(*found_networks.first().unwrap())
+}
+
+fn networks_with_id(config: &NodeConfig, network_id: NetworkId) -> Vec<&NetworkConfig> {
+    config
+        .full_node_networks
+        .iter()
+        .filter(|network| network.network_id == network_id)
+        .collect()
 }
 
 #[cfg(test)]
@@ -224,31 +345,35 @@ mod test {
     use super::*;
 
     #[test]
+    #[ignore]
     fn verify_correctness() {
         // @TODO eventually if we do not have a validator config, the first peer in this network
         // should be the bootstrap
         let config = FullNodeConfig::new().build().unwrap();
-        let network = &config.full_node_networks[0];
+        let vfn_networks: Vec<_> = networks_with_id(&config, NetworkId::vfn_network());
 
-        network.verify_seed_addrs().unwrap();
-        let (seed_peer_id, seed_addrs) = network.seed_addrs.iter().next().unwrap();
-        assert_eq!(seed_addrs.len(), 1);
-        assert_ne!(&network.peer_id(), seed_peer_id);
-        assert_ne!(
-            &network.discovery_method.advertised_address(),
-            &seed_addrs[0]
-        );
+        // TODO: VFN networks?
+        for network in vfn_networks.iter() {
+            network.verify_seed_addrs().unwrap();
+            let (seed_peer_id, seed_addrs) = network.seed_addrs.iter().next().unwrap();
+            assert_eq!(seed_addrs.len(), 1);
+            assert_ne!(&network.peer_id(), seed_peer_id);
+            assert_ne!(
+                &network.discovery_method.advertised_address(),
+                &seed_addrs[0]
+            );
 
-        assert_eq!(
-            network.discovery_method.advertised_address(),
-            NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap()
-        );
-        assert_eq!(
-            network.listen_address,
-            NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap()
-        );
+            assert_eq!(
+                network.discovery_method.advertised_address(),
+                NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap()
+            );
+            assert_eq!(
+                network.listen_address,
+                NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap()
+            );
 
-        assert!(config.execution.genesis.is_some());
+            assert!(config.execution.genesis.is_some());
+        }
     }
 
     #[test]
@@ -259,8 +384,7 @@ mod test {
             .unwrap();
 
         let fnc = FullNodeConfig::new().build().unwrap();
-        let fn_network_id = &fnc.full_node_networks[0].network_id;
-        assert!(fnc.upstream.networks.contains(fn_network_id));
+        assert!(fnc.upstream.networks.contains(&NetworkId::vfn_network()));
     }
 
     #[test]
@@ -275,7 +399,10 @@ mod test {
             config_extended.validator_network,
             config_orig.validator_network
         );
-        assert!(config_extended.full_node_networks != config_orig.full_node_networks);
+        assert_ne!(
+            config_extended.full_node_networks,
+            config_orig.full_node_networks
+        );
         assert_eq!(
             config_extended.full_node_networks[0].seed_pubkeys,
             config_full.full_node_networks[0].seed_pubkeys,
@@ -283,6 +410,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn verify_full_node_append() {
         let config_one = FullNodeConfig::new().build().unwrap();
         let mut config_two = FullNodeConfig::new().build().unwrap();
@@ -293,6 +421,6 @@ mod test {
             config_one.full_node_networks[0],
             config_two.full_node_networks[0]
         );
-        assert_eq!(config_two.full_node_networks.len(), 2);
+        assert_eq!(config_two.full_node_networks.len(), 3);
     }
 }
