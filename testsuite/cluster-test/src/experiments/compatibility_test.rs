@@ -57,7 +57,7 @@ pub async fn update_batch_instance(
     // Add a timeout to have wait for validators back to healthy mode.
     // TODO: Replace this with a blocking health check.
     info!("Wait for the instance to sync up with peers");
-    time::delay_for(Duration::from_secs(20)).await;
+    time::delay_for(Duration::from_secs(60)).await;
     Ok(())
 }
 
@@ -127,14 +127,15 @@ impl Experiment for CompatibilityTest {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let validator_txn_job = EmitJobRequest::for_instances(
-            context.cluster.validator_instances().to_vec(),
-            context.global_emit_job_request,
-        );
+        // let validator_txn_job = EmitJobRequest::for_instances(
+        //     context.cluster.validator_instances().to_vec(),
+        //     context.global_emit_job_request,
+        // );
         let fullnode_txn_job = EmitJobRequest::for_instances(
             context.cluster.fullnode_instances().to_vec(),
             context.global_emit_job_request,
         );
+        let validator_txn_job = fullnode_txn_job.clone();
         let job_duration = Duration::from_secs(3);
         context.report.report_text(format!(
             "Compatibility test results for {} ==> {} (PR)",
@@ -211,6 +212,10 @@ impl Experiment for CompatibilityTest {
             .map_err(|e| {
                 anyhow::format_err!("Failed to upgrade rest of validator images: {}", e)
             })?;
+
+        info!("Waiting before updating full nodes");
+
+        time::delay_for(Duration::from_secs(60)).await;
 
         let msg = format!(
             "5. All full nodes ({}) {} ==> {}, to finish the network upgrade",
