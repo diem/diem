@@ -78,7 +78,9 @@ fn test_branch() {
     // if assertion fails.
     let mut num_blocks = cache.block_map.lock().unwrap().len();
     assert_eq!(num_blocks, 11);
-    cache.prune(&gen_ledger_info(id(9), false)).unwrap();
+    cache
+        .prune(&gen_ledger_info(id(9), false), vec![], vec![])
+        .unwrap();
     num_blocks = cache.block_map.lock().unwrap().len();
     assert_eq!(num_blocks, 2);
     assert_eq!(cache.committed_block_id, id(9));
@@ -87,7 +89,9 @@ fn test_branch() {
 #[test]
 fn test_reconfig_id_update() {
     let mut cache = create_cache();
-    cache.prune(&gen_ledger_info(id(1), true)).unwrap();
+    cache
+        .prune(&gen_ledger_info(id(1), true), vec![], vec![])
+        .unwrap();
     let num_blocks = cache.block_map.lock().unwrap().len();
     assert_eq!(num_blocks, 4);
     assert_ne!(cache.committed_block_id, id(1));

@@ -614,8 +614,12 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // 5. Cache maintenance.
         let output_trees = output.executed_trees().clone();
         if let Some(ledger_info_with_sigs) = &ledger_info_to_commit {
-            self.cache
-                .update_block_tree_root(output_trees, ledger_info_with_sigs.ledger_info());
+            self.cache.update_block_tree_root(
+                output_trees,
+                ledger_info_with_sigs.ledger_info(),
+                vec![],
+                vec![],
+            );
         } else {
             self.cache.update_synced_trees(output_trees);
         }
@@ -774,7 +778,21 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
         debug!("Received request to commit block {:x}.", block_id_to_commit);
 
+        let version = ledger_info_with_sigs.ledger_info().version();
         let num_persistent_txns = self.cache.synced_trees().txn_accumulator().num_leaves();
+
+        if version + 1 < num_persistent_txns {
+            return Err(Error::InternalError {
+                error: format!(
+                    "Try to commit stale transactions with the last version as {}",
+                    version
+                ),
+            });
+        }
+
+        if version + 1 == num_persistent_txns {
+            return Ok(self.cache.committed_txns_and_events());
+        }
 
         // All transactions that need to go to storage. In the above example, this means all the
         // transactions in A, B and C whose status == TransactionStatus::Keep.
@@ -808,7 +826,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         // Check that the version in ledger info (computed by consensus) matches the version
         // computed by us.
-        let version = ledger_info_with_sigs.ledger_info().version();
         let num_txns_in_speculative_accumulator = last_block
             .output()
             .executed_trees()
@@ -868,8 +885,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 txn_data.prune_state_tree();
             }
         }
-        self.cache.prune(ledger_info_with_sigs.ledger_info())?;
-
         // Calculate committed transactions and reconfig events now that commit has succeeded
         let mut committed_txns = vec![];
         let mut reconfig_events = vec![];
@@ -877,6 +892,12 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             committed_txns.push(txn.transaction().clone());
             reconfig_events.append(&mut Self::extract_reconfig_events(txn.events().to_vec()));
         }
+
+        self.cache.prune(
+            ledger_info_with_sigs.ledger_info(),
+            committed_txns.clone(),
+            reconfig_events.clone(),
+        )?;
 
         // Now that the blocks are persisted successfully, we can reply to consensus
         Ok((committed_txns, reconfig_events))
