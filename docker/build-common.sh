@@ -14,7 +14,23 @@ export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
 export CARGOFLAGS=$(cat cargo-flags)
 export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO for release builds
 
-${CARGO} ${CARGOFLAGS} build --release -p libra-genesis-tool -p libra-operational-tool -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper -p backup-cli -p cluster-test "$@"
+# Build release binaries
+${CARGO} ${CARGOFLAGS} build --release \
+         -p libra-genesis-tool \
+         -p libra-operational-tool \
+         -p libra-node \
+         -p config-builder \
+         -p libra-key-manager \
+         -p safety-rules \
+         -p db-bootstrapper \
+         -p backup-cli \
+         "$@"
+
+# These non-release binaries are built separately to avoid feature unification issues
+${CARGO} ${CARGOFLAGS} build --release \
+         -p cluster-test \
+         -p cli \
+         "$@"
 
 rm -rf target/release/{build,deps,incremental}
 
