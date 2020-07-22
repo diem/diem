@@ -24,16 +24,19 @@ pub struct RebootRandomValidatorsParams {
         default_value = "10",
         help = "Number of validator nodes to reboot"
     )]
-    count: usize,
+    pub count: usize,
     #[structopt(long, default_value = "0", help = "Number of lsr nodes to reboot")]
-    lsr_count: usize,
+    pub lsr_count: usize,
+    #[structopt(long, default_value = "0", help = "Number of full nodes to reboot")]
+    pub fn_count: usize,
 }
 
 impl RebootRandomValidatorsParams {
-    pub fn new(validator_count: usize, lsr_count: usize) -> Self {
+    pub fn new(validator_count: usize, lsr_count: usize, fn_count: usize) -> Self {
         Self {
             count: validator_count,
             lsr_count,
+            fn_count,
         }
     }
 }
@@ -62,7 +65,7 @@ impl ExperimentParam for RebootRandomValidatorsParams {
         }
 
         let mut rnd = rand::thread_rng();
-        let mut instances = Vec::with_capacity(self.count + self.lsr_count);
+        let mut instances = Vec::with_capacity(self.count + self.lsr_count + self.fn_count);
         instances.append(
             &mut cluster
                 .validator_instances()
@@ -74,6 +77,13 @@ impl ExperimentParam for RebootRandomValidatorsParams {
             &mut cluster
                 .lsr_instances()
                 .choose_multiple(&mut rnd, self.lsr_count)
+                .cloned()
+                .collect(),
+        );
+        instances.append(
+            &mut cluster
+                .fullnode_instances()
+                .choose_multiple(&mut rnd, self.fn_count)
                 .cloned()
                 .collect(),
         );
