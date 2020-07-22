@@ -46,10 +46,12 @@ impl OperationalTool {
         command.set_validator_config()
     }
 
-    pub fn rotate_validator_network_key(
+    fn rotate_key<T>(
         &self,
         backend: &config::SecureBackend,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+        name: CommandName,
+        execute: fn(Command) -> Result<T, Error>,
+    ) -> Result<T, Error> {
         let args = format!(
             "
                 {command}
@@ -57,13 +59,31 @@ impl OperationalTool {
                 --host {host}
                 --validator-backend {backend_args}
             ",
-            command = command(TOOL_NAME, CommandName::RotateValidatorNetworkKey),
+            command = command(TOOL_NAME, name),
             host = self.host,
             chain_id = self.chain_id.id(),
             backend_args = backend_args(backend)?,
         );
         let command = Command::from_iter(args.split_whitespace());
-        command.rotate_validator_network_key()
+        execute(command)
+    }
+
+    pub fn rotate_validator_network_key(
+        &self,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+        self.rotate_key(backend, CommandName::RotateValidatorNetworkKey, |cmd| {
+            cmd.rotate_validator_network_key()
+        })
+    }
+
+    pub fn rotate_fullnode_network_key(
+        &self,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+        self.rotate_key(backend, CommandName::RotateFullNodeNetworkKey, |cmd| {
+            cmd.rotate_fullnode_network_key()
+        })
     }
 
     pub fn validate_transaction(

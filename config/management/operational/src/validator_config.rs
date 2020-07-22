@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::x25519;
-use libra_global_constants::{OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY};
+use libra_global_constants::{FULLNODE_NETWORK_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY};
 use libra_management::{
     error::Error, json_rpc::JsonRpcClientWrapper, storage::StorageWrapper, TransactionContext,
 };
@@ -66,22 +66,24 @@ impl SetValidatorConfig {
         client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
     }
 }
-
 #[derive(Debug, StructOpt)]
-pub struct RotateValidatorNetworkKey {
+pub struct RotateNetworkKey {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
     host: String,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
 }
 
-impl RotateValidatorNetworkKey {
-    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+impl RotateNetworkKey {
+    pub fn execute(
+        self,
+        key_name: &'static str,
+    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
         let mut storage = StorageWrapper::new(
             self.validator_config.validator_backend.name(),
             &self.validator_config.validator_backend.validator_backend,
         )?;
-        let key = storage.rotate_key(VALIDATOR_NETWORK_KEY)?;
+        let key = storage.rotate_key(key_name)?;
         let key = StorageWrapper::x25519(key)?;
 
         let set_validator_config = SetValidatorConfig {
@@ -92,6 +94,30 @@ impl RotateValidatorNetworkKey {
         };
 
         set_validator_config.execute().map(|txn_ctx| (txn_ctx, key))
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub struct RotateValidatorNetworkKey {
+    #[structopt(flatten)]
+    rotate_network_key: RotateNetworkKey,
+}
+
+impl RotateValidatorNetworkKey {
+    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+        self.rotate_network_key.execute(VALIDATOR_NETWORK_KEY)
+    }
+}
+
+#[derive(Debug, StructOpt)]
+pub struct RotateFullNodeNetworkKey {
+    #[structopt(flatten)]
+    rotate_network_key: RotateNetworkKey,
+}
+
+impl RotateFullNodeNetworkKey {
+    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+        self.rotate_network_key.execute(FULLNODE_NETWORK_KEY)
     }
 }
 
