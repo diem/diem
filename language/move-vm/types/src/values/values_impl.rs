@@ -1886,7 +1886,6 @@ impl VectorRef {
         let c = self.0.container();
         check_elem_layout(context, type_param, c)?;
         if idx >= c.len() {
-            println!("here!!! idx: {}, len: {}", idx, c.len());
             return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
         }
         Ok(NativeResult::ok(

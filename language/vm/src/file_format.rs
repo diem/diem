@@ -762,6 +762,7 @@ impl SignatureToken {
     pub fn debug_set_sh_idx(&mut self, sh_idx: StructHandleIndex) {
         match self {
             SignatureToken::Struct(ref mut wrapped) => *wrapped = sh_idx,
+            SignatureToken::StructInstantiation(ref mut wrapped, _) => *wrapped = sh_idx,
             SignatureToken::Reference(ref mut token)
             | SignatureToken::MutableReference(ref mut token) => token.debug_set_sh_idx(sh_idx),
             other => panic!(
