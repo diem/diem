@@ -10,10 +10,11 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.31"
+heck = "0.3.1"
 structopt = "0.3.15"
 textwrap = "0.12.1"
 serde-reflection = "0.3.1"
-serde-generate = "0.7.1"
+serde-generate = "0.8.0"
 serde_yaml = "0.8.13"
 
 libra-types = { path = "../../../types", version = "0.1.0" }
