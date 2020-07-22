@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::SynchronizerState;
+use crate::{counters, SynchronizerState};
 use anyhow::{format_err, Result};
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use itertools::Itertools;
@@ -146,11 +146,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
         _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
+        // track chunk execution time
+        let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
         let reconfig_events = self.executor.execute_and_commit_chunk(
             txn_list_with_proof,
             verified_target_li,
             intermediate_end_of_epoch_li,
         )?;
+        timer.stop_and_record();
         self.publish_on_chain_config_updates(reconfig_events)
     }
 
