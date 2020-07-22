@@ -4,15 +4,12 @@
 //! Utilities for property-based testing.
 
 use crate::file_format::{
-    AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FieldDefinition, FunctionDefinition,
-    FunctionHandle, IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, SignatureToken,
-    StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
-    TypeSignature,
+    AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionDefinition, FunctionHandle,
+    IdentifierIndex, ModuleHandle, ModuleHandleIndex, StructDefinition, TableIndex,
 };
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use proptest::{
     collection::{btree_set, vec, SizeRange},
-    option,
     prelude::*,
     sample::Index as PropIndex,
 };
@@ -20,14 +17,15 @@ use proptest::{
 mod constants;
 mod functions;
 mod signature;
+mod types;
 
-use crate::proptest_types::{
-    constants::ConstantPoolGen,
-    functions::{FnHandleMaterializeState, FunctionHandleGen},
+use constants::ConstantPoolGen;
+use functions::{
+    FnDefnMaterializeState, FnHandleMaterializeState, FunctionDefinitionGen, FunctionHandleGen,
 };
-use functions::{FnDefnMaterializeState, FunctionDefinitionGen};
-use signature::{KindGen, SignatureTokenGen};
-use std::collections::{BTreeSet, HashMap, HashSet};
+
+use crate::proptest_types::types::{StDefnMaterializeState, StructDefinitionGen, StructHandleGen};
+use std::collections::{BTreeSet, HashMap};
 
 /// Represents how large [`CompiledModule`] tables can be.
 pub type TableSize = u16;
@@ -94,11 +92,11 @@ impl CompiledModuleStrategyGen {
         Self {
             size: size as usize,
             field_count: (0..5).into(),
-            struct_type_params: (0..2).into(),
+            struct_type_params: (0..3).into(),
             parameters_count: (0..4).into(),
-            return_count: (0..2).into(),
-            func_type_params: (0..2).into(),
-            acquires_count: (0..1).into(),
+            return_count: (0..3).into(),
+            func_type_params: (0..3).into(),
+            acquires_count: (0..2).into(),
             code_len: (0..50).into(),
         }
     }
@@ -136,11 +134,14 @@ impl CompiledModuleStrategyGen {
         // Struct generators
         //
         let struct_handles_strat = vec(
-            any::<(PropIndex, PropIndex, bool, Vec<Kind>)>(),
+            StructHandleGen::strategy(self.struct_type_params.clone()),
             1..=self.size,
         );
         let struct_defs_strat = vec(
-            StructDefinitionGen::strategy(self.field_count.clone()),
+            StructDefinitionGen::strategy(
+                self.field_count.clone(),
+                self.struct_type_params.clone(),
+            ),
             1..=self.size,
         );
 
@@ -196,15 +197,18 @@ impl CompiledModuleStrategyGen {
                     //
                     // module handles
                     let mut module_handles_set = BTreeSet::new();
+                    let mut module_handles = vec![];
                     for (address, name) in module_handles_gen {
-                        module_handles_set.insert(ModuleHandle {
+                        let mh = ModuleHandle {
                             address: AddressIdentifierIndex(
                                 address.index(address_identifiers_len) as TableIndex
                             ),
                             name: IdentifierIndex(name.index(identifiers_len) as TableIndex),
-                        });
+                        };
+                        if module_handles_set.insert((mh.address, mh.name)) {
+                            module_handles.push(mh);
+                        }
                     }
-                    let module_handles: Vec<_> = module_handles_set.into_iter().collect();
                     let module_handles_len = module_handles.len();
 
                     //
@@ -212,29 +216,11 @@ impl CompiledModuleStrategyGen {
                     let mut struct_handles = vec![];
                     if module_handles_len > 1 {
                         let mut struct_handles_set = BTreeSet::new();
-                        for (module_idx, name_idx, is_nominal_resource, _type_parameters) in
-                            struct_handle_gens
-                        {
-                            let mut idx = module_idx.index(module_handles_len);
-                            // 0 module handles are reserved for definitions and
-                            // generated in the definition step
-                            if idx == 0 {
-                                idx += 1;
-                            }
-                            let module = ModuleHandleIndex(idx as TableIndex);
-                            let name =
-                                IdentifierIndex(name_idx.index(identifiers_len) as TableIndex);
-                            if struct_handles_set.insert((module, name)) {
-                                struct_handles.push(StructHandle {
-                                    module: ModuleHandleIndex(idx as TableIndex),
-                                    name: IdentifierIndex(
-                                        name_idx.index(identifiers_len) as TableIndex
-                                    ),
-                                    is_nominal_resource,
-                                    // TODO: enable type formals gen when we rework prop tests
-                                    // for generics
-                                    type_parameters: vec![],
-                                })
+                        for struct_handle_gen in struct_handle_gens.into_iter() {
+                            let sh =
+                                struct_handle_gen.materialize(module_handles_len, identifiers_len);
+                            if struct_handles_set.insert((sh.module, sh.name)) {
+                                struct_handles.push(sh);
                             }
                         }
                     }
@@ -263,7 +249,7 @@ impl CompiledModuleStrategyGen {
                         let mut state = FnHandleMaterializeState::new(
                             module_handles_len,
                             identifiers_len,
-                            struct_handles.len(),
+                            &struct_handles,
                         );
                         for function_handle_gen in function_handle_gens {
                             if let Some(function_handle) =
@@ -282,8 +268,8 @@ impl CompiledModuleStrategyGen {
                     let mut state = FnDefnMaterializeState::new(
                         identifiers_len,
                         constant_pool_len,
-                        struct_handles.len(),
-                        struct_defs.len(),
+                        &struct_handles,
+                        &struct_defs,
                         signatures,
                         function_handles,
                         struct_def_to_field_count,
@@ -304,7 +290,7 @@ impl CompiledModuleStrategyGen {
                     ) = state.return_tables();
 
                     // Build a compiled module
-                    CompiledModuleMut {
+                    let module = CompiledModuleMut {
                         module_handles,
                         self_module_handle_idx: ModuleHandleIndex(0),
                         struct_handles,
@@ -323,173 +309,11 @@ impl CompiledModuleStrategyGen {
                         identifiers,
                         address_identifiers,
                         constant_pool,
-                    }
-                    .freeze()
-                    .expect("valid modules should satisfy the bounds checker")
+                    };
+                    module
+                        .freeze()
+                        .expect("valid modules should satisfy the bounds checker")
                 },
             )
-    }
-}
-
-#[derive(Debug)]
-struct TypeSignatureIndex(u16);
-
-#[derive(Debug)]
-struct StDefnMaterializeState {
-    identifiers_len: usize,
-    struct_handles: Vec<StructHandle>,
-    new_handles: BTreeSet<(ModuleHandleIndex, IdentifierIndex)>,
-}
-
-impl StDefnMaterializeState {
-    fn new(identifiers_len: usize, struct_handles: Vec<StructHandle>) -> Self {
-        Self {
-            identifiers_len,
-            struct_handles,
-            new_handles: BTreeSet::new(),
-        }
-    }
-
-    fn add_struct_handle(&mut self, handle: StructHandle) -> Option<StructHandleIndex> {
-        if self.new_handles.insert((handle.module, handle.name)) {
-            self.struct_handles.push(handle);
-            Some(StructHandleIndex((self.struct_handles.len() - 1) as u16))
-        } else {
-            None
-        }
-    }
-
-    fn contains_nominal_resource(&self, signature: &SignatureToken) -> bool {
-        use SignatureToken::*;
-
-        match signature {
-            Signer => true,
-            Struct(struct_handle_index) => {
-                self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
-            }
-            StructInstantiation(struct_handle_index, type_args) => {
-                self.struct_handles[struct_handle_index.0 as usize].is_nominal_resource
-                    || type_args.iter().any(|t| self.contains_nominal_resource(t))
-            }
-            Vector(targ) => self.contains_nominal_resource(targ),
-            Reference(token) | MutableReference(token) => self.contains_nominal_resource(token),
-            Bool | U8 | U64 | U128 | Address | TypeParameter(_) => false,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct StructDefinitionGen {
-    name_idx: PropIndex,
-    is_nominal_resource: bool,
-    type_parameters: Vec<KindGen>,
-    is_public: bool,
-    field_defs: Option<Vec<FieldDefinitionGen>>,
-}
-
-impl StructDefinitionGen {
-    fn strategy(field_count: impl Into<SizeRange>) -> impl Strategy<Value = Self> {
-        (
-            any::<PropIndex>(),
-            any::<bool>(),
-            // TODO: how to not hard-code the number?
-            vec(KindGen::strategy(), 0..10),
-            any::<bool>(),
-            option::of(vec(FieldDefinitionGen::strategy(), field_count)),
-        )
-            .prop_map(
-                |(name_idx, is_nominal_resource, _type_parameters, is_public, field_defs)| Self {
-                    name_idx,
-                    is_nominal_resource,
-                    // TODO: re-enable type formals gen once we rework prop tests for generics
-                    type_parameters: vec![],
-                    is_public,
-                    field_defs,
-                },
-            )
-    }
-
-    fn materialize(self, state: &mut StDefnMaterializeState) -> (Option<StructDefinition>, usize) {
-        let mut field_names = HashSet::new();
-        let mut fields = vec![];
-        match self.field_defs {
-            None => (),
-            Some(field_defs_gen) => {
-                for fd_gen in field_defs_gen {
-                    let field = fd_gen.materialize(state);
-                    if field_names.insert(field.name) {
-                        fields.push(field);
-                    }
-                }
-            }
-        };
-        let is_nominal_resource = if fields.is_empty() {
-            self.is_nominal_resource
-        } else {
-            self.is_nominal_resource
-                || fields.iter().any(|field| {
-                    let field_sig = &field.signature.0;
-                    state.contains_nominal_resource(field_sig)
-                })
-        };
-        let handle = StructHandle {
-            // 0 represents the current module
-            module: ModuleHandleIndex(0),
-            name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
-            is_nominal_resource,
-            type_parameters: self
-                .type_parameters
-                .into_iter()
-                .map(|kind| kind.materialize())
-                .collect(),
-        };
-        match state.add_struct_handle(handle) {
-            Some(struct_handle) => {
-                if fields.is_empty() {
-                    (
-                        Some(StructDefinition {
-                            struct_handle,
-                            field_information: StructFieldInformation::Native,
-                        }),
-                        0,
-                    )
-                } else {
-                    let field_count = fields.len();
-                    let field_information = StructFieldInformation::Declared(fields);
-                    (
-                        Some(StructDefinition {
-                            struct_handle,
-                            field_information,
-                        }),
-                        field_count,
-                    )
-                }
-            }
-            None => (None, 0),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct FieldDefinitionGen {
-    name_idx: PropIndex,
-    signature_gen: SignatureTokenGen,
-}
-
-impl FieldDefinitionGen {
-    fn strategy() -> impl Strategy<Value = Self> {
-        (any::<PropIndex>(), SignatureTokenGen::atom_strategy()).prop_map(
-            |(name_idx, signature_gen)| Self {
-                name_idx,
-                signature_gen,
-            },
-        )
-    }
-
-    fn materialize(self, state: &StDefnMaterializeState) -> FieldDefinition {
-        FieldDefinition {
-            name: IdentifierIndex(self.name_idx.index(state.identifiers_len) as TableIndex),
-            signature: TypeSignature(self.signature_gen.materialize(state.struct_handles.len())),
-        }
     }
 }
