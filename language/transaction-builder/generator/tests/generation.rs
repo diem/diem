@@ -123,7 +123,9 @@ edition = "2018"
 [dependencies]
 libra-types = {{ path = "../libra-types", version = "0.1.0" }}
 serde_bytes = "0.11"
+serde = {{ version = "1.0.114", features = ["derive"] }}
 libra-canonical-serialization = {{ path = "{}", version = "0.1.0" }}
+once_cell = "1.4.0"
 
 [[bin]]
 name = "stdlib_demo"
