@@ -17,7 +17,7 @@ use futures::{future::try_join_all, try_join};
 use libra_logger::info;
 use structopt::StructOpt;
 
-#[derive(StructOpt, Debug)]
+#[derive(Clone, StructOpt, Debug)]
 pub struct ClusterBuilderParams {
     #[structopt(long, default_value = "1")]
     pub fullnodes_per_validator: u32,
@@ -48,8 +48,8 @@ impl ClusterBuilderParams {
 }
 
 pub struct ClusterBuilder {
-    current_tag: String,
-    cluster_swarm: ClusterSwarmKube,
+    pub current_tag: String,
+    pub cluster_swarm: ClusterSwarmKube,
 }
 
 impl ClusterBuilder {
