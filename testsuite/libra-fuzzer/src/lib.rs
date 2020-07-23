@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_proptest_helpers::ValueGenerator;
+use proptest::{
+    prelude::*,
+    strategy::{Strategy, ValueTree},
+    test_runner::{self, TestRunner},
+};
 use rand::RngCore;
 use std::{fmt, ops::Deref, str::FromStr};
 
@@ -51,4 +56,18 @@ impl FromStr for FuzzTarget {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         FuzzTarget::by_name(s).ok_or_else(|| format!("Fuzz target '{}' not found (run `list`)", s))
     }
+}
+
+/// useful to convert a bytearray to a value implenting the Arbitrary trait
+pub fn fuzz_data_to_value<T: Arbitrary>(data: &[u8]) -> T {
+    // setup proptest with passthrough RNG
+    let passthrough_rng =
+        test_runner::TestRng::from_seed(test_runner::RngAlgorithm::PassThrough, &data);
+    let config = test_runner::Config::default();
+    let mut runner = TestRunner::new_with_rng(config, passthrough_rng);
+
+    // create a value based on the arbitrary implementation of T
+    let strategy = T::arbitrary();
+    let strategy_tree = strategy.new_tree(&mut runner).expect("should not happen");
+    strategy_tree.current()
 }

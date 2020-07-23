@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::FuzzTargetImpl;
-use consensus::round_manager_fuzzing::{fuzz_proposal, generate_corpus_proposal};
-use libra_proptest_helpers::ValueGenerator;
+use crate::{fuzz_data_to_value, FuzzTargetImpl};
+use consensus::round_manager_fuzzing::fuzz_proposal;
+use consensus_types::proposal_msg::ProposalMsg;
 
 #[derive(Clone, Debug, Default)]
 pub struct ConsensusProposal;
@@ -17,11 +17,8 @@ impl FuzzTargetImpl for ConsensusProposal {
         "Consensus proposal messages"
     }
 
-    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(generate_corpus_proposal())
-    }
-
     fn fuzz(&self, data: &[u8]) {
-        fuzz_proposal(data);
+        let proposal: ProposalMsg = fuzz_data_to_value(data);
+        fuzz_proposal(proposal);
     }
 }

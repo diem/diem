@@ -6,6 +6,9 @@ use libra_types::block_info::BlockInfo;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
 /// VoteData keeps the information about the block, and its parent.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, CryptoHasher, LCSCryptoHash)]
 pub struct VoteData {
@@ -60,5 +63,17 @@ impl VoteData {
             "Proposed version is less than parent version",
         );
         Ok(())
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for VoteData {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (any::<BlockInfo>(), any::<BlockInfo>())
+            .prop_map(|(proposed, parent)| Self { proposed, parent })
+            .boxed()
     }
 }

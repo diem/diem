@@ -172,6 +172,12 @@ impl Ed25519Signature {
         self.0.to_bytes()
     }
 
+    /// Generates an [r=0, s=0] signature for testing
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn for_testing() -> Self {
+        Self(ed25519_dalek::Signature::try_from(&[0u8; ED25519_SIGNATURE_LENGTH]).unwrap())
+    }
+
     /// Deserialize an Ed25519Signature without any validation checks (malleability)
     /// apart from expected key size.
     pub(crate) fn from_bytes_unchecked(

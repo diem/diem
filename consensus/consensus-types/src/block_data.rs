@@ -16,6 +16,9 @@ use mirai_annotations::*;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum BlockType {
     Proposal {
@@ -182,5 +185,47 @@ impl BlockData {
             quorum_cert,
             block_type: BlockType::Proposal { payload, author },
         }
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for BlockType {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        prop_oneof![
+            (any::<Payload>(), any::<Author>())
+                .prop_map(|(payload, author)| Self::Proposal { payload, author }),
+            Just(Self::NilBlock),
+            Just(Self::Genesis),
+        ]
+        .boxed()
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for BlockData {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            any::<u64>(),
+            any::<u64>(),
+            any::<u64>(),
+            any::<QuorumCert>(),
+            any::<BlockType>(),
+        )
+            .prop_map(
+                |(epoch, round, timestamp_usecs, quorum_cert, block_type)| Self {
+                    epoch,
+                    round,
+                    timestamp_usecs,
+                    quorum_cert,
+                    block_type,
+                },
+            )
+            .boxed()
     }
 }

@@ -7,7 +7,11 @@ use libra_types::{block_info::BlockInfo, validator_verifier::ValidatorVerifier};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display, Formatter};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 #[derive(Deserialize, Serialize, Clone, Eq, PartialEq)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 /// This struct describes basic synchronization metadata.
 pub struct SyncInfo {
     /// Highest quorum certificate known to the peer.

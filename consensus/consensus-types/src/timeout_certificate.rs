@@ -11,6 +11,9 @@ use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
 /// TimeoutCertificate is a proof that 2f+1 participants in epoch i
 /// have voted in round r and we can now move to round r+1.
@@ -68,5 +71,30 @@ impl TimeoutCertificate {
 
     pub fn remove_signature(&mut self, author: Author) {
         self.signatures.remove(&author);
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for TimeoutCertificate {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            any::<Timeout>(),
+            prop::collection::vec(any::<Author>(), 0..10),
+        )
+            .prop_map(|(timeout, authors)| {
+                let dummy_signature = Ed25519Signature::for_testing();
+                let mut signatures = BTreeMap::new();
+                for author in authors {
+                    signatures.insert(author, dummy_signature.clone());
+                }
+                Self {
+                    timeout,
+                    signatures,
+                }
+            })
+            .boxed()
     }
 }

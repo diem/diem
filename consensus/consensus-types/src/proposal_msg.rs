@@ -7,9 +7,13 @@ use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 /// ProposalMsg contains the required information for the proposer election protocol to make its
 /// choice (typically depends on round and proposer info).
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ProposalMsg {
     proposal: Block,
     sync_info: SyncInfo,

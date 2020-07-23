@@ -8,9 +8,13 @@ use libra_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 /// This structure contains all the information necessary to construct a signature
 /// on the equivalent of a timeout message
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, LCSCryptoHash)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct Timeout {
     /// Epoch number corresponds to the set of validators that are active for this round.
     epoch: u64,

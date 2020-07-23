@@ -15,6 +15,9 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct QuorumCert {
     /// The vote information certified by the quorum.
@@ -122,5 +125,20 @@ impl QuorumCert {
             .context("Fail to verify QuorumCert")?;
         self.vote_data.verify()?;
         Ok(())
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for QuorumCert {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (any::<VoteData>(), any::<LedgerInfoWithSignatures>())
+            .prop_map(|(vote_data, signed_ledger_info)| Self {
+                vote_data,
+                signed_ledger_info,
+            })
+            .boxed()
     }
 }

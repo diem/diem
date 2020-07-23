@@ -17,6 +17,9 @@ use mirai_annotations::debug_checked_verify_eq;
 use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt::{self, Display, Formatter};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+
 #[path = "block_test_utils.rs"]
 #[cfg(any(test, feature = "fuzzing"))]
 pub mod block_test_utils;
@@ -57,6 +60,25 @@ impl Display for Block {
             self.round(),
             self.quorum_cert().certified_block().id(),
         )
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for Block {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        any::<BlockData>()
+            .prop_map(|block_data| {
+                let id = block_data.hash();
+                Self {
+                    id,
+                    block_data,
+                    signature: None,
+                }
+            })
+            .boxed()
     }
 }
 

@@ -6,7 +6,7 @@ use crate::{
     liveness::{
         proposal_generator::ProposalGenerator,
         rotating_proposer_election::RotatingProposer,
-        round_state::{ExponentialTimeInterval, NewRoundEvent, NewRoundReason, RoundState},
+        round_state::{ExponentialTimeInterval, RoundState},
     },
     metrics_safety_rules::MetricsSafetyRules,
     network::NetworkSender,
@@ -33,31 +33,23 @@ use network::{
     protocols::network::NewNetworkSender,
 };
 use once_cell::sync::Lazy;
+use proptest::prelude::*;
 use safety_rules::{test_utils, SafetyRules, TSafetyRules};
 use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 
-// This generates a proposal for round 1
-pub fn generate_corpus_proposal() -> Vec<u8> {
-    let mut round_manager = create_node_for_fuzzing();
-    block_on(async {
-        let proposal = round_manager
-            .generate_proposal(NewRoundEvent {
-                round: 1,
-                reason: NewRoundReason::QCReady,
-                timeout: std::time::Duration::new(5, 0),
-            })
-            .await;
-        // serialize and return proposal
-        lcs::to_bytes(&proposal.unwrap()).unwrap()
-    })
-}
-
+//
 // optimization for the fuzzer
+//
+
 static STATIC_RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
 static FUZZING_SIGNER: Lazy<ValidatorSigner> = Lazy::new(|| ValidatorSigner::from_int(1));
 
+//
 // helpers
+//
+
+// build an empty block store
 fn build_empty_store(
     storage: Arc<dyn PersistentLivenessStorage>,
     initial_data: RecoveryData,
@@ -83,7 +75,7 @@ fn make_initial_epoch_change_proof(signer: &ValidatorSigner) -> EpochChangeProof
     EpochChangeProof::new(vec![lis], false)
 }
 
-// TODO: MockStorage -> EmptyStorage
+// initialize a round state
 fn create_round_state() -> RoundState {
     let base_timeout = std::time::Duration::new(60, 0);
     let time_interval = Box::new(ExponentialTimeInterval::fixed(base_timeout));
@@ -92,24 +84,24 @@ fn create_round_state() -> RoundState {
     RoundState::new(time_interval, time_service, round_timeout_sender)
 }
 
-// Creates an RoundManager for fuzzing
+// creates a RoundManager for fuzzing
 fn create_node_for_fuzzing() -> RoundManager {
     // signer is re-used accross fuzzing runs
     let signer = FUZZING_SIGNER.clone();
 
-    // TODO: remove
+    // initialize validator verifier
     let validator = ValidatorVerifier::new_single(signer.author(), signer.public_key());
     let validator_set = (&validator).into();
 
-    // TODO: EmptyStorage
+    // initialize mock storage
     let (initial_data, storage) = MockStorage::start_for_testing(validator_set);
 
-    // TODO: remove
+    // initialize safety rules
     let proof = make_initial_epoch_change_proof(&signer);
     let mut safety_rules = SafetyRules::new(test_utils::test_storage(&signer), false);
     safety_rules.initialize(&proof).unwrap();
 
-    // TODO: mock channels
+    // initialize channels
     let (network_reqs_tx, _network_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
     let (connection_reqs_tx, _) =
@@ -131,14 +123,14 @@ fn create_node_for_fuzzing() -> RoundManager {
         epoch_state.verifier.clone(),
     );
 
-    // TODO: mock
+    // initialize block store
     let block_store = build_empty_store(storage.clone(), initial_data);
 
-    // TODO: remove
+    // initialize time service
     let time_service = Arc::new(SimulatedTimeService::new());
     time_service.sleep(Duration::from_millis(1));
 
-    // TODO: remove
+    // initialize proposal generator
     let proposal_generator = ProposalGenerator::new(
         signer.author(),
         block_store.clone(),
@@ -147,13 +139,11 @@ fn create_node_for_fuzzing() -> RoundManager {
         1,
     );
 
-    //
-    let round_state = create_round_state();
-
-    // TODO: have two different nodes, one for proposing, one for accepting a proposal
+    // initialize proposer election
     let proposer_election = Box::new(RotatingProposer::new(vec![signer.author()], 1));
 
-    // event processor
+    // initialize round manager
+    let round_state = create_round_state();
     RoundManager::new(
         epoch_state,
         Arc::clone(&block_store),
@@ -168,21 +158,16 @@ fn create_node_for_fuzzing() -> RoundManager {
     )
 }
 
-// This functions fuzzes a Proposal protobuffer (not a ConsensusMsg)
-pub fn fuzz_proposal(data: &[u8]) {
+//
+// Proposal Fuzzing
+//
+
+/// Fuzz a proposal message
+pub fn fuzz_proposal(proposal: ProposalMsg) {
     // create node
     let mut round_manager = create_node_for_fuzzing();
 
-    let proposal: ProposalMsg = match lcs::from_bytes(data) {
-        Ok(xx) => xx,
-        Err(_) => {
-            if cfg!(test) {
-                panic!();
-            }
-            return;
-        }
-    };
-
+    // verify well-formedness but avoid signature check
     let proposal = match proposal.verify_well_formed() {
         Ok(_) => proposal,
         Err(e) => {
@@ -195,17 +180,13 @@ pub fn fuzz_proposal(data: &[u8]) {
     };
 
     block_on(async move {
-        // TODO: make sure this obtains a vote when testing
-        // TODO: make sure that if this obtains a vote, it's for round 1, etc.
         let _ = round_manager.process_proposal_msg(proposal).await;
     });
 }
 
-// This test is here so that the fuzzer can be maintained
-#[test]
-fn test_consensus_proposal_fuzzer() {
-    // generate a proposal
-    let proposal = generate_corpus_proposal();
-    // successfully parse it
+proptest! {
+    #[test]
+    fn test_consensus_proposal_fuzzer(proposal in any::<ProposalMsg>()){
     fuzz_proposal(&proposal);
+    }
 }

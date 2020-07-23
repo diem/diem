@@ -3,12 +3,14 @@
 
 use crate::{epoch_state::EpochState, on_chain_config::ValidatorSet, transaction::Version};
 use libra_crypto::hash::HashValue;
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
-#[cfg(any(test, feature = "fuzzing"))]
-use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+
+#[cfg(any(test, feature = "fuzzing"))]
+use ::{
+    libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH, 
+    proptest::prelude::*
+};
 
 /// The round of a block is a consensus-internal counter, which starts with 0 and increases
 /// monotonically.
@@ -24,7 +26,6 @@ pub const GENESIS_TIMESTAMP_USECS: u64 = 0;
 /// without having access to the block or its execution output state. It
 /// assumes that the block is the last block executed within the ledger.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BlockInfo {
     /// Epoch number corresponds to the set of validators that are active for this block.
     epoch: u64,
@@ -172,5 +173,45 @@ impl Display for BlockInfo {
             self.timestamp_usecs(),
             self.next_epoch_state.as_ref().map_or("None".to_string(), |epoch_state| format!("{}", epoch_state)),
         )
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for BlockInfo {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        (
+            any::<u64>(),
+            any::<Round>(),
+            any::<HashValue>(),
+            any::<HashValue>(),
+            any::<Version>(),
+            any::<u64>(),
+            prop_oneof![Just(None), any::<EpochState>().prop_map(Some)],
+        )
+            .prop_map(
+                |(
+                    epoch,
+                    round,
+                    id,
+                    executed_state_id,
+                    version,
+                    timestamp_usecs,
+                    next_epoch_state,
+                )| {
+                    Self {
+                        epoch,
+                        round,
+                        id,
+                        executed_state_id,
+                        version,
+                        timestamp_usecs,
+                        next_epoch_state,
+                    }
+                },
+            )
+            .boxed()
     }
 }
