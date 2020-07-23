@@ -2080,8 +2080,8 @@
     "list": []
   },
   "time": {
-    "from": "2020-07-21T02:44:11.000Z",
-    "to": "2020-07-21T02:51:08.000Z"
+    "from": "now-3h",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
