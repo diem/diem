@@ -4,6 +4,7 @@
 use crate::network_id::{NetworkId, NodeNetworkId};
 use libra_types::PeerId;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// If a node considers a network 'upstream', the node will broadcast transactions (via mempool) to and
 /// send sync requests (via state sync) to all its peers in this network.
@@ -36,7 +37,7 @@ impl UpstreamConfig {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Identifier of a node, represented as (network_id, peer_id)
 pub struct PeerNetworkId(pub NodeNetworkId, pub PeerId);
 
@@ -66,6 +67,23 @@ impl PeerNetworkId {
         Self(
             NodeNetworkId::new(NetworkId::Validator, 0),
             PeerId::random(),
+        )
+    }
+}
+
+impl fmt::Debug for PeerNetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for PeerNetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "PeerId:{}, NodeNetworkId:({})",
+            self.peer_id().short_str(),
+            self.raw_network_id()
         )
     }
 }

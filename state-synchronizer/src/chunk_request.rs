@@ -5,7 +5,7 @@ use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 /// We're currently considering several types of chunk requests depending on the information
 /// available on the requesting side.
 pub enum TargetType {
@@ -39,7 +39,37 @@ pub enum TargetType {
     Waypoint(Version),
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+impl fmt::Debug for TargetType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+// TODO: This cuts out LedgerInfo, do we need it logging?
+impl fmt::Display for TargetType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            TargetType::TargetLedgerInfo(ledger_info) => {
+                write!(f, "TargetLedgerInfo({})", ledger_info)
+            }
+            TargetType::HighestAvailable {
+                target_li,
+                timeout_ms,
+            } => write!(
+                f,
+                "HighestAvailable(timeout:{}, target_li_version:{})",
+                timeout_ms,
+                target_li.as_ref().map_or_else(
+                    || String::from("None"),
+                    |li| li.ledger_info().version().to_string()
+                )
+            ),
+            TargetType::Waypoint(version) => write!(f, "Waypoint({})", version),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct GetChunkRequest {
     /// The response should start with `known_version + 1`.
     pub known_version: Version,
@@ -63,6 +93,12 @@ impl GetChunkRequest {
 
     pub fn target(&self) -> &TargetType {
         &self.target
+    }
+}
+
+impl fmt::Debug for GetChunkRequest {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 

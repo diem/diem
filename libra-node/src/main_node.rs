@@ -188,7 +188,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
         network_builder.build(runtime.handle().clone());
         network_runtimes.push(runtime);
         debug!(
-            "Network Built for network_context: {:?}",
+            "Network built for network context: {}",
             network_builder.network_context()
         );
     }
