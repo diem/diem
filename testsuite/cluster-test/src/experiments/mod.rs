@@ -8,6 +8,7 @@ mod cpu_flamegraph;
 mod packet_loss_random_validators;
 mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
+mod reboot_cluster;
 mod reboot_random_validators;
 mod recovery_time;
 mod twin_validator;
@@ -27,6 +28,7 @@ pub use performance_benchmark::{PerformanceBenchmark, PerformanceBenchmarkParams
 pub use performance_benchmark_three_region_simulation::{
     PerformanceBenchmarkThreeRegionSimulation, PerformanceBenchmarkThreeRegionSimulationParams,
 };
+pub use reboot_cluster::{RebootCluster, RebootClusterParams};
 pub use reboot_random_validators::{RebootRandomValidators, RebootRandomValidatorsParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 pub use twin_validator::{TwinValidators, TwinValidatorsParams};
@@ -147,6 +149,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
     known_experiments.insert("compatibility_test", f::<CompatiblityTestParams>());
+    known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
