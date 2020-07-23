@@ -46,7 +46,7 @@ use rand::{
     prelude::{SeedableRng, SmallRng},
     seq::SliceRandom,
 };
-use serde::Serialize;
+use serde::{export::Formatter, Serialize};
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
@@ -101,11 +101,31 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
 /// Config=lowest).
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, NumVariants, Serialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, NumVariants, Serialize)]
 pub enum DiscoverySource {
     OnChain,
     Gossip,
     Config,
+}
+
+impl fmt::Debug for DiscoverySource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for DiscoverySource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                DiscoverySource::OnChain => "OnChain",
+                DiscoverySource::Gossip => "Gossip",
+                DiscoverySource::Config => "Config",
+            }
+        )
+    }
 }
 
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
@@ -524,7 +544,7 @@ where
         if have_any_changed {
             let peer_addrs = &self.peer_addrs;
             info!(
-                "{} current addresses: update src: {:?}, all peer addresses: {}",
+                "{} current addresses: update src: {}, all peer addresses: {}",
                 self.network_context, src, peer_addrs,
             );
         }
@@ -555,7 +575,7 @@ where
             if pubkeys.update(src, new_pubkeys) {
                 have_any_changed = true;
                 info!(
-                    "{} pubkey sets updated for peer: {}, update src: {:?}, pubkeys: {}",
+                    "{} pubkey sets updated for peer: {}, update src: {}, pubkeys: {}",
                     self.network_context,
                     peer_id.short_str(),
                     src,
@@ -576,7 +596,7 @@ where
 
             let peer_pubkeys = &self.peer_pubkeys;
             info!(
-                "{} current pubkeys: update src: {:?}, all peer pubkeys: {}, new eligible set: {:?}",
+                "{} current pubkeys: update src: {}, all peer pubkeys: {}, new eligible set: {:?}",
                 self.network_context, src, peer_pubkeys, new_eligible,
             );
 

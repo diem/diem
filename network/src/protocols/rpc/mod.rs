@@ -156,7 +156,7 @@ impl RequestIdGenerator {
             match self.next_id.overflowing_add(1) {
                 (next_id, true) => {
                     info!(
-                        "Request ids with peer: {:?} wrapped around to 0",
+                        "Request ids with peer: {} wrapped around to 0",
                         self.peer_id.short_str(),
                     );
                     next_id
@@ -292,7 +292,7 @@ impl Rpc {
             );
             if let Err(e) = response_tx.send(response) {
                 warn!(
-                    "Failed to handle inbount RPC response from peer: {} for protocol: {:?}. Error: {:?}",
+                    "Failed to handle inbount RPC response from peer: {} for protocol: {}. Error: {:?}",
                     peer_id.short_str(),
                     protocol,
                     e
@@ -306,7 +306,7 @@ impl Rpc {
         } else {
             // TODO: add ability to log protocol id as well
             info!(
-                "Received response for expired request from {:?}. Discarding.",
+                "Received response for expired request from {}. Discarding.",
                 peer_id.short_str()
             )
         }

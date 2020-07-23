@@ -54,14 +54,15 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
+use serde::export::Formatter;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
 pub enum PeerManagerRequest {
     /// Send an RPC request to a remote peer.
-    SendRpc(PeerId, OutboundRpcRequest),
+    SendRpc(PeerId, #[serde(skip)] OutboundRpcRequest),
     /// Fire-and-forget style message send to a remote peer.
-    SendMessage(PeerId, Message),
+    SendMessage(PeerId, #[serde(skip)] Message),
 }
 
 /// Notifications sent by PeerManager to upstream actors.
@@ -86,7 +87,7 @@ pub enum ConnectionRequest {
     ),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
     NewPeer(
@@ -97,6 +98,25 @@ pub enum ConnectionNotification {
     ),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
     LostPeer(PeerId, NetworkAddress, ConnectionOrigin, DisconnectReason),
+}
+
+impl std::fmt::Debug for ConnectionNotification {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::fmt::Display for ConnectionNotification {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConnectionNotification::NewPeer(peer, addr, origin, context) => {
+                write!(f, "[{},{},{},{}]", peer, addr, origin, context)
+            }
+            ConnectionNotification::LostPeer(peer, addr, origin, reason) => {
+                write!(f, "[{},{},{},{}]", peer, addr, origin, reason)
+            }
+        }
+    }
 }
 
 /// Convenience wrapper which makes it easy to issue communication requests and await the responses
@@ -403,7 +423,7 @@ where
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
                 info!(
-                    "{} Connection {:?} closed due to {:?}",
+                    "{} Connection {} closed due to {}",
                     self.network_context, lost_conn_metadata, reason,
                 );
                 let peer_id = lost_conn_metadata.peer_id();
@@ -658,7 +678,7 @@ where
         for handler in self.connection_event_handlers.iter_mut() {
             if let Err(e) = handler.push(peer_id, notification.clone()) {
                 warn!(
-                    "{} Failed to send notification {:?} to handler for peer: {}. Error: {:?}",
+                    "{} Failed to send notification {} to handler for peer: {}. Error: {:?}",
                     self.network_context,
                     notification,
                     peer_id.short_str(),
@@ -718,10 +738,9 @@ where
                         PeerManagerNotification::RecvMessage(peer_id, msg),
                     ) {
                         warn!(
-                            "{} Upstream handler unable to handle messages for protocol: {:?}. Error:
+                            "{} Upstream handler unable to handle messages for protocol: {}. Error:
                             {:?}",
-                            network_context,
-                            protocol, err
+                            network_context, protocol, err
                         );
                     }
                 } else {
@@ -740,7 +759,7 @@ where
                         PeerManagerNotification::RecvRpc(peer_id, rpc_req),
                     ) {
                         warn!(
-                            "{} Upstream handler unable to handle rpc for protocol: {:?}. Error:
+                            "{} Upstream handler unable to handle rpc for protocol: {}. Error:
                               {:?}",
                             network_context, protocol, err
                         );

@@ -199,7 +199,7 @@ impl DirectSend {
                     }
                     Err(e) => {
                         warn!(
-                            "Failed to send message for protocol: {:?} to peer: {}. Error: {:?}",
+                            "Failed to send message for protocol: {} to peer: {}. Error: {:?}",
                             protocol_id,
                             self.peer_handle.peer_id().short_str(),
                             e
