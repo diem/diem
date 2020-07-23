@@ -3,7 +3,7 @@
 
 use crate::command::{Command, CommandName};
 use libra_config::config;
-use libra_crypto::x25519;
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK, TransactionContext};
 use libra_network_address::NetworkAddress;
 use libra_types::{account_address::AccountAddress, chain_id::ChainId};
@@ -66,6 +66,15 @@ impl OperationalTool {
         );
         let command = Command::from_iter(args.split_whitespace());
         execute(command)
+    }
+
+    pub fn rotate_consensus_key(
+        &self,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        self.rotate_key(backend, CommandName::RotateConsensusKey, |cmd| {
+            cmd.rotate_consensus_key()
+        })
     }
 
     pub fn rotate_validator_network_key(

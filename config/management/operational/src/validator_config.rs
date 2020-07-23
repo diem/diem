@@ -1,10 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::x25519;
-use libra_global_constants::{FULLNODE_NETWORK_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY};
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
+use libra_global_constants::{
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
+};
 use libra_management::{
-    error::Error, json_rpc::JsonRpcClientWrapper, storage::StorageWrapper, TransactionContext,
+    error::Error,
+    json_rpc::JsonRpcClientWrapper,
+    storage::{to_x25519, StorageWrapper},
+    TransactionContext,
 };
 use libra_network_address::{
     encrypted::{EncNetworkAddress, Key, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY},
@@ -67,24 +72,23 @@ impl SetValidatorConfig {
     }
 }
 #[derive(Debug, StructOpt)]
-pub struct RotateNetworkKey {
+pub struct RotateKey {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
     host: String,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
 }
 
-impl RotateNetworkKey {
+impl RotateKey {
     pub fn execute(
         self,
         key_name: &'static str,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
         let mut storage = StorageWrapper::new(
             self.validator_config.validator_backend.name(),
             &self.validator_config.validator_backend.validator_backend,
         )?;
         let key = storage.rotate_key(key_name)?;
-        let key = StorageWrapper::x25519(key)?;
 
         let set_validator_config = SetValidatorConfig {
             host: self.host,
@@ -98,26 +102,40 @@ impl RotateNetworkKey {
 }
 
 #[derive(Debug, StructOpt)]
+pub struct RotateConsensusKey {
+    #[structopt(flatten)]
+    rotate_key: RotateKey,
+}
+
+impl RotateConsensusKey {
+    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        self.rotate_key.execute(CONSENSUS_KEY)
+    }
+}
+
+#[derive(Debug, StructOpt)]
 pub struct RotateValidatorNetworkKey {
     #[structopt(flatten)]
-    rotate_network_key: RotateNetworkKey,
+    rotate_key: RotateKey,
 }
 
 impl RotateValidatorNetworkKey {
     pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        self.rotate_network_key.execute(VALIDATOR_NETWORK_KEY)
+        let (txn_ctx, key) = self.rotate_key.execute(VALIDATOR_NETWORK_KEY)?;
+        Ok((txn_ctx, to_x25519(key)?))
     }
 }
 
 #[derive(Debug, StructOpt)]
 pub struct RotateFullNodeNetworkKey {
     #[structopt(flatten)]
-    rotate_network_key: RotateNetworkKey,
+    rotate_key: RotateKey,
 }
 
 impl RotateFullNodeNetworkKey {
     pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        self.rotate_network_key.execute(FULLNODE_NETWORK_KEY)
+        let (txn_ctx, key) = self.rotate_key.execute(FULLNODE_NETWORK_KEY)?;
+        Ok((txn_ctx, to_x25519(key)?))
     }
 }
 
