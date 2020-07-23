@@ -3,7 +3,7 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
-use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
+use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
 use libra_global_constants::CONSENSUS_KEY;
@@ -12,6 +12,7 @@ use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
+use libra_management::TransactionContext;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
@@ -1473,10 +1474,80 @@ fn wait_for_all_nodes(
     }
 }
 
+/// Verifies that a given transaction has been executed on the blockchain
+// TODO: Support verification of the on-chain validator config state
+fn verify_transaction_executed(op_tool: OperationalTool, transaction_context: TransactionContext) {
+    op_tool
+        .validate_transaction(
+            transaction_context.address,
+            transaction_context.sequence_number,
+        )
+        .unwrap();
+}
+
+/// Loads the validator's storage backend from the given node config
+fn load_backend_storage(node_config: &&NodeConfig) -> SecureBackend {
+    if let Identity::FromStorage(storage_identity) =
+        &node_config.validator_network.as_ref().unwrap().identity
+    {
+        storage_identity.backend.clone()
+    } else {
+        panic!("Couldn't load identity from storage");
+    }
+}
+
 #[test]
-/// There are three main steps to network key rotation
-/// 1. Rotate the key in local storage
-/// 2. Write a transaction to update the ValidatorConfig trigerring the reconfiguration (Operator)
+fn test_consensus_key_rotation() {
+    let mut swarm = TestEnvironment::new(5);
+    swarm.validator_swarm.launch();
+
+    // Load the node configs
+    let node_configs: Vec<_> = swarm
+        .validator_swarm
+        .config
+        .config_files
+        .iter()
+        .map(|config_path| NodeConfig::load(config_path).unwrap())
+        .collect();
+    let libra_interfaces: Vec<_> = (&node_configs)
+        .iter()
+        .map(|node_config| get_libra_interface(node_config))
+        .collect();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let node_config = (&node_configs).first().unwrap();
+    let op_tool = OperationalTool::new(
+        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
+        ChainId::test(),
+    );
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+
+    // Setup an RPC endpoint so we can talk to the node
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let libra = (&libra_interfaces).first().unwrap();
+    let last_reconfig = libra.last_reconfiguration().unwrap();
+
+    // Rotate the consensus key
+    let (transaction_context, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+
+    // Ensure all nodes have been reconfigured
+    wait_for_all_nodes(&libra_interfaces, |libra| {
+        libra.last_reconfiguration().unwrap() > last_reconfig
+    });
+
+    verify_transaction_executed(op_tool, transaction_context);
+
+    // Verify that the config has been updated correctly with the new consensus key
+    let actual_key = libra
+        .retrieve_validator_config(validator_account)
+        .unwrap()
+        .consensus_public_key;
+    assert_eq!(new_consensus_key, actual_key);
+}
+
+#[test]
 fn test_network_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
@@ -1493,6 +1564,8 @@ fn test_network_key_rotation() {
         .iter()
         .map(|node_config| get_libra_interface(node_config))
         .collect();
+
+    // Connect the operator tool to the first node's JSON RPC API
     let node_config = (&node_configs).first().unwrap();
     let op_tool = OperationalTool::new(
         format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
@@ -1500,36 +1573,23 @@ fn test_network_key_rotation() {
     );
 
     // Load validator's on disk storage
-    let backend = if let Identity::FromStorage(storage_identity) =
-        &node_config.validator_network.as_ref().unwrap().identity
-    {
-        &storage_identity.backend
-    } else {
-        panic!("Couldn't load identity from storage");
-    };
+    let backend = load_backend_storage(&node_config);
 
     // Setup an RPC endpoint so we can talk to the node
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let libra = (&libra_interfaces).first().unwrap();
-
     let last_reconfig = libra.last_reconfiguration().unwrap();
+
+    // Rotate the validator network key
     let (transaction_context, new_network_key) =
-        op_tool.rotate_validator_network_key(backend).unwrap();
+        op_tool.rotate_validator_network_key(&backend).unwrap();
 
     // Ensure all nodes have been reconfigured
     wait_for_all_nodes(&libra_interfaces, |libra| {
         libra.last_reconfiguration().unwrap() > last_reconfig
     });
 
-    // Validate transaction
-    // TODO: Validating transaction doesn't seem to validate that the reconfiguration occurred
-    // Should refactor once we have a command to validate that
-    op_tool
-        .validate_transaction(
-            transaction_context.address,
-            transaction_context.sequence_number,
-        )
-        .unwrap();
+    verify_transaction_executed(op_tool, transaction_context);
 
     // Verify that config has been loaded correctly with new key
     let actual_key = libra
