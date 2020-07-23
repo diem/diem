@@ -102,50 +102,37 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
 }
 
 fn check_primitive_script_arg(context: &mut Context, mloc: Loc, idx: usize, ty: &Type) {
+    let current_function = context.current_function.clone().unwrap();
+    let mk_msg = move || {
+        format!(
+            "Invalid parameter for script function '{}'",
+            current_function
+        )
+    };
+
     let loc = ty.loc;
-
     let signer_ref = sp(loc, Type_::Ref(false, Box::new(Type_::signer(loc))));
-    let acceptable_types = vec![
-        Type_::u8(loc),
-        Type_::u64(loc),
-        Type_::u128(loc),
-        Type_::bool(loc),
-        Type_::address(loc),
-        Type_::vector(loc, Type_::u8(loc)),
-        signer_ref.clone(),
-    ];
-    let ty_is_unacceptable = acceptable_types.iter().all(|acceptable_type| {
-        subtype_no_report(context, ty.clone(), acceptable_type.clone()).is_err()
-    });
-    if ty_is_unacceptable {
-        let mmsg = format!(
-            "Invalid parameter for script function '{}'",
-            context.current_function.as_ref().unwrap()
-        );
-        let tys = acceptable_types
-            .iter()
-            .map(|t| core::error_format(t, &Subst::empty()));
-        let tmsg = format!(
-            "Found: {}. But expected: {}",
-            core::error_format(ty, &Subst::empty()),
-            format_comma(tys),
-        );
-        context.error(vec![(mloc, mmsg), (loc, tmsg)]);
-        return;
+    let is_signer_ref = {
+        let old_subst = context.subst.clone();
+        let result = subtype_no_report(context, ty.clone(), signer_ref.clone());
+        context.subst = old_subst;
+        result.is_ok()
+    };
+    if is_signer_ref {
+        if idx == 0 {
+            return;
+        } else {
+            let msg = mk_msg();
+            let tmsg = format!(
+                "{} must be the first argument to a script",
+                core::error_format(&signer_ref, &Subst::empty()),
+            );
+            context.error(vec![(mloc, msg), (loc, tmsg)]);
+            return;
+        }
     }
 
-    if idx != 0 && subtype_no_report(context, ty.clone(), signer_ref.clone()).is_ok() {
-        let mmsg = format!(
-            "Invalid parameter for script function '{}'",
-            context.current_function.as_ref().unwrap()
-        );
-        let tmsg = format!(
-            "{} must be the first argument to a script",
-            core::error_format(&signer_ref, &Subst::empty()),
-        );
-        context.error(vec![(mloc, mmsg), (loc, tmsg)]);
-        return;
-    }
+    check_valid_constant::signature(context, mloc, mk_msg, ty);
 }
 
 //**************************************************************************************************
@@ -266,7 +253,12 @@ fn constant(context: &mut Context, _name: ConstantName, nconstant: N::Constant) 
 
     // Don't need to add base type constraint, as it is checked in `check_valid_constant::signature`
     let mut signature = core::instantiate(context, signature);
-    check_valid_constant::signature(context, signature.loc, &signature);
+    check_valid_constant::signature(
+        context,
+        signature.loc,
+        || "Unpermitted constant type",
+        &signature,
+    );
     context.return_type = Some(signature.clone());
 
     let mut value = exp_(context, nvalue);
@@ -304,7 +296,12 @@ mod check_valid_constant {
     };
     use move_ir_types::location::*;
 
-    pub fn signature(context: &mut Context, sloc: Loc, ty: &Type) {
+    pub fn signature<T: Into<String>, F: FnOnce() -> T>(
+        context: &mut Context,
+        sloc: Loc,
+        fmsg: F,
+        ty: &Type,
+    ) {
         let loc = ty.loc;
 
         let mut acceptable_types = vec![
@@ -331,11 +328,9 @@ mod check_valid_constant {
         let inner = core::ready_tvars(&context.subst, inner_tvar);
         context.subst = old_subst;
         if is_vec {
-            signature(context, sloc, &inner);
+            signature(context, sloc, fmsg, &inner);
             return;
         }
-
-        let smsg = "Unpermitted constant type";
 
         acceptable_types.push(vec_ty);
         let tys = acceptable_types
@@ -346,7 +341,7 @@ mod check_valid_constant {
             core::error_format(ty, &Subst::empty()),
             format_comma(tys),
         );
-        context.error(vec![(sloc, smsg.into()), (loc, tmsg)]);
+        context.error(vec![(sloc, fmsg().into()), (loc, tmsg)]);
     }
 
     pub fn exp(context: &mut Context, e: &T::Exp) {
