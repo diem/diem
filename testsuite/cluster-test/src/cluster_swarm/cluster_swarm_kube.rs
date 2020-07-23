@@ -572,7 +572,7 @@ impl ClusterSwarmKube {
             .map_err(|e| format_err!("remove_all_network_effects: {}", e))
     }
 
-    async fn delete_all(&self) -> Result<()> {
+    pub async fn delete_all(&self) -> Result<()> {
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let pod_names: Vec<String> = pod_api
             .list(&ListParams {

@@ -252,6 +252,8 @@ struct BasicSwarmUtil {
 struct ClusterTestRunner {
     logs: LogTail,
     trace_tail: TraceTail,
+    cluster_builder: ClusterBuilder,
+    cluster_builder_params: ClusterBuilderParams,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
     slack: SlackClient,
@@ -462,8 +464,9 @@ impl ClusterTestRunner {
             .expect("Failed to discover grafana url in k8s");
         let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
         let cluster_builder = ClusterBuilder::new(current_tag.to_string(), cluster_swarm.clone());
+        let cluster_builder_params = args.cluster_builder_params.clone();
         let cluster = cluster_builder
-            .setup_cluster(&args.cluster_builder_params)
+            .setup_cluster(&cluster_builder_params, true)
             .await
             .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
         let log_tail_started = Instant::now();
@@ -499,6 +502,8 @@ impl ClusterTestRunner {
         Ok(Self {
             logs,
             trace_tail,
+            cluster_builder,
+            cluster_builder_params,
             cluster,
             health_check_runner,
             slack,
@@ -657,6 +662,8 @@ impl ClusterTestRunner {
             &mut self.tx_emitter,
             &mut self.trace_tail,
             &self.prometheus,
+            &mut self.cluster_builder,
+            &self.cluster_builder_params,
             &self.cluster,
             &mut self.report,
             &mut global_emit_job_request,
