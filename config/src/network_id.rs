@@ -81,7 +81,7 @@ pub enum NetworkId {
 /// This extra layer on top of `NetworkId` mainly exists for the application-layer (e.g. mempool,
 /// state sync) to differentiate between multiple public
 /// networks that a node may belong to
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct NodeNetworkId(NetworkId, usize);
 
 impl NodeNetworkId {
@@ -91,6 +91,18 @@ impl NodeNetworkId {
 
     pub fn network_id(&self) -> NetworkId {
         self.0.clone()
+    }
+}
+
+impl fmt::Debug for NodeNetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for NodeNetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", self.0, self.1)
     }
 }
 

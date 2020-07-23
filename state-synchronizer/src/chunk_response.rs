@@ -48,7 +48,7 @@ impl ResponseLedgerInfo {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
 /// The returned chunk is bounded by the end of the known_epoch of the requester
 /// (i.e., a chunk never crosses epoch boundaries).
 pub struct GetChunkResponse {
@@ -68,6 +68,11 @@ impl GetChunkResponse {
             response_li,
             txn_list_with_proof,
         }
+    }
+}
+impl fmt::Debug for GetChunkResponse {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
