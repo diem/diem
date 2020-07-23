@@ -6,7 +6,7 @@ error:
     │         ^^ Invalid parameter for script function 't1'
     ·
  11 │     fun t1(s: signer) {
-    │               ------ Found: 'signer'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
+    │               ------ Found: 'signer'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
     │
 
 error: 
@@ -42,7 +42,7 @@ error:
     │         ^^ Invalid parameter for script function 't2'
     ·
  18 │     fun t2(s: &signer, s2: signer) {
-    │                            ------ Found: 'signer'. But expected: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<u8>', '&signer'
+    │                            ------ Found: 'signer'. But expected one of: 'u8', 'u64', 'u128', 'bool', 'address', 'vector<_>'
     │
 
 error: 
