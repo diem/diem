@@ -20,7 +20,7 @@ use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
-use serde::Serialize;
+use serde::{export::Formatter, Serialize};
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom,
@@ -90,7 +90,7 @@ impl ConnectionIdGenerator {
 }
 
 /// Metadata associated with an established and fully upgraded connection.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct ConnectionMetadata {
     peer_id: PeerId,
     connection_id: ConnectionId,
@@ -136,6 +136,26 @@ impl ConnectionMetadata {
     }
 }
 
+impl std::fmt::Debug for ConnectionMetadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::fmt::Display for ConnectionMetadata {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{},{},{},{},{:?}]",
+            self.peer_id,
+            self.addr,
+            self.origin,
+            self.messaging_protocol,
+            self.application_protocols
+        )
+    }
+}
+
 /// The `Connection` struct consists of connection metadata and the actual socket for
 /// communication.
 #[derive(Debug)]
@@ -157,7 +177,7 @@ pub async fn perform_handshake<T: TSocket>(
         return Err(io::Error::new(
             io::ErrorKind::Other,
             format!(
-                "Handshakes don't match networks own: {:?} received: {:?}",
+                "Handshakes don't match networks own: {} received: {}",
                 own_handshake, remote_handshake
             ),
         ));
@@ -166,8 +186,11 @@ pub async fn perform_handshake<T: TSocket>(
     let intersecting_protocols = own_handshake.find_common_protocols(&remote_handshake);
     match intersecting_protocols {
         None => {
-            info!("No matching protocols found for connection with peer: {:?}. Handshake received: {:?}",
-                  peer_id.short_str(), remote_handshake);
+            info!(
+                "No matching protocols found for connection with peer: {}. Handshake received: {}",
+                peer_id.short_str(),
+                remote_handshake
+            );
             Err(io::Error::new(
                 io::ErrorKind::Other,
                 "no matching messaging protocol",

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use anyhow::{format_err, Error, Result};
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use serde::{de::Visitor, export::fmt::Debug, Deserialize, Deserializer, Serialize};
 use std::{
     convert::TryFrom,
     fmt::{Display, Formatter},
@@ -44,11 +44,21 @@ impl NamedChain {
     fn id(&self) -> u8 {
         *self as u8
     }
+
+    fn from_chain_id(chain_id: &ChainId) -> Result<NamedChain, String> {
+        match chain_id.id() {
+            1 => Ok(NamedChain::MAINNET),
+            2 => Ok(NamedChain::TESTNET),
+            3 => Ok(NamedChain::DEVNET),
+            4 => Ok(NamedChain::TESTING),
+            _ => Err(String::from("Not a named chain")),
+        }
+    }
 }
 
 /// Note: u7 in a u8 is uleb-compatible, and any usage of this should be aware
 /// that this field maybe updated to be uleb64 in the future
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct ChainId(u8);
 
 pub fn deserialize_config_chain_id<'de, D>(
@@ -86,10 +96,35 @@ where
     deserializer.deserialize_any(ChainIdVisitor)
 }
 
+impl Debug for ChainId {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 impl Display for ChainId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        // TODO add pretty printing for NamedChain
-        write!(f, "ChainId {:?}", self.0)
+        write!(
+            f,
+            "{}",
+            NamedChain::from_chain_id(&self)
+                .map_or_else(|_| self.0.to_string(), |chain| chain.to_string())
+        )
+    }
+}
+
+impl Display for NamedChain {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                NamedChain::DEVNET => "DEVNET",
+                NamedChain::TESTNET => "TESTNET",
+                NamedChain::MAINNET => "MAINNET",
+                NamedChain::TESTING => "TESTING",
+            }
+        )
     }
 }
 

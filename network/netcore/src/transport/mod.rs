@@ -14,7 +14,8 @@
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
-use serde::Serialize;
+use serde::{export::Formatter, Serialize};
+use std::fmt;
 
 pub mod and_then;
 pub mod boxed;
@@ -22,12 +23,31 @@ pub mod memory;
 pub mod tcp;
 
 /// Origin of how a Connection was established.
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize)]
 pub enum ConnectionOrigin {
     /// `Inbound` indicates that we are the listener for this connection.
     Inbound,
     /// `Outbound` indicates that we are the dialer for this connection.
     Outbound,
+}
+
+impl fmt::Debug for ConnectionOrigin {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for ConnectionOrigin {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ConnectionOrigin::Inbound => "Inbound",
+                ConnectionOrigin::Outbound => "Outbound",
+            }
+        )
+    }
 }
 
 /// A Transport is responsible for establishing connections with remote Peers.

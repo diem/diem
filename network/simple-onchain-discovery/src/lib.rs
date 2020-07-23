@@ -197,10 +197,7 @@ impl ConfigurationChangeListener {
 
         let updates = extract_updates(self.role, &self.shared_val_netaddr_key_map, node_set);
 
-        info!(
-            "Update {} Network about new Node IDs",
-            self.role.to_string()
-        );
+        info!("Update {} Network about new Node IDs", self.role);
 
         for update in updates {
             match self.conn_mgr_reqs_tx.send(update).await {

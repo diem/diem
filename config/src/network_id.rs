@@ -7,12 +7,18 @@ use std::fmt;
 
 /// A grouping of common information between all networking code for logging.
 /// This should greatly reduce the groupings between these given everywhere, and will allow
-/// for logging accordingly.  TODO: Figure out how to split these as structured logging
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+/// for logging accordingly.
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct NetworkContext {
     network_id: NetworkId,
     role: RoleType,
     peer_id: PeerId,
+}
+
+impl fmt::Debug for NetworkContext {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 impl fmt::Display for NetworkContext {
@@ -63,7 +69,7 @@ impl NetworkContext {
 /// and handshakes should verify that the NetworkId being used is the same during a handshake,
 /// to effectively ensure communication is restricted to a network.  Network should be checked that
 /// it is not the `DEFAULT_NETWORK`
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(rename = "NetworkId", rename_all = "snake_case")]
 pub enum NetworkId {
     Validator,
@@ -92,6 +98,12 @@ impl NodeNetworkId {
 impl Default for NetworkId {
     fn default() -> NetworkId {
         NetworkId::Public
+    }
+}
+
+impl fmt::Debug for NetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 

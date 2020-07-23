@@ -22,7 +22,7 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
-use serde::Serialize;
+use serde::{export::Formatter, Serialize};
 use std::{fmt::Debug, io, time::Duration};
 use stream_ratelimiter::*;
 use tokio::runtime::Handle;
@@ -49,6 +49,19 @@ pub enum PeerRequest {
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,
+}
+
+impl std::fmt::Display for DisconnectReason {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                DisconnectReason::Requested => "Requested",
+                DisconnectReason::ConnectionLost => "ConnectionLost",
+            }
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -166,17 +179,17 @@ where
                             match maybe_message {
                                 Some(Ok(message)) =>  {
                                     if let Err(err) = self.handle_inbound_message(message, write_reqs_tx.clone()).await {
-                                        warn!("Error in handling inbound message from peer: {:?}. Error: {:?}",
+                                        warn!("Error in handling inbound message from peer: {}. Error: {:?}",
                                             self_peer_id.short_str(), err);
                                     }
                                 },
                                 Some(Err(err)) => {
-                                    warn!("Failure in reading messages from socket from peer: {:?}. Error: {:?}",
+                                    warn!("Failure in reading messages from socket from peer: {}. Error: {:?}",
                                         self_peer_id.short_str(), err);
                                     self.close_connection( DisconnectReason::ConnectionLost).await;
                                 }
                                 None => {
-                                    warn!("Received connection closed event for peer: {:?}",
+                                    warn!("Received connection closed event for peer: {}",
                                         self_peer_id.short_str());
                                     self.close_connection(DisconnectReason::ConnectionLost).await;
                                 }
@@ -208,7 +221,7 @@ where
                             e
                         );
                     }
-                    debug!("Peer actor '{}' shutdown", self.peer_id().short_str(),);
+                    debug!("Peer actor '{}' shutdown", self.peer_id().short_str());
                     break;
                 }
             }
@@ -256,7 +269,7 @@ where
                             .await
                         {
                             warn!(
-                                "Error in sending message to peer: {:?}. Error: {:?}",
+                                "Error in sending message to peer: {}. Error: {:?}",
                                 self_peer_id.short_str(),
                                 e
                             );
@@ -268,7 +281,7 @@ where
                     }
                 }
             }
-            info!("Closing connection to peer: {:?}", self_peer_id.short_str());
+            info!("Closing connection to peer: {}", self_peer_id.short_str());
             let flush_and_close = async move {
                 writer.flush().await?;
                 writer.close().await?;
@@ -277,19 +290,19 @@ where
             match tokio::time::timeout(transport::TRANSPORT_TIMEOUT, flush_and_close).await {
                 Err(_) => {
                     info!(
-                        "Timeout in flush/close of connection to peer: {:?}",
+                        "Timeout in flush/close of connection to peer: {}",
                         self_peer_id.short_str()
                     );
                 }
                 Ok(Err(e)) => {
                     info!(
-                        "Failure in flush/close of connection to peer: {:?}. Error: {:?}",
+                        "Failure in flush/close of connection to peer: {}. Error: {:?}",
                         self_peer_id.short_str(),
                         e
                     );
                 }
                 Ok(Ok(())) => {
-                    info!("Closed connection to peer: {:?}", self_peer_id.short_str());
+                    info!("Closed connection to peer: {}", self_peer_id.short_str());
                 }
             }
         };
@@ -360,7 +373,7 @@ where
             PeerRequest::SendMessage(message, protocol, channel) => {
                 if let Err(e) = write_reqs_tx.send((message, channel)).await {
                     error!(
-                        "Failed to send message for protocol {:?} to peer: {:?}. Error: {:?}",
+                        "Failed to send message for protocol {} to peer: {}. Error: {:?}",
                         protocol,
                         self.peer_id().short_str(),
                         e

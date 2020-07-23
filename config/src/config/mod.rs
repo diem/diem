@@ -146,7 +146,7 @@ impl WaypointConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RoleType {
     Validator,
@@ -175,6 +175,12 @@ impl FromStr for RoleType {
             "full_node" => Ok(RoleType::FullNode),
             _ => Err(ParseRoleError(s.to_string())),
         }
+    }
+}
+
+impl fmt::Debug for RoleType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 

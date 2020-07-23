@@ -308,7 +308,7 @@ where
                             "{} Received stale note for peer: {} from peer: {}",
                             self.network_context,
                             note.peer_id.short_str(),
-                            remote_peer
+                            remote_peer.short_str()
                         );
                     }
                     continue;

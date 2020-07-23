@@ -12,7 +12,7 @@
 
 use libra_config::network_id::NetworkId;
 use libra_types::chain_id::ChainId;
-use serde::{Deserialize, Serialize};
+use serde::{export::Formatter, Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 
 #[cfg(test)]
@@ -21,7 +21,7 @@ mod test;
 /// Unique identifier associated with each application protocol.
 /// New application protocols can be added without bumping up the MessagingProtocolVersion.
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum ProtocolId {
     ConsensusRpc = 0,
     ConsensusDirectSend = 1,
@@ -45,6 +45,12 @@ impl ProtocolId {
     }
 }
 
+impl fmt::Debug for ProtocolId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
 impl fmt::Display for ProtocolId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_str())
@@ -56,19 +62,53 @@ pub struct SupportedProtocols(bitvec::BitVec);
 
 /// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
 /// bit-vector specifying application-level protocols supported over that version.
-#[derive(Clone, Debug, Deserialize, Serialize, Default)]
+#[derive(Clone, Deserialize, Serialize, Default)]
 pub struct HandshakeMsg {
     pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
     pub chain_id: ChainId,
     pub network_id: NetworkId,
 }
 
+impl fmt::Debug for HandshakeMsg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for HandshakeMsg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{},{},{:?}]",
+            self.chain_id, self.network_id, self.supported_protocols
+        )
+    }
+}
+
 /// Enum representing different versions of the Libra network protocol. These should be listed from
 /// old to new, old having the smallest value.
 /// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Debug, Hash, Deserialize, Serialize)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
 pub enum MessagingProtocolVersion {
     V1 = 0,
+}
+
+impl fmt::Debug for MessagingProtocolVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for MessagingProtocolVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                MessagingProtocolVersion::V1 => "V1",
+            }
+        )
+    }
 }
 
 impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
