@@ -17,7 +17,7 @@ use futures::{future::try_join_all, try_join};
 use libra_logger::info;
 use structopt::StructOpt;
 
-#[derive(StructOpt, Debug)]
+#[derive(Clone, StructOpt, Debug)]
 pub struct ClusterBuilderParams {
     #[structopt(long, default_value = "1")]
     pub fullnodes_per_validator: u32,
@@ -48,7 +48,7 @@ impl ClusterBuilderParams {
 }
 
 pub struct ClusterBuilder {
-    current_tag: String,
+    pub current_tag: String,
     cluster_swarm: ClusterSwarmKube,
 }
 
@@ -60,7 +60,11 @@ impl ClusterBuilder {
         }
     }
 
-    pub async fn setup_cluster(&self, params: &ClusterBuilderParams) -> Result<Cluster> {
+    pub async fn setup_cluster(
+        &self,
+        params: &ClusterBuilderParams,
+        clean_data: bool,
+    ) -> Result<Cluster> {
         self.cluster_swarm
             .cleanup()
             .await
@@ -86,15 +90,17 @@ impl ClusterBuilder {
                 instance_count += params.num_validators;
             }
         }
-        // First scale down to zero instances and wait for it to complete so that we don't schedule pods on
-        // instances which are going into termination state
-        aws::set_asg_size(0, 0.0, &asg_name, true, true)
-            .await
-            .map_err(|err| format_err!("{} scale down failed: {}", asg_name, err))?;
-        // Then scale up and bring up new instances
-        aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
-            .await
-            .map_err(|err| format_err!("{} scale up failed: {}", asg_name, err))?;
+        if clean_data {
+            // First scale down to zero instances and wait for it to complete so that we don't schedule pods on
+            // instances which are going into termination state
+            aws::set_asg_size(0, 0.0, &asg_name, true, true)
+                .await
+                .map_err(|err| format_err!("{} scale down failed: {}", asg_name, err))?;
+            // Then scale up and bring up new instances
+            aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
+                .await
+                .map_err(|err| format_err!("{} scale up failed: {}", asg_name, err))?;
+        }
         let (validators, lsrs, vaults, fullnodes) = self
             .spawn_validator_and_fullnode_set(
                 params.num_validators,
@@ -103,6 +109,7 @@ impl ClusterBuilder {
                 &params.lsr_backend,
                 current_tag,
                 &params.cfg_overrides(),
+                clean_data,
             )
             .await
             .map_err(|e| format_err!("Failed to spawn_validator_and_fullnode_set: {}", e))?;
@@ -125,6 +132,7 @@ impl ClusterBuilder {
         lsr_backend: &str,
         image_tag: &str,
         config_overrides: &[String],
+        clean_data: bool,
     ) -> Result<(Vec<Instance>, Vec<Instance>, Vec<Instance>, Vec<Instance>)> {
         let vault_nodes;
         let mut lsrs_nodes = vec![];
@@ -143,7 +151,9 @@ impl ClusterBuilder {
                     .enumerate()
                     .map(|(i, node)| async move {
                         let vault_config = VaultConfig {};
-                        self.cluster_swarm.clean_data(&node.name).await?;
+                        if clean_data {
+                            self.cluster_swarm.clean_data(&node.name).await?;
+                        }
                         self.cluster_swarm
                             .spawn_new_instance(InstanceConfig {
                                 validator_group: ValidatorGroup::new_for_index(i as u32),
@@ -169,7 +179,9 @@ impl ClusterBuilder {
                         image_tag: image_tag.to_string(),
                         lsr_backend: lsr_backend.to_string(),
                     };
-                    self.cluster_swarm.clean_data(&node.name).await?;
+                    if clean_data {
+                        self.cluster_swarm.clean_data(&node.name).await?;
+                    }
                     self.cluster_swarm
                         .spawn_new_instance(InstanceConfig {
                             validator_group: ValidatorGroup::new_for_index(i as u32),
@@ -205,9 +217,11 @@ impl ClusterBuilder {
                     seed_peer_ip,
                     safety_rules_addr,
                 };
-                self.cluster_swarm
-                    .clean_data(&validator_nodes[i as usize].name)
-                    .await?;
+                if clean_data {
+                    self.cluster_swarm
+                        .clean_data(&validator_nodes[i as usize].name)
+                        .await?;
+                }
                 self.cluster_swarm
                     .spawn_new_instance(InstanceConfig {
                         validator_group: ValidatorGroup::new_for_index(i),
@@ -239,13 +253,16 @@ impl ClusterBuilder {
                     config_overrides: config_overrides.to_vec(),
                     seed_peer_ip,
                 };
-                self.cluster_swarm
-                    .clean_data(
-                        &fullnode_nodes[(validator_index * num_fullnodes_per_validator
-                            + fullnode_index) as usize]
-                            .name,
-                    )
-                    .await?;
+                if clean_data {
+                    self.cluster_swarm
+                        .clean_data(
+                            &fullnode_nodes[(validator_index * num_fullnodes_per_validator
+                                + fullnode_index)
+                                as usize]
+                                .name,
+                        )
+                        .await?;
+                }
                 self.cluster_swarm
                     .spawn_new_instance(InstanceConfig {
                         validator_group: ValidatorGroup::new_for_index(validator_index),
