@@ -255,6 +255,7 @@ impl Identity {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityFromConfig {
+    #[serde(flatten)]
     pub key: ConfigKey<x25519::PrivateKey>,
     pub peer_id: PeerId,
 }
