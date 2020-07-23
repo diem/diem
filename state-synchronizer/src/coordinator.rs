@@ -264,13 +264,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                             match event {
                                 Event::NewPeer(peer_id, origin) => {
                                     let peer = PeerNetworkId(network_id, peer_id);
-                                    debug!("[state sync] new peer {:?}", peer);
+                                    debug!("[state sync] new peer {}", peer);
                                     self.peer_manager.enable_peer(peer, origin);
                                     self.check_progress();
                                 }
                                 Event::LostPeer(peer_id, _origin) => {
                                     let peer = PeerNetworkId(network_id, peer_id);
-                                    debug!("[state sync] lost peer {:?}", peer);
+                                    debug!("[state sync] lost peer {}", peer);
                                     self.peer_manager.disable_peer(&peer);
                                 }
                                 Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
@@ -403,7 +403,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .set(target_version as i64);
         debug!(
             "[state sync] sync requested. Known LI: {}, requested_version: {}",
-            highest_local_li, target_version
+            highest_local_li.version(),
+            target_version
         );
 
         self.sync_request = Some(request);
@@ -548,7 +549,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     ) -> Result<()> {
         self.sync_state_with_local_storage()?;
         debug!(
-            "[state sync] chunk request: peer_id: {:?}, local li version: {}, req: {}",
+            "[state sync] chunk request: peer: {}, local li version: {}, req: {}",
             peer,
             self.local_state.highest_local_li.ledger_info().version(),
             request,
@@ -1013,7 +1014,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
         debug!(
-            "[state sync] request next chunk. peer_id: {:?}, chunk req: {}",
+            "[state sync] request next chunk. peer: {}, chunk req: {}",
             peer, req,
         );
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
