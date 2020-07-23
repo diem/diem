@@ -14,7 +14,7 @@ use std::{collections::BTreeMap, fmt};
 
 /// EpochState represents a trusted validator set to validate messages from the specific epoch,
 /// it could be updated with EpochChangeProof.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, PartialEq, Serialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EpochState {
     pub epoch: u64,
@@ -48,6 +48,13 @@ impl Verifier for EpochState {
 
     fn is_ledger_info_stale(&self, ledger_info: &LedgerInfo) -> bool {
         ledger_info.epoch() < self.epoch
+    }
+}
+
+// this is required by structured log
+impl fmt::Debug for EpochState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
