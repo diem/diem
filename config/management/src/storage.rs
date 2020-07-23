@@ -94,7 +94,7 @@ impl StorageWrapper {
     /// Retrieves the Public key that is stored as a public key
     pub fn x25519_key(&self, name: &'static str) -> Result<x25519::PublicKey, Error> {
         let key = self.ed25519_key(name)?;
-        Self::x25519(key)
+        to_x25519(key)
     }
 
     pub fn rotate_key(&mut self, name: &'static str) -> Result<Ed25519PublicKey, Error> {
@@ -121,7 +121,7 @@ impl StorageWrapper {
         key_name: &'static str,
     ) -> Result<x25519::PublicKey, Error> {
         let key = self.ed25519_public_from_private(key_name)?;
-        Self::x25519(key)
+        to_x25519(key)
     }
 
     pub fn set(&mut self, name: &'static str, value: Value) -> Result<(), Error> {
@@ -148,9 +148,9 @@ impl StorageWrapper {
             signature,
         ))
     }
+}
 
-    pub fn x25519(edkey: Ed25519PublicKey) -> Result<x25519::PublicKey, Error> {
-        x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
-            .map_err(|e| Error::UnexpectedError(e.to_string()))
-    }
+pub fn to_x25519(edkey: Ed25519PublicKey) -> Result<x25519::PublicKey, Error> {
+    x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())
+        .map_err(|e| Error::UnexpectedError(e.to_string()))
 }
