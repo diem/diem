@@ -1,3 +1,4 @@
+
 # CONTENT
 
 **Note**: The Libra Client API is currently under development and may be updated in the future.
@@ -793,8 +794,186 @@ A Libra account.
    <td>Unique key for the received events stream of this account
    </td>
   </tr>
+  <tr>
+   <td>is_frozen
+   </td>
+   <td>bool
+   </td>
+   <td>Whether this account is frozen or not
+   </td>
+  </tr>
+  <tr>
+   <td>role
+   </td>
+   <td> Object
+   </td>
+   <td>Role of this account. Possible types are <a href="#designateddealerrole---type">DesignatedDealerRole</a>, <a href="#parentvasprole---type">ParentVASPRole</a>, <a href="#childvasprole---type">ChildVASPRole</a>, UnknownRole. You should use the "type" field to distinguish the type of the Object. (e.g., if "type" field is "child_vasp", this is a ChildVaspRole object)
+   </td>
+  </tr>
+
 </table>
 
+##
+
+---
+
+
+
+## DesignatedDealerRole - type
+
+### Attributes
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td>human_name
+   </td>
+   <td>string
+   </td>
+   <td>
+    human-readable name of this designated dealer
+   </td>
+  </tr>
+  <tr>
+   <td>base_url
+   </td>
+   <td>string
+   </td>
+   <td>base URL for this designated dealer
+   </td>
+  </tr>
+  <tr>
+   <td>expiration_time
+   </td>
+   <td>u64
+   </td>
+   <td>expiration time for this designated dealer
+   </td>
+  </tr>
+  <tr>
+   <td>compliance_key
+   </td>
+   <td>string
+   </td>
+   <td>compliance key for this designated dealer
+   </td>
+  </tr>
+  <tr>
+   <td>preburn_balances
+   </td>
+   <td>Vector of <a href="#amount---type">Amount</a>
+   </td>
+   <td>preburn balances of this designated dealer
+   </td>
+  </tr>
+  <tr>
+   <td>received_mint_events_key
+   </td>
+   <td>string
+   </td>
+   <td>key of received mint events for this designated dealer
+   </td>
+  </tr>
+</table>
+
+##
+
+---
+
+
+
+## ParentVASPRole - type
+
+### Attributes
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td>human_name
+   </td>
+   <td>string
+   </td>
+   <td>
+    human-readable name of this parent VASP
+   </td>
+  </tr>
+  <tr>
+   <td>base_url
+   </td>
+   <td>string
+   </td>
+   <td>base URL for this parent VASP
+   </td>
+  </tr>
+  <tr>
+   <td>expiration_time
+   </td>
+   <td>u64
+   </td>
+   <td>expiration time of this parent VASP
+   </td>
+  </tr>
+  <tr>
+   <td>compliance_key
+   </td>
+   <td>string
+   </td>
+   <td>compliance key for this parent VASP
+   </td>
+  </tr>
+  <tr>
+   <td>num_children
+   </td>
+   <td>u64
+   </td>
+   <td>number of children of this parent VASP
+   </td>
+  </tr>
+</table>
+
+##
+
+---
+
+
+
+## ChildVASPRole - type
+
+### Attributes
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td>parent_vasp_address
+   </td>
+   <td>string
+   </td>
+   <td>
+    address of this child VASP's parent VASP
+   </td>
+  </tr>
+</table>
 
 ##
 
