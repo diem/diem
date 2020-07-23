@@ -324,6 +324,12 @@ pub mod tests {
         assert!(contents.is_empty());
         file.read_to_end(&mut contents).unwrap();
         assert!(!contents.is_empty());
+
+        // Step 9) Verify
+        for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
+            helper.create_waypoint(ns).unwrap();
+            helper.verify_genesis(ns, genesis_path.path()).unwrap();
+        }
     }
 
     #[test]

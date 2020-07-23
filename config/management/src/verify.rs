@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants::VALIDATOR_CONFIG, error::Error, secure_backend::ValidatorBackend};
+use crate::{error::Error, secure_backend::ValidatorBackend};
 use executor::db_bootstrapper;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
@@ -11,13 +11,8 @@ use libra_global_constants::{
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_temppath::TempPath;
 use libra_types::{
-    account_address::AccountAddress,
-    account_config,
-    account_state::AccountState,
-    on_chain_config::ValidatorSet,
-    transaction::{TransactionArgument, TransactionPayload::Script},
-    validator_config::ValidatorConfig,
-    waypoint::Waypoint,
+    account_address::AccountAddress, account_config, account_state::AccountState,
+    on_chain_config::ValidatorSet, validator_config::ValidatorConfig, waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -260,44 +255,14 @@ fn validator_account(
     storage: &Storage,
     storage_name: &'static str,
 ) -> Result<AccountAddress, Error> {
-    let validator_config = storage
-        .get(VALIDATOR_CONFIG)
-        .map_err(|e| Error::StorageReadError(storage_name, VALIDATOR_CONFIG, e.to_string()))?
+    let account = storage
+        .get(OWNER_ACCOUNT)
+        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))?
         .value
-        .transaction()
-        .map_err(|e| {
-            Error::UnexpectedError(format!(
-                "Unable to parse validator config: {}",
-                e.to_string()
-            ))
-        })?;
-
-    let validator_config = validator_config
-        .as_signed_user_txn()
-        .expect("Invalid validator config transaction found!");
-
-    let transaction_payload = validator_config
-        .clone()
-        .into_raw_transaction()
-        .into_payload();
-    let script = match transaction_payload {
-        Script(script) => script,
-        _ => {
-            return Err(Error::UnexpectedError(format!(
-                "Invalid transaction payload found for validator config: {:?}",
-                transaction_payload
-            )))
-        }
-    };
-
-    let account_arg = script.args()[0].clone();
-    match account_arg {
-        TransactionArgument::Address(account) => Ok(account),
-        _ => Err(Error::UnexpectedError(format!(
-            "Unable to parse operator account: Invalid account address script argument found: {:?}",
-            account_arg
-        ))),
-    }
+        .string()
+        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))?;
+    AccountAddress::from_str(&account)
+        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))
 }
 
 fn ed25519_from_storage(
