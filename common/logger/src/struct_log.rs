@@ -40,6 +40,11 @@ const INITIALIZED: usize = 2;
 const SEVERITY_CRITICAL: usize = 1;
 const SEVERITY_WARNING: usize = 2;
 
+// Size configurations
+const MAX_LOG_LINE_SIZE: usize = 4096; // 4KiB
+const LOG_INFO_OFFSET: usize = 256;
+const WRITE_CHANNEL_SIZE: usize = 1024;
+
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
     /// log message set by macros like info!
@@ -88,6 +93,58 @@ impl StructuredLogEntry {
         ret.name = Some(name);
         ret.timestamp = Some(Utc::now().format("%F %T").to_string());
         ret
+    }
+
+    fn clone_without_data(&self) -> Self {
+        Self {
+            log: self.log.clone(),
+            pattern: self.pattern,
+            category: self.category,
+            name: self.name,
+            module: self.module,
+            location: self.location,
+            git_rev: self.git_rev,
+            timestamp: self.timestamp.clone(),
+            severity: self.severity,
+            data: HashMap::new(),
+        }
+    }
+
+    fn to_json(&self) -> Result<Value, serde_json::Error> {
+        let value = serde_json::to_value(self);
+        if let Err(e) = &value {
+            log::error!("[Logging] Failed to serialize struct log entry: {}", e);
+        }
+        value
+    }
+
+    fn to_json_string(&self) -> Result<String, serde_json::Error> {
+        let json = self.to_json()?;
+
+        // If the message is too long, let's truncate the message and leave helpful info
+        let mut json_string = json.to_string();
+        if json_string.len() > MAX_LOG_LINE_SIZE {
+            log::error!(
+                "[Logging] Structured log is too long, shrinking below : {}",
+                MAX_LOG_LINE_SIZE
+            );
+
+            let mut entry = self.clone_without_data();
+            if let Some(mut log) = entry.log {
+                log.truncate(MAX_LOG_LINE_SIZE - LOG_INFO_OFFSET);
+                // Leave 128 bytes for all the other info
+                entry.log = Some(log);
+            }
+            entry = entry
+                .data(
+                    "StructLogError",
+                    format!("Message exceeded MAX_LOG_LINE_SIZE {}", MAX_LOG_LINE_SIZE),
+                )
+                .data("OriginalLength", json_string.len());
+            json_string = entry.to_json()?.to_string();
+        }
+
+        Ok(json_string)
     }
 
     pub fn critical(mut self) -> Self {
@@ -299,7 +356,7 @@ struct FileStructLog {
 impl FileStructLog {
     /// Creates new FileStructLog and starts async thread to write results
     pub fn start_new(file_path: String) -> io::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel(1_024);
+        let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
         let file = OpenOptions::new()
             .append(true)
             .create(true)
@@ -328,14 +385,11 @@ struct FileStructLogThread {
 impl FileStructLogThread {
     pub fn run(mut self) {
         for entry in self.receiver {
-            let json = match serde_json::to_value(entry) {
-                Err(e) => {
-                    log::error!("Failed to serialize struct log entry: {}", e);
-                    continue;
-                }
-                Ok(json) => json,
+            let json_string = match entry.to_json_string() {
+                Ok(json_string) => json_string,
+                Err(_) => continue,
             };
-            if let Err(e) = writeln!(&mut self.file, "{}", json) {
+            if let Err(e) = writeln!(&mut self.file, "{}", json_string) {
                 log::error!("Failed to write struct log entry: {}", e);
             }
         }
@@ -350,7 +404,7 @@ struct UDPStructLog {
 impl UDPStructLog {
     /// Creates new UDPStructLog and starts async thread to send results
     pub fn start_new(udp_address: String) -> io::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel(1_024);
+        let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
         let socket = UdpSocket::bind("0.0.0.0:0").expect("couldn't bind to address");
         let sink_thread = UDPStructLogThread {
             receiver,
@@ -381,24 +435,16 @@ struct UDPStructLogThread {
 impl UDPStructLogThread {
     pub fn run(self) {
         for entry in self.receiver {
-            let json = match serde_json::to_value(entry) {
-                Err(e) => {
-                    log::error!("[Logging] Failed to serialize struct log entry: {}", e);
-                    continue;
-                }
-                Ok(json) => json,
+            let json_string = match entry.to_json_string() {
+                Ok(json_string) => json_string,
+                Err(_) => continue,
             };
-            match self
+            if let Err(e) = self
                 .socket
-                .send_to(json.to_string().as_bytes(), self.udp_address.clone())
+                .send_to(json_string.as_bytes(), self.udp_address.clone())
             {
-                Ok(_) => {
-                    continue;
-                }
-                Err(e) => {
-                    // do not break on error, move on to the next log message
-                    println!("[Logging] Error while sending data to socket: {}", e);
-                }
+                // do not break on error, move on to the next log message
+                println!("[Logging] Error while sending data to socket: {}", e);
             }
         }
     }
