@@ -14,7 +14,6 @@ use libra_network_address::{
     },
     NetworkAddress, RawNetworkAddress,
 };
-use libra_secure_storage::Value;
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     chain_id::ChainId,
@@ -108,9 +107,6 @@ impl ValidatorConfig {
         );
         let signed_txn = storage.sign(OPERATOR_KEY, "validator-config", raw_txn)?;
         let txn = Transaction::UserTransaction(signed_txn);
-
-        // Write validator config to local storage to save for verification later on
-        storage.set(constants::VALIDATOR_CONFIG, Value::Transaction(txn.clone()))?;
 
         Ok(txn)
     }
