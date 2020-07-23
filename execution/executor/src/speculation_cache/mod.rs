@@ -17,7 +17,10 @@
 #[cfg(test)]
 mod test;
 
-use crate::types::ProcessedVMOutput;
+use crate::{
+    logging::{self, executor_log, LogEntry},
+    types::ProcessedVMOutput,
+};
 use anyhow::{format_err, Result};
 use consensus_types::block::Block;
 use executor_types::{Error, ExecutedTrees};
@@ -93,7 +96,9 @@ impl Drop for SpeculationBlock {
             .unwrap()
             .remove(&self.id())
             .expect("Speculation block must exist in block_map before being dropped.");
-        debug!("Speculation block {} is dropped.", self.id())
+        sl_debug!(executor_log(LogEntry::Cache)
+            .data(logging::EVENT, "Block dropped")
+            .data("block_id", self.id()));
     }
 }
 
@@ -184,15 +189,22 @@ impl SpeculationCache {
             // Update the root block id with reconfig virtual block id, to be consistent
             // with the logic of Consensus.
             let id = Block::make_genesis_block_from_ledger_info(committed_ledger_info).id();
-            debug!(
-                "Updated with a new root block {} as a virtual block of reconfiguration block {}",
-                id,
-                committed_ledger_info.consensus_block_id()
-            );
+            sl_info!(executor_log(LogEntry::Cache)
+                .data(
+                    logging::EVENT,
+                    "Updated with a new root block as a virtual block of reconfiguration block"
+                )
+                .data("root_block_id", id)
+                .data(
+                    "original_reconfiguration_block_id",
+                    committed_ledger_info.consensus_block_id()
+                ));
             id
         } else {
             let id = committed_ledger_info.consensus_block_id();
-            debug!("updated with a new root block {}", id);
+            sl_info!(executor_log(LogEntry::Cache)
+                .data(logging::EVENT, "Updated with a new root block")
+                .data("root_block_id", id));
             id
         };
         self.committed_block_id = new_root_block_id;
