@@ -15,7 +15,7 @@ use futures::future::try_join_all;
 use libra_logger::prelude::*;
 use std::{
     collections::HashSet,
-    fmt,
+    env, fmt,
     iter::once,
     time::{Duration, Instant},
 };
@@ -262,30 +262,48 @@ impl Experiment for CompatibilityTest {
                 anyhow::format_err!("Failed to upgrade rest of validator images: {}", e)
             })?;
 
-        let msg = format!(
-            "5. All full nodes ({}) {} ==> {}, to finish the network upgrade",
-            self.full_nodes.len(),
-            context.current_tag,
-            self.updated_image_tag
-        );
-        info!("{}", msg);
-        info!(
-            "Upgrading full nodes: {}",
-            get_instance_list_str(&self.full_nodes)
-        );
-        context.report.report_text(msg);
-        update_batch_instance(
-            context,
-            &self.full_nodes,
-            &[],
-            self.updated_image_tag.clone(),
-        )
-        .await?;
-        context
-            .tx_emitter
-            .emit_txn_for(job_duration, fullnode_txn_job)
-            .await
-            .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
+        // TODO(rustielin): fullnode reboot in cluster-test breaks with current version of config-builder
+        //                  skipping for now, so cluster is not restored to same version across all instances
+        let disable_fn_upgrade = env::var("DISABLE_FN_UPGRADE").is_ok();
+        if disable_fn_upgrade {
+            let msg = format!(
+                "5. Reset all nodes ==> {}, to finish the network upgrade",
+                self.updated_image_tag
+            );
+            info!("{}", msg);
+            context.report.report_text(msg);
+            context.cluster_builder.current_tag = self.updated_image_tag.clone();
+            context
+                .cluster_builder
+                .setup_cluster(context.cluster_builder_params, false)
+                .await?;
+        } else {
+            let msg = format!(
+                "5. All full nodes ({}) {} ==> {}, to finish the network upgrade",
+                self.full_nodes.len(),
+                context.current_tag,
+                self.updated_image_tag
+            );
+            info!("{}", msg);
+            info!(
+                "Upgrading full nodes: {}",
+                get_instance_list_str(&self.full_nodes)
+            );
+            context.report.report_text(msg);
+            update_batch_instance(
+                context,
+                &self.full_nodes,
+                &[],
+                self.updated_image_tag.clone(),
+            )
+            .await?;
+            context
+                .tx_emitter
+                .emit_txn_for(job_duration, fullnode_txn_job)
+                .await
+                .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
+        }
+
         Ok(())
     }
 
