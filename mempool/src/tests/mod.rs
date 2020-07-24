@@ -9,4 +9,8 @@ mod core_mempool_test;
 mod shared_mempool_test;
 
 /// Mocks used for testing
+#[cfg(any(feature = "fuzzing", test))]
 pub mod mocks;
+
+/// Fuzzing
+pub mod fuzzing;

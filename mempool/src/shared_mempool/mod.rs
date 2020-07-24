@@ -8,5 +8,5 @@ pub use runtime::bootstrap;
 #[cfg(any(test, feature = "fuzzing"))]
 pub(crate) use runtime::start_shared_mempool;
 mod coordinator;
-mod peer_manager;
-mod tasks;
+pub(crate) mod peer_manager;
+pub(crate) mod tasks;

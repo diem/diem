@@ -68,7 +68,7 @@ pub use shared_mempool::{
     },
 };
 #[cfg(any(test, feature = "fuzzing"))]
-pub use tests::mocks;
+pub use tests::{fuzzing, mocks};
 
 mod core_mempool;
 mod counters;

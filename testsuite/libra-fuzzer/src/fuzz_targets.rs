@@ -23,6 +23,7 @@ mod inbound_rpc_protocol;
 mod inner_signed_transaction;
 mod json_rpc_service;
 mod language_transaction_execution;
+mod mempool;
 mod network_noise_initiator;
 mod network_noise_responder;
 //mod storage_save_blocks;
@@ -37,6 +38,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(inbound_rpc_protocol::RpcInboundRequest::default()),
         Box::new(inner_signed_transaction::SignedTransactionTarget::default()),
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
+        Box::new(mempool::MempoolIncomingTransactions::default()),
         Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
         Box::new(network_noise_responder::NetworkNoiseResponder::default()),
         //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
