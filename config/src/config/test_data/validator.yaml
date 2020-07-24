@@ -24,7 +24,7 @@ full_node_networks:
       identity:
           type: "from_storage"
           key_name: "fullnode_network"
-          peer_id_name: "operator_account"
+          peer_id_name: "owner_account"
           backend:
               type: "vault"
               server: "https://127.0.0.1:8200"
@@ -40,7 +40,7 @@ validator_network:
     identity:
         type: "from_storage"
         key_name: "validator_network"
-        peer_id_name: "operator_account"
+        peer_id_name: "owner_account"
         backend:
             type: "vault"
             server: "https://127.0.0.1:8200"
