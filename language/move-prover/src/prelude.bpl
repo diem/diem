@@ -40,7 +40,7 @@ function $DebugTrackLocal(file_id: int, byte_index:  int, var_idx: int, $Value: 
 }
 
 // Tracks at which location a function was aborted.
-function $DebugTrackAbort(file_id: int, byte_index: int) : bool {
+function $DebugTrackAbort(file_id: int, byte_index: int, code: int) : bool {
   true
 }
 
@@ -562,10 +562,23 @@ axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
 axiom contents#$Memory($EmptyMemory) == $ConstMemoryContent($DefaultValue());
 
 var $abort_flag: bool;
+var $abort_code: int;
+
+const $EXEC_FAILURE_CODE: int;
+axiom $EXEC_FAILURE_CODE == -1;
+
+// TODO(wrwg): currently we map aborts of native functions like those for vectors also to
+//   execution failure. This may need to be aligned with what the runtime actually does.
+
+procedure {:inline 1} $ExecFailureAbort() {
+    $abort_flag := true;
+    $abort_code := $EXEC_FAILURE_CODE;
+}
 
 procedure {:inline 1} $InitVerification() {
-  // Set abort_flag to false
+  // Set abort_flag to false, and havoc abort_code
   $abort_flag := false;
+  havoc $abort_code;
 }
 
 // ============================================================================================
@@ -602,7 +615,7 @@ function {:inline} $Dereference(ref: $Mutation): $Value {
 procedure {:inline 1} $MoveToRaw(m: $Memory, ta: $TypeValueArray, a: int, v: $Value) returns (m': $Memory)
 {
     if ($ResourceExistsRaw(m, ta, a)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     m' := $Memory(domain#$Memory(m)[ta, a := true], contents#$Memory(m)[ta, a := v]);
@@ -621,7 +634,7 @@ procedure {:inline 1} $MoveFrom(m: $Memory, address: $Value, ta: $TypeValueArray
     var a: int;
     a := a#$Address(address);
     if (!$ResourceExistsRaw(m, ta, a)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := contents#$Memory(m)[ta, a];
@@ -634,7 +647,7 @@ procedure {:inline 1} $BorrowGlobal(m: $Memory, address: $Value, ta: $TypeValueA
     var a: int;
     a := a#$Address(address);
     if (!$ResourceExistsRaw(m, ta, a)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Mutation($Global(ta, a), $EmptyPath, contents#$Memory(m)[ta, a]);
@@ -662,7 +675,7 @@ procedure {:inline 1} $GetGlobal(m: $Memory, address: $Value, ta: $TypeValueArra
     var a: int;
     a := a#$Address(address);
     if (!$ResourceExistsRaw(m, ta, a)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $ResourceValue(m, ta, address);
@@ -752,7 +765,7 @@ procedure {:inline 1} $CastU8(src: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src);
 {
     if (i#$Integer(src) > $MAX_U8) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := src;
@@ -762,7 +775,7 @@ procedure {:inline 1} $CastU64(src: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src);
 {
     if (i#$Integer(src) > $MAX_U64) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := src;
@@ -772,7 +785,7 @@ procedure {:inline 1} $CastU128(src: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src);
 {
     if (i#$Integer(src) > $MAX_U128) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := src;
@@ -782,7 +795,7 @@ procedure {:inline 1} $AddU8(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU8(src1) && $IsValidU8(src2);
 {
     if (i#$Integer(src1) + i#$Integer(src2) > $MAX_U8) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
@@ -792,7 +805,7 @@ procedure {:inline 1} $AddU64(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU64(src1) && $IsValidU64(src2);
 {
     if (i#$Integer(src1) + i#$Integer(src2) > $MAX_U64) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
@@ -808,7 +821,7 @@ procedure {:inline 1} $AddU128(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU128(src1) && $IsValidU128(src2);
 {
     if (i#$Integer(src1) + i#$Integer(src2) > $MAX_U128) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
@@ -824,7 +837,7 @@ procedure {:inline 1} $Sub(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src1) && is#$Integer(src2);
 {
     if (i#$Integer(src1) < i#$Integer(src2)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) - i#$Integer(src2));
@@ -865,7 +878,7 @@ procedure {:inline 1} $MulU8(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU8(src1) && $IsValidU8(src2);
 {
     if (i#$Integer(src1) * i#$Integer(src2) > $MAX_U8) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) * i#$Integer(src2));
@@ -875,7 +888,7 @@ procedure {:inline 1} $MulU64(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU64(src1) && $IsValidU64(src2);
 {
     if (i#$Integer(src1) * i#$Integer(src2) > $MAX_U64) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) * i#$Integer(src2));
@@ -885,7 +898,7 @@ procedure {:inline 1} $MulU128(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU128(src1) && $IsValidU128(src2);
 {
     if (i#$Integer(src1) * i#$Integer(src2) > $MAX_U128) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) * i#$Integer(src2));
@@ -895,7 +908,7 @@ procedure {:inline 1} $Div(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src1) && is#$Integer(src2);
 {
     if (i#$Integer(src2) == 0) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) div i#$Integer(src2));
@@ -905,7 +918,7 @@ procedure {:inline 1} $Mod(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} is#$Integer(src1) && is#$Integer(src2);
 {
     if (i#$Integer(src2) == 0) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Integer(i#$Integer(src1) mod i#$Integer(src2));
@@ -1012,7 +1025,7 @@ procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $V
     assume is#$Vector(v);
     len := $vlen(v);
     if (len == 0) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     e := $select_vector(v, len-1);
@@ -1042,7 +1055,7 @@ procedure {:inline 1} $Vector_borrow(ta: $TypeValue, src: $Value, i: $Value) ret
     assume is#$Integer(i);
     i_ind := i#$Integer(i);
     if (i_ind < 0 || i_ind >= $vlen(src)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $select_vector(src, i_ind);
@@ -1056,7 +1069,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Valu
     i_ind := i#$Integer(index);
     assume is#$Vector(v);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     dst := $Mutation($Local(0), $Path(p#$Path($EmptyPath)[0 := i_ind], 1), $select_vector(v, i_ind));
@@ -1065,7 +1078,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Valu
 
 procedure {:inline 1} $Vector_destroy_empty(ta: $TypeValue, v: $Value) {
     if ($vlen(v) != 0) {
-      $abort_flag := true;
+      call $ExecFailureAbort();
     }
 }
 
@@ -1078,7 +1091,7 @@ procedure {:inline 1} $Vector_swap(ta: $TypeValue, v: $Value, i: $Value, j: $Val
     i_ind := i#$Integer(i);
     j_ind := i#$Integer(j);
     if (i_ind >= $vlen(v) || j_ind >= $vlen(v) || i_ind < 0 || j_ind < 0) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     v' := $swap_vector(v, i_ind, j_ind);
@@ -1092,7 +1105,7 @@ procedure {:inline 1} $Vector_remove(ta: $TypeValue, v: $Value, i: $Value) retur
     assume is#$Vector(v);
     i_ind := i#$Integer(i);
     if (i_ind < 0 || i_ind >= $vlen(v)) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     e := $select_vector(v, i_ind);
@@ -1109,7 +1122,7 @@ procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, v: $Value, i: $Value) 
     i_ind := i#$Integer(i);
     len := $vlen(v);
     if (i_ind < 0 || i_ind >= len) {
-        $abort_flag := true;
+        call $ExecFailureAbort();
         return;
     }
     e := $select_vector(v, i_ind);

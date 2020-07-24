@@ -16,7 +16,7 @@ error: abort not covered by any of the `aborts_if` clauses
     │ ╰─────^
     ·
  83 │             if (i == 7) abort 7;
-    │             ------------------- abort happened here
+    │             ------------------- abort happened here with code `7`
     │
     =     at tests/sources/functional/loops.move:77:5: iter10_abort_incorrect
     =         i = <redacted>

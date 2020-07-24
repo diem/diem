@@ -1,0 +1,37 @@
+Move prover returns: exiting with boogie verification errors
+error: precondition does not hold at this call
+
+    ┌── tests/sources/functional/aborts_if_assume_assert.move:18:9 ───
+    │
+ 18 │         aborts_if [assert] x == 0;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 14 │     public fun asserted(x: u64): u64 {
+    │                -------- called function
+    │
+    =     at tests/sources/functional/aborts_if_assume_assert.move:30:5: asserted_caller_invalid
+    =     at tests/sources/functional/aborts_if_assume_assert.move:14:5: asserted (entry)
+
+error: function does not abort under this condition
+
+    ┌── tests/sources/functional/aborts_if_assume_assert.move:48:9 ───
+    │
+ 48 │         aborts_if [assert] x == 1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/aborts_if_assume_assert.move:44:5: asserted_spec_invalid
+    =         x = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/functional/aborts_if_assume_assert.move:45:9: asserted_spec_invalid
+
+error: function does not abort under this condition
+
+    ┌── tests/sources/functional/aborts_if_assume_assert.move:80:9 ───
+    │
+ 80 │         aborts_if [assume] x == 1;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/aborts_if_assume_assert.move:76:5: assumed_spec_invalid
+    =         x = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/functional/aborts_if_assume_assert.move:77:9: assumed_spec_invalid

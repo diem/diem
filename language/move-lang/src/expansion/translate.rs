@@ -808,16 +808,19 @@ fn spec_member(
             kind,
             properties: pproperties,
             exp,
+            abort_codes,
         } => {
             let properties = pproperties
                 .into_iter()
                 .map(|p| pragma_property(context, p))
                 .collect();
             let exp = exp_(context, exp);
+            let abort_codes = abort_codes.into_iter().map(|e| exp_(context, e)).collect();
             EM::Condition {
                 kind,
                 properties,
                 exp,
+                abort_codes,
             }
         }
         PM::Function {
@@ -1434,8 +1437,15 @@ fn unbound_names_spec_block(unbound: &mut BTreeSet<Name>, sp!(_, sb_): &E::SpecB
 
 fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E::SpecBlockMember) {
     use E::SpecBlockMember_ as M;
-    match m_ {
-        M::Condition { exp, .. } => unbound_names_exp(unbound, exp),
+    match &m_ {
+        M::Condition {
+            exp, abort_codes, ..
+        } => {
+            unbound_names_exp(unbound, exp);
+            abort_codes
+                .iter()
+                .for_each(|e| unbound_names_exp(unbound, e));
+        }
         // No unbound names
         // And will error in the move prover
         M::Function { .. }

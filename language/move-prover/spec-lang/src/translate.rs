@@ -16,7 +16,7 @@ use std::{
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
-use num::{BigUint, FromPrimitive, Num};
+use num::{BigInt, BigUint, FromPrimitive, Num};
 use regex::Regex;
 
 use bytecode_source_map::source_map::SourceMap;
@@ -44,8 +44,8 @@ use crate::{
         SpecVarDecl, Value,
     },
     env::{
-        ConstId, FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc,
-        NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
+        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc, NodeId,
+        QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
         TypeParameter, CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
@@ -149,8 +149,6 @@ struct FunEntry {
 #[derive(Debug, Clone)]
 struct ConstEntry {
     loc: Loc,
-    module_id: ModuleId,
-    const_id: ConstId,
     ty: Type,
     value: Value,
 }
@@ -319,22 +317,8 @@ impl<'env> Translator<'env> {
     }
 
     /// Defines a constant.
-    fn define_const(
-        &mut self,
-        loc: Loc,
-        name: QualifiedSymbol,
-        module_id: ModuleId,
-        const_id: ConstId,
-        ty: Type,
-        value: Value,
-    ) {
-        let entry = ConstEntry {
-            loc,
-            module_id,
-            const_id,
-            ty,
-            value,
-        };
+    fn define_const(&mut self, loc: Loc, name: QualifiedSymbol, ty: Type, value: Value) {
+        let entry = ConstEntry { loc, ty, value };
         // Duplicate declarations have been checked by the move compiler.
         assert!(self.const_table.insert(name, entry).is_none());
     }
@@ -369,15 +353,49 @@ impl<'env> Translator<'env> {
         let address_t = &Type::new_prim(PrimitiveType::Address);
 
         let param_t = &Type::TypeParameter(0);
-        let add_builtin = |trans: &mut Translator, name: QualifiedSymbol, entry: SpecFunEntry| {
-            trans
-                .spec_fun_table
-                .entry(name)
-                .or_insert_with(Vec::new)
-                .push(entry);
-        };
+        let add_builtin =
+            |trans: &mut Translator<'_>, name: QualifiedSymbol, entry: SpecFunEntry| {
+                trans
+                    .spec_fun_table
+                    .entry(name)
+                    .or_insert_with(Vec::new)
+                    .push(entry);
+            };
+        let add_num_constant =
+            |trans: &mut Translator<'_>, name: QualifiedSymbol, value: BigInt| {
+                trans.const_table.insert(
+                    name,
+                    ConstEntry {
+                        loc: loc.clone(),
+                        ty: num_t.clone(),
+                        value: Value::Number(value),
+                    },
+                )
+            };
 
         {
+            // Constants
+            add_num_constant(
+                self,
+                self.builtin_qualified_symbol("MAX_U8"),
+                BigInt::from(u8::MAX),
+            );
+            add_num_constant(
+                self,
+                self.builtin_qualified_symbol("MAX_U64"),
+                BigInt::from(u64::MAX),
+            );
+            add_num_constant(
+                self,
+                self.builtin_qualified_symbol("MAX_U128"),
+                BigInt::from(u128::MAX),
+            );
+            add_num_constant(
+                self,
+                self.builtin_qualified_symbol("EXECUTION_FAILURE"),
+                BigInt::from(-1),
+            );
+
             // Binary operators.
             let mut declare_bin =
                 |op: PA::BinOp_, oper: Operation, param_type: &Type, result_type: &Type| {
@@ -467,7 +485,7 @@ impl<'env> Translator<'env> {
             // Constants (max_u8(), etc.)
             add_builtin(
                 self,
-                self.builtin_fun_symbol("max_u8"),
+                self.builtin_qualified_symbol("max_u8"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::MaxU8,
@@ -479,7 +497,7 @@ impl<'env> Translator<'env> {
 
             add_builtin(
                 self,
-                self.builtin_fun_symbol("max_u64"),
+                self.builtin_qualified_symbol("max_u64"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::MaxU64,
@@ -491,7 +509,7 @@ impl<'env> Translator<'env> {
 
             add_builtin(
                 self,
-                self.builtin_fun_symbol("max_u128"),
+                self.builtin_qualified_symbol("max_u128"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::MaxU128,
@@ -504,7 +522,7 @@ impl<'env> Translator<'env> {
             // Vectors
             add_builtin(
                 self,
-                self.builtin_fun_symbol("len"),
+                self.builtin_qualified_symbol("len"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Len,
@@ -515,7 +533,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_all"),
+                self.builtin_qualified_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -526,7 +544,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_any"),
+                self.builtin_qualified_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -537,7 +555,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("update_vector"),
+                self.builtin_qualified_symbol("update_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Update,
@@ -548,7 +566,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("empty_vector"),
+                self.builtin_qualified_symbol("empty_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Empty,
@@ -559,7 +577,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("singleton_vector"),
+                self.builtin_qualified_symbol("singleton_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Single,
@@ -570,7 +588,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("concat_vector"),
+                self.builtin_qualified_symbol("concat_vector"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Concat,
@@ -583,7 +601,7 @@ impl<'env> Translator<'env> {
             // Ranges
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_all"),
+                self.builtin_qualified_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -594,7 +612,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_any"),
+                self.builtin_qualified_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -607,7 +625,7 @@ impl<'env> Translator<'env> {
             // Resources.
             add_builtin(
                 self,
-                self.builtin_fun_symbol("global"),
+                self.builtin_qualified_symbol("global"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Global,
@@ -621,7 +639,7 @@ impl<'env> Translator<'env> {
             // map them to `global` instead.
             add_builtin(
                 self,
-                self.builtin_fun_symbol("borrow_global"),
+                self.builtin_qualified_symbol("borrow_global"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Global,
@@ -632,7 +650,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("borrow_global_mut"),
+                self.builtin_qualified_symbol("borrow_global_mut"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Global,
@@ -643,7 +661,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("exists"),
+                self.builtin_qualified_symbol("exists"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Exists,
@@ -656,7 +674,7 @@ impl<'env> Translator<'env> {
             // Type values, domains and quantifiers
             add_builtin(
                 self,
-                self.builtin_fun_symbol("type"),
+                self.builtin_qualified_symbol("type"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::TypeValue,
@@ -667,7 +685,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_domain"),
+                self.builtin_qualified_symbol("$spec_domain"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::TypeDomain,
@@ -678,7 +696,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_all"),
+                self.builtin_qualified_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -689,7 +707,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("$spec_any"),
+                self.builtin_qualified_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -702,7 +720,7 @@ impl<'env> Translator<'env> {
             // Old
             add_builtin(
                 self,
-                self.builtin_fun_symbol("old"),
+                self.builtin_qualified_symbol("old"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Old,
@@ -715,7 +733,7 @@ impl<'env> Translator<'env> {
             // Tracing
             add_builtin(
                 self,
-                self.builtin_fun_symbol("TRACE"),
+                self.builtin_qualified_symbol("TRACE"),
                 SpecFunEntry {
                     loc,
                     oper: Operation::Trace,
@@ -744,7 +762,7 @@ impl<'env> Translator<'env> {
     }
 
     /// Returns the qualified symbol for a builtin function.
-    fn builtin_fun_symbol(&self, name: &str) -> QualifiedSymbol {
+    fn builtin_qualified_symbol(&self, name: &str) -> QualifiedSymbol {
         QualifiedSymbol {
             module_name: self.builtin_module(),
             symbol: self.env.symbol_pool().make(name),
@@ -1025,14 +1043,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let move_value =
             Constant::deserialize_constant(&compiled_module.constant_pool()[*const_idx as usize])
                 .unwrap();
-        let const_id = ConstId::new(name);
         let mut et = ExpTranslator::new(self);
         let loc = et.to_loc(&def.loc);
         let value = et.translate_from_move_value(&loc, &move_value);
         let ty = et.translate_type(&def.signature);
-        et.parent
-            .parent
-            .define_const(loc, qsym, et.parent.module_id, const_id, ty, value);
+        et.parent.parent.define_const(loc, qsym, ty, value);
     }
 
     fn decl_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
@@ -1331,6 +1346,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             kind,
                             properties,
                             exp,
+                            abort_codes,
                         } => {
                             let context = SpecBlockContext::FunctionCode(
                                 qsym.clone(),
@@ -1340,7 +1356,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             if let Some((kind, exp)) =
                                 self.extract_condition_kind(&context, kind, exp)
                             {
-                                self.def_ana_condition(loc, &context, kind, properties, exp);
+                                self.def_ana_condition(
+                                    loc,
+                                    &context,
+                                    kind,
+                                    properties,
+                                    exp,
+                                    abort_codes,
+                                );
                             }
                         }
                         _ => {
@@ -1454,10 +1477,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     kind,
                     properties,
                     exp,
+                    abort_codes,
                 } => {
                     if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
                         let properties = self.translate_properties(properties);
-                        self.def_ana_condition(loc, context, kind, properties, exp)
+                        self.def_ana_condition(loc, context, kind, properties, exp, abort_codes)
                     }
                 }
                 Function {
@@ -1938,6 +1962,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         kind: ConditionKind,
         properties: PropertyBag,
         exp: &EA::Exp,
+        abort_codes: &[EA::Exp],
     ) {
         if kind == ConditionKind::Decreases {
             self.parent
@@ -1947,6 +1972,29 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let expected_type = self.expected_type_for_condition(&kind);
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind), false);
         let translated = et.translate_exp(exp, &expected_type);
+        let translated_with_codes = if !abort_codes.is_empty() {
+            let mut args = abort_codes
+                .iter()
+                .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                .collect_vec();
+            let node_id = et.new_node_id_with_type_loc(&expected_type, loc);
+            match kind {
+                ConditionKind::AbortsIf => {
+                    args.insert(0, translated);
+                    Exp::Call(node_id, Operation::CondWithAbortCode, args)
+                }
+                ConditionKind::AbortsWith => Exp::Call(node_id, Operation::AbortCodes, args),
+                _ => {
+                    et.error(
+                        loc,
+                        "abort codes only allowed with `aborts_if` or `aborts_with`",
+                    );
+                    et.new_error_exp()
+                }
+            }
+        } else {
+            translated
+        };
         et.finalize_types();
         self.add_conditions_to_context(
             context,
@@ -1955,7 +2003,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 loc: loc.clone(),
                 kind,
                 properties,
-                exp: translated,
+                exp: translated_with_codes,
             }],
             PropertyBag::default(),
             "",
@@ -2003,6 +2051,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             PK::Ensures => Some((Ensures, exp)),
             PK::Requires => Some((Requires, exp)),
             PK::AbortsIf => Some((AbortsIf, exp)),
+            PK::AbortsWith => Some((AbortsWith, exp)),
             PK::SucceedsIf => Some((SucceedsIf, exp)),
             PK::RequiresModule => Some((RequiresModule, exp)),
             PK::Invariant => Some((Invariant, exp)),
@@ -2237,11 +2286,19 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     kind,
                     properties,
                     exp,
+                    abort_codes,
                 } => {
                     let context = SpecBlockContext::Schema(name.clone());
                     if let Some((kind, exp)) = self.extract_condition_kind(&context, kind, exp) {
                         let properties = self.translate_properties(properties);
-                        self.def_ana_condition(&member_loc, &context, kind, properties, exp);
+                        self.def_ana_condition(
+                            &member_loc,
+                            &context,
+                            kind,
+                            properties,
+                            exp,
+                            abort_codes,
+                        );
                     } else {
                         // Error reported.
                     }
@@ -3801,7 +3858,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 // We don't really need to infer type, because all ints are exchangeable.
                 make_value(
                     self,
-                    Value::Number(BigUint::from_u128(*x).unwrap()),
+                    Value::Number(BigInt::from_u128(*x).unwrap()),
                     Type::new_prim(PrimitiveType::U128),
                 )
             }
@@ -3920,15 +3977,15 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 }
             }
             EA::Value_::U8(x) => Some((
-                Value::Number(BigUint::from_u8(*x).unwrap()),
+                Value::Number(BigInt::from_u8(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U8),
             )),
             EA::Value_::U64(x) => Some((
-                Value::Number(BigUint::from_u64(*x).unwrap()),
+                Value::Number(BigInt::from_u64(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U64),
             )),
             EA::Value_::U128(x) => Some((
-                Value::Number(BigUint::from_u128(*x).unwrap()),
+                Value::Number(BigInt::from_u128(*x).unwrap()),
                 Type::new_prim(PrimitiveType::U128),
             )),
             EA::Value_::Bool(x) => Some((Value::Bool(*x), Type::new_prim(PrimitiveType::Bool))),
@@ -4102,16 +4159,17 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 if let Some(fid) = self.parent.spec_block_lets.get(&sym).cloned() {
                     return self.translate_let(loc, type_args, vec![], expected_type, fid);
                 }
-                // If not found, treat as spec var.
+                // If not found, try to resolve as builtin constant.
+                let builtin_sym = self.parent.parent.builtin_qualified_symbol(&name.value);
+                if let Some(entry) = self.parent.parent.const_table.get(&builtin_sym).cloned() {
+                    return self.translate_constant(loc, entry, expected_type);
+                }
+                // If not found, treat as global var in this module.
                 self.parent.qualified_by_module(sym)
             }
         };
-        if let Some(entry) = self.parent.parent.const_table.get(&global_var_sym) {
-            let ty = entry.ty.clone();
-            let value = entry.value.clone();
-            let ty = self.check_type(loc, &ty, expected_type, "in const expression");
-            let id = self.new_node_id_with_type_loc(&ty, loc);
-            return Exp::Value(id, value);
+        if let Some(entry) = self.parent.parent.const_table.get(&global_var_sym).cloned() {
+            return self.translate_constant(loc, entry, expected_type);
         }
 
         if let Some(entry) = self.parent.parent.spec_var_table.get(&global_var_sym) {
@@ -4147,6 +4205,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             ),
         );
         self.new_error_exp()
+    }
+
+    /// Creates an expression for a constant, checking the expected type.
+    fn translate_constant(&mut self, loc: &Loc, entry: ConstEntry, expected_type: &Type) -> Exp {
+        let ConstEntry { ty, value, .. } = entry;
+        let ty = self.check_type(loc, &ty, expected_type, "in const expression");
+        let id = self.new_node_id_with_type_loc(&ty, loc);
+        Exp::Value(id, value)
     }
 
     fn resolve_local(
@@ -4786,9 +4852,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     pub fn translate_from_move_value(&self, loc: &Loc, value: &MoveValue) -> Value {
         match value {
-            MoveValue::U8(n) => Value::Number(BigUint::from_u8(*n).unwrap()),
-            MoveValue::U64(n) => Value::Number(BigUint::from_u64(*n).unwrap()),
-            MoveValue::U128(n) => Value::Number(BigUint::from_u128(*n).unwrap()),
+            MoveValue::U8(n) => Value::Number(BigInt::from_u8(*n).unwrap()),
+            MoveValue::U64(n) => Value::Number(BigInt::from_u64(*n).unwrap()),
+            MoveValue::U128(n) => Value::Number(BigInt::from_u128(*n).unwrap()),
             MoveValue::Bool(b) => Value::Bool(*b),
             MoveValue::Address(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),
             MoveValue::Signer(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),

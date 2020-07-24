@@ -19,5 +19,5 @@ error: abort not covered by any of the `aborts_if` clauses
     ┌── tests/sources/functional/script_provider.move:18:24 ───
     │
  18 │         assert(Signer::address_of(account) == 0x1, 1);
-    │                        ---------- abort happened here
+    │                        ---------- abort happened here with code `1`
     │

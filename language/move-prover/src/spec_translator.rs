@@ -29,8 +29,9 @@ use spec_lang::{
     code_writer::CodeWriter,
     emit, emitln,
     env::{
-        ConditionInfo, GlobalEnv, GlobalId, QualifiedId, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA,
-        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
+        ConditionInfo, ConditionTag, GlobalEnv, GlobalId, QualifiedId, SpecVarId,
+        ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABORT_ASSERT_PROP,
+        CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
         CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA,
         REQUIRES_IF_ABORTS,
     },
@@ -46,6 +47,8 @@ use std::collections::BTreeSet;
 const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
 const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
+const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
+const WRONG_ABORTS_CODE: &str = "function does not abort with any of the expected codes";
 const SUCCEEDS_IF_FAILS_MESSAGE: &str = "function does not succeed under this condition";
 const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
@@ -161,7 +164,11 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    fn function_target(&'env self) -> &'env FunctionTarget<'env> {
+    fn global_env(&'env self) -> &'env GlobalEnv {
+        self.module_env().env
+    }
+
+    pub fn function_target(&'env self) -> &'env FunctionTarget<'env> {
         use SpecEnv::*;
         match &self.spec_env {
             Module(_) | Struct(_) => panic!(),
@@ -282,7 +289,7 @@ impl<'env> SpecTranslator<'env> {
             emitln!(
                 self.writer,
                 &boogie_declare_global(
-                    &self.module_env().env,
+                    &self.global_env(),
                     &boogie_name,
                     var.type_params.len(),
                     &var.type_
@@ -324,7 +331,7 @@ impl<'env> SpecTranslator<'env> {
                      module_id: mid,
                      id: vid,
                  }| {
-                    let declaring_module = self.module_env().env.get_module(*mid);
+                    let declaring_module = self.global_env().get_module(*mid);
                     let decl = declaring_module.get_spec_var(*vid);
                     let boogie_name = boogie_spec_var_name(&declaring_module, decl.name);
                     boogie_global_declarator(
@@ -338,7 +345,7 @@ impl<'env> SpecTranslator<'env> {
             let mem_params = fun.used_memory.iter().map(|memory| {
                 format!(
                     "{}: $Memory",
-                    boogie_resource_memory_name(self.module_env().env, *memory)
+                    boogie_resource_memory_name(self.global_env(), *memory)
                 )
             });
             let type_params = fun
@@ -384,17 +391,21 @@ impl<'env> SpecTranslator<'env> {
                         .join(", ")
                 );
                 let type_check = boogie_well_formed_expr(
-                    self.module_env().env,
+                    self.global_env(),
                     &call,
                     &fun.result_type,
                     WellFormedMode::WithInvariant,
                 );
-                emitln!(
-                    self.writer,
-                    "axiom (forall {} :: {});",
-                    param_list,
-                    type_check
-                );
+                if !param_list.is_empty() {
+                    emitln!(
+                        self.writer,
+                        "axiom (forall {} :: {});",
+                        param_list,
+                        type_check
+                    );
+                } else {
+                    emitln!(self.writer, "axiom {};", type_check);
+                }
             } else {
                 emitln!(self.writer, " {");
                 self.writer.indent();
@@ -410,6 +421,147 @@ impl<'env> SpecTranslator<'env> {
 
 // Pre/Post Conditions
 // ===================
+
+/// A data structure which describe the distribution of conditions how they are mapped to a
+/// Boogie entrypoint function. The different function entry points have different mappings.
+///
+#[derive(Debug, Default)]
+pub struct ConditionDistribution<'a> {
+    // Conditions which are emitted as boogie requires. This list can contain aborts_if
+    // conditions (stemming from the [assert] property) which are interpreted to be
+    // negated.
+    requires: Vec<&'a Condition>,
+    // Conditions which are emitted as boogie ensures. If this list contains aborts_if
+    // or succeeds_if conditions, they are treated as propagated aborts.
+    ensures: Vec<&'a Condition>,
+    /// Conditions which are emitted as assumptions on entry. This list can contain aborts_if
+    /// conditions (stemming from the [assume] property) which are interpreted to be
+    /// negated.
+    entry_assumes: Vec<&'a Condition>,
+}
+
+impl<'a> ConditionDistribution<'a> {
+    /// Adds a condition to this distribution. This determines various properties of the
+    /// condition, and then branches over the cross-product of entry point kind and
+    /// condition kind, considering the properties, to determine where the condition
+    /// will be placed in the distribution.
+    ///
+    /// This is source of truth in the code defining how conditions are evaluated on various
+    /// function entry points, in a relative declarative way.
+    fn add(
+        &mut self,
+        tr: &SpecTranslator<'a>,
+        entry_point: FunctionEntryPoint,
+        cond: &'a Condition,
+    ) {
+        let func_target = tr.function_target();
+        let env = tr.global_env();
+
+        let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
+        let export_ensures = func_target.is_pragma_true(EXPORT_ENSURES_PRAGMA, || false);
+
+        let get_prop = |name: &str| {
+            env.is_property_true(&cond.properties, name)
+                .unwrap_or(false)
+        };
+        let injected = get_prop(CONDITION_INJECTED_PROP);
+        let exported = get_prop(CONDITION_EXPORT_PROP);
+        let asserted = get_prop(CONDITION_ABORT_ASSERT_PROP);
+        let assumed = get_prop(CONDITION_ABORT_ASSUME_PROP);
+        let abstract_ = get_prop(CONDITION_ABSTRACT_PROP);
+        let concrete = get_prop(CONDITION_CONCRETE_PROP);
+
+        let external = (!injected || exported) && !concrete;
+
+        match entry_point {
+            FunctionEntryPoint::DirectInterModule if opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Requires if external => self.requires.push(cond),
+                    Ensures if external => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if external && asserted => {
+                        self.requires.push(cond)
+                    }
+                    AbortsIf | AbortsWith | SucceedsIf if external && !assumed => {
+                        self.ensures.push(cond)
+                    }
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::DirectInterModule if !opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Requires if external => self.requires.push(cond),
+                    Ensures if external || export_ensures => self.ensures.push(cond),
+                    AbortsIf | SucceedsIf if external && asserted => self.requires.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if external && assumed => {
+                        self.entry_assumes.push(cond)
+                    }
+                    AbortsIf | AbortsWith | SucceedsIf if external || export_ensures => {
+                        self.ensures.push(cond)
+                    }
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::DirectIntraModule if opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Requires | RequiresModule => self.requires.push(cond),
+                    Ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if !assumed => self.ensures.push(cond),
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::DirectIntraModule if !opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Requires | RequiresModule => self.requires.push(cond),
+                    Ensures if export_ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if assumed => self.entry_assumes.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if export_ensures => self.ensures.push(cond),
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::Indirect if opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Ensures if external || export_ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf
+                        if !assumed && !asserted && (external || export_ensures) =>
+                    {
+                        self.ensures.push(cond)
+                    }
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::Indirect if !opaque => {
+                use ConditionKind::*;
+                match &cond.kind {
+                    Ensures if export_ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if assumed || asserted => {
+                        self.entry_assumes.push(cond)
+                    }
+                    AbortsIf | AbortsWith | SucceedsIf if export_ensures => self.ensures.push(cond),
+                    _ => {}
+                }
+            }
+            FunctionEntryPoint::Verification => {
+                use ConditionKind::*;
+                if !abstract_ {
+                    match &cond.kind {
+                        Requires | RequiresModule => self.entry_assumes.push(cond),
+                        Ensures => self.ensures.push(cond),
+                        AbortsIf | AbortsWith | SucceedsIf => self.ensures.push(cond),
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
 
 impl<'env> SpecTranslator<'env> {
     // Generate boogie for asserts/assumes inside function bodies
@@ -437,41 +589,44 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    /// Generates boogie for pre/post conditions. Conditions are generated depending on
-    /// the kind of entry point.
-    /// Note: since `free requires` seems to be broken with inlined functions in Boogie,
-    /// we do not deal with them in this function but instead in
-    /// `translate_free_requires_conditions`.
-    pub fn translate_conditions(&self, for_entry_point: FunctionEntryPoint) {
+    /// Generates boogie for pre/post conditions of a procedure. Conditions are generated depending
+    /// on the kind of entry point. Conditions which are assumptions are not translated
+    /// by this function, but by calling `translate_entry_point_assumptions` with
+    /// the data structure returned from here. This allows splitting the translation in
+    /// some outputs attached to the signature and some to the function body.
+    pub fn translate_conditions(
+        &self,
+        for_entry_point: FunctionEntryPoint,
+    ) -> ConditionDistribution<'_> {
         use FunctionEntryPoint::*;
         assert!(!matches!(
             for_entry_point,
             Definition | VerificationDefinition
         ));
         let func_target = self.function_target();
-        let spec = func_target.get_spec();
         let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
-        let export_ensures = func_target.is_pragma_true(EXPORT_ENSURES_PRAGMA, || false);
+        let spec = func_target.get_spec();
+
+        // Create distribution of the conditions of this entry point.
+        let mut distribution = ConditionDistribution::default();
+        for cond in &spec.conditions {
+            distribution.add(self, for_entry_point, cond);
+        }
+
+        // Helper to filter conditions.
+        let kind_filter = |k: ConditionKind| move |c: &&&Condition| c.kind == k;
 
         // Get all aborts_if conditions.
-        let aborts_if = self.filter_conditions(
-            for_entry_point,
-            opaque,
-            export_ensures,
-            &[ConditionKind::AbortsIf],
-            &spec.conditions,
-        );
+        let aborts_if = distribution
+            .ensures
+            .iter()
+            .filter(kind_filter(ConditionKind::AbortsIf))
+            .copied()
+            .collect_vec();
 
         // Generate requires.
-        let requires = self.filter_conditions(
-            for_entry_point,
-            opaque,
-            export_ensures,
-            &[ConditionKind::Requires, ConditionKind::RequiresModule],
-            &spec.conditions,
-        );
-        if !requires.is_empty() {
-            self.emit_requires(false, &aborts_if, &requires);
+        if !distribution.requires.is_empty() {
+            self.emit_requires(false, &aborts_if, &distribution.requires);
             emitln!(self.writer);
         }
 
@@ -479,9 +634,15 @@ impl<'env> SpecTranslator<'env> {
         // (P1 || .. || Pn) <==> abort_flag. However, we generate different code to get
         // better error positions. We also need to respect the pragma `aborts_if_is_partial`
         // which changes the iff above into an implies.
+        let aborts_with = distribution
+            .ensures
+            .iter()
+            .filter(kind_filter(ConditionKind::AbortsWith))
+            .copied()
+            .collect_vec();
         let aborts_if_is_partial =
             func_target.is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
-        if aborts_if.is_empty() {
+        if aborts_if.is_empty() && aborts_with.is_empty() {
             if !aborts_if_is_partial
                 && func_target.is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
                 && for_entry_point == Verification
@@ -489,6 +650,11 @@ impl<'env> SpecTranslator<'env> {
                 // No user provided aborts_if and pragma is set for handling this
                 // as s.t. the function must never abort.
                 self.writer.set_location(&func_target.get_loc());
+                self.set_condition_info(
+                    &func_target.get_loc(),
+                    ConditionTag::Ensures,
+                    ABORTS_NOT_COVERED,
+                );
                 emitln!(self.writer, "ensures !$abort_flag;");
             }
         } else {
@@ -497,10 +663,11 @@ impl<'env> SpecTranslator<'env> {
             // reports positions only back per entire ensures, not individual sub-expression.)
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
-                self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE, false);
+                self.set_condition_info(&c.loc, ConditionTag::Ensures, ABORTS_IF_FAILS_MESSAGE);
+                let (exp, _) = c.exp.extract_cond_and_aborts_code();
                 emit!(self.writer, "ensures b#$Boolean(old(");
-                self.translate_exp(&c.exp);
-                emitln!(self.writer, ")) ==> $abort_flag;")
+                self.translate_exp(exp);
+                emitln!(self.writer, ")) ==> $abort_flag;");
             }
 
             // If aborts_if is configured to be total,
@@ -508,13 +675,85 @@ impl<'env> SpecTranslator<'env> {
             // is reported on this condition, we catch the case where the function aborts but no
             // conditions covers it. We use as a position for the ensures the function itself,
             // because reporting on (non-covering) aborts_if conditions is misleading.
-            if !aborts_if_is_partial {
+            if !aborts_if_is_partial && !aborts_if.is_empty() {
                 self.writer.set_location(&func_target.get_loc());
+                self.set_condition_info(
+                    &func_target.get_loc(),
+                    ConditionTag::Ensures,
+                    ABORTS_NOT_COVERED,
+                );
                 emit!(self.writer, "ensures $abort_flag ==> (");
-                self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
+                self.translate_seq(aborts_if.iter().copied(), "\n    || ", |c: &Condition| {
+                    let (exp, _) = c.exp.extract_cond_and_aborts_code();
                     emit!(self.writer, "b#$Boolean(old(");
-                    self.translate_exp_parenthesised(&c.exp);
+                    self.translate_exp(exp);
                     emit!(self.writer, "))")
+                });
+                emitln!(self.writer, ");");
+            }
+
+            // Create the abort code condition. Let (Pi, Ci?), i in 1..n, be the aborts_if
+            // conditions with optional code Ci. Let UCj, j in 1..m, be the abort codes which have
+            // been specified via an aborts_with. We generate:
+            //
+            //   ensures $aborts_flag ==>
+            //      Pi [ && $aborts_code == Ci ]
+            //    | ..
+            //    | Pn [ && $aborts_code == Cn ]
+            //    | $aborts_code == UCi | .. | $aborts_code == UCm
+            //
+            // Notice that an aborts_if without an aborts code will allow an arbitrary code.
+            // The codes from the aborts_with only apply if none of the aborts
+            // conditions are true. This seems to be the most consistent encoding, but this
+            // aspect may need to be revisited.
+            let aborts_if_has_codes = aborts_if
+                .iter()
+                .any(|c| c.exp.extract_cond_and_aborts_code().1.is_some());
+            if aborts_if_has_codes || !aborts_with.is_empty() {
+                let abort_code_loc = Loc::enclosing(
+                    &aborts_if
+                        .iter()
+                        .chain(aborts_with.iter())
+                        .map(|c| &c.loc)
+                        .collect_vec(),
+                );
+                if aborts_if_is_partial && aborts_with.is_empty() {
+                    // If the aborts spec is partial but there are no aborts_with, the
+                    // aborts code specification is meaningless, because the unspecified
+                    // aborts conditions can produce arbitrary codes. We better report an
+                    // error in this case instead of silently ignoring the aborts code spec.
+                    self.global_env().error(
+                        &abort_code_loc,
+                        "`aborts_if_is_partial` is set but \
+                            there are no abort codes specified with `aborts_with` to cover \
+                            the codes of the unspecified abort cases",
+                    );
+                }
+                self.writer.set_location(&abort_code_loc);
+                self.set_condition_info(&abort_code_loc, ConditionTag::Ensures, WRONG_ABORTS_CODE);
+                emit!(self.writer, "ensures $abort_flag ==> (");
+                self.translate_seq(aborts_if.iter().copied(), "\n    ||", |c: &Condition| {
+                    let (exp, code_opt) = c.exp.extract_cond_and_aborts_code();
+                    emit!(self.writer, "(b#$Boolean(old(");
+                    self.translate_exp(exp);
+                    if let Some(code) = code_opt {
+                        emit!(self.writer, ")) &&\n       $abort_code == i#$Integer(");
+                        self.translate_exp(code);
+                        emit!(self.writer, "))");
+                    } else {
+                        emit!(self.writer, ")))");
+                    }
+                });
+                if !aborts_if.is_empty() && !aborts_with.is_empty() {
+                    emit!(self.writer, "\n    ||");
+                }
+                self.translate_seq(aborts_with.iter().copied(), "\n    ||", |c: &Condition| {
+                    let codes = c.exp.extract_abort_codes();
+                    self.translate_seq(codes.iter(), " || ", |code| {
+                        emit!(self.writer, "$abort_code == i#$Integer(");
+                        self.translate_exp(code);
+                        emit!(self.writer, ")");
+                    });
                 });
                 emitln!(self.writer, ");");
             }
@@ -522,34 +761,32 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate succeeds_if.
         // Emits `ensures S1 ==> !abort_flag; ... ensures Sn ==> !abort_flag;`.
-        let succeeds_if = self.filter_conditions(
-            for_entry_point,
-            opaque,
-            export_ensures,
-            &[ConditionKind::SucceedsIf],
-            &spec.conditions,
-        );
+        let succeeds_if = distribution
+            .ensures
+            .iter()
+            .filter(kind_filter(ConditionKind::SucceedsIf))
+            .copied()
+            .collect_vec();
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
-            self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE, false);
+            self.set_condition_info(&c.loc, ConditionTag::Ensures, SUCCEEDS_IF_FAILS_MESSAGE);
             emit!(self.writer, "ensures b#$Boolean(old(");
             self.translate_exp(&c.exp);
             emitln!(self.writer, ")) ==> !$abort_flag;")
         }
 
         // Generate ensures
-        let ensures = self.filter_conditions(
-            for_entry_point,
-            opaque,
-            export_ensures,
-            &[ConditionKind::Ensures],
-            &spec.conditions,
-        );
+        let ensures = distribution
+            .ensures
+            .iter()
+            .filter(kind_filter(ConditionKind::Ensures))
+            .copied()
+            .collect_vec();
         if !ensures.is_empty() {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE, false);
+                self.set_condition_info(&cond.loc, ConditionTag::Ensures, ENSURES_FAILS_MESSAGE);
                 emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
@@ -570,7 +807,7 @@ impl<'env> SpecTranslator<'env> {
             for (i, ty) in func_target.get_return_types().iter().enumerate() {
                 let result_name = format!("$ret{}", i);
                 let check = boogie_well_formed_expr(
-                    self.module_env().env,
+                    self.global_env(),
                     &result_name,
                     ty,
                     WellFormedMode::Default,
@@ -580,26 +817,40 @@ impl<'env> SpecTranslator<'env> {
                 }
             }
         }
+        distribution
     }
 
-    /// Emit either assume or requires for preconditions, or-ing them with the aborts
-    /// conditions,
+    /// Emit either assume or requires for preconditions. For a regular requires,
+    /// 'or' them with the aborts conditions. If the condition is an aborts_if or a succeeds_if,
+    /// treat it a an [assert] or a [assume] which has been lifted as a precondition.
     fn emit_requires(&self, assume: bool, aborts_if: &[&Condition], requires: &[&Condition]) {
         let func_target = self.function_target();
-        self.translate_seq(requires.iter(), "\n", |cond| {
+        self.translate_seq(requires.iter().copied(), "\n", |cond: &Condition| {
             self.writer.set_location(&cond.loc);
-            self.set_condition_info(&cond.loc, REQUIRES_FAILS_MESSAGE, true);
+            self.set_condition_info(&cond.loc, ConditionTag::Requires, REQUIRES_FAILS_MESSAGE);
             emit!(
                 self.writer,
-                "{} b#$Boolean(",
-                if assume { "assume" } else { "requires" }
+                "{} {}b#$Boolean(",
+                if assume { "assume" } else { "requires" },
+                if cond.kind == ConditionKind::AbortsIf {
+                    // If an aborts_if appears in precondition position, it must be negated.
+                    "!"
+                } else {
+                    ""
+                },
             );
-            self.translate_exp(&cond.exp);
+            let (exp, _) = cond.exp.extract_cond_and_aborts_code();
+            self.translate_exp(exp);
             emit!(self.writer, ")");
-            if !func_target.is_pragma_true(REQUIRES_IF_ABORTS, || false) {
+            if !matches!(
+                cond.kind,
+                ConditionKind::AbortsIf | ConditionKind::SucceedsIf
+            ) && func_target.is_pragma_true(REQUIRES_IF_ABORTS, || false)
+            {
                 for aborts in aborts_if {
+                    let (exp, _) = aborts.exp.extract_cond_and_aborts_code();
                     emit!(self.writer, "\n    || b#$Boolean(");
-                    self.translate_exp(&aborts.exp);
+                    self.translate_exp(exp);
                     emit!(self.writer, ")")
                 }
             }
@@ -608,7 +859,11 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates assumptions to make at function entry points.
-    pub fn translate_entry_point_assumptions(&self, for_entry_point: FunctionEntryPoint) {
+    pub fn translate_entry_point_assumptions(
+        &self,
+        for_entry_point: FunctionEntryPoint,
+        distribution: ConditionDistribution,
+    ) {
         use FunctionEntryPoint::*;
         assert!(!matches!(
             for_entry_point,
@@ -617,6 +872,7 @@ impl<'env> SpecTranslator<'env> {
         let func_target = self.function_target();
         if for_entry_point == Verification {
             // Generate assumes for top-level verification entry
+
             // (a) init prelude specific stuff.
             emitln!(self.writer, "call $InitVerification();");
 
@@ -642,136 +898,14 @@ impl<'env> SpecTranslator<'env> {
                 }
             }
 
-            // (c) assume invariants and preconditions.
+            // (c) assume invariants.
             self.assume_invariants_for_verify();
-            self.assume_preconditions_for_verify();
         }
-    }
-
-    /// A helper for filtering conditions based on function entry point and whether the
-    /// function is opaque or not.
-    fn filter_conditions<'c>(
-        &self,
-        entry_point: FunctionEntryPoint,
-        opaque: bool,
-        export_ensures: bool,
-        kinds: &[ConditionKind],
-        conditions: &'c [Condition],
-    ) -> Vec<&'c Condition> {
-        use ConditionKind::*;
-        use FunctionEntryPoint::*;
-        conditions
-            .iter()
-            .filter(|cond| {
-                if !kinds.contains(&cond.kind) {
-                    return false;
-                }
-                let env = self.module_env().env;
-                let abstract_ = env
-                    .is_property_true(&cond.properties, CONDITION_ABSTRACT_PROP)
-                    .unwrap_or(false);
-                let concrete = env
-                    .is_property_true(&cond.properties, CONDITION_CONCRETE_PROP)
-                    .unwrap_or(false);
-                match entry_point {
-                    DirectInterModule | DirectIntraModule | Indirect if concrete => false,
-                    Verification if abstract_ => false,
-                    DirectIntraModule => {
-                        // For intra-module calls, all Requires and RequiresModule are visible.
-                        // Ensures are only visible if the function is opaque.
-                        match &cond.kind {
-                            Requires | RequiresModule => true,
-                            Ensures | AbortsIf | SucceedsIf => opaque || export_ensures,
-                            _ => false,
-                        }
-                    }
-                    DirectInterModule => {
-                        // For inter-module calls, all exported Requires are visible. Ensures are
-                        // only visible if the function is opaque and the condition is exported
-                        match &cond.kind {
-                            Requires => self.is_exported(cond),
-                            Ensures | AbortsIf | SucceedsIf => {
-                                (opaque || export_ensures) && self.is_exported(cond)
-                            }
-                            _ => false,
-                        }
-                    }
-                    Indirect => match &cond.kind {
-                        // For indirect calls, only ensures is visible if the condition is
-                        // opaque and exported.
-                        Ensures | AbortsIf | SucceedsIf => {
-                            (opaque || export_ensures) && self.is_exported(cond)
-                        }
-                        _ => false,
-                    },
-                    Verification => {
-                        // During verification, we emit requires as assumes in the entry point.
-                        // Boogie doesn't seem to propagate `requires` as assumptions to the
-                        // inlined function.
-                        !matches!(cond.kind, Requires | RequiresModule)
-                    }
-                    _ => false,
-                }
-            })
-            .collect_vec()
-    }
-
-    /// Returns true if the condition is visible between modules. A condition is visible if
-    /// it either is not injected (by apply or a module invariant), or if its marked as
-    /// exported.
-    fn is_exported(&self, cond: &Condition) -> bool {
-        let env = self.module_env().env;
-        !env.is_property_true(&cond.properties, CONDITION_INJECTED_PROP)
-            .unwrap_or(false)
-            || env
-                .is_property_true(&cond.properties, CONDITION_EXPORT_PROP)
-                .unwrap_or(false)
-    }
-
-    /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
-    /// If info is already set, it will not be overridden.
-    fn set_condition_info(&self, loc: &Loc, message: &str, is_requires: bool) {
-        let env = self.module_env().env;
-        let mut info = if let Some(info) = env.get_condition_info(loc) {
-            if is_requires {
-                if info.message_if_requires.is_some() {
-                    // already set
-                    return;
-                }
-            } else if !info.message.is_empty() {
-                // already set
-                return;
-            }
-            info
-        } else {
-            ConditionInfo::default()
-        };
-        if is_requires {
-            info.message_if_requires = Some(message.to_string());
-        } else {
-            info.message = message.to_string();
-        }
-        self.module_env().env.set_condition_info(loc.clone(), info);
-    }
-
-    /// Assumes preconditions for function. This is used for the top-level verification
-    /// entry point of a function.
-    pub fn assume_preconditions_for_verify(&self) {
-        let func_target = self.function_target();
-        // Collect all requires.
-        let requires = func_target
-            .get_spec()
-            .filter(|c| {
-                matches!(
-                    c.kind,
-                    ConditionKind::Requires | ConditionKind::RequiresModule
-                )
-            })
-            .collect_vec();
-        if !requires.is_empty() {
+        if !distribution.entry_assumes.is_empty() {
+            // assume preconditions which have been converted into assumptions.
             // TODO(wrwg): investigate soundness of emitting those assumptions without
             // or-ing with aborts conditions.
-            self.emit_requires(true, &[], &requires);
+            self.emit_requires(true, &[], &distribution.entry_assumes);
             emitln!(self.writer);
         }
     }
@@ -780,7 +914,7 @@ impl<'env> SpecTranslator<'env> {
         let func_target = self.function_target();
         let usage = TransitiveUsage::default();
         let used_mem = usage.get_used_memory(
-            self.module_env().env,
+            self.global_env(),
             self.targets,
             func_target
                 .module_env()
@@ -831,6 +965,12 @@ impl<'env> SpecTranslator<'env> {
 
         // Now emit global invariants which touch the used memory.
         self.emit_global_invariants(true, invariants.into_iter().collect_vec())
+    }
+
+    /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
+    fn set_condition_info(&self, loc: &Loc, tag: ConditionTag, message: &str) {
+        self.global_env()
+            .set_condition_info(loc.clone(), tag, ConditionInfo::for_message(message));
     }
 }
 
@@ -1123,7 +1263,11 @@ impl<'env> SpecTranslator<'env> {
                 if assume {
                     emit!(self.writer, "assume b#$Boolean(");
                 } else {
-                    self.set_condition_info(&inv.loc, INVARIANT_FAILS_MESSAGE, false);
+                    self.set_condition_info(
+                        &inv.loc,
+                        ConditionTag::Ensures,
+                        INVARIANT_FAILS_MESSAGE,
+                    );
                     emit!(self.writer, "assert b#$Boolean(");
                 }
                 self.with_invariant_target(target, old_target, || self.translate_exp(&inv.exp));
@@ -1142,7 +1286,7 @@ impl<'env> SpecTranslator<'env> {
         for inv in invariants {
             if let Some((module_id, spec_var_id, tys)) = &inv.kind.get_spec_var_target() {
                 self.writer.set_location(&inv.loc);
-                let module_env = self.module_env().env.get_module(*module_id);
+                let module_env = self.global_env().get_module(*module_id);
                 let spec_var = module_env.get_spec_var(*spec_var_id);
                 let var_name = boogie_spec_var_name(&self.module_env(), spec_var.name);
                 if !tys.is_empty() {
@@ -1167,7 +1311,7 @@ impl<'env> SpecTranslator<'env> {
     }
 
     pub fn save_memory_for_update_invariants(&self, memory: QualifiedId<StructId>) {
-        let env = self.module_env().env;
+        let env = self.global_env();
         let mut memory_to_save = BTreeSet::new();
         // Collect all update invariants.
         for id in env.get_global_invariants_for_memory(memory) {
@@ -1185,12 +1329,12 @@ impl<'env> SpecTranslator<'env> {
     }
 
     pub fn emit_global_invariants_for_memory(&self, assume: bool, memory: QualifiedId<StructId>) {
-        let env = self.module_env().env;
+        let env = self.global_env();
         self.emit_global_invariants(assume, env.get_global_invariants_for_memory(memory))
     }
 
     fn emit_global_invariants(&self, assume: bool, invariants: Vec<GlobalId>) {
-        let env = self.module_env().env;
+        let env = self.global_env();
         for inv in invariants
             .into_iter()
             .map(|id| env.get_global_invariant(id).unwrap())
@@ -1203,7 +1347,11 @@ impl<'env> SpecTranslator<'env> {
             if assume {
                 emit!(self.writer, "assume b#$Boolean(");
             } else {
-                self.set_condition_info(&inv.loc, GLOBAL_INVARIANT_FAILS_MESSAGE, false);
+                self.set_condition_info(
+                    &inv.loc,
+                    ConditionTag::Ensures,
+                    GLOBAL_INVARIANT_FAILS_MESSAGE,
+                );
                 emit!(self.writer, "assert b#$Boolean(");
             }
             // We need to use a translator for the module which declared the invariant, which is not
@@ -1230,9 +1378,9 @@ impl<'env> SpecTranslator<'env> {
     /// instantiation, this will be used to instantiate the type.
     fn translate_type(&self, ty: &Type) -> String {
         if let Some(ty_args) = &self.type_args_opt {
-            boogie_type_value(self.module_env().env, &ty.instantiate(ty_args))
+            boogie_type_value(self.global_env(), &ty.instantiate(ty_args))
         } else {
-            boogie_type_value(self.module_env().env, ty)
+            boogie_type_value(self.global_env(), ty)
         }
     }
 }
@@ -1263,7 +1411,7 @@ impl<'env> SpecTranslator<'env> {
                     ),
                     || {
                         self.set_writer_location(*node_id);
-                        let module_env = self.module_env().env.get_module(*module_id);
+                        let module_env = self.global_env().get_module(*module_id);
                         let spec_var = module_env.get_spec_var(*var_id);
                         let instantiation_str = if instantiation.is_empty() {
                             "".to_string()
@@ -1442,6 +1590,9 @@ impl<'env> SpecTranslator<'env> {
     fn translate_call(&self, node_id: NodeId, oper: &Operation, args: &[Exp]) {
         let loc = self.module_env().get_node_loc(node_id);
         match oper {
+            Operation::AbortCodes | Operation::CondWithAbortCode => {
+                panic!("unexpected virtual operator")
+            }
             Operation::Function(module_id, fun_id) => {
                 self.translate_spec_fun_call(node_id, *module_id, *fun_id, args)
             }
@@ -1534,7 +1685,7 @@ impl<'env> SpecTranslator<'env> {
         args: &[Exp],
     ) {
         let instantiation = self.module_env().get_node_instantiation(node_id);
-        let module_env = self.module_env().env.get_module(module_id);
+        let module_env = self.global_env().get_module(module_id);
         let fun_decl = module_env.get_spec_fun(fun_id);
         let name = boogie_spec_fun_name(&module_env, fun_id);
         emit!(self.writer, "{}(", name);
@@ -1548,7 +1699,7 @@ impl<'env> SpecTranslator<'env> {
         };
         for memory in &fun_decl.used_memory {
             maybe_comma();
-            let memory = boogie_resource_memory_name(self.module_env().env, *memory);
+            let memory = boogie_resource_memory_name(self.global_env(), *memory);
             emit!(self.writer, &memory);
         }
         for QualifiedId {
@@ -1557,7 +1708,7 @@ impl<'env> SpecTranslator<'env> {
         } in &fun_decl.used_spec_vars
         {
             maybe_comma();
-            let declaring_module = self.module_env().env.get_module(*mid);
+            let declaring_module = self.global_env().get_module(*mid);
             let var_decl = declaring_module.get_spec_var(*vid);
             emit!(
                 self.writer,
@@ -1583,7 +1734,7 @@ impl<'env> SpecTranslator<'env> {
         field_id: FieldId,
         args: &[Exp],
     ) {
-        let module_env = self.module_env().env.get_module(module_id);
+        let module_env = self.global_env().get_module(module_id);
         let struct_env = module_env.get_struct(struct_id);
         let field_env = struct_env.get_field(field_id);
         let field_name = boogie_field_name(&field_env);
@@ -1607,7 +1758,7 @@ impl<'env> SpecTranslator<'env> {
         self.trace_value(node_id, TraceItem::Exp, || {
             let rty = &self.module_env().get_node_instantiation(node_id)[0];
             let (mid, sid, targs) = rty.require_struct();
-            let env = self.module_env().env;
+            let env = self.global_env();
             emit!(
                 self.writer,
                 "$ResourceValue({}, {}, ",
@@ -1621,9 +1772,9 @@ impl<'env> SpecTranslator<'env> {
 
     fn get_memory_name(&self, memory: QualifiedId<StructId>) -> String {
         if self.supports_native_old || !*self.in_old.borrow() {
-            boogie_resource_memory_name(self.module_env().env, memory)
+            boogie_resource_memory_name(self.global_env(), memory)
         } else {
-            boogie_saved_resource_memory_name(self.module_env().env, memory)
+            boogie_saved_resource_memory_name(self.global_env(), memory)
         }
     }
 
@@ -1631,7 +1782,7 @@ impl<'env> SpecTranslator<'env> {
         self.trace_value(node_id, TraceItem::Exp, || {
             let rty = &self.module_env().get_node_instantiation(node_id)[0];
             let (mid, sid, targs) = rty.require_struct();
-            let env = self.module_env().env;
+            let env = self.global_env();
             emit!(
                 self.writer,
                 "$ResourceExists({}, {}, ",
@@ -1679,14 +1830,14 @@ impl<'env> SpecTranslator<'env> {
                 };
                 if let Some(domain_ty) = is_domain {
                     let type_check = boogie_well_formed_expr(
-                        self.module_env().env,
+                        self.global_env(),
                         &var_name,
                         &domain_ty,
                         WellFormedMode::Default,
                     );
                     if type_check.is_empty() {
                         let tctx = TypeDisplayContext::WithEnv {
-                            env: self.module_env().env,
+                            env: self.global_env(),
                             type_param_names: None,
                         };
                         self.error(

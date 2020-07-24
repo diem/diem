@@ -36,7 +36,7 @@ use crate::{
         boogie_type_value_array, boogie_type_values, boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
-    spec_translator::{FunctionEntryPoint, SpecEnv, SpecTranslator},
+    spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
 use spec_lang::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
@@ -226,7 +226,7 @@ impl<'env> ModuleTranslator<'env> {
         self.new_spec_translator(self.module_env.clone(), false)
     }
 
-    fn new_spec_translator<E>(&self, env: E, supports_native_old: bool) -> SpecTranslator<'_>
+    fn new_spec_translator<'a, E>(&'a self, env: E, supports_native_old: bool) -> SpecTranslator<'a>
     where
         E: Into<SpecEnv<'env>>,
     {
@@ -509,7 +509,8 @@ impl<'env> ModuleTranslator<'env> {
             if self.options.prover.native_stubs {
                 self.generate_function_sig(func_target, Indirect);
                 emit!(self.writer, ";");
-                self.generate_function_spec(func_target, Indirect);
+                let st = self.new_spec_translator(func_target.clone(), true);
+                self.generate_function_spec(&st, Indirect);
                 emitln!(self.writer);
             }
             return;
@@ -532,9 +533,10 @@ impl<'env> ModuleTranslator<'env> {
             if opaque {
                 emit!(self.writer, ";");
             }
-            self.generate_function_spec(func_target, entry_point);
+            let st = self.new_spec_translator(func_target.clone(), true);
+            let distribution = self.generate_function_spec(&st, entry_point);
             if !opaque {
-                self.generate_function_stub(func_target, entry_point, Definition);
+                self.generate_function_stub(&st, entry_point, Definition, distribution);
             }
             emitln!(self.writer);
         }
@@ -575,11 +577,13 @@ impl<'env> ModuleTranslator<'env> {
         self.set_top_level_verify(false);
         emitln!(self.writer);
         self.generate_function_sig(func_target, FunctionEntryPoint::Verification);
-        self.generate_function_spec(func_target, FunctionEntryPoint::Verification);
+        let st = self.new_spec_translator(func_target.clone(), true);
+        let distribution = self.generate_function_spec(&st, FunctionEntryPoint::Verification);
         self.generate_function_stub(
-            func_target,
+            &st,
             FunctionEntryPoint::Verification,
             FunctionEntryPoint::VerificationDefinition,
+            distribution,
         );
         emitln!(self.writer);
     }
@@ -671,13 +675,12 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Emit code for the function specification.
-    fn generate_function_spec(
-        &self,
-        func_target: &FunctionTarget<'_>,
+    fn generate_function_spec<'a>(
+        &'a self,
+        st: &'a SpecTranslator<'a>,
         entry_point: FunctionEntryPoint,
-    ) {
-        self.new_spec_translator(func_target.clone(), true)
-            .translate_conditions(entry_point);
+    ) -> ConditionDistribution<'a> {
+        st.translate_conditions(entry_point)
     }
 
     /// Emit code for spec inside function implementation.
@@ -692,12 +695,14 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Generate function stub depending on entry point type. This forwards to the
     /// inlined function definition.
-    fn generate_function_stub(
-        &self,
-        func_target: &FunctionTarget<'_>,
+    fn generate_function_stub<'a>(
+        &'a self,
+        st: &SpecTranslator<'a>,
         entry_point: FunctionEntryPoint,
         def_entry_point: FunctionEntryPoint,
+        distribution: ConditionDistribution<'a>,
     ) {
+        let func_target = st.function_target();
         // Set the location to internal so it won't be counted for execution traces
         self.writer
             .set_location(&self.module_env.env.internal_loc());
@@ -708,8 +713,7 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_function_args_well_formed(func_target);
 
         // Translate assumptions specific to this entry point.
-        let spec_translator = self.new_spec_translator(func_target.clone(), false);
-        spec_translator.translate_entry_point_assumptions(entry_point);
+        st.translate_entry_point_assumptions(entry_point, distribution);
 
         // Generate call to inlined function.
         let args = func_target
@@ -887,7 +891,7 @@ impl<'env> ModuleTranslator<'env> {
 
         let propagate_abort = || {
             format!(
-                "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {});\n  goto Abort;\n}}",
+                "if ($abort_flag) {{\n  assume $DebugTrackAbort({}, {}, $abort_code);\n  goto Abort;\n}}",
                 func_target
                     .func_env
                     .module_env
@@ -895,6 +899,11 @@ impl<'env> ModuleTranslator<'env> {
                     .file_id_to_idx(loc.file_id()),
                 loc.span().start(),
             )
+        };
+        let propagate_abort_from_call = || {
+            // In case of a call, we do not track the abortion point, as we want to see the
+            // abort on the instruction which caused it.
+            "if ($abort_flag) {\n  goto Abort;\n}".to_string()
         };
 
         // Translate the bytecode instruction.
@@ -1172,7 +1181,7 @@ impl<'env> ModuleTranslator<'env> {
                             // Assume that calls to this function do not abort
                             emitln!(self.writer, "assume $abort_flag == false;");
                         } else {
-                            emitln!(self.writer, &propagate_abort());
+                            emitln!(self.writer, &propagate_abort_from_call());
                         }
                         for s in &dest_type_assumptions {
                             emitln!(self.writer, s);
@@ -1689,18 +1698,24 @@ impl<'env> ModuleTranslator<'env> {
                     Destroy => {}
                 }
             }
-            Abort(..) => {
+            Abort(_, src) => {
                 // Below we introduce a dummy `if` for $DebugTrackAbort to ensure boogie creates
                 // a execution trace entry for this statement.
                 emitln!(
                     self.writer,
-                    "if (true) {{ assume $DebugTrackAbort({}, {}); }}",
+                    "if (true) {{ assume $DebugTrackAbort({}, {}, i#$Integer({})); }}",
                     func_target
                         .func_env
                         .module_env
                         .env
                         .file_id_to_idx(loc.file_id()),
                     loc.span().start(),
+                    str_local(*src)
+                );
+                emitln!(
+                    self.writer,
+                    "$abort_code := i#$Integer({});",
+                    str_local(*src)
                 );
                 emitln!(self.writer, "goto Abort;")
             }

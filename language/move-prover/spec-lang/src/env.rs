@@ -112,6 +112,16 @@ pub const CONDITION_ABSTRACT_PROP: &str = "abstract";
 /// Opposite to the abstract property.
 pub const CONDITION_CONCRETE_PROP: &str = "concrete";
 
+/// Property which indicates that an aborts_if should be assumed.
+/// For callers of a function with such an aborts_if, the negation of the condition becomes
+/// an assumption.
+pub const CONDITION_ABORT_ASSUME_PROP: &str = "assume";
+
+/// Property which indicates that an aborts_if should be asserted.
+/// For callers of a function with such an aborts_if, the negation of the condition becomes
+/// an assertion.
+pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
+
 /// Pragma which indicates that the functions aborts and ensure conditions shall be exported
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
@@ -158,6 +168,20 @@ impl Loc {
             Span::new(self.span.start(), self.span.start() + ByteOffset(1)),
         )
     }
+
+    /// Creates a location which encloses all the locations in the provided slice,
+    /// which must not be empty. All locations are expected to be in the same file.
+    pub fn enclosing(locs: &[&Loc]) -> Loc {
+        assert!(!locs.is_empty());
+        let loc = locs[0];
+        let mut start = loc.span.start();
+        let mut end = loc.span.end();
+        for l in locs.iter().skip(1) {
+            start = std::cmp::min(start, l.span().start());
+            end = std::cmp::max(end, l.span().end());
+        }
+        Loc::new(loc.file_id(), Span::new(start, end))
+    }
 }
 
 /// Alias for the Loc variant of MoveIR. This uses a `&static str` instead of `FileId` for the
@@ -199,10 +223,6 @@ pub struct FunId(Symbol);
 /// Identifier for a schema.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SchemaId(Symbol);
-
-/// Identifier for a constant.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
-pub struct ConstId(Symbol);
 
 /// Identifier for a specification function, relative to module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
@@ -259,16 +279,6 @@ impl StructId {
 }
 
 impl FieldId {
-    pub fn new(sym: Symbol) -> Self {
-        Self(sym)
-    }
-
-    pub fn symbol(self) -> Symbol {
-        self.0
-    }
-}
-
-impl ConstId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
     }
@@ -370,7 +380,7 @@ pub struct GlobalEnv {
     /// start position of the associated language item in the source.
     doc_comments: BTreeMap<FileId, BTreeMap<ByteIndex, String>>,
     /// A map of locations to information about verification conditions at the location.
-    condition_infos: RefCell<BTreeMap<Loc, ConditionInfo>>,
+    condition_infos: RefCell<BTreeMap<(Loc, ConditionTag), ConditionInfo>>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
@@ -413,21 +423,25 @@ pub struct GlobalEnv {
 pub struct ConditionInfo {
     /// The message to print when the condition fails.
     pub message: String,
-    /// An alternative message to print if this condition fails in the context of a pre-condition.
-    /// This is used to distinguishes the case where the same condition is being used as pre and
-    /// post condition.
-    pub message_if_requires: Option<String>,
     /// Whether execution traces shall be printed if this condition fails.
     pub omit_trace: bool,
     /// Whether passing this condition is actually a failure.
     pub negative_cond: bool,
 }
 
+/// A tag used to be associated with a condition info. Condition infos are
+/// identified in the environment by a pair of Loc and this type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ConditionTag {
+    Requires,
+    Ensures,
+    NegativeTest,
+}
+
 impl ConditionInfo {
-    pub fn for_message(message: String, message_if_requires: Option<String>) -> Self {
+    pub fn for_message<S: Into<String>>(message: S) -> Self {
         Self {
-            message,
-            message_if_requires,
+            message: message.into(),
             omit_trace: false,
             negative_cond: false,
         }
@@ -948,19 +962,22 @@ impl GlobalEnv {
     }
 
     /// Get verification condition info associated with location.
-    pub fn get_condition_info(&self, loc: &Loc) -> Option<ConditionInfo> {
-        self.condition_infos.borrow().get(loc).cloned()
+    pub fn get_condition_info(&self, loc: &Loc, tag: ConditionTag) -> Option<ConditionInfo> {
+        self.condition_infos
+            .borrow()
+            .get(&(loc.clone(), tag))
+            .cloned()
     }
 
     /// Set verification condition info.
-    pub fn set_condition_info(&self, loc: Loc, info: ConditionInfo) {
-        self.condition_infos.borrow_mut().insert(loc, info);
+    pub fn set_condition_info(&self, loc: Loc, tag: ConditionTag, info: ConditionInfo) {
+        self.condition_infos.borrow_mut().insert((loc, tag), info);
     }
 
     /// Execute function on each condition info.
     pub fn with_condition_infos<F>(&self, mut f: F)
     where
-        F: FnMut(&Loc, &ConditionInfo),
+        F: FnMut(&(Loc, ConditionTag), &ConditionInfo),
     {
         self.condition_infos
             .borrow()
