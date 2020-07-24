@@ -287,7 +287,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
     }
 
-    async fn process_one_message(&mut self, peer: PeerNetworkId, msg: StateSynchronizerMsg) {
+    pub(crate) async fn process_one_message(
+        &mut self,
+        peer: PeerNetworkId,
+        msg: StateSynchronizerMsg,
+    ) {
         match msg {
             StateSynchronizerMsg::GetChunkRequest(request) => {
                 let _timer = counters::PROCESS_MSG_LATENCY
