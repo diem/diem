@@ -64,5 +64,7 @@ impl SynchronizerState {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(feature = "fuzzing", test))]
 mod tests;
+#[cfg(any(feature = "fuzzing", test))]
+pub use tests::fuzzing;
