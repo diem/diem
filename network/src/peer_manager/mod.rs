@@ -352,6 +352,28 @@ where
         }
     }
 
+    pub fn update_connected_peers_metrics(&self) {
+        let total = self.active_peers.len();
+        let inbound = self
+            .active_peers
+            .iter()
+            .filter(|(_, (metadata, _))| metadata.origin() == ConnectionOrigin::Inbound)
+            .count();
+        let outbound = total.saturating_sub(inbound);
+        let role = self.network_context.role().as_str();
+        counters::LIBRA_NETWORK_PEERS
+            .with_label_values(&[role, "connected"])
+            .set(total as i64);
+
+        counters::LIBRA_NETWORK_PEERS
+            .with_label_values(&[role, "inbound"])
+            .set(inbound as i64);
+
+        counters::LIBRA_NETWORK_PEERS
+            .with_label_values(&[role, "outbound"])
+            .set(outbound as i64);
+    }
+
     /// Get the [`NetworkAddress`] we're listening for incoming connections on
     pub fn listen_addr(&self) -> &NetworkAddress {
         &self.listen_addr
@@ -415,9 +437,7 @@ where
                 );
                 // Update libra_network_peer counter.
                 self.add_peer(conn);
-                counters::LIBRA_NETWORK_PEERS
-                    .with_label_values(&[self.network_context.role().as_str(), "connected"])
-                    .set(self.active_peers.len() as i64);
+                self.update_connected_peers_metrics();
             }
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
@@ -435,9 +455,7 @@ where
                         entry.remove();
                     }
                 }
-                counters::LIBRA_NETWORK_PEERS
-                    .with_label_values(&[self.network_context.role().as_str(), "connected"])
-                    .set(self.active_peers.len() as i64);
+                self.update_connected_peers_metrics();
 
                 // If the connection was explicitly closed by an upstream client, send an ACK.
                 if let Some(oneshot_tx) = self

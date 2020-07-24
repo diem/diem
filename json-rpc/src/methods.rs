@@ -357,9 +357,9 @@ async fn get_account_state_with_proof(
 
 /// Returns the number of peers this node is connected to
 async fn get_network_status(service: JsonRpcService, _request: JsonRpcRequest) -> Result<u64> {
-    let blah = counters::LIBRA_NETWORK_PEERS
+    let peers = counters::LIBRA_NETWORK_PEERS
         .get_metric_with_label_values(&[service.role.as_str(), "connected"])?;
-    Ok(blah.get() as u64)
+    Ok(peers.get() as u64)
 }
 
 /// Builds registry of all available RPC methods
