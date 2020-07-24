@@ -64,15 +64,20 @@ def send_transaction():
 
     try:
         create_client()
+        application.client.sendline("q as 000000000000000000000000000000dd")
+        application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
+        if application.client.match:
+            next_dd_seq = int(application.client.match.groups()[0]) + 1
+        else:
+            return 'DD sequence number not found', 400
+
         application.client.sendline(
             "a m {} {} {} use_base_units".format(auth_key, amount, currency_code))
         application.client.expect("Mint request submitted", timeout=2)
 
-        application.client.sendline("q as 000000000000000000000000000000dd")
-        application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
         application.client.terminate(True)
     except pexpect.exceptions.ExceptionPexpect:
         application.client.terminate(True)
         raise
 
-    return application.client.match.groups()[0]
+    return str(next_dd_seq)
