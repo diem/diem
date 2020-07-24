@@ -177,7 +177,7 @@ impl Ed25519Signature {
     pub(crate) fn from_bytes_unchecked(
         bytes: &[u8],
     ) -> std::result::Result<Ed25519Signature, CryptoMaterialError> {
-        match ed25519_dalek::Signature::from_bytes(bytes) {
+        match ed25519_dalek::Signature::try_from(bytes) {
             Ok(dalek_signature) => Ok(Ed25519Signature(dalek_signature)),
             Err(_) => Err(CryptoMaterialError::DeserializationError),
         }
