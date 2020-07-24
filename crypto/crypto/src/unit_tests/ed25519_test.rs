@@ -187,9 +187,10 @@ proptest! {
         );
     }
 
-        // In this test we demonstrate a signature that's not message-bound by only
+    // In this test we demonstrate a signature that's transformable by only
     // modifying the public key and the R component, under a pathological yet
-    // admissible s < l value for the signature.
+    // admissible s < l value for the signature. It shows the difference
+    // between `verify` and `verify_strict` in ed25519-dalek
     #[test]
     fn verify_sig_strict_torsion(idx in 0usize..8usize){
         let message = b"hello_world";
