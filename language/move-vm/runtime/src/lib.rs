@@ -22,5 +22,9 @@ pub mod session;
 #[macro_use]
 mod tracing;
 
+// Only include debugging functionality in debug builds
+#[cfg(debug_assertions)]
+mod debug;
+
 #[cfg(test)]
 mod unit_tests;

@@ -685,7 +685,14 @@ impl Frame {
         let code = self.function.code();
         loop {
             for instruction in &code[self.pc as usize..] {
-                trace!(self.function.pretty_string(), self.pc, instruction);
+                trace!(
+                    &self.function,
+                    &self.locals,
+                    self.pc,
+                    instruction,
+                    &resolver,
+                    &interpreter
+                );
                 self.pc += 1;
 
                 match instruction {
