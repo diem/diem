@@ -1,6 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+pub mod cache;
+pub mod view;
+
 use crate::storage::{FileHandle, ShellSafeName, TextLine};
 use anyhow::Result;
 use libra_types::transaction::Version;

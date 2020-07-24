@@ -8,13 +8,14 @@ use backup_cli::{
         state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
         transaction::backup::{TransactionBackupController, TransactionBackupOpt},
     },
+    metadata::cache,
     storage::StorageOpt,
     utils::{
         backup_service_client::{BackupServiceClient, BackupServiceClientOpt},
         GlobalBackupOpt,
     },
 };
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -27,20 +28,33 @@ enum Command {
 #[derive(StructOpt)]
 enum OneShotCommand {
     #[structopt(about = "Query the backup service builtin in the local Libra node.")]
-    Query(OneShotQueryOpt),
+    Query(OneShotQueryType),
     #[structopt(about = "Do a one shot backup.")]
     Backup(OneShotBackupOpt),
 }
 
 #[derive(StructOpt)]
-struct OneShotQueryOpt {
-    #[structopt(flatten)]
-    client: BackupServiceClientOpt,
+enum OneShotQueryType {
     #[structopt(
-        long,
         help = "Queries the latest epoch, committed version and synced version of the DB."
     )]
-    db_state: bool,
+    DbState(OneShotQueryDbStateOpt),
+    #[structopt(help = "Queries the latest epoch and versions in the backup storage.")]
+    BackupStorageState(OneShotQueryBackupStorageStateOpt),
+}
+
+#[derive(StructOpt)]
+struct OneShotQueryDbStateOpt {
+    #[structopt(flatten)]
+    client: BackupServiceClientOpt,
+}
+
+#[derive(StructOpt)]
+struct OneShotQueryBackupStorageStateOpt {
+    #[structopt(long, parse(from_os_str), help = "Metadata cache dir.")]
+    metadata_cache_dir: Option<PathBuf>,
+    #[structopt(subcommand)]
+    storage: StorageOpt,
 }
 
 #[derive(StructOpt)]
@@ -82,16 +96,26 @@ async fn main() -> Result<()> {
     let cmd = Command::from_args();
     match cmd {
         Command::OneShot(one_shot_cmd) => match one_shot_cmd {
-            OneShotCommand::Query(opt) => {
-                let client = BackupServiceClient::new_with_opt(opt.client);
-                if opt.db_state {
+            OneShotCommand::Query(typ) => match typ {
+                OneShotQueryType::DbState(opt) => {
+                    let client = BackupServiceClient::new_with_opt(opt.client);
                     if let Some(db_state) = client.get_db_state().await? {
                         println!("{}", db_state)
                     } else {
                         println!("DB not bootstrapped.")
                     }
                 }
-            }
+                OneShotQueryType::BackupStorageState(opt) => {
+                    println!("{:?}", opt.metadata_cache_dir);
+                    let view = cache::sync_and_load(
+                        &opt.metadata_cache_dir
+                            .unwrap_or_else(|| std::env::temp_dir().join("libra_backup_metadata")),
+                        opt.storage.init_storage().await?,
+                    )
+                    .await?;
+                    println!("{}", view.get_storage_state())
+                }
+            },
             OneShotCommand::Backup(opt) => {
                 let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
                 let global_opt = opt.global;
