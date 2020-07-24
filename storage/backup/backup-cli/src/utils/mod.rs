@@ -11,6 +11,7 @@ pub mod test_utils;
 use libra_types::transaction::Version;
 use std::{mem::size_of, path::PathBuf};
 use structopt::StructOpt;
+use tokio::fs::metadata;
 
 #[derive(Clone, StructOpt)]
 pub struct GlobalBackupOpt {
@@ -32,4 +33,9 @@ pub struct GlobalRestoreOpt {
 
 pub(crate) fn should_cut_chunk(chunk: &[u8], record: &[u8], max_chunk_size: usize) -> bool {
     !chunk.is_empty() && chunk.len() + record.len() + size_of::<u32>() > max_chunk_size
+}
+
+// TODO: use Path::exists() when Rust 1.5 stabilizes.
+pub(crate) async fn path_exists(path: &PathBuf) -> bool {
+    metadata(&path).await.is_ok()
 }
