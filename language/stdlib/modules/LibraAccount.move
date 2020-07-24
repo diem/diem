@@ -884,11 +884,12 @@ module LibraAccount {
         creator_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
+        human_name: vector<u8>,
     ) {
         assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        ValidatorConfig::publish(&new_account, creator_account);
+        ValidatorConfig::publish(&new_account, creator_account, human_name);
         make_account(new_account, auth_key_prefix)
     }
 
@@ -896,6 +897,7 @@ module LibraAccount {
         creator_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
+        _human_name: vector<u8>,
     ) {
         assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);

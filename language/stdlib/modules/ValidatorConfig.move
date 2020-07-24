@@ -23,6 +23,8 @@ module ValidatorConfig {
         /// set and rotated by the operator_account
         config: Option<Config>,
         operator_account: Option<address>,
+        /// The human readable name of this entity. Immutable.
+        human_name: vector<u8>,
     }
 
     /// TODO(valerini): add events here
@@ -39,11 +41,13 @@ module ValidatorConfig {
     public fun publish(
         account: &signer,
         lr_account: &signer,
+        human_name: vector<u8>,
         ) {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
+            human_name,
         });
     }
 

@@ -312,44 +312,61 @@ pub fn encode_create_testing_account_script(
     )
 }
 
-/// Create a validator account at `new_validator_address` with `auth_key_prefix`.
+/// Create a validator account at `new_validator_address` with `auth_key_prefix`and
+/// human_name.
 pub fn encode_create_validator_account_script(
+    sliding_nonce: u64,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
+    human_name: Vec<u8>,
 ) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 7, 7, 14, 38, 8, 52, 16, 0, 0,
-            0, 1, 0, 1, 0, 3, 6, 12, 5, 10, 2, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117,
-            110, 116, 24, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111,
-            114, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            1, 0, 0, 1, 5, 11, 0, 10, 1, 11, 2, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 73, 8, 109, 16,
+            0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 2, 6, 12, 3, 0, 4, 6, 12, 5, 10, 2, 10, 2, 5,
+            6, 12, 3, 5, 10, 2, 10, 2, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116,
+            12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111,
+            114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 24, 99,
+            114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 97, 99, 99,
+            111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 9, 10, 0,
+            10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 17, 1, 2,
         ],
         vec![],
         vec![
+            TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
+            TransactionArgument::U8Vector(human_name),
         ],
     )
 }
 
-/// Create a validator operator account at `new_validator_address` with `auth_key_prefix`.
+/// Create a validator operator account at `new_validator_address` with
+/// `auth_key_prefix`and human_name.
 pub fn encode_create_validator_operator_account_script(
+    sliding_nonce: u64,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
+    human_name: Vec<u8>,
 ) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 7, 7, 14, 47, 8, 61, 16, 0, 0,
-            0, 1, 0, 1, 0, 3, 6, 12, 5, 10, 2, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117,
-            110, 116, 33, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111,
-            114, 95, 111, 112, 101, 114, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117, 110, 116, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 5, 11, 0, 10, 1, 11, 2, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 22, 7, 36, 82, 8, 118, 16,
+            0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 2, 6, 12, 3, 0, 4, 6, 12, 5, 10, 2, 10, 2, 5,
+            6, 12, 3, 5, 10, 2, 10, 2, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116,
+            12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111,
+            114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 33, 99,
+            114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 111, 112,
+            101, 114, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 1, 9, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4,
+            17, 1, 2,
         ],
         vec![],
         vec![
+            TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
+            TransactionArgument::U8Vector(human_name),
         ],
     )
 }
