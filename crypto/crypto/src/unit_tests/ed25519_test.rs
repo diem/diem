@@ -20,6 +20,7 @@ use core::{
     convert::TryFrom,
     ops::{Add, Index, IndexMut, Mul, Neg},
 };
+use ed25519_dalek::ed25519::signature::{Signature as _, Verifier as _};
 
 use digest::Digest;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
@@ -398,8 +399,9 @@ proptest! {
         // Construct the corresponding dalek Signature. This signature is malleable.
         let dalek_sig = ed25519_dalek::Signature::from_bytes(&serialized);
 
-        // ed25519_dalek will (post 2.0) no longer deserialize the malleable signature. It does detect it.
-        prop_assert!(dalek_sig.is_err());
+        // ed25519_dalek will (post 2.0) deserialize the malleable
+        // signature. It does not detect it.
+        prop_assert!(dalek_sig.is_ok());
 
         let serialized_malleable: &[u8] = &serialized;
         // try_from will fail on malleable signatures. We detect malleable signatures
@@ -409,10 +411,11 @@ proptest! {
             Err(CryptoMaterialError::CanonicalRepresentationError)
         );
 
-        // We expect from_bytes_unchecked deserialization to fail, as dalek checks
-        // for signature malleability. This method is pub(crate) and only used for test purposes.
+        // We expect from_bytes_unchecked deserialization to succeed, as dalek
+        // does not check for signature malleability. This method is pub(crate)
+        // and only used for test purposes.
         let sig_unchecked = Ed25519Signature::from_bytes_unchecked(&serialized);
-        prop_assert!(sig_unchecked.is_err());
+        prop_assert!(sig_unchecked.is_ok());
 
         // Update the signature by setting S = L to make it invalid.
         serialized[32..].copy_from_slice(&L.to_bytes());
