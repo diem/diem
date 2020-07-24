@@ -23,7 +23,11 @@ use libra_types::{
     },
     vm_status::KeptVMStatus,
 };
-use std::{collections::BTreeMap, net::SocketAddr, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    net::SocketAddr,
+    sync::Arc,
+};
 use storage_interface::{DbReader, StartupInfo, TreeState};
 use tokio::runtime::Runtime;
 
@@ -47,7 +51,8 @@ pub fn test_bootstrap(
 #[derive(Clone)]
 pub(crate) struct MockLibraDB {
     pub version: u64,
-    pub all_accounts: BTreeMap<AccountAddress, AccountStateBlob>,
+    pub genesis: HashMap<AccountAddress, AccountStateBlob>,
+    pub all_accounts: HashMap<AccountAddress, AccountStateBlob>,
     pub all_txns: Vec<(Transaction, KeptVMStatus)>,
     pub events: Vec<(u64, ContractEvent)>,
     pub account_state_with_proof: Vec<AccountStateWithProof>,
@@ -59,7 +64,9 @@ impl DbReader for MockLibraDB {
         &self,
         address: AccountAddress,
     ) -> Result<Option<AccountStateBlob>> {
-        if let Some(blob) = self.all_accounts.get(&address) {
+        if let Some(blob) = self.genesis.get(&address) {
+            Ok(Some(blob.clone()))
+        } else if let Some(blob) = self.all_accounts.get(&address) {
             Ok(Some(blob.clone()))
         } else {
             Ok(None)

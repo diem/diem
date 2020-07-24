@@ -607,8 +607,8 @@ pub struct CurrencyInfoView {
     pub exchange_rate_update_events_key: BytesView,
 }
 
-impl From<CurrencyInfoResource> for CurrencyInfoView {
-    fn from(info: CurrencyInfoResource) -> CurrencyInfoView {
+impl From<&CurrencyInfoResource> for CurrencyInfoView {
+    fn from(info: &CurrencyInfoResource) -> CurrencyInfoView {
         CurrencyInfoView {
             code: info.currency_code().to_string(),
             scaling_factor: info.scaling_factor(),
