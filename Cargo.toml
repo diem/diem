@@ -89,7 +89,6 @@ members = [
     "language/transaction-builder",
     "language/transaction-builder-generator",
     "language/vm",
-    "language/vm/serializer-tests",
     "libra-node",
     "mempool",
     "network",
