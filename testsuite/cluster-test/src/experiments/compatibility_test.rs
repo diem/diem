@@ -26,6 +26,7 @@ use tokio::time;
 pub async fn update_batch_instance(
     context: &mut Context<'_>,
     updated_instance: &[Instance],
+    updated_lsr: &[Instance],
     updated_tag: String,
 ) -> anyhow::Result<()> {
     let deadline = Instant::now() + Duration::from_secs(2 * 60);
@@ -33,6 +34,26 @@ pub async fn update_batch_instance(
     info!("Stop Existing instances.");
     let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
     try_join_all(futures).await?;
+
+    if !updated_lsr.is_empty() {
+        info!("Stop associated lsr instances.");
+        let futures: Vec<_> = updated_lsr.iter().map(Instance::stop).collect();
+        try_join_all(futures).await?;
+        info!("Reinstantiate a set of new lsr.");
+        let futures: Vec<_> = updated_lsr
+            .iter()
+            .map(|instance| {
+                let mut newer_config = instance.instance_config().clone();
+                newer_config.replace_tag(updated_tag.clone()).unwrap();
+                context
+                    .cluster_swarm
+                    .spawn_new_instance(newer_config, false)
+            })
+            .collect();
+        try_join_all(futures).await?;
+        info!("Wait for the instance to sync up with peers");
+        time::delay_for(Duration::from_secs(20)).await;
+    }
 
     info!("Reinstantiate a set of new nodes.");
     let futures: Vec<_> = updated_instance
@@ -84,8 +105,11 @@ pub struct CompatiblityTestParams {
 
 pub struct CompatibilityTest {
     first_node: Instance,
+    first_lsr: Vec<Instance>,
     first_batch: Vec<Instance>,
+    first_batch_lsr: Vec<Instance>,
     second_batch: Vec<Instance>,
+    second_batch_lsr: Vec<Instance>,
     full_nodes: Vec<Instance>,
     updated_image_tag: String,
 }
@@ -102,14 +126,26 @@ impl ExperimentParam for CompatiblityTestParams {
         }
         let (first_batch, second_batch) = cluster.split_n_validators_random(self.count);
         let mut first_batch = first_batch.into_validator_instances();
+        let second_batch = second_batch.into_validator_instances();
         let first_node = first_batch
             .pop()
             .expect("Requires at least one validator in the first batch");
+        let mut first_lsr = vec![];
+        let mut first_batch_lsr = vec![];
+        let mut second_batch_lsr = vec![];
+        if !cluster.lsr_instances().is_empty() {
+            first_batch_lsr = cluster.lsr_instances_for_validators(&first_batch);
+            second_batch_lsr = cluster.lsr_instances_for_validators(&second_batch);
+            first_lsr = cluster.lsr_instances_for_validators(&[first_node.clone()]);
+        }
 
         Self::E {
             first_node,
+            first_lsr,
             first_batch,
-            second_batch: second_batch.into_validator_instances(),
+            first_batch_lsr,
+            second_batch,
+            second_batch_lsr,
             full_nodes: cluster.fullnode_instances().to_vec(),
             updated_image_tag: self.updated_image_tag,
         }
@@ -162,7 +198,13 @@ impl Experiment for CompatibilityTest {
         info!("Upgrading validator: {}", self.first_node);
         context.report.report_text(msg);
         let first_node = vec![self.first_node.clone()];
-        update_batch_instance(context, &first_node, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &first_node,
+            &self.first_lsr,
+            self.updated_image_tag.clone(),
+        )
+        .await?;
         context
             .tx_emitter
             .emit_txn_for(
@@ -184,7 +226,13 @@ impl Experiment for CompatibilityTest {
             get_instance_list_str(&self.first_batch)
         );
         context.report.report_text(msg);
-        update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.first_batch,
+            &self.first_batch_lsr,
+            self.updated_image_tag.clone(),
+        )
+        .await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, validator_txn_job.clone())
@@ -203,7 +251,13 @@ impl Experiment for CompatibilityTest {
             get_instance_list_str(&self.second_batch)
         );
         context.report.report_text(msg);
-        update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.second_batch,
+            &self.second_batch_lsr,
+            self.updated_image_tag.clone(),
+        )
+        .await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, validator_txn_job)
@@ -224,7 +278,13 @@ impl Experiment for CompatibilityTest {
             get_instance_list_str(&self.full_nodes)
         );
         context.report.report_text(msg);
-        update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.full_nodes,
+            &[],
+            self.updated_image_tag.clone(),
+        )
+        .await?;
         context
             .tx_emitter
             .emit_txn_for(job_duration, fullnode_txn_job)

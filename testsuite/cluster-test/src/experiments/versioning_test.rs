@@ -41,7 +41,9 @@ pub struct ValidatorVersioningParams {
 
 pub struct ValidatorVersioning {
     first_batch: Vec<Instance>,
+    first_batch_lsr: Vec<Instance>,
     second_batch: Vec<Instance>,
+    second_batch_lsr: Vec<Instance>,
     full_nodes: Vec<Instance>,
     updated_image_tag: String,
 }
@@ -57,10 +59,20 @@ impl ExperimentParam for ValidatorVersioningParams {
             );
         }
         let (first_batch, second_batch) = cluster.split_n_validators_random(self.count);
+        let first_batch = first_batch.into_validator_instances();
+        let second_batch = second_batch.into_validator_instances();
+        let mut first_batch_lsr = vec![];
+        let mut second_batch_lsr = vec![];
+        if !cluster.lsr_instances().is_empty() {
+            first_batch_lsr = cluster.lsr_instances_for_validators(&first_batch);
+            second_batch_lsr = cluster.lsr_instances_for_validators(&second_batch);
+        }
 
         Self::E {
-            first_batch: first_batch.into_validator_instances(),
-            second_batch: second_batch.into_validator_instances(),
+            first_batch,
+            first_batch_lsr,
+            second_batch,
+            second_batch_lsr,
             full_nodes: cluster.fullnode_instances().to_vec(),
             updated_image_tag: self.updated_image_tag,
         }
@@ -90,7 +102,13 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("1. Changing the images for the instances in the first batch");
-        update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.first_batch,
+            &self.first_batch_lsr,
+            self.updated_image_tag.clone(),
+        )
+        .await?;
 
         info!("2. Send a transaction to make sure it is not rejected nor cause any fork");
         let full_node = context.cluster.random_fullnode_instance();
@@ -131,7 +149,13 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("3. Change the rest of the images in the second batch");
-        update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.second_batch,
+            &self.second_batch_lsr,
+            self.updated_image_tag.clone(),
+        )
+        .await?;
 
         info!("4. Send a transaction to make sure this feature is still not activated.");
         let txn2 = txn_gen(&mut account_1)?;
@@ -182,7 +206,13 @@ impl Experiment for ValidatorVersioning {
         };
 
         info!("7. Change the images for the full nodes");
-        update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
+        update_batch_instance(
+            context,
+            &self.full_nodes,
+            &[],
+            self.updated_image_tag.clone(),
+        )
+        .await?;
 
         info!("8. Send a transaction to make sure it gets dropped by the full node mempool.");
 
