@@ -309,6 +309,11 @@ impl<'env> SpecTranslator<'env> {
                 // This function is native and expected to be found in the prelude.
                 continue;
             }
+            if fun.is_move_fun && !self.module_env().spec_fun_is_used(*id) {
+                // This function is a pure move function but is never used,
+                // so we don't need to translate it.
+                continue;
+            }
             if let Type::Tuple(..) | Type::Fun(..) = fun.result_type {
                 self.error(&fun.loc, "function or tuple result type not yet supported");
                 continue;

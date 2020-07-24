@@ -591,9 +591,9 @@ TODO(wrwg): this currently does not verify. It probably never did as it was timi
 
 
 <pre><code>pragma verify = <b>false</b>;
-<a name="0x1_DesignatedDealer_dealer$3"></a>
+<a name="0x1_DesignatedDealer_dealer$11"></a>
 <b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-<a name="0x1_DesignatedDealer_current_time$4"></a>
+<a name="0x1_DesignatedDealer_current_time$12"></a>
 <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
 <b>ensures</b> <b>old</b>(dealer.window_start) &lt;= dealer.window_start;
 <b>ensures</b>

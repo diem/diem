@@ -708,7 +708,7 @@ module Libra {
     spec schema RegisterCurrencyAbortsIf<CoinType> {
         lr_account: signer;
         aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account));
-        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
+        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::CURRENCY_INFO_ADDRESS();
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
@@ -760,7 +760,7 @@ module Libra {
     spec module {
         /// Returns the market cap of CoinType.
         define spec_market_cap<CoinType>(): u128 {
-            global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value
+            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
         }
     }
 
@@ -829,7 +829,7 @@ module Libra {
         ensures result == spec_currency_info<CoinType>().currency_code;
     }
     spec schema CurrencyCodeAbortsIf<CoinType> {
-        aborts_if !exists<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS());
+        aborts_if !exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
     }
 
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
@@ -907,19 +907,19 @@ module Libra {
     spec module {
         /// Checks whether currency is registered. Mirrors `Self::is_currency<CoinType>`.
         define spec_is_currency<CoinType>(): bool {
-            exists<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
+            exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
         }
 
         /// Returns currency information.
         define spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
-            global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
+            global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
         }
 
         /// Specification version of `Self::approx_lbr_for_value`.
         define spec_approx_lbr_for_value<CoinType>(value: num):  num {
             FixedPoint32::spec_multiply_u64(
                 value,
-                global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
+                global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
             )
         }
 
@@ -999,7 +999,7 @@ module Libra {
     //     invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
     //     invariant module spec_is_currency<CoinType>()
     //                 ==> sum_of_coin_values<CoinType>
-    //                     == global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value;
+    //                     == global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value;
     // }
 
     // spec module {
