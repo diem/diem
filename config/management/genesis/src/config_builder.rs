@@ -141,14 +141,17 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             )
             .unwrap();
 
+        let validator_identity = validator_network.identity_from_storage();
         validator_network.identity = Identity::from_storage(
-            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
-            libra_global_constants::OWNER_ACCOUNT.into(),
+            validator_identity.key_name,
+            validator_identity.peer_id_name,
             self.secure_backend(&local_ns, "validator"),
         );
+
+        let fullnode_identity = fullnode_network.identity_from_storage();
         fullnode_network.identity = Identity::from_storage(
-            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
-            libra_global_constants::OWNER_ACCOUNT.into(),
+            fullnode_identity.key_name,
+            fullnode_identity.peer_id_name,
             self.secure_backend(&local_ns, "full_node"),
         );
 
