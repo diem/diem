@@ -5,19 +5,26 @@ use crate::SynchronizerState;
 use anyhow::{anyhow, bail, Result};
 use executor_types::ExecutedTrees;
 use libra_crypto::HashValue;
+#[cfg(test)]
 use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
     block_info::BlockInfo,
-    epoch_state::EpochState,
-    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    ledger_info::LedgerInfo,
     on_chain_config::ValidatorSet,
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{authenticator::AuthenticationKey, SignedTransaction, Transaction},
+    transaction::{authenticator::AuthenticationKey, SignedTransaction},
+};
+use libra_types::{
+    epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
     validator_signer::ValidatorSigner,
 };
-use std::collections::{BTreeMap, HashMap};
+#[cfg(test)]
+use std::collections::BTreeMap;
+use std::collections::HashMap;
+#[cfg(test)]
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
+#[cfg(test)]
 use vm_genesis::GENESIS_KEYPAIR;
 
 #[derive(Clone)]
@@ -94,8 +101,11 @@ impl MockStorage {
         )
     }
 
-    pub fn get_epoch_changes(&self, known_epoch: u64) -> LedgerInfoWithSignatures {
-        self.ledger_infos.get(&known_epoch).unwrap().clone()
+    pub fn get_epoch_changes(&self, known_epoch: u64) -> Result<LedgerInfoWithSignatures> {
+        match self.ledger_infos.get(&known_epoch) {
+            None => bail!("[mock storage] missing epoch change li"),
+            Some(li) => Ok(li.clone()),
+        }
     }
 
     pub fn get_chunk(
@@ -104,8 +114,11 @@ impl MockStorage {
         limit: u64,
         target_version: u64,
     ) -> Vec<Transaction> {
-        let mut version = start_version;
         let mut res = vec![];
+        if target_version < start_version || start_version == 0 {
+            return res;
+        }
+        let mut version = start_version;
         let limit = std::cmp::min(limit, target_version - start_version + 1);
         while version - 1 < self.transactions.len() as u64 && version - start_version < limit {
             res.push(self.transactions[(version - 1) as usize].clone());
@@ -145,6 +158,7 @@ impl MockStorage {
 
     // Generate new dummy txns and updates the LI
     // with the version corresponding to the new transactions, signed by this storage signer.
+    #[cfg(test)]
     pub fn commit_new_txns(&mut self, num_txns: u64) -> (Vec<Transaction>, Vec<SignedTransaction>) {
         let mut committed_txns = vec![];
         let mut signed_txns = vec![];
@@ -160,6 +174,7 @@ impl MockStorage {
         (committed_txns, signed_txns)
     }
 
+    #[cfg(test)]
     fn gen_mock_user_txn() -> Transaction {
         let sender = AccountAddress::random();
         let receiver = AuthenticationKey::random();
@@ -180,6 +195,7 @@ impl MockStorage {
     }
 
     // add the LI to the current highest version and sign it
+    #[cfg(test)]
     fn add_li(&mut self, validator_set: Option<ValidatorSet>) {
         let epoch_state = validator_set.map(|set| EpochState {
             epoch: self.epoch_num() + 1,
@@ -211,6 +227,7 @@ impl MockStorage {
     // just adding a new LedgerInfo).
     // The validator set is different only in the consensus public / private keys, network data
     // remains the same.
+    #[cfg(test)]
     pub fn move_to_next_epoch(&mut self, signer: ValidatorSigner, validator_set: ValidatorSet) {
         self.add_li(Some(validator_set));
         self.epoch_num += 1;

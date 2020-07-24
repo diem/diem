@@ -2,33 +2,28 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerSender},
-    tests::mock_storage::MockStorage,
-    StateSyncClient, StateSynchronizer, SynchronizerState,
+    tests::{
+        helpers::{MockExecutorProxy, MockRpcHandler, SynchronizerEnvHelper},
+        mock_storage::MockStorage,
+    },
+    StateSyncClient, StateSynchronizer,
 };
 use anyhow::{bail, Result};
 use channel::{libra_channel, message_queues::QueueStyle};
-use executor_types::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, StreamExt};
 use libra_config::{
     config::{GossipConfig, RoleType},
     network_id::{NetworkContext, NetworkId, NodeNetworkId},
 };
-use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
+use libra_crypto::x25519;
 use libra_mempool::mocks::MockSharedMempool;
-use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
-};
+use libra_network_address::NetworkAddress;
 use libra_types::{
-    chain_id::ChainId, contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::ValidatorSet, proof::TransactionListProof,
-    transaction::TransactionListWithProof, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
+    chain_id::ChainId, ledger_info::LedgerInfoWithSignatures, on_chain_config::ValidatorSet,
+    transaction::TransactionListWithProof, validator_info::ValidatorInfo,
+    validator_signer::ValidatorSigner, validator_verifier::random_validator_verifier,
+    waypoint::Waypoint, PeerId,
 };
 use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
 use network::{
@@ -42,95 +37,16 @@ use network::{
     DisconnectReason, ProtocolId,
 };
 use network_builder::builder::NetworkBuilder;
-use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     num::NonZeroUsize,
     ops::DerefMut,
-    str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
     },
 };
 use tokio::runtime::Runtime;
-
-type MockRpcHandler = Box<
-    dyn Fn(TransactionListWithProof) -> Result<TransactionListWithProof> + Send + Sync + 'static,
->;
-
-pub struct MockExecutorProxy {
-    handler: MockRpcHandler,
-    storage: Arc<RwLock<MockStorage>>,
-}
-
-impl MockExecutorProxy {
-    fn new(handler: MockRpcHandler, storage: Arc<RwLock<MockStorage>>) -> Self {
-        Self { handler, storage }
-    }
-}
-
-impl ExecutorProxyTrait for MockExecutorProxy {
-    fn get_local_storage_state(&self) -> Result<SynchronizerState> {
-        Ok(self.storage.read().unwrap().get_local_storage_state())
-    }
-
-    fn execute_chunk(
-        &mut self,
-        txn_list_with_proof: TransactionListWithProof,
-        ledger_info_with_sigs: LedgerInfoWithSignatures,
-        intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        _synced_trees: &mut ExecutedTrees,
-    ) -> Result<()> {
-        self.storage.write().unwrap().add_txns_with_li(
-            txn_list_with_proof.transactions,
-            ledger_info_with_sigs,
-            intermediate_end_of_epoch_li,
-        );
-        Ok(())
-    }
-
-    fn get_chunk(
-        &self,
-        known_version: u64,
-        limit: u64,
-        target_version: u64,
-    ) -> Result<TransactionListWithProof> {
-        let txns = self
-            .storage
-            .read()
-            .unwrap()
-            .get_chunk(known_version + 1, limit, target_version);
-        let first_txn_version = txns.first().map(|_| known_version + 1);
-        let txns_with_proof = TransactionListWithProof::new(
-            txns,
-            None,
-            first_txn_version,
-            TransactionListProof::new_empty(),
-        );
-        (self.handler)(txns_with_proof)
-    }
-
-    fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
-        Ok(self.storage.read().unwrap().get_epoch_changes(epoch))
-    }
-
-    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        self.storage
-            .read()
-            .unwrap()
-            .get_epoch_ending_ledger_info(version)
-    }
-
-    fn load_on_chain_configs(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    fn publish_on_chain_config_updates(&mut self, _events: Vec<ContractEvent>) -> Result<()> {
-        Ok(())
-    }
-}
 
 struct SynchronizerEnv {
     runtime: Runtime,
@@ -153,51 +69,6 @@ struct SynchronizerEnv {
 }
 
 impl SynchronizerEnv {
-    // Returns the initial peers with their signatures
-    fn initial_setup(
-        count: usize,
-    ) -> (
-        Vec<ValidatorSigner>,
-        Vec<ValidatorInfo>,
-        Vec<x25519::PrivateKey>,
-    ) {
-        let (signers, _verifier) = random_validator_verifier(count, None, true);
-
-        // Setup identity public keys.
-        let mut rng = StdRng::from_seed(TEST_SEED);
-        let network_keys: Vec<_> = (0..count)
-            .map(|_| x25519::PrivateKey::generate(&mut rng))
-            .collect();
-
-        let mut validators_keys = vec![];
-        // The voting power of peer 0 is enough to generate an LI that passes validation.
-        for (idx, signer) in signers.iter().enumerate() {
-            let voting_power = if idx == 0 { 1000 } else { 1 };
-            let addr = NetworkAddress::from_str("/memory/0").unwrap();
-            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-            let enc_addr = raw_addr.clone().encrypt(
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                &signer.author(),
-                0,
-                0,
-            );
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
-
-            let validator_config = ValidatorConfig::new(
-                signer.public_key(),
-                network_keys[idx].public_key(),
-                raw_enc_addr,
-                network_keys[idx].public_key(),
-                raw_addr,
-            );
-            let validator_info =
-                ValidatorInfo::new(signer.author(), voting_power, validator_config);
-            validators_keys.push(validator_info);
-        }
-        (signers, validators_keys, network_keys)
-    }
-
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
     // their new signers: they're going to learn about the new epoch public key through state
     // synchronization, but private keys are discovered separately.
@@ -223,17 +94,10 @@ impl SynchronizerEnv {
             .move_to_next_epoch(signers[0].clone(), validator_set);
     }
 
-    fn genesis_li(validators: &[ValidatorInfo]) -> LedgerInfoWithSignatures {
-        LedgerInfoWithSignatures::genesis(
-            *ACCUMULATOR_PLACEHOLDER_HASH,
-            ValidatorSet::new(validators.to_vec()),
-        )
-    }
-
     fn new(num_peers: usize) -> Self {
         ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
-        let (signers, public_keys, network_keys) = Self::initial_setup(num_peers);
+        let (signers, public_keys, network_keys) = SynchronizerEnvHelper::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
 
         Self {
@@ -409,7 +273,7 @@ impl SynchronizerEnv {
             network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
         };
 
-        let genesis_li = Self::genesis_li(&self.public_keys);
+        let genesis_li = SynchronizerEnvHelper::genesis_li(&self.public_keys);
         let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
             genesis_li,
             self.signers[new_peer_idx].clone(),
