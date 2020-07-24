@@ -15,6 +15,7 @@
 -  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
 -  [Function `get_config`](#0x1_ValidatorConfig_get_config)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
+-  [Function `human_name`](#0x1_ValidatorConfig_human_name)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
@@ -146,6 +147,13 @@
 <dd>
 
 </dd>
+<dt>
+
+<code>human_name: vector&lt;u8&gt;</code>
+</dt>
+<dd>
+ The human readable name of this entity. Immutable.
+</dd>
 </dl>
 
 
@@ -157,7 +165,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -169,11 +177,13 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(
     account: &signer,
     lr_account: &signer,
+    human_name: vector&lt;u8&gt;,
     ) {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
+        human_name,
     });
 }
 </code></pre>
@@ -369,6 +379,34 @@ empty, returns the input
 
 </details>
 
+<a name="0x1_ValidatorConfig_human_name"></a>
+
+## Function `human_name`
+
+Return the human-readable name for the Validator owner.
+Aborts if
+<code>addr</code> does not have a
+<code><a href="#0x1_ValidatorConfig">ValidatorConfig</a></code> resource.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_human_name">human_name</a>(addr: address): vector&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_human_name">human_name</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
+    *&borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).human_name
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_ValidatorConfig_get_consensus_pubkey"></a>
 
 ## Function `get_consensus_pubkey`
@@ -457,7 +495,7 @@ Never aborts
 ### Function `publish`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 

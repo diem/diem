@@ -17,8 +17,10 @@ fn validator_add() {
         libra_root_account
             .transaction()
             .script(encode_create_validator_account_script(
+                0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
+                vec![],
             ))
             .sequence_number(1)
             .sign(),
@@ -73,8 +75,10 @@ fn validator_rotate_key_and_reconfigure() {
         libra_root_account
             .transaction()
             .script(encode_create_validator_account_script(
+                0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
+                vec![],
             ))
             .sequence_number(1)
             .sign(),
@@ -165,8 +169,10 @@ fn validator_set_operator_set_key_reconfigure() {
         libra_root_account
             .transaction()
             .script(encode_create_validator_operator_account_script(
+                0,
                 *operator_account.address(),
                 operator_account.auth_key_prefix(),
+                b"operator_0".to_vec(),
             ))
             .sequence_number(1)
             .sign(),
@@ -181,8 +187,10 @@ fn validator_set_operator_set_key_reconfigure() {
         libra_root_account
             .transaction()
             .script(encode_create_validator_account_script(
+                0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
+                vec![],
             ))
             .sequence_number(2)
             .sign(),

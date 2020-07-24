@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub struct ValidatorConfigResource {
     pub validator_config: Option<ValidatorConfig>,
     pub delegated_account: Option<AccountAddress>,
+    pub human_name: Vec<u8>,
 }
 
 impl MoveResource for ValidatorConfigResource {

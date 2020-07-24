@@ -38,8 +38,8 @@ fun main(account: &signer) {
 script {
 use 0x1::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::create_validator_account(account, {{vivian}}, {{vivian::auth_key}});
-    LibraAccount::create_validator_operator_account(account, {{otto}}, {{otto::auth_key}})
+    LibraAccount::create_validator_account(account, {{vivian}}, {{vivian::auth_key}}, b"owner_name");
+    LibraAccount::create_validator_operator_account(account, {{otto}}, {{otto::auth_key}}, b"operator_name")
 
 }
 }

@@ -388,8 +388,10 @@ fn create_and_initialize_owners_operators(
         let owner_auth_key = AuthenticationKey::ed25519(&owner_key);
         let owner_account = account_address::from_public_key(owner_key);
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
+            0,
             owner_account,
             owner_auth_key.prefix().to_vec(),
+            vec![],
         );
         exec_script(session, libra_root_address, &create_owner_script);
     }
@@ -400,8 +402,10 @@ fn create_and_initialize_owners_operators(
         let operator_account = account_address::from_public_key(operator_key);
         let create_operator_script =
             transaction_builder::encode_create_validator_operator_account_script(
+                0,
                 operator_account,
                 operator_auth_key.prefix().to_vec(),
+                b"operator_0".to_vec(),
             );
         exec_script(session, libra_root_address, &create_operator_script);
     }
