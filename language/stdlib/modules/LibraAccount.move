@@ -570,6 +570,7 @@ module LibraAccount {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(new_account_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         let new_account = create_signer(new_account_address);
+        SlidingNonce::publish_nonce_resource(&new_account, &new_account);
         make_account(new_account, auth_key_prefix)
     }
 
