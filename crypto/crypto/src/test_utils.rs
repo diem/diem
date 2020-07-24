@@ -110,8 +110,6 @@ pub struct TestLibraCrypto(pub String);
 #[cfg(any(test, feature = "fuzzing"))]
 pub struct TestLibraCryptoHasher(crate::hash::DefaultHasher);
 #[cfg(any(test, feature = "fuzzing"))]
-#[automatically_derived]
-#[allow(unused_qualifications)]
 impl ::core::clone::Clone for TestLibraCryptoHasher {
     #[inline]
     fn clone(&self) -> TestLibraCryptoHasher {
