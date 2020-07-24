@@ -1,0 +1,9 @@
+Move prover returns: exiting with checking errors
+error: calling impure function `TestPureFun::init` is not allowed
+
+    ┌── tests/sources/functional/pure_function_call_incorrect.move:32:20 ───
+    │
+ 32 │         aborts_if !init(account);
+    │                    ^^^^^^^^^^^^^
+    │
+    = impure function `TestPureFun::init(&signer): bool`

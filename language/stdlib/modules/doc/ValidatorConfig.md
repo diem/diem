@@ -15,7 +15,6 @@
 -  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
 -  [Function `get_config`](#0x1_ValidatorConfig_get_config)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
--  [Function `human_name`](#0x1_ValidatorConfig_human_name)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
@@ -372,34 +371,6 @@ empty, returns the input
     <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
     <b>let</b> t_ref = borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *<a href="Option.md#0x1_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_ValidatorConfig_human_name"></a>
-
-## Function `human_name`
-
-Return the human-readable name for the Validator owner.
-Aborts if
-<code>addr</code> does not have a
-<code><a href="#0x1_ValidatorConfig">ValidatorConfig</a></code> resource.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_human_name">human_name</a>(addr: address): vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_human_name">human_name</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    *&borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).human_name
 }
 </code></pre>
 

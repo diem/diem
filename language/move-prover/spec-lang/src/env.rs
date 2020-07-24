@@ -404,6 +404,8 @@ pub struct GlobalEnv {
     global_invariants_for_spec_var: BTreeMap<QualifiedId<SpecVarId>, BTreeSet<GlobalId>>,
     /// A map from global memories to global invariants which refer to them.
     global_invariants_for_memory: BTreeMap<QualifiedId<StructId>, BTreeSet<GlobalId>>,
+    /// A set containing spec functions which are called/used in specs.
+    used_spec_funs: BTreeSet<QualifiedId<SpecFunId>>,
 }
 
 /// Information about a verification condition stored in the environment.
@@ -471,6 +473,7 @@ impl GlobalEnv {
             global_invariants: Default::default(),
             global_invariants_for_memory: Default::default(),
             global_invariants_for_spec_var: Default::default(),
+            used_spec_funs: BTreeSet::new(),
         }
     }
 
@@ -670,6 +673,11 @@ impl GlobalEnv {
             .get(&memory)
             .map(|ids| ids.iter().cloned().collect_vec())
             .unwrap_or_else(Default::default)
+    }
+
+    /// Adds a spec function to used_spec_funs set.
+    pub fn add_used_spec_fun(&mut self, module_id: ModuleId, spec_fun_id: SpecFunId) {
+        self.used_spec_funs.insert(module_id.qualified(spec_fun_id));
     }
 
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
@@ -1352,6 +1360,13 @@ impl<'env> ModuleEnv<'env> {
     /// Gets module specification.
     pub fn get_spec(&self) -> &Spec {
         &self.data.module_spec
+    }
+
+    /// Returns whether a spec fun is ever called or not.
+    pub fn spec_fun_is_used(&self, spec_fun_id: SpecFunId) -> bool {
+        self.env
+            .used_spec_funs
+            .contains(&self.get_id().qualified(spec_fun_id))
     }
 
     /// Get all spec fun overloads with the given name.
