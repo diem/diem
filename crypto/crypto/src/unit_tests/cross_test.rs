@@ -77,7 +77,7 @@ proptest! {
         med_keypair in uniform_keypair_strategy::<MultiEd25519PrivateKey, MultiEd25519PublicKey>()
     ) {
         // this is impossible to write statically, due to the trait not being
-        // object-safe (voluntarily)
+        // object-safe (voluntarily), see unsupported_sigs below
         // let mut l: Vec<Box<dyn PrivateKey>> = vec![];
         let mut l: Vec<Ed25519PrivateKey> = vec![];
         l.push(ed_keypair1.private_key);
@@ -87,10 +87,7 @@ proptest! {
         // This is business as usual
         prop_assert!(signature.verify(&message, &ed_keypair1.public_key).is_ok());
 
-        // This is impossible to write, and generates:
-        // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::MultiEd25519PublicKey`
-        // prop_assert!(signature.verify(&message, &med_keypair.public_key).is_ok());
-
+        // signature-publickey mixups are statically impossible, see unsupported_sigs below
         let mut l2: Vec<PrivateK> = vec![];
         l2.push(PrivateK::MultiEd(med_keypair.private_key));
         l2.push(PrivateK::Ed(ed_keypair2.private_key));
@@ -121,4 +118,13 @@ proptest! {
         let bad_sigver = med_signature.verify(&message, &ed_pubkey2);
         prop_assert!(bad_sigver.is_err(), "{:?}", bad_sigver);
     }
+}
+
+#[test]
+fn unsupported_sigs() {
+    let t = trybuild::TestCases::new();
+    t.compile_fail("src/unit_tests/compilation/cross_test.rs");
+    t.compile_fail("src/unit_tests/compilation/cross_test_trait_obj.rs");
+    t.compile_fail("src/unit_tests/compilation/cross_test_trait_obj_sig.rs");
+    t.compile_fail("src/unit_tests/compilation/cross_test_trait_obj_pub.rs");
 }
