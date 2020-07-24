@@ -536,7 +536,55 @@ impl<'env> BoogieWrapper<'env> {
             Regex::new(r"(?m)^    .*\((?P<line>\d+),(?P<col>\d+)\): (?P<msg>.*)$").unwrap();
         let mut errors = vec![];
         let mut at: usize = 0;
-        loop {
+        while let Some(cap) = verification_diag_start.captures(&out[at..]) {
+            let msg = cap.name("msg").unwrap().as_str();
+            at += cap.get(0).unwrap().end();
+            // Check whether there is a `Related` message which points to the pre/post condition.
+            // If so, this has the real position.
+            let (pos, context_pos) =
+                if let Some(cap1) = verification_diag_related.captures(&out[at..]) {
+                    let call_line = cap.name("line").unwrap().as_str();
+                    let call_col = cap.name("col").unwrap().as_str();
+                    at += cap1.get(0).unwrap().end();
+                    let line = cap1.name("line").unwrap().as_str();
+                    let col = cap1.name("col").unwrap().as_str();
+                    (
+                        make_position(line, col),
+                        Some(make_position(call_line, call_col)),
+                    )
+                } else {
+                    let line = cap.name("line").unwrap().as_str();
+                    let col = cap.name("col").unwrap().as_str();
+                    (make_position(line, col), None)
+                };
+            let mut trace = vec![];
+            if let Some(m) = verification_diag_trace.find(&out[at..]) {
+                at += m.end();
+                while let Some(cap) = verification_diag_trace_entry.captures(&out[at..]) {
+                    let line = cap.name("line").unwrap().as_str();
+                    let col = cap.name("col").unwrap().as_str();
+                    let msg = cap.name("msg").unwrap().as_str();
+                    let trace_kind = if msg.ends_with("$Entry") {
+                        TraceKind::EnterFunction
+                    } else if msg.ends_with("$Return") {
+                        TraceKind::ExitFunction
+                    } else if msg.contains("_update_inv$") {
+                        TraceKind::UpdateInvariant
+                    } else if msg.contains("$Pack_") {
+                        TraceKind::Pack
+                    } else {
+                        TraceKind::Regular
+                    };
+                    trace.push((make_position(line, col), trace_kind, msg.to_string()));
+                    at += cap.get(0).unwrap().end();
+                    if !out[at..].starts_with("\n  ") && !out[at..].starts_with("\r\n  ") {
+                        // Don't read further if this line does not start with an indent,
+                        // as all trace entries do. Otherwise we would match the trace entry
+                        // for the next error.
+                        break;
+                    }
+                }
+            }
             let model = model_region.captures(&out[at..]).and_then(|cap| {
                 at += cap.get(0).unwrap().end();
                 match Model::parse(self, cap.name("mod").unwrap().as_str()) {
@@ -554,73 +602,20 @@ impl<'env> BoogieWrapper<'env> {
                     }
                 }
             });
-
-            if let Some(cap) = verification_diag_start.captures(&out[at..]) {
-                let msg = cap.name("msg").unwrap().as_str();
-                at += cap.get(0).unwrap().end();
-                // Check whether there is a `Related` message which points to the pre/post condition.
-                // If so, this has the real position.
-                let (pos, context_pos) =
-                    if let Some(cap1) = verification_diag_related.captures(&out[at..]) {
-                        let call_line = cap.name("line").unwrap().as_str();
-                        let call_col = cap.name("col").unwrap().as_str();
-                        at += cap1.get(0).unwrap().end();
-                        let line = cap1.name("line").unwrap().as_str();
-                        let col = cap1.name("col").unwrap().as_str();
-                        (
-                            make_position(line, col),
-                            Some(make_position(call_line, call_col)),
-                        )
-                    } else {
-                        let line = cap.name("line").unwrap().as_str();
-                        let col = cap.name("col").unwrap().as_str();
-                        (make_position(line, col), None)
-                    };
-                let mut trace = vec![];
-                if let Some(m) = verification_diag_trace.find(&out[at..]) {
-                    at += m.end();
-                    while let Some(cap) = verification_diag_trace_entry.captures(&out[at..]) {
-                        let line = cap.name("line").unwrap().as_str();
-                        let col = cap.name("col").unwrap().as_str();
-                        let msg = cap.name("msg").unwrap().as_str();
-                        let trace_kind = if msg.ends_with("$Entry") {
-                            TraceKind::EnterFunction
-                        } else if msg.ends_with("$Return") {
-                            TraceKind::ExitFunction
-                        } else if msg.contains("_update_inv$") {
-                            TraceKind::UpdateInvariant
-                        } else if msg.contains("$Pack_") {
-                            TraceKind::Pack
-                        } else {
-                            TraceKind::Regular
-                        };
-                        trace.push((make_position(line, col), trace_kind, msg.to_string()));
-                        at += cap.get(0).unwrap().end();
-                        if !out[at..].starts_with("\n  ") && !out[at..].starts_with("\r\n  ") {
-                            // Don't read further if this line does not start with an indent,
-                            // as all trace entries do. Otherwise we would match the trace entry
-                            // for the next error.
-                            break;
-                        }
-                    }
-                }
-                errors.push(BoogieError {
-                    kind: if msg.contains("assertion might not hold") {
-                        BoogieErrorKind::Assertion
-                    } else if msg.contains("precondition") {
-                        BoogieErrorKind::Precondition
-                    } else {
-                        BoogieErrorKind::Postcondition
-                    },
-                    position: pos,
-                    context_position: context_pos,
-                    message: msg.to_string(),
-                    execution_trace: trace,
-                    model,
-                });
-            } else {
-                break;
-            }
+            errors.push(BoogieError {
+                kind: if msg.contains("assertion might not hold") {
+                    BoogieErrorKind::Assertion
+                } else if msg.contains("precondition") {
+                    BoogieErrorKind::Precondition
+                } else {
+                    BoogieErrorKind::Postcondition
+                },
+                position: pos,
+                context_position: context_pos,
+                message: msg.to_string(),
+                execution_trace: trace,
+                model,
+            });
         }
         errors
     }
