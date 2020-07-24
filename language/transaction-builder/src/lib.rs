@@ -8,23 +8,11 @@ use libra_types::{
     access_path::AccessPath,
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, VMPublishingOption},
-    transaction::{ChangeSet, Script, Transaction, TransactionArgument},
+    transaction::{ChangeSet, Script, Transaction},
     write_set::{WriteOp, WriteSetMut},
 };
-use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
 pub use transaction_builder_generated::stdlib::*;
-
-/// Encode `stdlib_script` with arguments `args`.
-/// Note: this is not type-safe; the individual type-safe wrappers below should be used when
-/// possible.
-pub fn encode_stdlib_script(
-    stdlib_script: StdlibScript,
-    type_args: Vec<TypeTag>,
-    args: Vec<TransactionArgument>,
-) -> Script {
-    Script::new(stdlib_script.compiled_bytes().into_vec(), type_args, args)
-}
 
 pub fn encode_modify_publishing_option_script(config: VMPublishingOption) -> Script {
     let bytes = lcs::to_bytes(&config).expect("Cannot deserialize VMPublishingOption");
