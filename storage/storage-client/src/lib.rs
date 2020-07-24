@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use libra_crypto::HashValue;
+use libra_logger::warn;
 use libra_secure_net::NetworkClient;
 use libra_types::{
     account_address::AccountAddress,
@@ -34,11 +35,20 @@ impl StorageClient {
         }
     }
 
+    fn process_one_message(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
+        let mut client = self.network_client.lock().unwrap();
+        client.write(&input)?;
+        client.read().map_err(|e| e.into())
+    }
+
     fn request<T: DeserializeOwned>(&self, input: StorageRequest) -> std::result::Result<T, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        let mut client = self.network_client.lock().unwrap();
-        client.write(&input_message)?;
-        let result = client.read()?;
+        let result = loop {
+            match self.process_one_message(&input_message) {
+                Err(err) => warn!("Failed to communicate with storage service: {}", err),
+                Ok(value) => break value,
+            }
+        };
         lcs::from_bytes(&result)?
     }
 
