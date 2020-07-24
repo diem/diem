@@ -100,6 +100,14 @@ impl NetworkConfig {
         key.expect("identity key should be present")
     }
 
+    pub fn identity_from_storage(&self) -> IdentityFromStorage {
+        if let Identity::FromStorage(identity) = self.identity.clone() {
+            identity
+        } else {
+            panic!("Invalid identity found, expected a storage identity.");
+        }
+    }
+
     pub fn load(&mut self, role: RoleType) -> Result<(), Error> {
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip()
