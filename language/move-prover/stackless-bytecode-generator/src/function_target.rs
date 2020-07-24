@@ -6,6 +6,7 @@ use crate::{
     borrow_analysis, lifetime_analysis, livevar_analysis, packref_analysis, reaching_def_analysis,
     stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
     writeback_analysis,
+    test_instrumenter::SpecCheck,
 };
 use itertools::Itertools;
 use spec_lang::{
@@ -56,8 +57,7 @@ pub struct FunctionTargetData {
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
-    pub rewritten_spec: Vec<Spec>,
-    pub rewritten_code: BTreeMap<usize, Vec<Bytecode>>,
+    pub rewritten_spec: Vec<SpecCheck>,
 
     /// Map of spec block ids as given by the source, to the code offset in the original
     /// bytecode. Those spec block's content is found at
@@ -286,7 +286,6 @@ impl FunctionTargetData {
             locations,
             annotations: Default::default(),
             rewritten_spec: vec![],
-            rewritten_code: BTreeMap::new(),
             given_spec_blocks_on_impl: given_spec_blocks,
             generated_spec_blocks_on_impl: Default::default(),
             next_free_spec_block_id,
@@ -301,25 +300,15 @@ impl FunctionTargetData {
         id
     }
 
-    /// Adds a mutated specification and the corresponding mutated code to the list
-    /// of specification checks
-    pub fn add_spec_check(&mut self, spec: Spec, rewritten_code_opt: Option<Vec<Bytecode>>) {
-        let mut index = None;
-        if let Some(code) = rewritten_code_opt {
-            index = Some(self.rewritten_code.len());
-            self.rewritten_code.insert(index.unwrap(), code);
-        }
-        let spec = Spec {
-            rewritten_code_index: index,
-            ..spec
+    /// Adds a specification check and the corresponding mutated code to the list
+    /// of specification checks.
+    pub fn add_spec_check(&mut self, spec: Spec, code: Option<Vec<Bytecode>>, loc: Loc) {
+        // Initialize id with the number of specification checks for this function so far.
+        let id = self.rewritten_spec.len();
+        let spec_check = SpecCheck {
+            id, spec, code, loc,
         };
-        self.rewritten_spec.push(spec);
-    }
-
-    /// Return the code associated to the specification
-    pub fn get_spec_code(&self, spec: &Spec) -> Option<&Vec<Bytecode>> {
-        spec.rewritten_code_index
-            .map_or(None, |index| self.rewritten_code.get(&index))
+        self.rewritten_spec.push(spec_check);
     }
 }
 

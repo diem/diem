@@ -143,6 +143,7 @@ pub const CONST_SUBEXP_TEST_PRAGMA: &str = "const_sub_exp";
 
 /// Pragma indicating that the function will run the specification writeref coverage check
 pub const WRITEREF_TEST_PRAGMA: &str = "writeref_test";
+pub const MUTATED_ARGS_TEST_PRAGMA: &str = "mutated_args_test";
 
 // =================================================================================================
 /// # Locations
@@ -152,11 +153,16 @@ pub const WRITEREF_TEST_PRAGMA: &str = "writeref_test";
 pub struct Loc {
     file_id: FileId,
     span: Span,
+    annotation: Option<String>
 }
 
 impl Loc {
     pub fn new(file_id: FileId, span: Span) -> Loc {
-        Loc { file_id, span }
+        Loc { file_id, span, annotation: None }
+    }
+
+    pub fn annotated(file_id: FileId, span: Span, label: String) -> Loc {
+        Loc { file_id, span, annotation: Some(label) }
     }
 
     pub fn span(&self) -> Span {
@@ -586,6 +592,7 @@ impl GlobalEnv {
         Loc {
             file_id: self.get_file_id(loc.file()).expect("file name undefined"),
             span: loc.span(),
+            annotation: None,
         }
     }
 
@@ -1939,6 +1946,9 @@ impl<'env> FunctionEnv<'env> {
         if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, WRITEREF_TEST_PRAGMA) {
             if b { return true }
         }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, MUTATED_ARGS_TEST_PRAGMA) {
+            if b { return true }
+        }
         false
     }
 
@@ -1962,6 +1972,37 @@ impl<'env> FunctionEnv<'env> {
         self.get_parameters()
             .iter()
             .any(|Parameter(_, ty)| ty.is_mutable_reference())
+    }
+
+    /// Returns the types of mutable reference function arugments
+    pub fn get_mut_ref_types(&self) -> Vec<Type> {
+        self.get_parameters()
+            .into_iter()
+            .filter(|Parameter(_, ty)| ty.is_mutable_reference())
+            .map(|Parameter(_, ty)| ty.clone())
+            .collect_vec()
+    }
+
+    /// Returns the number of mutable references
+    pub fn get_mut_ref_count(&self) -> usize {
+        self.get_mut_ref_types().len()
+    }
+
+    /// Returns the types of the return values of the procedure.
+    /// This includes the values returned by the function and the
+    /// mutable reference arguments.
+    pub fn get_proc_return_types(&self) -> Vec<Type> {
+        let mut types = vec![];
+        types.append(&mut self.get_return_types());
+        types.append(&mut self.get_mut_ref_types());
+        types
+    }
+
+    /// Returns the number of return values for the procedure.
+    /// This includes the return count of the function and number of
+    /// mutable references.
+    pub fn get_proc_return_count(&self) -> usize {
+        self.get_return_count() + self.get_mut_ref_count()
     }
 
     /// Returns the type parameters associated with this function.

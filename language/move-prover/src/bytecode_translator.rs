@@ -17,7 +17,7 @@ use spec_lang::{
     emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
     ty::{PrimitiveType, Type},
-    ast::{ConditionKind, Spec},
+    ast::ConditionKind,
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget,
@@ -29,6 +29,7 @@ use stackless_bytecode_generator::{
         Constant, Label, Operation, SpecBlockId,
         TEMP_DEFAULT_VALUE_INDEX,
     },
+    test_instrumenter::SpecCheck,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use vm::file_format::CodeOffset;
@@ -523,7 +524,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // generate definition with function body
         self.generate_function_sig(func_target, FunctionEntryPoint::Definition);
-        self.generate_inline_function_body(func_target, None);
+        self.generate_inline_function_body(func_target, &None);
         emitln!(self.writer);
 
         // generate direct and indirect application entries.
@@ -553,19 +554,16 @@ impl<'env> ModuleTranslator<'env> {
         if func_target.data.rewritten_spec.len() > 0 {
             // generate the _smoke_test version of the function which creates a new procedure
             // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
-            for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
+            for spec_check in &func_target.data.rewritten_spec {
                 // generate the mutated program for this spec if one exists
-                let mutated_bytecode = func_target.data.get_spec_code(spec);
-                if mutated_bytecode.is_some() {
-                    let index = spec
-                        .rewritten_code_index
-                        .expect("Couldn't find rewritten_code_index from spec containing mutation.");
-                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(index));
-                    self.generate_inline_function_body(func_target, mutated_bytecode);
+                if spec_check.code.is_some() {
+                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(spec_check.id));
+                    self.generate_inline_function_body(func_target, &spec_check.code);
                 }
 
-                self.generate_smoke_test_function_sig(i, func_target);
-                self.generate_function_spec_check_body(func_target, spec);
+                self.writer.set_location(&spec_check.loc);
+                self.generate_spec_check_function_sig(func_target, spec_check);
+                self.generate_function_spec_check_body(func_target, spec_check);
             }
 
             // Do not do any verification in specification check mode
@@ -600,33 +598,10 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
-        if func_target.data.rewritten_spec.len() > 0 {
-            // generate the _smoke_test version of the function which creates a new procedure
-            // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
-            for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
-                // generate the mutated program for this spec if one exists
-                let mutated_bytecode = func_target.data.get_spec_code(spec);
-                if mutated_bytecode.is_some() {
-                    let index = spec
-                        .rewritten_code_index
-                        .expect("Couldn't find rewritten_code_index from spec containing mutation.");
-                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(index));
-                    self.generate_inline_function_body(func_target, mutated_bytecode);
-                }
-
-                // > TODO(kkmc): Generate a function with the rewritten code.
-                self.generate_smoke_test_function_sig(i, func_target);
-                self.generate_function_args_well_formed(func_target);
-                self.generate_function_spec_check_body(func_target, spec);
-            }
-
-            return;
-        }
-
         // generate the verify functions with full pre/post conditions.
         self.generate_function_sig(func_target, FunctionEntryPoint::VerificationDefinition);
         self.set_top_level_verify(true); // Ensure that DirectCall is used from this definition
-        self.generate_inline_function_body(func_target, None);
+        self.generate_inline_function_body(func_target, &None);
         self.set_top_level_verify(false);
         emitln!(self.writer);
         self.generate_function_sig(func_target, FunctionEntryPoint::Verification);
@@ -642,13 +617,13 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Return a string for a boogie procedure smoke test header.
-    fn generate_smoke_test_function_sig(&self, test_number: usize, func_target: &FunctionTarget<'_>) {
+    fn generate_spec_check_function_sig(&self, func_target: &FunctionTarget<'_>, spec_check: &SpecCheck) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
         emit!(
             self.writer,
             "procedure {}_smoke_test_{} ({}) returns ({})\n",
             boogie_function_name(func_target.func_env),
-            test_number,
+            spec_check.id,
             args,
             rets
         )
@@ -837,8 +812,9 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_function_spec_check_body(
         &self,
         func_target: &FunctionTarget<'_>,
-        spec: &Spec,
+        spec_check: &SpecCheck,
     ) {
+        let SpecCheck { id, spec, code, loc:_ } = &spec_check;
         let conds = &spec.conditions;
 
         // Find the specification check assertion
@@ -858,9 +834,6 @@ impl<'env> ModuleTranslator<'env> {
 
         spec_translator.ensure_postcondition(spec_check);
 
-        // Set the location to internal so it won't be counted for execution traces
-        self.writer
-            .set_location(&self.module_env.env.internal_loc());
         emitln!(self.writer, "{");
         self.writer.indent();
 
@@ -871,13 +844,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "call $InitVerification();");
 
         // (b) assume implicit preconditions.
-
-        for cond in conds {
-            match cond.kind {
-                ConditionKind::RequiresSmokeTest => spec_translator.assume_cond(cond),
-                _ => (),
-            }
-        }
+        spec_translator.assume_preconditions();
 
         if spec_check.kind != ConditionKind::RequiresSmokeTestAssert {
             // (c) assume reference parameters to be based on the Param(i) Location, ensuring
@@ -907,8 +874,8 @@ impl<'env> ModuleTranslator<'env> {
             }
 
             // Generate call to inlined function.
-            let fun_entry_point = if let Some(index) = spec.rewritten_code_index {
-                FunctionEntryPoint::Mutated(index)
+            let fun_entry_point = if code.is_some() {
+                FunctionEntryPoint::Mutated(*id)
             } else {
                 FunctionEntryPoint::Definition
             };
@@ -950,7 +917,7 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the `FunctionEntryPoint::Definition`
     /// version of the function.
-    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>, rewritten_bytecode: Option<&Vec<Bytecode>>) {
+    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>, rewritten_bytecode: &Option<Vec<Bytecode>>) {
         // Construct context for bytecode translation.
         let context = BytecodeContext::new(func_target);
 
@@ -994,7 +961,7 @@ impl<'env> ModuleTranslator<'env> {
 
         // Generate bytecode
         let code = if let Some(bytecode) = rewritten_bytecode {
-            bytecode
+            &bytecode
         } else {
             func_target.get_bytecode()
         };

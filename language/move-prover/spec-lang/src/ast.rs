@@ -180,8 +180,6 @@ pub struct Spec {
     pub properties: PropertyBag,
     // If this is a function, specs associated with individual code points.
     pub on_impl: BTreeMap<CodeOffset, Spec>,
-    // For specification checking, this is the index of the mutated code
-    pub rewritten_code_index: Option<usize>
 }
 
 impl Spec {
@@ -190,7 +188,6 @@ impl Spec {
             conditions,
             properties,
             on_impl,
-            rewritten_code_index: None,
         }
     }
 

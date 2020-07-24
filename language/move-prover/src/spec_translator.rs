@@ -1015,11 +1015,13 @@ impl<'env> SpecTranslator<'env> {
     /// Assert the given postcondition. This is used for the top-level
     /// `_smoke_test` function.
     pub fn ensure_postcondition(&self, cond: &Condition) {
+        *self.in_ensures.borrow_mut() = true;
         self.writer.set_location(&cond.loc);
         emit!(self.writer, "ensures b#$Boolean(");
         self.translate_exp(&cond.exp);
         emit!(self.writer, ");");
         emitln!(self.writer);
+        *self.in_ensures.borrow_mut() = false;
     }
 
     /// Assume module requires of a function. This is used when the function is called from
