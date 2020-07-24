@@ -394,7 +394,7 @@ impl Interpreter {
     fn debug_print_frame<B: Write>(
         &self,
         buf: &mut B,
-        resolver: &Resolver,
+        loader: &Loader,
         idx: usize,
         frame: &Frame,
     ) -> PartialVMResult<()> {
@@ -409,7 +409,7 @@ impl Interpreter {
         let ty_args = frame.ty_args();
         let mut ty_tags = vec![];
         for ty in ty_args {
-            ty_tags.push(resolver.type_to_type_tag(ty)?);
+            ty_tags.push(loader.type_to_type_tag(ty)?);
         }
         if !ty_tags.is_empty() {
             debug_write!(buf, "<")?;
@@ -444,10 +444,6 @@ impl Interpreter {
         debug_writeln!(buf)?;
         debug_writeln!(buf, "        Locals:")?;
         if func.local_count() > 0 {
-            let mut tys = vec![];
-            for local in &func.locals().0 {
-                tys.push(resolver.make_type(local, ty_args)?);
-            }
             values::debug::print_locals(buf, &frame.locals)?;
             debug_writeln!(buf)?;
         } else {
@@ -462,11 +458,11 @@ impl Interpreter {
     pub(crate) fn debug_print_stack_trace<B: Write>(
         &self,
         buf: &mut B,
-        resolver: &Resolver,
+        loader: &Loader,
     ) -> PartialVMResult<()> {
         debug_writeln!(buf, "Call Stack:")?;
         for (i, frame) in self.call_stack.0.iter().enumerate() {
-            self.debug_print_frame(buf, resolver, i, frame)?;
+            self.debug_print_frame(buf, loader, i, frame)?;
         }
         debug_writeln!(buf, "Operand Stack:")?;
         for (idx, val) in self.operand_stack.0.iter().enumerate() {

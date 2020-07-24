@@ -137,7 +137,7 @@ impl<'a> FunctionContext<'a> {
 impl<'a> NativeContext for FunctionContext<'a> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
-            .debug_print_stack_trace(buf, &self.resolver)
+            .debug_print_stack_trace(buf, self.resolver.loader())
     }
 
     fn cost_table(&self) -> &CostTable {

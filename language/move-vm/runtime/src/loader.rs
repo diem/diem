@@ -998,31 +998,12 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub(crate) fn make_type(
-        &self,
-        token: &SignatureToken,
-        type_context: &[Type],
-    ) -> PartialVMResult<Type> {
-        match &self.binary {
-            BinaryType::Module(module) => {
-                let binary = &module.module;
-                self.loader
-                    .module_cache
-                    .lock()
-                    .unwrap()
-                    .make_type(binary, token)?
-                    .subst(type_context)
-            }
-            // TODO: this may not be true at all when it comes to printing (locals for instance)
-            BinaryType::Script(_) => unreachable!("Scripts cannot have type operations"),
-        }
-    }
-
-    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> PartialVMResult<TypeTag> {
-        self.loader.type_to_type_tag(ty)
-    }
     pub(crate) fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
         self.loader.type_to_type_layout(ty)
+    }
+
+    pub(crate) fn loader(&self) -> &Loader {
+        &self.loader
     }
 }
 
@@ -1477,10 +1458,6 @@ impl Function {
 
     pub(crate) fn local_count(&self) -> usize {
         self.locals.len()
-    }
-
-    pub(crate) fn locals(&self) -> &Signature {
-        &self.locals
     }
 
     pub(crate) fn arg_count(&self) -> usize {
