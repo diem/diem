@@ -5,13 +5,13 @@ use crate::{
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        Credential, DesignatedDealer, FreezingBit, ParentVASP, PreburnResource,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        Credential, CurrencyInfoResource, DesignatedDealer, FreezingBit, ParentVASP,
+        PreburnResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
-    on_chain_config::{ConfigurationResource, OnChainConfig, ValidatorSet},
+    on_chain_config::{ConfigurationResource, OnChainConfig, RegisteredCurrencies, ValidatorSet},
     validator_config::ValidatorConfigResource,
 };
 use anyhow::{bail, Error, Result};
@@ -120,6 +120,22 @@ impl AccountState {
 
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
         self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
+    }
+
+    pub fn get_registered_currency_info_resources(
+        &self,
+    ) -> Result<Vec<Option<CurrencyInfoResource>>> {
+        let path = RegisteredCurrencies::CONFIG_ID.access_path().path;
+        let currencies: Option<RegisteredCurrencies> = self.get_resource(&path)?;
+        match currencies {
+            Some(currencies) => currencies
+                .currency_codes()
+                .iter()
+                .map(|code| CurrencyInfoResource::resource_path_for(code.clone()))
+                .map(|access_path| self.get_resource(&access_path.path))
+                .collect(),
+            None => Ok(vec![]),
+        }
     }
 
     pub fn get_libra_block_resource(&self) -> Result<Option<LibraBlockResource>> {

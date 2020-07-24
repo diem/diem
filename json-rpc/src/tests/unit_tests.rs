@@ -3,15 +3,18 @@
 
 use crate::{
     errors::{InvalidArguments, JsonRpcError, ServerCode},
-    tests::utils::{test_bootstrap, MockLibraDB},
+    tests::{
+        genesis::generate_genesis_state,
+        utils::{test_bootstrap, MockLibraDB},
+    },
 };
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::utils;
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use libra_json_rpc_client::{
     views::{
-        AccountStateWithProofView, BlockMetadata, BytesView, EventView, StateProofView,
-        TransactionDataView, TransactionView, VMStatusView,
+        AccountStateWithProofView, AccountView, BlockMetadata, BytesView, EventView,
+        StateProofView, TransactionDataView, TransactionView, VMStatusView,
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
@@ -21,10 +24,12 @@ use libra_json_rpc_types::{
         JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
     },
 };
+
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::AccountResource,
+    account_config::{from_currency_code_string, AccountResource, FreezingBit, LBR_NAME},
+    account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     chain_id::ChainId,
     contract_event::ContractEvent,
@@ -37,14 +42,14 @@ use libra_types::{
     vm_status::StatusCode,
 };
 use libradb::test_helper::arb_blocks_to_commit;
-use move_core_types::language_storage::TypeTag;
-use proptest::prelude::*;
-use std::{
-    collections::{BTreeMap, HashMap},
-    convert::TryFrom,
-    str::FromStr,
-    sync::Arc,
+use move_core_types::{
+    language_storage::TypeTag,
+    move_resource::MoveResource,
+    value::{MoveStructLayout, MoveTypeLayout},
 };
+use move_vm_types::values::{Struct, Value};
+use proptest::prelude::*;
+use std::{collections::HashMap, convert::TryFrom, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 use vm_validator::{
@@ -60,7 +65,7 @@ fn mock_db() -> MockLibraDB {
     let mut account_state_with_proof = gen.generate(any::<AccountStateWithProof>());
 
     let mut version = 1;
-    let mut all_accounts = BTreeMap::new();
+    let mut all_accounts = HashMap::new();
     let mut all_txns = vec![];
     let mut events = vec![];
     let mut timestamps = vec![0 as u64];
@@ -83,7 +88,14 @@ fn mock_db() -> MockLibraDB {
 
         // Record all account states.
         for (address, blob) in account_states.into_iter() {
-            all_accounts.insert(address, blob.clone());
+            let mut state = AccountState::try_from(&blob).unwrap();
+            let freezing_bit = Value::struct_(Struct::pack(vec![Value::bool(false)], true))
+                .value_as::<Struct>()
+                .unwrap()
+                .simple_serialize(&MoveStructLayout::new(vec![MoveTypeLayout::Bool]))
+                .unwrap();
+            state.insert(FreezingBit::resource_path(), freezing_bit);
+            all_accounts.insert(address, AccountStateBlob::try_from(&state).unwrap());
         }
 
         // Record all transactions.
@@ -99,6 +111,7 @@ fn mock_db() -> MockLibraDB {
         let (_, blob) = all_accounts.iter().next().unwrap();
         account_state_with_proof.blob = Some(blob.clone());
     }
+
     let account_state_with_proof = vec![account_state_with_proof];
 
     if events.is_empty() {
@@ -112,8 +125,10 @@ fn mock_db() -> MockLibraDB {
         events.push((version as u64, mock_event));
     }
 
+    let (genesis, _) = generate_genesis_state();
     MockLibraDB {
         version: version as u64,
+        genesis,
         all_accounts,
         all_txns,
         events,
@@ -284,75 +299,74 @@ fn test_transaction_submission() {
     }
 }
 
-// TODO: Once account configs are published in the mock DB this test can be turned back on
-//#[test]
-//fn test_get_account() {
-//    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1024);
-//
-//    // test case 1: single call
-//    let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
-//    let expected_resource = AccountState::try_from(blob).unwrap();
-//
-//    let mut batch = JsonRpcBatch::default();
-//    batch.add_get_account_request(*first_account);
-//    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
-//    let account = AccountView::optional_from_response(result)
-//        .unwrap()
-//        .expect("account does not exist");
-//    let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
-//    let expected_resource_balances: Vec<_> = expected_resource
-//        .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
-//        .unwrap()
-//        .iter()
-//        .map(|bal_resource| bal_resource.coin())
-//        .collect();
-//    assert_eq!(account_balances, expected_resource_balances);
-//    assert_eq!(
-//        account.sequence_number,
-//        expected_resource
-//            .get_account_resource()
-//            .unwrap()
-//            .unwrap()
-//            .sequence_number()
-//    );
-//
-//    // test case 2: batch call
-//    let mut batch = JsonRpcBatch::default();
-//    let mut states = vec![];
-//
-//    for (account, blob) in mock_db.all_accounts.iter() {
-//        if account == first_account {
-//            continue;
-//        }
-//        states.push(AccountState::try_from(blob).unwrap());
-//        batch.add_get_account_request(*account);
-//    }
-//
-//    let responses = runtime.block_on(client.execute(batch)).unwrap();
-//    assert_eq!(responses.len(), states.len());
-//
-//    for (idx, response) in responses.into_iter().enumerate() {
-//        let account = AccountView::optional_from_response(response.expect("error in response"))
-//            .unwrap()
-//            .expect("account does not exist");
-//        let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
-//        let expected_resource_balances: Vec<_> = states[idx]
-//            .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
-//            .unwrap()
-//            .iter()
-//            .map(|bal_resource| bal_resource.coin())
-//            .collect();
-//        assert_eq!(account_balances, expected_resource_balances);
-//        assert_eq!(
-//            account.sequence_number,
-//            states[idx]
-//                .get_account_resource()
-//                .unwrap()
-//                .unwrap()
-//                .sequence_number()
-//        );
-//    }
-//}
+#[test]
+fn test_get_account() {
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1024);
+
+    // test case 1: single call
+    let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
+    let expected_resource = AccountState::try_from(blob).unwrap();
+
+    let mut batch = JsonRpcBatch::default();
+    batch.add_get_account_request(*first_account);
+    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
+    let account = AccountView::optional_from_response(result)
+        .unwrap()
+        .expect("account does not exist");
+    let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
+    let expected_resource_balances: Vec<_> = expected_resource
+        .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
+        .unwrap()
+        .iter()
+        .map(|(_, bal_resource)| bal_resource.coin())
+        .collect();
+    assert_eq!(account_balances, expected_resource_balances);
+    assert_eq!(
+        account.sequence_number,
+        expected_resource
+            .get_account_resource()
+            .unwrap()
+            .unwrap()
+            .sequence_number()
+    );
+
+    // test case 2: batch call
+    let mut batch = JsonRpcBatch::default();
+    let mut states = vec![];
+
+    for (account, blob) in mock_db.all_accounts.iter() {
+        if account == first_account {
+            continue;
+        }
+        states.push(AccountState::try_from(blob).unwrap());
+        batch.add_get_account_request(*account);
+    }
+
+    let responses = runtime.block_on(client.execute(batch)).unwrap();
+    assert_eq!(responses.len(), states.len());
+
+    for (idx, response) in responses.into_iter().enumerate() {
+        let account = AccountView::optional_from_response(response.expect("error in response"))
+            .unwrap()
+            .expect("account does not exist");
+        let account_balances: Vec<_> = account.balances.iter().map(|bal| bal.amount).collect();
+        let expected_resource_balances: Vec<_> = states[idx]
+            .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
+            .unwrap()
+            .iter()
+            .map(|(_, bal_resource)| bal_resource.coin())
+            .collect();
+        assert_eq!(account_balances, expected_resource_balances);
+        assert_eq!(
+            account.sequence_number,
+            states[idx]
+                .get_account_resource()
+                .unwrap()
+                .unwrap()
+                .sequence_number()
+        );
+    }
+}
 
 #[test]
 fn test_get_metadata_latest() {

@@ -18,19 +18,17 @@ use libra_mempool::MempoolClientSender;
 use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, CurrencyInfoResource},
+    account_config::{from_currency_code_string, libra_root_address},
     account_state::AccountState,
     chain_id::ChainId,
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::MempoolStatusCode,
-    move_resource::MoveStorage,
-    on_chain_config::{OnChainConfig, RegisteredCurrencies},
     transaction::SignedTransaction,
 };
 use network::counters;
 use serde_json::Value;
-use std::{collections::HashMap, convert::TryFrom, ops::Deref, pin::Pin, str::FromStr, sync::Arc};
+use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
 #[derive(Clone)]
@@ -125,32 +123,42 @@ async fn get_account(
 ) -> Result<Option<AccountView>> {
     let address: String = serde_json::from_value(request.get_param(0))?;
     let account_address = AccountAddress::from_str(&address)?;
-    let response = service
+    let account_state_blob = service
         .db
         .get_account_state_with_proof_by_version(account_address, request.version())?
         .0;
+
+    let blob = match account_state_blob {
+        Some(val) => val,
+        None => return Ok(None),
+    };
+
+    let account_state = AccountState::try_from(&blob)?;
+    let account_resource = account_state
+        .get_account_resource()?
+        .ok_or_else(|| format_err!("invalid account data: no account resource"))?;
+    let freezing_bit = account_state
+        .get_freezing_bit()?
+        .ok_or_else(|| format_err!("invalid account data: no freezing bit"))?;
+
     let currency_info = currencies_info(service, request).await?;
     let currencies: Vec<_> = currency_info
         .into_iter()
         .map(|info| from_currency_code_string(&info.code))
         .collect::<Result<_, _>>()?;
-    if let Some(blob) = response {
-        let account_state = AccountState::try_from(&blob)?;
-        if let Some(account) = account_state.get_account_resource()? {
-            let balances = account_state.get_balance_resources(&currencies)?;
-            if let Some(account_role) = account_state.get_account_role(&currencies)? {
-                if let Some(freezing_bit) = account_state.get_freezing_bit()? {
-                    return Ok(Some(AccountView::new(
-                        &account,
-                        balances,
-                        account_role,
-                        freezing_bit,
-                    )));
-                }
-            }
-        }
-    }
-    Ok(None)
+
+    let account_role = account_state
+        .get_account_role(&currencies)?
+        .ok_or_else(|| format_err!("invalid account data: no account role"))?;
+
+    let balances = account_state.get_balance_resources(&currencies)?;
+
+    Ok(Some(AccountView::new(
+        &account_resource,
+        balances,
+        account_role,
+        freezing_bit,
+    )))
 }
 
 /// Returns the blockchain metadata for a specified version. If no version is specified, default to
@@ -294,28 +302,20 @@ async fn currencies_info(
     service: JsonRpcService,
     request: JsonRpcRequest,
 ) -> Result<Vec<CurrencyInfoView>> {
-    let raw_data = service.db.deref().batch_fetch_resources_by_version(
-        vec![RegisteredCurrencies::CONFIG_ID.access_path()],
-        request.version(),
-    )?;
-    ensure!(raw_data.len() == 1, "invalid storage result");
-    let currencies = RegisteredCurrencies::from_bytes(&raw_data[0])?;
-    let access_paths: Vec<_> = currencies
-        .currency_codes()
-        .iter()
-        .map(|code| CurrencyInfoResource::resource_path_for(code.clone()))
-        .collect();
-
-    let mut currencies = vec![];
-    for raw_data in service
+    if let Some(blob) = service
         .db
-        .deref()
-        .batch_fetch_resources_by_version(access_paths, request.version())?
+        .get_account_state_with_proof_by_version(libra_root_address(), request.version())?
+        .0
     {
-        let currency_info = CurrencyInfoResource::try_from_bytes(&raw_data)?;
-        currencies.push(CurrencyInfoView::from(currency_info));
+        let account_state = AccountState::try_from(&blob)?;
+        Ok(account_state
+            .get_registered_currency_info_resources()?
+            .iter()
+            .map(|info| CurrencyInfoView::from(info.as_ref().unwrap()))
+            .collect())
+    } else {
+        Ok(vec![])
     }
-    Ok(currencies)
 }
 
 /// Returns proof of new state relative to version known to client

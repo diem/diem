@@ -266,7 +266,7 @@ where
                 ));
                 continue;
             }
-            let (blobs, state_tree) = Self::process_write_set(
+            let (blobs, state_tree) = process_write_set(
                 txn,
                 &mut account_to_state,
                 &proof_reader,
@@ -366,82 +366,6 @@ where
             ),
             next_epoch_state,
         ))
-    }
-
-    /// For all accounts modified by this transaction, find the previous blob and update it based
-    /// on the write set. Returns the blob value of all these accounts as well as the newly
-    /// constructed state tree.
-    fn process_write_set(
-        transaction: &Transaction,
-        account_to_state: &mut HashMap<AccountAddress, AccountState>,
-        proof_reader: &ProofReader,
-        write_set: WriteSet,
-        previous_state_tree: &SparseMerkleTree,
-    ) -> Result<(
-        HashMap<AccountAddress, AccountStateBlob>,
-        Arc<SparseMerkleTree>,
-    )> {
-        let mut updated_blobs = HashMap::new();
-
-        // Find all addresses this transaction touches while processing each write op.
-        let mut addrs = HashSet::new();
-        for (access_path, write_op) in write_set.into_iter() {
-            let address = access_path.address;
-            let path = access_path.path;
-            match account_to_state.entry(address) {
-                hash_map::Entry::Occupied(mut entry) => {
-                    Self::update_account_state(entry.get_mut(), path, write_op);
-                }
-                hash_map::Entry::Vacant(entry) => {
-                    // Before writing to an account, VM should always read that account. So we
-                    // should not reach this code path. The exception is genesis transaction (and
-                    // maybe other writeset transactions).
-                    match transaction {
-                        Transaction::WaypointWriteSet(_) => (),
-                        Transaction::BlockMetadata(_) => {
-                            bail!("Write set should be a subset of read set.")
-                        }
-                        Transaction::UserTransaction(txn) => match txn.payload() {
-                            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
-                                bail!("Write set should be a subset of read set.")
-                            }
-                            TransactionPayload::WriteSet(_) => (),
-                        },
-                    }
-
-                    let mut account_state = Default::default();
-                    Self::update_account_state(&mut account_state, path, write_op);
-                    entry.insert(account_state);
-                }
-            }
-            addrs.insert(address);
-        }
-
-        for addr in addrs {
-            let account_state = account_to_state.get(&addr).expect("Address should exist.");
-            let account_blob = AccountStateBlob::try_from(account_state)?;
-            updated_blobs.insert(addr, account_blob);
-        }
-        let state_tree = Arc::new(
-            previous_state_tree
-                .update(
-                    updated_blobs
-                        .iter()
-                        .map(|(addr, value)| (addr.hash(), value.clone()))
-                        .collect(),
-                    proof_reader,
-                )
-                .expect("Failed to update state tree."),
-        );
-
-        Ok((updated_blobs, state_tree))
-    }
-
-    fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
-        match write_op {
-            WriteOp::Value(new_value) => account_state.insert(path, new_value),
-            WriteOp::Deletion => account_state.remove(&path),
-        };
     }
 
     fn extract_reconfig_events(events: Vec<ContractEvent>) -> Vec<ContractEvent> {
@@ -902,4 +826,80 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         // Now that the blocks are persisted successfully, we can reply to consensus
         Ok((committed_txns, reconfig_events))
     }
+}
+
+/// For all accounts modified by this transaction, find the previous blob and update it based
+/// on the write set. Returns the blob value of all these accounts as well as the newly
+/// constructed state tree.
+pub fn process_write_set(
+    transaction: &Transaction,
+    account_to_state: &mut HashMap<AccountAddress, AccountState>,
+    proof_reader: &ProofReader,
+    write_set: WriteSet,
+    previous_state_tree: &SparseMerkleTree,
+) -> Result<(
+    HashMap<AccountAddress, AccountStateBlob>,
+    Arc<SparseMerkleTree>,
+)> {
+    let mut updated_blobs = HashMap::new();
+
+    // Find all addresses this transaction touches while processing each write op.
+    let mut addrs = HashSet::new();
+    for (access_path, write_op) in write_set.into_iter() {
+        let address = access_path.address;
+        let path = access_path.path;
+        match account_to_state.entry(address) {
+            hash_map::Entry::Occupied(mut entry) => {
+                update_account_state(entry.get_mut(), path, write_op);
+            }
+            hash_map::Entry::Vacant(entry) => {
+                // Before writing to an account, VM should always read that account. So we
+                // should not reach this code path. The exception is genesis transaction (and
+                // maybe other writeset transactions).
+                match transaction {
+                    Transaction::WaypointWriteSet(_) => (),
+                    Transaction::BlockMetadata(_) => {
+                        bail!("Write set should be a subset of read set.")
+                    }
+                    Transaction::UserTransaction(txn) => match txn.payload() {
+                        TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
+                            bail!("Write set should be a subset of read set.")
+                        }
+                        TransactionPayload::WriteSet(_) => (),
+                    },
+                }
+
+                let mut account_state = Default::default();
+                update_account_state(&mut account_state, path, write_op);
+                entry.insert(account_state);
+            }
+        }
+        addrs.insert(address);
+    }
+
+    for addr in addrs {
+        let account_state = account_to_state.get(&addr).expect("Address should exist.");
+        let account_blob = AccountStateBlob::try_from(account_state)?;
+        updated_blobs.insert(addr, account_blob);
+    }
+    let state_tree = Arc::new(
+        previous_state_tree
+            .update(
+                updated_blobs
+                    .iter()
+                    .map(|(addr, value)| (addr.hash(), value.clone()))
+                    .collect(),
+                proof_reader,
+            )
+            .expect("Failed to update state tree."),
+    );
+
+    Ok((updated_blobs, state_tree))
+}
+
+fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_op: WriteOp) {
+    match write_op {
+        WriteOp::Value(new_value) => account_state.insert(path, new_value),
+        WriteOp::Deletion => account_state.remove(&path),
+    };
 }
