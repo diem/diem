@@ -1,0 +1,85 @@
+Move prover returns: exiting with boogie verification errors
+error: function does not abort with any of the expected codes
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:78:9 ───
+    │
+ 78 │ ╭         aborts_if x == 1;
+ 79 │ │         aborts_if x == 2 with 1;
+    │ ╰────────────────────────────────^
+    ·
+ 74 │             abort(2)
+    │             -------- abort happened here with code `2`
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:69:5: aborts_if_with_code_mixed_invalid
+    =         x = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:75:10: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:70:9: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:73:9: aborts_if_with_code_mixed_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:74:13: aborts_if_with_code_mixed_invalid (ABORTED)
+
+error: function does not abort with any of the expected codes
+
+     ┌── tests/sources/functional/aborts_if_with_code.move:106:9 ───
+     │
+ 106 │         aborts_with 1,3;
+     │         ^^^^^^^^^^^^^^^^
+     ·
+ 102 │             abort(2)
+     │             -------- abort happened here with code `2`
+     │
+     =     at tests/sources/functional/aborts_if_with_code.move:97:5: aborts_with_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/aborts_if_with_code.move:103:10: aborts_with_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:98:9: aborts_with_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:101:9: aborts_with_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:102:13: aborts_with_invalid (ABORTED)
+
+error: function does not abort with any of the expected codes
+
+     ┌── tests/sources/functional/aborts_if_with_code.move:133:9 ───
+     │
+ 133 │ ╭         aborts_if x == 1 with 1;
+ 134 │ │         aborts_with 2;
+     │ ╰──────────────────────^
+     ·
+ 128 │             abort(1)
+     │             -------- abort happened here with code `1`
+     │
+     =     at tests/sources/functional/aborts_if_with_code.move:123:5: aborts_with_mixed_invalid
+     =         x = <redacted>
+     =     at tests/sources/functional/aborts_if_with_code.move:129:10: aborts_with_mixed_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:124:9: aborts_with_mixed_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:127:9: aborts_with_mixed_invalid
+     =     at tests/sources/functional/aborts_if_with_code.move:128:13: aborts_with_mixed_invalid (ABORTED)
+
+error: function does not abort with any of the expected codes
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:39:9 ───
+    │
+ 39 │ ╭         aborts_if x == 1 with 1; // wrong code
+ 40 │ │         aborts_if y == 2 with 3;
+    │ ╰────────────────────────────────^
+    ·
+ 31 │             abort 2
+    │             ------- abort happened here with code `2`
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:29:5: conditional_abort_invalid
+    =         x = <redacted>,
+    =         y = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:36:9: conditional_abort_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:30:9: conditional_abort_invalid
+    =     at tests/sources/functional/aborts_if_with_code.move:31:13: conditional_abort_invalid (ABORTED)
+
+error: function does not abort with any of the expected codes
+
+    ┌── tests/sources/functional/aborts_if_with_code.move:49:9 ───
+    │
+ 49 │         aborts_if x == 0 with 1; // wrong code
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 46 │         10 / x
+    │         ------ abort happened here with code `-1`
+    │
+    =     at tests/sources/functional/aborts_if_with_code.move:45:5: exec_failure_invalid
+    =         x = <redacted>
+    =     at tests/sources/functional/aborts_if_with_code.move:46:9: exec_failure_invalid (ABORTED)

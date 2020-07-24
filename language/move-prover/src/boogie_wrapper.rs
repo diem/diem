@@ -29,7 +29,7 @@ use spec_lang::{
 use crate::cli::Options;
 // DEBUG
 // use backtrace::Backtrace;
-use spec_lang::env::NodeId;
+use spec_lang::env::{ConditionTag, NodeId};
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
 };
@@ -185,7 +185,7 @@ impl<'env> BoogieWrapper<'env> {
 
         // Check whether the condition which failed was a negative one.
         self.env
-            .get_condition_info(&source_loc)
+            .get_condition_info(&source_loc, ConditionTag::NegativeTest)
             .filter(|info| info.negative_cond)?;
         Some(source_loc)
     }
@@ -193,7 +193,7 @@ impl<'env> BoogieWrapper<'env> {
     /// Go over all negative conditions and check whether errors occurred for them.
     /// For those which did not occur, report error.
     fn add_negative_errors(&self, negative_cond_errors: BTreeSet<Loc>) {
-        self.env.with_condition_infos(|loc, info| {
+        self.env.with_condition_infos(|(loc, _), info| {
             if !info.negative_cond || negative_cond_errors.contains(loc) {
                 // Not a negative condition, or expected error happened.
                 return;
@@ -229,20 +229,25 @@ impl<'env> BoogieWrapper<'env> {
         // Create the error
         let (show_trace, message, call_loc) = loc_opt
             .as_ref()
-            .and_then(|loc| self.env.get_condition_info(loc))
-            .map(|info| {
-                if let Some(msg) = info.message_if_requires.as_ref() {
+            .and_then(|loc| {
+                let requires_info = self.env.get_condition_info(&loc, ConditionTag::Requires);
+                let ensures_info = self.env.get_condition_info(&loc, ConditionTag::Ensures);
+                if let Some(info) = requires_info {
                     // Check whether the Boogie error indicates a precondition, or if this is
-                    // the only message we have.
-                    if error.kind == BoogieErrorKind::Precondition || info.message.is_empty() {
+                    // the only info we have.
+                    if error.kind == BoogieErrorKind::Precondition || ensures_info.is_none() {
                         // Extract the location of the call site.
                         let call_loc = error
                             .context_position
                             .and_then(|p| self.to_proper_source_location(self.get_locations(p).1));
-                        return (!info.omit_trace, msg.clone(), call_loc);
+                        return Some((!info.omit_trace, info.message, call_loc));
                     }
                 }
-                (!info.omit_trace, info.message, None)
+                if let Some(info) = ensures_info {
+                    Some((!info.omit_trace, info.message, None))
+                } else {
+                    None
+                }
             })
             .unwrap_or_else(|| (true, error.message.clone(), None));
         let mut diag = Diagnostic::new(
@@ -309,19 +314,14 @@ impl<'env> BoogieWrapper<'env> {
                     //    source_pos.1.line, source_pos.1.column
                     //);
                     // END DEBUG
-                    let aborts_here = error
-                        .model
-                        .as_ref()
-                        .map(|model| {
-                            model
-                                .tracked_aborts
-                                .get(&(source_pos.0.clone(), source_pos.1.line))
-                                .is_some()
-                        })
-                        .unwrap_or(false);
-                    if aborts_here {
+                    let abort_marker = error.model.as_ref().and_then(|model| {
+                        model
+                            .tracked_aborts
+                            .get(&(source_pos.0.clone(), source_pos.1.line))
+                    });
+                    if let Some(m) = abort_marker {
                         kind = &TraceKind::Aborted;
-                        aborted = Some(source_loc.clone());
+                        aborted = Some((source_loc.clone(), m.code));
                     }
                     Some((orig_pos, source_loc, source_pos, kind, msg))
                 })
@@ -359,14 +359,22 @@ impl<'env> BoogieWrapper<'env> {
                         .collect_vec()
                 })
                 .collect_vec();
-            if let Some(abort_loc) = aborted {
-                // Patch the diag for aborted case. In this case, none of the aborts_if clauses
-                // covered the abort case, and the error message can be misleading.
-                diag.message = "abort not covered by any of the `aborts_if` clauses".to_string();
+            if let Some((abort_loc, code)) = aborted {
+                // Patch the diag for aborted case if its the generic one. In this case, none of
+                // the aborts_if clauses covered the abort case, and the error message can be
+                // misleading.
+                if diag
+                    .message
+                    .trim()
+                    .starts_with("A postcondition might not hold")
+                {
+                    diag.message =
+                        "abort not covered by any of the `aborts_if` clauses".to_string();
+                }
                 diag.secondary_labels = vec![Label::new(
                     abort_loc.file_id(),
                     abort_loc.span(),
-                    "abort happened here",
+                    &format!("abort happened here with code `{}`", code),
                 )];
             }
             diag = diag.with_notes(trace);
@@ -847,7 +855,7 @@ impl Model {
         map_entry: &ModelValue,
     ) -> Result<(AbortDescriptor, Loc), ModelParseError> {
         if let ModelValue::List(args) = map_entry {
-            if args.len() != 2 {
+            if args.len() != 3 {
                 return Err(Self::invalid_track_info());
             }
             let loc = Self::extract_loc(wrapper, args)?;
@@ -856,10 +864,14 @@ impl Model {
                 .get_enclosing_function(loc.clone())
                 .ok_or_else(Self::invalid_track_info)?;
             let func_target = wrapper.targets.get_target(&func_env);
+            let code = args[2]
+                .extract_i128()
+                .ok_or_else(Self::invalid_track_info)?;
             Ok((
                 AbortDescriptor {
                     module_id: func_target.func_env.module_env.get_id(),
                     func_id: func_target.get_id(),
+                    code,
                 },
                 loc,
             ))
@@ -1131,6 +1143,23 @@ impl ModelValue {
         }
     }
 
+    /// Extract a i128 from a literal.
+    fn extract_i128(&self) -> Option<i128> {
+        if let Some(value) = self.extract_list("-").and_then(|values| {
+            if values.len() == 1 {
+                values[0].extract_i128().map(|value| -value)
+            } else {
+                None
+            }
+        }) {
+            Some(value)
+        } else if let Ok(n) = self.extract_literal()?.parse::<i128>() {
+            Some(n)
+        } else {
+            None
+        }
+    }
+
     /// Extract the value of a primitive.
     fn extract_primitive(&self, ctor: &str) -> Option<&String> {
         let args = self.extract_list(ctor)?;
@@ -1353,6 +1382,7 @@ impl LocalDescriptor {
 struct AbortDescriptor {
     module_id: ModuleId,
     func_id: FunId,
+    code: i128,
 }
 
 /// Represents an expression descriptor.

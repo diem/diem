@@ -3,7 +3,7 @@
 
 //! Contains AST definitions for the specification language fragments of the Move language.
 
-use num::{BigUint, Num};
+use num::{BigInt, BigUint, Num};
 
 use crate::{
     env::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
@@ -17,7 +17,8 @@ use std::{
 };
 use vm::file_format::CodeOffset;
 
-use crate::env::{FunId, GlobalId, QualifiedId, SchemaId, TypeParameter};
+use crate::env::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
+use itertools::Itertools;
 
 // =================================================================================================
 /// # Declarations
@@ -54,6 +55,7 @@ pub enum ConditionKind {
     Assume,
     Decreases,
     AbortsIf,
+    AbortsWith,
     SucceedsIf,
     Ensures,
     Requires,
@@ -88,7 +90,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | SucceedsIf | Ensures
+            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures
         )
     }
 
@@ -97,7 +99,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | SucceedsIf | Ensures
+            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures
         )
     }
 
@@ -128,6 +130,7 @@ impl std::fmt::Display for ConditionKind {
             Assume => write!(f, "assume"),
             Decreases => write!(f, "decreases"),
             AbortsIf => write!(f, "aborts_if"),
+            AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
@@ -307,6 +310,24 @@ impl Exp {
         }
         visitor(self);
     }
+
+    /// Optionally extracts condition and abort code from the special `Operation::CondWithAbortCode`.
+    pub fn extract_cond_and_aborts_code(&self) -> (&Exp, Option<&Exp>) {
+        match self {
+            Exp::Call(_, Operation::CondWithAbortCode, args) if args.len() == 2 => {
+                (&args[0], Some(&args[1]))
+            }
+            _ => (self, None),
+        }
+    }
+
+    /// Optionally extracts list of abort codes from the special `Operation::AbortCodes`.
+    pub fn extract_abort_codes(&self) -> &[Exp] {
+        match self {
+            Exp::Call(_, Operation::AbortCodes, args) => args.as_slice(),
+            _ => &[],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -319,6 +340,10 @@ pub enum Operation {
     Result(usize),
     Index,
     Slice,
+
+    // Pseudo operators for aborts condition.
+    CondWithAbortCode, // aborts_if E with C
+    AbortCodes,        // aborts_with C1, ..., Cn
 
     // Binary operators
     Range,
@@ -374,7 +399,7 @@ pub struct LocalVarDecl {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Address(BigUint),
-    Number(BigUint),
+    Number(BigInt),
     Bool(bool),
     ByteArray(Vec<u8>),
 }
@@ -547,6 +572,49 @@ impl<'a> fmt::Display for QualifiedSymbolDisplay<'a> {
             )?;
         }
         write!(f, "{}", self.sym.symbol.display(self.pool))?;
+        Ok(())
+    }
+}
+
+impl Exp {
+    /// Creates a display of an expression which can be used in formatting.
+    ///
+    /// Current implementation is incomplete.
+    pub fn display<'a>(&'a self, env: &'a GlobalEnv) -> ExpDisplay<'a> {
+        ExpDisplay { env, exp: self }
+    }
+}
+
+/// Helper type for expression display.
+pub struct ExpDisplay<'a> {
+    env: &'a GlobalEnv,
+    exp: &'a Exp,
+}
+
+impl<'a> fmt::Display for ExpDisplay<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        match self.exp {
+            Exp::Value(_, Value::Number(num)) => write!(f, "{}", num)?,
+            Exp::Value(_, Value::Bool(b)) => write!(f, "{}", b)?,
+            Exp::Value(_, Value::Address(num)) => f.write_str(&num.to_str_radix(16))?,
+            Exp::Call(_, Operation::Function(mid, fid), args) => {
+                let module_env = self.env.get_module(*mid);
+                let fun = module_env.get_spec_fun(*fid);
+                write!(
+                    f,
+                    "{}::{}({})",
+                    module_env.get_name().display(self.env.symbol_pool()),
+                    fun.name.display(self.env.symbol_pool()),
+                    args.iter()
+                        .map(|e| e.display(self.env).to_string())
+                        .join(", ")
+                )?
+            }
+            _ => {
+                // TODO(wrwg): implement expression printer
+                f.write_str("<value>")?
+            }
+        }
         Ok(())
     }
 }

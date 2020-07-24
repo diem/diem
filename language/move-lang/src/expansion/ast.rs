@@ -133,6 +133,7 @@ pub enum SpecBlockMember_ {
         kind: SpecConditionKind,
         properties: Vec<PragmaProperty>,
         exp: Exp,
+        abort_codes: Vec<Exp>,
     },
     Function {
         uninterpreted: bool,
@@ -473,9 +474,14 @@ impl AstDebug for SpecBlockMember_ {
                 kind,
                 properties: _,
                 exp,
+                abort_codes,
             } => {
                 kind.ast_debug(w);
                 exp.ast_debug(w);
+                w.list(abort_codes, ",", |w, e| {
+                    e.ast_debug(w);
+                    true
+                });
             }
             SpecBlockMember_::Function {
                 uninterpreted,
