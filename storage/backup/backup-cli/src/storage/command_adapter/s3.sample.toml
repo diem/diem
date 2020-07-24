@@ -6,3 +6,5 @@ value = "libra-backup"
 create_backup = 'echo "$BACKUP_NAME"'
 create_for_write = 'echo "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME" && exec >&- && aws s3 cp - "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME"'
 open_for_read = 'aws s3 cp "$FILE_HANDLE" -'
+save_metadata_line= 'aws s3 cp - "s3://$BUCKET/metadata/$FILE_NAME"'
+list_metadata_files = 'aws s3 ls s3://$BUCKET/metadata/ | sed -ne "s/.* /p"'

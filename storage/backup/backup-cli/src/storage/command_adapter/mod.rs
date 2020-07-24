@@ -9,12 +9,13 @@ mod tests;
 use crate::storage::{
     command_adapter::config::{CommandAdapterConfig, EnvVar},
     BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef, ShellSafeName,
+    TextLine,
 };
 use anyhow::{anyhow, ensure, Result};
 use async_trait::async_trait;
 use std::{path::PathBuf, process::Stdio};
 use structopt::StructOpt;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 #[derive(StructOpt)]
 pub struct CommandAdapterOpt {
@@ -112,6 +113,36 @@ impl BackupStorage for CommandAdapter {
             .take()
             .ok_or_else(|| anyhow!("Child process stdout is None."))?;
         Ok(Box::new(stdout))
+    }
+
+    async fn save_metadata_line(&self, name: &ShellSafeName, content: &TextLine) -> Result<()> {
+        let mut child = self
+            .cmd(
+                &self.config.commands.save_metadata_line,
+                vec![EnvVar::file_name(name.to_string())],
+            )
+            .spawn()
+            .await?;
+        let mut stdin = child
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("Child process stdin is None."))?;
+        stdin.write_all(content.as_ref().as_bytes()).await?;
+        Ok(())
+    }
+
+    async fn list_metadata_files(&self) -> Result<Vec<FileHandle>> {
+        let mut child = self
+            .cmd(&self.config.commands.list_metadata_files, vec![])
+            .spawn()
+            .await?;
+        let mut stdout = child
+            .stdout
+            .take()
+            .ok_or_else(|| anyhow!("Child process stdout is None."))?;
+        let mut buf = FileHandle::new();
+        stdout.read_to_string(&mut buf).await?;
+        Ok(buf.lines().map(str::to_string).collect())
     }
 }
 

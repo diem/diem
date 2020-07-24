@@ -99,6 +99,38 @@ impl Arbitrary for ShellSafeName {
     }
 }
 
+#[cfg_attr(test, derive(Debug, Hash, Eq, Ord, PartialEq, PartialOrd))]
+pub struct TextLine(String);
+
+impl TextLine {
+    #[cfg(test)]
+    fn new(value: &str) -> Result<Self> {
+        let newlines: &[_] = &['\n', '\r'];
+        ensure!(value.find(newlines).is_none(), "Newline not allowed.");
+        let mut ret = value.to_string();
+        ret.push('\n');
+        Ok(Self(ret))
+    }
+}
+
+impl AsRef<str> for TextLine {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+impl Arbitrary for TextLine {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        ("[^\r\n]{0,1024}")
+            .prop_map(|s| TextLine::new(&s).unwrap())
+            .boxed()
+    }
+}
+
 #[async_trait]
 pub trait BackupStorage: Send + Sync {
     /// Hint that a bunch of files are gonna be created related to a backup identified by `name`,
@@ -119,6 +151,20 @@ pub trait BackupStorage: Send + Sync {
         &self,
         file_handle: &FileHandleRef,
     ) -> Result<Box<dyn AsyncRead + Send + Unpin>>;
+    /// Asks to save a metadata entry. A metadata entry is one line of text.
+    /// The backup system doesn't expect a metadata entry to exclusively map to a single file
+    /// handle, or the same file handle when accessed later, so there's no need to return one. This
+    /// also means a local cache must download each metadata file from remote at least once, to
+    /// uncover potential storage glitch sooner.
+    /// See `list_metadata_files`.
+    async fn save_metadata_line(&self, name: &ShellSafeName, content: &TextLine) -> Result<()>;
+    /// The backup system always asks for all metadata files and cache and build index on top of
+    /// the content of them. This means:
+    ///   1. The storage is free to reorganise the metadata files, like combining multiple ones to
+    /// reduce fragmentation.
+    ///   2. But the cache does expect the content stays the same for a file handle, so when
+    /// reorganising metadata files, give them new unique names.
+    async fn list_metadata_files(&self) -> Result<Vec<FileHandle>>;
 }
 
 #[derive(StructOpt)]

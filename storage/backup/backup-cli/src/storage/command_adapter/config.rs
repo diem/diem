@@ -56,6 +56,14 @@ pub struct Commands {
     ///     $FILE_NAME
     /// expected stdout to stream out bytes of the file.
     pub open_for_read: String,
+    /// Command line to save a line of metadata
+    /// input env vars:
+    ///     $FILE_NAME
+    /// stdin will be fed with a line of text with a trailing newline.
+    pub save_metadata_line: String,
+    /// Command line to list all existing metadata file handles.
+    /// expected stdout to stream out lines of file handles.
+    pub list_metadata_files: String,
 }
 
 #[derive(Deserialize)]
