@@ -5,6 +5,7 @@ use libra_types::{
     account_address::AccountAddress,
     transaction::{GovernanceRole, SignedTransaction},
 };
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Clone)]
@@ -47,7 +48,7 @@ impl MempoolTransaction {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Deserialize, Hash, Serialize)]
 pub enum TimelineState {
     // transaction is ready for broadcast
     // Associated integer represents it's position in log of such transactions

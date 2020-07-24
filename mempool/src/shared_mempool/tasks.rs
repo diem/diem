@@ -322,7 +322,7 @@ fn is_txn_retryable(result: SubmissionStatus) -> bool {
 
 /// submits a list of SignedTransaction to the local mempool
 /// and returns a vector containing AdmissionControlStatus
-async fn process_incoming_transactions<V>(
+pub(crate) async fn process_incoming_transactions<V>(
     smp: &SharedMempool<V>,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
