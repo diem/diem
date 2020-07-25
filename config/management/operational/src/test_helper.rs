@@ -9,6 +9,7 @@ use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::{
     account_address::AccountAddress, chain_id::ChainId, validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo,
 };
 use structopt::StructOpt;
 
@@ -137,6 +138,25 @@ impl OperationalTool {
 
         let command = Command::from_iter(args.split_whitespace());
         command.validator_config()
+    }
+
+    pub fn validator_set(
+        &self,
+        account_address: AccountAddress,
+    ) -> Result<Vec<ValidatorInfo>, Error> {
+        let args = format!(
+            "
+                {command}
+                --host {host}
+                --account-address {account_address}
+        ",
+            command = command(TOOL_NAME, CommandName::ValidatorSet),
+            host = self.host,
+            account_address = account_address,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.validator_set()
     }
 }
 
