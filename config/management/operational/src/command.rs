@@ -29,6 +29,10 @@ pub enum Command {
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Displays the current validator set infos registered on the blockchain")]
     ValidatorSet(crate::validator_set::ValidatorSet),
+    #[structopt(about = "Remove a validator from ValidatorSet")]
+    AddValidator(crate::governance::AddValidator),
+    #[structopt(about = "Remove a validator from ValidatorSet")]
+    RemoveValidator(crate::governance::RemoveValidator),
 }
 
 #[derive(Debug, PartialEq)]
@@ -42,6 +46,8 @@ pub enum CommandName {
     ValidateTransaction,
     ValidatorConfig,
     ValidatorSet,
+    AddValidator,
+    RemoveValidator,
 }
 
 impl From<&Command> for CommandName {
@@ -56,6 +62,8 @@ impl From<&Command> for CommandName {
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::ValidatorSet(_) => CommandName::ValidatorSet,
+            Command::AddValidator(_) => CommandName::AddValidator,
+            Command::RemoveValidator(_) => CommandName::RemoveValidator,
         }
     }
 }
@@ -72,6 +80,8 @@ impl std::fmt::Display for CommandName {
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::ValidatorSet => "validator-set",
+            CommandName::AddValidator => "add-validator",
+            CommandName::RemoveValidator => "remove-validator",
         };
         write!(f, "{}", name)
     }
@@ -91,6 +101,8 @@ impl Command {
             Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::AddValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::RemoveValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
         }
     }
 
@@ -158,6 +170,20 @@ impl Command {
         match self {
             Command::ValidatorSet(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorSet)),
+        }
+    }
+
+    pub fn add_validator(self) -> Result<TransactionContext, Error> {
+        match self {
+            Command::AddValidator(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::AddValidator)),
+        }
+    }
+
+    pub fn remove_validator(self) -> Result<TransactionContext, Error> {
+        match self {
+            Command::RemoveValidator(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::RemoveValidator)),
         }
     }
 
