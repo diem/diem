@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 pub mod command;
-mod json_rpc;
 mod validator_config;
 mod waypoint;
 

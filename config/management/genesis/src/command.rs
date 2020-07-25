@@ -20,10 +20,6 @@ pub enum Command {
     OperatorKey(libra_management::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
     OwnerKey(libra_management::key::OwnerKey),
-    #[structopt(about = "Read account state from JSON-RPC endpoint")]
-    ReadAccountState(crate::json_rpc::ReadAccountState),
-    #[structopt(about = "Submit a transaction to the blockchain")]
-    SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(libra_management::layout::SetLayout),
     #[structopt(about = "Sets the validator operator chosen by the owner")]
@@ -42,10 +38,8 @@ pub enum CommandName {
     Genesis,
     OperatorKey,
     OwnerKey,
-    ReadAccountState,
     SetLayout,
     SetOperator,
-    SubmitTransaction,
     ValidatorConfig,
     Verify,
 }
@@ -59,10 +53,8 @@ impl From<&Command> for CommandName {
             Command::Genesis(_) => CommandName::Genesis,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
-            Command::ReadAccountState(_) => CommandName::ReadAccountState,
             Command::SetLayout(_) => CommandName::SetLayout,
             Command::SetOperator(_) => CommandName::SetOperator,
-            Command::SubmitTransaction(_) => CommandName::SubmitTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -78,10 +70,8 @@ impl std::fmt::Display for CommandName {
             CommandName::Genesis => "genesis",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
-            CommandName::ReadAccountState => "read-account-state",
             CommandName::SetLayout => "set-layout",
             CommandName::SetOperator => "set-operator",
-            CommandName::SubmitTransaction => "submit-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -100,14 +90,8 @@ impl Command {
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
-            Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
             Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
-            Command::SubmitTransaction(_) => self
-                .submit_transaction()
-                .map(|_| "success!")
-                .unwrap()
-                .to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
@@ -155,13 +139,6 @@ impl Command {
         }
     }
 
-    pub fn read_account_state(self) -> Result<libra_types::account_state::AccountState, Error> {
-        match self {
-            Command::ReadAccountState(read_account_state) => read_account_state.execute(),
-            _ => Err(self.unexpected_command(CommandName::ReadAccountState)),
-        }
-    }
-
     pub fn set_layout(self) -> Result<libra_management::layout::Layout, Error> {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
@@ -173,13 +150,6 @@ impl Command {
         match self {
             Command::SetOperator(set_operator) => set_operator.execute(),
             _ => Err(self.unexpected_command(CommandName::SetOperator)),
-        }
-    }
-
-    pub fn submit_transaction(self) -> Result<(), Error> {
-        match self {
-            Command::SubmitTransaction(submit_transaction) => submit_transaction.execute(),
-            _ => Err(self.unexpected_command(CommandName::SubmitTransaction)),
         }
     }
 
