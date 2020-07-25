@@ -10,12 +10,12 @@ use crate::{
 use executor_types::StateComputeResult;
 use libra_crypto::hash::HashValue;
 use libra_types::block_info::BlockInfo;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 /// ExecutedBlocks are managed in a speculative tree, the committed blocks form a chain. Besides
 /// block data, each executed block also has other derived meta data which could be regenerated from
 /// blocks.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct ExecutedBlock {
     /// Block data that cannot be regenerated.
     block: Block,
@@ -23,6 +23,12 @@ pub struct ExecutedBlock {
     /// the tree. The execution results are not persisted: they're recalculated again for the
     /// pending blocks upon restart.
     state_compute_result: StateComputeResult,
+}
+
+impl Debug for ExecutedBlock {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 impl Display for ExecutedBlock {
