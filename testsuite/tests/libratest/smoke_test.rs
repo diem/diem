@@ -1455,12 +1455,6 @@ fn test_key_manager_consensus_rotation() {
     }
 }
 
-/// Helper function to build libra interfaces for smoke test
-fn get_libra_interface(node_config: &NodeConfig) -> JsonRpcLibraInterface {
-    let json_rpc_endpoint = format!("http://127.0.0.1:{}", node_config.rpc.address.port());
-    JsonRpcLibraInterface::new(json_rpc_endpoint)
-}
-
 /// Loads the validator's storage backend from the given node config
 fn load_backend_storage(node_config: &&NodeConfig) -> SecureBackend {
     if let Identity::FromStorage(storage_identity) =
@@ -1485,10 +1479,6 @@ fn test_consensus_key_rotation() {
         .iter()
         .map(|config_path| NodeConfig::load(config_path).unwrap())
         .collect();
-    let libra_interfaces: Vec<_> = (&node_configs)
-        .iter()
-        .map(|node_config| get_libra_interface(node_config))
-        .collect();
 
     // Connect the operator tool to the first node's JSON RPC API
     let node_config = (&node_configs).first().unwrap();
@@ -1500,11 +1490,6 @@ fn test_consensus_key_rotation() {
     // Load validator's on disk storage
     let backend = load_backend_storage(&node_config);
 
-    // Setup an RPC endpoint so we can talk to the node
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
-    let libra = (&libra_interfaces).first().unwrap();
-
-    // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
     client
@@ -1512,8 +1497,9 @@ fn test_consensus_key_rotation() {
         .unwrap();
 
     // Verify that the config has been updated correctly with the new consensus key
-    let actual_key = libra
-        .retrieve_validator_config(validator_account)
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let actual_key = op_tool
+        .validator_config(validator_account)
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, actual_key);
@@ -1532,10 +1518,6 @@ fn test_network_key_rotation() {
         .iter()
         .map(|config_path| NodeConfig::load(config_path).unwrap())
         .collect();
-    let libra_interfaces: Vec<_> = (&node_configs)
-        .iter()
-        .map(|node_config| get_libra_interface(node_config))
-        .collect();
 
     // Connect the operator tool to the first node's JSON RPC API
     let node_config = (&node_configs).first().unwrap();
@@ -1547,10 +1529,6 @@ fn test_network_key_rotation() {
     // Load validator's on disk storage
     let backend = load_backend_storage(&node_config);
 
-    // Setup an RPC endpoint so we can talk to the node
-    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
-    let libra = (&libra_interfaces).first().unwrap();
-
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
@@ -1559,8 +1537,9 @@ fn test_network_key_rotation() {
         .unwrap();
 
     // Verify that config has been loaded correctly with new key
-    let actual_key = libra
-        .retrieve_validator_config(validator_account)
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let actual_key = op_tool
+        .validator_config(validator_account)
         .unwrap()
         .validator_network_identity_public_key;
     assert_eq!(new_network_key, actual_key);
