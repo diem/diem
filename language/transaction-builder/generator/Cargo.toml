@@ -16,10 +16,10 @@ serde-reflection = "0.3.1"
 serde-generate = "0.7.1"
 serde_yaml = "0.8.13"
 
-libra-types = { path = "../../types", version = "0.1.0" }
-libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-move-core-types = { path = "../move-core/types", version = "0.1.0" }
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 
 [dev-dependencies]
 tempfile = "3.1.0"

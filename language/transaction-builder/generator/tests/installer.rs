@@ -9,7 +9,7 @@ fn test_that_installed_rust_code_compiles() {
     let dir = tempdir().unwrap();
 
     let status = Command::new("cargo")
-        .current_dir("../..")
+        .current_dir("../../..")
         .arg("run")
         .arg("-p")
         .arg("transaction-builder-generator")
