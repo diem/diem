@@ -148,6 +148,34 @@ impl JsonRpcClient {
         }
     }
 
+    /// Retrieves the status of a transaction on a given account.
+    pub fn get_transaction_status(
+        &self,
+        account: AccountAddress,
+        sequence_number: u64,
+    ) -> Result<Option<TransactionView>, Error> {
+        let method = "get_account_transaction".into();
+        let params = vec![
+            Value::String(account.to_string()),
+            json!(sequence_number),
+            json!(false),
+        ];
+        let response = self.execute_request(method, params);
+
+        match response.status() {
+            200 => {
+                let response = response.into_string()?;
+                if let Ok(response) = serde_json::from_str::<JSONRpcFailureResponse>(&response) {
+                    return Err(Error::InternalRPCError(format!("{:?}", response)));
+                }
+
+                let view = serde_json::from_str::<TransactionViewResponse>(&response)?;
+                Ok(view.result)
+            }
+            _ => Err(Error::RPCFailure(response.into_string()?)),
+        }
+    }
+
     // Executes the specified request method using the given parameters by contacting the JSON RPC
     // server.
     fn execute_request(&self, method: String, params: Vec<Value>) -> Response {
@@ -201,6 +229,43 @@ struct AccountStateWithProofResponse {
 struct AccountStateResponse {
     version: u64,
     blob: Option<Bytes>,
+}
+
+/// Below is a sample response from a successful get_account_state_with_proof_call() JSON RPC call.
+/// "{
+///   "id": 0,
+///   "jsonrpc": "2.0",
+///   "result": ...
+/// }"
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct TransactionViewResponse {
+    id: u64,
+    jsonrpc: String,
+    result: Option<TransactionView>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct TransactionView {
+    pub vm_status: VMStatusView,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum VMStatusView {
+    Executed,
+    OutOfGas,
+    MoveAbort {
+        location: String,
+        abort_code: u64,
+    },
+    ExecutionFailure {
+        location: String,
+        function_index: u16,
+        code_offset: u16,
+    },
+    VerificationError,
+    DeserializationError,
+    PublishingFailure,
 }
 
 /// Below is a sample response from a failed JSON RPC call:
