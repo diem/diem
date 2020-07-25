@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::{error::Error, json_rpc::JsonRpcClientWrapper};
+use crate::json_rpc::JsonRpcClientWrapper;
+use libra_management::error::Error;
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use structopt::StructOpt;

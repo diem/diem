@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, TransactionContext};
+use crate::TransactionContext;
+use libra_management::error::Error;
 use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
 use libra_types::{
     account_address::AccountAddress, account_config, account_config::AccountResource,

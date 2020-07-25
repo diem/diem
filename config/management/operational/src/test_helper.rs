@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::command::{Command, CommandName};
+use crate::{
+    command::{Command, CommandName},
+    TransactionContext,
+};
 use libra_config::config;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::{error::Error, secure_backend::DISK, TransactionContext};
+use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::{
