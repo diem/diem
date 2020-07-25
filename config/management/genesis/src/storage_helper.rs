@@ -88,11 +88,11 @@ impl StorageHelper {
         command.libra_root_key()
     }
 
-    pub fn create_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
+    pub fn create_and_insert_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 libra-genesis-tool
-                create-waypoint
+                create-and-insert-waypoint
                 --shared-backend backend={backend};\
                     path={path}
                 --validator-backend backend={backend};\
@@ -105,7 +105,7 @@ impl StorageHelper {
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        command.create_waypoint()
+        command.create_and_insert_waypoint()
     }
 
     pub fn genesis(&self, genesis_path: &Path) -> Result<Transaction, Error> {
@@ -124,28 +124,6 @@ impl StorageHelper {
 
         let command = Command::from_iter(args.split_whitespace());
         command.genesis()
-    }
-
-    pub fn insert_waypoint(&self, validator_ns: &str, shared_ns: &str) -> Result<Waypoint, Error> {
-        let args = format!(
-            "
-                libra-genesis-tool
-                insert-waypoint
-                --validator-backend backend={backend};\
-                    path={path};\
-                    namespace={validator_ns}
-                --shared-backend backend={backend};\
-                    path={path};\
-                    namespace={shared_ns}
-            ",
-            backend = DISK,
-            path = self.path_string(),
-            validator_ns = validator_ns,
-            shared_ns = shared_ns,
-        );
-
-        let command = Command::from_iter(args.split_whitespace());
-        command.insert_waypoint()
     }
 
     pub fn operator_key(

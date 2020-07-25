@@ -9,6 +9,8 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used for Operators")]
 pub enum Command {
+    #[structopt(about = "Set the waypoint in the validator storage")]
+    InsertWaypoint(crate::waypoint::InsertWaypoint),
     #[structopt(about = "Sets the validator config")]
     SetValidatorConfig(crate::validator_config::SetValidatorConfig),
     #[structopt(about = "Rotates the consensus key for a validator")]
@@ -27,6 +29,7 @@ pub enum Command {
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
+    InsertWaypoint,
     SetValidatorConfig,
     RotateConsensusKey,
     RotateFullNodeNetworkKey,
@@ -39,6 +42,7 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
+            Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
             Command::RotateConsensusKey(_) => CommandName::RotateConsensusKey,
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
@@ -53,6 +57,7 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
+            CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::SetValidatorConfig => "set-validator-config",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
@@ -68,6 +73,9 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match self {
+            Command::InsertWaypoint(cmd) => {
+                format!("{:?}", cmd.execute().map(|()| "success").unwrap())
+            }
             Command::SetValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
@@ -75,6 +83,13 @@ impl Command {
             Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
+        }
+    }
+
+    pub fn insert_waypoint(self) -> Result<(), Error> {
+        match self {
+            Command::InsertWaypoint(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
         }
     }
 

@@ -15,7 +15,6 @@ pub mod storage;
 pub mod validator_config;
 pub mod validator_operator;
 pub mod verify;
-pub mod waypoint;
 
 pub mod constants {
     use libra_types::account_config::LBR_NAME;
