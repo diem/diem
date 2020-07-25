@@ -66,7 +66,7 @@ def send_transaction():
         create_client()
         application.client.sendline(
             "a m {} {} {} use_base_units".format(auth_key, amount, currency_code))
-        application.client.expect("Mint request submitted", timeout=2)
+        application.client.expect("Request submitted to faucet", timeout=2)
 
         application.client.sendline("q as 000000000000000000000000000000dd")
         application.client.expect(r"sequence_number: ([0-9]+)", timeout=1)
