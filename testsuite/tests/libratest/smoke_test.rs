@@ -12,7 +12,6 @@ use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
-use libra_management::TransactionContext;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
@@ -1462,29 +1461,6 @@ fn get_libra_interface(node_config: &NodeConfig) -> JsonRpcLibraInterface {
     JsonRpcLibraInterface::new(json_rpc_endpoint)
 }
 
-/// Helper function to wait for all nodes to reach a condition
-fn wait_for_all_nodes(
-    libra_interfaces: &[JsonRpcLibraInterface],
-    condition: impl Fn(&JsonRpcLibraInterface) -> bool,
-) {
-    for libra in libra_interfaces {
-        while !condition(libra) {
-            sleep(Duration::from_secs(1));
-        }
-    }
-}
-
-/// Verifies that a given transaction has been executed on the blockchain
-// TODO: Support verification of the on-chain validator config state
-fn verify_transaction_executed(op_tool: OperationalTool, transaction_context: TransactionContext) {
-    op_tool
-        .validate_transaction(
-            transaction_context.address,
-            transaction_context.sequence_number,
-        )
-        .unwrap();
-}
-
 /// Loads the validator's storage backend from the given node config
 fn load_backend_storage(node_config: &&NodeConfig) -> SecureBackend {
     if let Identity::FromStorage(storage_identity) =
@@ -1527,17 +1503,13 @@ fn test_consensus_key_rotation() {
     // Setup an RPC endpoint so we can talk to the node
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let libra = (&libra_interfaces).first().unwrap();
-    let last_reconfig = libra.last_reconfiguration().unwrap();
 
     // Rotate the consensus key
-    let (transaction_context, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
-
-    // Ensure all nodes have been reconfigured
-    wait_for_all_nodes(&libra_interfaces, |libra| {
-        libra.last_reconfiguration().unwrap() > last_reconfig
-    });
-
-    verify_transaction_executed(op_tool, transaction_context);
+    let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
 
     // Verify that the config has been updated correctly with the new consensus key
     let actual_key = libra
@@ -1578,18 +1550,13 @@ fn test_network_key_rotation() {
     // Setup an RPC endpoint so we can talk to the node
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let libra = (&libra_interfaces).first().unwrap();
-    let last_reconfig = libra.last_reconfiguration().unwrap();
 
     // Rotate the validator network key
-    let (transaction_context, new_network_key) =
-        op_tool.rotate_validator_network_key(&backend).unwrap();
-
-    // Ensure all nodes have been reconfigured
-    wait_for_all_nodes(&libra_interfaces, |libra| {
-        libra.last_reconfiguration().unwrap() > last_reconfig
-    });
-
-    verify_transaction_executed(op_tool, transaction_context);
+    let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
 
     // Verify that config has been loaded correctly with new key
     let actual_key = libra

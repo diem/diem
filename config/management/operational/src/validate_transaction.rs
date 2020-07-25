@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_management::{error::Error, json_rpc::JsonRpcClientWrapper};
+use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use structopt::StructOpt;
 
@@ -17,9 +18,8 @@ pub struct ValidateTransaction {
 
 /// Returns `true` if we've passed by the expected sequence number
 impl ValidateTransaction {
-    pub fn execute(self) -> Result<bool, Error> {
-        let client = JsonRpcClientWrapper::new(self.host);
-        let sequence_number = client.sequence_number(self.account_address)?;
-        Ok(sequence_number >= self.sequence_number)
+    pub fn execute(self) -> Result<Option<VMStatusView>, Error> {
+        JsonRpcClientWrapper::new(self.host)
+            .transaction_status(self.account_address, self.sequence_number)
     }
 }

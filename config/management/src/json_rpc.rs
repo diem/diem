@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{error::Error, TransactionContext};
-use libra_secure_json_rpc::JsonRpcClient;
+use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
 use libra_types::{
     account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
     transaction::SignedTransaction, validator_config::ValidatorConfig,
@@ -55,6 +55,17 @@ impl JsonRpcClientWrapper {
 
     pub fn sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
         Ok(self.account_resource(account)?.sequence_number())
+    }
+
+    pub fn transaction_status(
+        &self,
+        account: AccountAddress,
+        sequence_number: u64,
+    ) -> Result<Option<VMStatusView>, Error> {
+        self.client
+            .get_transaction_status(account, sequence_number)
+            .map(|maybe_txn_status| maybe_txn_status.map(|status| status.vm_status))
+            .map_err(|e| Error::JsonRpcReadError("transaction-status", e.to_string()))
     }
 }
 

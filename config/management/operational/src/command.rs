@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, TransactionContext};
+use libra_secure_json_rpc::VMStatusView;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -60,7 +61,7 @@ impl Command {
             Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateValidatorNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::ValidateTransaction(cmd) => cmd.execute().unwrap().to_string(),
+            Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
         }
     }
 
@@ -96,7 +97,7 @@ impl Command {
         }
     }
 
-    pub fn validate_transaction(self) -> Result<bool, Error> {
+    pub fn validate_transaction(self) -> Result<Option<VMStatusView>, Error> {
         match self {
             Command::ValidateTransaction(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidateTransaction)),
