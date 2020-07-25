@@ -4,8 +4,9 @@
 use crate::{error::Error, TransactionContext};
 use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
 use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource, account_state::AccountState,
-    transaction::SignedTransaction, validator_config::ValidatorConfig,
+    account_address::AccountAddress, account_config, account_config::AccountResource,
+    account_state::AccountState, transaction::SignedTransaction, validator_config::ValidatorConfig,
+    validator_info::ValidatorInfo,
 };
 
 /// A wrapper around JSON RPC for error handling
@@ -46,6 +47,48 @@ impl JsonRpcClientWrapper {
         )?
         .validator_config
         .ok_or_else(|| Error::JsonRpcReadError("validator-config", "not present".to_string()))
+    }
+
+    /// This method returns all validator infos currently registered in the validator set of the
+    /// Libra blockchain. If account is specified, only a single validator info is returned: the
+    /// one that matches the given account.
+    pub fn validator_set(
+        &self,
+        account: Option<AccountAddress>,
+    ) -> Result<Vec<ValidatorInfo>, Error> {
+        let validator_set_account = account_config::validator_set_address();
+        let validator_set = self
+            .account_state(validator_set_account)?
+            .get_validator_set();
+
+        match validator_set {
+            Ok(validator_set) => match validator_set {
+                Some(validator_set) => {
+                    let mut validator_infos = vec![];
+                    for validator_info in validator_set.payload().iter() {
+                        if let Some(account) = account {
+                            if validator_info.account_address() == &account {
+                                validator_infos.push(validator_info.clone());
+                            }
+                        } else {
+                            validator_infos.push(validator_info.clone());
+                        }
+                    }
+
+                    if validator_infos.is_empty() {
+                        return Err(Error::UnexpectedError(
+                            "No validator sets were found!".to_string(),
+                        ));
+                    }
+                    Ok(validator_infos)
+                }
+                None => Err(Error::JsonRpcReadError(
+                    "validator-set",
+                    "not present".to_string(),
+                )),
+            },
+            Err(e) => Err(Error::JsonRpcReadError("validator-set", e.to_string())),
+        }
     }
 
     pub fn account_resource(&self, account: AccountAddress) -> Result<AccountResource, Error> {

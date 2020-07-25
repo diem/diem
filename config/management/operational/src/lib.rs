@@ -6,6 +6,7 @@
 pub mod command;
 pub mod validate_transaction;
 pub mod validator_config;
+pub mod validator_set;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test_helper;
