@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, secure_backend::SharedBackend};
+use libra_management::{constants, error::Error, secure_backend::SharedBackend};
 use libra_secure_storage::{KVStorage, Value};
 use serde::{Deserialize, Serialize};
 use std::{

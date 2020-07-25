@@ -1,12 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
+use libra_global_constants::OPERATOR_KEY;
+use libra_management::{
     constants,
     error::Error,
     secure_backend::{SharedBackend, ValidatorBackend},
 };
-use libra_global_constants::OPERATOR_KEY;
 use libra_secure_storage::{KVStorage, Value};
 use structopt::StructOpt;
 

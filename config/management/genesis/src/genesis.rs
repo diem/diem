@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, layout::Layout, secure_backend::SharedBackend};
+use crate::layout::Layout;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY};
+use libra_management::{constants, error::Error, secure_backend::SharedBackend};
 use libra_secure_storage::KVStorage;
 use libra_types::{
     account_address,
