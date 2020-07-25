@@ -7,7 +7,9 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK, TransactionContext};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{account_address::AccountAddress, chain_id::ChainId};
+use libra_types::{
+    account_address::AccountAddress, chain_id::ChainId, validator_config::ValidatorConfig,
+};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "libra-operational-tool";
@@ -116,6 +118,25 @@ impl OperationalTool {
 
         let command = Command::from_iter(args.split_whitespace());
         command.validate_transaction()
+    }
+
+    pub fn validator_config(
+        &self,
+        account_address: AccountAddress,
+    ) -> Result<ValidatorConfig, Error> {
+        let args = format!(
+            "
+                {command}
+                --host {host}
+                --account-address {account_address}
+        ",
+            command = command(TOOL_NAME, CommandName::ValidatorConfig),
+            host = self.host,
+            account_address = account_address,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.validator_config()
     }
 }
 
