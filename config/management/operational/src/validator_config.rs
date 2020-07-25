@@ -71,6 +71,7 @@ impl SetValidatorConfig {
         client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
     }
 }
+
 #[derive(Debug, StructOpt)]
 pub struct RotateKey {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
@@ -183,4 +184,19 @@ fn decode_address(raw_address: RawNetworkAddress) -> Result<NetworkAddress, Erro
         .cloned()
         .collect::<Vec<_>>();
     Ok(NetworkAddress::try_from(protocols).unwrap())
+}
+
+#[derive(Debug, StructOpt)]
+pub struct ValidatorConfig {
+    #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080")]
+    host: String,
+    #[structopt(long, help = "Validator account address to display the config")]
+    account_address: AccountAddress,
+}
+
+impl ValidatorConfig {
+    pub fn execute(self) -> Result<libra_types::validator_config::ValidatorConfig, Error> {
+        let client = JsonRpcClientWrapper::new(self.host);
+        client.validator_config(self.account_address)
+    }
 }
