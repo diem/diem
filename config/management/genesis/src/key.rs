@@ -4,7 +4,7 @@
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_management::{
     error::Error,
-    secure_backend::{OptionalSharedBackend, ValidatorBackend},
+    secure_backend::{SharedBackend, ValidatorBackend},
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use structopt::StructOpt;
@@ -14,7 +14,7 @@ pub struct LibraRootKey {
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
     #[structopt(flatten)]
-    shared_backend: OptionalSharedBackend,
+    shared_backend: SharedBackend,
 }
 
 impl LibraRootKey {
@@ -33,7 +33,7 @@ pub struct OperatorKey {
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
     #[structopt(flatten)]
-    shared_backend: OptionalSharedBackend,
+    shared_backend: SharedBackend,
 }
 
 impl OperatorKey {
@@ -52,7 +52,7 @@ pub struct OwnerKey {
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
     #[structopt(flatten)]
-    shared_backend: OptionalSharedBackend,
+    shared_backend: SharedBackend,
 }
 
 impl OwnerKey {
@@ -70,7 +70,7 @@ fn submit_key(
     key_name: &'static str,
     account_name: Option<&'static str>,
     validator_backend: ValidatorBackend,
-    shared_backend: OptionalSharedBackend,
+    shared_backend: SharedBackend,
 ) -> Result<Ed25519PublicKey, Error> {
     let mut validator_storage = validator_backend
         .validator_backend
@@ -90,14 +90,12 @@ fn submit_key(
             })?
     }
 
-    if let Some(shared_backend_config) = &shared_backend.shared_backend {
-        let mut shared_storage = shared_backend_config.create_storage(shared_backend.name())?;
-        shared_storage
-            .set(key_name, Value::Ed25519PublicKey(key.clone()))
-            .map_err(|e| {
-                Error::StorageWriteError(shared_backend.name(), key_name, e.to_string())
-            })?;
-    }
+    let mut shared_storage = shared_backend
+        .shared_backend
+        .create_storage(shared_backend.name())?;
+    shared_storage
+        .set(key_name, Value::Ed25519PublicKey(key.clone()))
+        .map_err(|e| Error::StorageWriteError(shared_backend.name(), key_name, e.to_string()))?;
 
     Ok(key)
 }
