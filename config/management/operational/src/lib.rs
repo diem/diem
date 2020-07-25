@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 pub mod command;
+pub mod governance;
 mod json_rpc;
 pub mod operator_key;
 pub mod validate_transaction;
