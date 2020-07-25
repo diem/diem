@@ -3,6 +3,7 @@
 
 use std::{
     collections::HashSet,
+    env,
     fmt::{Display, Error, Formatter},
     time::Duration,
 };
@@ -10,7 +11,6 @@ use std::{
 use anyhow::{format_err, Result};
 
 use futures::{future::FutureExt, join};
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use structopt::StructOpt;
 
 use async_trait::async_trait;
@@ -67,11 +67,8 @@ impl Experiment for CpuFlamegraph {
             .emit_txn_for(tx_emitter_duration, emit_job_request)
             .boxed();
         let filename = format!(
-            "{}-libra-node-perf.svg",
-            thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(30)
-                .collect::<String>()
+            "{}/libra-node-perf.svg",
+            env::var("RUN_ID").expect("RUN_ID is not set")
         );
         let command = generate_perf_flamegraph_command(&filename, self.duration_secs);
         let flame_graph = self.perf_instance.util_cmd(command, "generate-flamegraph");
@@ -82,7 +79,7 @@ impl Experiment for CpuFlamegraph {
         emit_result.map_err(|e| format_err!("Emiting tx failed: {:?}", e))?;
         flame_graph_result.map_err(|e| format_err!("Failed to generate flamegraph: {:?}", e))?;
         context.report.report_text(format!(
-            "perf flamegraph : https://toro-cluster-test-flamegraphs.s3-us-west-2.amazonaws.com/{}",
+            "perf flamegraph : https://toro-cluster-test-flamegraphs.s3-us-west-2.amazonaws.com/flamegraphs/{}",
             filename
         ));
         Ok(())
@@ -109,7 +106,7 @@ fn generate_perf_flamegraph_command(filename: &str, duration_secs: usize) -> Str
         perf record -F 99 -p $(ps aux | grep libra-node | grep -v grep | awk '{{print $2}}') --output=perf.data --call-graph dwarf -- sleep {duration_secs};
         perf script --input=perf.data | /usr/local/etc/FlameGraph/stackcollapse-perf.pl > out.perf-folded;
         /usr/local/etc/FlameGraph/flamegraph.pl out.perf-folded > {filename};
-        aws s3 cp {filename} s3://toro-cluster-test-flamegraphs/{filename};"#,
+        aws s3 cp {filename} s3://toro-cluster-test-flamegraphs/flamegraphs/{filename};"#,
         duration_secs = duration_secs,
         filename = filename,
     )
