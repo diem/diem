@@ -3,7 +3,7 @@
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, TransactionContext};
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::validator_config::ValidatorConfig;
+use libra_types::{validator_config::ValidatorConfig, validator_info::ValidatorInfo};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -21,6 +21,8 @@ pub enum Command {
     ValidateTransaction(crate::validate_transaction::ValidateTransaction),
     #[structopt(about = "Displays the current validator config registered on the blockchain")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
+    #[structopt(about = "Displays the current validator set infos registered on the blockchain")]
+    ValidatorSet(crate::validator_set::ValidatorSet),
 }
 
 #[derive(Debug, PartialEq)]
@@ -31,6 +33,7 @@ pub enum CommandName {
     RotateValidatorNetworkKey,
     ValidateTransaction,
     ValidatorConfig,
+    ValidatorSet,
 }
 
 impl From<&Command> for CommandName {
@@ -42,6 +45,7 @@ impl From<&Command> for CommandName {
             Command::RotateValidatorNetworkKey(_) => CommandName::RotateValidatorNetworkKey,
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
+            Command::ValidatorSet(_) => CommandName::ValidatorSet,
         }
     }
 }
@@ -55,6 +59,7 @@ impl std::fmt::Display for CommandName {
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
+            CommandName::ValidatorSet => "validator-set",
         };
         write!(f, "{}", name)
     }
@@ -69,6 +74,7 @@ impl Command {
             Command::RotateValidatorNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
         }
     }
 
@@ -115,6 +121,13 @@ impl Command {
         match self {
             Command::ValidatorConfig(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
+        }
+    }
+
+    pub fn validator_set(self) -> Result<Vec<ValidatorInfo>, Error> {
+        match self {
+            Command::ValidatorSet(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::ValidatorSet)),
         }
     }
 
