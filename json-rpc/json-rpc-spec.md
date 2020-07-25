@@ -205,7 +205,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
                 "type":"user"
             },
             "version":4433485,
-            "vm_status":4001
+            "vm_status": {"type": "executed"}
         },
         ....
     ]
@@ -391,7 +391,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
             "type":"user"
         },
         "version":4433485,
-        "vm_status":4001
+        "vm_status":{"type": "executed"}
     }
 }
 ```
@@ -1127,7 +1127,7 @@ A transaction on the blockchain.
    </td>
    <td>Object
    </td>
-   <td> The returned status of the transaction after being processed by the VM. One of Executed, OutOfGas, <a href ="#moveabort---type">MoveAbort</a>, <a href="#executionfailure--type">ExecutionFailure</a>, VerificationFailure, DeserializationError, or PublishingFailure.
+   <td> The returned status of the transaction after being processed by the VM. One of Executed, OutOfGas, <a href ="#moveabort---type">MoveAbort</a>, <a href="#executionfailure--type">ExecutionFailure</a>, VerificationFailure, DeserializationError, or PublishingFailure. You should use the "type" field to distinguish the type of the Object, the value is snake cased of the type name. (e.g., if "type" field is "out_of_gas", this is a OutOfGas object)
    </td>
   </tr>
   <tr>
@@ -1153,6 +1153,7 @@ A transaction on the blockchain.
          "max_gas_amount": 7000,
          "gas_unit_price": 3,
          "expiration_timestamp_secs": 1582007787665718,
+         "vm_status": {"type": "executed"}
       },
       "events": [] // empty because include_events is set to false
     }

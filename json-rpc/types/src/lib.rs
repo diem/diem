@@ -4,3 +4,6 @@
 pub mod errors;
 pub mod response;
 pub mod views;
+
+#[cfg(test)]
+pub mod tests;
