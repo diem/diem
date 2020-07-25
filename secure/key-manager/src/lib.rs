@@ -34,7 +34,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,
     chain_id::ChainId,
-    transaction::{RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument},
+    transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use std::str::FromStr;
 use thiserror::Error;
@@ -397,18 +397,15 @@ pub fn build_rotation_transaction(
     expiration_timestamp_secs: u64,
     chain_id: ChainId,
 ) -> RawTransaction {
-    let script = Script::new(
-        libra_transaction_scripts::SET_VALIDATOR_CONFIG_AND_RECONFIGURE_TXN.clone(),
-        vec![],
-        vec![
-            TransactionArgument::Address(owner_address),
-            TransactionArgument::U8Vector(consensus_key.to_bytes().to_vec()),
-            TransactionArgument::U8Vector(network_key.as_slice().to_vec()),
-            TransactionArgument::U8Vector(network_address.as_ref().to_vec()),
-            TransactionArgument::U8Vector(fullnode_network_key.as_slice().to_vec()),
-            TransactionArgument::U8Vector(fullnode_network_address.as_ref().to_vec()),
-        ],
-    );
+    let script =
+        transaction_builder_generated::stdlib::encode_set_validator_config_and_reconfigure_script(
+            owner_address,
+            consensus_key.to_bytes().to_vec(),
+            network_key.as_slice().to_vec(),
+            network_address.as_ref().to_vec(),
+            fullnode_network_key.as_slice().to_vec(),
+            fullnode_network_address.as_ref().to_vec(),
+        );
     RawTransaction::new_script(
         operator_address,
         seq_id,
