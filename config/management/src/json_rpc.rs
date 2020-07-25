@@ -62,31 +62,29 @@ impl JsonRpcClientWrapper {
             .get_validator_set();
 
         match validator_set {
-            Ok(validator_set) => match validator_set {
-                Some(validator_set) => {
-                    let mut validator_infos = vec![];
-                    for validator_info in validator_set.payload().iter() {
-                        if let Some(account) = account {
-                            if validator_info.account_address() == &account {
-                                validator_infos.push(validator_info.clone());
-                            }
-                        } else {
+            Ok(Some(validator_set)) => {
+                let mut validator_infos = vec![];
+                for validator_info in validator_set.payload().iter() {
+                    if let Some(account) = account {
+                        if validator_info.account_address() == &account {
                             validator_infos.push(validator_info.clone());
                         }
+                    } else {
+                        validator_infos.push(validator_info.clone());
                     }
-
-                    if validator_infos.is_empty() {
-                        return Err(Error::UnexpectedError(
-                            "No validator sets were found!".to_string(),
-                        ));
-                    }
-                    Ok(validator_infos)
                 }
-                None => Err(Error::JsonRpcReadError(
-                    "validator-set",
-                    "not present".to_string(),
-                )),
-            },
+
+                if validator_infos.is_empty() {
+                    return Err(Error::UnexpectedError(
+                        "No validator sets were found!".to_string(),
+                    ));
+                }
+                Ok(validator_infos)
+            }
+            Ok(None) => Err(Error::JsonRpcReadError(
+                "validator-set",
+                "not present".to_string(),
+            )),
             Err(e) => Err(Error::JsonRpcReadError("validator-set", e.to_string())),
         }
     }
