@@ -23,9 +23,9 @@ libra-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
 libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
 libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
-libra-transaction-scripts = { path = "../transaction-scripts", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+transaction-builder-generated = { path = "../../language/transaction-builder/generated", version = "0.1.0" }
 
 [dev-dependencies]
 anyhow = "1.0.31"
