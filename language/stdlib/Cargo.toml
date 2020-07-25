@@ -20,7 +20,7 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 vm = { path = "../vm", version = "0.1.0" }
-transaction-builder-generator = { path = "../../language/transaction-builder-generator", version = "0.1.0" }
+transaction-builder-generator = { path = "../../language/transaction-builder/generator", version = "0.1.0" }
 
 clap = "2.33.1"
 log = "0.4.11"

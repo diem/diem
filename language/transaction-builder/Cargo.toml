@@ -11,12 +11,12 @@ edition = "2018"
 [dependencies]
 mirai-annotations = "1.9.1"
 
-move-core-types = { path = "../move-core/types", version = "0.1.0" }
 compiled-stdlib = { path = "../stdlib/compiled",  version = "0.1.0" }
+move-core-types = { path = "../move-core/types", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-vm = { path = "../vm", version = "0.1.0" }
+transaction-builder-generated = { path = "generated", version = "0.1.0" }
 
 [features]
 default = []

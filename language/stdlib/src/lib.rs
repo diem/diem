@@ -40,7 +40,7 @@ pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scr
 
 /// Where to write generated transaction builders.
 pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
-    "../transaction-builder/src/generated.rs";
+    "../transaction-builder-generated/src/stdlib.rs";
 
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
