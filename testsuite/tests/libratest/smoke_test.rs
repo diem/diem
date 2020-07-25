@@ -180,6 +180,16 @@ impl TestEnvironment {
     fn get_validator(&self, node_index: usize) -> Option<&LibraNode> {
         self.validator_swarm.get_validator(node_index)
     }
+
+    fn get_op_tool(&self, node_index: usize) -> OperationalTool {
+        OperationalTool::new(
+            format!(
+                "http://127.0.0.1:{}",
+                self.validator_swarm.get_client_port(node_index)
+            ),
+            ChainId::test(),
+        )
+    }
 }
 
 fn copy_file_with_sender_address(file_path: &Path, sender: AccountAddress) -> io::Result<PathBuf> {
@@ -1015,6 +1025,13 @@ fn test_full_node_basic_flow() {
 #[test]
 fn test_e2e_reconfiguration() {
     let (env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
+    let node_configs: Vec<_> = env
+        .validator_swarm
+        .config
+        .config_files
+        .iter()
+        .map(|config_path| NodeConfig::load(config_path).unwrap())
+        .collect();
 
     // the client connected to the removed validator
     let mut client_proxy_0 = env.get_validator_client(0, None);
@@ -1035,14 +1052,12 @@ fn test_e2e_reconfiguration() {
         vec![(10.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap(),
     ));
-    let peer_id = env
-        .get_validator(0)
-        .unwrap()
-        .validator_peer_id()
-        .unwrap()
-        .to_string();
+    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
+    let op_tool = env.get_op_tool(1);
+    let libra_root = load_libra_root_storage(node_configs.first().unwrap());
+    let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy_1
-        .remove_validator(&["remove_validator", &peer_id], true)
+        .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
@@ -1058,8 +1073,9 @@ fn test_e2e_reconfiguration() {
         client_proxy_0.get_balances(&["b", "0"]).unwrap(),
     ));
     // Add the node back
-    client_proxy_1
-        .add_validator(&["add_validator", &peer_id], true)
+    let context = op_tool.add_validator(peer_id, &libra_root).unwrap();
+    client_proxy_0
+        .wait_for_transaction(context.address, context.sequence_number)
         .unwrap();
     // Wait for it catches up, mint1 + mint2 => seq == 2
     client_proxy_0
@@ -1467,6 +1483,22 @@ fn load_backend_storage(node_config: &&NodeConfig) -> SecureBackend {
     }
 }
 
+fn load_libra_root_storage(node_config: &NodeConfig) -> SecureBackend {
+    if let Identity::FromStorage(storage_identity) =
+        &node_config.validator_network.as_ref().unwrap().identity
+    {
+        match storage_identity.backend.clone() {
+            SecureBackend::OnDiskStorage(mut config) => {
+                config.namespace = Some("libra_root".to_string());
+                SecureBackend::OnDiskStorage(config)
+            }
+            _ => unimplemented!("only support on-disk storage in smoke tests"),
+        }
+    } else {
+        panic!("Couldn't load identity from storage");
+    }
+}
+
 #[test]
 fn test_consensus_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
@@ -1477,10 +1509,7 @@ fn test_consensus_key_rotation() {
         NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
 
     // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = OperationalTool::new(
-        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
-        ChainId::test(),
-    );
+    let op_tool = swarm.get_op_tool(0);
 
     // Load validator's on disk storage
     let backend = load_backend_storage(&&node_config);
@@ -1565,10 +1594,7 @@ fn test_network_key_rotation() {
         NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
 
     // Connect the operator tool to the first node's JSON RPC API
-    let op_tool = OperationalTool::new(
-        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
-        ChainId::test(),
-    );
+    let op_tool = swarm.get_op_tool(0);
 
     // Load validator's on disk storage
     let backend = load_backend_storage(&&node_config);

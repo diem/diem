@@ -170,6 +170,52 @@ impl OperationalTool {
         let command = Command::from_iter(args.split_whitespace());
         command.validator_set()
     }
+
+    pub fn add_validator(
+        &self,
+        account_address: AccountAddress,
+        backend: &config::SecureBackend,
+    ) -> Result<TransactionContext, Error> {
+        let args = format!(
+            "
+            {command}
+            --host {host}
+            --chain-id {chain_id}
+            --validator-address {account_address}
+            --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::AddValidator),
+            host = self.host,
+            chain_id = self.chain_id.id(),
+            account_address = account_address,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.add_validator()
+    }
+
+    pub fn remove_validator(
+        &self,
+        account_address: AccountAddress,
+        backend: &config::SecureBackend,
+    ) -> Result<TransactionContext, Error> {
+        let args = format!(
+            "
+            {command}
+            --host {host}
+            --chain-id {chain_id}
+            --validator-address {account_address}
+            --validator-backend {backend_args}
+            ",
+            command = command(TOOL_NAME, CommandName::RemoveValidator),
+            host = self.host,
+            chain_id = self.chain_id.id(),
+            account_address = account_address,
+            backend_args = backend_args(backend)?,
+        );
+        let command = Command::from_iter(args.split_whitespace());
+        command.remove_validator()
+    }
 }
 
 fn command(tool_name: &'static str, command: CommandName) -> String {
