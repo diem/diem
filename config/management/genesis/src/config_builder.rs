@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::storage_helper::StorageHelper;
+use crate::{layout::Layout, storage_helper::StorageHelper};
 use config_builder::BuildSwarm;
 use libra_config::{
     config::{
@@ -11,10 +11,7 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_management::{
-    constants::{COMMON_NS, LAYOUT},
-    layout::Layout,
-};
+use libra_management::constants::{COMMON_NS, LAYOUT};
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};

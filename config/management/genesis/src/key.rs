@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
+use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_management::{
     error::Error,
     secure_backend::{OptionalSharedBackend, ValidatorBackend},
 };
-use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use structopt::StructOpt;
 

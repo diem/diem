@@ -26,7 +26,7 @@ pub struct CreateWaypoint {
 
 impl CreateWaypoint {
     pub fn execute(self) -> Result<Waypoint, Error> {
-        let genesis_helper = libra_management::genesis::Genesis {
+        let genesis_helper = crate::genesis::Genesis {
             backend: self.shared_backend,
             path: None,
         };

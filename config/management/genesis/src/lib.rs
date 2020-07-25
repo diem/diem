@@ -3,7 +3,12 @@
 
 #![forbid(unsafe_code)]
 pub mod command;
+mod genesis;
+mod key;
+mod layout;
 mod validator_config;
+mod validator_operator;
+mod verify;
 mod waypoint;
 
 #[cfg(any(test, feature = "testing"))]
