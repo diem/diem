@@ -13,14 +13,14 @@ use structopt::StructOpt;
 pub enum Command {
     #[structopt(about = "Set the waypoint in the validator storage")]
     InsertWaypoint(crate::waypoint::InsertWaypoint),
-    #[structopt(about = "Sets the validator config")]
-    SetValidatorConfig(crate::validator_config::SetValidatorConfig),
     #[structopt(about = "Rotates the consensus key for a validator")]
     RotateConsensusKey(crate::validator_config::RotateConsensusKey),
     #[structopt(about = "Rotates a full node network key")]
     RotateFullNodeNetworkKey(crate::validator_config::RotateFullNodeNetworkKey),
     #[structopt(about = "Rotates a validator network key")]
     RotateValidatorNetworkKey(crate::validator_config::RotateValidatorNetworkKey),
+    #[structopt(about = "Sets the validator config")]
+    SetValidatorConfig(crate::validator_config::SetValidatorConfig),
     #[structopt(about = "Validates a transaction")]
     ValidateTransaction(crate::validate_transaction::ValidateTransaction),
     #[structopt(about = "Displays the current validator config registered on the blockchain")]
@@ -32,10 +32,10 @@ pub enum Command {
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
     InsertWaypoint,
-    SetValidatorConfig,
     RotateConsensusKey,
     RotateFullNodeNetworkKey,
     RotateValidatorNetworkKey,
+    SetValidatorConfig,
     ValidateTransaction,
     ValidatorConfig,
     ValidatorSet,
@@ -45,10 +45,10 @@ impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
-            Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
             Command::RotateConsensusKey(_) => CommandName::RotateConsensusKey,
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
             Command::RotateValidatorNetworkKey(_) => CommandName::RotateValidatorNetworkKey,
+            Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::ValidatorSet(_) => CommandName::ValidatorSet,
@@ -60,10 +60,10 @@ impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
             CommandName::InsertWaypoint => "insert-waypoint",
-            CommandName::SetValidatorConfig => "set-validator-config",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
+            CommandName::SetValidatorConfig => "set-validator-config",
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::ValidatorSet => "validator-set",
@@ -78,10 +78,10 @@ impl Command {
             Command::InsertWaypoint(cmd) => {
                 format!("{:?}", cmd.execute().map(|()| "success").unwrap())
             }
-            Command::SetValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateValidatorNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::SetValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
@@ -92,13 +92,6 @@ impl Command {
         match self {
             Command::InsertWaypoint(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
-        }
-    }
-
-    pub fn set_validator_config(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::SetValidatorConfig(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::SetValidatorConfig)),
         }
     }
 
@@ -124,6 +117,13 @@ impl Command {
         match self {
             Command::RotateValidatorNetworkKey(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::RotateValidatorNetworkKey)),
+        }
+    }
+
+    pub fn set_validator_config(self) -> Result<TransactionContext, Error> {
+        match self {
+            Command::SetValidatorConfig(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetValidatorConfig)),
         }
     }
 
