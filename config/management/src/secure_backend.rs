@@ -199,20 +199,6 @@ secure_backend!(
     "shared information"
 );
 
-secure_backend!(
-    OptionalValidatorBackend,
-    validator_backend,
-    Option<SecureBackend>,
-    "validator configuration"
-);
-
-secure_backend!(
-    OptionalSharedBackend,
-    shared_backend,
-    Option<SecureBackend>,
-    "shared information"
-);
-
 #[allow(dead_code)]
 #[cfg(test)]
 mod tests {
