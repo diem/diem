@@ -1,13 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, secure_backend::ValidatorBackend};
 use executor::db_bootstrapper;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, OPERATOR_KEY,
     OWNER_ACCOUNT, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
+use libra_management::{error::Error, secure_backend::ValidatorBackend};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_temppath::TempPath;
 use libra_types::{

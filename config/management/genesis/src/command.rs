@@ -9,25 +9,25 @@ use structopt::StructOpt;
 #[structopt(about = "Tool used for genesis")]
 pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
-    LibraRootKey(libra_management::key::LibraRootKey),
+    LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Create a waypoint and place it in a store")]
     CreateAndInsertWaypoint(crate::waypoint::CreateAndInsertWaypoint),
     #[structopt(about = "Create a waypoint")]
     CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
-    Genesis(libra_management::genesis::Genesis),
+    Genesis(crate::genesis::Genesis),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
-    OperatorKey(libra_management::key::OperatorKey),
+    OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
-    OwnerKey(libra_management::key::OwnerKey),
+    OwnerKey(crate::key::OwnerKey),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
-    SetLayout(libra_management::layout::SetLayout),
+    SetLayout(crate::layout::SetLayout),
     #[structopt(about = "Sets the validator operator chosen by the owner")]
-    SetOperator(libra_management::validator_operator::ValidatorOperator),
+    SetOperator(crate::validator_operator::ValidatorOperator),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
-    Verify(libra_management::verify::Verify),
+    Verify(crate::verify::Verify),
 }
 
 #[derive(Debug, PartialEq)]
@@ -139,7 +139,7 @@ impl Command {
         }
     }
 
-    pub fn set_layout(self) -> Result<libra_management::layout::Layout, Error> {
+    pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),

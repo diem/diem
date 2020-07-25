@@ -179,11 +179,7 @@ impl StorageHelper {
     }
 
     #[cfg(test)]
-    pub fn set_layout(
-        &self,
-        path: &str,
-        namespace: &str,
-    ) -> Result<libra_management::layout::Layout, Error> {
+    pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
                 libra-genesis-tool
