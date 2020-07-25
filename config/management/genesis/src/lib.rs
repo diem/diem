@@ -5,6 +5,7 @@
 pub mod command;
 mod json_rpc;
 mod validator_config;
+mod waypoint;
 
 #[cfg(any(test, feature = "testing"))]
 mod storage_helper;

@@ -10,12 +10,12 @@ use structopt::StructOpt;
 pub enum Command {
     #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
     LibraRootKey(libra_management::key::LibraRootKey),
-    #[structopt(about = "Create a waypoint and optionally place it in a store")]
-    CreateWaypoint(libra_management::waypoint::CreateWaypoint),
+    #[structopt(about = "Create a waypoint and place it in a store")]
+    CreateAndInsertWaypoint(crate::waypoint::CreateAndInsertWaypoint),
+    #[structopt(about = "Create a waypoint")]
+    CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(libra_management::genesis::Genesis),
-    #[structopt(about = "Insert a waypoint")]
-    InsertWaypoint(libra_management::waypoint::InsertWaypoint),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
     OperatorKey(libra_management::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
@@ -37,9 +37,9 @@ pub enum Command {
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
     LibraRootKey,
+    CreateAndInsertWaypoint,
     CreateWaypoint,
     Genesis,
-    InsertWaypoint,
     OperatorKey,
     OwnerKey,
     ReadAccountState,
@@ -54,9 +54,9 @@ impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
             Command::LibraRootKey(_) => CommandName::LibraRootKey,
+            Command::CreateAndInsertWaypoint(_) => CommandName::CreateAndInsertWaypoint,
             Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
-            Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::ReadAccountState(_) => CommandName::ReadAccountState,
@@ -73,9 +73,9 @@ impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
             CommandName::LibraRootKey => "libra-root-key",
+            CommandName::CreateAndInsertWaypoint => "create-and-insert-waypoint",
             CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
-            CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::ReadAccountState => "read-account-state",
@@ -93,9 +93,11 @@ impl Command {
     pub fn execute(self) -> String {
         match &self {
             Command::LibraRootKey(_) => self.libra_root_key().unwrap().to_string(),
+            Command::CreateAndInsertWaypoint(_) => {
+                self.create_and_insert_waypoint().unwrap().to_string()
+            }
             Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
-            Command::InsertWaypoint(_) => self.insert_waypoint().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
@@ -118,6 +120,13 @@ impl Command {
         }
     }
 
+    pub fn create_and_insert_waypoint(self) -> Result<Waypoint, Error> {
+        match self {
+            Command::CreateAndInsertWaypoint(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::CreateAndInsertWaypoint)),
+        }
+    }
+
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
         match self {
             Command::CreateWaypoint(create_waypoint) => create_waypoint.execute(),
@@ -129,13 +138,6 @@ impl Command {
         match self {
             Command::Genesis(genesis) => genesis.execute(),
             _ => Err(self.unexpected_command(CommandName::Genesis)),
-        }
-    }
-
-    pub fn insert_waypoint(self) -> Result<Waypoint, Error> {
-        match self {
-            Command::InsertWaypoint(insert_waypoint) => insert_waypoint.execute(),
-            _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
         }
     }
 
@@ -327,7 +329,7 @@ pub mod tests {
 
         // Step 9) Verify
         for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
-            helper.create_waypoint(ns).unwrap();
+            helper.create_and_insert_waypoint(ns).unwrap();
             helper.verify_genesis(ns, genesis_path.path()).unwrap();
         }
     }
