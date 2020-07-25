@@ -6,6 +6,7 @@ use libra_config::config;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK, TransactionContext};
 use libra_network_address::NetworkAddress;
+use libra_secure_json_rpc::VMStatusView;
 use libra_types::{account_address::AccountAddress, chain_id::ChainId};
 use structopt::StructOpt;
 
@@ -99,7 +100,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         sequence_number: u64,
-    ) -> Result<bool, Error> {
+    ) -> Result<Option<VMStatusView>, Error> {
         let args = format!(
             "
                 {command}

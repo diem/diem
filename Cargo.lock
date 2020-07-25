@@ -5773,6 +5773,7 @@ dependencies = [
  "libra-management 0.1.0",
  "libra-network-address 0.1.0",
  "libra-operational-tool 0.1.0",
+ "libra-secure-json-rpc 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
  "libra-swarm 0.1.0",
