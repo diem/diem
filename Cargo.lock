@@ -2693,7 +2693,6 @@ dependencies = [
  "libra-secure-push-metrics 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-secure-time 0.1.0",
- "libra-transaction-scripts 0.1.0",
  "libra-types 0.1.0",
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -2704,6 +2703,7 @@ dependencies = [
  "storage-interface 0.1.0",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder-generated 0.1.0",
  "vm-validator 0.1.0",
 ]
 
@@ -3058,15 +3058,6 @@ dependencies = [
  "serde_json 1.0.56 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "libra-transaction-scripts"
-version = "0.1.0"
-dependencies = [
- "include_dir 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-workspace-hack 0.1.0",
- "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5799,7 +5790,6 @@ dependencies = [
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
  "libra-trace 0.1.0",
- "libra-transaction-scripts 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

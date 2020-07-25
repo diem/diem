@@ -108,7 +108,6 @@ members = [
     "secure/storage/github",
     "secure/storage/vault",
     "secure/time",
-    "secure/transaction-scripts",
     "state-synchronizer",
     "storage/accumulator",
     "storage/backup/backup-cli",
