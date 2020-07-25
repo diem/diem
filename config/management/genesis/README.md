@@ -172,7 +172,7 @@ cargo run -p libra-genesis-tool -- \
   data in the local backend:
 ```
 cargo run -p libra-genesis-tool -- \
-    create-waypoint \
+    create-and-insert-waypoint \
     --local 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN' \
     --remote 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN'
 ```

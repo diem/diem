@@ -169,7 +169,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
         let _ = self
             .storage_helper
-            .insert_waypoint(&local_ns, COMMON_NS)
+            .create_and_insert_waypoint(&local_ns)
             .unwrap();
         let output = self
             .storage_helper
@@ -213,7 +213,6 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
         }
 
         // Create genesis and waypoint
-        let _ = self.storage_helper.create_waypoint(COMMON_NS).unwrap();
         for (i, config) in configs.iter_mut().enumerate() {
             self.finish_validator_config(i, config);
         }
