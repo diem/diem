@@ -6059,7 +6059,16 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
- "vm 0.1.0",
+ "transaction-builder-generated 0.1.0",
+]
+
+[[package]]
+name = "transaction-builder-generated"
+version = "0.1.0"
+dependencies = [
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
 ]
 
 [[package]]
