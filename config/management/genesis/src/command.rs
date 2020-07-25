@@ -8,14 +8,14 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used for genesis")]
 pub enum Command {
-    #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
-    LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Create a waypoint and place it in a store")]
     CreateAndInsertWaypoint(crate::waypoint::CreateAndInsertWaypoint),
     #[structopt(about = "Create a waypoint")]
     CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
+    #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
+    LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
     OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
@@ -32,10 +32,10 @@ pub enum Command {
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
-    LibraRootKey,
     CreateAndInsertWaypoint,
     CreateWaypoint,
     Genesis,
+    LibraRootKey,
     OperatorKey,
     OwnerKey,
     SetLayout,
@@ -47,10 +47,10 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
-            Command::LibraRootKey(_) => CommandName::LibraRootKey,
             Command::CreateAndInsertWaypoint(_) => CommandName::CreateAndInsertWaypoint,
             Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
+            Command::LibraRootKey(_) => CommandName::LibraRootKey,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
@@ -64,10 +64,10 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
-            CommandName::LibraRootKey => "libra-root-key",
             CommandName::CreateAndInsertWaypoint => "create-and-insert-waypoint",
             CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
+            CommandName::LibraRootKey => "libra-root-key",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
@@ -82,25 +82,18 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match &self {
-            Command::LibraRootKey(_) => self.libra_root_key().unwrap().to_string(),
             Command::CreateAndInsertWaypoint(_) => {
                 self.create_and_insert_waypoint().unwrap().to_string()
             }
             Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
+            Command::LibraRootKey(_) => self.libra_root_key().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
             Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
-        }
-    }
-
-    pub fn libra_root_key(self) -> Result<Ed25519PublicKey, Error> {
-        match self {
-            Command::LibraRootKey(libra_root_key) => libra_root_key.execute(),
-            _ => Err(self.unexpected_command(CommandName::LibraRootKey)),
         }
     }
 
@@ -113,56 +106,63 @@ impl Command {
 
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
         match self {
-            Command::CreateWaypoint(create_waypoint) => create_waypoint.execute(),
+            Command::CreateWaypoint(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::CreateWaypoint)),
         }
     }
 
     pub fn genesis(self) -> Result<Transaction, Error> {
         match self {
-            Command::Genesis(genesis) => genesis.execute(),
+            Command::Genesis(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::Genesis)),
+        }
+    }
+
+    pub fn libra_root_key(self) -> Result<Ed25519PublicKey, Error> {
+        match self {
+            Command::LibraRootKey(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::LibraRootKey)),
         }
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
         match self {
-            Command::OperatorKey(operator_key) => operator_key.execute(),
+            Command::OperatorKey(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::OperatorKey)),
         }
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
         match self {
-            Command::OwnerKey(owner_key) => owner_key.execute(),
+            Command::OwnerKey(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::OwnerKey)),
         }
     }
 
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
         match self {
-            Command::SetLayout(set_layout) => set_layout.execute(),
+            Command::SetLayout(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),
         }
     }
 
     pub fn set_operator(self) -> Result<String, Error> {
         match self {
-            Command::SetOperator(set_operator) => set_operator.execute(),
+            Command::SetOperator(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::SetOperator)),
         }
     }
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
         match self {
-            Command::ValidatorConfig(config) => config.execute(),
+            Command::ValidatorConfig(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
         }
     }
 
     pub fn verify(self) -> Result<String, Error> {
         match self {
-            Command::Verify(verify) => verify.execute(),
+            Command::Verify(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::Verify)),
         }
     }
