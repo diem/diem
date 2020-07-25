@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
 use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
@@ -31,6 +31,10 @@ use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use reqwest::Client as HttpClient;
 use std::{collections::HashSet, convert::TryFrom, process::Command};
 
+use rusoto_core::Region;
+use rusoto_s3::{PutObjectRequest, S3Client, S3};
+use rusoto_sts::WebIdentityProvider;
+
 const DEFAULT_NAMESPACE: &str = "default";
 
 const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337133713371337";
@@ -42,6 +46,7 @@ const ERROR_NOT_FOUND: u16 = 404;
 pub struct ClusterSwarmKube {
     client: Client,
     http_client: HttpClient,
+    s3_client: S3Client,
     pub node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
 }
 
@@ -66,11 +71,16 @@ impl ClusterSwarmKube {
                 .expect("Failed to parse kubernetes endpoint url"),
         );
         let client = Client::new(config);
+        let credentials_provider = WebIdentityProvider::from_k8s_env();
+        let dispatcher =
+            rusoto_core::HttpClient::new().expect("failed to create request dispatcher");
+        let s3_client = S3Client::new_with(dispatcher, credentials_provider, Region::UsWest2);
         let node_map = Arc::new(Mutex::new(HashMap::new()));
         Ok(Self {
             client,
             node_map,
             http_client,
+            s3_client,
         })
     }
 
@@ -89,7 +99,6 @@ impl ClusterSwarmKube {
     fn lsr_spec(
         &self,
         validator_index: u32,
-        pod_name: &str,
         num_validators: u32,
         node_name: &str,
         image_tag: &str,
@@ -101,7 +110,6 @@ impl ClusterSwarmKube {
             num_validators = num_validators,
             image_tag = image_tag,
             node_name = node_name,
-            pod_name = pod_name,
             lsr_backend = lsr_backend,
             cfg_seed = CFG_SEED,
         );
@@ -159,7 +167,6 @@ impl ClusterSwarmKube {
         } else {
             ""
         };
-        let fluentbit_enabled = "true";
         let pod_yaml = format!(
             include_str!("validator_spec_template.yaml"),
             index = index,
@@ -174,7 +181,6 @@ impl ClusterSwarmKube {
             cfg_seed_peer_ip = seed_peer_ip,
             cfg_safety_rules_addr = safety_rules_addr,
             cfg_fullnode_seed = cfg_fullnode_seed,
-            fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         let pod_spec = serde_json::value::to_value(pod_spec)?;
@@ -193,7 +199,6 @@ impl ClusterSwarmKube {
         seed_peer_ip: &str,
         cfg_overrides: &str,
     ) -> Result<Pod> {
-        let fluentbit_enabled = "true";
         let pod_yaml = format!(
             include_str!("fullnode_spec_template.yaml"),
             fullnode_index = fullnode_index,
@@ -206,7 +211,6 @@ impl ClusterSwarmKube {
             cfg_seed = CFG_SEED,
             cfg_seed_peer_ip = seed_peer_ip,
             cfg_fullnode_seed = CFG_FULLNODE_SEED,
-            fluentbit_enabled = fluentbit_enabled,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         let pod_spec = serde_json::value::to_value(pod_spec)?;
@@ -454,6 +458,22 @@ impl ClusterSwarmKube {
             .allocate_node(&pod_name)
             .await
             .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
+        debug!("Configuring fluent-bit for pod {} on {:?}", pod_name, node);
+        match &instance_config.application_config {
+            Validator(_) => {
+                self.config_fluentbit("validator-events", pod_name.as_str(), &node.name)
+                    .await?
+            }
+            Fullnode(_) => {
+                self.config_fluentbit("validator-events", pod_name.as_str(), &node.name)
+                    .await?
+            }
+            LSR(_) => {
+                self.config_fluentbit("safety-rules-events", pod_name.as_str(), &node.name)
+                    .await?
+            }
+            _ => {}
+        }
         debug!("Creating pod {} on {:?}", pod_name, node);
         let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
@@ -492,7 +512,6 @@ impl ClusterSwarmKube {
             }
             LSR(lsr_config) => self.lsr_spec(
                 instance_config.validator_group.index_only(),
-                pod_name.as_str(),
                 lsr_config.num_validators,
                 &node.name,
                 &lsr_config.image_tag,
@@ -659,6 +678,65 @@ impl ClusterSwarmKube {
             job_name,
         )
         .await
+    }
+
+    async fn put_file(
+        &self,
+        node: &str,
+        pod_name: &str,
+        path: &str,
+        content: Vec<u8>,
+    ) -> Result<()> {
+        let bucket = "toro-cluster-test-flamegraphs";
+        let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
+        self.s3_client
+            .put_object(PutObjectRequest {
+                bucket: bucket.to_string(),
+                key: format!("data/{}/{}/{}", run_id, pod_name, path),
+                body: Some(content.into()),
+                ..Default::default()
+            })
+            .await?;
+        self.util_cmd(
+            format!(
+                "aws s3 cp s3://{}/data/{}/{}/{path} {path}",
+                bucket,
+                run_id,
+                pod_name,
+                path = path
+            ),
+            node,
+            "put-file",
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn config_fluentbit(&self, input_tag: &str, pod_name: &str, node: &str) -> Result<()> {
+        let parsers_config = include_str!("fluent-bit/parsers.conf").to_string();
+        let fluentbit_config = format!(
+            include_str!("fluent-bit/fluent-bit.conf"),
+            input_tag = input_tag,
+            pod_name = pod_name
+        );
+        let dir = "/opt/libra/data/fluent-bit/";
+        self.util_cmd(format!("mkdir -p {}", dir), node, "mkdir-fluentbit")
+            .await?;
+        self.put_file(
+            node,
+            pod_name,
+            format!("{}parser.conf", dir).as_str(),
+            parsers_config.into_bytes(),
+        )
+        .await?;
+        self.put_file(
+            node,
+            pod_name,
+            format!("{}fluent-bit.conf", dir).as_str(),
+            fluentbit_config.into_bytes(),
+        )
+        .await?;
+        Ok(())
     }
 }
 
