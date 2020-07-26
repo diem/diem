@@ -221,7 +221,7 @@ module ValidatorConfig {
         }
     }
 
-    /// Get validator's account human name
+    /// Return the human-readable name for the validator account.
     /// Aborts if there is no ValidatorConfig resource
     public fun get_human_name(addr: address): vector<u8> acquires ValidatorConfig {
         assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);

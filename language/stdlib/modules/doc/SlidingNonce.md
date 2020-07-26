@@ -9,6 +9,7 @@
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
+-  [Function `has_sliding_nonce`](#0x1_SlidingNonce_has_sliding_nonce)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
 
 
@@ -155,6 +156,30 @@ This is required before other functions in this module can be called for `accoun
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer) {
     move_to(account, <a href="#0x1_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
 }
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_SlidingNonce_has_sliding_nonce"></a>
+
+## Function `has_sliding_nonce`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_has_sliding_nonce">has_sliding_nonce</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_has_sliding_nonce">has_sliding_nonce</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(addr)
+  }
 </code></pre>
 
 

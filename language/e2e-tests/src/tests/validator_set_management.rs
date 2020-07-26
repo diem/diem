@@ -17,7 +17,7 @@ fn validator_add() {
         libra_root_account
             .transaction()
             .script(encode_create_validator_account_script(
-                0,
+                1,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
                 b"validator_0".to_vec(),
@@ -67,6 +67,24 @@ fn validator_add() {
         .events()
         .iter()
         .any(|e| e.key() == &new_epoch_event_key()));
+
+    // ensure SlidingNonce aborts on repeated nonce 1
+    let output = executor.execute_transaction(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_account_script(
+                1,
+                *validator_account.address(),
+                validator_account.auth_key_prefix(),
+                b"operator_0".to_vec(),
+            ))
+            .sequence_number(3)
+            .sign(),
+    );
+    assert!(matches!(
+        output.status().status(),
+        Ok(KeptVMStatus::MoveAbort(_, 3))
+    ));
 }
 
 #[test]

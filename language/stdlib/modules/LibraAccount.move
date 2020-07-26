@@ -125,7 +125,6 @@ module LibraAccount {
     /// Balance<LBR> resource
     const EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
     const EPAYER_DOESNT_HOLD_CURRENCY: u64 = 19;
-
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
     /// important to the semantics of the system.

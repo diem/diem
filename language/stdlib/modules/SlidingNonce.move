@@ -22,7 +22,6 @@ module SlidingNonce {
     const ENONCE_ALREADY_RECORDED: u64 = 3;
     /// Calling account doesn't have sufficient privileges to create a sliding nonce resource
     const ENOT_LIBRA_ROOT: u64 = 4;
-
     /// Size of SlidingNonce::nonce_mask in bits.
     const NONCE_MASK_SIZE: u64 = 128;
 
@@ -71,6 +70,10 @@ module SlidingNonce {
     public fun publish(account: &signer) {
         move_to(account, SlidingNonce {  min_nonce: 0, nonce_mask: 0 });
     }
+
+    public fun has_sliding_nonce(addr: address): bool {
+        exists<SlidingNonce>(addr)
+      }
 
     /// Publishes nonce resource into specific account
     /// Only the libra root account can create this resource for different accounts

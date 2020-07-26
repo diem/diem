@@ -48,3 +48,13 @@ script {
     }
 }
 // check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::SlidingNonce;
+    fun main(_account: &signer) {
+        assert(SlidingNonce::has_sliding_nonce(0xa550c18) == true, 1);
+    }
+}
+// check: EXECUTED

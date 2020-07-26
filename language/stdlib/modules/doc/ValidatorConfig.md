@@ -355,7 +355,7 @@ Aborts if there is no ValidatorConfig resource of if its config is empty
 
 ## Function `get_human_name`
 
-Get validator's account human name
+Return the human-readable name for the validator account.
 Aborts if there is no ValidatorConfig resource
 
 
