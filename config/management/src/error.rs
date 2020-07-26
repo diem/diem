@@ -13,6 +13,8 @@ pub enum Error {
     BackendParsingError(String),
     #[error("Invalid arguments: {0}")]
     CommandArgumentError(String),
+    #[error("Unable to load config: {0}")]
+    ConfigError(String),
     #[error("Failed to read '{0}' from JSON-RPC: {1}")]
     JsonRpcReadError(&'static str, String),
     #[error("Failed to write '{0}' from JSON-RPC: {1}")]
