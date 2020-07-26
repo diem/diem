@@ -13,8 +13,8 @@ use std::str::FromStr;
 
 /// A helper to handle common error handling and functionality for tooling
 pub struct StorageWrapper {
-    storage_name: &'static str,
-    storage: Storage,
+    pub(crate) storage_name: &'static str,
+    pub(crate) storage: Storage,
 }
 
 impl StorageWrapper {
