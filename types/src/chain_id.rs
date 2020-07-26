@@ -41,7 +41,7 @@ impl NamedChain {
         Ok(ChainId::new(reserved_chain.id()))
     }
 
-    fn id(&self) -> u8 {
+    pub fn id(&self) -> u8 {
         *self as u8
     }
 
