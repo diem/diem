@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::fat_type::FatStructType;
 use anyhow::{anyhow, Result};
+use move_core_types::language_storage::StructTag;
 use once_cell::sync::Lazy;
 use std::{collections::btree_map::BTreeMap, fs::File, io::Write, path::PathBuf};
 use vm_genesis::generate_genesis_type_mapping;
@@ -10,7 +10,7 @@ use vm_genesis::generate_genesis_type_mapping;
 pub const TYPE_MAP_PATH: &str = "move_type_map/mapping.txt";
 pub const STAGED_TYPE_MAP_BYTES: &[u8] = std::include_bytes!("../move_type_map/mapping.txt");
 
-static STAGED_TYPE_MAP: Lazy<BTreeMap<Vec<u8>, FatStructType>> = Lazy::new(build_mapping);
+static STAGED_TYPE_MAP: Lazy<BTreeMap<Vec<u8>, StructTag>> = Lazy::new(build_mapping);
 
 pub fn update_mapping() {
     let new_mapping = generate_genesis_type_mapping()
@@ -24,15 +24,15 @@ pub fn update_mapping() {
     module_file.write_all(b"\n").unwrap();
 }
 
-pub(crate) fn build_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
-    serde_json::from_slice::<Vec<(String, FatStructType)>>(STAGED_TYPE_MAP_BYTES)
+pub(crate) fn build_mapping() -> BTreeMap<Vec<u8>, StructTag> {
+    serde_json::from_slice::<Vec<(String, StructTag)>>(STAGED_TYPE_MAP_BYTES)
         .unwrap()
         .into_iter()
         .map(|(k, v)| (hex::decode(k.as_bytes()).unwrap(), v))
         .collect()
 }
 
-pub(crate) fn resource_vec_to_type_tag(resource_vec: &[u8]) -> Result<FatStructType> {
+pub(crate) fn resource_vec_to_type_tag(resource_vec: &[u8]) -> Result<StructTag> {
     STAGED_TYPE_MAP
         .get(resource_vec)
         .cloned()
