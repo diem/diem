@@ -86,6 +86,7 @@ members = [
     "language/tools/test-generation",
     "language/tools/utils",
     "language/vm/serializer-tests",
+    "network/memsocket",
     "network/socket-bench-server",
     "testsuite",
     "testsuite/cluster-test",
