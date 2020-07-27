@@ -76,12 +76,11 @@
 //! ```
 
 use digest::{
-    generic_array::{self, ArrayLength, GenericArray},
+    generic_array::{self, ArrayLength},
     BlockInput, FixedOutput, Reset, Update,
 };
 
-use generic_array::typenum::{IsGreaterOrEqual, True, Unsigned, U32};
-use hmac::{Hmac, Mac, NewMac};
+use generic_array::typenum::{IsGreaterOrEqual, True, U32};
 
 use std::marker::PhantomData;
 use thiserror::Error;
@@ -111,46 +110,25 @@ where
 {
     /// The RFC5869 HKDF-Extract operation.
     pub fn extract(salt: Option<&[u8]>, ikm: &[u8]) -> Result<Vec<u8>, HkdfError> {
-        let mut hmac = match salt {
-            Some(s) => Hmac::<D>::new_varkey(s).map_err(|_| HkdfError::MACKeyError)?,
-            None => Hmac::<D>::new(&Default::default()),
-        };
-
-        hmac.update(ikm);
-
-        Ok(hmac.finalize().into_bytes().to_vec())
+        let (arr, _hkdf) = hkdf::Hkdf::<D>::extract(salt, ikm);
+        Ok(arr.to_vec())
     }
 
     /// The RFC5869 HKDF-Expand operation.
     pub fn expand(prk: &[u8], info: Option<&[u8]>, length: usize) -> Result<Vec<u8>, HkdfError> {
-        let hmac_output_bytes = D::OutputSize::to_usize();
-        if prk.len() < hmac_output_bytes {
-            return Err(HkdfError::WrongPseudorandomKeyError);
-        }
-        // According to RFC5869, MAX_OUTPUT_LENGTH <= 255 * HashLen.
-        // We specifically exclude zero size as well.
-        if length == 0 || length > hmac_output_bytes * 255 {
+        // According to RFC5869, MAX_OUTPUT_LENGTH <= 255 * HashLen — which is
+        // checked below.
+        // We specifically exclude a zero size length as well.
+        if length == 0 {
             return Err(HkdfError::InvalidOutputLengthError);
         }
+
+        let hkdf =
+            hkdf::Hkdf::<D>::from_prk(prk).map_err(|_| HkdfError::WrongPseudorandomKeyError)?;
         let mut okm = vec![0u8; length];
-        let mut prev: Option<GenericArray<u8, <D as digest::FixedOutput>::OutputSize>> = None;
-        let mut hmac = Hmac::<D>::new_varkey(prk).map_err(|_| HkdfError::MACKeyError)?;
-
-        for (blocknum, okm_block) in okm.chunks_mut(hmac_output_bytes).enumerate() {
-            if let Some(ref prev) = prev {
-                hmac.update(prev)
-            }
-            if let Some(_info) = info {
-                hmac.update(_info);
-            }
-            hmac.update(&[blocknum as u8 + 1]);
-
-            let output = hmac.finalize_reset().into_bytes();
-            okm_block.copy_from_slice(&output[..okm_block.len()]);
-
-            prev = Some(output);
-        }
-
+        hkdf.expand(info.unwrap_or_else(|| &[]), &mut okm)
+            // length > D::OutputSize::to_usize() * 255
+            .map_err(|_| HkdfError::InvalidOutputLengthError)?;
         Ok(okm)
     }
 
