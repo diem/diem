@@ -199,20 +199,12 @@ impl StorageHelper {
         command.set_layout()
     }
 
-    pub fn set_operator(
-        &self,
-        operator_name: &str,
-        validator_ns: &str,
-        shared_ns: &str,
-    ) -> Result<String, Error> {
+    pub fn set_operator(&self, operator_name: &str, shared_ns: &str) -> Result<String, Error> {
         let args = format!(
             "
                 libra-genesis-tool
                 set-operator
                 --operator-name {operator_name}
-                --validator-backend backend={backend};\
-                    path={path};\
-                    namespace={validator_ns}
                 --shared-backend backend={backend};\
                     path={path};\
                     namespace={shared_ns}
@@ -220,7 +212,6 @@ impl StorageHelper {
             operator_name = operator_name,
             backend = DISK,
             path = self.path_string(),
-            validator_ns = validator_ns,
             shared_ns = shared_ns,
         );
 

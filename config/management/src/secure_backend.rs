@@ -156,11 +156,12 @@ impl TryInto<Storage> for SecureBackend {
 }
 
 macro_rules! secure_backend {
-    ($struct_name:ident, $field_name:ident, $struct_type:ty, $purpose:literal) => {
+    ($struct_name:ident, $field_name:ident, $purpose:literal) => {
         #[derive(Clone, Debug, StructOpt)]
         pub struct $struct_name {
             #[structopt(long,
                 help = concat!("Backend for ", $purpose),
+                required_unless("config"),
                 long_help = concat!("Backend for ", $purpose, r#"
 
 Secure backends are represented as a semi-colon deliminted key value
@@ -174,13 +175,7 @@ pair: "k0=v0;k1=v1;...".  The current supported formats are:
     OnDisk: "backend=disk;path=LOCAL_PATH"
                 "#)
             )]
-            pub $field_name: $struct_type,
-        }
-
-        impl $struct_name {
-            pub fn name(&self) -> &'static str {
-                stringify!(struct_name)
-            }
+            pub $field_name: Option<SecureBackend>,
         }
     }
 }
@@ -188,16 +183,10 @@ pair: "k0=v0;k1=v1;...".  The current supported formats are:
 secure_backend!(
     ValidatorBackend,
     validator_backend,
-    SecureBackend,
     "validator configuration"
 );
 
-secure_backend!(
-    SharedBackend,
-    shared_backend,
-    SecureBackend,
-    "shared information"
-);
+secure_backend!(SharedBackend, shared_backend, "shared information");
 
 #[allow(dead_code)]
 #[cfg(test)]

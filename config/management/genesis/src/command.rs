@@ -184,7 +184,7 @@ pub mod tests {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use libra_management::constants;
-    use libra_secure_storage::{CryptoStorage, KVStorage, Value};
+    use libra_secure_storage::{KVStorage, Value};
     use libra_types::{
         account_address,
         chain_id::ChainId,
@@ -259,13 +259,10 @@ pub mod tests {
 
         // Step 5) Set the operator for each owner:
         for ns in [alice_ns, bob_ns, carol_ns].iter() {
-            let ns = (*ns).to_string();
             let ns_shared = (*ns).to_string() + shared;
 
             let operator_name = format!("operator_{}", ns_shared);
-            helper
-                .set_operator(&operator_name, &ns, &ns_shared)
-                .unwrap();
+            helper.set_operator(&operator_name, &ns_shared).unwrap();
         }
 
         // Step 6) Upload a signed validator config transaction for each operator:
@@ -423,7 +420,7 @@ pub mod tests {
 
         // Owner calls the set-operator command
         let local_operator_name = storage_helper
-            .set_operator(operator_name, local_owner_ns, remote_owner_ns)
+            .set_operator(operator_name, remote_owner_ns)
             .unwrap();
 
         // Verify that a file setting the operator was uploaded to the remote storage
@@ -459,45 +456,5 @@ pub mod tests {
             .count();
         // 2 KeyNotSet results in 3 split (the accounts aren't initialized via initialize)
         assert_eq!(output, 3);
-    }
-
-    #[test]
-    fn test_owner_key() {
-        test_key(libra_global_constants::OWNER_KEY, StorageHelper::owner_key);
-    }
-
-    #[test]
-    fn test_operator_key() {
-        test_key(
-            libra_global_constants::OPERATOR_KEY,
-            StorageHelper::operator_key,
-        );
-    }
-
-    fn test_key(
-        key_name: &str,
-        op: fn(&StorageHelper, &str, &str) -> Result<Ed25519PublicKey, Error>,
-    ) {
-        let helper = StorageHelper::new();
-        let local_ns = format!("local_{}_key", key_name);
-        let remote_ns = format!("remote_{}_key", key_name);
-
-        op(&helper, &local_ns, &remote_ns).unwrap_err();
-
-        helper.initialize(local_ns.clone());
-        let local = helper.storage(local_ns.clone());
-        let local_key = local.get_public_key(key_name).unwrap().public_key;
-
-        let output_key = op(&helper, &local_ns, &remote_ns).unwrap();
-        let remote = helper.storage(remote_ns);
-        let remote_key = remote
-            .get(key_name)
-            .unwrap()
-            .value
-            .ed25519_public_key()
-            .unwrap();
-
-        assert_eq!(local_key, output_key);
-        assert_eq!(local_key, remote_key);
     }
 }

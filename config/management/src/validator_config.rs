@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, secure_backend::ValidatorBackend, storage::StorageWrapper};
+use crate::{config::ConfigPath, constants, error::Error, secure_backend::ValidatorBackend};
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::ValidCryptoMaterial;
 use libra_global_constants::{
@@ -24,8 +24,10 @@ use structopt::StructOpt;
 
 #[derive(Clone, Debug, StructOpt)]
 pub struct ValidatorConfig {
-    #[structopt(long)]
-    pub chain_id: ChainId,
+    #[structopt(flatten)]
+    pub config: ConfigPath,
+    #[structopt(long, required_unless("config"))]
+    pub chain_id: Option<ChainId>,
     #[structopt(flatten)]
     pub validator_backend: ValidatorBackend,
 }
@@ -38,10 +40,13 @@ impl ValidatorConfig {
         validator_address: NetworkAddress,
         reconfigure: bool,
     ) -> Result<Transaction, Error> {
-        let mut storage = StorageWrapper::new(
-            self.validator_backend.name(),
-            &self.validator_backend.validator_backend,
-        )?;
+        let config = self
+            .config
+            .load()?
+            .override_chain_id(self.chain_id)
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
+        let mut storage = config.validator_backend();
+
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
 
         let consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
@@ -103,7 +108,7 @@ impl ValidatorConfig {
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),
             RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS,
-            self.chain_id,
+            config.chain_id,
         );
         let signed_txn = storage.sign(OPERATOR_KEY, "validator-config", raw_txn)?;
         let txn = Transaction::UserTransaction(signed_txn);

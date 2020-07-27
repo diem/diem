@@ -163,7 +163,7 @@ impl ConfigPath {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use libra_config::config::{Token, VaultConfig};
+    use libra_config::config::{SecureBackend, Token, VaultConfig};
     use libra_types::chain_id::NamedChain;
 
     #[test]
