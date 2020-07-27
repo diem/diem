@@ -110,6 +110,7 @@ pub mod data_cache;
 #[cfg(feature = "mirai-contracts")]
 pub mod foreign_contracts;
 
+mod errors;
 mod libra_vm;
 pub mod transaction_metadata;
 

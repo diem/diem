@@ -4,6 +4,7 @@
 use crate::{
     counters::*,
     data_cache::StateViewCache,
+    errors::expect_only_successful_execution,
     libra_vm::{
         charge_global_write_gas_usage, get_transaction_output,
         txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
@@ -395,16 +396,15 @@ impl LibraVM {
                 Value::vector_address(previous_vote),
                 Value::address(proposer),
             ];
-            session
-                .execute_function(
-                    &LIBRA_BLOCK_MODULE,
-                    &BLOCK_PROLOGUE,
-                    vec![],
-                    args,
-                    txn_data.sender,
-                    &mut cost_strategy,
-                )
-                .map_err(|e| e.into_vm_status())?
+            session.execute_function(
+                &LIBRA_BLOCK_MODULE,
+                &BLOCK_PROLOGUE,
+                vec![],
+                args,
+                txn_data.sender,
+                &mut cost_strategy,
+                expect_only_successful_execution,
+            )?
         } else {
             return Err(VMStatus::Error(StatusCode::MALFORMED));
         };
@@ -431,6 +431,7 @@ impl LibraVM {
 
         if let Err(e) = self.0.run_writeset_prologue(&mut session, &txn_data) {
             // Switch any error from the prologue to a reject
+            debug_assert!(e.status_code() == StatusCode::REJECTED_WRITE_SET);
             return Ok((e, discard_error_output(StatusCode::REJECTED_WRITE_SET)));
         };
 
@@ -438,18 +439,17 @@ impl LibraVM {
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
-        session
-            .execute_function(
-                &account_config::ACCOUNT_MODULE,
-                &BUMP_SEQUENCE_NUMBER_NAME,
-                vec![],
-                vec![Value::transaction_argument_signer_reference(
-                    txn_data.sender,
-                )],
+        session.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &BUMP_SEQUENCE_NUMBER_NAME,
+            vec![],
+            vec![Value::transaction_argument_signer_reference(
                 txn_data.sender,
-                &mut cost_strategy,
-            )
-            .map_err(|e| e.into_vm_status())?;
+            )],
+            txn_data.sender,
+            &mut cost_strategy,
+            expect_only_successful_execution,
+        )?;
 
         let change_set = match txn.payload() {
             TransactionPayload::WriteSet(writeset_payload) => {
@@ -576,9 +576,9 @@ impl LibraVM {
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
                     self.process_block_prologue(data_cache, block_metadata)?
                 }
-                Ok(PreprocessedTransaction::WaypointWriteSet(write_set_payload)) => self
-                    .process_waypoint_change_set(data_cache, write_set_payload)
-                    .unwrap_or_else(discard_error_vm_status),
+                Ok(PreprocessedTransaction::WaypointWriteSet(write_set_payload)) => {
+                    self.process_waypoint_change_set(data_cache, write_set_payload)?
+                }
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
                     self.execute_user_transaction(data_cache, &txn)

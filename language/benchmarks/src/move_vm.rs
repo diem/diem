@@ -80,6 +80,7 @@ fn execute(
                     vec![],
                     sender,
                     &mut cost_strategy,
+                    |e| e,
                 )
                 .unwrap_or_else(|err| panic!("{:?}::{} failed with {:?}", &module_id, fun, err))
         })

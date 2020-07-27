@@ -107,25 +107,26 @@ fn execute_function_in_module<S: StateView>(
         let internals = libra_vm.internals();
 
         let gas_schedule = internals.gas_schedule()?;
-        internals
-            .with_txn_data_cache(state_view, |mut txn_context| {
-                let sender = AccountAddress::random();
-                let mut mod_blob = vec![];
-                module
-                    .serialize(&mut mod_blob)
-                    .expect("Module serialization error");
-                let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
-                txn_context.publish_module(mod_blob, sender, &mut cost_strategy)?;
-                txn_context.execute_function(
-                    &module_id,
-                    &entry_name,
-                    ty_args,
-                    args,
-                    sender,
-                    &mut cost_strategy,
-                )
-            })
-            .map_err(|e| e.into_vm_status())
+        internals.with_txn_data_cache(state_view, |mut txn_context| {
+            let sender = AccountAddress::random();
+            let mut mod_blob = vec![];
+            module
+                .serialize(&mut mod_blob)
+                .expect("Module serialization error");
+            let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
+            txn_context
+                .publish_module(mod_blob, sender, &mut cost_strategy)
+                .map_err(|e| e.into_vm_status())?;
+            txn_context.execute_function(
+                &module_id,
+                &entry_name,
+                ty_args,
+                args,
+                sender,
+                &mut cost_strategy,
+                |e| e,
+            )
+        })
     }
 }
 

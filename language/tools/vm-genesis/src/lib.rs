@@ -200,6 +200,7 @@ fn exec_function(
             args,
             sender,
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            |e| e,
         )
         .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e))
 }

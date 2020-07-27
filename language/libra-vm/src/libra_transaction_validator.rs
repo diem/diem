@@ -14,7 +14,7 @@ use libra_types::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
         VMValidatorResult,
     },
-    vm_status::{convert_prologue_runtime_error, StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
@@ -67,10 +67,7 @@ impl LibraVMValidator {
                 )
             }
             TransactionPayload::WriteSet(_cs) => {
-                self.0
-                    .run_writeset_prologue(&mut session, &txn_data)
-                    // Switch any error from the prologue to a reject
-                    .map_err(|_| VMStatus::Error(StatusCode::REJECTED_WRITE_SET))
+                self.0.run_writeset_prologue(&mut session, &txn_data)
             }
         }
     }
@@ -143,7 +140,7 @@ impl VMValidator for LibraVMValidator {
                 if err.status_code() == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
                     None
                 } else {
-                    Some(convert_prologue_runtime_error(err))
+                    Some(err)
                 }
             }
         };

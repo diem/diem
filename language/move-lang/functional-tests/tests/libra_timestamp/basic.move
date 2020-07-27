@@ -16,8 +16,7 @@ script {
 //! proposer-address: 0x0
 //! block-time: 1
 
-// check: ABORTED
-// check: 2
+// check: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION
 
 //! block-prologue
 //! proposer-address: 0x0

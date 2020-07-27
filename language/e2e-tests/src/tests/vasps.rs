@@ -5,6 +5,7 @@
 
 use crate::{account::Account, executor::FakeExecutor, keygen::KeyGen};
 use libra_types::{account_config, vm_status::KeptVMStatus};
+use move_core_types::vm_status::VMStatus;
 use move_vm_types::values::Value;
 use transaction_builder::*;
 
@@ -48,7 +49,7 @@ fn valid_creator_already_vasp() {
             libra_root.address(),
         )
         .unwrap_err();
-    assert_eq!(err.sub_status(), Some(7));
+    assert!(matches!(err, VMStatus::MoveAbort(_, 7)));
 }
 
 #[test]

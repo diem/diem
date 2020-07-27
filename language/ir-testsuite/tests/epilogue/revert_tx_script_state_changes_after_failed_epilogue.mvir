@@ -25,7 +25,7 @@ main(account: &signer, amount: u64) {
 }
 
 // check: ABORTED
-// check: 6
+// check: 43
 
 
 // Bob sends the same transaction script, with the amount set to 1000 instead of his full balance.

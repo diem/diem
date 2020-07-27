@@ -38,7 +38,7 @@ use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
 };
-use vm::{errors::VMError, CompiledModule};
+use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 
 /// Provides an environment to run a VM instance.
@@ -324,6 +324,7 @@ impl FakeExecutor {
                     args,
                     *sender,
                     &mut cost_strategy,
+                    |e| e,
                 )
                 .unwrap_or_else(|e| {
                     panic!("Error calling {}.{}: {}", module_name, function_name, e)
@@ -343,7 +344,7 @@ impl FakeExecutor {
         type_params: Vec<TypeTag>,
         args: Vec<Value>,
         sender: &AccountAddress,
-    ) -> Result<WriteSet, VMError> {
+    ) -> Result<WriteSet, VMStatus> {
         let cost_table = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
         let vm = MoveVM::new();
@@ -356,6 +357,7 @@ impl FakeExecutor {
             args,
             *sender,
             &mut cost_strategy,
+            |e| e,
         )?;
         let effects = session.finish().expect("Failed to generate txn effects");
         let (writeset, _events) =

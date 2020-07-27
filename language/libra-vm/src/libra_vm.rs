@@ -4,6 +4,10 @@
 use crate::{
     access_path_cache::AccessPathCache,
     data_cache::{RemoteStorage, StateViewCache},
+    errors::{
+        convert_normal_prologue_error, convert_normal_success_epilogue_error,
+        convert_write_set_prologue_error, expect_only_successful_execution,
+    },
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
@@ -16,7 +20,7 @@ use libra_types::{
     event::EventKey,
     on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig},
     transaction::{ChangeSet, Script, TransactionOutput, TransactionStatus},
-    vm_status::{convert_prologue_runtime_error, KeptVMStatus, StatusCode, VMStatus},
+    vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
@@ -221,24 +225,23 @@ impl LibraVMImpl {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
         let chain_id = txn_data.chain_id();
-        session
-            .execute_function(
-                &account_config::ACCOUNT_MODULE,
-                &PROLOGUE_NAME,
-                vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(txn_expiration_timestamp_secs),
-                    Value::u8(chain_id.id()),
-                ],
-                txn_data.sender,
-                cost_strategy,
-            )
-            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status()))
+        session.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &PROLOGUE_NAME,
+            vec![gas_currency_ty],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::vector_u8(txn_public_key),
+                Value::u64(txn_gas_price),
+                Value::u64(txn_max_gas_units),
+                Value::u64(txn_expiration_timestamp_secs),
+                Value::u8(chain_id.id()),
+            ],
+            txn_data.sender,
+            cost_strategy,
+            convert_normal_prologue_error,
+        )
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -256,22 +259,21 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        session
-            .execute_function(
-                &account_config::ACCOUNT_MODULE,
-                &SUCCESS_EPILOGUE_NAME,
-                vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
-                cost_strategy,
-            )
-            .map_err(|e| e.into_vm_status())
+        session.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &SUCCESS_EPILOGUE_NAME,
+            vec![gas_currency_ty],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::u64(txn_gas_price),
+                Value::u64(txn_max_gas_units),
+                Value::u64(gas_remaining),
+            ],
+            txn_data.sender,
+            cost_strategy,
+            convert_normal_success_epilogue_error,
+        )
     }
 
     /// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function
@@ -289,22 +291,21 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        session
-            .execute_function(
-                &account_config::ACCOUNT_MODULE,
-                &FAILURE_EPILOGUE_NAME,
-                vec![gas_currency_ty],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::u64(txn_gas_price),
-                    Value::u64(txn_max_gas_units),
-                    Value::u64(gas_remaining),
-                ],
-                txn_data.sender,
-                cost_strategy,
-            )
-            .map_err(|e| e.into_vm_status())
+        session.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &FAILURE_EPILOGUE_NAME,
+            vec![gas_currency_ty],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::u64(txn_gas_price),
+                Value::u64(txn_max_gas_units),
+                Value::u64(gas_remaining),
+            ],
+            txn_data.sender,
+            cost_strategy,
+            expect_only_successful_execution,
+        )
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -318,20 +319,19 @@ impl LibraVMImpl {
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-        session
-            .execute_function(
-                &LIBRA_WRITESET_MANAGER_MODULE,
-                &PROLOGUE_NAME,
-                vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::u64(txn_sequence_number),
-                    Value::vector_u8(txn_public_key),
-                ],
-                txn_data.sender,
-                &mut cost_strategy,
-            )
-            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status()))
+        session.execute_function(
+            &LIBRA_WRITESET_MANAGER_MODULE,
+            &PROLOGUE_NAME,
+            vec![],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::vector_u8(txn_public_key),
+            ],
+            txn_data.sender,
+            &mut cost_strategy,
+            convert_write_set_prologue_error,
+        )
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
@@ -346,19 +346,18 @@ impl LibraVMImpl {
             lcs::to_bytes(change_set).map_err(|_| VMStatus::Error(StatusCode::INVALID_DATA))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-        session
-            .execute_function(
-                &LIBRA_WRITESET_MANAGER_MODULE,
-                &WRITESET_EPILOGUE_NAME,
-                vec![],
-                vec![
-                    Value::transaction_argument_signer_reference(txn_data.sender),
-                    Value::vector_u8(change_set_bytes),
-                ],
-                txn_data.sender,
-                &mut cost_strategy,
-            )
-            .map_err(|e| e.into_vm_status())
+        session.execute_function(
+            &LIBRA_WRITESET_MANAGER_MODULE,
+            &WRITESET_EPILOGUE_NAME,
+            vec![],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::vector_u8(change_set_bytes),
+            ],
+            txn_data.sender,
+            &mut cost_strategy,
+            expect_only_successful_execution,
+        )
     }
 
     pub fn new_session<'r, R: RemoteCache>(&self, r: &'r R) -> Session<'r, '_, R> {

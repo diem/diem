@@ -191,56 +191,6 @@ impl VMStatus {
     }
 }
 
-/// Error codes that can be emitted by the prologue. These have special significance to the VM when
-/// they are raised during the prologue. However, they can also be raised by user code during
-/// execution of a transaction script. They have no significance to the VM in that case.
-pub const EACCOUNT_FROZEN: u64 = 0; // sending account is frozen
-pub const EBAD_ACCOUNT_AUTHENTICATION_KEY: u64 = 1; // auth key in transaction is invalid
-pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 2; // transaction sequence number is too old
-pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 3; // transaction sequence number is too new
-pub const EACCOUNT_DOES_NOT_EXIST: u64 = 4; // transaction sender's account does not exist
-pub const ECANT_PAY_GAS_DEPOSIT: u64 = 5; // insufficient balance to pay for gas deposit
-pub const ETRANSACTION_EXPIRED: u64 = 6; // transaction expiration time exceeds block time.
-pub const EBAD_CHAIN_ID: u64 = 7; // chain_id in transaction doesn't match the one on-chain
-
-/// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
-/// conventions for debugging
-pub const EINSUFFICIENT_BALANCE: u64 = 10; // withdrawing more than an account contains
-pub const EINSUFFICIENT_PRIVILEGES: u64 = 11; // user lacks the credentials to do something
-
-pub const EASSERT_ERROR: u64 = 42; // catch-all error code for assert failures
-
-// FUTURE: At the moment we can't pass transaction metadata or the signed transaction due to
-// restrictions in the two places that this function is called. We therefore just pass through what
-// we need at the moment---the sender address---but we may want/need to pass more data later on.
-pub fn convert_prologue_runtime_error(status: VMStatus) -> VMStatus {
-    match status {
-        // TODO look at location? or remove this function entirely
-        VMStatus::MoveAbort(location, code) => {
-            let new_major_status = match code {
-                EACCOUNT_FROZEN => StatusCode::SENDING_ACCOUNT_FROZEN,
-                // Invalid authentication key
-                EBAD_ACCOUNT_AUTHENTICATION_KEY => StatusCode::INVALID_AUTH_KEY,
-                // Sequence number too old
-                ESEQUENCE_NUMBER_TOO_OLD => StatusCode::SEQUENCE_NUMBER_TOO_OLD,
-                // Sequence number too new
-                ESEQUENCE_NUMBER_TOO_NEW => StatusCode::SEQUENCE_NUMBER_TOO_NEW,
-                // Sequence number too new
-                EACCOUNT_DOES_NOT_EXIST => StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST,
-                // Can't pay for transaction gas deposit/fee
-                ECANT_PAY_GAS_DEPOSIT => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-                ETRANSACTION_EXPIRED => StatusCode::TRANSACTION_EXPIRED,
-                EBAD_CHAIN_ID => StatusCode::BAD_CHAIN_ID,
-                code => return VMStatus::MoveAbort(location, code),
-            };
-            VMStatus::Error(new_major_status)
-        }
-        status @ VMStatus::ExecutionFailure { .. }
-        | status @ VMStatus::Error(_)
-        | status @ VMStatus::Executed => status,
-    }
-}
-
 impl fmt::Display for StatusType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let string = match self {
@@ -394,12 +344,12 @@ pub mod known_locations {
         AbortLocation::Module(LIBRA_MODULE.clone())
     }
 
-    /// The name of the Libra module.
+    /// The name of the Designated Dealer module.
     pub const DESIGNATED_DEALER_MODULE_NAME: &str = "DesignatedDealer";
-    /// The Identifier for the Libra module.
+    /// The Identifier for the Designated Dealer module.
     pub static DESIGNATED_DEALER_MODULE_IDENTIFIER: Lazy<Identifier> =
         Lazy::new(|| Identifier::new(DESIGNATED_DEALER_MODULE_NAME).unwrap());
-    /// The ModuleId for the Libra module.
+    /// The ModuleId for the Designated Dealer module.
     pub static DESIGNATED_DEALER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         ModuleId::new(
             CORE_CODE_ADDRESS,
@@ -408,6 +358,22 @@ pub mod known_locations {
     });
     pub fn designated_dealer_module_abort() -> AbortLocation {
         AbortLocation::Module(DESIGNATED_DEALER_MODULE.clone())
+    }
+
+    /// The name of the Write Set Manager module.
+    pub const WRITE_SET_MANAGER_MODULE_NAME: &str = "LibraWriteSetManager";
+    /// The Identifier for the Write Set Manager module.
+    pub static WRITE_SET_MANAGER_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(WRITE_SET_MANAGER_MODULE_NAME).unwrap());
+    /// The ModuleId for the Write Set Manager module.
+    pub static WRITE_SET_MANAGER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+        ModuleId::new(
+            CORE_CODE_ADDRESS,
+            WRITE_SET_MANAGER_MODULE_IDENTIFIER.clone(),
+        )
+    });
+    pub fn write_set_manager_module_abort() -> AbortLocation {
+        AbortLocation::Module(WRITE_SET_MANAGER_MODULE.clone())
     }
 }
 
@@ -636,6 +602,7 @@ pub enum StatusCode {
     VM_STARTUP_FAILURE = 2012,
     NATIVE_FUNCTION_INTERNAL_INCONSISTENCY = 2013,
     INVALID_CODE_CACHE = 2014,
+    UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION = 2015,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
@@ -741,12 +708,9 @@ impl StatusCode {
     /// checked in debug asserts
     pub fn should_skip_checks_for_todo(self) -> bool {
         fn todo_needs_execution_trace_information() -> std::collections::HashSet<StatusCode> {
-            vec![
-                StatusCode::VM_MAX_TYPE_DEPTH_REACHED,
-                StatusCode::VM_MAX_VALUE_DEPTH_REACHED,
-            ]
-            .into_iter()
-            .collect()
+            vec![StatusCode::VM_MAX_VALUE_DEPTH_REACHED]
+                .into_iter()
+                .collect()
         }
 
         todo_needs_execution_trace_information().contains(&self)

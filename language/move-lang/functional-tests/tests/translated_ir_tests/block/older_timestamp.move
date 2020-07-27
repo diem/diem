@@ -19,5 +19,4 @@ fun main() {
 //! proposer: vivian
 //! block-time: 11000000
 
-// check: ABORTED
-// check: 3
+// check: UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION
