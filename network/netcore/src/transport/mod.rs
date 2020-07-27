@@ -19,6 +19,7 @@ use std::fmt;
 
 pub mod and_then;
 pub mod boxed;
+#[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 pub mod memory;
 pub mod tcp;
 
