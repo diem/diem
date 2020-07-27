@@ -123,7 +123,7 @@ impl LibraNode {
         Ok(contents)
     }
 
-    fn get_metric(&mut self, metric_name: &str) -> Option<i64> {
+    pub fn get_metric(&mut self, metric_name: &str) -> Option<i64> {
         match self.debug_client.get_node_metric(metric_name) {
             Err(e) => {
                 println!(

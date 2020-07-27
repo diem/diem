@@ -164,6 +164,7 @@ fn create_node_for_fuzzing() -> RoundManager {
         network,
         Arc::new(MockTransactionManager::new(None)),
         storage,
+        false,
     )
 }
 

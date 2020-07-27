@@ -1625,3 +1625,65 @@ fn test_network_key_rotation() {
     swarm.validator_swarm.kill_node(0);
     swarm.validator_swarm.add_node(0, false).unwrap();
 }
+
+#[test]
+fn test_stop_consensus() {
+    let mut env = TestEnvironment::new(4);
+    println!("1. set stop_consensus = true for the first node and check it can sync to others");
+    let config_path = env.validator_swarm.config.config_files.first().unwrap();
+    let mut node_config = NodeConfig::load(config_path).unwrap();
+    node_config.consensus.stop_consensus = true;
+    node_config.save(config_path).unwrap();
+    env.validator_swarm.launch();
+    // 1. test the stopped node still syncs the transaction
+    let mut client_proxy = env.get_validator_client(0, None);
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .unwrap();
+    println!("2. set stop_consensus = true for all nodes and restart");
+    for (i, config_path) in env
+        .validator_swarm
+        .config
+        .config_files
+        .clone()
+        .iter()
+        .enumerate()
+    {
+        let mut node_config = NodeConfig::load(config_path).unwrap();
+        node_config.consensus.stop_consensus = true;
+        node_config.save(config_path).unwrap();
+        env.validator_swarm.kill_node(i);
+        env.validator_swarm.add_node(i, false).unwrap();
+    }
+    println!("3. delete one node's db and test they can still sync when stop_consensus is true for every nodes");
+    env.validator_swarm.kill_node(0);
+    fs::remove_dir_all(node_config.storage.dir()).unwrap();
+    env.validator_swarm.add_node(0, false).unwrap();
+    println!("4. verify all nodes are at the same round and no progress being made in 5 sec");
+    env.validator_swarm.wait_for_all_nodes_to_catchup();
+    let mut known_round = None;
+    for i in 0..5 {
+        let last_committed_round_str = "libra_consensus_last_committed_round{}";
+        for (index, node) in &mut env.validator_swarm.nodes {
+            if let Some(round) = node.get_metric(last_committed_round_str) {
+                match known_round {
+                    Some(r) if r != round => panic!(
+                        "round not equal, last known: {}, node {} is {}",
+                        r, index, round
+                    ),
+                    None => known_round = Some(round),
+                    _ => continue,
+                }
+            } else {
+                panic!("unable to get round from node {}", index);
+            }
+        }
+        println!(
+            "The last know round after {} sec is {}",
+            i,
+            known_round.unwrap()
+        );
+        sleep(Duration::from_secs(1));
+    }
+}
