@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use executor::db_bootstrapper;
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, OPERATOR_KEY,
     OWNER_ACCOUNT, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
-use libra_management::{error::Error, secure_backend::ValidatorBackend};
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
+use libra_management::{
+    config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
+    storage::StorageWrapper as Storage,
+};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
@@ -32,6 +33,8 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 pub struct Verify {
     #[structopt(flatten)]
+    config: ConfigPath,
+    #[structopt(flatten)]
     backend: ValidatorBackend,
     /// If specified, compares the internal state to that of a
     /// provided genesis. Note, that a waypont might diverge from
@@ -42,10 +45,11 @@ pub struct Verify {
 
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
-        let validator_storage = self
-            .backend
-            .validator_backend
-            .create_storage(self.backend.name())?;
+        let config = self
+            .config
+            .load()?
+            .override_validator_backend(&self.backend.validator_backend)?;
+        let validator_storage = config.validator_backend();
         let mut buffer = String::new();
 
         writeln!(buffer, "Data stored in SecureStorage:").unwrap();
@@ -73,12 +77,7 @@ impl Verify {
         write_break(&mut buffer);
 
         if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(
-                &validator_storage,
-                &mut buffer,
-                genesis_path,
-                self.backend.name(),
-            )?;
+            compare_genesis(&validator_storage, &mut buffer, genesis_path)?;
         }
 
         Ok(buffer)
@@ -99,36 +98,37 @@ fn write_break(buffer: &mut String) {
 }
 
 fn write_ed25519_key(storage: &Storage, buffer: &mut String, key: &'static str) {
-    let value = ed25519_from_storage(key, storage).map_or_else(|e| e, |v| v.to_string());
+    let value = storage
+        .ed25519_public_from_private(key)
+        .map(|v| v.to_string())
+        .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
 fn write_x25519_key(storage: &Storage, buffer: &mut String, key: &'static str) {
-    let value = ed25519_from_storage(key, storage).map_or_else(|e| e, |v| v.to_string());
-    writeln!(buffer, "{} - {}", key, value).unwrap();
-}
-
-fn write_string(storage: &Storage, buffer: &mut String, key: &str) {
     let value = storage
-        .get(key)
-        .and_then(|c| c.value.string())
+        .x25519_public_from_private(key)
+        .map(|v| v.to_string())
         .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_u64(storage: &Storage, buffer: &mut String, key: &str) {
+fn write_string(storage: &Storage, buffer: &mut String, key: &'static str) {
+    let value = storage.string(key).unwrap_or_else(|e| e.to_string());
+    writeln!(buffer, "{} - {}", key, value).unwrap();
+}
+
+fn write_u64(storage: &Storage, buffer: &mut String, key: &'static str) {
     let value = storage
-        .get(key)
-        .and_then(|c| c.value.u64())
-        .map(|c| c.to_string())
+        .u64(key)
+        .map(|v| v.to_string())
         .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_waypoint(storage: &Storage, buffer: &mut String, key: &str) {
+fn write_waypoint(storage: &Storage, buffer: &mut String, key: &'static str) {
     let value = storage
-        .get(key)
-        .and_then(|c| c.value.string())
+        .string(key)
         .map(|value| {
             if value.is_empty() {
                 "empty".into()
@@ -147,27 +147,19 @@ fn compare_genesis(
     storage: &Storage,
     buffer: &mut String,
     genesis_path: &PathBuf,
-    storage_name: &'static str,
 ) -> Result<(), Error> {
     // Compute genesis and waypoint and compare to given waypoint
     let db_path = TempPath::new();
     let (db_rw, expected_waypoint) = compute_genesis(genesis_path, db_path.path())?;
 
-    let actual_waypoint = storage
-        .get(WAYPOINT)
-        .and_then(|c| c.value.string())
-        .map_err(|e| Error::StorageReadError(storage_name, WAYPOINT, e.to_string()))?;
-    let actual_waypoint = Waypoint::from_str(&actual_waypoint).map_err(|e| {
-        Error::UnexpectedError(format!("Unable to parse waypoint: {}", e.to_string()))
-    })?;
+    let actual_waypoint = storage.waypoint(WAYPOINT)?;
     write_assert(buffer, WAYPOINT, actual_waypoint == expected_waypoint);
 
     // Fetch on-chain validator config and compare on-chain keys to local keys
-    let validator_account = validator_account(storage, storage_name)?;
+    let validator_account = storage.account_address(OWNER_ACCOUNT)?;
     let validator_config = validator_config(validator_account, db_rw.reader.clone())?;
 
-    let actual_consensus_key = ed25519_from_storage(CONSENSUS_KEY, storage)
-        .map_err(|e| Error::StorageReadError(storage_name, CONSENSUS_KEY, e))?;
+    let actual_consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
     let expected_consensus_key = validator_config.consensus_public_key;
     write_assert(
         buffer,
@@ -175,8 +167,7 @@ fn compare_genesis(
         actual_consensus_key == expected_consensus_key,
     );
 
-    let actual_validator_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, storage)
-        .map_err(|e| Error::StorageReadError(storage_name, VALIDATOR_NETWORK_KEY, e))?;
+    let actual_validator_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
     let expected_validator_key = validator_config.validator_network_identity_public_key;
     write_assert(
         buffer,
@@ -184,8 +175,7 @@ fn compare_genesis(
         actual_validator_key == expected_validator_key,
     );
 
-    let actual_fullnode_key = x25519_from_storage(FULLNODE_NETWORK_KEY, storage)
-        .map_err(|e| Error::StorageReadError(storage_name, FULLNODE_NETWORK_KEY, e))?;
+    let actual_fullnode_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
     let expected_fullnode_key = validator_config.full_node_network_identity_public_key;
     write_assert(
         buffer,
@@ -249,36 +239,4 @@ fn validator_config(
             ))
         })?;
     Ok(info.config().clone())
-}
-
-fn validator_account(
-    storage: &Storage,
-    storage_name: &'static str,
-) -> Result<AccountAddress, Error> {
-    let account = storage
-        .get(OWNER_ACCOUNT)
-        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))?
-        .value
-        .string()
-        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))?;
-    AccountAddress::from_str(&account)
-        .map_err(|e| Error::StorageReadError(storage_name, OWNER_ACCOUNT, e.to_string()))
-}
-
-fn ed25519_from_storage(
-    key_name: &'static str,
-    storage: &Storage,
-) -> Result<Ed25519PublicKey, String> {
-    storage
-        .get_public_key(key_name)
-        .map(|v| v.public_key)
-        .map_err(|e| e.to_string())
-}
-
-fn x25519_from_storage(
-    key_name: &'static str,
-    storage: &Storage,
-) -> Result<x25519::PublicKey, String> {
-    let edkey = ed25519_from_storage(key_name, storage)?;
-    x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes()).map_err(|e| e.to_string())
 }

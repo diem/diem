@@ -105,13 +105,10 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
     /// Sets the operator for the owner by uploading a set-operator transaction to shared storage.
     /// Note, we assume that owner i chooses operator i to operate the validator.
     fn set_validator_operator(&self, index: usize) {
-        let local_ns = index.to_string() + OWNER_NS;
         let remote_ns = index.to_string() + OWNER_SHARED_NS;
 
         let operator_name = index.to_string() + OPERATOR_SHARED_NS;
-        let _ = self
-            .storage_helper
-            .set_operator(&operator_name, &local_ns, &remote_ns);
+        let _ = self.storage_helper.set_operator(&operator_name, &remote_ns);
     }
 
     /// Operators upload their validator_config to shared storage.

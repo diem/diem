@@ -27,10 +27,12 @@ pub enum Error {
     StorageSigningError(&'static str, &'static str, &'static str, String),
     #[error("Failed to write, {1}, to {0} storage: {2}")]
     StorageWriteError(&'static str, &'static str, String),
-    #[error("Unable to read file, {0}, error {1}")]
-    UnableToReadFile(String, String),
+    #[error("Unable to parse, {0}, error {1}")]
+    UnableToParse(&'static str, String),
     #[error("Unable to parse file, {0}, error {1}")]
     UnableToParseFile(String, String),
+    #[error("Unable to read file, {0}, error {1}")]
+    UnableToReadFile(String, String),
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(String, String),
     #[error("Unexpected error: {0}")]
