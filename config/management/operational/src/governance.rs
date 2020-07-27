@@ -33,7 +33,11 @@ impl AddValidator {
         let txn = RawTransaction::new_script(
             libra_root_address(),
             seq_num,
-            transaction_builder::encode_add_validator_script(self.validator_address),
+            transaction_builder::encode_add_validator_and_reconfigure_script(
+                seq_num,
+                vec![],
+                self.validator_address,
+            ),
             constants::MAX_GAS_AMOUNT,
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),
@@ -67,7 +71,11 @@ impl RemoveValidator {
         let txn = RawTransaction::new_script(
             libra_root_address(),
             seq_num,
-            transaction_builder::encode_remove_validator_script(self.validator_address),
+            transaction_builder::encode_remove_validator_and_reconfigure_script(
+                seq_num,
+                vec![],
+                self.validator_address,
+            ),
             constants::MAX_GAS_AMOUNT,
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),

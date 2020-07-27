@@ -1,25 +1,23 @@
 
 <a name="SCRIPT"></a>
 
-# Script `set_validator_config.move`
+# Script `register_validator_config.move`
 
 ### Table of Contents
 
--  [Function `set_validator_config`](#SCRIPT_set_validator_config)
+-  [Function `register_validator_config`](#SCRIPT_register_validator_config)
 
 
 
-<a name="SCRIPT_set_validator_config"></a>
+<a name="SCRIPT_register_validator_config"></a>
 
-## Function `set_validator_config`
+## Function `register_validator_config`
 
 Set validator's config locally.
 Does not emit NewEpochEvent, the config is NOT changed in the validator set.
-TODO(valerini): rename to register_validator_config to avoid confusion with
-set_validator_config_and_reconfigure script.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_config">set_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_register_validator_config">register_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -28,7 +26,7 @@ set_validator_config_and_reconfigure script.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_set_validator_config">set_validator_config</a>(
+<pre><code><b>fun</b> <a href="#SCRIPT_register_validator_config">register_validator_config</a>(
     account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,

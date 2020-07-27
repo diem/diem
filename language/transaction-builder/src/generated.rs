@@ -59,18 +59,31 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
 
 /// Add `new_validator` to the validator set. Fails if the `new_validator` address is
 /// already in the validator set or does not have a `ValidatorConfig` resource stored at
-/// the address. Emits a NewEpochEvent. TODO(valerini): rename to
-/// add_validator_and_reconfigure?
-pub fn encode_add_validator_script(validator_address: AccountAddress) -> Script {
+/// the address. Emits a NewEpochEvent.
+pub fn encode_add_validator_and_reconfigure_script(
+    sliding_nonce: u64,
+    validator_name: Vec<u8>,
+    validator_address: AccountAddress,
+) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 26, 8, 38, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 5, 0, 11, 76, 105, 98, 114, 97, 83, 121, 115, 116, 101, 109,
-            13, 97, 100, 100, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 92, 8, 137, 1,
+            16, 0, 0, 0, 1, 0, 2, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1,
+            5, 1, 10, 2, 2, 6, 12, 5, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 11, 76, 105, 98, 114, 97, 83,
+            121, 115, 116, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101,
+            15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 21, 114,
+            101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114,
+            116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95, 110, 97, 109, 101, 13, 97, 100,
+            100, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 1, 0, 5, 6, 18, 10, 0, 10, 1, 17, 0, 10, 3, 17, 1, 11, 2, 33, 12, 4, 11, 4, 3,
+            14, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10, 3, 17, 2, 2,
         ],
         vec![],
-        vec![TransactionArgument::Address(validator_address)],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::U8Vector(validator_name),
+            TransactionArgument::Address(validator_address),
+        ],
     )
 }
 
@@ -546,19 +559,63 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
     )
 }
 
-/// Removes a validator from the validator set. Fails if the validator_address is not in
-/// the validator set. Emits a NewEpochEvent. TODO(valerini): rename to
-/// remove_validator_and_reconfigure?
-pub fn encode_remove_validator_script(validator_address: AccountAddress) -> Script {
+/// Set validator's config locally. Does not emit NewEpochEvent, the config is NOT changed
+/// in the validator set.
+pub fn encode_register_validator_config_script(
+    validator_account: AccountAddress,
+    consensus_pubkey: Vec<u8>,
+    validator_network_identity_pubkey: Vec<u8>,
+    validator_network_address: Vec<u8>,
+    fullnodes_network_identity_pubkey: Vec<u8>,
+    fullnodes_network_address: Vec<u8>,
+) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 29, 8, 41, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 5, 0, 11, 76, 105, 98, 114, 97, 83, 121, 115, 116, 101, 109,
-            16, 114, 101, 109, 111, 118, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 15, 7, 22, 27, 8, 49, 16, 0,
+            0, 0, 1, 0, 1, 0, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 10, 2, 0, 15, 86, 97, 108,
+            105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99,
+            111, 110, 102, 105, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 9,
+            11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11, 5, 11, 6, 17, 0, 2,
         ],
         vec![],
-        vec![TransactionArgument::Address(validator_address)],
+        vec![
+            TransactionArgument::Address(validator_account),
+            TransactionArgument::U8Vector(consensus_pubkey),
+            TransactionArgument::U8Vector(validator_network_identity_pubkey),
+            TransactionArgument::U8Vector(validator_network_address),
+            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
+            TransactionArgument::U8Vector(fullnodes_network_address),
+        ],
+    )
+}
+
+/// Removes a validator from the validator set. Fails if the validator_address is not in
+/// the validator set. Emits a NewEpochEvent.
+pub fn encode_remove_validator_and_reconfigure_script(
+    sliding_nonce: u64,
+    validator_name: Vec<u8>,
+    validator_address: AccountAddress,
+) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 95, 8, 140, 1,
+            16, 0, 0, 0, 1, 0, 2, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1,
+            5, 1, 10, 2, 2, 6, 12, 5, 4, 6, 12, 3, 10, 2, 5, 2, 1, 3, 11, 76, 105, 98, 114, 97, 83,
+            121, 115, 116, 101, 109, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101,
+            15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 21, 114,
+            101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114,
+            116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95, 110, 97, 109, 101, 16, 114,
+            101, 109, 111, 118, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 6, 18, 10, 0, 10, 1, 17, 0, 10, 3, 17, 1, 11, 2,
+            33, 12, 4, 11, 4, 3, 14, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10, 3, 17, 2,
+            2,
+        ],
+        vec![],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::U8Vector(validator_name),
+            TransactionArgument::Address(validator_address),
+        ],
     )
 }
 
@@ -697,37 +754,6 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
     )
 }
 
-/// Set validator's config locally. Does not emit NewEpochEvent, the config is NOT changed
-/// in the validator set. TODO(valerini): rename to register_validator_config to avoid
-/// confusion with set_validator_config_and_reconfigure script.
-pub fn encode_set_validator_config_script(
-    validator_account: AccountAddress,
-    consensus_pubkey: Vec<u8>,
-    validator_network_identity_pubkey: Vec<u8>,
-    validator_network_address: Vec<u8>,
-    fullnodes_network_identity_pubkey: Vec<u8>,
-    fullnodes_network_address: Vec<u8>,
-) -> Script {
-    Script::new(
-        vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 15, 7, 22, 27, 8, 49, 16, 0,
-            0, 0, 1, 0, 1, 0, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 10, 2, 0, 15, 86, 97, 108,
-            105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99,
-            111, 110, 102, 105, 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 9,
-            11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11, 5, 11, 6, 17, 0, 2,
-        ],
-        vec![],
-        vec![
-            TransactionArgument::Address(validator_account),
-            TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_identity_pubkey),
-            TransactionArgument::U8Vector(validator_network_address),
-            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
-            TransactionArgument::U8Vector(fullnodes_network_address),
-        ],
-    )
-}
-
 /// Set validator's config and updates the config in the validator set. NewEpochEvent is
 /// emitted.
 pub fn encode_set_validator_config_and_reconfigure_script(
@@ -762,16 +788,26 @@ pub fn encode_set_validator_config_and_reconfigure_script(
 }
 
 /// Set validator's operator
-pub fn encode_set_validator_operator_script(operator_account: AccountAddress) -> Script {
+pub fn encode_set_validator_operator_script(
+    operator_name: Vec<u8>,
+    operator_account: AccountAddress,
+) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 29, 8, 41, 16, 0, 0,
-            0, 1, 0, 1, 0, 2, 6, 12, 5, 0, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111,
-            110, 102, 105, 103, 12, 115, 101, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 19, 7, 33, 68, 8, 101, 16,
+            0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 3, 0, 1, 5, 1, 10, 2, 2, 6, 12, 5, 0, 3, 6, 12, 10,
+            2, 5, 2, 1, 3, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105,
+            103, 23, 86, 97, 108, 105, 100, 97, 116, 111, 114, 79, 112, 101, 114, 97, 116, 111,
+            114, 67, 111, 110, 102, 105, 103, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95,
+            110, 97, 109, 101, 12, 115, 101, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 5, 15, 10, 2, 17, 0, 11, 1, 33, 12, 3,
+            11, 3, 3, 11, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 0, 10, 2, 17, 1, 2,
         ],
         vec![],
-        vec![TransactionArgument::Address(operator_account)],
+        vec![
+            TransactionArgument::U8Vector(operator_name),
+            TransactionArgument::Address(operator_account),
+        ],
     )
 }
 

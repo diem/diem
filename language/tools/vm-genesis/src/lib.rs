@@ -405,7 +405,7 @@ fn create_and_initialize_owners_operators(
                 0,
                 operator_account,
                 operator_auth_key.prefix().to_vec(),
-                b"operator_0".to_vec(),
+                vec![],
             );
         exec_script(session, libra_root_address, &create_operator_script);
     }
@@ -551,7 +551,7 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistra
             let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
             let operator_account = account_address::from_public_key(&operator_key);
             let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script(operator_account);
+                transaction_builder::encode_set_validator_operator_script(vec![], operator_account);
 
             (owner_key, set_operator_script)
         })
@@ -595,7 +595,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
-            let script = transaction_builder::encode_set_validator_config_script(
+            let script = transaction_builder::encode_register_validator_config_script(
                 owner_account,
                 consensus_key.to_bytes().to_vec(),
                 identity_key.to_bytes(),

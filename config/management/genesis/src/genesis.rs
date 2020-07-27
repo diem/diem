@@ -120,7 +120,7 @@ impl Genesis {
 
             let operator_account = self.fetch_operator_account(operator_name)?;
             let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script(operator_account);
+                transaction_builder::encode_set_validator_operator_script(vec![], operator_account);
 
             operator_assignments.push((owner_key, set_operator_script));
         }
