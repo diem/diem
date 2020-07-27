@@ -19,6 +19,8 @@
 -  [Function `reconfigure_`](#0x1_LibraConfig_reconfigure_)
 -  [Function `emit_reconfiguration_event`](#0x1_LibraConfig_emit_reconfiguration_event)
 -  [Specification](#0x1_LibraConfig_Specification)
+    -  [Function `get`](#0x1_LibraConfig_Specification_get)
+    -  [Function `set`](#0x1_LibraConfig_Specification_set)
     -  [Function `publish_new_config`](#0x1_LibraConfig_Specification_publish_new_config)
     -  [Function `reconfigure_`](#0x1_LibraConfig_Specification_reconfigure_)
 
@@ -168,9 +170,9 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(
     config_account: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(config_account);
+    <b>assert</b>(!exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECONFIGURATION));
     move_to&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(
         config_account,
         <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
@@ -204,7 +206,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config
 <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), ECONFIG_DOES_NOT_EXIST);
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
     *&borrow_global&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
 </code></pre>
@@ -230,11 +232,11 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
 <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a>, <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
-    <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), ECONFIG_DOES_NOT_EXIST);
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), EMODIFY_CAPABILITY_NOT_HELD);
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="Errors.md#0x1_Errors_requires_privilege">Errors::requires_privilege</a>(EMODIFY_CAPABILITY));
 
+    <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 
@@ -266,7 +268,7 @@
     payload: Config
 ) <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a>, <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), ECONFIG_DOES_NOT_EXIST);
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
@@ -296,9 +298,12 @@
     config_account: &signer,
     payload: Config,
 ): <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(config_account), ENOT_LIBRA_ROOT);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(config_account);
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ELIBRA_CONFIG)
+    );
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {}
 }
@@ -328,6 +333,10 @@
     payload: Config
 ) {
     <b>let</b> capability = <a href="#0x1_LibraConfig_publish_new_config_and_get_capability">publish_new_config_and_get_capability</a>&lt;Config&gt;(config_account, payload);
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EMODIFY_CAPABILITY)
+    );
     move_to(config_account, capability);
 }
 </code></pre>
@@ -354,8 +363,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(
     lr_account: &signer,
 ) <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
-    // Only callable by libra root account or by the VM internally.
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
 }
 </code></pre>
@@ -391,7 +399,7 @@
    // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
    <b>let</b> current_block_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-   <b>assert</b>(current_block_time &gt; config_ref.last_reconfiguration_time, EINVALID_BLOCK_TIME);
+   <b>assert</b>(current_block_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EINVALID_BLOCK_TIME));
    config_ref.last_reconfiguration_time = current_block_time;
 
    <a href="#0x1_LibraConfig_emit_reconfiguration_event">emit_reconfiguration_event</a>();
@@ -418,6 +426,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraConfig_emit_reconfiguration_event">emit_reconfiguration_event</a>() <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ECONFIGURATION));
     <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     config_ref.epoch = config_ref.epoch + 1;
 
@@ -439,6 +448,65 @@
 ## Specification
 
 
+<a name="0x1_LibraConfig_Specification_get"></a>
+
+### Function `get`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
+<b>ensures</b> result == <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;();
+</code></pre>
+
+
+
+
+<a name="0x1_LibraConfig_AbortsIfNotPublished"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt; {
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraConfig_Specification_set"></a>
+
+### Function `set`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraConfig_AbortsIfNotModifiable"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt; {
+    account: signer;
+    <b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+        with Errors::REQUIRES_PRIVILEGE;
+}
+</code></pre>
+
+
+
 <a name="0x1_LibraConfig_Specification_publish_new_config"></a>
 
 ### Function `publish_new_config`
@@ -449,12 +517,37 @@
 
 
 
-TODO(wrwg): enable
-aborts_if spec_is_published<Config>();
+
+<pre><code><b>include</b> <a href="#0x1_LibraConfig_PublishNewConfigAbortsIf">PublishNewConfigAbortsIf</a>&lt;Config&gt;;
+<b>include</b> <a href="#0x1_LibraConfig_PublishNewConfigEnsures">PublishNewConfigEnsures</a>&lt;Config&gt;;
+</code></pre>
 
 
-<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;());
-<b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;();
+
+
+<a name="0x1_LibraConfig_PublishNewConfigAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_PublishNewConfigAbortsIf">PublishNewConfigAbortsIf</a>&lt;Config&gt; {
+    config_account: signer;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: config_account};
+    <b>aborts_if</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;();
+    <b>aborts_if</b> exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraConfig_PublishNewConfigEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_PublishNewConfigEnsures">PublishNewConfigEnsures</a>&lt;Config&gt; {
+    config_account: signer;
+    <b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;();
+    <b>ensures</b> exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+}
 </code></pre>
 
 
@@ -469,31 +562,44 @@ aborts_if spec_is_published<Config>();
 
 
 
-Consider only states for verification where this function does not abort
-for a caller. This prevents that callers need to propagate the abort conditions of this
-function up the call chain. The abort conditions of this function represent
-internal programming errors.
-
-> TODO(wrwg): we should have a convention to distinguish error codes resulting from
-contract program errors and from errors coming from inputs to transaction
-scripts. In most cases, only the later one should be propagated upwards to callers.
-For now, we use the pragma below to simulate this.
+The effect of this function is currently excluded from verification.
+> TODO: still specify this function using the
+<code>[concrete]</code> property so it can be locally verified.
 
 
-<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
+<pre><code>pragma opaque, verify = <b>false</b>;
+<b>aborts_if</b> <b>false</b>;
 </code></pre>
 
 
 
-> TODO(wrwg): We've removed an invariant in RegisteredCurrencies that config is only stored
-Specifications of LibraConfig are very incomplete.  There are just a few
-definitions that are used by RegisteredCurrencies
+TODO: Specifications of LibraConfig are very incomplete.
 
 
 <pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+Configurations are only stored at the libra root address.
+
+
+<pre><code><b>invariant</b>
+    forall config_address: address, config_type: type where exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;config_type&gt;&gt;(config_address):
+        config_address == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+</code></pre>
+
+
+After genesis, no new configurations are added.
+
+
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
+        (forall config_type: type
+         where <b>old</b>(!exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())):
+             !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()));
 <a name="0x1_LibraConfig_spec_has_config"></a>
 <b>define</b> <a href="#0x1_LibraConfig_spec_has_config">spec_has_config</a>(): bool {
-    exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+    exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
 }
 </code></pre>
 
@@ -506,7 +612,7 @@ Spec version of
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
-    <b>global</b>&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).payload
+    <b>global</b>&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).payload
 }
 </code></pre>
 
@@ -519,6 +625,6 @@ Spec version of
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
-    exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+    exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
 }
 </code></pre>

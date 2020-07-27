@@ -28,7 +28,7 @@ script {
         LibraAccount::initialize(sender);
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: bob
@@ -54,7 +54,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 17,"
+// check: "Keep(ABORTED { code: 4357,"
 
 //! new-transaction
 //! sender: bob
@@ -67,7 +67,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 19,"
+// check: "Keep(ABORTED { code: 4869,"
 
 //! new-transaction
 //! sender: bob
@@ -80,7 +80,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: "Keep(ABORTED { code: 18,"
+// check: "Keep(ABORTED { code: 4615,"
 
 //! new-transaction
 //! sender: bob
@@ -92,7 +92,7 @@ script {
         LibraAccount::restore_key_rotation_capability(rot_cap);
     }
 }
-// check: "Keep(ABORTED { code: 8,"
+// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 script {
@@ -109,10 +109,7 @@ script {
         );
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9
+// check: "Keep(ABORTED { code: 2305,"
 
 //! new-transaction
 script {
@@ -154,14 +151,14 @@ script {
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, 0x0, {{bob::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
 stdlib_script::create_parent_vasp_account
-// check: "Keep(ABORTED { code: 10,"
+// check: "Keep(ABORTED { code: 2567,"
 
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{abby}}, x"", b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
 stdlib_script::create_parent_vasp_account
-// check: "Keep(ABORTED { code: 8,"
+// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 //! sender: libraroot
@@ -171,7 +168,7 @@ script {
         LibraAccount::create_libra_root_account({{libraroot}}, {{libraroot::auth_key}});
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: libraroot
@@ -181,4 +178,4 @@ script {
         LibraAccount::create_treasury_compliance_account(account, {{blessed}}, {{blessed::auth_key}});
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"

@@ -10,5 +10,4 @@ fun main() {
     assert(FixedPoint32::get_raw_value(f1) == 999, 1);
 }
 }
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 1031"

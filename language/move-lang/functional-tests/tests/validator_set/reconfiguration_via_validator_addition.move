@@ -36,7 +36,7 @@ script{
         LibraSystem::remove_validator(account, {{bob}});
     }
 }
-// check: ABORTED
+// check: "ABORTED { code: 2"
 
 //! block-prologue
 //! proposer: bob
@@ -51,7 +51,7 @@ script{
         LibraSystem::add_validator(account, {{alice}});
     }
 }
-// check: "ABORTED { code: 1,"
+// check: "ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: libraroot
@@ -61,7 +61,7 @@ script{
         LibraSystem::add_validator(account, {{invalidvalidator}});
     }
 }
-// check: "ABORTED { code: 3,"
+// check: "ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: libraroot
@@ -85,4 +85,4 @@ script{
         LibraSystem::add_validator(account, {{alice}});
     }
 }
-// check: "ABORTED { code: 4,"
+// check: "ABORTED { code: 519,"

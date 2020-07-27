@@ -16,11 +16,16 @@ module LBR {
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
     use 0x1::CoreAddresses;
+    use 0x1::Errors;
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::Libra::{Self, Libra,
     // RegisterNewCurrency
     };
-    use 0x1::Signer;
+    use 0x1::LibraTimestamp;
+
+    spec module {
+        pragma verify;
+    }
 
     /// The type tag representing the `LBR` currency on-chain.
     resource struct LBR { }
@@ -35,6 +40,10 @@ module LBR {
         ratio: FixedPoint32,
         /// Holds the `CoinType` backing coins for the on-chain reserve.
         backing: Libra<CoinType>
+    }
+    spec struct ReserveComponent {
+        // The ratio cannot be zero.
+        invariant !FixedPoint32::is_zero(ratio);
     }
 
     /// The on-chain reserve for the `LBR` holds both the capability for minting `LBR`
@@ -60,10 +69,22 @@ module LBR {
         coin2: ReserveComponent<Coin2>,
     }
 
-    const EINVALID_SINGLETON_ADDRESS: u64 = 0;
-    const EZERO_LBR_MINT_NOT_ALLOWED: u64 = 1;
-    const ECOIN1_INVALID_AMOUNT: u64 = 2;
-    const ECOIN2_INVALID_AMOUNT: u64 = 3;
+    /// Global invariant that the Reserve resource exists after genesis.
+    spec module {
+        invariant [global] LibraTimestamp::is_operating() ==> reserve_exists() && Libra::is_currency<LBR>();
+
+        define reserve_exists(): bool {
+           exists<Reserve>(CoreAddresses::CURRENCY_INFO_ADDRESS())
+        }
+    }
+
+    /// TODO(wrwg): This should be provided somewhere centrally in the framework.
+    const MAX_U64: u64 = 18446744073709551615;
+
+    const ERESERVE: u64 = 0;
+    const ECOIN1: u64 = 1;
+    const ECOIN2: u64 = 2;
+    const EZERO_LBR_MINT_NOT_ALLOWED: u64 = 3;
 
     /// Initializes the `LBR` module. This sets up the initial `LBR` ratios and
     /// reserve components, and creates the mint, preburn, and burn
@@ -76,9 +97,11 @@ module LBR {
         lr_account: &signer,
         tc_account: &signer,
     ) {
+        LibraTimestamp::assert_genesis();
         // Operational constraint
-        assert(Signer::address_of(lr_account) == reserve_address(), EINVALID_SINGLETON_ADDRESS);
-        // Register the `LBR` currency.
+        CoreAddresses::assert_currency_info(lr_account);
+        // Reserve must not exist.
+        assert(!exists<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS()), Errors::already_published(ERESERVE));
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             lr_account,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
@@ -100,13 +123,6 @@ module LBR {
         move_to(lr_account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
-    spec module {
-        /// Returns true if the Reserve has been initialized.
-        define spec_is_initialized(): bool {
-            exists<Reserve>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
-        }
-    }
-
     /// Returns true if `CoinType` is `LBR::LBR`
     public fun is_lbr<CoinType>(): bool {
         Libra::is_currency<CoinType>() &&
@@ -119,11 +135,9 @@ module LBR {
         ensures result == spec_is_lbr<CoinType>();
     }
 
-    spec module {
-        /// Returns true if CoinType is LBR.
-        define spec_is_lbr<CoinType>(): bool {
-            type<CoinType>() == type<LBR>()
-        }
+    /// Returns true if CoinType is LBR.
+    spec define spec_is_lbr<CoinType>(): bool {
+        type<CoinType>() == type<LBR>()
     }
 
     /// We take the truncated multiplication + 1 (not ceiling!) to withdraw for each currency that makes up the `LBR`.
@@ -131,10 +145,13 @@ module LBR {
     /// banker's rounding, but this adds considerable arithmetic complexity.
     public fun calculate_component_amounts_for_lbr(amount_lbr: u64): (u64, u64)
     acquires Reserve {
+        LibraTimestamp::assert_operating();
         let reserve = borrow_global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        let num_coin1 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
-        let num_coin2 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
-        (num_coin1, num_coin2)
+        let amount1 = FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
+        let amount2 = FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
+        assert(amount1 != MAX_U64, Errors::limit_exceeded(ECOIN1));
+        assert(amount2 != MAX_U64, Errors::limit_exceeded(ECOIN2));
+        (amount1 + 1, amount2 + 1)
     }
 
     /// Create `amount_lbr` number of `LBR` from the passed in coins. If
@@ -150,11 +167,12 @@ module LBR {
         coin2: Libra<Coin2>
     ): Libra<LBR>
     acquires Reserve {
-        assert(amount_lbr > 0, EZERO_LBR_MINT_NOT_ALLOWED);
+        LibraTimestamp::assert_operating();
+        assert(amount_lbr > 0, Errors::invalid_argument(EZERO_LBR_MINT_NOT_ALLOWED));
         let (num_coin1, num_coin2) = calculate_component_amounts_for_lbr(amount_lbr);
         let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        assert(num_coin1 == Libra::value(&coin1), ECOIN1_INVALID_AMOUNT);
-        assert(num_coin2 == Libra::value(&coin2), ECOIN2_INVALID_AMOUNT);
+        assert(num_coin1 == Libra::value(&coin1), Errors::invalid_argument(ECOIN1));
+        assert(num_coin2 == Libra::value(&coin2), Errors::invalid_argument(ECOIN2));
         // Deposit the coins in to the reserve
         Libra::deposit(&mut reserve.coin1.backing, coin1);
         Libra::deposit(&mut reserve.coin2.backing, coin2);
@@ -172,22 +190,46 @@ module LBR {
     /// would be `6` and `3` for `Coin1` and `Coin2` respectively.
     public fun unpack(coin: Libra<LBR>): (Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
+        LibraTimestamp::assert_operating();
         let reserve = borrow_global_mut<Reserve>(reserve_address());
         let ratio_multiplier = Libra::value(&coin);
         let sender = reserve_address();
-        Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
-        Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender, &reserve.burn_cap);
+        Libra::burn_now(coin, &mut reserve.preburn_cap, sender, &reserve.burn_cap);
         let coin1_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin1.ratio);
         let coin2_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin2.ratio);
         let coin1 = Libra::withdraw(&mut reserve.coin1.backing, coin1_amount);
         let coin2 = Libra::withdraw(&mut reserve.coin2.backing, coin2_amount);
         (coin1, coin2)
     }
-
     spec fun unpack {
-        /// > TODO(emmazzz): turn opaque off when we are able to fully specify unpack.
-        pragma opaque = true;
+        pragma verify_duration_estimate = 100; // TODO: occasionally times out
+        include UnpackAbortsIf;
         ensures Libra::spec_market_cap<LBR>() == old(Libra::spec_market_cap<LBR>()) - coin.value;
+        ensures result_1.value == spec_unpack_coin1(coin);
+        ensures result_2.value == spec_unpack_coin2(coin);
+    }
+    spec schema UnpackAbortsIf {
+        coin: Libra<LBR>;
+        include LibraTimestamp::AbortsIfNotOperating;
+        let reserve = global<Reserve>(reserve_address());
+        include Libra::BurnNowAbortsIf<LBR>{preburn: reserve.preburn_cap};
+        /// > TODO(wrwg): It appears the next couple of aborts inclusions are redundant, i.e. they can be
+        /// > removed but still no abort is reported. It is unclear why this is the case. For example,
+        /// > the coin value could be so larged that multiply overflows, or the reserve could not have backing.
+        //  > Need to investigate why this is the case. Notice that keeping them also does not produce an error,
+        /// > indicating the the solver determines their conditions can never become true.
+        include FixedPoint32::MultiplyAbortsIf{val: coin.value, multiplier: reserve.coin1.ratio};
+        include FixedPoint32::MultiplyAbortsIf{val: coin.value, multiplier: reserve.coin2.ratio};
+        include Libra::WithdrawAbortsIf<Coin1>{coin: reserve.coin1.backing, amount: spec_unpack_coin1(coin)};
+        include Libra::WithdrawAbortsIf<Coin2>{coin: reserve.coin2.backing, amount: spec_unpack_coin2(coin)};
+    }
+    spec define spec_unpack_coin1(coin: Libra<LBR>): u64 {
+        let reserve = global<Reserve>(reserve_address());
+        FixedPoint32::spec_multiply_u64(coin.value, reserve.coin1.ratio)
+    }
+    spec define spec_unpack_coin2(coin: Libra<LBR>): u64 {
+        let reserve = global<Reserve>(reserve_address());
+        FixedPoint32::spec_multiply_u64(coin.value, reserve.coin2.ratio)
     }
 
     /// Return the account address where the globally unique LBR::Reserve resource is stored

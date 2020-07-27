@@ -98,7 +98,7 @@ fun main(account: &signer) {
     )
 }
 }
-// check: "ABORTED { code: 3,"
+// check: "ABORTED { code: 775,"
 
 // delegating parent2's key to an account without a RecoveryAddress resource should abort
 //! new-transaction
@@ -112,7 +112,7 @@ fun main(account: &signer) {
     )
 }
 }
-// check: "ABORTED { code: 5,"
+// check: "ABORTED { code: 1285,"
 
 // trying to recover an account that hasn't delegated its KeyRotationCapability to a recovery
 // address should abort
@@ -125,7 +125,7 @@ fun main(account: &signer) {
     RecoveryAddress::rotate_authentication_key(account, {{child1}}, {{child2}}, dummy_auth_key);
 }
 }
-// check: "ABORTED { code: 4,"
+// check: "ABORTED { code: 1031,"
 
 // trying to recover from an account without a RecoveryAddress resource should abort
 //! new-transaction
@@ -137,7 +137,7 @@ fun main(account: &signer) {
     RecoveryAddress::rotate_authentication_key(account, {{child2}}, {{child1}}, dummy_auth_key);
 }
 }
-// check: "ABORTED { code: 5,"
+// check: "ABORTED { code: 1285,"
 
 
 // parent1 shouldn't be able to rotate child1's address
@@ -150,7 +150,7 @@ fun main(account: &signer) {
     RecoveryAddress::rotate_authentication_key(account, {{child1}}, {{child1}}, dummy_auth_key);
 }
 }
-// check: "ABORTED { code: 2,"
+// check: "ABORTED { code: 519,"
 
 // A non-vasp can't create a recovery address
 //! new-transaction
@@ -162,7 +162,7 @@ fun main(account: &signer) {
     RecoveryAddress::publish(account, LibraAccount::extract_key_rotation_capability(account))
 }
 }
-// check: "ABORTED { code: 0,"
+// check: "ABORTED { code: 7,"
 
 //! new-transaction
 module Holder {
@@ -215,4 +215,4 @@ fun main(account: &signer) {
     RecoveryAddress::publish(account, cap);
 }
 }
-// check: "ABORTED { code: 1,"
+// check: "ABORTED { code: 263,"

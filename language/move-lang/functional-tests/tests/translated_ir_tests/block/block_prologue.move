@@ -40,7 +40,7 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 2
+// check: 514
 
 //! new-transaction
 //! sender: vivian
@@ -54,4 +54,4 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 2
+// check: 514

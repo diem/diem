@@ -93,7 +93,7 @@ impl AUTransactionGen for P2PTransferGen {
                 // 10 means the balance was insufficient while trying to transfer.
                 status = TransactionStatus::Keep(KeptVMStatus::MoveAbort(
                     known_locations::account_module_abort(),
-                    5,
+                    1288,
                 ));
             }
             (false, _, _) => {

@@ -70,11 +70,14 @@
 ): <a href="#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> {
     // check theshold requirements
     <b>let</b> len = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&public_keys);
-    <b>assert</b>(threshold != 0, EZERO_THRESHOLD);
-    <b>assert</b>((threshold <b>as</b> u64) &lt;= len, ENOT_ENOUGH_KEYS_FOR_THRESHOLD);
+    <b>assert</b>(threshold != 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EZERO_THRESHOLD));
+    <b>assert</b>(
+        (threshold <b>as</b> u64) &lt;= len,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
+    );
     // TODO: add constant MULTI_ED25519_MAX_KEYS
     // the multied25519 signature scheme allows at most 32 keys
-    <b>assert</b>(len &lt;= 32, ENUM_KEYS_ABOVE_MAX_THRESHOLD);
+    <b>assert</b>(len &lt;= 32, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENUM_KEYS_ABOVE_MAX_THRESHOLD));
 
     <a href="#0x1_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> { public_keys, threshold }
 }

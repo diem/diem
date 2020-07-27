@@ -13,17 +13,17 @@
 -  [Function `update_global_time`](#0x1_LibraTimestamp_update_global_time)
 -  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
 -  [Function `is_genesis`](#0x1_LibraTimestamp_is_genesis)
+-  [Function `assert_genesis`](#0x1_LibraTimestamp_assert_genesis)
+-  [Function `is_operating`](#0x1_LibraTimestamp_is_operating)
+-  [Function `assert_operating`](#0x1_LibraTimestamp_assert_operating)
 -  [Function `is_not_initialized`](#0x1_LibraTimestamp_is_not_initialized)
 -  [Specification](#0x1_LibraTimestamp_Specification)
-    -  [Module specification](#0x1_LibraTimestamp_@Module_specification)
-        -  [Persistence of Initialization](#0x1_LibraTimestamp_@Persistence_of_Initialization)
-        -  [Global Clock Time Progression](#0x1_LibraTimestamp_@Global_Clock_Time_Progression)
     -  [Function `initialize`](#0x1_LibraTimestamp_Specification_initialize)
     -  [Function `set_time_has_started`](#0x1_LibraTimestamp_Specification_set_time_has_started)
     -  [Function `update_global_time`](#0x1_LibraTimestamp_Specification_update_global_time)
     -  [Function `now_microseconds`](#0x1_LibraTimestamp_Specification_now_microseconds)
-    -  [Function `is_genesis`](#0x1_LibraTimestamp_Specification_is_genesis)
-    -  [Function `is_not_initialized`](#0x1_LibraTimestamp_Specification_is_not_initialized)
+    -  [Function `assert_genesis`](#0x1_LibraTimestamp_Specification_assert_genesis)
+    -  [Function `assert_operating`](#0x1_LibraTimestamp_Specification_assert_operating)
 
 This module keeps a global wall clock that stores the current Unix time in microseconds.
 It interacts with the other modules in the following ways:
@@ -99,7 +99,8 @@ is called at the end of genesis.
 
 ## Function `initialize`
 
-Initializes the global wall clock time resource. This can only be called from genesis.
+Initializes the global wall clock time resource. This can only be called from genesis and with the
+root account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(lr_account: &signer)
@@ -112,11 +113,15 @@ Initializes the global wall clock time resource. This can only be called from ge
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(lr_account: &signer) {
-    // Operational constraint, only callable by the libra root account
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+    // Only callable from genesis.
+    <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>();
+
+    // Only callable by libra root account
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
 
     // TODO: Should the initialized value be passed in <b>to</b> genesis?
     <b>let</b> timer = <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
+    <b>assert</b>(!exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ETIMER_RESOURCE));
     move_to(lr_account, timer);
 }
 </code></pre>
@@ -129,7 +134,8 @@ Initializes the global wall clock time resource. This can only be called from ge
 
 ## Function `set_time_has_started`
 
-Marks that time has started and genesis has finished. This can only be called from genesis.
+Marks that time has started and genesis has finished. This can only be called from genesis and with the root
+account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(lr_account: &signer)
@@ -142,14 +148,14 @@ Marks that time has started and genesis has finished. This can only be called fr
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(lr_account: &signer) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+    <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>();
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
 
     // Current time must have been initialized.
     <b>assert</b>(
         exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) && <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0,
-        ETIME_NOT_INITIALIZED
+        <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ETIMER_RESOURCE)
     );
-    <b>assert</b>(!exists&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)), EGENESIS_ONLY);
     move_to(lr_account, <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{});
 }
 </code></pre>
@@ -163,8 +169,8 @@ Marks that time has started and genesis has finished. This can only be called fr
 ## Function `reset_time_has_started_for_test`
 
 Helper functions for tests to reset the time-has-started, and pretend to be in genesis.
-> TODO(wrwg): we should have a capability which only tests can have to be able to call
-> this function.
+> TODO(wrwg): we MUST have a capability which only tests can have to be able to call
+> this function before we go to production.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_reset_time_has_started_for_test">reset_time_has_started_for_test</a>()
@@ -177,7 +183,10 @@ Helper functions for tests to reset the time-has-started, and pretend to be in g
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_reset_time_has_started_for_test">reset_time_has_started_for_test</a>() <b>acquires</b> <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a> {
-    <b>let</b> <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{} = move_from&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <b>if</b> (exists&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())) {
+        // Only do this <b>if</b> it actually exists.
+        <b>let</b> <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{} = move_from&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    }
 }
 </code></pre>
 
@@ -206,16 +215,18 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
     proposer: address,
     timestamp: u64
 ) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    // Can only be invoked by LibraVM privilege.
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), ENOT_VM);
+    <a href="#0x1_LibraTimestamp_assert_operating">assert_operating</a>();
+    // Can only be invoked by LibraVM signer.
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_vm">CoreAddresses::assert_vm</a>(account);
 
     <b>let</b> global_timer = borrow_global_mut&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <b>let</b> now = global_timer.microseconds;
     <b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         // NIL block with null address <b>as</b> proposer. Timestamp must be equal.
-        <b>assert</b>(timestamp == global_timer.microseconds, EINVALID_TIMESTAMP);
+        <b>assert</b>(now == timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ETIMESTAMP));
     } <b>else</b> {
         // Normal block. Time must advance
-        <b>assert</b>(global_timer.microseconds &lt; timestamp, EINVALID_TIMESTAMP);
+        <b>assert</b>(now &lt; timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ETIMESTAMP));
     };
     global_timer.microseconds = timestamp;
 }
@@ -243,6 +254,10 @@ Gets the timestamp representing
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>(): u64 <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
+    <b>assert</b>(
+        exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
+        <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ETIMER_RESOURCE)
+    );
     borrow_global&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
 }
 </code></pre>
@@ -255,7 +270,7 @@ Gets the timestamp representing
 
 ## Function `is_genesis`
 
-Helper function to determine if the blockchain is in genesis state.
+Helper function to determine if Libra is in genesis state.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(): bool
@@ -276,11 +291,91 @@ Helper function to determine if the blockchain is in genesis state.
 
 </details>
 
+<a name="0x1_LibraTimestamp_assert_genesis"></a>
+
+## Function `assert_genesis`
+
+Helper function to assert genesis state.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>()
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>() {
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ENOT_GENESIS));
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraTimestamp_is_operating"></a>
+
+## Function `is_operating`
+
+Helper function to determine if Libra is operating. This is the same as
+<code>!<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code> and is provided
+for convenience. Testing
+<code><a href="#0x1_LibraTimestamp_is_operating">is_operating</a>()</code> is more frequent than
+<code><a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code>.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(): bool {
+    exists&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraTimestamp_assert_operating"></a>
+
+## Function `assert_operating`
+
+Helper function to assert operating (!genesis) state.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_operating">assert_operating</a>()
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_operating">assert_operating</a>() {
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ENOT_OPERATING));
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_LibraTimestamp_is_not_initialized"></a>
 
 ## Function `is_not_initialized`
 
-Helper function to determine whether the CurrentTime has been initialized.
+Helper function to determine whether the CurrentTime has been not fully setup. This returns true
+even if the resource exists but the time is still set to zero.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_not_initialized">is_not_initialized</a>(): bool
@@ -306,107 +401,36 @@ Helper function to determine whether the CurrentTime has been initialized.
 ## Specification
 
 
-<a name="0x1_LibraTimestamp_@Module_specification"></a>
-
-### Module specification
-
-
 Verify all functions in this module.
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code>pragma verify;
 </code></pre>
 
 
-Specification version of the
-<code><a href="#0x1_LibraTimestamp_is_genesis">Self::is_genesis</a></code> function.
+All functions which do not have an
+<code><b>aborts_if</b></code> specification in this module are implicitly declared
+to never abort.
 
 
-<a name="0x1_LibraTimestamp_spec_is_genesis"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>(): bool {
-    !exists&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
-}
-</code></pre>
-
-
-Helper to express !is_genesis.
-
-
-<a name="0x1_LibraTimestamp_spec_is_up"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_up">spec_is_up</a>(): bool {
-    !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>()
-}
-</code></pre>
-
-
-Specification version of the
-<code><a href="#0x1_LibraTimestamp_is_not_initialized">Self::is_not_initialized</a></code> function.
-
-
-<a name="0x1_LibraTimestamp_spec_is_not_initialized"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>(): bool {
-    !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>() || <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0
-}
-</code></pre>
-
-
-True if the association root account has a CurrentTimeMicroseconds.
-
-
-<a name="0x1_LibraTimestamp_spec_root_ctm_initialized"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>(): bool {
-    exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
-}
-</code></pre>
-
-
-Auxiliary function to get the association's Unix time in microseconds.
-
-
-<a name="0x1_LibraTimestamp_spec_now_microseconds"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
-    <b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).microseconds
-}
+<pre><code>pragma aborts_if_is_strict;
 </code></pre>
 
 
 
-<a name="0x1_LibraTimestamp_@Persistence_of_Initialization"></a>
-
-#### Persistence of Initialization
-
-
-After genesis, the time stamp and time-has-started marker stay published.
+After genesis, the time stamp and time-has-started marker are published.
 
 
 <pre><code><b>invariant</b> [<b>global</b>]
-    <a href="#0x1_LibraTimestamp_spec_is_up">spec_is_up</a>() ==&gt;
-        exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) &&
-        exists&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>() ==&gt; exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
-
-
-
-<a name="0x1_LibraTimestamp_@Global_Clock_Time_Progression"></a>
-
-#### Global Clock Time Progression
 
 
 After genesis, time progresses monotonically.
 
 
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
-    <a href="#0x1_LibraTimestamp_spec_is_up">spec_is_up</a>() ==&gt; <b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
+    <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>() ==&gt; <b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
 
 
@@ -422,10 +446,23 @@ After genesis, time progresses monotonically.
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
-<b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
-<b>ensures</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
+<pre><code><b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_timer_initialized">spec_timer_initialized</a>() with Errors::ALREADY_PUBLISHED;
+<b>ensures</b> <a href="#0x1_LibraTimestamp_spec_timer_initialized">spec_timer_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0;
+</code></pre>
+
+
+A helper to check whether the association root account has a CurrentTimeMicroseconds.
+
+
+<a name="0x1_LibraTimestamp_spec_timer_initialized"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_timer_initialized">spec_timer_initialized</a>(): bool {
+exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
+}
 </code></pre>
 
 
@@ -440,19 +477,17 @@ After genesis, time progresses monotonically.
 
 
 
-This function is not directly verified but only in its calling context. Once it publishes
-the
-<code><a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a></code> resource, all invariants in the system which describe the resource state
-after genesis will be asserted. This function is only called from genesis, which must
-establish a state which passes the verification steps implied by calling this function.
+This function can currently not be verified standalone. Once we publish the
+<code><a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a></code> resource, all invariants in the system which describe the state of the
+system after genesis will be asserted. The caller need to establish a state where
+these assertions verify.
 
 
 <pre><code>pragma verify = <b>false</b>;
-<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
-<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
-<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
-<b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() != 0;
-<b>ensures</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
+<b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_timer_initialized">spec_timer_initialized</a>() || <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() != 0 with Errors::NOT_PUBLISHED;
+<b>ensures</b> <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>();
 </code></pre>
 
 
@@ -468,11 +503,18 @@ establish a state which passes the verification steps implied by calling this fu
 
 
 
-<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
-<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>();
-<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
-<b>aborts_if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && (timestamp != <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
-<b>aborts_if</b> (proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && !(timestamp &gt; <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+<pre><code><b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>;
+<a name="0x1_LibraTimestamp_now$12"></a>
+<b>let</b> now = <b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+<b>aborts_if</b> [<b>assume</b>]
+    (<b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
+        now != timestamp
+     } <b>else</b>  {
+        now &gt;= timestamp
+     }
+    )
+    with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == timestamp;
 </code></pre>
 
@@ -489,50 +531,88 @@ establish a state which passes the verification steps implied by calling this fu
 
 
 
-<pre><code><b>include</b> <a href="#0x1_LibraTimestamp_TimeAccessAbortsIf">TimeAccessAbortsIf</a>;
-</code></pre>
-
-
-
-<a name="0x1_LibraTimestamp_Specification_is_genesis"></a>
-
-### Function `is_genesis`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(): bool
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNoTime">AbortsIfNoTime</a>;
+<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
+<a name="0x1_LibraTimestamp_spec_now_microseconds"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
+<b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
+}
+</code></pre>
+
+
+Schema specifying that a function aborts if the timer is not published.
+
+
+<a name="0x1_LibraTimestamp_AbortsIfNoTime"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_AbortsIfNoTime">AbortsIfNoTime</a> {
+    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_timer_initialized">spec_timer_initialized</a>() with Errors::NOT_PUBLISHED;
+}
 </code></pre>
 
 
 
-<a name="0x1_LibraTimestamp_Specification_is_not_initialized"></a>
+<a name="0x1_LibraTimestamp_Specification_assert_genesis"></a>
 
-### Function `is_not_initialized`
+### Function `assert_genesis`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_not_initialized">is_not_initialized</a>(): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>()
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>();
+<pre><code>pragma opaque = <b>true</b>;
+<b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a>;
+</code></pre>
+
+
+Helper schema to specify that a function aborts if not in genesis.
+
+
+<a name="0x1_LibraTimestamp_AbortsIfNotGenesis"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a> {
+    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>() with Errors::INVALID_STATE;
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_Specification_assert_operating"></a>
+
+### Function `assert_operating`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_operating">assert_operating</a>()
 </code></pre>
 
 
 
 
-<a name="0x1_LibraTimestamp_TimeAccessAbortsIf"></a>
+<pre><code>pragma opaque = <b>true</b>;
+<b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
+</code></pre>
 
 
-<pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_TimeAccessAbortsIf">TimeAccessAbortsIf</a> {
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+Helper schema to specify that a function aborts if not operating.
+
+
+<a name="0x1_LibraTimestamp_AbortsIfNotOperating"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a> {
+    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>() with Errors::INVALID_STATE;
 }
 </code></pre>

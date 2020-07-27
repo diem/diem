@@ -1,6 +1,7 @@
 address 0x1 {
 module DesignatedDealer {
-    use 0x1::Libra::{Self, Libra};
+    use 0x1::Errors;
+    use 0x1::Libra;
     use 0x1::LibraTimestamp;
     use 0x1::Vector;
     use 0x1::Event;
@@ -44,12 +45,12 @@ module DesignatedDealer {
     }
 
     /// Error codes
-    const EACCOUNT_NOT_TREASURY_COMPLIANCE: u64 = 0;
-    const EINVALID_TIER_ADDITION: u64 = 1;
-    const EINVALID_TIER_START: u64 = 2;
-    const EINVALID_TIER_INDEX: u64 = 3;
-    const EINVALID_MINT_AMOUNT: u64 = 4;
-    const ENOT_A_DD: u64 = 5;
+    const EDEALER: u64 = 0;
+    const ELIMIT: u64 = 1;
+    const EINVALID_TIER_ADDITION: u64 = 2;
+    const EINVALID_TIER_START: u64 = 3;
+    const EINVALID_TIER_INDEX: u64 = 4;
+    const EINVALID_MINT_AMOUNT: u64 = 5;
     const EINVALID_AMOUNT_FOR_TIER: u64 = 6;
 
     /// Number of microseconds in a day
@@ -77,7 +78,8 @@ module DesignatedDealer {
         tc_account: &signer,
         add_all_currencies: bool,
     ) acquires TierInfo {
-        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+        Roles::assert_treasury_compliance(tc_account);
+        assert(!exists<Dealer>(Signer::address_of(tc_account)), Errors::already_published(EDEALER));
         move_to(dd, Dealer { mint_event_handle: Event::new_event_handle<ReceivedMintEvent>(dd) });
         if (add_all_currencies) {
             add_currency<Coin1>(dd, tc_account);
@@ -100,10 +102,11 @@ module DesignatedDealer {
     /// multi-signer transactions in order to add a new currency to an existing DD.
     public fun add_currency<CoinType>(dd: &signer, tc_account: &signer)
     acquires TierInfo {
+        Roles::assert_treasury_compliance(tc_account);
         let dd_addr = Signer::address_of(dd);
-        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-        assert(exists_at(dd_addr), ENOT_A_DD);
+        assert(exists_at(dd_addr), Errors::not_published(EDEALER));
         Libra::publish_preburn_to_account<CoinType>(dd, tc_account);
+        assert(!exists<TierInfo<CoinType>>(dd_addr), Errors::already_published(EDEALER));
         move_to(dd, TierInfo<CoinType> {
             window_start: LibraTimestamp::now_microseconds(),
             window_inflow: 0,
@@ -126,13 +129,13 @@ module DesignatedDealer {
         dd_addr: address,
         tier_upperbound: u64
     ) acquires TierInfo {
-        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+        Roles::assert_treasury_compliance(tc_account);
         let tiers = &mut borrow_global_mut<TierInfo<CoinType>>(dd_addr).tiers;
         let number_of_tiers = Vector::length(tiers);
-        assert(number_of_tiers + 1 <= MAX_NUM_TIERS, EINVALID_TIER_ADDITION);
+        assert(number_of_tiers + 1 <= MAX_NUM_TIERS, Errors::invalid_argument(EINVALID_TIER_ADDITION));
         if (number_of_tiers > 0) {
             let last_tier = *Vector::borrow(tiers, number_of_tiers - 1);
-            assert(last_tier < tier_upperbound, EINVALID_TIER_START);
+            assert(last_tier < tier_upperbound, Errors::invalid_argument(EINVALID_TIER_START));
         };
         Vector::push_back(tiers, tier_upperbound);
     }
@@ -149,22 +152,28 @@ module DesignatedDealer {
         tier_index: u64,
         new_upperbound: u64
     ) acquires TierInfo {
-        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+        Roles::assert_treasury_compliance(tc_account);
         let tiers = &mut borrow_global_mut<TierInfo<CoinType>>(dd_addr).tiers;
         let number_of_tiers = Vector::length(tiers);
-        assert(tier_index < number_of_tiers, EINVALID_TIER_INDEX);
+        assert(tier_index < number_of_tiers, Errors::invalid_argument(EINVALID_TIER_INDEX));
         // Make sure that this new start for the tier is consistent with the tier above and below it.
         let tier = Vector::borrow(tiers, tier_index);
         if (*tier == new_upperbound) return;
         if (*tier < new_upperbound) {
             let next_tier_index = tier_index + 1;
             if (next_tier_index < number_of_tiers) {
-                assert(new_upperbound < *Vector::borrow(tiers, next_tier_index), EINVALID_TIER_START);
+                assert(
+                    new_upperbound < *Vector::borrow(tiers, next_tier_index),
+                    Errors::invalid_argument(EINVALID_TIER_START)
+                );
             };
         };
         if (*tier > new_upperbound && tier_index > 0) {
             let prev_tier_index = tier_index - 1;
-            assert(new_upperbound > *Vector::borrow(tiers, prev_tier_index), EINVALID_TIER_START);
+            assert(
+                new_upperbound > *Vector::borrow(tiers, prev_tier_index),
+                Errors::invalid_argument(EINVALID_TIER_START)
+            );
         };
         *Vector::borrow_mut(tiers, tier_index) = new_upperbound;
     }
@@ -180,10 +189,10 @@ module DesignatedDealer {
         amount: u64,
         dd_addr: address,
         tier_index: u64,
-    ): Libra<CoinType> acquires Dealer, TierInfo {
-        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-        assert(amount > 0, EINVALID_MINT_AMOUNT);
-        assert(exists_at(dd_addr), ENOT_A_DD);
+    ): Libra::Libra<CoinType> acquires Dealer, TierInfo {
+        Roles::assert_treasury_compliance(tc_account);
+        assert(amount > 0, Errors::invalid_argument(EINVALID_MINT_AMOUNT));
+        assert(exists_at(dd_addr), Errors::not_published(EDEALER));
 
         validate_and_record_mint<CoinType>(dd_addr, amount, tier_index);
         // Send ReceivedMintEvent
@@ -214,14 +223,9 @@ module DesignatedDealer {
     public fun exists_at(dd_addr: address): bool {
         exists<Dealer>(dd_addr)
     }
-    spec fun exists_at {
-        pragma verify = true;
-        ensures result == spec_exists_at(dd_addr);
-    }
-    spec module {
-        define spec_exists_at(addr: address): bool {
-            exists<Dealer>(addr)
-        }
+    spec schema AbortsIfNotExistAt{
+        dd_addr: address;
+        aborts_if !exists<Dealer>(dd_addr) with Errors::NOT_PUBLISHED;
     }
 
     /// Validate and record the minting of `amount` of `CoinType` coins against
@@ -236,9 +240,9 @@ module DesignatedDealer {
         let new_inflow = cur_inflow + amount;
         let tiers = &mut tier.tiers;
         let number_of_tiers = Vector::length(tiers);
-        assert(tier_index < number_of_tiers, EINVALID_TIER_INDEX);
+        assert(tier_index < number_of_tiers, Errors::invalid_argument(EINVALID_TIER_INDEX));
         let tier_upperbound: u64 = *Vector::borrow(tiers, tier_index);
-        assert(new_inflow <= tier_upperbound, EINVALID_AMOUNT_FOR_TIER);
+        assert(new_inflow <= tier_upperbound, Errors::invalid_argument(EINVALID_AMOUNT_FOR_TIER));
         tier.window_inflow = new_inflow;
     }
 

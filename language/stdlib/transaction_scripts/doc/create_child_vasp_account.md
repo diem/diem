@@ -125,7 +125,7 @@ pragma aborts_if_is_partial = <b>true</b>;
 
 
 <pre><code><b>aborts_if</b> !<a href="../../modules/doc/Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
-<b>aborts_if</b> !<a href="../../modules/doc/VASP.md#0x1_VASP_spec_is_parent_vasp">VASP::spec_is_parent_vasp</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
+<b>aborts_if</b> !<a href="../../modules/doc/VASP.md#0x1_VASP_is_parent">VASP::is_parent</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
 </code></pre>
 
 
@@ -134,7 +134,7 @@ pragma aborts_if_is_partial = <b>true</b>;
 
 
 <pre><code><b>aborts_if</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(child_address);
-<b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(child_address);
+<b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(child_address);
 </code></pre>
 
 

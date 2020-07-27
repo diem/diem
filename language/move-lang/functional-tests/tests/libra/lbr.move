@@ -38,7 +38,7 @@ fun main(account: &signer) {
    Offer::create(account, Libra::remove_burn_capability<LBR>(account), {{alice}});
 }
 }
-// check: MISSING_DATA
+// check: "ABORTED { code: 4"
 
 // Check that is_lbr only returns true for LBR
 //! new-transaction
@@ -83,13 +83,13 @@ fun main(account: &signer) {
 //! sender: alice
 //! args: 10
 stdlib_script::mint_lbr
-// check: "Keep(ABORTED { code: 18,"
+// check: "Keep(ABORTED { code: 4615,"
 
 //! new-transaction
 //! sender: alice
 //! args: 0
 stdlib_script::mint_lbr
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 module Holder {
@@ -98,6 +98,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: blessed
@@ -114,7 +115,7 @@ fun main(account: &signer) {
     Holder::hold(account, LBR::create(10, c1, c2));
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: blessed
@@ -131,4 +132,4 @@ fun main(account: &signer) {
     Holder::hold(account, LBR::create(10, c1, c2));
 }
 }
-// check: "Keep(ABORTED { code: 3,"
+// check: "Keep(ABORTED { code: 519,"

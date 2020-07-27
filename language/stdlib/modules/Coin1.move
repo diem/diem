@@ -3,14 +3,20 @@ address 0x1 {
 module Coin1 {
     use 0x1::AccountLimits;
     use 0x1::Libra;
+    use 0x1::LibraTimestamp;
     use 0x1::FixedPoint32;
 
     struct Coin1 { }
+
+    spec module {
+        invariant [global] LibraTimestamp::is_operating() ==> Libra::is_currency<Coin1>();
+    }
 
     public fun initialize(
         lr_account: &signer,
         tc_account: &signer,
     ) {
+        LibraTimestamp::assert_genesis();
         Libra::register_SCS_currency<Coin1>(
             lr_account,
             tc_account,

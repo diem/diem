@@ -250,7 +250,7 @@ fn zero_amount_peer_to_peer() {
         &output.status(),
         &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
             known_locations::account_module_abort(),
-            2
+            519
         )),
     ));
 }

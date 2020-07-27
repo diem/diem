@@ -7,6 +7,7 @@
 
 -  [Struct `Coin2`](#0x1_Coin2_Coin2)
 -  [Function `initialize`](#0x1_Coin2_initialize)
+-  [Specification](#0x1_Coin2_Specification)
 
 
 
@@ -57,6 +58,7 @@
     lr_account: &signer,
     tc_account: &signer,
 ) {
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     <a href="Libra.md#0x1_Libra_register_SCS_currency">Libra::register_SCS_currency</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;(
         lr_account,
         tc_account,
@@ -72,3 +74,12 @@
 
 
 </details>
+
+<a name="0x1_Coin2_Specification"></a>
+
+## Specification
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;<a href="#0x1_Coin2">Coin2</a>&gt;();
+</code></pre>

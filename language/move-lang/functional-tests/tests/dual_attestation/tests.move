@@ -18,8 +18,7 @@ script{
         DualAttestation::set_microlibra_limit(not_blessed, 99);
     }
 }
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -42,7 +41,7 @@ script{
         );
     }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 1283,"
 
 //! new-transaction
 //! sender: blessed
@@ -55,7 +54,7 @@ script{
         );
     }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 1283,"
 
 //! new-transaction
 //! sender: libraroot
@@ -75,7 +74,7 @@ script{
         );
     }
 }
-// check: "Keep(ABORTED { code: 3,"
+// check: "Keep(ABORTED { code: 770,"
 
 //! new-transaction
 //! sender: blessed
@@ -85,20 +84,10 @@ script{
         DualAttestation::rotate_base_url(account, x"");
     }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: blessed
-script{
-    use 0x1::DualAttestation;
-    fun main(account: &signer) {
-        DualAttestation::rotate_compliance_public_key(account, x"");
-    }
-}
-// check: "Keep(ABORTED { code: 2,"
-
-//! new-transaction
-//! sender: bob
 script{
     use 0x1::DualAttestation;
     fun main(account: &signer) {
@@ -112,10 +101,10 @@ script{
 script{
     use 0x1::DualAttestation;
     fun main(account: &signer) {
-        DualAttestation::initialize(account);
+        DualAttestation::rotate_compliance_public_key(account, x"");
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 519,"
 
 //! new-transaction
 //! sender: bob
@@ -125,4 +114,14 @@ script{
         DualAttestation::initialize(account);
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"
+
+//! new-transaction
+//! sender: bob
+script{
+    use 0x1::DualAttestation;
+    fun main(account: &signer) {
+        DualAttestation::initialize(account);
+    }
+}
+// check: "Keep(ABORTED { code: 1,"

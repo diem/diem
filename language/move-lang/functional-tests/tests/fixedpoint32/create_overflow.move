@@ -10,4 +10,4 @@ fun main() {
     assert(FixedPoint32::get_raw_value(f1) == 999, 1);
 }
 }
-// check: ARITHMETIC_ERROR
+// check: "Keep(ABORTED { code: 1032"

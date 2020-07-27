@@ -8,7 +8,7 @@ script {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 0
+// check: 1
 
 //! new-transaction
 script {
@@ -20,7 +20,7 @@ script {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 3
+// check: 261
 
 //! new-transaction
 script {
@@ -32,7 +32,7 @@ script {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 3
+// check: 516
 
 //! new-transaction
 script {
@@ -44,7 +44,7 @@ script {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 0
+// check: 1
 
 //! new-transaction
 module Holder {
@@ -53,6 +53,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: libraroot
@@ -66,7 +67,7 @@ script {
         LibraConfig::set(account, 1);
     }
 }
-// check: "Keep(ABORTED { code: 4,"
+// check: "Keep(ABORTED { code: 516,"
 
 //! new-transaction
 //! sender: blessed
@@ -80,4 +81,4 @@ script {
         LibraConfig::set(account, 1);
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 2,"

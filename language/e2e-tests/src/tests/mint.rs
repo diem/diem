@@ -104,7 +104,7 @@ fn tiered_mint_designated_dealer() {
         &output.status(),
         &TransactionStatus::Keep(KeptVMStatus::MoveAbort(
             known_locations::designated_dealer_module_abort(),
-            3
+            1031
         )),
     ));
 }

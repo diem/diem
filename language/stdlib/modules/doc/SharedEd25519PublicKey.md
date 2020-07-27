@@ -70,6 +70,7 @@
         rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account)
     };
     <a href="#0x1_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(&<b>mut</b> t, key);
+    <b>assert</b>(!exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ESHARED_KEY));
     move_to(account, t);
 }
 </code></pre>
@@ -97,7 +98,7 @@
     // Cryptographic check of <b>public</b> key validity
     <b>assert</b>(
         <a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
-        EMALFORMED_PUBLIC_KEY
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_PUBLIC_KEY)
     );
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(
         &shared_key.rotation_cap,
@@ -151,6 +152,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_key">key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
+    <b>assert</b>(exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ESHARED_KEY));
     *&borrow_global&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr).key
 }
 </code></pre>

@@ -5,7 +5,7 @@ fun main() {
     ValidatorOperatorConfig::get_human_name({{default}});
 }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: blessed
@@ -15,4 +15,4 @@ fun main(account: &signer) {
     ValidatorOperatorConfig::publish(account, account, x"");
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 2,"

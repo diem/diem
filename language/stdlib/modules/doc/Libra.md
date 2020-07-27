@@ -29,6 +29,7 @@
 -  [Function `burn_with_capability`](#0x1_Libra_burn_with_capability)
 -  [Function `burn_with_resource_cap`](#0x1_Libra_burn_with_resource_cap)
 -  [Function `cancel_burn_with_capability`](#0x1_Libra_cancel_burn_with_capability)
+-  [Function `burn_now`](#0x1_Libra_burn_now)
 -  [Function `remove_burn_capability`](#0x1_Libra_remove_burn_capability)
 -  [Function `preburn_value`](#0x1_Libra_preburn_value)
 -  [Function `zero`](#0x1_Libra_zero)
@@ -65,15 +66,20 @@
     -  [Function `preburn_to`](#0x1_Libra_Specification_preburn_to)
     -  [Function `burn_with_capability`](#0x1_Libra_Specification_burn_with_capability)
     -  [Function `burn_with_resource_cap`](#0x1_Libra_Specification_burn_with_resource_cap)
+    -  [Function `burn_now`](#0x1_Libra_Specification_burn_now)
+    -  [Function `remove_burn_capability`](#0x1_Libra_Specification_remove_burn_capability)
     -  [Function `split`](#0x1_Libra_Specification_split)
     -  [Function `withdraw`](#0x1_Libra_Specification_withdraw)
     -  [Function `withdraw_all`](#0x1_Libra_Specification_withdraw_all)
     -  [Function `join`](#0x1_Libra_Specification_join)
+    -  [Function `deposit`](#0x1_Libra_Specification_deposit)
     -  [Function `destroy_zero`](#0x1_Libra_Specification_destroy_zero)
     -  [Function `register_currency`](#0x1_Libra_Specification_register_currency)
     -  [Function `register_SCS_currency`](#0x1_Libra_Specification_register_SCS_currency)
+    -  [Function `approx_lbr_for_value`](#0x1_Libra_Specification_approx_lbr_for_value)
     -  [Function `currency_code`](#0x1_Libra_Specification_currency_code)
     -  [Function `update_lbr_exchange_rate`](#0x1_Libra_Specification_update_lbr_exchange_rate)
+    -  [Function `assert_is_currency`](#0x1_Libra_Specification_assert_is_currency)
     -  [Module Specification](#0x1_Libra_@Module_Specification)
         -  [Minting](#0x1_Libra_@Minting)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
@@ -699,12 +705,9 @@ config, and publishes the
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(
     config_account: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     // Operational constraint
-    <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        EINVALID_SINGLETON_ADDRESS
-    );
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(config_account);
     <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
 }
 </code></pre>
@@ -723,9 +726,7 @@ Publishes the
 <code>CoinType</code> currency under
 <code>account</code>.
 <code>CoinType</code>
-must be a registered currency type.
-The caller must pass a
-<code>TreasuryComplianceRole</code> capability.
+must be a registered currency type. The caller must pass a treasury compliance account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;, tc_account: &signer)
@@ -742,8 +743,12 @@ The caller must pass a
     cap: <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;,
     tc_account: &signer,
 ) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EBURN_CAPABILITY)
+    );
     move_to(account, cap)
 }
 </code></pre>
@@ -813,6 +818,8 @@ published
     account: &signer,
     preburn_address: address
 ) <b>acquires</b> <a href="#0x1_Libra_BurnCapability">BurnCapability</a>, <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EBURN_CAPABILITY));
     <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>(
         preburn_address,
         borrow_global&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
@@ -852,9 +859,11 @@ outstanding in the
     account: &signer,
     preburn_address: address
 ): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_Libra_BurnCapability">BurnCapability</a>, <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EBURN_CAPABILITY));
     <a href="#0x1_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>(
         preburn_address,
-        borrow_global&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
+        borrow_global&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
     )
 }
 </code></pre>
@@ -895,7 +904,8 @@ reference.
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-    <b>assert</b>(info.can_mint, EMINTING_NOT_ALLOWED);
+    <b>assert</b>(info.can_mint, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EMINTING_NOT_ALLOWED));
+    <b>assert</b>(MAX_U128 - info.total_value &gt;= (value <b>as</b> u128), <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ECURRENCY_INFO));
     info.total_value = info.total_value + (value <b>as</b> u128);
     // don't emit mint events for synthetic currenices
     <b>if</b> (!info.is_synthetic) {
@@ -952,10 +962,11 @@ the
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> coin_value = <a href="#0x1_Libra_value">value</a>(&coin);
     // Throw <b>if</b> already occupied
-    <b>assert</b>(<a href="#0x1_Libra_value">value</a>(&preburn.to_burn) == 0, 6);
+    <b>assert</b>(<a href="#0x1_Libra_value">value</a>(&preburn.to_burn) == 0, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EPREBURN_OCCUPIED));
     <a href="#0x1_Libra_deposit">deposit</a>(&<b>mut</b> preburn.to_burn, coin);
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <b>assert</b>(MAX_U64 - info.preburn_value &gt;= coin_value, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ECOIN));
     info.preburn_value = info.preburn_value + coin_value;
     // don't emit preburn events for synthetic currencies
     <b>if</b> (!info.is_synthetic) {
@@ -995,7 +1006,7 @@ Create a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(
     tc_account: &signer
 ): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { to_burn: <a href="#0x1_Libra_zero">zero</a>&lt;CoinType&gt;() }
 }
@@ -1032,8 +1043,10 @@ this resource for the designated dealer.
     account: &signer,
     tc_account: &signer
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(!<a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), EIS_SYNTHETIC_CURRENCY);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_designated_dealer_role">Roles::has_designated_dealer_role</a>(account), ENOT_DESIGNATED_DEALER);
+    <a href="Roles.md#0x1_Roles_assert_designated_dealer">Roles::assert_designated_dealer</a>(account);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <b>assert</b>(!<a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EIS_SYNTHETIC_CURRENCY));
+    <b>assert</b>(!exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EPREBURN));
     move_to(account, <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_account))
 }
 </code></pre>
@@ -1070,6 +1083,7 @@ Calls to this function will fail if
     coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(sender), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EPREBURN));
     <a href="#0x1_Libra_preburn_with_resource">preburn_with_resource</a>(coin, borrow_global_mut&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(sender), sender);
 }
 </code></pre>
@@ -1092,7 +1106,7 @@ Calls to this function will fail if the there is no
 <code><a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
 resource under
 <code>preburn_address</code>, or, if the preburn to_burn area for
-<code>CoinType</code> is empty (error code 7).
+<code>CoinType</code> is empty.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
@@ -1109,6 +1123,7 @@ resource under
     capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
     // destroy the coin in the preburn to_burn area
+    <b>assert</b>(exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EPREBURN));
     <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>(
         borrow_global_mut&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address),
         preburn_address,
@@ -1154,12 +1169,15 @@ resource under
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // Abort <b>if</b> no coin present in preburn area
-    <b>assert</b>(preburn.to_burn.value &gt; 0, 7);
+    <b>assert</b>(preburn.to_burn.value &gt; 0, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EPREBURN_EMPTY));
     // destroy the coin in <a href="#0x1_Libra_Preburn">Preburn</a> area
     <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <b>assert</b>(info.total_value &gt;= (value <b>as</b> u128), <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ECURRENCY_INFO));
     info.total_value = info.total_value - (value <b>as</b> u128);
+    <b>assert</b>(info.preburn_value &gt;= value, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EPREBURN));
     info.preburn_value = info.preburn_value - value;
     // don't emit burn events for synthetic currencies
     <b>if</b> (!info.is_synthetic) {
@@ -1214,6 +1232,7 @@ at
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>let</b> amount = <a href="#0x1_Libra_value">value</a>(&coin);
+    <b>assert</b>(info.preburn_value &gt;= amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EPREBURN));
     info.preburn_value = info.preburn_value - amount;
     // Don't emit cancel burn events for synthetic currencies. cancel burn shouldn't be be used
     // for synthetics in the first place
@@ -1229,6 +1248,41 @@ at
     };
 
     coin
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Libra_burn_now"></a>
+
+## Function `burn_now`
+
+A shortcut for immediately burning a coin. This calls preburn followed by a subsequent burn, and is
+used for administrative burns, like unpacking an LBR coin or charging fees.
+> TODO(wrwg): consider removing complexity here by removing the need for a preburn resource. The preburn
+> resource is required to have 0 value on entry and will have so also after this call, so it is redundant.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_now">burn_now</a>&lt;CoinType&gt;(coin: <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_now">burn_now</a>&lt;CoinType&gt;(
+    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;,
+    preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;,
+    preburn_address: address,
+    capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
+) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <b>assert</b>(coin.value &gt; 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ECOIN));
+    <a href="#0x1_Libra_preburn_with_resource">preburn_with_resource</a>(coin, preburn, preburn_address);
+    <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>(preburn, preburn_address, capability);
 }
 </code></pre>
 
@@ -1260,7 +1314,9 @@ published
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_remove_burn_capability">remove_burn_capability</a>&lt;CoinType&gt;(account: &signer): <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 <b>acquires</b> <a href="#0x1_Libra_BurnCapability">BurnCapability</a> {
-    move_from&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_requires_privilege">Errors::requires_privilege</a>(EBURN_CAPABILITY));
+    move_from&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -1290,6 +1346,7 @@ currency).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_preburn_value">preburn_value</a>&lt;CoinType&gt;(): u64 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value
 }
 </code></pre>
@@ -1418,7 +1475,7 @@ value of the passed-in
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; {
     // Check that `amount` is less than the coin's value
-    <b>assert</b>(coin.value &gt;= amount, EAMOUNT_EXCEEDS_COIN_VALUE);
+    <b>assert</b>(coin.value &gt;= amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EAMOUNT_EXCEEDS_COIN_VALUE));
     coin.value = coin.value - amount;
     <a href="#0x1_Libra">Libra</a> { value: amount }
 }
@@ -1506,6 +1563,7 @@ The
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;, check: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = check;
+    <b>assert</b>(MAX_U64 - coin.value &gt;= value, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ECOIN));
     coin.value = coin.value + value;
 }
 </code></pre>
@@ -1539,7 +1597,7 @@ a
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = coin;
-    <b>assert</b>(value == 0, EDESTRUCTION_OF_NONZERO_COIN)
+    <b>assert</b>(value == 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EDESTRUCTION_OF_NONZERO_COIN))
 }
 </code></pre>
 
@@ -1592,13 +1650,13 @@ adds the currency to the set of
     currency_code: vector&lt;u8&gt;,
 ): (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
 {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_register_new_currency_privilege">Roles::has_register_new_currency_privilege</a>(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_register_new_currency_privilege">Roles::has_register_new_currency_privilege</a>(lr_account), <a href="Errors.md#0x1_Errors_requires_role">Errors::requires_role</a>(EREGISTRATION_PRIVILEGE));
     // Operational constraint that it must be stored under a specific address.
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_currency_info">CoreAddresses::assert_currency_info</a>(lr_account);
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(),
-        EINVALID_SINGLETON_ADDRESS
+        !exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECURRENCY_INFO)
     );
-
     move_to(lr_account, <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
         total_value: 0,
         preburn_value: 0,
@@ -1655,7 +1713,7 @@ accounts.
     fractional_part: u64,
     currency_code: vector&lt;u8&gt;,
 ) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> (mint_cap, burn_cap) =
         <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(
             lr_account,
@@ -1665,8 +1723,10 @@ accounts.
             fractional_part,
             currency_code,
         );
-    // DD: converted <b>to</b> move_to because of problems proving <b>invariant</b>.
-    // publish_mint_capability&lt;CoinType&gt;(tc_account, mint_cap, tc_account);
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EMINT_CAPABILITY)
+    );
     move_to(tc_account, mint_cap);
     <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(tc_account, burn_cap, tc_account);
 }
@@ -1695,6 +1755,7 @@ Returns the total amount of currency minted of type
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_market_cap">market_cap</a>&lt;CoinType&gt;(): u128
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
 }
 </code></pre>
@@ -1808,6 +1869,7 @@ Returns
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(): bool <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     !info.is_synthetic
 }
@@ -1871,6 +1933,7 @@ in its
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_scaling_factor">scaling_factor</a>&lt;CoinType&gt;(): u64
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).scaling_factor
 }
 </code></pre>
@@ -1899,6 +1962,7 @@ Returns the representable (i.e. real-world) fractional part for the
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_fractional_part">fractional_part</a>&lt;CoinType&gt;(): u64
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).fractional_part
 }
 </code></pre>
@@ -1927,6 +1991,7 @@ its
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;(): vector&lt;u8&gt;
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     *&borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).currency_code
 }
 </code></pre>
@@ -1959,7 +2024,7 @@ Updates the
     tc_account: &signer,
     lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;FromCoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -1997,6 +2062,7 @@ Returns the (rough) exchange rate between
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     *&borrow_global&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
 }
 </code></pre>
@@ -2035,7 +2101,7 @@ start out in the default state of
     can_mint: bool,
     )
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
@@ -2054,7 +2120,7 @@ Asserts that
 <code>CoinType</code> is a registered currency.
 
 
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;()
 </code></pre>
 
 
@@ -2063,8 +2129,8 @@ Asserts that
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;() {
-    <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), ENOT_A_REGISTERED_CURRENCY);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;() {
+    <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ECURRENCY_INFO));
 }
 </code></pre>
 
@@ -2088,7 +2154,8 @@ Asserts that
 
 
 <pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;() <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(<a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(), ENOT_AN_SCS_CURRENCY);
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
+    <b>assert</b>(<a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ECURRENCY_INFO));
 }
 </code></pre>
 
@@ -2099,20 +2166,6 @@ Asserts that
 <a name="0x1_Libra_Specification"></a>
 
 ## Specification
-
-
-
-<a name="0x1_Libra_PublishBurnCapAbortsIfs"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt; {
-    account: &signer;
-    tc_account: &signer;
-    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
-    <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-}
-</code></pre>
-
 
 
 <a name="0x1_Libra_Specification_publish_burn_capability"></a>
@@ -2132,6 +2185,19 @@ Asserts that
 
 
 
+
+<a name="0x1_Libra_PublishBurnCapAbortsIfs"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt; {
+    account: &signer;
+    tc_account: &signer;
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::ALREADY_PUBLISHED;
+}
+</code></pre>
+
+
 Returns true if a BurnCapability for CoinType exists at addr.
 
 
@@ -2139,7 +2205,7 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 <pre><code><b>define</b> <a href="#0x1_Libra_spec_has_burn_cap">spec_has_burn_cap</a>&lt;CoinType&gt;(addr: address): bool {
-    exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
+exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
 }
 </code></pre>
 
@@ -2174,8 +2240,8 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code>pragma verify=<b>false</b>;
-<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code>pragma verify = <b>false</b>;
+<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::NOT_PUBLISHED;
 </code></pre>
 
 
@@ -2203,9 +2269,9 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt; {
     value: u64;
-    <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-    <b>aborts_if</b> !<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().can_mint;
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value + value &gt; max_u128();
+    <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> !<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().can_mint with Errors::INVALID_STATE;
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value + value &gt; max_u128() with Errors::LIMIT_EXCEEDED;
 }
 </code></pre>
 
@@ -2237,9 +2303,22 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
-<b>aborts_if</b> preburn.to_burn.value != 0;
+<pre><code><b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_PreburnWithResourceAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt; {
+    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> preburn.to_burn.value != 0 with Errors::INVALID_STATE;
+    <b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
+}
 </code></pre>
 
 
@@ -2250,8 +2329,8 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt; {
     coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value + coin.value &gt; max_u64();
+    <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value + coin.value &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
 }
 </code></pre>
 
@@ -2282,7 +2361,11 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+<b>aborts_if</b> <a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;() with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::ALREADY_PUBLISHED;
 </code></pre>
 
 
@@ -2298,8 +2381,9 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)).to_burn.value != 0;
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::NOT_PUBLISHED;
+<b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)).to_burn.value != 0
+    with Errors::INVALID_STATE;
 <b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))};
 </code></pre>
@@ -2317,7 +2401,7 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address);
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) with Errors::NOT_PUBLISHED;
 <b>include</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 <b>include</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 </code></pre>
@@ -2347,10 +2431,14 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-    <b>aborts_if</b> preburn.to_burn.value == 0;
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value - preburn.to_burn.<a href="#0x1_Libra_value">value</a> &lt; 0;
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value - preburn.to_burn.<a href="#0x1_Libra_value">value</a> &lt; 0;
+    <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <a name="0x1_Libra_to_burn$49"></a>
+    <b>let</b> to_burn = preburn.to_burn.value;
+    <a name="0x1_Libra_info$50"></a>
+    <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
+    <b>aborts_if</b> to_burn == 0 with Errors::INVALID_STATE;
+    <b>aborts_if</b> info.total_value &lt; to_burn with Errors::LIMIT_EXCEEDED;
+    <b>aborts_if</b> info.<a href="#0x1_Libra_preburn_value">preburn_value</a> &lt; to_burn with Errors::LIMIT_EXCEEDED;
 }
 </code></pre>
 
@@ -2371,6 +2459,71 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
+<a name="0x1_Libra_Specification_burn_now"></a>
+
+### Function `burn_now`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_now">burn_now</a>&lt;CoinType&gt;(coin: <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_Libra_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
+<b>ensures</b> preburn.to_burn.value == 0;
+<a name="0x1_Libra_info$53"></a>
+<b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
+<b>ensures</b> info.total_value == <b>old</b>(info.total_value) - coin.value;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_BurnNowAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt; {
+    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> coin.value == 0 with Errors::INVALID_ARGUMENT;
+    <b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;;
+    <a name="0x1_Libra_info$51"></a>
+    <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
+    <b>aborts_if</b> info.total_value &lt; coin.value with Errors::LIMIT_EXCEEDED;
+}
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_remove_burn_capability"></a>
+
+### Function `remove_burn_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_remove_burn_capability">remove_burn_capability</a>&lt;CoinType&gt;(account: &signer): <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_Libra_AbortsIfNoBurnCapability">AbortsIfNoBurnCapability</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_AbortsIfNoBurnCapability"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_AbortsIfNoBurnCapability">AbortsIfNoBurnCapability</a>&lt;CoinType&gt; {
+    account: signer;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::REQUIRES_PRIVILEGE;
+}
+</code></pre>
+
+
+
 <a name="0x1_Libra_Specification_split"></a>
 
 ### Function `split`
@@ -2382,7 +2535,7 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> coin.<a href="#0x1_Libra_value">value</a> &lt; amount;
+<pre><code><b>aborts_if</b> coin.<a href="#0x1_Libra_value">value</a> &lt; amount with Errors::LIMIT_EXCEEDED;
 <b>ensures</b> result_1.value == coin.value - amount;
 <b>ensures</b> result_2.value == amount;
 </code></pre>
@@ -2400,9 +2553,23 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> coin.<a href="#0x1_Libra_value">value</a> &lt; amount;
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_Libra_WithdrawAbortsIf">WithdrawAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> coin.value == <b>old</b>(coin.value) - amount;
 <b>ensures</b> result.value == amount;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_WithdrawAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_WithdrawAbortsIf">WithdrawAbortsIf</a>&lt;CoinType&gt; {
+    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    amount: u64;
+    <b>aborts_if</b> coin.<a href="#0x1_Libra_value">value</a> &lt; amount with Errors::LIMIT_EXCEEDED;
+}
 </code></pre>
 
 
@@ -2418,7 +2585,8 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> <b>false</b>;
+<pre><code>pragma opaque;
+<b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result.value == <b>old</b>(coin.value);
 <b>ensures</b> coin.value == 0;
 </code></pre>
@@ -2436,8 +2604,40 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> coin1.value + coin2.value &gt; max_u64();
+<pre><code>pragma opaque;
+<b>aborts_if</b> coin1.value + coin2.value &gt; max_u64() with Errors::LIMIT_EXCEEDED;
 <b>ensures</b> result.value == coin1.value + coin2.value;
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_deposit"></a>
+
+### Function `deposit`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_deposit">deposit</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;, check: <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_Libra_DepositAbortsIf">DepositAbortsIf</a>&lt;CoinType&gt;;
+<b>ensures</b> coin.value == <b>old</b>(coin.value) + check.value;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_DepositAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_DepositAbortsIf">DepositAbortsIf</a>&lt;CoinType&gt; {
+    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    check: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> coin.value + check.value &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
+}
 </code></pre>
 
 
@@ -2453,7 +2653,8 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> coin.value &gt; 0;
+<pre><code>pragma opaque;
+<b>aborts_if</b> coin.value &gt; 0 with Errors::INVALID_ARGUMENT;
 </code></pre>
 
 
@@ -2469,8 +2670,7 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege_addr">Roles::spec_has_register_new_currency_privilege_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-<b>include</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
+<pre><code><b>include</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
 <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value == 0;
 </code></pre>
@@ -2483,10 +2683,12 @@ Returns true if a BurnCapability for CoinType exists at addr.
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt; {
     lr_account: signer;
-    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege_addr">Roles::spec_has_register_new_currency_privilege_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>();
-    <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+    currency_code: vector&lt;u8&gt;;
+    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege_addr">Roles::spec_has_register_new_currency_privilege_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account))
+        with Errors::REQUIRES_ROLE;
+    <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">CoreAddresses::AbortsIfNotCurrencyInfo</a>{account: lr_account};
+    <b>aborts_if</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account))
+        with Errors::ALREADY_PUBLISHED;
     <b>include</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">RegisteredCurrencies::AddCurrencyCodeAbortsIf</a>;
 }
 </code></pre>
@@ -2511,7 +2713,6 @@ Returns true if a BurnCapability for CoinType exists at addr.
 </code></pre>
 
 
-
 Returns the market cap of CoinType.
 
 
@@ -2519,7 +2720,51 @@ Returns the market cap of CoinType.
 
 
 <pre><code><b>define</b> <a href="#0x1_Libra_spec_market_cap">spec_market_cap</a>&lt;CoinType&gt;(): u128 {
-    <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
+<b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
+}
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_approx_lbr_for_value"></a>
+
+### Function `approx_lbr_for_value`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_approx_lbr_for_value">approx_lbr_for_value</a>&lt;FromCoinType&gt;(from_value: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;FromCoinType&gt;;
+<b>ensures</b> result == <a href="#0x1_Libra_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;FromCoinType&gt;(from_value);
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_ApproxLbrForValueAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;CoinType&gt; {
+    from_value: num;
+    <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <a name="0x1_Libra_lbr_exchange_rate$52"></a>
+    <b>let</b> lbr_exchange_rate = <a href="#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;();
+    <b>include</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">FixedPoint32::MultiplyAbortsIf</a>{val: from_value, multiplier: lbr_exchange_rate};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_spec_scaling_factor"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_scaling_factor">spec_scaling_factor</a>&lt;CoinType&gt;(): u64 {
+<b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).scaling_factor
 }
 </code></pre>
 
@@ -2537,19 +2782,8 @@ Returns the market cap of CoinType.
 
 
 <pre><code>pragma opaque;
-<b>include</b> <a href="#0x1_Libra_CurrencyCodeAbortsIf">CurrencyCodeAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
 <b>ensures</b> result == <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().currency_code;
-</code></pre>
-
-
-
-
-<a name="0x1_Libra_CurrencyCodeAbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_CurrencyCodeAbortsIf">CurrencyCodeAbortsIf</a>&lt;CoinType&gt; {
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-}
 </code></pre>
 
 
@@ -2565,7 +2799,49 @@ Returns the market cap of CoinType.
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;FromCoinType&gt;;
+<b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;FromCoinType&gt;().to_lbr_exchange_rate == lbr_exchange_rate;
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_assert_is_currency"></a>
+
+### Function `assert_is_currency`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;()
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_AbortsIfNoCurrency"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt; {
+    <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_AbortsIfNoSCSCurrency"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_AbortsIfNoSCSCurrency">AbortsIfNoSCSCurrency</a>&lt;CoinType&gt; {
+    <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;CoinType&gt;() with Errors::INVALID_STATE;
+}
 </code></pre>
 
 
@@ -2577,8 +2853,6 @@ Returns the market cap of CoinType.
 
 
 Verify all functions in this module.
-> TODO(wrwg): temporarily deactivated as a recent PR destroyed assumptions
-> about coin balance.
 
 
 <pre><code>pragma verify = <b>true</b>;
@@ -2619,10 +2893,11 @@ Specification version of
 
 
 <pre><code><b>define</b> <a href="#0x1_Libra_spec_approx_lbr_for_value">spec_approx_lbr_for_value</a>&lt;CoinType&gt;(value: num):  num {
-    <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(
-        value,
-        <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
-    )
+    <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(value, <a href="#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;())
+}
+<a name="0x1_Libra_spec_lbr_exchange_rate"></a>
+<b>define</b> <a href="#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a> {
+    <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
 }
 <a name="0x1_Libra_spec_is_SCS_currency"></a>
 <b>define</b> <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;CoinType&gt;(): bool {
@@ -2651,40 +2926,6 @@ SCS coins
 
 For an SCS coin, the mint capability cannot move or disappear.
 TODO: Specify that they're published at the one true treasurycompliance address?
-
-If an address has a mint capability, it is an SCS currency.
-
-
-<pre><code><b>invariant</b> [<b>global</b>]
-    forall coin_type: type
-        where (exists addr3: address : <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3)) :
-        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;();
-</code></pre>
-
-
-If there is a pending offer for a mint capability, the coin_type is an SCS currency and
-there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
-
-
-<pre><code><b>invariant</b> [<b>global</b>]
-    forall coin_type: type :
-        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;()
-        && (forall addr3: address : !<a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3));
-<b>invariant</b> [<b>global</b>]
-    forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
-        forall addr1: address, addr2: address
-             where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1) && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr2):
-                  addr1 == addr2;
-<b>invariant</b> <b>update</b> [<b>global</b>]
-    forall coin_type: type:
-        forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)):
-            exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
-<b>invariant</b> [<b>global</b>]
-    forall coin_type: type:
-        forall addr1: address where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1):
-             <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr1);
-</code></pre>
-
 
 
 <a name="0x1_Libra_@Conservation_of_currency"></a>
@@ -2759,5 +3000,6 @@ Only mint and burn functions can change the total amount of currency.
 
 <pre><code><b>apply</b> <a href="#0x1_Libra_TotalValueRemainsSame">TotalValueRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
     <b>except</b> <a href="#0x1_Libra_mint">mint</a>&lt;CoinType&gt;, <a href="#0x1_Libra_mint_with_capability">mint_with_capability</a>&lt;CoinType&gt;,
-    <a href="#0x1_Libra_burn">burn</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;;
+    <a href="#0x1_Libra_burn">burn</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;,
+    <a href="#0x1_Libra_burn_now">burn_now</a>&lt;CoinType&gt;;
 </code></pre>

@@ -2,6 +2,7 @@ address 0x1 {
 
 module LibraSystem {
     use 0x1::CoreAddresses;
+    use 0x1::Errors;
     use 0x1::LibraConfig::{Self, ModifyConfigCapability};
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
@@ -33,14 +34,21 @@ module LibraSystem {
                 validators[i].addr == validators[j].addr ==> i == j;
     }
 
-    const ENOT_GENESIS: u64 = 0;
-    const ENOT_LIBRA_ROOT: u64 = 1;
-    const EINVALID_SINGLETON_ADDRESS: u64 = 2;
-    const EINVALID_PROSPECTIVE_VALIDATOR: u64 = 3;
-    const EALREADY_A_VALIDATOR: u64 = 4;
-    const ENOT_AN_ACTIVE_VALIDATOR: u64 = 5;
-    const EINVALID_TRANSACTION_SENDER: u64 = 6;
-    const ENO_VALIDATOR_OPERATOR_ROLE: u64 = 7;
+    spec module {
+        /// After genesis, the `LibraSystem` configuration is published, as well as the capability
+        /// to modify it.
+        invariant [global] LibraTimestamp::is_operating() ==>
+            LibraConfig::spec_is_published<LibraSystem>() &&
+            exists<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+    }
+
+    const ECAPABILITY_HOLDER: u64 = 0;
+    const EINVALID_PROSPECTIVE_VALIDATOR: u64 = 1;
+    const EALREADY_A_VALIDATOR: u64 = 2;
+    const ENOT_AN_ACTIVE_VALIDATOR: u64 = 3;
+    const EINVALID_TRANSACTION_SENDER: u64 = 4;
+    const EVALIDATOR_INDEX: u64 = 5;
+    const ENO_VALIDATOR_OPERATOR_ROLE: u64 = 6;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -52,11 +60,8 @@ module LibraSystem {
     public fun initialize_validator_set(
         config_account: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(
-            Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            EINVALID_SINGLETON_ADDRESS
-        );
+        LibraTimestamp::assert_genesis();
+        Roles::assert_libra_root(config_account);
 
         let cap = LibraConfig::publish_new_config_and_get_capability<LibraSystem>(
             config_account,
@@ -65,15 +70,18 @@ module LibraSystem {
                 validators: Vector::empty(),
             },
         );
+        assert(
+            !exists<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::already_published(ECAPABILITY_HOLDER)
+        );
         move_to(config_account, CapabilityHolder { cap })
     }
     spec fun initialize_validator_set {
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::AbortsIfNotLibraRoot{account: config_account};
         let config_addr = Signer::spec_address_of(config_account);
-        aborts_if !Roles::spec_has_libra_root_role_addr(config_addr);
-        aborts_if config_addr != CoreAddresses::LIBRA_ROOT_ADDRESS();
-        aborts_if LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if !LibraTimestamp::is_genesis();
-        aborts_if exists<CapabilityHolder>(config_addr);
+        aborts_if LibraConfig::spec_is_published<LibraSystem>() with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<CapabilityHolder>(config_addr) with Errors::ALREADY_PUBLISHED;
         ensures exists<CapabilityHolder>(config_addr);
         ensures LibraConfig::spec_is_published<LibraSystem>();
         ensures len(spec_get_validator_set()) == 0;
@@ -82,15 +90,10 @@ module LibraSystem {
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
-        LibraConfig::set_with_capability_and_reconfigure<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap, value)
-    }
-    spec fun set_validator_set {
-        pragma assume_no_abort_from_here = true;
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if !exists<CapabilityHolder>(
-            CoreAddresses::LIBRA_ROOT_ADDRESS()
-        );
-        ensures LibraConfig::spec_get<LibraSystem>() == value;
+        LibraConfig::set_with_capability_and_reconfigure<LibraSystem>(
+            &borrow_global<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap,
+            value
+        )
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -103,13 +106,17 @@ module LibraSystem {
         lr_account: &signer,
         account_address: address
     ) acquires CapabilityHolder {
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        LibraTimestamp::assert_operating();
+        Roles::assert_libra_root(lr_account);
         // A prospective validator must have a validator config resource
-        assert(ValidatorConfig::is_valid(account_address), EINVALID_PROSPECTIVE_VALIDATOR);
+        assert(ValidatorConfig::is_valid(account_address), Errors::invalid_argument(EINVALID_PROSPECTIVE_VALIDATOR));
 
         let validator_set = get_validator_set();
         // Ensure that this address is not already a validator
-        assert(!is_validator_(account_address, &validator_set.validators), EALREADY_A_VALIDATOR);
+        assert(
+            !is_validator_(account_address, &validator_set.validators),
+            Errors::invalid_argument(EALREADY_A_VALIDATOR)
+        );
         // it is guaranteed that the config is non-empty
         let config = ValidatorConfig::get_config(account_address);
         Vector::push_back(&mut validator_set.validators, ValidatorInfo {
@@ -121,10 +128,12 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun add_validator {
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if spec_is_validator(account_address);
-        aborts_if !ValidatorConfig::spec_is_valid(account_address);
+        /// TODO: times out arbitrarily, while succeeding quickly some other times.
+        pragma verify = false;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        aborts_if !ValidatorConfig::spec_is_valid(account_address) with Errors::INVALID_ARGUMENT;
+        aborts_if spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
         ensures spec_is_validator(account_address);
     }
 
@@ -134,11 +143,12 @@ module LibraSystem {
         lr_account: &signer,
         account_address: address
     ) acquires CapabilityHolder {
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        LibraTimestamp::assert_operating();
+        Roles::assert_libra_root(lr_account);
         let validator_set = get_validator_set();
         // Ensure that this address is an active validator
         let to_remove_index_vec = get_validator_index_(&validator_set.validators, account_address);
-        assert(Option::is_some(&to_remove_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
+        assert(Option::is_some(&to_remove_index_vec), Errors::invalid_argument(ENOT_AN_ACTIVE_VALIDATOR));
         let to_remove_index = *Option::borrow(&to_remove_index_vec);
         // Remove corresponding ValidatorInfo from the validator set
         _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
@@ -146,11 +156,10 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun remove_validator {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if !spec_is_validator(account_address);
+        pragma verify_duration_estimate = 100; // TODO: timeout
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        aborts_if !spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
         ensures !spec_is_validator(account_address);
     }
 
@@ -161,14 +170,14 @@ module LibraSystem {
         operator_account: &signer,
         validator_address: address,
     ) acquires CapabilityHolder {
-        assert(Roles::has_validator_operator_role(operator_account), ENO_VALIDATOR_OPERATOR_ROLE);
+        Roles::assert_validator_operator(operator_account);
         assert(
             ValidatorConfig::get_operator(validator_address) == Signer::address_of(operator_account),
-            EINVALID_TRANSACTION_SENDER
+            Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
         let validator_set = get_validator_set();
         let to_update_index_vec = get_validator_index_(&validator_set.validators, validator_address);
-        assert(Option::is_some(&to_update_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
+        assert(Option::is_some(&to_update_index_vec), Errors::invalid_argument(ENOT_AN_ACTIVE_VALIDATOR));
         let to_update_index = *Option::borrow(&to_update_index_vec);
         let is_validator_info_updated = update_ith_validator_info_(&mut validator_set.validators, to_update_index);
         if (is_validator_info_updated) {
@@ -176,14 +185,15 @@ module LibraSystem {
         }
     }
     spec fun update_config_and_reconfigure {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
-        aborts_if !Roles::spec_has_validator_operator_role_addr(Signer::address_of(operator_account));
-        aborts_if ValidatorConfig::spec_get_operator(validator_address)
-            != Signer::spec_address_of(operator_account);
+        /// TODO: times out arbitrarily, while succeeding quickly some other times.
+        pragma verify_duration_estimate = 100;
+        include Roles::AbortsIfNotValidatorOperator{account: operator_account};
+        include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
+        aborts_if ValidatorConfig::spec_get_operator(validator_address) != Signer::spec_address_of(operator_account)
+            with Errors::INVALID_ARGUMENT;
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if !spec_is_validator(validator_address);
-        aborts_if !ValidatorConfig::spec_is_valid(validator_address);
+        aborts_if !spec_is_validator(validator_address) with Errors::INVALID_ARGUMENT;
+        aborts_if !ValidatorConfig::spec_is_valid(validator_address) with Errors::INVALID_ARGUMENT;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -196,13 +206,11 @@ module LibraSystem {
     }
     spec fun get_validator_set {
         pragma opaque;
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         ensures result == LibraConfig::spec_get<LibraSystem>();
     }
-    spec module {
-        define spec_get_validator_set(): vector<ValidatorInfo> {
-            LibraConfig::spec_get<LibraSystem>().validators
-        }
+    spec define spec_get_validator_set(): vector<ValidatorInfo> {
+        LibraConfig::spec_get<LibraSystem>().validators
     }
 
 
@@ -212,13 +220,11 @@ module LibraSystem {
     }
     spec fun is_validator {
         pragma opaque;
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         ensures result == spec_is_validator(addr);
     }
-    spec module {
-        define spec_is_validator(addr: address): bool {
-            exists v in spec_get_validator_set(): v.addr == addr
-        }
+    spec define spec_is_validator(addr: address): bool {
+        exists v in spec_get_validator_set(): v.addr == addr
     }
 
     // Returns validator config
@@ -226,15 +232,16 @@ module LibraSystem {
     public fun get_validator_config(addr: address): ValidatorConfig::Config {
         let validator_set = get_validator_set();
         let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
-        assert(Option::is_some(&validator_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
+        assert(Option::is_some(&validator_index_vec), Errors::invalid_argument(ENOT_AN_ACTIVE_VALIDATOR));
         *&(Vector::borrow(&validator_set.validators, *Option::borrow(&validator_index_vec))).config
     }
     spec fun get_validator_config {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         pragma opaque;
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
-        aborts_if !spec_is_validator(addr);
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
+        aborts_if !spec_is_validator(addr) with Errors::INVALID_ARGUMENT;
+        ensures
+            exists info in LibraConfig::spec_get<LibraSystem>().validators where info.addr == addr:
+                result == info.config;
     }
 
     // Return the size of the current validator set
@@ -243,18 +250,19 @@ module LibraSystem {
     }
     spec fun validator_set_size {
         pragma opaque;
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         ensures result == len(spec_get_validator_set());
     }
 
     // This function is used in transaction_fee.move to distribute transaction fees among validators
     public fun get_ith_validator_address(i: u64): address {
+        assert(i < validator_set_size(), Errors::invalid_argument(EVALIDATOR_INDEX));
         Vector::borrow(&get_validator_set().validators, i).addr
     }
     spec fun get_ith_validator_address {
         pragma opaque;
-        aborts_if i >= len(spec_get_validator_set());
-        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
+        aborts_if i >= len(spec_get_validator_set()) with Errors::INVALID_ARGUMENT;
         ensures result == spec_get_validator_set()[i].addr;
     }
 
@@ -291,6 +299,7 @@ module LibraSystem {
     }
     spec fun get_validator_index_ {
         pragma opaque;
+        aborts_if false;
         let res_index = Option::borrow(result);
         let size = len(validators);
         ensures (exists i in 0..size: validators[i].addr == addr)
@@ -319,22 +328,18 @@ module LibraSystem {
         true
     }
     spec fun update_ith_validator_info_ {
-        aborts_if i < len(validators) &&
-            !ValidatorConfig::spec_is_valid(validators[i].addr);
-        ensures i < len(validators) ==> validators[i].config ==
-             ValidatorConfig::spec_get_config(validators[i].addr);
+        //aborts_if i < len(validators) &&
+        //    !ValidatorConfig::spec_is_valid(validators[i].addr);
         ensures i < len(validators) ==>
-            result == (old(validators[i].config) !=
-                ValidatorConfig::spec_get_config(validators[i].addr));
+            validators[i].config == ValidatorConfig::spec_get_config(validators[i].addr);
+        ensures i < len(validators) ==>
+            result == (old(validators[i].config) != ValidatorConfig::spec_get_config(validators[i].addr));
     }
-
 
     fun is_validator_(addr: address, validators_vec_ref: &vector<ValidatorInfo>): bool {
         Option::is_some(&get_validator_index_(validators_vec_ref, addr))
     }
     spec fun is_validator_ {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         pragma opaque;
         aborts_if false;
         ensures result == (exists v in validators_vec_ref: v.addr == addr);
@@ -354,7 +359,7 @@ module LibraSystem {
     // the ValidatorInfo for its validator (only), and set the config for the
     // modified validator set to the new validator set and trigger a reconfiguration.
     spec module {
-        pragma verify = true, aborts_if_is_strict = true;
+        pragma verify;
     }
 
     /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].

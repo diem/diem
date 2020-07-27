@@ -2,6 +2,7 @@ address 0x1 {
 
 module DualAttestation {
     use 0x1::CoreAddresses;
+    use 0x1::Errors;
     use 0x1::LBR::LBR;
     use 0x1::LCS;
     use 0x1::Libra;
@@ -38,25 +39,19 @@ module DualAttestation {
         micro_lbr_limit: u64,
     }
 
+    const MAX_U64: u128 = 18446744073709551615;
+
     // Error codes
-    /// Attempting to initialize the dual attestation limit after genesis
-    const ENOT_GENESIS: u64 = 0;
-    /// Calling a privileged function from an account without the LibraRoot role
-    const EACCOUNT_NOT_LIBRA_ROOT: u64 = 1;
-    /// Attempting to publish a `Credential` resource under an account without the ParentVASP or
-    /// DesignatedDealer role
-    const ENOT_PARENT_VASP_OR_DD: u64 = 2;
-    /// Transaction not signed by LibraRoot or TreasuryCompliance
-    const ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
-    /// Attempting to update the limit from an account that does not contain the
-    /// `ModifyLimitCapability` resource
-    const ECANNOT_UPDATE_LIMIT: u64 = 4;
+    /// A credential is not or already published.
+    const ECREDENTIAL: u64 = 0;
+    /// A limit is not or already published.
+    const ELIMIT: u64 = 1;
     /// Cannot parse this as an ed25519 public key
-    const EINVALID_PUBLIC_KEY: u64 = 5;
+    const EINVALID_PUBLIC_KEY: u64 = 2;
     /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
-    const EMALFORMED_METADATA_SIGNATURE: u64 = 6;
+    const EMALFORMED_METADATA_SIGNATURE: u64 = 3;
     /// Signature does not match message and public key
-    const EINVALID_METADATA_SIGNATURE: u64 = 7;
+    const EINVALID_METADATA_SIGNATURE: u64 = 4;
 
     /// Value of the dual attestation limit at genesis
     const INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
@@ -73,15 +68,13 @@ module DualAttestation {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>,
     ) {
+        Roles::assert_parent_vasp_or_designated_dealer(created);
+        Roles::assert_libra_root_or_treasury_compliance(creator);
         assert(
-            Roles::has_parent_VASP_role(created) || Roles::has_designated_dealer_role(created),
-            ENOT_PARENT_VASP_OR_DD
+            Signature::ed25519_validate_pubkey(copy compliance_public_key),
+            Errors::invalid_argument(EINVALID_PUBLIC_KEY)
         );
-        assert(
-            Roles::has_libra_root_role(creator) || Roles::has_treasury_compliance_role(creator),
-            ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE
-        );
-        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), EINVALID_PUBLIC_KEY);
+        assert(!exists<Credential>(Signer::address_of(created)), Errors::already_published(ECREDENTIAL));
         move_to(created, Credential {
             human_name,
             base_url,
@@ -91,24 +84,27 @@ module DualAttestation {
         })
     }
     spec fun publish_credential {
-        pragma aborts_if_is_partial = true;
-
-        // TODO(jkpark): Refactor this governance spec.
         /// The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedDealer [B26].
-        aborts_if !Roles::spec_has_parent_VASP_role_addr(Signer::spec_address_of(created)) &&
-            !Roles::spec_has_designated_dealer_role_addr(Signer::spec_address_of(created));
+        include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
+        include Roles::AbortsIfNotLibraRootOrTreasuryCompliance{account: creator};
+        aborts_if exists<Credential>(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
+        aborts_if !Signature::ed25519_validate_pubkey(compliance_public_key) with Errors::INVALID_ARGUMENT;
     }
 
     /// Rotate the base URL for `account` to `new_url`
     public fun rotate_base_url(account: &signer, new_url: vector<u8>) acquires Credential {
         let addr = Signer::address_of(account);
-        assert(exists<Credential>(addr), ENOT_PARENT_VASP_OR_DD);
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         borrow_global_mut<Credential>(addr).base_url = new_url
     }
     spec fun rotate_base_url {
-        aborts_if !exists<Credential>(Signer::spec_address_of(account));
+        include AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
         ensures
             global<Credential>(Signer::spec_address_of(account)).base_url == new_url;
+    }
+    spec schema AbortsIfNoCredential {
+        addr: address;
+        aborts_if !exists<Credential>(addr) with Errors::NOT_PUBLISHED;
     }
 
     /// Rotate the compliance public key for `account` to `new_key`.
@@ -117,13 +113,13 @@ module DualAttestation {
         new_key: vector<u8>,
     ) acquires Credential {
         let addr = Signer::address_of(account);
-        assert(exists<Credential>(addr), ENOT_PARENT_VASP_OR_DD);
-        assert(Signature::ed25519_validate_pubkey(copy new_key), EINVALID_PUBLIC_KEY);
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
+        assert(Signature::ed25519_validate_pubkey(copy new_key), Errors::invalid_argument(EINVALID_PUBLIC_KEY));
         borrow_global_mut<Credential>(addr).compliance_public_key = new_key
     }
     spec fun rotate_compliance_public_key {
-        aborts_if !exists<Credential>(Signer::spec_address_of(account));
-        aborts_if !Signature::ed25519_validate_pubkey(new_key);
+        include AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
+        aborts_if !Signature::ed25519_validate_pubkey(new_key) with Errors::INVALID_ARGUMENT;
         ensures global<Credential>(Signer::spec_address_of(account)).compliance_public_key
              == new_key;
     }
@@ -131,35 +127,53 @@ module DualAttestation {
     /// Return the human-readable name for the VASP account.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun human_name(addr: address): vector<u8> acquires Credential {
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).human_name
+    }
+    spec fun human_name {
+        pragma opaque;
+        include AbortsIfNoCredential;
+        ensures result == global<Credential>(addr).human_name;
     }
 
     /// Return the base URL for `addr`.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun base_url(addr: address): vector<u8> acquires Credential {
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).base_url
+    }
+    spec fun base_url {
+        pragma opaque;
+        include AbortsIfNoCredential;
+        ensures result == global<Credential>(addr).base_url;
     }
 
     /// Return the compliance public key for `addr`.
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun compliance_public_key(addr: address): vector<u8> acquires Credential {
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).compliance_public_key
     }
     spec fun compliance_public_key {
-        aborts_if !exists<Credential>(addr);
+        pragma opaque;
+        include AbortsIfNoCredential;
         ensures result == spec_compliance_public_key(addr);
     }
-    spec module {
-        /// Spec version of `Self::compliance_public_key`.
-        define spec_compliance_public_key(addr: address): vector<u8> {
-            global<Credential>(addr).compliance_public_key
-        }
+    /// Spec version of `Self::compliance_public_key`.
+    spec define spec_compliance_public_key(addr: address): vector<u8> {
+        global<Credential>(addr).compliance_public_key
     }
 
     /// Return the expiration date `addr
     /// Aborts if `addr` does not have a `Credential` resource.
     public fun expiration_date(addr: address): u64  acquires Credential {
+        assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         *&borrow_global<Credential>(addr).expiration_date
+    }
+    spec fun expiration_date {
+        pragma opaque;
+        include AbortsIfNoCredential;
+        ensures result == global<Credential>(addr).expiration_date;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -171,18 +185,15 @@ module DualAttestation {
         if (VASP::is_child(addr)) VASP::parent_address(addr) else addr
     }
     spec fun credential_address {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
+        pragma opaque;
         aborts_if false;
         ensures result == spec_credential_address(addr);
     }
-    spec module {
-        define spec_credential_address(addr: address): address {
-            if (VASP::spec_is_child_vasp(addr)) {
-                VASP::spec_parent_address(addr)
-            } else {
-                addr
-            }
+    spec define spec_credential_address(addr: address): address {
+        if (VASP::is_child(addr)) {
+            VASP::spec_parent_address(addr)
+        } else {
+            addr
         }
     }
 
@@ -207,19 +218,18 @@ module DualAttestation {
             VASP::parent_address(payer) != VASP::parent_address(payee)
     }
     spec fun dual_attestation_required {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         pragma opaque = true;
         include DualAttestationRequiredAbortsIf<Token>;
         ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
     }
     spec schema DualAttestationRequiredAbortsIf<Token> {
-        aborts_if !Libra::spec_is_currency<Token>();
-        aborts_if !spec_is_published();
+        deposit_value: num;
+        include Libra::ApproxLbrForValueAbortsIf<Token>{from_value: deposit_value};
+        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
     }
     spec module {
         define spec_is_inter_vasp(payer: address, payee: address): bool {
-            VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
+            VASP::is_vasp(payer) && VASP::is_vasp(payee)
                 && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
         }
         /// Helper functions which simulates `Self::dual_attestation_required`.
@@ -250,12 +260,11 @@ module DualAttestation {
         /// message is not important for the verification problem, as long as the prover considers both
         /// messages which fail verification and which do not.
         pragma opaque = true, verify = false;
+        aborts_if false;
         ensures result == spec_dual_attestation_message(payer, metadata, deposit_value);
     }
-    spec module {
-        /// Uninterpreted function for `Self::dual_attestation_message`.
-        define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
-    }
+    /// Uninterpreted function for `Self::dual_attestation_message`.
+    spec define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
 
     /// Helper function to check validity of a signature when dual attestion is required.
     fun assert_signature_is_valid(
@@ -266,7 +275,7 @@ module DualAttestation {
         deposit_value: u64
     ) acquires Credential {
         // sanity check of signature validity
-        assert(Vector::length(&metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
+        assert(Vector::length(&metadata_signature) == 64, Errors::invalid_argument(EMALFORMED_METADATA_SIGNATURE));
         // cryptographic check of signature validity
         let message = dual_attestation_message(payer, metadata, deposit_value);
         assert(
@@ -275,12 +284,10 @@ module DualAttestation {
                 compliance_public_key(credential_address(payee)),
                 message
             ),
-            EINVALID_METADATA_SIGNATURE
+            Errors::invalid_argument(EINVALID_METADATA_SIGNATURE)
         );
     }
     spec fun assert_signature_is_valid {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         pragma opaque = true;
         include AssertSignatureValidAbortsIf;
     }
@@ -290,25 +297,24 @@ module DualAttestation {
         metadata_signature: vector<u8>;
         metadata: vector<u8>;
         deposit_value: u64;
-        aborts_if !exists<Credential>(spec_credential_address(payee));
-        aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
+        aborts_if !exists<Credential>(spec_credential_address(payee)) with Errors::NOT_PUBLISHED;
+        aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value)
+            with Errors::INVALID_ARGUMENT;
     }
-    spec module {
-        /// Returns true if signature is valid.
-        define spec_signature_is_valid(
-            payer: address,
-            payee: address,
-            metadata_signature: vector<u8>,
-            metadata: vector<u8>,
-            deposit_value: u64
-        ): bool {
-            len(metadata_signature) == 64
-                && Signature::ed25519_verify(
-                        metadata_signature,
-                        spec_compliance_public_key(spec_credential_address(payee)),
-                        spec_dual_attestation_message(payer, metadata, deposit_value)
-                   )
-        }
+    /// Returns true if signature is valid.
+    spec define spec_signature_is_valid(
+        payer: address,
+        payee: address,
+        metadata_signature: vector<u8>,
+        metadata: vector<u8>,
+        deposit_value: u64
+    ): bool {
+        len(metadata_signature) == 64
+            && Signature::ed25519_verify(
+                    metadata_signature,
+                    spec_compliance_public_key(spec_credential_address(payee)),
+                    spec_dual_attestation_message(payer, metadata, deposit_value)
+               )
     }
 
     /// Public API for checking whether a payment of `value` coins of type `Currency`
@@ -333,8 +339,6 @@ module DualAttestation {
         }
     }
     spec fun assert_payment_ok {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         pragma opaque;
         include AssertPaymentOkAbortsIf<Currency>;
     }
@@ -344,10 +348,9 @@ module DualAttestation {
         value: u64;
         metadata: vector<u8>;
         metadata_signature: vector<u8>;
-        aborts_if
-            (len(metadata_signature) != 0 ||
-             spec_dual_attestation_required<Currency>(payer, payee, value)) &&
-            !spec_signature_is_valid(payer, payee, metadata_signature, metadata, value);
+        include len(metadata_signature) == 0 ==> DualAttestationRequiredAbortsIf<Currency>{deposit_value: value};
+        include (len(metadata_signature) != 0 || spec_dual_attestation_required<Currency>(payer, payee, value))
+            ==> AssertSignatureValidAbortsIf{deposit_value: value};
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -356,43 +359,56 @@ module DualAttestation {
 
     /// Travel rule limit set during genesis
     public fun initialize(lr_account: &signer) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(
-            Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            EACCOUNT_NOT_LIBRA_ROOT
-        );
+        LibraTimestamp::assert_genesis();
+        CoreAddresses::assert_libra_root(lr_account);
+        assert(!exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()), Errors::already_published(ELIMIT));
+        let initial_limit = (INITIAL_DUAL_ATTESTATION_LIMIT as u128) * (Libra::scaling_factor<LBR>() as u128);
+        assert(initial_limit <= MAX_U64, Errors::limit_exceeded(ELIMIT));
         move_to(
             lr_account,
             Limit {
-                micro_lbr_limit: INITIAL_DUAL_ATTESTATION_LIMIT * Libra::scaling_factor<LBR>()
+                micro_lbr_limit: (initial_limit as u64)
             }
         )
+    }
+    spec fun initialize {
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include CoreAddresses::AbortsIfNotLibraRoot{account: lr_account};
+        aborts_if exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()) with Errors::ALREADY_PUBLISHED;
+        let initial_limit = INITIAL_DUAL_ATTESTATION_LIMIT * Libra::spec_scaling_factor<LBR>();
+        aborts_if initial_limit > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        include Libra::AbortsIfNoCurrency<LBR>; // for scaling_factor.
     }
 
     /// Return the current dual attestation limit in microlibra
     public fun get_cur_microlibra_limit(): u64 acquires Limit {
+        assert(exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
         borrow_global<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit
     }
     spec fun get_cur_microlibra_limit {
-        aborts_if !exists<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+        pragma opaque;
+        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
         ensures result == spec_get_cur_microlibra_limit();
     }
 
     /// Set the dual attestation limit to `micro_libra_limit`.
     /// Aborts if `tc_account` does not have the TreasuryCompliance role
     public fun set_microlibra_limit(tc_account: &signer, micro_lbr_limit: u64) acquires Limit {
-        assert(
-            Roles::has_update_dual_attestation_limit_privilege(tc_account),
-            ECANNOT_UPDATE_LIMIT
-        );
+        Roles::assert_treasury_compliance(tc_account);
+        assert(exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()), Errors::not_published(ELIMIT));
         borrow_global_mut<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit = micro_lbr_limit;
+    }
+    spec fun set_microlibra_limit {
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        aborts_if !spec_is_published() with Errors::NOT_PUBLISHED;
+        ensures global<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit == micro_lbr_limit;
     }
 
     // **************************** SPECIFICATION ********************************
 
     /// The Limit resource should be published after genesis
     spec module {
-        invariant [global] !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
+        invariant [global] LibraTimestamp::is_operating() ==> spec_is_published();
     }
 
     spec module {
@@ -400,12 +416,12 @@ module DualAttestation {
 
         /// Helper function to determine whether the Limit is published.
         define spec_is_published(): bool {
-            exists<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+            exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
 
         /// Mirrors `Self::get_cur_microlibra_limit`.
         define spec_get_cur_microlibra_limit(): u64 {
-            global<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()).micro_lbr_limit
+            global<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit
         }
     }
 }

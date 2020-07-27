@@ -2,24 +2,24 @@ address 0x1 {
 
 module LibraVersion {
     use 0x1::CoreAddresses;
+    use 0x1::Errors;
     use 0x1::LibraConfig;
     use 0x1::LibraTimestamp;
-    use 0x1::Signer;
 
     struct LibraVersion {
         major: u64,
     }
 
-    const ENOT_GENESIS: u64 = 0;
-    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
-    const EINVALID_MAJOR_VERSION_NUMBER: u64 = 2;
+    spec module {
+    }
+
+    const EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
 
     public fun initialize(
         lr_account: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
-
+        LibraTimestamp::assert_genesis();
+        CoreAddresses::assert_libra_root(lr_account);
         LibraConfig::publish_new_config<LibraVersion>(
             lr_account,
             LibraVersion { major: 1 },
@@ -27,11 +27,16 @@ module LibraVersion {
     }
 
     public fun set(account: &signer, major: u64) {
+        LibraTimestamp::assert_operating();
+
+        // TODO: is this restricted to be called from libra root?
+        // CoreAddresses::assert_libra_root(account);
+
         let old_config = LibraConfig::get<LibraVersion>();
 
         assert(
             old_config.major < major,
-            EINVALID_MAJOR_VERSION_NUMBER
+            Errors::invalid_argument(EINVALID_MAJOR_VERSION_NUMBER)
         );
 
         LibraConfig::set<LibraVersion>(
@@ -41,9 +46,12 @@ module LibraVersion {
     }
 
     spec module {
+        /// After genesis, version is published.
+        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<LibraVersion>();
+
         /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B20].
-        invariant [global] forall addr: address where exists<LibraVersion>(addr):
-            addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        invariant [global, on_update] forall addr: address where exists<LibraVersion>(addr):
+            addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
     }
 }
 

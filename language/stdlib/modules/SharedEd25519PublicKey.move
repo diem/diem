@@ -5,6 +5,7 @@
 address 0x1 {
 module SharedEd25519PublicKey {
     use 0x1::Authenticator;
+    use 0x1::Errors;
     use 0x1::LibraAccount;
     use 0x1::Signature;
     use 0x1::Signer;
@@ -19,6 +20,7 @@ module SharedEd25519PublicKey {
     }
 
     const EMALFORMED_PUBLIC_KEY: u64 = 0;
+    const ESHARED_KEY: u64 = 1;
 
     // (1) Rotate the authentication key of the sender to `key`
     // (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
@@ -31,6 +33,7 @@ module SharedEd25519PublicKey {
             rotation_cap: LibraAccount::extract_key_rotation_capability(account)
         };
         rotate_key_(&mut t, key);
+        assert(!exists<SharedEd25519PublicKey>(Signer::address_of(account)), Errors::already_published(ESHARED_KEY));
         move_to(account, t);
     }
 
@@ -38,7 +41,7 @@ module SharedEd25519PublicKey {
         // Cryptographic check of public key validity
         assert(
             Signature::ed25519_validate_pubkey(copy new_public_key),
-            EMALFORMED_PUBLIC_KEY
+            Errors::invalid_argument(EMALFORMED_PUBLIC_KEY)
         );
         LibraAccount::rotate_authentication_key(
             &shared_key.rotation_cap,
@@ -60,6 +63,7 @@ module SharedEd25519PublicKey {
     // Return the public key stored under `addr`.
     // Aborts if `addr` does not hold a `SharedEd25519PublicKey` resource.
     public fun key(addr: address): vector<u8> acquires SharedEd25519PublicKey {
+        assert(exists<SharedEd25519PublicKey>(addr), Errors::not_published(ESHARED_KEY));
         *&borrow_global<SharedEd25519PublicKey>(addr).key
     }
 

@@ -26,6 +26,7 @@
     -  [Function `is_child`](#0x1_VASP_Specification_is_child)
     -  [Function `is_vasp`](#0x1_VASP_Specification_is_vasp)
     -  [Function `is_same_vasp`](#0x1_VASP_Specification_is_same_vasp)
+    -  [Function `num_children`](#0x1_VASP_Specification_num_children)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
         -  [Post Genesis](#0x1_VASP_@Post_Genesis)
     -  [Existence of Parents](#0x1_VASP_@Existence_of_Parents)
@@ -33,7 +34,6 @@
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
         -  [Parent does not change](#0x1_VASP_@Parent_does_not_change)
-        -  [Aborts conditions shared between functions.](#0x1_VASP_@Aborts_conditions_shared_between_functions.)
 
 
 
@@ -144,9 +144,12 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EVASP_OPERATIONS_RESOURCE)
+    );
     move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
         limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(lr_account),
     })
@@ -179,10 +182,11 @@ or if there is already a VASP (child or parent) at this account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
+    <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(vasp);
     <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(vasp), ENOT_A_PARENT_VASP);
-    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr), EALREADY_A_VASP);
+    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EPARENT_OR_CHILD_VASP));
     move_to(vasp, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> { num_children: 0 });
 }
 </code></pre>
@@ -219,14 +223,14 @@ Aborts if
     // DD: Since it checks for a <a href="#0x1_VASP_ParentVASP">ParentVASP</a> property, anyway, checking
     // for role might be a bit redundant (would need <b>invariant</b> that only
     // Parent Role has <a href="#0x1_VASP_ParentVASP">ParentVASP</a>)
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(parent), ENOT_A_PARENT_VASP);
+    <a href="Roles.md#0x1_Roles_assert_parent_vasp_role">Roles::assert_parent_vasp_role</a>(parent);
     <b>let</b> child_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(child);
-    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(child_vasp_addr), EALREADY_A_VASP);
+    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(child_vasp_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EPARENT_OR_CHILD_VASP));
     <b>let</b> parent_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent);
-    <b>assert</b>(<a href="#0x1_VASP_is_parent">is_parent</a>(parent_vasp_addr), ENOT_A_PARENT_VASP);
+    <b>assert</b>(<a href="#0x1_VASP_is_parent">is_parent</a>(parent_vasp_addr), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_A_PARENT_VASP));
     <b>let</b> num_children = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr).num_children;
     // Abort <b>if</b> creating this child account would put the parent <a href="#0x1_VASP">VASP</a> over the limit
-    <b>assert</b>(*<a href="#0x1_VASP_num_children">num_children</a> &lt; MAX_CHILD_ACCOUNTS, ETOO_MANY_CHILDREN);
+    <b>assert</b>(*<a href="#0x1_VASP_num_children">num_children</a> &lt; MAX_CHILD_ACCOUNTS, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ETOO_MANY_CHILDREN));
     *num_children = *num_children + 1;
     move_to(child, <a href="#0x1_VASP_ChildVASP">ChildVASP</a> { parent_vasp_addr });
 }
@@ -293,7 +297,7 @@ Aborts otherwise
     } <b>else</b> <b>if</b> (<a href="#0x1_VASP_is_child">is_child</a>(addr)) {
         borrow_global&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
     } <b>else</b> { // wrong account type, <b>abort</b>
-        <b>abort</b>(88)
+        <b>abort</b>(<a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_A_VASP))
     }
 }
 </code></pre>
@@ -425,6 +429,7 @@ Aborts if
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_num_children">num_children</a>(addr: address): u64  <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
+    // If parent <a href="#0x1_VASP">VASP</a> succeeds, the parent is guaranteed <b>to</b> exist.
     *&borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)).num_children
 }
 </code></pre>
@@ -449,12 +454,14 @@ Aborts if
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
-<b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
-<b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
-<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp)) == 0;
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: vasp};
+<a name="0x1_VASP_vasp_addr$14"></a>
+<b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp);
+<b>aborts_if</b> <a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr) with Errors::ALREADY_PUBLISHED;
+<b>ensures</b> <a href="#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(vasp_addr) == 0;
 </code></pre>
 
 
@@ -470,16 +477,18 @@ Aborts if
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
-<b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
-<b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
-<b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent)) + 1 &gt; 256;
-<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))
-     == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))) + 1;
-<b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
-<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child))
-     == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
+<pre><code>pragma verify_duration_estimate = 100;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
+<a name="0x1_VASP_parent_addr$15"></a>
+<b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
+<a name="0x1_VASP_child_addr$16"></a>
+<b>let</b> child_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child);
+<b>aborts_if</b> <a href="#0x1_VASP_is_vasp">is_vasp</a>(child_addr) with Errors::ALREADY_PUBLISHED;
+<b>aborts_if</b> !<a href="#0x1_VASP_is_parent">is_parent</a>(parent_addr) with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) + 1 &gt; MAX_CHILD_ACCOUNTS with Errors::LIMIT_EXCEEDED;
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr)) + 1;
+<b>ensures</b> <a href="#0x1_VASP_is_child">is_child</a>(child_addr);
+<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr) == parent_addr;
 </code></pre>
 
 
@@ -495,8 +504,8 @@ Aborts if
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-pragma opaque = <b>true</b>;
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> !<a href="#0x1_VASP_is_parent">is_parent</a>(addr) && !<a href="#0x1_VASP_is_child">is_child</a>(addr) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> result == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr);
 </code></pre>
 
@@ -510,7 +519,7 @@ Spec version of
 
 
 <pre><code><b>define</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr: address): address {
-    <b>if</b> (<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr)) {
+    <b>if</b> (<a href="#0x1_VASP_is_parent">is_parent</a>(addr)) {
         addr
     } <b>else</b> {
         <b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
@@ -536,21 +545,8 @@ Spec version of
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>ensures</b> result == <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr);
-</code></pre>
-
-
-
-Spec version of
-<code><a href="#0x1_VASP_is_parent">Self::is_parent</a></code>.
-
-
-<a name="0x1_VASP_spec_is_parent_vasp"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(addr)
-}
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_VASP_is_parent">is_parent</a>(addr);
 </code></pre>
 
 
@@ -567,21 +563,8 @@ Spec version of
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>ensures</b> result == <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr);
-</code></pre>
-
-
-
-Spec version
-<code><a href="#0x1_VASP_is_child">Self::is_child</a></code>.
-
-
-<a name="0x1_VASP_spec_is_child_vasp"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr)
-}
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_VASP_is_child">is_child</a>(addr);
 </code></pre>
 
 
@@ -598,20 +581,19 @@ Spec version
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>ensures</b> result == <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_VASP_is_vasp">is_vasp</a>(addr);
 </code></pre>
 
 
 
-Spec version of
-<code><a href="#0x1_VASP_is_vasp">Self::is_vasp</a></code>.
+
+<a name="0x1_VASP_AbortsIfNotVASP"></a>
 
 
-<a name="0x1_VASP_spec_is_vasp"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr: address): bool {
-    <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr) || <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr)
+<pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> {
+    addr: address;
+    <b>aborts_if</b> !<a href="#0x1_VASP_is_vasp">is_vasp</a>(addr);
 }
 </code></pre>
 
@@ -629,6 +611,7 @@ Spec version of
 
 
 <pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1, addr2);
 </code></pre>
 
@@ -642,8 +625,33 @@ Spec version of
 
 
 <pre><code><b>define</b> <a href="#0x1_VASP_spec_is_same_vasp">spec_is_same_vasp</a>(addr1: address, addr2: address): bool {
-    <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr1) && <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr2) && <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr1) == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr2)
+    <a href="#0x1_VASP_is_vasp">is_vasp</a>(addr1) && <a href="#0x1_VASP_is_vasp">is_vasp</a>(addr2) && <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr1) == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr2)
 }
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_num_children"></a>
+
+### Function `num_children`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_num_children">num_children</a>(addr: address): u64
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_is_vasp">is_vasp</a>(addr) with Errors::INVALID_ARGUMENT;
+</code></pre>
+
+
+This abort is supposed to not happen because of the parent existence invariant. However, for now
+we have deactivated this invariant, so prevent this is leaking to callers with an assumed aborts
+condition.
+
+
+<pre><code><b>aborts_if</b> [<b>assume</b>] !exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr)) with EXECUTION_FAILURE;
 </code></pre>
 
 
@@ -654,7 +662,7 @@ Spec version of
 
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code>pragma verify;
 </code></pre>
 
 
@@ -669,8 +677,8 @@ Spec version of
 
 
 <pre><code><b>invariant</b> [<b>global</b>]
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_up">LibraTimestamp::spec_is_up</a>() ==&gt;
-        exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
+        exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
 
 
@@ -678,13 +686,6 @@ Spec version of
 <a name="0x1_VASP_@Existence_of_Parents"></a>
 
 ### Existence of Parents
-
-
-
-<pre><code><b>invariant</b> [<b>global</b>]
-    forall child_addr: address where <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(child_addr):
-        <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(child_addr).parent_vasp_addr);
-</code></pre>
 
 
 
@@ -738,7 +739,7 @@ TODO(wrwg): this should be replaced by a modifies clause
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> {
     <b>ensures</b> forall parent: address
-        where <b>old</b>(<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(parent)):
+        where <b>old</b>(<a href="#0x1_VASP_is_parent">is_parent</a>(parent)):
             <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent)) == <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent);
 }
 </code></pre>
@@ -772,41 +773,6 @@ Returns the number of children under
 
 
 
-<a name="0x1_VASP_@Aborts_conditions_shared_between_functions."></a>
-
-#### Aborts conditions shared between functions.
-
-
-
-<a name="0x1_VASP_AbortsIfNotVASP"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> {
-    addr: address;
-    <b>aborts_if</b> [export] !<a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> <b>to</b> parent_address, num_children;
-</code></pre>
-
-
-
-
-<a name="0x1_VASP_AbortsIfParentIsNotParentVASP"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> {
-    addr: address;
-    <b>aborts_if</b> [export] !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr));
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> num_children;
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>, on_update]
+    forall a: address where <a href="#0x1_VASP_is_child">is_child</a>(a): <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>

@@ -14,7 +14,7 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 4
+// check: 1031
 
 // TreasuryCompliance should not be able to add a balance
 //! new-transaction
@@ -29,7 +29,7 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 4
+// check: 1031
 
 
 // Validators and ValidatorOperators should not be able to add a balance
@@ -61,7 +61,7 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 4
+// check: 1031
 
 // check ValidatorOperator case
 //! new-transaction
@@ -76,7 +76,7 @@ fun main(account: &signer) {
 // TODO(status_migration) remove duplicate check
 // check: ABORTED
 // check: ABORTED
-// check: 4
+// check: 1031
 
 //! new-transaction
 //! sender: libraroot

@@ -49,13 +49,13 @@ spec fun create_child_vasp_account {
     pragma verify = false;
     pragma aborts_if_is_partial = true;
     /// `parent_vasp` must be a parent vasp account
-    // TODO(tzakian): need to teach the prover that Roles::has_parent_VASP_role ==> VASP::spec_is_parent_vasp
+    // TODO(tzakian): need to teach the prover that Roles::has_parent_VASP_role ==> VASP::is_parent
     aborts_if !Roles::spec_has_parent_VASP_role_addr(Signer::spec_address_of(parent_vasp));
-    aborts_if !VASP::spec_is_parent_vasp(Signer::spec_address_of(parent_vasp));
+    aborts_if !VASP::is_parent(Signer::spec_address_of(parent_vasp));
     /// `child_address` must not be an existing account/vasp account
-    // TODO(tzakian): need to teach the prover that !exists(account) ==> !VASP::spec_is_vasp(child_address)
+    // TODO(tzakian): need to teach the prover that !exists(account) ==> !VASP::is_vasp(child_address)
     aborts_if exists<LibraAccount::LibraAccount>(child_address);
-    aborts_if VASP::spec_is_vasp(child_address);
+    aborts_if VASP::is_vasp(child_address);
     /// `parent_vasp` must not have created more than 256 children
     aborts_if VASP::spec_get_num_children(Signer::spec_address_of(parent_vasp)) + 1 > 256; // MAX_CHILD_ACCOUNTS
 }

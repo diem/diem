@@ -26,8 +26,8 @@ use move_core_types::language_storage::TypeTag;
 use transaction_builder::*;
 
 const COIN1_THRESHOLD: u64 = 10_000_000_000 / 5;
-const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 6;
-const MISMATCHED_METADATA_SIGNATURE_ERROR_CODE: u64 = 7;
+const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 775;
+const MISMATCHED_METADATA_SIGNATURE_ERROR_CODE: u64 = 1031;
 
 #[test]
 fn freeze_unfreeze_account() {
@@ -464,10 +464,7 @@ fn dual_attestation_payment() {
                 .sign(),
         );
 
-        assert!(matches!(
-            output.status().status(),
-            Ok(KeptVMStatus::MoveAbort(_, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE))
-        ));
+        assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE);
     }
 
     {
@@ -487,10 +484,7 @@ fn dual_attestation_payment() {
                 .sequence_number(2)
                 .sign(),
         );
-        assert!(matches!(
-            output.status().status(),
-            Ok(KeptVMStatus::MoveAbort(_, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE))
-        ));
+        assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE);
     }
     {
         // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
@@ -610,10 +604,14 @@ fn create_dual_attestation_payment(
 }
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
-    assert!(matches!(
-        output.status().status(),
-        Ok(KeptVMStatus::MoveAbort(_, code)) if code == error_code
-    ));
+    if let Ok(KeptVMStatus::MoveAbort(_, code)) = output.status().status() {
+        assert_eq!(error_code, code);
+    } else {
+        assert!(matches!(
+            output.status().status(),
+            Ok(KeptVMStatus::MoveAbort(..))
+        ));
+    }
 }
 
 // Check that DD <-> DD and DD <-> VASP payments over the threshold work with and without dual attesation.
@@ -999,7 +997,7 @@ fn recovery_address() {
             .sequence_number(0)
             .sign(),
     );
-    assert_aborted_with(output, 3);
+    assert_aborted_with(output, 775);
 
     // try to rotate child's key from other_vasp--should abort
     let (_, pubkey3) = keygen.generate_keypair();
@@ -1017,7 +1015,7 @@ fn recovery_address() {
             .sequence_number(0)
             .sign(),
     );
-    assert_aborted_with(output, 2);
+    assert_aborted_with(output, 519);
 }
 
 #[test]

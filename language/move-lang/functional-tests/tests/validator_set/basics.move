@@ -9,7 +9,7 @@ fun main(account: &signer) {
     LibraSystem::initialize_validator_set(account);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 script {
@@ -18,7 +18,7 @@ script {
         LibraSystem::update_config_and_reconfigure(account, {{bob}});
     }
 }
-// check: "Keep(ABORTED { code: 7,"
+// check: "Keep(ABORTED { code: 2051,"
 
 //! new-transaction
 //! sender: libraroot
@@ -34,7 +34,7 @@ script {
         ValidatorConfig::set_operator(account, 0x0);
     }
 }
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 //! sender: bob
@@ -45,7 +45,7 @@ script {
         ValidatorConfig::set_operator(account, Signer::address_of(account))
     }
 }
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 //! sender: bob
@@ -69,7 +69,7 @@ script {
                                     x"", x"", x"", x"");
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: bob
@@ -79,7 +79,7 @@ script {
         ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 script {
@@ -88,7 +88,7 @@ script {
         ValidatorConfig::publish(account, account, x"")
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: bob
@@ -98,7 +98,7 @@ script {
         ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"", x"", x"");
     }
 }
-// check: "Keep(ABORTED { code: 3,"
+// check: "Keep(ABORTED { code: 519"
 
 //! new-transaction
 //! sender: bob
@@ -108,7 +108,7 @@ script {
         let _ = ValidatorConfig::get_config({{alice}});
     }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: bob

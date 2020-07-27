@@ -66,7 +66,7 @@ Rotate the sender's authentication key to
 
 
 
-<pre><code>pragma verify = <b>true</b>;
+<pre><code>pragma verify = <b>false</b>;
 <a name="SCRIPT_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 </code></pre>

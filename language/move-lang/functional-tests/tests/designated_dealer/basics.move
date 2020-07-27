@@ -11,7 +11,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 script {
@@ -21,7 +21,7 @@ fun main(account: &signer) {
     DesignatedDealer::add_currency<Coin1>(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -42,7 +42,7 @@ fun main(account: &signer) {
     DesignatedDealer::add_tier<Coin1>(account, {{bob}}, 0);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -61,7 +61,7 @@ fun main(account: &signer) {
     DesignatedDealer::add_tier<Coin1>(account, {{bob}}, 1000000000000);
 }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 519,"
 
 //! new-transaction
 script {
@@ -71,7 +71,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 10, 1000000000000);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -95,7 +95,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 0, 5000000 * Libra::scaling_factor<Coin1>());
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 //! sender: blessed
@@ -107,7 +107,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 2, 5000000 * Libra::scaling_factor<Coin1>());
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 //! sender: blessed
@@ -121,7 +121,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 4,"
+// check: "Keep(ABORTED { code: 1287,"
 
 //! new-transaction
 //! sender: blessed
@@ -150,7 +150,7 @@ script {
         );
     }
 }
-// check: "Keep(ABORTED { code: 6,"
+// check: "Keep(ABORTED { code: 1543,"
 
 //! block-prologue
 //! proposer: validatorvivian

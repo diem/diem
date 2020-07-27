@@ -8,7 +8,7 @@ fun main(account: &signer) {
     Libra::initialize(account);
 }
 }
-// check: RESOURCE_ALREADY_EXISTS
+// check: "Keep(ABORTED { code: 262"
 
 //! new-transaction
 //! sender: libraroot
@@ -18,7 +18,7 @@ fun main(account: &signer) {
     Libra::initialize(account);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: blessed
@@ -30,4 +30,4 @@ fun main(account: &signer) {
     Libra::initialize(account);
 }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 2,"

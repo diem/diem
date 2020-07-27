@@ -5,4 +5,4 @@ fun main(account: &signer) {
     TransactionFee::initialize(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 1,"

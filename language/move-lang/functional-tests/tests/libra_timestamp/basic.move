@@ -30,7 +30,7 @@ script {
     }
 }
 // check: ABORTED
-// check: "code: 0"
+// check: "code: 1"
 
 //! new-transaction
 //! sender: libraroot
@@ -41,4 +41,6 @@ script {
     }
 }
 // check: ABORTED
-// check: "code: 4"
+// check: "code: 1"
+// check: ABORTED
+// check: "code: 1"

@@ -9,6 +9,7 @@
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
 -  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
+-  [Function `exists_config`](#0x1_ValidatorConfig_exists_config)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
 -  [Function `set_config`](#0x1_ValidatorConfig_set_config)
@@ -25,7 +26,7 @@
     -  [Function `remove_operator`](#0x1_ValidatorConfig_Specification_remove_operator)
     -  [Function `set_config`](#0x1_ValidatorConfig_Specification_set_config)
     -  [Function `is_valid`](#0x1_ValidatorConfig_Specification_is_valid)
-        -  [Validator stays valid once it becomes valid](#0x1_ValidatorConfig_@Validator_stays_valid_once_it_becomes_valid)
+    -  [Validator stays valid once it becomes valid](#0x1_ValidatorConfig_@Validator_stays_valid_once_it_becomes_valid)
     -  [Function `get_config`](#0x1_ValidatorConfig_Specification_get_config)
     -  [Function `get_human_name`](#0x1_ValidatorConfig_Specification_get_human_name)
     -  [Function `get_operator`](#0x1_ValidatorConfig_Specification_get_operator)
@@ -179,14 +180,44 @@
     account: &signer,
     lr_account: &signer,
     human_name: vector&lt;u8&gt;,
-    ) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_validator_role">Roles::has_validator_role</a>(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+) {
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
+    <a href="Roles.md#0x1_Roles_assert_validator">Roles::assert_validator</a>(account);
+    <b>assert</b>(
+        !exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EVALIDATOR_CONFIG)
+    );
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         human_name,
     });
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_ValidatorConfig_exists_config"></a>
+
+## Function `exists_config`
+
+Returns true if a ValidatorConfig resource exists under addr.
+
+
+<pre><code><b>fun</b> <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr)
 }
 </code></pre>
 
@@ -211,13 +242,14 @@ Sets a new operator account, preserving the old config.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_validator_role">Roles::has_validator_role</a>(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+    <a href="Roles.md#0x1_Roles_assert_validator">Roles::assert_validator</a>(account);
     // Role check is not necessary since the role is checked when the config <b>resource</b> is published.
     <b>assert</b>(
         <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account),
-        ENOT_A_VALIDATOR_OPERATOR
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_A_VALIDATOR_OPERATOR)
     );
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(sender), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     (borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(sender)).operator_account = <a href="Option.md#0x1_Option_some">Option::some</a>(operator_account);
 }
 </code></pre>
@@ -244,9 +276,10 @@ The old config is preserved.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_remove_operator">remove_operator</a>(account: &signer) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_validator_role">Roles::has_validator_role</a>(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+    <a href="Roles.md#0x1_Roles_assert_validator">Roles::assert_validator</a>(account);
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // <a href="#0x1_ValidatorConfig_Config">Config</a> field remains set
+    <b>assert</b>(<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(sender), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     (borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(sender)).operator_account = <a href="Option.md#0x1_Option_none">Option::none</a>();
 }
 </code></pre>
@@ -284,10 +317,14 @@ of the LibraSystem's code
 ) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_account),
-        EINVALID_TRANSACTION_SENDER
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TRANSACTION_SENDER)
     );
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> consensus_pubkey), EINVALID_CONSENSUS_KEY);
+    <b>assert</b>(
+        <a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> consensus_pubkey),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_CONSENSUS_KEY)
+    );
     // TODO(valerini): verify the proof of posession for consensus_pubkey
+    <b>assert</b>(<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(validator_account), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x1_Option_some">Option::some</a>(<a href="#0x1_ValidatorConfig_Config">Config</a> {
         consensus_pubkey,
@@ -349,8 +386,9 @@ Aborts if there is no ValidatorConfig resource of if its config is empty
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+    <b>assert</b>(<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     <b>let</b> config = &borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config;
+    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(config), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EVALIDATOR_CONFIG));
     *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(config)
 }
 </code></pre>
@@ -377,7 +415,7 @@ Aborts if there is no ValidatorConfig resource
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     <b>let</b> t_ref = borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *&t_ref.human_name
 }
@@ -406,7 +444,7 @@ empty, returns the input
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EVALIDATOR_CONFIG));
     <b>let</b> t_ref = borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *<a href="Option.md#0x1_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
 }
@@ -510,22 +548,23 @@ Never aborts
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> <a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
+<b>aborts_if</b> <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::ALREADY_PUBLISHED;
+<b>ensures</b> <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 </code></pre>
 
 
-
-Returns true if a ValidatorConfig resource exists under addr.
-
-
-<a name="0x1_ValidatorConfig_spec_exists_config"></a>
+Describes abort if ValidatorConfig does not exist.
 
 
-<pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr)
+<a name="0x1_ValidatorConfig_AbortsIfNoValidatorConfig"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a> {
+    addr: address;
+    <b>aborts_if</b> !<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr) with Errors::NOT_PUBLISHED;
 }
 </code></pre>
 
@@ -542,11 +581,15 @@ Returns true if a ValidatorConfig resource exists under addr.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_spec_exists_config">ValidatorOperatorConfig::spec_exists_config</a>(operator_account);
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) == operator_account;
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
+<b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account)
+    with Errors::INVALID_ARGUMENT;
+<a name="0x1_ValidatorConfig_sender$18"></a>
+<b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
+<b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account) with Errors::NOT_PUBLISHED;
+<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(sender);
+<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(sender) == operator_account;
 </code></pre>
 
 
@@ -604,11 +647,12 @@ Returns the human name of the validator
 
 
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
+<a name="0x1_ValidatorConfig_sender$19"></a>
+<b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
 <b>ensures</b> !<a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
-    == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(sender) == sender;
 </code></pre>
 
 
@@ -624,12 +668,15 @@ Returns the human name of the validator
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(signer) != <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(validator_account);
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(validator_account);
-<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(consensus_pubkey);
+<a name="0x1_ValidatorConfig_sender$20"></a>
+
+
+<pre><code><b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(signer);
+<b>aborts_if</b> sender != <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(validator_account) with Errors::INVALID_ARGUMENT;
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: validator_account};
+<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(consensus_pubkey) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(validator_account);
 </code></pre>
-
 
 
 Returns true if there a config published under addr.
@@ -639,7 +686,7 @@ Returns true if there a config published under addr.
 
 
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(addr: address): bool {
-    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
 
@@ -662,7 +709,6 @@ Returns true if there a config published under addr.
 </code></pre>
 
 
-
 Returns true if addr is a valid validator.
 
 
@@ -670,7 +716,7 @@ Returns true if addr is a valid validator.
 
 
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(addr: address): bool {
-    <a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr) && <a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(addr)
+<a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr) && <a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(addr)
 }
 </code></pre>
 
@@ -678,23 +724,12 @@ Returns true if addr is a valid validator.
 
 <a name="0x1_ValidatorConfig_@Validator_stays_valid_once_it_becomes_valid"></a>
 
-#### Validator stays valid once it becomes valid
+### Validator stays valid once it becomes valid
 
 
 
-<a name="0x1_ValidatorConfig_ValidatorStaysValid"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_ValidatorConfig_ValidatorStaysValid">ValidatorStaysValid</a> {
-    <b>ensures</b> forall validator: address:
-        <b>old</b>(<a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(validator)) ==&gt; <a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(validator);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_ValidatorConfig_ValidatorStaysValid">ValidatorStaysValid</a> <b>to</b> *;
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    forall validator: address where <b>old</b>(<a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(validator)): <a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(validator);
 </code></pre>
 
 
@@ -711,11 +746,10 @@ Returns true if addr is a valid validator.
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_has_config">spec_has_config</a>(addr);
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
+<b>aborts_if</b> <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr);
 </code></pre>
-
 
 
 Returns the config published under addr.
@@ -725,7 +759,7 @@ Returns the config published under addr.
 
 
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> {
-    <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
 </code></pre>
 
@@ -743,7 +777,7 @@ Returns the config published under addr.
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_human_name">spec_get_human_name</a>(addr);
 </code></pre>
 
@@ -761,7 +795,7 @@ Returns the config published under addr.
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
+<b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>;
 <b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(addr);
 </code></pre>
 

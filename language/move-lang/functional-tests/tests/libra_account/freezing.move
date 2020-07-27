@@ -22,8 +22,7 @@ fun main(account: &signer) {
     AccountFreezing::freeze_account(account, {{bob}});
 }
 }
-// check: ABORTED
-// check: 100
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -76,8 +75,7 @@ fun main(account: &signer) {
     AccountFreezing::freeze_account(account, {{libraroot}});
 }
 }
-// check: ABORTED
-// check: 14
+// check: "Keep(ABORTED { code: 775,"
 
 // TODO: this can go away once //! account works
 // create a parent VASPx
@@ -146,8 +144,7 @@ script {
         AccountFreezing::freeze_account(account, {{vasp}});
     }
 }
-// check: ABORTED
-// check: "code: 2"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: libraroot
@@ -157,8 +154,7 @@ script {
         AccountFreezing::unfreeze_account(account, {{vasp}});
     }
 }
-// check: ABORTED
-// check: "code: 5"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -168,8 +164,7 @@ script {
         AccountFreezing::freeze_account(account, {{libraroot}});
     }
 }
-// check: ABORTED
-// check: "code: 3"
+// check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
 //! sender: blessed
@@ -179,8 +174,7 @@ script {
         AccountFreezing::freeze_account(account, {{blessed}});
     }
 }
-// check: ABORTED
-// check: "code: 4"
+// check: "Keep(ABORTED { code: 1031,"
 
 //! new-transaction
 //! sender: libraroot
@@ -190,8 +184,7 @@ script {
         AccountFreezing::initialize(account);
     }
 }
-// check: ABORTED
-// check: "code: 0"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: libraroot
@@ -216,6 +209,7 @@ module Holder {
        x
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: vasp
@@ -270,7 +264,7 @@ script {
         Holder::hold(account, cap);
     }
 }
-// check: "Keep(ABORTED { code: 16,"
+// check: "Keep(ABORTED { code: 1537,"
 
 //! new-transaction
 //! sender: alice
@@ -283,7 +277,7 @@ script {
         LibraAccount::restore_withdraw_capability(cap);
     }
 }
-// check: "Keep(ABORTED { code: 16,"
+// check: "Keep(ABORTED { code: 1537,"
 
 //! new-transaction
 //! sender: alice
@@ -296,4 +290,4 @@ script {
         LibraAccount::restore_withdraw_capability(cap);
     }
 }
-// check: "Keep(ABORTED { code: 16,"
+// check: "Keep(ABORTED { code: 1537,"

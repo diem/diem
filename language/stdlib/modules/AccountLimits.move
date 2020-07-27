@@ -1,6 +1,7 @@
 address 0x1 {
 
 module AccountLimits {
+    use 0x1::Errors;
     use 0x1::LibraTimestamp;
     use 0x1::Roles;
     use 0x1::Signer;
@@ -50,12 +51,18 @@ module AccountLimits {
         limit_address: address,
     }
 
-    const ENOT_GENESIS: u64 = 0;
-    const EINVALID_INITIALIZATION_ADDRESS: u64 = 1;
-    const ENOT_LIBRA_ROOT: u64 = 2;
-    const ENOT_TREASURY_COMPLIANCE: u64 = 3;
-    const ENO_LIMITS_DEFINITION_EXISTS: u64 = 4;
-    const ELIMITS_DEFINITION_ALREADY_EXISTS: u64 = 5;
+    /// Invariant that `LimitsDefinition` exists if a `Window` exists.
+    spec module {
+        // TODO(wrwg): this invariant currently leads to non-termination as it produces a new address
+        //   from an implication. Should try to generate a trigger for this kind of invariants, perhaps
+        //   this fixes it.
+        //invariant [global]
+        //   forall window_addr: address, coin_type: type where exists<Window<coin_type>>(window_addr):
+        //        exists<LimitsDefinition<coin_type>>(global<Window<coin_type>>(window_addr).limit_address);
+    }
+
+    const ELIMITS_DEFINITION: u64 = 0;
+    const EWINDOW: u64 = 1;
 
     /// 24 hours in microseconds
     const ONE_DAY: u64 = 86400000000;
@@ -64,9 +71,13 @@ module AccountLimits {
     /// Grant a capability to call this module. This does not necessarily
     /// need to be a unique capability.
     public fun grant_mutation_capability(lr_account: &signer): AccountLimitMutationCapability {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        LibraTimestamp::assert_genesis();
+        Roles::assert_libra_root(lr_account);
         AccountLimitMutationCapability{}
+    }
+    spec fun grant_mutation_capability {
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
     }
 
     /// Determines if depositing `amount` of `CoinType` coins into the
@@ -77,6 +88,7 @@ module AccountLimits {
         addr: address,
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
+        assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
@@ -89,13 +101,15 @@ module AccountLimits {
     spec schema UpdateDepositLimitsAbortsIf<CoinType> {
         amount: u64;
         addr: address;
-        aborts_if !exists<Window<CoinType>>(addr);
+        include AbortsIfNoWindow<CoinType>;
         include CanReceiveAbortsIf<CoinType>{receiving: global<Window<CoinType>>(addr)};
     }
-    spec module {
-        define spec_update_deposit_limits<CoinType>(amount: u64, addr: address): bool {
-            spec_receiving_limits_ok(global<Window<CoinType>>(addr), amount)
-        }
+    spec schema AbortsIfNoWindow<CoinType> {
+        addr: address;
+        aborts_if !exists<Window<CoinType>>(addr) with Errors::NOT_PUBLISHED;
+    }
+    spec define spec_update_deposit_limits<CoinType>(amount: u64, addr: address): bool {
+        spec_receiving_limits_ok(global<Window<CoinType>>(addr), amount)
     }
 
     /// Determine if withdrawing `amount` of `CoinType` coins from
@@ -106,6 +120,7 @@ module AccountLimits {
         addr: address,
         _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
+        assert(exists<Window<CoinType>>(addr), Errors::not_published(EWINDOW));
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window<CoinType>>(addr),
@@ -118,29 +133,26 @@ module AccountLimits {
     spec schema UpdateWithdrawalLimitsAbortsIf<CoinType> {
         amount: u64;
         addr: address;
-        aborts_if !exists<Window<CoinType>>(addr);
+        include AbortsIfNoWindow<CoinType>;
         include CanWithdrawAbortsIf<CoinType>{sending: global<Window<CoinType>>(addr)};
     }
-    spec module {
-        define spec_update_withdrawal_limits<CoinType>(amount: u64, addr: address): bool {
-            spec_withdrawal_limits_ok(global<Window<CoinType>>(addr), amount)
-        }
+    spec define spec_update_withdrawal_limits<CoinType>(amount: u64, addr: address): bool {
+        spec_withdrawal_limits_ok(global<Window<CoinType>>(addr), amount)
     }
 
     /// All accounts that could be subject to account limits will have a
     /// `Window` for each currency they can hold published at the top level.
     /// Root accounts for multi-account entities will hold this resource at
     /// their root/parent account.
-    /// Aborts with ELIMITS_DEFINITION_ALREADY_EXISTS if `to_limit` already contains a
-    /// Window<CoinType>
     public fun publish_window<CoinType>(
         to_limit: &signer,
         _: &AccountLimitMutationCapability,
         limit_address: address,
     ) {
+        assert(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
         assert(
             !exists<Window<CoinType>>(Signer::address_of(to_limit)),
-            ELIMITS_DEFINITION_ALREADY_EXISTS
+            Errors::already_published(EWINDOW)
         );
         move_to(
             to_limit,
@@ -153,6 +165,11 @@ module AccountLimits {
             }
         )
     }
+    spec fun publish_window {
+        // TODO(wrwg): put these conditions into a schema.
+        aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
+        aborts_if exists<Window<CoinType>>(Signer::spec_address_of(to_limit)) with Errors::ALREADY_PUBLISHED;
+    }
 
     /// Unrestricted limits are represented by setting all fields in the
     /// limits definition to `U64_MAX`. Anyone can publish an unrestricted
@@ -161,6 +178,10 @@ module AccountLimits {
     /// window to it. Additionally, the TC controls the values held within this
     /// resource once it's published.
     public fun publish_unrestricted_limits<CoinType>(publish_account: &signer) {
+        assert(
+            !exists<LimitsDefinition<CoinType>>(Signer::address_of(publish_account)),
+            Errors::already_published(ELIMITS_DEFINITION)
+        );
         move_to(
             publish_account,
             LimitsDefinition<CoinType> {
@@ -171,9 +192,16 @@ module AccountLimits {
             }
         )
     }
+    spec fun publish_unrestricted_limits {
+        // TODO(wrwg): put these conditions into a schema.
+        aborts_if exists<LimitsDefinition<CoinType>>(Signer::spec_address_of(publish_account))
+            with Errors::ALREADY_PUBLISHED;
+    }
 
     /// Updates the `LimitsDefinition<CoinType>` resource at `limit_address`.
     /// If any of the field arguments is `0` the corresponding field is not updated.
+    ///
+    /// TODO(wrwg): specify
     public fun update_limits_definition<CoinType>(
         tc_account: &signer,
         limit_address: address,
@@ -182,9 +210,10 @@ module AccountLimits {
         new_max_holding_balance: u64,
         new_time_period: u64,
     ) acquires LimitsDefinition {
-        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        Roles::assert_treasury_compliance(tc_account);
         // As we don't have Optionals for txn scripts, in update_account_limit_definition.move
         // we use 0 value to represent a None (ie no update to that variable)
+        assert(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
         let limits_def = borrow_global_mut<LimitsDefinition<CoinType>>(limit_address);
         if (new_max_inflow > 0) { limits_def.max_inflow = new_max_inflow };
         if (new_max_outflow > 0) { limits_def.max_outflow = new_max_outflow };
@@ -202,16 +231,17 @@ module AccountLimits {
     ///   `new_limit_address`. If the `aggregate_balance` needs to be updated
     ///   but the `limit_address` should remain the same, the current
     ///   `limit_address` needs to be passed in for `new_limit_address`.
+    /// TODO(wrwg): specify
     public fun update_window_info<CoinType>(
         tc_account: &signer,
         window_address: address,
         aggregate_balance: u64,
         new_limit_address: address,
     ) acquires Window {
-        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        Roles::assert_treasury_compliance(tc_account);
         let window = borrow_global_mut<Window<CoinType>>(window_address);
         if (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
-        assert(exists<LimitsDefinition<CoinType>>(new_limit_address), ENO_LIMITS_DEFINITION_EXISTS);
+        assert(exists<LimitsDefinition<CoinType>>(new_limit_address), Errors::not_published(ELIMITS_DEFINITION));
         window.limit_address = new_limit_address;
     }
 
@@ -231,14 +261,13 @@ module AccountLimits {
         }
     }
     spec fun reset_window {
-        pragma opaque;
         include ResetWindowAbortsIf<CoinType>;
         include ResetWindowEnsures<CoinType>;
     }
     spec schema ResetWindowAbortsIf<CoinType> {
         window: Window<CoinType>;
         limits_definition: LimitsDefinition<CoinType>;
-        include LibraTimestamp::TimeAccessAbortsIf;
+        include LibraTimestamp::AbortsIfNoTime;
         aborts_if window.window_start + limits_definition.time_period > max_u64();
     }
     spec schema ResetWindowEnsures<CoinType> {
@@ -401,6 +430,8 @@ module AccountLimits {
         limits_def.time_period == ONE_DAY
     }
     spec fun is_unrestricted {
+        pragma opaque;
+        aborts_if false;
         ensures result == spec_is_unrestricted(limits_def);
     }
     spec module {
@@ -411,7 +442,6 @@ module AccountLimits {
             limits_def.time_period == 86400000000
         }
     }
-
 
     public fun limits_definition_address<CoinType>(addr: address): address acquires Window {
         borrow_global<Window<CoinType>>(addr).limit_address

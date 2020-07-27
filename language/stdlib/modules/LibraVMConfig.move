@@ -2,14 +2,19 @@ address 0x1 {
 
 module LibraVMConfig {
     use 0x1::LibraConfig;
+    use 0x1::LibraTimestamp;
     use 0x1::Roles;
 
     // The struct to hold all config data needed to operate the LibraVM.
-    // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configruation.
+    // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configuration.
     // * gas_schedule: Cost of running the VM.
     struct LibraVMConfig {
         publishing_option: vector<u8>,
         gas_schedule: GasSchedule,
+    }
+
+    spec module {
+        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<LibraVMConfig>();
     }
 
     // The gas schedule keeps two separate schedules for the gas:
@@ -69,6 +74,11 @@ module LibraVMConfig {
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
     ) {
+        LibraTimestamp::assert_genesis();
+
+        // The permission "UpdateVMConfig" is granted to LibraRoot [B21].
+        Roles::assert_libra_root(lr_account);
+
         let gas_constants = GasConstants {
             global_memory_per_byte_cost: 4,
             global_memory_per_byte_write_cost: 9,
@@ -95,19 +105,13 @@ module LibraVMConfig {
             },
         );
     }
-    spec fun initialize {
-        pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
-    }
 
     public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {
+        // TODO: who is allowed to do this?
         let current_config = LibraConfig::get<LibraVMConfig>();
         current_config.publishing_option = publishing_option;
         LibraConfig::set<LibraVMConfig>(account, current_config);
     }
 
-    spec module {
-        /// The permission "UpdateVMConfig" is granted to LibraRoot [B21].
-        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to initialize;
-    }
 }
 }

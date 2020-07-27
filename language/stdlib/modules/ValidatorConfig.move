@@ -1,6 +1,8 @@
 address 0x1 {
 
 module ValidatorConfig {
+    use 0x1::LibraTimestamp;
+    use 0x1::Errors;
     use 0x1::Option::{Self, Option};
     use 0x1::Signature;
     use 0x1::Signer;
@@ -30,12 +32,10 @@ module ValidatorConfig {
 
     /// TODO(valerini): add events here
 
-    const ENOT_LIBRA_ROOT: u64 = 0;
+    const EVALIDATOR_CONFIG: u64 = 0;
     const EINVALID_TRANSACTION_SENDER: u64 = 1;
-    const EVALIDATOR_RESOURCE_DOES_NOT_EXIST: u64 = 2;
-    const EINVALID_CONSENSUS_KEY: u64 = 3;
-    const ENO_VALIDATOR_ACCOUNT_ROLE: u64 = 4;
-    const ENOT_A_VALIDATOR_OPERATOR: u64 = 5;
+    const EINVALID_CONSENSUS_KEY: u64 = 2;
+    const ENOT_A_VALIDATOR_OPERATOR: u64 = 3;
 
     ///////////////////////////////////////////////////////////////////////////
     // Validator setup methods
@@ -45,9 +45,14 @@ module ValidatorConfig {
         account: &signer,
         lr_account: &signer,
         human_name: vector<u8>,
-        ) {
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
-        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+    ) {
+        LibraTimestamp::assert_operating();
+        Roles::assert_libra_root(lr_account);
+        Roles::assert_validator(account);
+        assert(
+            !exists<ValidatorConfig>(Signer::address_of(account)),
+            Errors::already_published(EVALIDATOR_CONFIG)
+        );
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
@@ -56,17 +61,22 @@ module ValidatorConfig {
     }
 
     spec fun publish {
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
-        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
-        aborts_if spec_exists_config(Signer::spec_address_of(account));
-        ensures spec_exists_config(Signer::spec_address_of(account));
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include Roles::AbortsIfNotValidator;
+        aborts_if exists_config(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
+        ensures exists_config(Signer::spec_address_of(account));
     }
 
-    spec module {
-        /// Returns true if a ValidatorConfig resource exists under addr.
-        define spec_exists_config(addr: address): bool {
-            exists<ValidatorConfig>(addr)
-        }
+    /// Returns true if a ValidatorConfig resource exists under addr.
+    fun exists_config(addr: address): bool {
+        exists<ValidatorConfig>(addr)
+    }
+
+    /// Describes abort if ValidatorConfig does not exist.
+    spec schema AbortsIfNoValidatorConfig {
+        addr: address;
+        aborts_if !exists_config(addr) with Errors::NOT_PUBLISHED;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -75,22 +85,26 @@ module ValidatorConfig {
 
     /// Sets a new operator account, preserving the old config.
     public fun set_operator(account: &signer, operator_account: address) acquires ValidatorConfig {
-        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+        Roles::assert_validator(account);
         // Role check is not necessary since the role is checked when the config resource is published.
         assert(
             ValidatorOperatorConfig::has_validator_operator_config(operator_account),
-            ENOT_A_VALIDATOR_OPERATOR
+            Errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
         );
         let sender = Signer::address_of(account);
+        assert(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
 
     spec fun set_operator {
-        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
-        aborts_if !ValidatorOperatorConfig::spec_exists_config(operator_account);
-        aborts_if !spec_exists_config(Signer::spec_address_of(account));
-        ensures spec_has_operator(Signer::spec_address_of(account));
-        ensures spec_get_operator(Signer::spec_address_of(account)) == operator_account;
+        include Roles::AbortsIfNotValidator;
+        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account)
+            with Errors::INVALID_ARGUMENT;
+        let sender = Signer::spec_address_of(account);
+        include AbortsIfNoValidatorConfig{addr: sender};
+        aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account) with Errors::NOT_PUBLISHED;
+        ensures spec_has_operator(sender);
+        ensures spec_get_operator(sender) == operator_account;
     }
 
     spec module {
@@ -118,18 +132,19 @@ module ValidatorConfig {
     /// Removes an operator account, setting a corresponding field to Option::none.
     /// The old config is preserved.
     public fun remove_operator(account: &signer) acquires ValidatorConfig {
-        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+        Roles::assert_validator(account);
         let sender = Signer::address_of(account);
         // Config field remains set
+        assert(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
     }
 
     spec fun remove_operator {
-        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
-        aborts_if !spec_exists_config(Signer::spec_address_of(account));
+        include Roles::AbortsIfNotValidator;
+        let sender = Signer::spec_address_of(account);
+        include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(account));
-        ensures spec_get_operator(Signer::spec_address_of(account))
-            == Signer::spec_address_of(account);
+        ensures spec_get_operator(sender) == sender;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -150,10 +165,14 @@ module ValidatorConfig {
     ) acquires ValidatorConfig {
         assert(
             Signer::address_of(signer) == get_operator(validator_account),
-            EINVALID_TRANSACTION_SENDER
+            Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
-        assert(Signature::ed25519_validate_pubkey(copy consensus_pubkey), EINVALID_CONSENSUS_KEY);
+        assert(
+            Signature::ed25519_validate_pubkey(copy consensus_pubkey),
+            Errors::invalid_argument(EINVALID_CONSENSUS_KEY)
+        );
         // TODO(valerini): verify the proof of posession for consensus_pubkey
+        assert(exists_config(validator_account), Errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
         t_ref.config = Option::some(Config {
             consensus_pubkey,
@@ -165,17 +184,16 @@ module ValidatorConfig {
     }
 
     spec fun set_config {
-        aborts_if Signer::spec_address_of(signer) != spec_get_operator(validator_account);
-        aborts_if !spec_exists_config(validator_account);
-        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey);
+        let sender = Signer::spec_address_of(signer);
+        aborts_if sender != spec_get_operator(validator_account) with Errors::INVALID_ARGUMENT;
+        include AbortsIfNoValidatorConfig{addr: validator_account};
+        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with Errors::INVALID_ARGUMENT;
         ensures spec_has_config(validator_account);
     }
 
-    spec module {
-        /// Returns true if there a config published under addr.
-        define spec_has_config(addr: address): bool {
-            Option::is_some(global<ValidatorConfig>(addr).config)
-        }
+    /// Returns true if there a config published under addr.
+    spec define spec_has_config(addr: address): bool {
+        Option::is_some(global<ValidatorConfig>(addr).config)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -196,57 +214,50 @@ module ValidatorConfig {
         ensures result == spec_is_valid(addr);
     }
 
-    spec module {
-        /// Returns true if addr is a valid validator.
-        define spec_is_valid(addr: address): bool {
-            spec_exists_config(addr) && spec_has_config(addr)
-        }
+    /// Returns true if addr is a valid validator.
+    spec define spec_is_valid(addr: address): bool {
+        exists_config(addr) && spec_has_config(addr)
     }
 
-    /// ## Validator stays valid once it becomes valid
-
-    spec schema ValidatorStaysValid {
-        ensures forall validator: address:
-            old(spec_is_valid(validator)) ==> spec_is_valid(validator);
-    }
+    /// # Validator stays valid once it becomes valid
 
     spec module {
-        apply ValidatorStaysValid to *;
+        invariant update [global]
+            forall validator: address where old(spec_is_valid(validator)): spec_is_valid(validator);
     }
 
     /// Get Config
     /// Aborts if there is no ValidatorConfig resource of if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+        assert(exists_config(addr), Errors::not_published(EVALIDATOR_CONFIG));
         let config = &borrow_global<ValidatorConfig>(addr).config;
+        assert(Option::is_some(config), Errors::invalid_argument(EVALIDATOR_CONFIG));
         *Option::borrow(config)
     }
 
     spec fun get_config {
         pragma opaque = true;
-        aborts_if !spec_exists_config(addr);
-        aborts_if !spec_has_config(addr);
+        include AbortsIfNoValidatorConfig;
+        aborts_if Option::spec_is_none(global<ValidatorConfig>(addr).config) with Errors::INVALID_ARGUMENT;
         ensures result == spec_get_config(addr);
     }
 
-    spec module {
-        /// Returns the config published under addr.
-        define spec_get_config(addr: address): Config {
-            Option::borrow(global<ValidatorConfig>(addr).config)
-        }
+    /// Returns the config published under addr.
+    spec define spec_get_config(addr: address): Config {
+        Option::borrow(global<ValidatorConfig>(addr).config)
     }
 
     /// Get validator's account human name
     /// Aborts if there is no ValidatorConfig resource
     public fun get_human_name(addr: address): vector<u8> acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+        assert(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *&t_ref.human_name
     }
 
     spec fun get_human_name {
         pragma opaque = true;
-        aborts_if !spec_exists_config(addr);
+        include AbortsIfNoValidatorConfig;
         ensures result == spec_get_human_name(addr);
     }
 
@@ -254,14 +265,14 @@ module ValidatorConfig {
     /// Aborts if there is no ValidatorConfig resource, if its operator_account is
     /// empty, returns the input
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+        assert(exists<ValidatorConfig>(addr), Errors::not_published(EVALIDATOR_CONFIG));
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *Option::borrow_with_default(&t_ref.operator_account, &addr)
     }
 
     spec fun get_operator {
         pragma opaque = true;
-        aborts_if !spec_exists_config(addr);
+        include AbortsIfNoValidatorConfig;
         ensures result == spec_get_operator(addr);
     }
 

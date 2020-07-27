@@ -49,7 +49,11 @@ fn valid_creator_already_vasp() {
             libra_root.address(),
         )
         .unwrap_err();
-    assert!(matches!(err, VMStatus::MoveAbort(_, 7)));
+    if let VMStatus::MoveAbort(_, code) = err {
+        assert_eq!(code, 262);
+    } else {
+        panic!("expected MoveAbort")
+    }
 }
 
 #[test]
@@ -114,8 +118,9 @@ fn max_child_accounts_for_vasp() {
             .sign(),
     );
 
-    assert!(matches!(
-        output.status().status(),
-        Ok(KeptVMStatus::MoveAbort(_, 8)) // ETOO_MANY_CHILDREN
-    ));
+    if let Ok(KeptVMStatus::MoveAbort(_, code)) = output.status().status() {
+        assert_eq!(code, 520); // ETOO_MANY_CHILDREN
+    } else {
+        panic!("expected MoveAbort")
+    }
 }

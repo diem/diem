@@ -59,8 +59,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(Libra::mint<Coin1>(account, 1));
 }
 }
-// check: ABORTED
-// check: 5
+// check: "Keep(ABORTED { code: 2055,"
 
 //! new-transaction
 //! sender: bob
@@ -85,8 +84,7 @@ script {
         );
     }
 }
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 261"
 
 //! new-transaction
 script {
@@ -111,7 +109,7 @@ script {
         Libra::initialize(account);
     }
 }
-// check: RESOURCE_ALREADY_EXISTS
+// check: "ABORTED { code: 262"
 
 //! new-transaction
 //! sender: blessed
@@ -135,6 +133,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: libraroot
@@ -150,7 +149,7 @@ fun main(account: &signer) {
     Holder::hold(account, mint_cap);
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed
@@ -166,7 +165,7 @@ fun main(account: &signer) {
     Holder::hold(account, burn_cap);
 }
 }
-// check: "Keep(ABORTED { code: 7,"
+// check: "Keep(ABORTED { code: 2307,"
 
 //! new-transaction
 //! sender: libraroot
@@ -179,7 +178,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: libraroot
@@ -191,7 +190,7 @@ fun main(account: &signer) {
     Holder::hold(account, Libra::create_preburn<Coin1>(account));
 }
 }
-// check: "Keep(ABORTED { code: 2,")
+// check: "Keep(ABORTED { code: 258,")
 
 //! new-transaction
 //! sender: libraroot
@@ -202,7 +201,7 @@ fun main(account: &signer) {
     Libra::publish_preburn_to_account<LBR>(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 4,")
+// check: "Keep(ABORTED { code: 1539,")
 
 //! new-transaction
 //! sender: libraroot
@@ -213,7 +212,7 @@ fun main(account: &signer) {
     Libra::publish_preburn_to_account<Coin1>(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 10,")
+// check: "Keep(ABORTED { code: 1539,")
 
 //! new-transaction
 //! sender: blessed
@@ -227,7 +226,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(coin1);
 }
 }
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 2824,"
 
 //! new-transaction
 script {

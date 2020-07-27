@@ -23,7 +23,6 @@
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
-    -  [Function `exists_at`](#0x1_DesignatedDealer_Specification_exists_at)
 
 
 
@@ -182,7 +181,8 @@ and default tiers for each known currency at launch.
     tc_account: &signer,
     add_all_currencies: bool,
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <b>assert</b>(!exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EDEALER));
     move_to(dd, <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> { mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd) });
     <b>if</b> (add_all_currencies) {
         <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(dd, tc_account);
@@ -219,10 +219,11 @@ multi-signer transactions in order to add a new currency to an existing DD.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
 <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dd);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), ENOT_A_DD);
+    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
     <a href="Libra.md#0x1_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(dd, tc_account);
+    <b>assert</b>(!exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EDEALER));
     move_to(dd, <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; {
         window_start: <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(),
         window_inflow: 0,
@@ -261,13 +262,13 @@ multi-signer transactions in order to add a new currency to an existing DD.
     dd_addr: address,
     tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> tiers = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>assert</b>(number_of_tiers + 1 &lt;= MAX_NUM_TIERS, EINVALID_TIER_ADDITION);
+    <b>assert</b>(number_of_tiers + 1 &lt;= MAX_NUM_TIERS, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_ADDITION));
     <b>if</b> (number_of_tiers &gt; 0) {
         <b>let</b> last_tier = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
-        <b>assert</b>(last_tier &lt; tier_upperbound, EINVALID_TIER_START);
+        <b>assert</b>(last_tier &lt; tier_upperbound, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_START));
     };
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(tiers, tier_upperbound);
 }
@@ -298,22 +299,28 @@ multi-signer transactions in order to add a new currency to an existing DD.
     tier_index: u64,
     new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> tiers = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>assert</b>(tier_index &lt; number_of_tiers, EINVALID_TIER_INDEX);
+    <b>assert</b>(tier_index &lt; number_of_tiers, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_INDEX));
     // Make sure that this new start for the tier is consistent with the tier above and below it.
     <b>let</b> tier = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
     <b>if</b> (*tier == new_upperbound) <b>return</b>;
     <b>if</b> (*tier &lt; new_upperbound) {
         <b>let</b> next_tier_index = tier_index + 1;
         <b>if</b> (next_tier_index &lt; number_of_tiers) {
-            <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier_index), EINVALID_TIER_START);
+            <b>assert</b>(
+                new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier_index),
+                <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_START)
+            );
         };
     };
     <b>if</b> (*tier &gt; new_upperbound && tier_index &gt; 0) {
         <b>let</b> prev_tier_index = tier_index - 1;
-        <b>assert</b>(new_upperbound &gt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, prev_tier_index), EINVALID_TIER_START);
+        <b>assert</b>(
+            new_upperbound &gt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, prev_tier_index),
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_START)
+        );
     };
     *<a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tiers, tier_index) = new_upperbound;
 }
@@ -343,10 +350,10 @@ multi-signer transactions in order to add a new currency to an existing DD.
     amount: u64,
     dd_addr: address,
     tier_index: u64,
-): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-    <b>assert</b>(amount &gt; 0, EINVALID_MINT_AMOUNT);
-    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), ENOT_A_DD);
+): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <b>assert</b>(amount &gt; 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_MINT_AMOUNT));
+    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
 
     <a href="#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr, amount, tier_index);
     // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
@@ -422,9 +429,9 @@ that amount that can be minted according to the bounds for the
     <b>let</b> new_inflow = cur_inflow + amount;
     <b>let</b> tiers = &<b>mut</b> tier.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>assert</b>(tier_index &lt; number_of_tiers, EINVALID_TIER_INDEX);
+    <b>assert</b>(tier_index &lt; number_of_tiers, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_INDEX));
     <b>let</b> tier_upperbound: u64 = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
-    <b>assert</b>(new_inflow &lt;= tier_upperbound, EINVALID_AMOUNT_FOR_TIER);
+    <b>assert</b>(new_inflow &lt;= tier_upperbound, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_AMOUNT_FOR_TIER));
     tier.window_inflow = new_inflow;
 }
 </code></pre>
@@ -589,11 +596,11 @@ TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times o
 
 
 
-<a name="0x1_DesignatedDealer_dealer$11"></a>
+<a name="0x1_DesignatedDealer_dealer$10"></a>
 
 
 <pre><code><b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-<a name="0x1_DesignatedDealer_current_time$12"></a>
+<a name="0x1_DesignatedDealer_current_time$11"></a>
 <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
 <b>ensures</b> <b>old</b>(dealer.window_start) &lt;= dealer.window_start;
 <b>ensures</b>
@@ -606,29 +613,13 @@ TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times o
 
 
 
-<a name="0x1_DesignatedDealer_Specification_exists_at"></a>
 
-### Function `exists_at`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr: address): bool
-</code></pre>
+<a name="0x1_DesignatedDealer_AbortsIfNotExistAt"></a>
 
 
-
-
-<pre><code>pragma verify = <b>true</b>;
-<b>ensures</b> result == <a href="#0x1_DesignatedDealer_spec_exists_at">spec_exists_at</a>(dd_addr);
-</code></pre>
-
-
-
-
-<a name="0x1_DesignatedDealer_spec_exists_at"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_DesignatedDealer_spec_exists_at">spec_exists_at</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr)
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_AbortsIfNotExistAt">AbortsIfNotExistAt</a> {
+    dd_addr: address;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr) with Errors::NOT_PUBLISHED;
 }
 </code></pre>
 

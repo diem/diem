@@ -10,4 +10,4 @@ fun main() {
     assert(fail == 999, 1);
 }
 }
-// check: ARITHMETIC_ERROR
+// check: "Keep(ABORTED { code: 775"

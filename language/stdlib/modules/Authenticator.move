@@ -4,6 +4,7 @@
 
 address 0x1 {
 module Authenticator {
+    use 0x1::Errors;
     use 0x1::Hash;
     use 0x1::LCS;
     use 0x1::Vector;
@@ -31,11 +32,14 @@ module Authenticator {
     ): MultiEd25519PublicKey {
         // check theshold requirements
         let len = Vector::length(&public_keys);
-        assert(threshold != 0, EZERO_THRESHOLD);
-        assert((threshold as u64) <= len, ENOT_ENOUGH_KEYS_FOR_THRESHOLD);
+        assert(threshold != 0, Errors::invalid_argument(EZERO_THRESHOLD));
+        assert(
+            (threshold as u64) <= len,
+            Errors::invalid_argument(ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
+        );
         // TODO: add constant MULTI_ED25519_MAX_KEYS
         // the multied25519 signature scheme allows at most 32 keys
-        assert(len <= 32, ENUM_KEYS_ABOVE_MAX_THRESHOLD);
+        assert(len <= 32, Errors::invalid_argument(ENUM_KEYS_ABOVE_MAX_THRESHOLD));
 
         MultiEd25519PublicKey { public_keys, threshold }
     }

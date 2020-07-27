@@ -2,10 +2,10 @@ address 0x1 {
 
 /// Module managing the registered currencies in the Libra framework.
 module RegisteredCurrencies {
-    use 0x1::CoreAddresses;
+    use 0x1::Errors;
     use 0x1::LibraConfig;
-    use 0x1::LibraTimestamp::{Self, spec_is_genesis};
-    use 0x1::Signer;
+    use 0x1::LibraTimestamp;
+    use 0x1::Roles;
     use 0x1::Vector;
 
     /// An on-chain config holding all of the currency codes for registered
@@ -15,34 +15,23 @@ module RegisteredCurrencies {
         currency_codes: vector<vector<u8>>,
     }
 
-    const ENOT_GENESIS: u64 = 0;
-    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
-    const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 2;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 0;
+    const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 1;
 
     /// Initializes this module. Can only be called from genesis.
     public fun initialize(config_account: &signer) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-
-        assert(
-            Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            EINVALID_SINGLETON_ADDRESS
-        );
+        LibraTimestamp::assert_genesis();
+        Roles::assert_libra_root(config_account);
         LibraConfig::publish_new_config(
             config_account,
             RegisteredCurrencies { currency_codes: Vector::empty() }
         );
-
-
     }
     spec fun initialize {
-        pragma aborts_if_is_partial; // because of Roles import problem below
-        /// Function aborts if already initialized or not in genesis.
-        // TODO: I don't think there is any way to import the next function for spec only.
-        // aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(config_account));
-        aborts_if Signer::spec_address_of(config_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
-        aborts_if LibraConfig::spec_is_published<RegisteredCurrencies>();
-        aborts_if !spec_is_genesis();
-        ensures LibraConfig::spec_is_published<RegisteredCurrencies>();
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::AbortsIfNotLibraRoot{account: config_account};
+        include LibraConfig::PublishNewConfigAbortsIf<RegisteredCurrencies>;
+        include LibraConfig::PublishNewConfigEnsures<RegisteredCurrencies>;
         ensures len(get_currency_codes()) == 0;
     }
 
@@ -55,7 +44,7 @@ module RegisteredCurrencies {
         let config = LibraConfig::get<RegisteredCurrencies>();
         assert(
             !Vector::contains(&config.currency_codes, &currency_code),
-            ECURRENCY_CODE_ALREADY_TAKEN
+            Errors::invalid_argument(ECURRENCY_CODE_ALREADY_TAKEN)
         );
         Vector::push_back(&mut config.currency_codes, currency_code);
         LibraConfig::set(lr_account, config);
@@ -68,15 +57,13 @@ module RegisteredCurrencies {
     spec schema AddCurrencyCodeAbortsIf {
         lr_account: &signer;
         currency_code: vector<u8>;
-
-        aborts_if !LibraConfig::spec_is_published<RegisteredCurrencies>();
-        aborts_if !exists<LibraConfig::ModifyConfigCapability<RegisteredCurrencies>>(Signer::spec_address_of(lr_account));
+        include LibraConfig::AbortsIfNotModifiable<RegisteredCurrencies>{account: lr_account};
 
         /// The same currency code can be only added once.
         aborts_if Vector::spec_contains(
             LibraConfig::spec_get<RegisteredCurrencies>().currency_codes,
             currency_code
-        );
+        ) with Errors::INVALID_ARGUMENT;
     }
 
     // **************** Global Specification ****************
@@ -90,13 +77,16 @@ module RegisteredCurrencies {
         }
 
         /// Global invariant that currency config is always available after genesis.
-        invariant [global] !spec_is_genesis() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
+        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
 
+        /*
         /// Global invariant that only LIBRA_ROOT can have a currency registration.
-        invariant [global] !spec_is_genesis() ==> (
+        /// TODO(wrwg): deactivated because it is causing inconsistencies(?)
+        invariant [global] LibraTimestamp::is_operating() ==> (
             forall holder: address where exists<LibraConfig::LibraConfig<RegisteredCurrencies>>(holder):
                 holder == CoreAddresses::LIBRA_ROOT_ADDRESS()
         );
+        */
     }
 
 }

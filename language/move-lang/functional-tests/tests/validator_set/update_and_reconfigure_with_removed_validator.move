@@ -48,4 +48,4 @@ script {
         LibraSystem::update_config_and_reconfigure(account, {{bob}});
     }
 }
-// check: "ABORTED { code: 5,"
+// check: "ABORTED { code: 775,"
