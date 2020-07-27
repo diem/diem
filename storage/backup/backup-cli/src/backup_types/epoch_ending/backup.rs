@@ -3,6 +3,7 @@
 
 use crate::{
     backup_types::epoch_ending::manifest::{EpochEndingBackup, EpochEndingChunk},
+    metadata::Metadata,
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
@@ -158,9 +159,12 @@ impl EpochEndingBackupController {
         waypoints: Vec<Waypoint>,
         chunks: Vec<EpochEndingChunk>,
     ) -> Result<FileHandle> {
+        let first_epoch = self.start_epoch;
+        let last_epoch = self.end_epoch - 1;
+
         let manifest = EpochEndingBackup {
-            first_epoch: self.start_epoch,
-            last_epoch: self.end_epoch - 1,
+            first_epoch,
+            last_epoch,
             waypoints,
             chunks,
         };
@@ -172,6 +176,12 @@ impl EpochEndingBackupController {
             .write_all(&serde_json::to_vec(&manifest)?)
             .await?;
 
+        let metadata =
+            Metadata::new_epoch_ending_backup(first_epoch, last_epoch, manifest_handle.clone());
+
+        self.storage
+            .save_metadata_line(&metadata.name(), &metadata.to_text_line()?)
+            .await?;
         Ok(manifest_handle)
     }
 }

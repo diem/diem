@@ -3,6 +3,7 @@
 
 use crate::{
     backup_types::transaction::manifest::{TransactionBackup, TransactionChunk},
+    metadata::Metadata,
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
@@ -183,6 +184,12 @@ impl TransactionBackupController {
             .await?;
         manifest_file
             .write_all(&serde_json::to_vec(&manifest)?)
+            .await?;
+
+        let metadata =
+            Metadata::new_transaction_backup(first_version, last_version, manifest_handle.clone());
+        self.storage
+            .save_metadata_line(&metadata.name(), &metadata.to_text_line()?)
             .await?;
 
         Ok(manifest_handle)
