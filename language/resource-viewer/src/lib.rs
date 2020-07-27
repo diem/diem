@@ -75,7 +75,9 @@ impl<'a> MoveValueAnnotator<'a> {
         access_path: AccessPath,
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
-        let ty = resource_vec_to_type_tag(&access_path.path)?;
+        let ty = self
+            .cache
+            .resolve_struct(&resource_vec_to_type_tag(access_path.path.as_slice())?)?;
         let struct_def = (&ty)
             .try_into()
             .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
@@ -96,14 +98,23 @@ impl<'a> MoveValueAnnotator<'a> {
     pub fn view_account_state(&self, state: &AccountState) -> Result<AnnotatedAccountStateBlob> {
         let mut output = BTreeMap::new();
         for (k, v) in state.iter() {
-            let ty = resource_vec_to_type_tag(k.as_slice())?;
+            let ty = if let Ok(ty) = resource_vec_to_type_tag(k.as_slice()) {
+                ty
+            } else {
+                println!("Uncached AccessPath: {:?}", k);
+                continue;
+            };
+            let ty = self.cache.resolve_struct(&ty)?;
             let struct_def = (&ty)
                 .try_into()
                 .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
+
             let move_struct = MoveStruct::simple_deserialize(v.as_slice(), &struct_def)?;
+            println!("annotaing: {:?}, {:?}", ty, move_struct);
             output.insert(
                 ty.struct_tag()
-                    .map_err(|e| e.finish(Location::Undefined).into_vm_status())?,
+                    .map_err(|e| e.finish(Location::Undefined).into_vm_status())
+                    .unwrap(),
                 self.annotate_struct(&move_struct, &ty)?,
             );
         }
