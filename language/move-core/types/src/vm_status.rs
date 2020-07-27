@@ -742,10 +742,8 @@ impl StatusCode {
     pub fn should_skip_checks_for_todo(self) -> bool {
         fn todo_needs_execution_trace_information() -> std::collections::HashSet<StatusCode> {
             vec![
-                StatusCode::OUT_OF_GAS,
                 StatusCode::VM_MAX_TYPE_DEPTH_REACHED,
                 StatusCode::VM_MAX_VALUE_DEPTH_REACHED,
-                StatusCode::CALL_STACK_OVERFLOW,
             ]
             .into_iter()
             .collect()
