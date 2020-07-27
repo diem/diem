@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, secure_backend::SecureBackend};
+use crate::error::Error;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_types::{
@@ -18,32 +18,6 @@ pub struct StorageWrapper {
 }
 
 impl StorageWrapper {
-    pub fn new(
-        storage_name: &'static str,
-        backend: &SecureBackend,
-    ) -> Result<StorageWrapper, Error> {
-        let storage = backend.clone().create_storage(storage_name)?;
-        Ok(StorageWrapper {
-            storage_name,
-            storage,
-        })
-    }
-
-    pub fn new_with_namespace(
-        storage_name: &'static str,
-        namespace: String,
-        backend: &SecureBackend,
-    ) -> Result<StorageWrapper, Error> {
-        let storage = backend
-            .clone()
-            .set_namespace(namespace)
-            .create_storage(storage_name)?;
-        Ok(StorageWrapper {
-            storage_name,
-            storage,
-        })
-    }
-
     pub fn value(&self, name: &'static str) -> Result<Value, Error> {
         self.storage
             .get(name)
