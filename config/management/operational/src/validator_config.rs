@@ -189,14 +189,14 @@ fn decode_address(raw_address: RawNetworkAddress) -> Result<NetworkAddress, Erro
 #[derive(Debug, StructOpt)]
 pub struct ValidatorConfig {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080")]
-    host: String,
+    json_server: String,
     #[structopt(long, help = "Validator account address to display the config")]
     account_address: AccountAddress,
 }
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<libra_types::validator_config::ValidatorConfig, Error> {
-        let client = JsonRpcClientWrapper::new(self.host);
+        let client = JsonRpcClientWrapper::new(self.json_server);
         client.validator_config(self.account_address)
     }
 }
