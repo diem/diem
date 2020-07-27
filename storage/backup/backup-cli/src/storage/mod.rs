@@ -103,8 +103,7 @@ impl Arbitrary for ShellSafeName {
 pub struct TextLine(String);
 
 impl TextLine {
-    #[cfg(test)]
-    fn new(value: &str) -> Result<Self> {
+    pub fn new(value: &str) -> Result<Self> {
         let newlines: &[_] = &['\n', '\r'];
         ensure!(value.find(newlines).is_none(), "Newline not allowed.");
         let mut ret = value.to_string();

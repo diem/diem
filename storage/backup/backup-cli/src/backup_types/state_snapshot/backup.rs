@@ -3,6 +3,7 @@
 
 use crate::{
     backup_types::state_snapshot::manifest::{StateSnapshotBackup, StateSnapshotChunk},
+    metadata::Metadata,
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
@@ -210,6 +211,11 @@ impl StateSnapshotBackupController {
             .await?;
         manifest_file
             .write_all(&serde_json::to_vec(&manifest)?)
+            .await?;
+
+        let metadata = Metadata::new_state_snapshot_backup(self.version, manifest_handle.clone());
+        self.storage
+            .save_metadata_line(&metadata.name(), &metadata.to_text_line()?)
             .await?;
 
         Ok(manifest_handle)
