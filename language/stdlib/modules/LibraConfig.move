@@ -1,10 +1,10 @@
 address 0x1 {
 module LibraConfig {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::Event;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
-    // TODO: Can't use aliasing because spec functions won't import
     use 0x1::Roles;
 
     // A generic singleton resource that holds a value of a specific type.
@@ -92,9 +92,9 @@ module LibraConfig {
         config_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(Roles::has_libra_root_role(config_account), ENOT_LIBRA_ROOT);
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
+        assert(LibraTimestamp::is_genesis(), CoreErrors::NOT_GENESIS());
+        assert(Roles::has_libra_root_role(config_account), CoreErrors::NOT_LIBRA_ROOT_ROLE());
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), CoreErrors::NOT_LIBRA_ROOT_ADDRESS());
         move_to(config_account, LibraConfig { payload });
         ModifyConfigCapability<Config> {}
     }
@@ -193,8 +193,13 @@ module LibraConfig {
 
     // check spec_is_published
     spec fun publish_new_config {
-        /// TODO(wrwg): enable
-        /// aborts_if spec_is_published<Config>();
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include Roles::AbortsIfNotLibraRoot{account: config_account};
+        aborts_if spec_is_published<Config>();
+
+        // TODO(wrwg): turn the assume below either into an assert or eliminate the aborts condition
+        aborts_if [assume] exists<ModifyConfigCapability<Config>>(Signer::spec_address_of(config_account));
+
         ensures old(!spec_is_published<Config>());
         ensures spec_is_published<Config>();
     }

@@ -17,7 +17,7 @@ script {
 //! block-time: 1
 
 // check: ABORTED
-// check: 2
+// check: "code: 101"
 
 //! block-prologue
 //! proposer-address: 0x0
@@ -31,7 +31,7 @@ script {
     }
 }
 // check: ABORTED
-// check: "code: 0"
+// check: "code: 101"
 
 //! new-transaction
 //! sender: libraroot
@@ -42,4 +42,4 @@ script {
     }
 }
 // check: ABORTED
-// check: "code: 4"
+// check: "code: 101"

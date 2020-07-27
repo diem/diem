@@ -3,8 +3,10 @@ address 0x1 {
 /// Module managing the registered currencies in the Libra framework.
 module RegisteredCurrencies {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::LibraConfig;
-    use 0x1::LibraTimestamp::{Self, spec_is_genesis};
+    use 0x1::LibraTimestamp;
+    use 0x1::Roles;
     use 0x1::Signer;
     use 0x1::Vector;
 
@@ -21,27 +23,21 @@ module RegisteredCurrencies {
 
     /// Initializes this module. Can only be called from genesis.
     public fun initialize(config_account: &signer) {
-        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-
+        assert(LibraTimestamp::is_genesis(), CoreErrors::NOT_GENESIS());
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            EINVALID_SINGLETON_ADDRESS
+            CoreErrors::NOT_LIBRA_ROOT_ADDRESS()
         );
         LibraConfig::publish_new_config(
             config_account,
             RegisteredCurrencies { currency_codes: Vector::empty() }
         );
-
-
     }
     spec fun initialize {
-        pragma aborts_if_is_partial; // because of Roles import problem below
-        /// Function aborts if already initialized or not in genesis.
-        // TODO: I don't think there is any way to import the next function for spec only.
-        // aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(config_account));
-        aborts_if Signer::spec_address_of(config_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include CoreAddresses::AbortsIfNotLibraRoot{account: config_account};
+        include Roles::AbortsIfNotLibraRoot{account: config_account};
         aborts_if LibraConfig::spec_is_published<RegisteredCurrencies>();
-        aborts_if !spec_is_genesis();
         ensures LibraConfig::spec_is_published<RegisteredCurrencies>();
         ensures len(get_currency_codes()) == 0;
     }
@@ -90,10 +86,10 @@ module RegisteredCurrencies {
         }
 
         /// Global invariant that currency config is always available after genesis.
-        invariant [global] !spec_is_genesis() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
+        invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
 
         /// Global invariant that only LIBRA_ROOT can have a currency registration.
-        invariant [global] !spec_is_genesis() ==> (
+        invariant [global] LibraTimestamp::is_operating() ==> (
             forall holder: address where exists<LibraConfig::LibraConfig<RegisteredCurrencies>>(holder):
                 holder == CoreAddresses::LIBRA_ROOT_ADDRESS()
         );

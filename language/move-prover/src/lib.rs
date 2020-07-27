@@ -69,7 +69,7 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
     }
-    if env.has_warnings() {
+    if options.prover.report_warnings && env.has_warnings() {
         env.report_warnings(error_writer);
     }
 

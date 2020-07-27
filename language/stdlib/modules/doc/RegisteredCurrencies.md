@@ -63,18 +63,15 @@ Initializes this module. Can only be called from genesis.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), <a href="CoreErrors.md#0x1_CoreErrors_NOT_GENESIS">CoreErrors::NOT_GENESIS</a>());
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        EINVALID_SINGLETON_ADDRESS
+        <a href="CoreErrors.md#0x1_CoreErrors_NOT_LIBRA_ROOT_ADDRESS">CoreErrors::NOT_LIBRA_ROOT_ADDRESS</a>()
     );
     <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
         config_account,
         <a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a> { currency_codes: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
     );
-
-
 }
 </code></pre>
 
@@ -132,16 +129,10 @@ Adds a new currency code. The currency code must not yet exist.
 
 
 
-<pre><code>pragma aborts_if_is_partial;
-</code></pre>
-
-
-Function aborts if already initialized or not in genesis.
-
-
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: config_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: config_account};
 <b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
-<b>aborts_if</b> !spec_is_genesis();
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
 <b>ensures</b> len(<a href="#0x1_RegisteredCurrencies_get_currency_codes">get_currency_codes</a>()) == 0;
 </code></pre>
@@ -217,14 +208,14 @@ Helper to get the currency code vector.
 Global invariant that currency config is always available after genesis.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] !spec_is_genesis() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
 </code></pre>
 
 
 Global invariant that only LIBRA_ROOT can have a currency registration.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] !spec_is_genesis() ==&gt; (
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; (
     forall holder: address where exists&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;&gt;(holder):
         holder == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
 );

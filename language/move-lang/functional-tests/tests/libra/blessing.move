@@ -23,7 +23,7 @@ fun main(account: &signer) {
     Libra::update_lbr_exchange_rate<Coin1>(account, FixedPoint32::create_from_rational(1, 3));
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 302,"
 
 //! new-transaction
 script {

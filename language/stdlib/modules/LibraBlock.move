@@ -47,7 +47,7 @@ module LibraBlock {
     }
 
     spec fun initialize_block_metadata {
-        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if !LibraTimestamp::is_genesis();
         aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if spec_is_initialized();
         ensures spec_is_initialized();
@@ -100,6 +100,7 @@ module LibraBlock {
         previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
+
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
         if(proposer != CoreAddresses::VM_RESERVED_ADDRESS()) assert(LibraSystem::is_validator(proposer), EPROPOSER_NOT_A_VALIDATOR);
@@ -118,6 +119,8 @@ module LibraBlock {
 
     spec fun process_block_prologue {
         pragma assume_no_abort_from_here = true, opaque = true;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include CoreAddresses::AbortsIfNotVM{account: vm};
         aborts_if !spec_is_initialized();
         aborts_if proposer != CoreAddresses::SPEC_VM_RESERVED_ADDRESS()
             && !LibraConfig::spec_is_published<LibraSystem::LibraSystem>();

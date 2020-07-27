@@ -203,6 +203,7 @@ Update the BlockMetadata resource with the new blockmetada coming from the conse
     previous_block_votes: vector&lt;address&gt;,
     proposer: address
 ) <b>acquires</b> <a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
+
     <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 
     <b>if</b>(proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) <b>assert</b>(<a href="LibraSystem.md#0x1_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer), EPROPOSER_NOT_A_VALIDATOR);
@@ -265,7 +266,7 @@ Get the current block height
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
+<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
 <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> <a href="#0x1_LibraBlock_spec_is_initialized">spec_is_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraBlock_spec_is_initialized">spec_is_initialized</a>();
@@ -326,6 +327,8 @@ Get the current block height
 
 
 <pre><code>pragma assume_no_abort_from_here = <b>true</b>, opaque = <b>true</b>;
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>{account: vm};
 <b>aborts_if</b> !<a href="#0x1_LibraBlock_spec_is_initialized">spec_is_initialized</a>();
 <b>aborts_if</b> proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()
     && !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraSystem.md#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>&gt;();

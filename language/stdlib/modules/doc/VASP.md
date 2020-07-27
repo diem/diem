@@ -729,7 +729,7 @@ Spec version of
 
 
 <pre><code><b>invariant</b> [<b>global</b>]
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_up">LibraTimestamp::spec_is_up</a>() ==&gt;
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
         exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
 

@@ -1,3 +1,4 @@
+// flag: --warn
 module TestUnusedSchema {
 
     spec module {

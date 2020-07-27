@@ -111,6 +111,9 @@ pub struct ProverOptions {
     pub assume_wellformed_on_access: bool,
     /// Whether to automatically debug trace values of specification expression leafs.
     pub debug_trace: bool,
+    /// Report warnings. This is not on by default. We may turn it on if the warnings
+    /// are better filtered, e.g. do not contain unused schemas intended for other modules.
+    pub report_warnings: bool,
 }
 
 impl Default for ProverOptions {
@@ -125,6 +128,7 @@ impl Default for ProverOptions {
             resource_wellformed_axiom: false,
             assume_wellformed_on_access: false,
             debug_trace: false,
+            report_warnings: false,
         }
     }
 }
@@ -274,6 +278,12 @@ impl Options {
                 Arg::with_name("generate-only")
                     .long("generate-only")
                     .help("only generate boogie file but do not call boogie"),
+            )
+            .arg(
+                Arg::with_name("warn")
+                    .long("warn")
+                    .short("w")
+                    .help("produces warnings")
             )
             .arg(
                 Arg::with_name("trace")
@@ -432,6 +442,9 @@ impl Options {
         }
         if matches.is_present("abigen") {
             options.run_abigen = true;
+        }
+        if matches.is_present("warn") {
+            options.prover.report_warnings = true;
         }
         if matches.is_present("trace") {
             options.prover.debug_trace = true;

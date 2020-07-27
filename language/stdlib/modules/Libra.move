@@ -6,6 +6,7 @@ address 0x1 {
 /// minting and burning of coins.
 module Libra {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::RegisteredCurrencies;
@@ -838,7 +839,7 @@ module Libra {
         tc_account: &signer,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
-        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        assert(Roles::has_treasury_compliance_role(tc_account), CoreErrors::NOT_TREASURY_COMPLIANCE_ROLE());
         assert_is_currency<FromCoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -852,6 +853,10 @@ module Libra {
     }
     spec fun update_lbr_exchange_rate {
         pragma aborts_if_is_partial = true; // TODO: added for a module property. Remove this once the "aborts_if" spec is completely specified.
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+
+        // because we have partial aborts in the presence of error codes, we must specify remaining abort codes.
+        aborts_with 8;
     }
 
 

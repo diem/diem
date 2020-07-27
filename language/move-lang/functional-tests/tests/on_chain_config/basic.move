@@ -80,4 +80,4 @@ script {
         LibraConfig::set(account, 1);
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 301,"

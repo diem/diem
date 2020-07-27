@@ -10,6 +10,7 @@
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
 -  [Specification](#0x1_CoreAddresses_Specification)
+    -  [Specification Schemas for Aborts Related to Core Addresses](#0x1_CoreAddresses_@Specification_Schemas_for_Aborts_Related_to_Core_Addresses)
 
 
 
@@ -178,5 +179,42 @@ Specification version of
 
 <pre><code><b>define</b> <a href="#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">SPEC_VM_RESERVED_ADDRESS</a>(): address {
     0x0
+}
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_@Specification_Schemas_for_Aborts_Related_to_Core_Addresses"></a>
+
+### Specification Schemas for Aborts Related to Core Addresses
+
+Note that currently, we do not define these functions on Move level, because it
+is better for debugging to have the matching assert directly in the code than indirect via a function.
+TODO(wrwg): revisit whether we really cannot write helpers which handle the aborts in Move. Perhaps we
+can have stack traces from the VM which would make this restriction unnecessary.
+Specifies that a function aborts if the account is not the Libra root.
+
+
+<a name="0x1_CoreAddresses_AbortsIfNotLibraRoot"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_CoreAddresses_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
+    account: signer;
+    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>()
+        with <a href="CoreErrors.md#0x1_CoreErrors_NOT_LIBRA_ROOT_ADDRESS">CoreErrors::NOT_LIBRA_ROOT_ADDRESS</a>();
+}
+</code></pre>
+
+
+Specifies that a function aborts if the account is not the VM reserved address.
+
+
+<a name="0x1_CoreAddresses_AbortsIfNotVM"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_CoreAddresses_AbortsIfNotVM">AbortsIfNotVM</a> {
+    account: signer;
+    <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="#0x1_CoreAddresses_VM_RESERVED_ADDRESS">VM_RESERVED_ADDRESS</a>()
+        with <a href="CoreErrors.md#0x1_CoreErrors_NOT_VM_RESERVED_ADDRESS">CoreErrors::NOT_VM_RESERVED_ADDRESS</a>();
 }
 </code></pre>

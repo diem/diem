@@ -51,7 +51,7 @@ module AccountFreezing {
         });
     }
     spec fun initialize {
-        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if !LibraTimestamp::is_genesis();
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if exists<FreezeEventsHolder>(Signer::spec_address_of(lr_account));
         ensures exists<FreezeEventsHolder>(Signer::spec_address_of(lr_account));
@@ -141,17 +141,17 @@ module AccountFreezing {
         }
 
         /// FreezeEventsHolder always exists after genesis.
-        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] LibraTimestamp::is_operating() ==>
             exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
 
         /// The account of LibraRoot is not freezable [G2].
         /// After genesis, FreezingBit of LibraRoot is always false.
-        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
 
         /// The account of TreasuryCompliance is not freezable [G3].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
-        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] LibraTimestamp::is_operating() ==>
             spec_account_is_not_frozen(CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS());
 
         /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B17].

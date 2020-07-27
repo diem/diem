@@ -5,7 +5,7 @@ script {
         RegisteredCurrencies::initialize(account);
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 101,"
 
 //! new-transaction
 //! sender: libraroot
@@ -15,7 +15,7 @@ script {
         RegisteredCurrencies::initialize(account);
     }
 }
-// check: "Keep(ABORTED { code: 0,"
+// check: "Keep(ABORTED { code: 101,"
 
 //! new-transaction
 //! sender: libraroot

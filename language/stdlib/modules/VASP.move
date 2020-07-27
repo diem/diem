@@ -236,7 +236,7 @@ module VASP {
     spec module {
         /// `VASPOperationsResource` is published under the LibraRoot address after genesis.
         invariant [global]
-            LibraTimestamp::spec_is_up() ==>
+            LibraTimestamp::is_operating() ==>
                 exists<VASPOperationsResource>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
     }
 

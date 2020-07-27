@@ -40,7 +40,7 @@ module TransactionFee {
     }
 
     spec fun initialize {
-        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if !LibraTimestamp::is_genesis();
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if !Roles::spec_has_treasury_compliance_role_addr(Signer::spec_address_of(tc_account));
         ensures spec_is_initialized<LBR>();

@@ -659,11 +659,11 @@ Return true if
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
-<b>aborts_if</b> spec_address_of(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(lr_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(lr_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(lr_account)).role_id == <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>();
+<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
+<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account)).role_id == <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>();
 </code></pre>
 
 
@@ -679,12 +679,12 @@ Return true if
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
+<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
 <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
-<b>aborts_if</b> spec_address_of(treasury_compliance_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>();
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(treasury_compliance_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(treasury_compliance_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(treasury_compliance_account)).role_id == <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>();
+<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(treasury_compliance_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(treasury_compliance_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(treasury_compliance_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(treasury_compliance_account)).role_id == <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>();
 </code></pre>
 
 
@@ -701,9 +701,9 @@ Return true if
 
 
 <pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account)).role_id == <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>();
 </code></pre>
 
 
@@ -720,9 +720,9 @@ Return true if
 
 
 <pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>();
 </code></pre>
 
 
@@ -739,9 +739,9 @@ Return true if
 
 
 <pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account)).role_id == <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>();
 </code></pre>
 
 
@@ -758,9 +758,9 @@ Return true if
 
 
 <pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account)).role_id == <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>();
 </code></pre>
 
 
@@ -777,9 +777,9 @@ Return true if
 
 
 <pre><code><b>aborts_if</b> !<a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(creating_account));
-<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(spec_address_of(new_account)).role_id == <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(new_account)).role_id == <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>();
 </code></pre>
 
 
@@ -803,7 +803,7 @@ Helper functions
 
 
 <pre><code><b>define</b> <a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(account: signer): u64 {
-    <b>let</b> addr = spec_address_of(account);
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id
 }
 <a name="0x1_Roles_spec_has_role_id_addr"></a>
@@ -880,20 +880,9 @@ will remain an account with role
 <code>R</code> for all time.
 
 
-<a name="0x1_Roles_RoleIdPersists"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> {
-    <b>ensures</b> forall addr: address where <b>old</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr)):
-        exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr)
-            && <b>old</b>(<b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id) == <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id;
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> <b>to</b> *&lt;T&gt;, * <b>except</b> has*;
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    forall addr: address where <b>old</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr)):
+        exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) && <b>old</b>(<b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id) == <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id;
 </code></pre>
 
 
@@ -917,7 +906,8 @@ will remain an account with role
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a> {
     account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+        with <a href="CoreErrors.md#0x1_CoreErrors_NOT_LIBRA_ROOT_ROLE">CoreErrors::NOT_LIBRA_ROOT_ROLE</a>();
 }
 </code></pre>
 
@@ -929,7 +919,8 @@ will remain an account with role
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotTreasuryCompliance">AbortsIfNotTreasuryCompliance</a> {
     account: signer;
-    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+    <b>aborts_if</b> !<a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
+        with <a href="CoreErrors.md#0x1_CoreErrors_NOT_TREASURY_COMPLIANCE_ROLE">CoreErrors::NOT_TREASURY_COMPLIANCE_ROLE</a>();
 }
 </code></pre>
 
