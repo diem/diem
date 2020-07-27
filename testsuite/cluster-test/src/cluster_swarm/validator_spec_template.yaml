@@ -79,6 +79,7 @@ spec:
           Replace_Dots    Off
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
+          Generate_ID     On
       EOF
       until [ $(kubectl get pods -l app=libra-validator | grep ^val | grep -e Init -e Running | wc -l) = "{num_validators}" ]; do
         sleep 3;
