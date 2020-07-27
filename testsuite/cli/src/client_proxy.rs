@@ -15,7 +15,7 @@ use libra_crypto::{
     x25519, ValidCryptoMaterialStringExt,
 };
 use libra_json_rpc_client::views::{
-    AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
+    AccountView, BlockMetadata, EventView, TransactionView, VMStatusViewV1,
 };
 use libra_logger::prelude::*;
 use libra_network_address::{
@@ -745,7 +745,7 @@ impl ClientProxy {
             {
                 Ok(Some(txn_view)) => {
                     println!();
-                    if txn_view.vm_status == VMStatusView::Executed {
+                    if txn_view.vm_status.vm_status == VMStatusViewV1::Executed {
                         println!("transaction executed!");
                         if txn_view.events.is_empty() {
                             println!("no events emitted");

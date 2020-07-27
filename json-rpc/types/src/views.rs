@@ -47,29 +47,51 @@ impl AmountView {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-#[serde(tag = "type")]
-pub enum AccountRoleView {
-    #[serde(rename = "unknown")]
+pub struct ChildVASP {
+    pub parent_vasp_address: BytesView,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct ParentVASP {
+    pub human_name: String,
+    pub base_url: String,
+    pub expiration_time: u64,
+    pub compliance_key: BytesView,
+    pub num_children: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct DesignatedDealer {
+    pub human_name: String,
+    pub base_url: String,
+    pub expiration_time: u64,
+    pub compliance_key: BytesView,
+    pub preburn_balances: Vec<AmountView>,
+    pub received_mint_events_key: BytesView,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountRoleViewV1 {
     Unknown,
-    #[serde(rename = "child_vasp")]
-    ChildVASP { parent_vasp_address: BytesView },
-    #[serde(rename = "parent_vasp")]
-    ParentVASP {
-        human_name: String,
-        base_url: String,
-        expiration_time: u64,
-        compliance_key: BytesView,
-        num_children: u64,
-    },
-    #[serde(rename = "designated_dealer")]
-    DesignatedDealer {
-        human_name: String,
-        base_url: String,
-        expiration_time: u64,
-        compliance_key: BytesView,
-        preburn_balances: Vec<AmountView>,
-        received_mint_events_key: BytesView,
-    },
+    ChildVasp(ChildVASP),
+    ParentVasp(ParentVASP),
+    DesignatedDealer(DesignatedDealer),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum AccountRoleViewV2 {
+    Unknown,
+    ChildVasp(ChildVASP),
+    ParentVasp(ParentVASP),
+    DesignatedDealer(DesignatedDealer),
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+pub struct AccountRoleView {
+    pub role: AccountRoleViewV1,
+    pub role_v2: AccountRoleViewV2,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -82,6 +104,7 @@ pub struct AccountView {
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
     pub is_frozen: bool,
+    #[serde(flatten)]
     pub role: AccountRoleView,
 }
 
@@ -350,48 +373,90 @@ impl From<&Vec<u8>> for BytesView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(tag = "type")]
-pub enum VMStatusView {
-    #[serde(rename = "executed")]
+#[serde(rename_all = "snake_case")]
+pub enum VMStatusViewV1 {
     Executed,
-    #[serde(rename = "out_of_gas")]
     OutOfGas,
-    #[serde(rename = "move_abort")]
-    MoveAbort { location: String, abort_code: u64 },
-    #[serde(rename = "execution_failure")]
+    MoveAbort {
+        location: String,
+        abort_code: u64,
+    },
     ExecutionFailure {
         location: String,
         function_index: u16,
         code_offset: u16,
     },
-    #[serde(rename = "verification_error")]
     VerificationError,
-    #[serde(rename = "deserialization_error")]
     DeserializationError,
-    #[serde(rename = "publishing_failure")]
     PublishingFailure,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum VMStatusViewV2 {
+    Executed,
+    OutOfGas,
+    MoveAbort {
+        location: String,
+        abort_code: u64,
+    },
+    ExecutionFailure {
+        location: String,
+        function_index: u16,
+        code_offset: u16,
+    },
+    VerificationError,
+    DeserializationError,
+    PublishingFailure,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct VMStatusView {
+    pub vm_status: VMStatusViewV1,
+    pub vm_status_v2: VMStatusViewV2,
 }
 
 impl From<&KeptVMStatus> for VMStatusView {
     fn from(status: &KeptVMStatus) -> Self {
-        match status {
-            KeptVMStatus::Executed => VMStatusView::Executed,
-            KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
-            KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusView::MoveAbort {
-                location: loc.to_string(),
-                abort_code: *abort_code,
+        VMStatusView {
+            vm_status: match status {
+                KeptVMStatus::Executed => VMStatusViewV1::Executed,
+                KeptVMStatus::OutOfGas => VMStatusViewV1::OutOfGas,
+                KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusViewV1::MoveAbort {
+                    location: loc.to_string(),
+                    abort_code: *abort_code,
+                },
+                KeptVMStatus::ExecutionFailure {
+                    location,
+                    function,
+                    code_offset,
+                } => VMStatusViewV1::ExecutionFailure {
+                    location: location.to_string(),
+                    function_index: *function,
+                    code_offset: *code_offset,
+                },
+                KeptVMStatus::VerificationError => VMStatusViewV1::VerificationError,
+                KeptVMStatus::DeserializationError => VMStatusViewV1::DeserializationError,
             },
-            KeptVMStatus::ExecutionFailure {
-                location,
-                function,
-                code_offset,
-            } => VMStatusView::ExecutionFailure {
-                location: location.to_string(),
-                function_index: *function,
-                code_offset: *code_offset,
+            vm_status_v2: match status {
+                KeptVMStatus::Executed => VMStatusViewV2::Executed,
+                KeptVMStatus::OutOfGas => VMStatusViewV2::OutOfGas,
+                KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusViewV2::MoveAbort {
+                    location: loc.to_string(),
+                    abort_code: *abort_code,
+                },
+                KeptVMStatus::ExecutionFailure {
+                    location,
+                    function,
+                    code_offset,
+                } => VMStatusViewV2::ExecutionFailure {
+                    location: location.to_string(),
+                    function_index: *function,
+                    code_offset: *code_offset,
+                },
+                KeptVMStatus::VerificationError => VMStatusViewV2::VerificationError,
+                KeptVMStatus::DeserializationError => VMStatusViewV2::DeserializationError,
             },
-            KeptVMStatus::VerificationError => VMStatusView::VerificationError,
-            KeptVMStatus::DeserializationError => VMStatusView::DeserializationError,
         }
     }
 }
@@ -402,6 +467,7 @@ pub struct TransactionView {
     pub transaction: TransactionDataView,
     pub hash: String,
     pub events: Vec<EventView>,
+    #[serde(flatten)]
     pub vm_status: VMStatusView,
     pub gas_used: u64,
 }
@@ -500,36 +566,57 @@ impl From<Transaction> for TransactionDataView {
 impl From<AccountRole> for AccountRoleView {
     fn from(role: AccountRole) -> Self {
         match role {
-            AccountRole::Unknown => AccountRoleView::Unknown,
-            AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
-                parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),
+            AccountRole::Unknown => AccountRoleView {
+                role: AccountRoleViewV1::Unknown,
+                role_v2: AccountRoleViewV2::Unknown,
             },
-            AccountRole::ParentVASP { vasp, credential } => AccountRoleView::ParentVASP {
-                human_name: credential.human_name().to_string(),
-                base_url: credential.base_url().to_string(),
-                expiration_time: credential.expiration_date(),
-                compliance_key: BytesView::from(credential.compliance_public_key()),
-                num_children: vasp.num_children(),
-            },
+            AccountRole::ChildVASP(child_vasp) => {
+                let cvasp = ChildVASP {
+                    parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),
+                };
+                AccountRoleView {
+                    role: AccountRoleViewV1::ChildVasp(cvasp.clone()),
+                    role_v2: AccountRoleViewV2::ChildVasp(cvasp),
+                }
+            }
+            AccountRole::ParentVASP { vasp, credential } => {
+                let pvasp = ParentVASP {
+                    human_name: credential.human_name().to_string(),
+                    base_url: credential.base_url().to_string(),
+                    expiration_time: credential.expiration_date(),
+                    compliance_key: BytesView::from(credential.compliance_public_key()),
+                    num_children: vasp.num_children(),
+                };
+                AccountRoleView {
+                    role: AccountRoleViewV1::ParentVasp(pvasp.clone()),
+                    role_v2: AccountRoleViewV2::ParentVasp(pvasp),
+                }
+            }
             AccountRole::DesignatedDealer {
                 dd_credential,
                 preburn_balances,
                 designated_dealer,
-            } => AccountRoleView::DesignatedDealer {
-                human_name: dd_credential.human_name().to_string(),
-                base_url: dd_credential.base_url().to_string(),
-                expiration_time: dd_credential.expiration_date(),
-                compliance_key: BytesView::from(dd_credential.compliance_public_key()),
-                preburn_balances: preburn_balances
-                    .iter()
-                    .map(|(currency_code, balance)| {
-                        AmountView::new(balance.coin(), &currency_code.as_str())
-                    })
-                    .collect(),
-                received_mint_events_key: BytesView::from(
-                    designated_dealer.received_mint_events().key().as_bytes(),
-                ),
-            },
+            } => {
+                let dd = DesignatedDealer {
+                    human_name: dd_credential.human_name().to_string(),
+                    base_url: dd_credential.base_url().to_string(),
+                    expiration_time: dd_credential.expiration_date(),
+                    compliance_key: BytesView::from(dd_credential.compliance_public_key()),
+                    preburn_balances: preburn_balances
+                        .iter()
+                        .map(|(currency_code, balance)| {
+                            AmountView::new(balance.coin(), &currency_code.as_str())
+                        })
+                        .collect(),
+                    received_mint_events_key: BytesView::from(
+                        designated_dealer.received_mint_events().key().as_bytes(),
+                    ),
+                };
+                AccountRoleView {
+                    role: AccountRoleViewV1::DesignatedDealer(dd.clone()),
+                    role_v2: AccountRoleViewV2::DesignatedDealer(dd),
+                }
+            }
         }
     }
 }
