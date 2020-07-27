@@ -5,6 +5,7 @@
 
 pub mod command;
 mod json_rpc;
+pub mod operator_key;
 pub mod validate_transaction;
 pub mod validator_config;
 pub mod validator_set;

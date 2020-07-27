@@ -74,9 +74,9 @@ impl SetValidatorConfig {
 #[derive(Debug, StructOpt)]
 pub struct RotateKey {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
-    host: String,
+    pub(crate) host: String,
     #[structopt(flatten)]
-    validator_config: libra_management::validator_config::ValidatorConfig,
+    pub(crate) validator_config: libra_management::validator_config::ValidatorConfig,
 }
 
 impl RotateKey {
