@@ -17,6 +17,8 @@ pub enum Command {
     RotateConsensusKey(crate::validator_config::RotateConsensusKey),
     #[structopt(about = "Rotates a full node network key")]
     RotateFullNodeNetworkKey(crate::validator_config::RotateFullNodeNetworkKey),
+    #[structopt(about = "Rotates the operator key for the operator")]
+    RotateOperatorKey(crate::operator_key::RotateOperatorKey),
     #[structopt(about = "Rotates a validator network key")]
     RotateValidatorNetworkKey(crate::validator_config::RotateValidatorNetworkKey),
     #[structopt(about = "Sets the validator config")]
@@ -33,6 +35,7 @@ pub enum Command {
 pub enum CommandName {
     InsertWaypoint,
     RotateConsensusKey,
+    RotateOperatorKey,
     RotateFullNodeNetworkKey,
     RotateValidatorNetworkKey,
     SetValidatorConfig,
@@ -46,6 +49,7 @@ impl From<&Command> for CommandName {
         match command {
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::RotateConsensusKey(_) => CommandName::RotateConsensusKey,
+            Command::RotateOperatorKey(_) => CommandName::RotateOperatorKey,
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
             Command::RotateValidatorNetworkKey(_) => CommandName::RotateValidatorNetworkKey,
             Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
@@ -61,6 +65,7 @@ impl std::fmt::Display for CommandName {
         let name = match self {
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
+            CommandName::RotateOperatorKey => "rotate-operator-key",
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
             CommandName::SetValidatorConfig => "set-validator-config",
@@ -79,6 +84,7 @@ impl Command {
                 format!("{:?}", cmd.execute().map(|()| "success").unwrap())
             }
             Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::RotateOperatorKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateValidatorNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::SetValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
@@ -99,6 +105,13 @@ impl Command {
         match self {
             Command::RotateConsensusKey(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::RotateConsensusKey)),
+        }
+    }
+
+    pub fn rotate_operator_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        match self {
+            Command::RotateOperatorKey(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::RotateOperatorKey)),
         }
     }
 

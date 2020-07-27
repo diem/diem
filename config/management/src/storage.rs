@@ -148,6 +148,28 @@ impl StorageWrapper {
             signature,
         ))
     }
+
+    /// Sign a transaction with the given version
+    pub fn sign_using_version(
+        &mut self,
+        key_name: &'static str,
+        key_version: Ed25519PublicKey,
+        script_name: &'static str,
+        raw_transaction: RawTransaction,
+    ) -> Result<SignedTransaction, Error> {
+        let signature = self
+            .storage
+            .sign_using_version(key_name, key_version.clone(), &raw_transaction)
+            .map_err(|e| {
+                Error::StorageSigningError(self.storage_name, script_name, key_name, e.to_string())
+            })?;
+
+        Ok(SignedTransaction::new(
+            raw_transaction,
+            key_version,
+            signature,
+        ))
+    }
 }
 
 pub fn to_x25519(edkey: Ed25519PublicKey) -> Result<x25519::PublicKey, Error> {
