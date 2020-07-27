@@ -68,6 +68,7 @@ spec:
               Replace_Dots    Off
               Retry_Limit     False
               Logstash_Prefix kubernetes_cluster
+              Generate_ID     On
           EOF
           if [[ {lsr_backend} = "vault" ]]; then
           while true; do
