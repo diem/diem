@@ -1,6 +1,7 @@
 //! account: bob, 10000LBR
 //! account: alice, 0LBR
 //! account: abby, 0, 0, address
+//! account: doris, 0Coin1, 0
 
 module Holder {
     use 0x1::Signer;
@@ -27,10 +28,7 @@ script {
         LibraAccount::initialize(sender);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 0,"
 
 //! new-transaction
 //! sender: bob
@@ -48,6 +46,45 @@ script {
 //! new-transaction
 //! sender: bob
 script {
+    use 0x1::LBR::LBR;
+    use 0x1::LibraAccount;
+    fun main(account: &signer) {
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{abby}}, 10, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
+    }
+}
+// check: "Keep(ABORTED { code: 17,"
+
+//! new-transaction
+//! sender: bob
+script {
+    use 0x1::Coin1::Coin1;
+    use 0x1::LibraAccount;
+    fun main(account: &signer) {
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{abby}}, 10, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
+    }
+}
+// check: "Keep(ABORTED { code: 19,"
+
+//! new-transaction
+//! sender: bob
+script {
+    use 0x1::LBR::LBR;
+    use 0x1::LibraAccount;
+    fun main(account: &signer) {
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{doris}}, 10, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
+    }
+}
+// check: "Keep(ABORTED { code: 18,"
+
+//! new-transaction
+//! sender: bob
+script {
     use 0x1::LibraAccount;
     fun main(account: &signer) {
         let rot_cap = LibraAccount::extract_key_rotation_capability(account);
@@ -55,10 +92,7 @@ script {
         LibraAccount::restore_key_rotation_capability(rot_cap);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 8
+// check: "Keep(ABORTED { code: 8,"
 
 //! new-transaction
 script {
@@ -114,3 +148,37 @@ script {
     }
 }
 // check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: 0x0, {{bob::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+stdlib_script::create_parent_vasp_account
+// check: "Keep(ABORTED { code: 10,"
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{abby}}, x"", b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+stdlib_script::create_parent_vasp_account
+// check: "Keep(ABORTED { code: 8,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::LibraAccount;
+    fun main() {
+        LibraAccount::create_libra_root_account({{libraroot}}, {{libraroot::auth_key}});
+    }
+}
+// check: "Keep(ABORTED { code: 0,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::LibraAccount;
+    fun main(account: &signer) {
+        LibraAccount::create_treasury_compliance_account(account, {{blessed}}, {{blessed::auth_key}});
+    }
+}
+// check: "Keep(ABORTED { code: 0,"

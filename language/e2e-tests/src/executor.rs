@@ -38,7 +38,7 @@ use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
 };
-use vm::CompiledModule;
+use vm::{errors::VMError, CompiledModule};
 use vm_genesis::GENESIS_KEYPAIR;
 
 /// Provides an environment to run a VM instance.
@@ -334,5 +334,32 @@ impl FakeExecutor {
             writeset
         };
         self.data_store.add_write_set(&write_set);
+    }
+
+    pub fn try_exec(
+        &mut self,
+        module_name: &str,
+        function_name: &str,
+        type_params: Vec<TypeTag>,
+        args: Vec<Value>,
+        sender: &AccountAddress,
+    ) -> Result<WriteSet, VMError> {
+        let cost_table = zero_cost_schedule();
+        let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
+        let vm = MoveVM::new();
+        let remote_view = RemoteStorage::new(&self.data_store);
+        let mut session = vm.new_session(&remote_view);
+        session.execute_function(
+            &Self::module(module_name),
+            &Self::name(function_name),
+            type_params,
+            args,
+            *sender,
+            &mut cost_strategy,
+        )?;
+        let effects = session.finish().expect("Failed to generate txn effects");
+        let (writeset, _events) =
+            txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+        Ok(writeset)
     }
 }

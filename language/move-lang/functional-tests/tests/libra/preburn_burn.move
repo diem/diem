@@ -51,6 +51,41 @@ fun main(account: &signer) {
 // check: PreburnEvent
 // check: EXECUTED
 
+// cancel the preburn
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer)  {
+    LibraAccount::cancel_burn<Coin1>(account, {{dd}})
+}
+}
+// check: EXECUTED
+
+// perform a preburn
+//! new-transaction
+//! sender: dd
+//! gas-currency: Coin1
+script {
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
+use 0x1::LibraAccount;
+fun main(account: &signer) {
+    let old_market_cap = Libra::market_cap<Coin1>();
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    // send the coins to the preburn area. market cap should not be affected, but the preburn
+    // bucket should increase in size by 100
+    LibraAccount::preburn<Coin1>(account, &with_cap, 100);
+    assert(Libra::market_cap<Coin1>() == old_market_cap, 8002);
+    assert(Libra::preburn_value<Coin1>() == 100, 8003);
+    LibraAccount::restore_withdraw_capability(with_cap);
+}
+}
+
+// check: PreburnEvent
+// check: EXECUTED
+
 // second (concurrent) preburn disallowed
 //! new-transaction
 //! sender: dd

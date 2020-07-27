@@ -194,7 +194,7 @@ module Roles {
     /// in the privilege/role relationship can be implemented by changing Roles and not the
     /// module that uses it.
 
-    public fun has_role(account: &signer, role_id: u64): bool acquires RoleId {
+    fun has_role(account: &signer, role_id: u64): bool acquires RoleId {
        let addr = Signer::address_of(account);
        exists<RoleId>(addr)
            && borrow_global<RoleId>(addr).role_id == role_id

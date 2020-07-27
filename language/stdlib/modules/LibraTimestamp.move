@@ -27,6 +27,7 @@ module LibraTimestamp {
     const ETIME_NOT_INITIALIZED: u64 = 1;
     const ENOT_VM: u64 = 2;
     const EINVALID_TIMESTAMP: u64 = 3;
+    const EGENESIS_ONLY: u64 = 4;
 
     /// Initializes the global wall clock time resource. This can only be called from genesis.
     public fun initialize(lr_account: &signer) {
@@ -47,6 +48,7 @@ module LibraTimestamp {
             exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()) && now_microseconds() == 0,
             ETIME_NOT_INITIALIZED
         );
+        assert(!exists<TimeHasStarted>(Signer::address_of(lr_account)), EGENESIS_ONLY);
         move_to(lr_account, TimeHasStarted{});
     }
 

@@ -887,8 +887,9 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) {
-        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
+        // The creator account is verified to have the libra root role in `Roles::new_validator_role`
+        Roles::new_validator_role(creator_account, &new_account);
         Event::publish_generator(&new_account);
         ValidatorConfig::publish(&new_account, creator_account, human_name);
         make_account(new_account, auth_key_prefix)
@@ -900,8 +901,9 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) {
-        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
+        // The creator account is verified to have the libra root role in `Roles::new_validator_operator_role`
+        Roles::new_validator_operator_role(creator_account, &new_account);
         Event::publish_generator(&new_account);
         ValidatorOperatorConfig::publish(&new_account, creator_account, human_name);
         make_account(new_account, auth_key_prefix)

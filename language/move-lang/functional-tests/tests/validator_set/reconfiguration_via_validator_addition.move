@@ -1,5 +1,6 @@
 //! account: alice, 1000000, 0, validator
 //! account: bob, 1000000, 0, validator
+//! account: invalidvalidator
 
 //! block-prologue
 //! proposer: bob
@@ -44,6 +45,25 @@ script{
 // check: EXECUTED
 
 //! new-transaction
+script{
+    use 0x1::LibraSystem;
+    fun main(account: &signer) {
+        LibraSystem::add_validator(account, {{alice}});
+    }
+}
+// check: "ABORTED { code: 1,"
+
+//! new-transaction
+//! sender: libraroot
+script{
+    use 0x1::LibraSystem;
+    fun main(account: &signer) {
+        LibraSystem::add_validator(account, {{invalidvalidator}});
+    }
+}
+// check: "ABORTED { code: 3,"
+
+//! new-transaction
 //! sender: libraroot
 script{
     use 0x1::LibraSystem;
@@ -56,3 +76,13 @@ script{
 }
 // check: NewEpochEvent
 // check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+script{
+    use 0x1::LibraSystem;
+    fun main(account: &signer) {
+        LibraSystem::add_validator(account, {{alice}});
+    }
+}
+// check: "ABORTED { code: 4,"

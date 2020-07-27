@@ -52,11 +52,13 @@ module VASP {
     public fun publish_parent_vasp_credential(vasp: &signer, lr_account: &signer) {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         let vasp_addr = Signer::address_of(vasp);
-        assert(!is_vasp(vasp_addr), ENOT_A_VASP);
+        assert(Roles::has_parent_VASP_role(vasp), ENOT_A_PARENT_VASP);
+        assert(!is_vasp(vasp_addr), EALREADY_A_VASP);
         move_to(vasp, ParentVASP { num_children: 0 });
     }
     spec fun publish_parent_vasp_credential {
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
+        aborts_if !Roles::spec_has_parent_VASP_role_addr(Signer::spec_address_of(vasp));
         aborts_if spec_is_vasp(Signer::spec_address_of(vasp));
         ensures spec_is_parent_vasp(Signer::spec_address_of(vasp));
         ensures spec_get_num_children(Signer::spec_address_of(vasp)) == 0;

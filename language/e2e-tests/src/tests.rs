@@ -25,5 +25,6 @@ mod scripts;
 mod transaction_builder;
 mod transaction_fees;
 mod validator_set_management;
+mod vasps;
 mod verify_txn;
 mod write_set;

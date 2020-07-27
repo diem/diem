@@ -3,6 +3,9 @@
 //! account: child2, 0, 0, address
 //! account: parent2, 0, 0, address
 
+//! account: vasp1, 0, 0, address
+//! account: vasp2, 0, 0, address
+
 // === Setup ===
 
 // create parent VASP accounts for parent1 and 2
@@ -148,3 +151,68 @@ fun main(account: &signer) {
 }
 }
 // check: "ABORTED { code: 2,"
+
+// A non-vasp can't create a recovery address
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::RecoveryAddress;
+use 0x1::LibraAccount;
+fun main(account: &signer) {
+    RecoveryAddress::publish(account, LibraAccount::extract_key_rotation_capability(account))
+}
+}
+// check: "ABORTED { code: 0,"
+
+//! new-transaction
+module Holder {
+    resource struct Holder<T> { x: T }
+    public fun hold<T>(account: &signer, x: T) {
+        move_to(account, Holder<T> { x });
+    }
+
+    public fun get<T>(addr: address): T
+    acquires Holder {
+        let Holder<T>{ x } = move_from<Holder<T>>(addr);
+        x
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{vasp1}}, {{vasp1::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+stdlib_script::create_parent_vasp_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{vasp2}}, {{vasp2::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+stdlib_script::create_parent_vasp_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vasp1
+script {
+use {{default}}::Holder;
+use 0x1::LibraAccount;
+fun main(account: &signer) {
+    Holder::hold(account, LibraAccount::extract_key_rotation_capability(account));
+}
+}
+// check: EXECUTED
+
+// Try to create a recovery address with an invalid key rotation capability
+//! new-transaction
+//! sender: vasp2
+script {
+use 0x1::RecoveryAddress;
+use {{default}}::Holder;
+use 0x1::LibraAccount;
+fun main(account: &signer) {
+    let cap = Holder::get<LibraAccount::KeyRotationCapability>({{vasp1}});
+    RecoveryAddress::publish(account, cap);
+}
+}
+// check: "ABORTED { code: 1,"

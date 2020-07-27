@@ -20,7 +20,6 @@
 -  [Function `can_withdraw`](#0x1_AccountLimits_can_withdraw)
 -  [Function `is_unrestricted`](#0x1_AccountLimits_is_unrestricted)
 -  [Function `limits_definition_address`](#0x1_AccountLimits_limits_definition_address)
--  [Function `is_unlimited_account`](#0x1_AccountLimits_is_unlimited_account)
 -  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
 -  [Function `has_window_published`](#0x1_AccountLimits_has_window_published)
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
@@ -642,30 +641,6 @@ Return whether the
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_limits_definition_address">limits_definition_address</a>&lt;CoinType&gt;(addr: address): address <b>acquires</b> <a href="#0x1_AccountLimits_Window">Window</a> {
     borrow_global&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr).limit_address
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_AccountLimits_is_unlimited_account"></a>
-
-## Function `is_unlimited_account`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_is_unlimited_account">is_unlimited_account</a>&lt;CoinType&gt;(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_is_unlimited_account">is_unlimited_account</a>&lt;CoinType&gt;(addr: address): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(borrow_global&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(addr))
 }
 </code></pre>
 
