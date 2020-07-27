@@ -95,6 +95,11 @@ module ValidatorConfig {
                 addr
             }
         }
+
+        /// Returns the human name of the validator
+        define spec_get_human_name(addr: address): vector<u8> {
+            global<ValidatorConfig>(addr).human_name
+        }
     }
 
     /// Removes an operator account, setting a corresponding field to Option::none.
@@ -214,6 +219,20 @@ module ValidatorConfig {
         define spec_get_config(addr: address): Config {
             Option::spec_get(global<ValidatorConfig>(addr).config)
         }
+    }
+
+    /// Get validator's account human name
+    /// Aborts if there is no ValidatorConfig resource
+    public fun get_human_name(addr: address): vector<u8> acquires ValidatorConfig {
+        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+        let t_ref = borrow_global<ValidatorConfig>(addr);
+        *&t_ref.human_name
+    }
+
+    spec fun get_human_name {
+        pragma opaque = true;
+        aborts_if !spec_exists_config(addr);
+        ensures result == spec_get_human_name(addr);
     }
 
     /// Get operator's account

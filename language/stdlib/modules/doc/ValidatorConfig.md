@@ -14,6 +14,7 @@
 -  [Function `set_config`](#0x1_ValidatorConfig_set_config)
 -  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
 -  [Function `get_config`](#0x1_ValidatorConfig_get_config)
+-  [Function `get_human_name`](#0x1_ValidatorConfig_get_human_name)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
@@ -26,6 +27,7 @@
     -  [Function `is_valid`](#0x1_ValidatorConfig_Specification_is_valid)
         -  [Validator stays valid once it becomes valid](#0x1_ValidatorConfig_@Validator_stays_valid_once_it_becomes_valid)
     -  [Function `get_config`](#0x1_ValidatorConfig_Specification_get_config)
+    -  [Function `get_human_name`](#0x1_ValidatorConfig_Specification_get_human_name)
     -  [Function `get_operator`](#0x1_ValidatorConfig_Specification_get_operator)
 
 
@@ -349,6 +351,34 @@ Aborts if there is no ValidatorConfig resource of if its config is empty
 
 </details>
 
+<a name="0x1_ValidatorConfig_get_human_name"></a>
+
+## Function `get_human_name`
+
+Get validator's account human name
+Aborts if there is no ValidatorConfig resource
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
+    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
+    <b>let</b> t_ref = borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
+    *&t_ref.human_name
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_ValidatorConfig_get_operator"></a>
 
 ## Function `get_operator`
@@ -539,6 +569,18 @@ and returns the addr itself otherwise.
 </code></pre>
 
 
+Returns the human name of the validator
+
+
+<a name="0x1_ValidatorConfig_spec_get_human_name"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_get_human_name">spec_get_human_name</a>(addr: address): vector&lt;u8&gt; {
+    <b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).human_name
+}
+</code></pre>
+
+
 
 <a name="0x1_ValidatorConfig_Specification_remove_operator"></a>
 
@@ -673,6 +715,24 @@ Returns the config published under addr.
 <pre><code><b>define</b> <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> {
     <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
 }
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_Specification_get_human_name"></a>
+
+### Function `get_human_name`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt;
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> !<a href="#0x1_ValidatorConfig_spec_exists_config">spec_exists_config</a>(addr);
+<b>ensures</b> result == <a href="#0x1_ValidatorConfig_spec_get_human_name">spec_get_human_name</a>(addr);
 </code></pre>
 
 

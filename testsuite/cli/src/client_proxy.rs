@@ -62,7 +62,7 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
-use transaction_builder::encode_set_validator_config_script;
+use transaction_builder::encode_register_validator_config_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -623,9 +623,13 @@ impl ClientProxy {
             self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.libra_root_account {
             Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(transaction_builder::encode_remove_validator_script(
-                    account_address,
-                )),
+                TransactionPayload::Script(
+                    transaction_builder::encode_remove_validator_and_reconfigure_script(
+                        self.libra_root_account.as_ref().unwrap().sequence_number,
+                        vec![],
+                        account_address,
+                    ),
+                ),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -647,9 +651,13 @@ impl ClientProxy {
             self.get_account_address_from_parameter(space_delim_strings[1])?;
         match self.libra_root_account {
             Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(transaction_builder::encode_add_validator_script(
-                    account_address,
-                )),
+                TransactionPayload::Script(
+                    transaction_builder::encode_add_validator_and_reconfigure_script(
+                        self.libra_root_account.as_ref().unwrap().sequence_number,
+                        vec![],
+                        account_address,
+                    ),
+                ),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -703,7 +711,7 @@ impl ClientProxy {
         );
         let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
 
-        let program = encode_set_validator_config_script(
+        let program = encode_register_validator_config_script(
             address,
             consensus_public_key.to_bytes().to_vec(),
             network_identity_key.to_bytes(),

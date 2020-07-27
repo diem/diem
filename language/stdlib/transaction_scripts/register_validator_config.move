@@ -3,9 +3,7 @@ script {
 
     /// Set validator's config locally.
     /// Does not emit NewEpochEvent, the config is NOT changed in the validator set.
-    /// TODO(valerini): rename to register_validator_config to avoid confusion with
-    ///                 set_validator_config_and_reconfigure script.
-    fun set_validator_config(
+    fun register_validator_config(
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,

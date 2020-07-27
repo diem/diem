@@ -20,7 +20,7 @@ fn validator_add() {
                 0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
-                vec![],
+                b"validator_0".to_vec(),
             ))
             .sequence_number(1)
             .sign(),
@@ -30,7 +30,7 @@ fn validator_add() {
     executor.execute_and_apply(
         validator_account
             .transaction()
-            .script(encode_set_validator_config_script(
+            .script(encode_register_validator_config_script(
                 *validator_account.address(),
                 [
                     0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9,
@@ -50,7 +50,11 @@ fn validator_add() {
     let output = executor.execute_and_apply(
         libra_root_account
             .transaction()
-            .script(encode_add_validator_script(*validator_account.address()))
+            .script(encode_add_validator_and_reconfigure_script(
+                2,
+                b"validator_0".to_vec(),
+                *validator_account.address(),
+            ))
             .sequence_number(2)
             .sign(),
     );
@@ -78,7 +82,7 @@ fn validator_rotate_key_and_reconfigure() {
                 0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
-                vec![],
+                b"validator_0".to_vec(),
             ))
             .sequence_number(1)
             .sign(),
@@ -88,7 +92,7 @@ fn validator_rotate_key_and_reconfigure() {
     let output = executor.execute_and_apply(
         validator_account
             .transaction()
-            .script(encode_set_validator_config_script(
+            .script(encode_register_validator_config_script(
                 *validator_account.address(),
                 [
                     0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9,
@@ -112,7 +116,11 @@ fn validator_rotate_key_and_reconfigure() {
     let output = executor.execute_and_apply(
         libra_root_account
             .transaction()
-            .script(encode_add_validator_script(*validator_account.address()))
+            .script(encode_add_validator_and_reconfigure_script(
+                2,
+                b"validator_0".to_vec(),
+                *validator_account.address(),
+            ))
             .sequence_number(2)
             .sign(),
     );
@@ -190,7 +198,7 @@ fn validator_set_operator_set_key_reconfigure() {
                 0,
                 *validator_account.address(),
                 validator_account.auth_key_prefix(),
-                vec![],
+                b"validator_0".to_vec(),
             ))
             .sequence_number(2)
             .sign(),
@@ -205,6 +213,7 @@ fn validator_set_operator_set_key_reconfigure() {
         validator_account
             .transaction()
             .script(encode_set_validator_operator_script(
+                b"operator_0".to_vec(),
                 *operator_account.address(),
             ))
             .sequence_number(0)
@@ -218,7 +227,7 @@ fn validator_set_operator_set_key_reconfigure() {
     let output = executor.execute_and_apply(
         operator_account
             .transaction()
-            .script(encode_set_validator_config_script(
+            .script(encode_register_validator_config_script(
                 *validator_account.address(),
                 [
                     0x3d, 0x40, 0x17, 0xc3, 0xe8, 0x43, 0x89, 0x5a, 0x92, 0xb7, 0x0a, 0xa7, 0x4d,
@@ -243,7 +252,11 @@ fn validator_set_operator_set_key_reconfigure() {
     let output = executor.execute_and_apply(
         libra_root_account
             .transaction()
-            .script(encode_add_validator_script(*validator_account.address()))
+            .script(encode_add_validator_and_reconfigure_script(
+                3,
+                b"validator_0".to_vec(),
+                *validator_account.address(),
+            ))
             .sequence_number(3)
             .sign(),
     );

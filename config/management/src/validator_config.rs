@@ -83,7 +83,7 @@ impl ValidatorConfig {
         let transaction_callback = if reconfigure {
             transaction_builder::encode_set_validator_config_and_reconfigure_script
         } else {
-            transaction_builder::encode_set_validator_config_script
+            transaction_builder::encode_register_validator_config_script
         };
         let validator_config_script = transaction_callback(
             owner_account,
