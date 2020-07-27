@@ -19,8 +19,9 @@ use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::{chain_id::ChainId, PeerId};
+#[cfg(any(test, feature = "testing", feature = "fuzzing"))]
+use netcore::transport::memory::MemoryTransport;
 use netcore::transport::{
-    memory::MemoryTransport,
     tcp::{TcpSocket, TcpTransport},
     Transport,
 };
@@ -157,6 +158,7 @@ impl PeerManagerContext {
     }
 }
 
+#[cfg(any(test, feature = "testing", feature = "fuzzing"))]
 type MemoryPeerManager =
     PeerManager<LibraNetTransport<MemoryTransport>, NoiseStream<memsocket::MemorySocket>>;
 type TcpPeerManager = PeerManager<LibraNetTransport<TcpTransport>, NoiseStream<TcpSocket>>;
@@ -174,6 +176,7 @@ pub struct PeerManagerBuilder {
     peer_manager_context: Option<PeerManagerContext>,
     // TODO(philiphayes): better support multiple listening addrs
     // An option to ensure at most one copy of the contained private key.
+    #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     memory_peer_manager: Option<MemoryPeerManager>,
     tcp_peer_manager: Option<TcpPeerManager>,
     // ListenAddress will be updated when the PeerManager is built
@@ -228,6 +231,7 @@ impl PeerManagerBuilder {
                 max_concurrent_network_notifs,
                 channel_size,
             )),
+            #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
             memory_peer_manager: None,
             tcp_peer_manager: None,
             listen_address,
@@ -303,6 +307,7 @@ impl PeerManagerBuilder {
                     executor,
                 ))
             }
+            #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
             [Memory(_)] => {
                 self.memory_peer_manager = Some(self.build_with_transport(
                     LibraNetTransport::new(
@@ -383,6 +388,7 @@ impl PeerManagerBuilder {
         assert_eq!(self.state, State::BUILT);
         self.state = State::STARTED;
         debug!("{} Starting Peer manager", self.network_context);
+        #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
         if let Some(memory_pm) = self.memory_peer_manager.take() {
             self.start_peer_manager(memory_pm, executor);
         };

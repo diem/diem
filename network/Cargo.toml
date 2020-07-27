@@ -39,7 +39,7 @@ libra-network-address = { path = "../network/network-address", version = "0.1.0"
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0", optional = true }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
-memsocket = { path = "../network/memsocket", version = "0.1.0" }
+memsocket = { path = "../network/memsocket", version = "0.1.0", optional = true }
 netcore = { path = "../network/netcore", version = "0.1.0" }
 num-variants = { path = "../common/num-variants", version = "0.1.0" }
 stream-ratelimiter = { path = "../common/stream-ratelimiter", version = "0.1.0" }
@@ -48,6 +48,7 @@ stream-ratelimiter = { path = "../common/stream-ratelimiter", version = "0.1.0" 
 criterion = "0.3.3"
 libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+memsocket = { path = "../network/memsocket", version = "0.1.0" }
 network-builder = {path = "../network/builder", version = "0.1.0"}
 proptest = { version = "0.10.0", default-features = true }
 rand_core = { version = "0.5.1" }
@@ -56,8 +57,8 @@ socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "rand_core"]
-testing = ["libra-config/testing"]
+fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "rand_core", "memsocket/testing", "netcore/fuzzing"]
+testing = ["libra-config/testing", "memsocket/testing", "netcore/testing"]
 
 [[bench]]
 name = "socket_bench"
