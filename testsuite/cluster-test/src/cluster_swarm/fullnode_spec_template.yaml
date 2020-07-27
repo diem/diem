@@ -49,12 +49,13 @@ spec:
           Parsers_File  /opt/libra/data/fluent-bit/parsers.conf
 
       [INPUT]
-          Name              tail
-          Tag               validator
-          Path              /opt/libra/data/${{libra_log_file}}
-          Mem_Buf_Limit     200MB
-          Refresh_Interval  10
-          Skip_Long_Lines   On
+          Name        tcp
+          Tag         validator
+          Listen      0.0.0.0
+          Port        5044
+          Chunk_Size  32
+          Buffer_Size 64
+          Format      json
 
       [INPUT]
           Name              tail
@@ -119,8 +120,8 @@ spec:
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
       value: "warn"
-    - name: STRUCT_LOG_FILE
-      value: "/opt/libra/data/events.log"
+    - name: STRUCT_LOG_TCP_ADDR
+      value: "127.0.0.1:5044"
     - name: STRUCT_LOG_LEVEL
       value: "debug"
     - name: RUST_BACKTRACE
