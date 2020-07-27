@@ -29,7 +29,7 @@ use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTran
 use std::{
     ops::Deref,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
@@ -67,6 +67,8 @@ pub(crate) async fn coordinator<V>(
     loop {
         ::futures::select! {
             (mut msg, callback) = client_events.select_next_some() => {
+
+                debug!("[mempool] client txn submission at {:?}", SystemTime::now());
                 trace_event!("mempool::client_event", {"txn", msg.sender(), msg.sequence_number()});
                 let _ = counters::TASK_SPAWN_LATENCY
                 .with_label_values(&[counters::CLIENT_EVENT_LABEL])
@@ -97,6 +99,7 @@ pub(crate) async fn coordinator<V>(
                     .await;
             },
             (peer, backoff) = scheduled_broadcasts.select_next_some() => {
+                debug!("[mempool] scheduled broadcast: {:?} at {:?}", peer, SystemTime::now());
                 tasks::execute_broadcast(peer, backoff, &mut smp, &mut scheduled_broadcasts, executor.clone());
             },
             (network_id, event) = events.select_next_some() => {

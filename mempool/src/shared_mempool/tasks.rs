@@ -165,6 +165,7 @@ where
             peer, e
         );
     } else {
+        debug!("[mempool] actually broadcasted to {:?} at {:?}", peer, SystemTime::now());
         let broadcast_time = Instant::now();
         let peer_id = &peer.peer_id().to_string();
         counters::SHARED_MEMPOOL_TRANSACTION_BROADCAST
