@@ -57,5 +57,4 @@ fun main() {
     assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
 }
 }
-
 // check: EXECUTED

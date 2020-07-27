@@ -50,6 +50,39 @@ fn invalid_write_set_sender() {
 }
 
 #[test]
+fn invalid_write_set_signer() {
+    // create a FakeExecutor with a genesis from file
+    let mut executor = FakeExecutor::from_genesis_file();
+    let genesis_account = Account::new_libra_root();
+    executor.new_block();
+
+    // (1) Create a WriteSet that adds an account on a new address
+    let new_account_data = AccountData::new(0, 10);
+    let write_set = new_account_data.to_writeset();
+
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(write_set, vec![])))
+        .sequence_number(1)
+        .raw()
+        .sign(
+            &new_account_data.account().privkey,
+            new_account_data.account().pubkey.clone(),
+        )
+        .unwrap()
+        .into_inner();
+    let output = executor.execute_transaction(writeset_txn.clone());
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    );
+    assert_eq!(
+        executor.verify_transaction(writeset_txn).status(),
+        Some(StatusCode::REJECTED_WRITE_SET)
+    );
+}
+
+#[test]
 fn verify_and_execute_writeset() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();

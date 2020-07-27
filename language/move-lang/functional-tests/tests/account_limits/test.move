@@ -2,6 +2,7 @@
 //! account: bob, 100000000Coin1, 0, unhosted
 //! account: alice, 100000000Coin1, 0, unhosted
 //! account: otherblessed, 0Coin1, 0, unhosted
+//! account: otherbob, 0Coin1, 0, address
 
 //! account: moneybags, 1000000000000Coin1
 
@@ -239,3 +240,96 @@ script {
 // TODO: fix
 // chec: ABORTED
 // chec: 1
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{otherbob}}, {{otherbob::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+stdlib_script::create_parent_vasp_account
+//! check: EXECUTED
+
+//! new-transaction
+//! sender: otherbob
+script {
+use 0x1::VASP;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer)  {
+    VASP::add_account_limits<Coin1>(account);
+}
+}
+// check: ABORTED
+// check: "code: 5"
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{libraroot}}, 1, 1, 1, 1, 1
+stdlib_script::update_account_limit_definition
+// check: ABORTED
+// check: "code: 3"
+
+//! new-transaction
+//! sender: blessed
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{libraroot}}, 1, 1, 1, 1, 1
+stdlib_script::update_account_limit_definition
+// check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{otherbob}}, 10, {{libraroot}}
+stdlib_script::update_account_limit_window_info
+// check: ABORTED
+// check: "code: 3"
+
+//! new-transaction
+//! sender: blessed
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{otherbob}}, 10, {{otherbob}}
+stdlib_script::update_account_limit_window_info
+// check: ABORTED
+// check: "code: 4"
+
+//! new-transaction
+//! sender: otherbob
+script {
+use 0x1::AccountLimits;
+use 0x1::Coin1::Coin1;
+fun main()  {
+    assert(AccountLimits::limits_definition_address<Coin1>({{otherbob}}) == {{libraroot}}, 1);
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: otherbob
+script {
+use 0x1::AccountLimits;
+use 0x1::Coin1::Coin1;
+fun main()  {
+    assert(AccountLimits::has_limits_published<Coin1>({{libraroot}}), 2);
+    assert(!AccountLimits::has_limits_published<Coin1>({{otherbob}}), 3);
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+module Holder {
+    resource struct Hold<T> { x: T}
+    public fun hold<T>(account: &signer, x: T) {
+        move_to(account, Hold<T> { x})
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::AccountLimits;
+use {{default}}::Holder;
+fun main(account: &signer)  {
+    Holder::hold(account, AccountLimits::grant_mutation_capability(account));
+}
+}
+// check: ABORTED
+// check: "code: 0"

@@ -45,3 +45,39 @@ script {
 // check: ABORTED
 // check: ABORTED
 // check: 0
+
+//! new-transaction
+module Holder {
+    resource struct Holder<T> { x: T }
+    public fun hold<T>(account: &signer, x: T)  {
+        move_to(account, Holder<T> { x })
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+script {
+    use 0x1::LibraConfig::{Self};
+    use {{default}}::Holder;
+    use 0x1::LibraTimestamp;
+    fun main(account: &signer) {
+        LibraTimestamp::reset_time_has_started_for_test();
+        Holder::hold(account, LibraConfig::publish_new_config_and_get_capability(account, 0));
+        LibraConfig::set(account, 1);
+    }
+}
+// check: "Keep(ABORTED { code: 4,"
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x1::LibraConfig::{Self};
+    use {{default}}::Holder;
+    use 0x1::LibraTimestamp;
+    fun main(account: &signer) {
+        LibraTimestamp::reset_time_has_started_for_test();
+        Holder::hold(account, LibraConfig::publish_new_config_and_get_capability(account, 0));
+        LibraConfig::set(account, 1);
+    }
+}
+// check: "Keep(ABORTED { code: 1,"

@@ -89,5 +89,96 @@ fun main() {
     assert(VASP::parent_address({{bob}}) == {{parent}}, 2016);
 }
 }
-// check: ABORTED
-// check: 88
+// check: "Keep(ABORTED { code: 88,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::initialize(account)
+}
+}
+// check: "Keep(ABORTED { code: 0,"
+
+//! new-transaction
+script {
+use 0x1::VASP;
+use 0x1::LibraTimestamp;
+fun main(account: &signer) {
+    LibraTimestamp::reset_time_has_started_for_test();
+    VASP::initialize(account);
+}
+}
+// check: "Keep(ABORTED { code: 3,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::publish_parent_vasp_credential(account, account);
+    abort 99
+}
+}
+// check: "Keep(ABORTED { code: 4,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::publish_parent_vasp_credential(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 3,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::publish_child_vasp_credential(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 4,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::publish_child_vasp_credential(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 4,"
+
+//! new-transaction
+//! sender: parent
+script {
+use 0x1::VASP;
+fun main(account: &signer) {
+    VASP::publish_child_vasp_credential(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 7,"
+
+//! new-transaction
+//! sender: parent
+script {
+use 0x1::VASP;
+fun main() {
+    assert(!VASP::is_same_vasp({{parent}}, {{blessed}}), 42);
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: parent
+script {
+use 0x1::VASP;
+fun main() {
+    assert(!VASP::is_same_vasp({{blessed}}, {{parent}}), 42);
+}
+}
+// check: EXECUTED

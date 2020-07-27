@@ -417,10 +417,6 @@ module AccountLimits {
         borrow_global<Window<CoinType>>(addr).limit_address
     }
 
-    public fun is_unlimited_account<CoinType>(addr: address): bool acquires LimitsDefinition {
-        is_unrestricted(borrow_global<LimitsDefinition<CoinType>>(addr))
-    }
-
     public fun has_limits_published<CoinType>(addr: address): bool {
         exists<LimitsDefinition<CoinType>>(addr)
     }

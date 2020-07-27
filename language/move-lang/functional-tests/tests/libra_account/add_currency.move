@@ -1,3 +1,6 @@
+//! account: vasp, 0,0, address
+//! account: child, 0,0, address
+
 // LibraRoot should not be able to add a balance
 //! new-transaction
 //! sender: libraroot
@@ -74,3 +77,29 @@ fun main(account: &signer) {
 // check: ABORTED
 // check: ABORTED
 // check: 4
+
+//! new-transaction
+//! sender: libraroot
+//! type-args: 0x1::Coin1::Coin1
+//! args: {{vasp}}, {{vasp::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", false
+stdlib_script::create_parent_vasp_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vasp
+//! type-args: 0x1::Coin2::Coin2
+stdlib_script::add_currency_to_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vasp
+//! type-args: 0x1::Coin2::Coin2
+//! args: {{child}}, {{child::auth_key}}, false, 0
+stdlib_script::create_child_vasp_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: child
+//! type-args: 0x1::LBR::LBR
+stdlib_script::add_currency_to_account
+// check: "Keep(ABORTED { code: 4,"

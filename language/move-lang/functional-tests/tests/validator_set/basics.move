@@ -86,3 +86,44 @@ script {
 // check: ABORTED
 // check: ABORTED
 // check: 1
+
+//! new-transaction
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::publish(account, account, x"")
+    }
+}
+// check: "Keep(ABORTED { code: 0,"
+
+//! new-transaction
+//! sender: bob
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"", x"", x"");
+    }
+}
+// check: "Keep(ABORTED { code: 3,"
+
+//! new-transaction
+//! sender: bob
+script {
+    use 0x1::ValidatorConfig;
+    fun main() {
+        let _ = ValidatorConfig::get_config({{alice}});
+    }
+}
+// check: "Keep(ABORTED { code: 2,"
+
+//! new-transaction
+//! sender: bob
+script {
+    use 0x1::ValidatorConfig;
+    fun main() {
+        let config = ValidatorConfig::get_config({{bob}});
+        let _ = ValidatorConfig::get_validator_network_identity_pubkey(&config);
+        let _ = ValidatorConfig::get_validator_network_address(&config);
+    }
+}
+// check: EXECUTED

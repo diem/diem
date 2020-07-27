@@ -127,3 +127,118 @@ script {
     }
 }
 // check: EXECUTED
+
+//! new-transaction
+module Holder {
+    resource struct Holder<T> { x: T }
+    public fun hold<T>(account: &signer, x: T)  {
+        move_to(account, Holder<T> { x })
+    }
+}
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+use {{default}}::Holder;
+fun main(account: &signer) {
+    let (mint_cap, burn_cap) = Libra::register_currency<u64>(
+        account, FixedPoint32::create_from_rational(1, 1), true, 10, 10, b"wat"
+    );
+    Libra::publish_burn_capability(account, burn_cap, account);
+    Holder::hold(account, mint_cap);
+}
+}
+// check: "Keep(ABORTED { code: 2,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+use {{default}}::Holder;
+fun main(account: &signer) {
+    let (mint_cap, burn_cap) = Libra::register_currency<u64>(
+        account, FixedPoint32::create_from_rational(1, 1), true, 10, 10, b"wat"
+    );
+    Holder::hold(account, mint_cap);
+    Holder::hold(account, burn_cap);
+}
+}
+// check: "Keep(ABORTED { code: 7,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+fun main(account: &signer) {
+    Libra::register_SCS_currency<u64>(
+        account, account, FixedPoint32::create_from_rational(1, 1), 10, 10, b"wat"
+    );
+}
+}
+// check: "Keep(ABORTED { code: 2,"
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use {{default}}::Holder;
+fun main(account: &signer) {
+    Holder::hold(account, Libra::create_preburn<Coin1>(account));
+}
+}
+// check: "Keep(ABORTED { code: 2,")
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::LBR::LBR;
+fun main(account: &signer) {
+    Libra::publish_preburn_to_account<LBR>(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 4,")
+
+//! new-transaction
+//! sender: libraroot
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    Libra::publish_preburn_to_account<Coin1>(account, account);
+}
+}
+// check: "Keep(ABORTED { code: 10,")
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    let coin1 = Libra::mint<Coin1>(account, 1);
+    let tmp = Libra::withdraw(&mut coin1, 10);
+    Libra::destroy_zero(tmp);
+    Libra::destroy_zero(coin1);
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+//! new-transaction
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::LBR::LBR;
+fun main() {
+    assert(Libra::is_SCS_currency<Coin1>(), 99);
+    assert(!Libra::is_SCS_currency<LBR>(), 98);
+    assert(!Libra::is_synthetic_currency<Coin1>(), 97);
+    assert(Libra::is_synthetic_currency<LBR>(), 96);
+}
+}
+// check: EXECUTED
