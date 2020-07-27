@@ -3,7 +3,6 @@
 
 use crate::error::Error;
 use libra_config::config::{self, GitHubConfig, OnDiskStorageConfig, Token, VaultConfig};
-use libra_secure_storage::{KVStorage, Storage};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -12,6 +11,7 @@ use std::{
 };
 use structopt::StructOpt;
 
+pub const BACKEND: &str = "backend";
 pub const DISK: &str = "disk";
 pub const GITHUB: &str = "github";
 pub const MEMORY: &str = "memory";
@@ -27,26 +27,6 @@ pub const VAULT: &str = "vault";
 pub struct SecureBackend {
     pub backend: String,
     pub parameters: HashMap<String, String>,
-}
-
-impl SecureBackend {
-    const BACKEND: &'static str = "backend";
-    const NAMESPACE: &'static str = "namespace";
-
-    /// Creates and returns a new Storage instance using the SecureBackend.
-    /// This method ensures the storage instance is available before returning.
-    pub fn create_storage(&self, name: &'static str) -> Result<Storage, Error> {
-        let storage: Storage = self.clone().try_into()?;
-        storage
-            .available()
-            .map_err(|e| Error::StorageUnavailable(name, e.to_string()))?;
-        Ok(storage)
-    }
-
-    pub fn set_namespace(mut self, namespace: String) -> Self {
-        self.parameters.insert(Self::NAMESPACE.into(), namespace);
-        self
-    }
 }
 
 impl FromStr for SecureBackend {
@@ -71,7 +51,7 @@ impl TryFrom<&str> for SecureBackend {
             parameters.insert(kv[0].into(), kv[1].into());
         }
         let backend = parameters
-            .remove(Self::BACKEND)
+            .remove(BACKEND)
             .ok_or(Error::BackendMissingBackendKey)?;
         Ok(Self {
             backend,
@@ -143,15 +123,6 @@ impl TryInto<config::SecureBackend> for SecureBackend {
         }
 
         Ok(backend)
-    }
-}
-
-impl TryInto<Storage> for SecureBackend {
-    type Error = Error;
-
-    fn try_into(self) -> Result<Storage, Error> {
-        let config: config::SecureBackend = self.try_into()?;
-        Ok((&config).into())
     }
 }
 
@@ -235,7 +206,7 @@ mod tests {
         storage(&github).unwrap();
 
         let github = "backend=github";
-        assert!(storage(github).is_err());
+        storage(github).unwrap_err();
     }
 
     #[test]
@@ -259,10 +230,10 @@ mod tests {
         storage(&vault).unwrap();
 
         let vault = "backend=vault";
-        assert!(storage(vault).is_err());
+        storage(vault).unwrap_err();
     }
 
-    fn storage(s: &str) -> Result<Storage, Error> {
+    fn storage(s: &str) -> Result<config::SecureBackend, Error> {
         let management_backend: SecureBackend = s.try_into()?;
         management_backend.try_into()
     }
