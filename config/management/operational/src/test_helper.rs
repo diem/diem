@@ -128,11 +128,11 @@ impl OperationalTool {
         let args = format!(
             "
                 {command}
-                --host {host}
+                --json-server {json_server}
                 --account-address {account_address}
         ",
             command = command(TOOL_NAME, CommandName::ValidatorConfig),
-            host = self.host,
+            json_server = self.host,
             account_address = account_address,
         );
 
@@ -147,11 +147,11 @@ impl OperationalTool {
         let args = format!(
             "
                 {command}
-                --host {host}
+                --json-server {json_server}
                 --account-address {account_address}
         ",
             command = command(TOOL_NAME, CommandName::ValidatorSet),
-            host = self.host,
+            json_server = self.host,
             account_address = account_address,
         );
 

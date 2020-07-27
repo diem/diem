@@ -8,14 +8,14 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 pub struct ValidatorSet {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080")]
-    host: String,
+    json_server: String,
     #[structopt(long, help = "AccountAddress to retrieve the validator set info")]
     account_address: Option<AccountAddress>,
 }
 
 impl ValidatorSet {
     pub fn execute(self) -> Result<Vec<ValidatorInfo>, Error> {
-        let client = JsonRpcClientWrapper::new(self.host);
+        let client = JsonRpcClientWrapper::new(self.json_server);
         client.validator_set(self.account_address)
     }
 }
