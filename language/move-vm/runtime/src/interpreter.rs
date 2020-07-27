@@ -123,6 +123,12 @@ impl Interpreter {
 
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
+            macro_rules! set_err_info {
+                ($frame:ident, $e:expr) => {{
+                    self.set_location($e.at_code_offset($frame.function.index(), $frame.pc))
+                }};
+            }
+
             let resolver = current_frame.resolver(loader);
             let exit_code =
                 current_frame //self
@@ -133,7 +139,7 @@ impl Interpreter {
                     current_frame
                         .locals
                         .check_resources_for_return()
-                        .map_err(|e| self.set_location(e))?;
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     if let Some(frame) = self.call_stack.pop() {
                         current_frame = frame;
                     } else {
@@ -146,7 +152,7 @@ impl Interpreter {
                             Opcodes::CALL,
                             AbstractMemorySize::new(1 as GasCarrier),
                         )
-                        .map_err(|e| self.set_location(e))?;
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_handle(fh_idx);
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, vec![])?;
@@ -157,7 +163,7 @@ impl Interpreter {
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
-                        let err = self.set_location(err);
+                        let err = set_err_info!(frame, err);
                         self.maybe_core_dump(err, &frame)
                     })?;
                     current_frame = frame;
@@ -171,10 +177,10 @@ impl Interpreter {
                                 AbstractMemorySize::new((arity + 1) as GasCarrier),
                             )
                         })
-                        .map_err(|e| self.set_location(e))?;
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     let ty_args = resolver
                         .instantiate_generic_function(idx, current_frame.ty_args())
-                        .map_err(|e| self.set_location(e))?;
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_instantiation(idx);
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
@@ -185,7 +191,7 @@ impl Interpreter {
                         .map_err(|err| self.maybe_core_dump(err, &current_frame))?;
                     self.call_stack.push(current_frame).map_err(|frame| {
                         let err = PartialVMError::new(StatusCode::CALL_STACK_OVERFLOW);
-                        let err = self.set_location(err);
+                        let err = set_err_info!(frame, err);
                         self.maybe_core_dump(err, &frame)
                     })?;
                     current_frame = frame;
