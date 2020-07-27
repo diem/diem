@@ -20,7 +20,7 @@ use crate::{
     state_replication::{StateComputer, TxnManager},
     util::time_service::TimeService,
 };
-use anyhow::{anyhow, bail, ensure, Context};
+use anyhow::{bail, ensure, Context};
 use channel::libra_channel;
 use consensus_types::{
     common::{Author, Round},
@@ -319,6 +319,7 @@ impl EpochManager {
             network_sender,
             self.txn_manager.clone(),
             self.storage.clone(),
+            self.config.stop_consensus,
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));
@@ -445,7 +446,7 @@ impl EpochManager {
                 let recovery_data = match event {
                     VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
                     VerifiedEvent::VoteMsg(vote) => p.process_vote_msg(*vote).await,
-                    _ => Err(anyhow!("Unexpected VerifiedEvent during startup")),
+                    VerifiedEvent::SyncInfo(sync_info) => p.sync_up(&sync_info, peer_id).await,
                 }?;
                 let epoch_state = p.epoch_state().clone();
                 info!("Recovered from SyncProcessor");

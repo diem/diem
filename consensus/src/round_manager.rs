@@ -141,7 +141,7 @@ impl RecoveryManager {
         self.sync_up(&sync_info, author).await
     }
 
-    async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData> {
+    pub async fn sync_up(&mut self, sync_info: &SyncInfo, peer: Author) -> Result<RecoveryData> {
         sync_info.verify(&self.epoch_state.verifier)?;
         ensure!(
             sync_info.highest_round() > self.last_committed_round,
@@ -183,6 +183,7 @@ pub struct RoundManager {
     network: NetworkSender,
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
+    stop_consensus: bool,
 }
 
 impl RoundManager {
@@ -196,6 +197,7 @@ impl RoundManager {
         network: NetworkSender,
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
+        stop_consensus: bool,
     ) -> Self {
         Self {
             epoch_state,
@@ -207,6 +209,7 @@ impl RoundManager {
             txn_manager,
             network,
             storage,
+            stop_consensus,
         }
     }
 
@@ -245,9 +248,10 @@ impl RoundManager {
             .proposer_election
             .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
         {
-            let proposal_msg = self.generate_proposal(new_round_event).await?;
+            let proposal_msg =
+                ConsensusMsg::ProposalMsg(Box::new(self.generate_proposal(new_round_event).await?));
             let mut network = self.network.clone();
-            network.broadcast_proposal(proposal_msg).await;
+            network.broadcast(proposal_msg).await;
             counters::PROPOSALS_COUNT.inc();
         }
         Ok(())
@@ -400,6 +404,16 @@ impl RoundManager {
             return Ok(());
         }
 
+        if self.stop_consensus {
+            debug!("[RoundManager] stop_consensus flag is set, broadcasting SyncInfo");
+            self.network
+                .broadcast(ConsensusMsg::SyncInfo(Box::new(
+                    self.block_store.sync_info(),
+                )))
+                .await;
+            return Ok(());
+        }
+
         let (use_last_vote, mut timeout_vote) = match self.round_state.vote_sent() {
             Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
             _ => {
@@ -429,8 +443,11 @@ impl RoundManager {
         }
 
         self.round_state.record_vote(timeout_vote.clone());
-        let timeout_vote_msg = VoteMsg::new(timeout_vote, self.block_store.sync_info());
-        self.network.broadcast_vote(timeout_vote_msg).await;
+        let timeout_vote_msg = ConsensusMsg::VoteMsg(Box::new(VoteMsg::new(
+            timeout_vote,
+            self.block_store.sync_info(),
+        )));
+        self.network.broadcast(timeout_vote_msg).await;
         Ok(())
     }
 
@@ -522,6 +539,11 @@ impl RoundManager {
             self.round_state.vote_sent().is_none(),
             "[RoundManager] Already vote on this round {}",
             self.round_state.current_round()
+        );
+
+        ensure!(
+            !self.stop_consensus,
+            "[RoundManager] stop_consensus flag is set, stop voting"
         );
 
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();

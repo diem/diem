@@ -15,6 +15,7 @@ pub struct ConsensusConfig {
     pub round_initial_timeout_ms: u64,
     pub proposer_type: ConsensusProposerType,
     pub safety_rules: SafetyRulesConfig,
+    pub stop_consensus: bool,
 }
 
 impl Default for ConsensusConfig {
@@ -29,6 +30,7 @@ impl Default for ConsensusConfig {
                 inactive_weights: 1,
             }),
             safety_rules: SafetyRulesConfig::default(),
+            stop_consensus: false,
         }
     }
 }

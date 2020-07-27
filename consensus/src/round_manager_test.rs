@@ -204,6 +204,7 @@ impl NodeSetup {
             network,
             Arc::new(MockTransactionManager::new(None)),
             storage.clone(),
+            false,
         );
         block_on(round_manager.start(last_vote_sent));
         Self {

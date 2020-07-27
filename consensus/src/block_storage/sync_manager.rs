@@ -4,6 +4,7 @@
 use crate::{
     block_storage::{BlockReader, BlockStore},
     network::NetworkSender,
+    network_interface::ConsensusMsg,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     state_replication::StateComputer,
 };
@@ -104,10 +105,12 @@ impl BlockStore {
             if qc.ends_epoch() {
                 retriever
                     .network
-                    .broadcast_epoch_change(EpochChangeProof::new(
-                        vec![finality_proof.clone()],
-                        /* more = */ false,
-                    ))
+                    .broadcast(ConsensusMsg::EpochChangeProof(Box::new(
+                        EpochChangeProof::new(
+                            vec![finality_proof.clone()],
+                            /* more = */ false,
+                        ),
+                    )))
                     .await;
             }
         }
