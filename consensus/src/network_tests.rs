@@ -498,7 +498,9 @@ mod tests {
                     _ => panic!("unexpected messages"),
                 }
             }
-            nodes[0].broadcast_proposal(proposal.clone()).await;
+            nodes[0]
+                .broadcast(ConsensusMsg::ProposalMsg(Box::new(proposal.clone())))
+                .await;
             playground
                 .wait_for_messages(4, NetworkPlayground::take_all)
                 .await;

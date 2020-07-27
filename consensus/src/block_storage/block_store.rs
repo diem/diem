@@ -194,6 +194,9 @@ impl BlockStore {
                     panic!("[BlockStore] failed to insert quorum during build{:?}", e)
                 });
         }
+        counters::LAST_COMMITTED_ROUND.set(block_store.root().round() as i64);
+        counters::LAST_COMMITTED_VERSION
+            .set(block_store.root().compute_result().num_leaves() as i64);
         block_store
     }
 
