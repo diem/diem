@@ -1,8 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::{constants, error::Error, secure_backend::SharedBackend};
-use libra_secure_storage::{KVStorage, Value};
+use libra_management::{
+    config::ConfigPath, constants, error::Error, secure_backend::SharedBackend,
+};
+use libra_secure_storage::Value;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -47,6 +49,8 @@ impl std::fmt::Display for Layout {
 
 #[derive(Debug, StructOpt)]
 pub struct SetLayout {
+    #[structopt(flatten)]
+    config: ConfigPath,
     #[structopt(long)]
     path: PathBuf,
     #[structopt(flatten)]
@@ -58,15 +62,12 @@ impl SetLayout {
         let layout = Layout::from_disk(&self.path)?;
         let data = layout.to_toml()?;
 
-        let mut remote_storage = self
-            .backend
-            .shared_backend
-            .create_storage(self.backend.name())?;
-        remote_storage
-            .set(constants::LAYOUT, Value::String(data))
-            .map_err(|e| {
-                Error::StorageWriteError(self.backend.name(), constants::LAYOUT, e.to_string())
-            })?;
+        let config = self
+            .config
+            .load()?
+            .override_shared_backend(&self.backend.shared_backend)?;
+        let mut storage = config.shared_backend();
+        storage.set(constants::LAYOUT, Value::String(data))?;
 
         Ok(layout)
     }

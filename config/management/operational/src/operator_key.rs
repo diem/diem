@@ -1,35 +1,40 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{json_rpc::JsonRpcClientWrapper, validator_config::RotateKey, TransactionContext};
+use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_management::{constants, error::Error, storage::StorageWrapper};
+use libra_management::{constants, error::Error};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::transaction::{authenticator::AuthenticationKey, RawTransaction, Transaction};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 pub struct RotateOperatorKey {
+    /// JSON-RPC Endpoint (e.g. http://localhost:8080)
+    #[structopt(long, required_unless = "config")]
+    json_server: Option<String>,
     #[structopt(flatten)]
-    rotate_key: RotateKey,
+    validator_config: libra_management::validator_config::ValidatorConfig,
 }
 
 impl RotateOperatorKey {
     pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        let config = self
+            .validator_config
+            .config
+            .load()?
+            .override_json_server(&self.json_server)
+            .override_validator_backend(
+                &self.validator_config.validator_backend.validator_backend,
+            )?;
+
         // Fetch the operator account from storage
-        let mut storage = StorageWrapper::new(
-            &self.rotate_key.validator_config.validator_backend.name(),
-            &self
-                .rotate_key
-                .validator_config
-                .validator_backend
-                .validator_backend,
-        )?;
+        let mut storage = config.validator_backend();
         let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
 
         // Create a JSON RPC client and fetch the current sequence number
-        let client = JsonRpcClientWrapper::new(self.rotate_key.host);
+        let client = JsonRpcClientWrapper::new(config.json_server);
         let sequence_number = client.sequence_number(operator_account)?;
 
         // Rotate the operator key in storage
@@ -48,7 +53,7 @@ impl RotateOperatorKey {
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),
             RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS,
-            self.rotate_key.validator_config.chain_id,
+            config.chain_id,
         );
 
         // Sign the operator rotation transaction

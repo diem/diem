@@ -4,9 +4,9 @@
 use executor::db_bootstrapper;
 use libra_global_constants::WAYPOINT;
 use libra_management::{
+    config::ConfigPath,
     error::Error,
     secure_backend::{SharedBackend, ValidatorBackend},
-    storage::StorageWrapper,
 };
 use libra_secure_storage::Value;
 use libra_temppath::TempPath;
@@ -21,12 +21,15 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 pub struct CreateWaypoint {
     #[structopt(flatten)]
+    config: ConfigPath,
+    #[structopt(flatten)]
     shared_backend: SharedBackend,
 }
 
 impl CreateWaypoint {
     pub fn execute(self) -> Result<Waypoint, Error> {
         let genesis_helper = crate::genesis::Genesis {
+            config: self.config,
             backend: self.shared_backend,
             path: None,
         };
@@ -47,6 +50,8 @@ impl CreateWaypoint {
 #[derive(Debug, StructOpt)]
 pub struct CreateAndInsertWaypoint {
     #[structopt(flatten)]
+    config: ConfigPath,
+    #[structopt(flatten)]
     shared_backend: SharedBackend,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
@@ -55,12 +60,16 @@ pub struct CreateAndInsertWaypoint {
 impl CreateAndInsertWaypoint {
     pub fn execute(self) -> Result<Waypoint, Error> {
         let waypoint = CreateWaypoint {
+            config: self.config.clone(),
             shared_backend: self.shared_backend,
         }
         .execute()?;
-        let storage_name = self.validator_backend.name();
-        let mut validator_storage =
-            StorageWrapper::new(storage_name, &self.validator_backend.validator_backend)?;
+
+        let config = self
+            .config
+            .load()?
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
+        let mut validator_storage = config.validator_backend();
         validator_storage.set(WAYPOINT, Value::String(waypoint.to_string()))?;
         Ok(waypoint)
     }

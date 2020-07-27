@@ -40,7 +40,7 @@ impl OperationalTool {
                 {fullnode_address}
                 {validator_address}
                 --chain-id {chain_id}
-                --host {host}
+                --json-server {host}
             ",
             command = command(TOOL_NAME, CommandName::SetValidatorConfig),
             host = self.host,
@@ -63,7 +63,7 @@ impl OperationalTool {
             "
                 {command}
                 --chain-id {chain_id}
-                --host {host}
+                --json-server {host}
                 --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, name),
@@ -119,7 +119,7 @@ impl OperationalTool {
         let args = format!(
             "
                 {command}
-                --host {host}
+                --json-server {host}
                 --account-address {account_address}
                 --sequence-number {sequence_number}
         ",
@@ -179,9 +179,9 @@ impl OperationalTool {
         let args = format!(
             "
             {command}
-            --host {host}
+            --json-server {host}
             --chain-id {chain_id}
-            --validator-address {account_address}
+            --account-address {account_address}
             --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::AddValidator),
@@ -202,9 +202,9 @@ impl OperationalTool {
         let args = format!(
             "
             {command}
-            --host {host}
+            --json-server {host}
             --chain-id {chain_id}
-            --validator-address {account_address}
+            --account-address {account_address}
             --validator-backend {backend_args}
             ",
             command = command(TOOL_NAME, CommandName::RemoveValidator),
