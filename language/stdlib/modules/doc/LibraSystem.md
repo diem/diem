@@ -608,13 +608,16 @@ Validators have unique addresses.
 
 
 
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
-<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account)
-    != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<a name="0x1_LibraSystem_config_addr$15"></a>
+
+
+<pre><code><b>let</b> config_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account);
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(config_addr);
+<b>aborts_if</b> config_addr != <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
-<b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+<b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>();
+<b>aborts_if</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(config_addr);
+<b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(config_addr);
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
 </code></pre>
@@ -635,7 +638,7 @@ Validators have unique addresses.
 <pre><code>pragma assume_no_abort_from_here = <b>true</b>;
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
-    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
+    <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
 );
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;() == value;
 </code></pre>
@@ -657,9 +660,6 @@ Validators have unique addresses.
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 <b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(account_address);
-<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
-    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
-);
 <b>ensures</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 </code></pre>
 
@@ -679,9 +679,6 @@ Validators have unique addresses.
 <pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account));
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
-<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
-    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
-);
 <b>ensures</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 </code></pre>
 
@@ -697,10 +694,12 @@ Validators have unique addresses.
 
 
 
-Overrides module default. Remove this once this function is specified.
 
-
-<pre><code>pragma aborts_if_is_strict = <b>false</b>;
+<pre><code><b>aborts_if</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">ValidatorConfig::spec_get_operator</a>(validator_address)
+    != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(operator_account);
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(validator_address);
+<b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(validator_address);
 </code></pre>
 
 
@@ -828,12 +827,16 @@ Overrides module default. Remove this once this function is specified.
 
 
 
-TODO(wrwg): turn this on once we have better support for loops.
 
-
-<pre><code>pragma verify = <b>false</b>, opaque;
-<b>ensures</b> exists i in 0..len(validators) where validators[i].addr == addr: result == <a href="Option.md#0x1_Option_spec_some">Option::spec_some</a>(i);
-<b>ensures</b> (forall i in 0..len(validators): validators[i].addr != addr) ==&gt; result == <a href="Option.md#0x1_Option_spec_none">Option::spec_none</a>();
+<pre><code>pragma opaque;
+<a name="0x1_LibraSystem_res_index$16"></a>
+<b>let</b> res_index = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+<a name="0x1_LibraSystem_size$17"></a>
+<b>let</b> size = len(validators);
+<b>ensures</b> (exists i in 0..size: validators[i].addr == addr)
+    == (<a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(result) && 0 &lt;= res_index && res_index &lt; size
+    && validators[res_index].addr == addr);
+<b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; result == <a href="Option.md#0x1_Option_spec_none">Option::spec_none</a>();
 </code></pre>
 
 
@@ -888,5 +891,8 @@ TODO(wrwg): turn this on once we have better support for loops.
 </code></pre>
 
 
-The permission "{Add, Remove} Validator" is granted to LibraRoot [B23].
-TODO(wrwg): this does not verify after we removed timeouts
+The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
+
+
+<pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
+</code></pre>

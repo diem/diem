@@ -67,16 +67,13 @@ module LibraSystem {
         move_to(config_account, CapabilityHolder { cap })
     }
     spec fun initialize_validator_set {
-        // TODO (dd): In a hurry to get this landed.
-        pragma aborts_if_is_partial = true;
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(config_account));
-        aborts_if Signer::spec_address_of(config_account)
-            != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        let config_addr = Signer::spec_address_of(config_account);
+        aborts_if !Roles::spec_has_libra_root_role_addr(config_addr);
+        aborts_if config_addr != CoreAddresses::LIBRA_ROOT_ADDRESS();
         aborts_if LibraConfig::spec_is_published<LibraSystem>();
-        // TODO (dd): restore this function
-        // aborts_if LibraConfig::spec_has_modify_config_capability<LibraSystem>();
-        aborts_if !LibraTimestamp::spec_is_genesis();
-        ensures exists<CapabilityHolder>(Signer::spec_address_of(config_account));
+        aborts_if !LibraTimestamp::is_genesis();
+        aborts_if exists<CapabilityHolder>(config_addr);
+        ensures exists<CapabilityHolder>(config_addr);
         ensures LibraConfig::spec_is_published<LibraSystem>();
         ensures len(spec_get_validator_set()) == 0;
     }
@@ -90,7 +87,7 @@ module LibraSystem {
         pragma assume_no_abort_from_here = true;
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if !exists<CapabilityHolder>(
-            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+            CoreAddresses::LIBRA_ROOT_ADDRESS()
         );
         ensures LibraConfig::spec_get<LibraSystem>() == value;
     }
@@ -127,9 +124,6 @@ module LibraSystem {
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if spec_is_validator(account_address);
         aborts_if !ValidatorConfig::spec_is_valid(account_address);
-        aborts_if !exists<CapabilityHolder>(
-            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
-        );
         ensures spec_is_validator(account_address);
     }
 
@@ -154,9 +148,6 @@ module LibraSystem {
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if !spec_is_validator(account_address);
-        aborts_if !exists<CapabilityHolder>(
-            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
-        );
         ensures !spec_is_validator(account_address);
     }
 
@@ -179,8 +170,11 @@ module LibraSystem {
         }
     }
     spec fun update_config_and_reconfigure {
-        /// Overrides module default. Remove this once this function is specified.
-        pragma aborts_if_is_strict = false;
+        aborts_if ValidatorConfig::spec_get_operator(validator_address)
+            != Signer::spec_address_of(operator_account);
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if !spec_is_validator(validator_address);
+        aborts_if !ValidatorConfig::spec_is_valid(validator_address);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -285,10 +279,13 @@ module LibraSystem {
         return Option::none()
     }
     spec fun get_validator_index_ {
-        /// TODO(wrwg): turn this on once we have better support for loops.
-        pragma verify = false, opaque;
-        ensures exists i in 0..len(validators) where validators[i].addr == addr: result == Option::spec_some(i);
-        ensures (forall i in 0..len(validators): validators[i].addr != addr) ==> result == Option::spec_none();
+        pragma opaque;
+        let res_index = Option::spec_get(result);
+        let size = len(validators);
+        ensures (exists i in 0..size: validators[i].addr == addr)
+            == (Option::spec_is_some(result) && 0 <= res_index && res_index < size
+            && validators[res_index].addr == addr);
+        ensures (forall i in 0..size: validators[i].addr != addr) ==> result == Option::spec_none();
     }
 
     // Updates ith validator info, if nothing changed, return false.
@@ -347,10 +344,9 @@ module LibraSystem {
         pragma verify = true, aborts_if_is_strict = true;
     }
 
-    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B23].
-    /// TODO(wrwg): this does not verify after we removed timeouts
+    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
     spec module {
-        //apply Roles::AbortsIfNotTreasuryCompliance{account: lr_account} to add_validator, remove_validator;
+        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
     }
 }
 }
