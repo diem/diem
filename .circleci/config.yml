@@ -373,7 +373,7 @@ jobs:
       - save_sccache
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
-          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
+          build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
           webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
     executor: unittest-executor
