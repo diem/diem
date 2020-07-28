@@ -4,7 +4,7 @@
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
-    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
 use libra_management::{
     error::Error,
@@ -37,10 +37,11 @@ impl SetValidatorConfig {
             self.validator_config.validator_backend.name(),
             &self.validator_config.validator_backend.validator_backend,
         )?;
+        let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
 
         let client = JsonRpcClientWrapper::new(self.host);
-        let sequence_number = client.sequence_number(owner_account)?;
+        let sequence_number = client.sequence_number(operator_account)?;
 
         // Retrieve the current validator / fullnode addresses and update accordingly
         let validator_config = client.validator_config(owner_account)?;
