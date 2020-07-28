@@ -5,12 +5,10 @@ use crate::FuzzTargetImpl;
 use libra_mempool::fuzzing::{
     mempool_incoming_transactions_strategy, test_mempool_process_incoming_transactions_impl,
 };
-use libra_proptest_helpers::ValueGenerator;
 use proptest::{
     strategy::{Strategy, ValueTree},
     test_runner::{self, TestRunner},
 };
-use rand::RngCore;
 
 #[derive(Debug, Default)]
 pub struct MempoolIncomingTransactions;
@@ -22,13 +20,6 @@ impl FuzzTargetImpl for MempoolIncomingTransactions {
 
     fn description(&self) -> &'static str {
         "Transactions submitted to mempool"
-    }
-
-    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        let mut output = vec![0u8; 4096];
-        let mut rng = rand::thread_rng();
-        rng.fill_bytes(&mut output);
-        Some(output)
     }
 
     fn fuzz(&self, data: &[u8]) {

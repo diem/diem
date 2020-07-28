@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
-use libra_proptest_helpers::ValueGenerator;
 use proptest::{
     strategy::{Strategy, ValueTree},
     test_runner::{self, TestRunner},
 };
-use rand::RngCore;
 use state_synchronizer::fuzzing::{state_sync_msg_strategy, test_state_sync_msg_fuzzer_impl};
 
 #[derive(Debug, Default)]
@@ -20,13 +18,6 @@ impl FuzzTargetImpl for StateSyncMsg {
 
     fn description(&self) -> &'static str {
         "State sync network message"
-    }
-
-    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        let mut output = vec![0u8; 4096];
-        let mut rng = rand::thread_rng();
-        rng.fill_bytes(&mut output);
-        Some(output)
     }
 
     fn fuzz(&self, data: &[u8]) {

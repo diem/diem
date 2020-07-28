@@ -7,7 +7,6 @@ use language_e2e_tests::account_universe::{
 };
 use libra_proptest_helpers::ValueGenerator;
 use proptest::{collection::vec, test_runner};
-use rand::RngCore;
 
 #[derive(Clone, Debug, Default)]
 pub struct LanguageTransactionExecution;
@@ -19,13 +18,6 @@ impl FuzzTargetImpl for LanguageTransactionExecution {
 
     fn description(&self) -> &'static str {
         "Language execute randomly generated transactions"
-    }
-
-    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        let mut output = vec![0u8; 4096];
-        let mut rng = rand::thread_rng();
-        rng.fill_bytes(&mut output);
-        Some(output)
     }
 
     fn fuzz(&self, data: &[u8]) {
