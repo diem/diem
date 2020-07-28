@@ -71,7 +71,10 @@ fn output_script_call_enum_with_imports(
     abis: &[ScriptABI],
     local_types: bool,
 ) -> Result<()> {
-    let external_definitions = get_external_definitions(local_types);
+    let mut external_definitions = get_external_definitions(local_types);
+    if local_types {
+        external_definitions.insert("".to_string(), vec!["Bytes".to_string()]);
+    }
     let script_registry: BTreeMap<_, _> =
         vec![("ScriptCall".to_string(), make_abi_enum_container(abis))]
             .into_iter()
@@ -99,12 +102,19 @@ impl ScriptCall {
     );
     output_with_external_dependencies_and_comments(
         out,
-        /* derive macros */ !local_types,
+        /* derive macros */ true,
         &script_registry,
         &external_definitions,
         &comments,
     )
-    .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))
+    .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
+    if local_types {
+        writeln!(
+            out,
+            "\n// Type alias used for code generation.\ntype Bytes = Vec<u8>;"
+        )?;
+    }
+    Ok(())
 }
 
 fn get_external_definitions(local_types: bool) -> serde_generate::ExternalDefinitions {
