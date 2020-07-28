@@ -13,10 +13,18 @@
 //! [`define_schema!`] macro to define the schema name, the types of key and value, and name of the
 //! column family.
 
+mod metrics;
 #[macro_use]
 pub mod schema;
 
-use crate::schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec};
+use crate::{
+    metrics::{
+        LIBRA_SCHEMADB_BATCH_COMMIT_BYTES, LIBRA_SCHEMADB_BATCH_COMMIT_LATENCY_SECONDS,
+        LIBRA_SCHEMADB_DELETES, LIBRA_SCHEMADB_GET_BYTES, LIBRA_SCHEMADB_GET_LATENCY_SECONDS,
+        LIBRA_SCHEMADB_ITER_BYTES, LIBRA_SCHEMADB_ITER_LATENCY_SECONDS, LIBRA_SCHEMADB_PUT_BYTES,
+    },
+    schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
+};
 use anyhow::{ensure, format_err, Result};
 use libra_metrics::OpMetrics;
 use once_cell::sync::Lazy;
@@ -142,7 +150,11 @@ where
     }
 
     fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
-        let _timer = OP_COUNTER.timer(&format!("db_iter_time_{}", S::COLUMN_FAMILY_NAME));
+        let __timer = OP_COUNTER.timer(&format!("db_iter_time_{}", S::COLUMN_FAMILY_NAME));
+        let _timer = LIBRA_SCHEMADB_ITER_LATENCY_SECONDS
+            .with_label_values(&[S::COLUMN_FAMILY_NAME])
+            .start_timer();
+
         if !self.db_iter.valid() {
             self.db_iter.status()?;
             return Ok(None);
@@ -154,6 +166,10 @@ where
             &format!("db_iter_bytes_{}", S::COLUMN_FAMILY_NAME),
             (raw_key.len() + raw_value.len()) as f64,
         );
+        LIBRA_SCHEMADB_ITER_BYTES
+            .with_label_values(&[S::COLUMN_FAMILY_NAME])
+            .observe((raw_key.len() + raw_value.len()) as f64);
+
         let key = <S::Key as KeyCodec<S>>::decode_key(raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(raw_value)?;
 
@@ -273,7 +289,11 @@ impl DB {
 
     /// Reads single record by key.
     pub fn get<S: Schema>(&self, schema_key: &S::Key) -> Result<Option<S::Value>> {
-        let _timer = OP_COUNTER.timer(&format!("db_get_time_{}", S::COLUMN_FAMILY_NAME));
+        let __timer = OP_COUNTER.timer(&format!("db_get_time_{}", S::COLUMN_FAMILY_NAME));
+        let _timer = LIBRA_SCHEMADB_GET_LATENCY_SECONDS
+            .with_label_values(&[S::COLUMN_FAMILY_NAME])
+            .start_timer();
+
         let k = <S::Key as KeyCodec<S>>::encode_key(&schema_key)?;
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
 
@@ -282,6 +302,10 @@ impl DB {
             &format!("db_get_bytes_{}", S::COLUMN_FAMILY_NAME),
             result.as_ref().map_or(0.0, |v| v.len() as f64),
         );
+        LIBRA_SCHEMADB_GET_BYTES
+            .with_label_values(&[S::COLUMN_FAMILY_NAME])
+            .observe(result.as_ref().map_or(0.0, |v| v.len() as f64));
+
         result
             .map(|raw_value| <S::Value as ValueCodec<S>>::decode_value(&raw_value))
             .transpose()
@@ -338,7 +362,11 @@ impl DB {
 
     /// Writes a group of records wrapped in a [`SchemaBatch`].
     pub fn write_schemas(&self, batch: SchemaBatch) -> Result<()> {
-        let _timer = OP_COUNTER.timer(&format!("db_batch_commit_time_{}", self.name));
+        let __timer = OP_COUNTER.timer(&format!("db_batch_commit_time_{}", self.name));
+        let _timer = LIBRA_SCHEMADB_BATCH_COMMIT_LATENCY_SECONDS
+            .with_label_values(&[self.name])
+            .start_timer();
+
         let mut db_batch = rocksdb::WriteBatch::default();
         for (cf_name, rows) in &batch.rows {
             let cf_handle = self.get_cf_handle(cf_name)?;
@@ -357,11 +385,19 @@ impl DB {
         for (cf_name, rows) in &batch.rows {
             for (key, write_op) in rows {
                 match write_op {
-                    WriteOp::Value(value) => OP_COUNTER.observe(
-                        &format!("db_put_bytes_{}", cf_name),
-                        (key.len() + value.len()) as f64,
-                    ),
-                    WriteOp::Deletion => OP_COUNTER.inc(&format!("db_delete_{}", cf_name)),
+                    WriteOp::Value(value) => {
+                        OP_COUNTER.observe(
+                            &format!("db_put_bytes_{}", cf_name),
+                            (key.len() + value.len()) as f64,
+                        );
+                        LIBRA_SCHEMADB_PUT_BYTES
+                            .with_label_values(&[cf_name])
+                            .observe((key.len() + value.len()) as f64);
+                    }
+                    WriteOp::Deletion => {
+                        OP_COUNTER.inc(&format!("db_delete_{}", cf_name));
+                        LIBRA_SCHEMADB_DELETES.with_label_values(&[cf_name]).inc();
+                    }
                 }
             }
         }
@@ -369,6 +405,9 @@ impl DB {
             &format!("db_batch_commit_bytes_{}", self.name),
             serialized_size as f64,
         );
+        LIBRA_SCHEMADB_BATCH_COMMIT_BYTES
+            .with_label_values(&[self.name])
+            .observe(serialized_size as f64);
 
         Ok(())
     }
