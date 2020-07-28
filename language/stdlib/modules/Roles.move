@@ -1,15 +1,16 @@
 address 0x1 {
 /// This module describes two things:
 ///
-/// 1. The relationship between roles, e.g. Role_A can creates accounts of Role_B
-/// It is important to note here that this module _does not_ describe the
-/// privileges that a specific role can have. This is a property of each of
-/// the modules that declares a privilege.
-///
-/// Roles are defined to be completely opaque outside of this module --
-/// all operations should be guarded by privilege checks, and not by role
-/// checks. Each role comes with a default privilege.
-///
+/// Each address with an account has exactly one role.
+/// An address can perform a privileged operation without aborting
+/// only if the address has the appropriate appropriate privilege. In
+/// some cases, the privilege is inherent in the role, so the
+/// operation will check has_..._role(account).  In other cases, the
+/// role may or may not have a privilege, and the privilege check is
+/// done via a call to has_..._privilege(account). In this file, all
+/// has_..._privilege functions just call a has_..._role function,
+/// because we anticipate the possibility that the privilege may be
+/// separated from the role at some future point.
 
 module Roles {
     use 0x1::Signer::{Self, spec_address_of};

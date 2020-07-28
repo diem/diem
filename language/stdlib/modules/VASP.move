@@ -246,10 +246,16 @@ module VASP {
                 spec_is_parent_vasp(global<ChildVASP>(child_addr).parent_vasp_addr);
     }
 
+    /// # Limit on number of children is respected
+    spec module {
+        invariant [global]
+            forall parent_addr: address where spec_is_parent_vasp(parent_addr):
+                global<ParentVASP>(parent_addr).num_children <= MAX_CHILD_ACCOUNTS;
+    }
 
     /// ## Mutation
 
-    /// Only a parent VASP calling publish_child_vast_credential can create
+    /// Only a parent VASP calling publish_child_vasp_credential can create
     /// child VASP.
     spec schema ChildVASPsDontChange {
         /// **Informally:** A child is at an address iff it was there in the

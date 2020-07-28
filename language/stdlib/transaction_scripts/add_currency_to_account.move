@@ -34,9 +34,7 @@ spec fun add_currency_to_account {
     aborts_if
         Roles::spec_needs_account_limits_addr(Signer::spec_address_of(account)) &&
         Roles::spec_has_child_VASP_role_addr(Signer::spec_address_of(account)) &&
-        !VASP::spec_has_account_limits<Currency>(Signer::spec_address_of(account)) &&
-        // TODO(shb): teach prover that Roles::spec_has_child_VASP_roles ==> VASP::spec_is_vasp and
-        // then eliminate this
-        VASP::spec_is_vasp(Signer::spec_address_of(account));
+        !VASP::spec_has_account_limits<Currency>(Signer::spec_address_of(account));
+
 }
 }

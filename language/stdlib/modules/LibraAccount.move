@@ -649,7 +649,7 @@ module LibraAccount {
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `Token`. If
-    /// `add_all_currencies` is true, 0 balances for all avaialable currencies in the system will
+    /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added. This account will be a child of `creator`, which must be a ParentVASP.
     public fun create_child_vasp_account<Token>(
         parent: &signer,
@@ -658,14 +658,20 @@ module LibraAccount {
         add_all_currencies: bool,
     ) {
         let new_account = create_signer(new_account_address);
-        Roles::new_child_vasp_role(parent, &new_account);
         VASP::publish_child_vasp_credential(
             parent,
             &new_account,
         );
+        Roles::new_child_vasp_role(parent, &new_account);
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
+    }
+
+    spec fun create_child_vasp_account {
+
+        ensures Roles::spec_has_child_VASP_role_addr(new_account_address)
+                  ==> VASP::spec_is_vasp(new_account_address);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -713,6 +719,14 @@ module LibraAccount {
 
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
+
+    // spec fun add_currency {
+    //     pragma verify = false;
+    //     pragma partial_aborts_if = true;
+    //     aborts_if !Libra::spec_is_currency<Token>();
+    //     aborts_if !Roles::spec_can_hold_balance_addr(Signer::spec_address_of(account));
+    //     aborts_if exists<Balance<Token>>(Signer::spec_address_of(account));
+    // }
 
     /// Return whether the account at `addr` accepts `Token` type coins
     public fun accepts_currency<Token>(addr: address): bool {
@@ -969,6 +983,16 @@ module LibraAccount {
         /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B28].
         apply EnsuresWithdrawalCap{account: new_account} to make_account;
     }
+
+
+    /// # If an address has a child_vasp role, it is a vasp
+    spec module {
+        invariant [global]
+            forall child_addr1: address where Roles::spec_has_child_VASP_role_addr(child_addr1):
+                VASP::spec_is_vasp(child_addr1);
+    }
+
+    // TODO (dd): specify that every currency on an account that account limits has account limits.
 
 
 }
