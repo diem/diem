@@ -10,13 +10,8 @@ module ValidatorConfig {
 
     struct Config {
         consensus_pubkey: vector<u8>,
-        /// TODO(philiphayes): restructure
-        ///   3) remove validator_network_identity_pubkey
-        ///   4) remove full_node_network_identity_pubkey
-        validator_network_identity_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        full_node_network_identity_pubkey: vector<u8>,
-        full_node_network_address: vector<u8>,
+        validator_network_addresses: vector<vector<u8>>,
+        full_node_network_addresses: vector<vector<u8>>,
     }
 
     resource struct ValidatorConfig {
@@ -119,10 +114,8 @@ module ValidatorConfig {
         signer: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
-        validator_network_identity_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        full_node_network_identity_pubkey: vector<u8>,
-        full_node_network_address: vector<u8>,
+        validator_network_addresses: vector<vector<u8>>,
+        full_node_network_addresses: vector<vector<u8>>,
     ) acquires ValidatorConfig {
         assert(
             Signer::address_of(signer) == get_operator(validator_account),
@@ -133,10 +126,8 @@ module ValidatorConfig {
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
         t_ref.config = Option::some(Config {
             consensus_pubkey,
-            validator_network_identity_pubkey,
-            validator_network_address,
-            full_node_network_identity_pubkey,
-            full_node_network_address,
+            validator_network_addresses,
+            full_node_network_addresses,
         });
     }
 
@@ -233,16 +224,16 @@ module ValidatorConfig {
         &config_ref.consensus_pubkey
     }
 
-    /// Get validator's network identity pubkey from Config
+    /// Get validator's network addresses from Config
     /// Never aborts
-    public fun get_validator_network_identity_pubkey(config_ref: &Config): &vector<u8> {
-        &config_ref.validator_network_identity_pubkey
+    public fun get_validator_network_addresses(config_ref: &Config): &vector<vector<u8>> {
+        &config_ref.validator_network_addresses
     }
 
-    /// Get validator's network address from Config
+    /// Get validator's full node network addresses from Config
     /// Never aborts
-    public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
-        &config_ref.validator_network_address
+    public fun get_full_node_network_addresses(config_ref: &Config): &vector<vector<u8>> {
+        &config_ref.full_node_network_addresses
     }
 
     spec module {

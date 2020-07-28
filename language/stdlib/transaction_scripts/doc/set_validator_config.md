@@ -19,7 +19,7 @@ TODO(valerini): rename to register_validator_config to avoid confusion with
 set_validator_config_and_reconfigure script.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_config">set_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_config">set_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;vector&lt;u8&gt;&gt;, full_node_network_addresses: vector&lt;vector&lt;u8&gt;&gt;)
 </code></pre>
 
 
@@ -32,19 +32,15 @@ set_validator_config_and_reconfigure script.
     account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
-    validator_network_identity_pubkey: vector&lt;u8&gt;,
-    validator_network_address: vector&lt;u8&gt;,
-    fullnodes_network_identity_pubkey: vector&lt;u8&gt;,
-    fullnodes_network_address: vector&lt;u8&gt;,
+    validator_network_addresses: vector&lt;vector&lt;u8&gt;&gt;,
+    full_node_network_addresses: vector&lt;vector&lt;u8&gt;&gt;,
 ) {
     <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
         account,
         validator_account,
         consensus_pubkey,
-        validator_network_identity_pubkey,
-        validator_network_address,
-        fullnodes_network_identity_pubkey,
-        fullnodes_network_address
+        validator_network_addresses,
+        full_node_network_addresses
     );
  }
 </code></pre>

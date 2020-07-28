@@ -24,22 +24,22 @@ impl OperationalTool {
 
     pub fn set_validator_config(
         &self,
-        validator_address: Option<NetworkAddress>,
-        fullnode_address: Option<NetworkAddress>,
+        validator_addresses: Vec<NetworkAddress>,
+        fullnode_addresses: Vec<NetworkAddress>,
     ) -> Result<TransactionContext, Error> {
         let args = format!(
             "
                 {command}
-                {fullnode_address}
-                {validator_address}
+                {fullnode_addresses}
+                {validator_addresses}
                 --chain-id {chain_id}
                 --host {host}
             ",
             command = command(TOOL_NAME, CommandName::SetValidatorConfig),
             host = self.host,
             chain_id = self.chain_id.id(),
-            fullnode_address = optional_arg("fullnode-address", fullnode_address),
-            validator_address = optional_arg("validator-address", validator_address),
+            fullnode_addresses = fmt_arg_list("fullnode-addresses", fullnode_addresses),
+            validator_addresses = fmt_arg_list("validator-addresses", validator_addresses),
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -113,13 +113,12 @@ fn command(tool_name: &'static str, command: CommandName) -> String {
     format!("{tool} {command}", tool = tool_name, command = command)
 }
 
-/// Allow arguments to be optional
-fn optional_arg<T: std::fmt::Display>(name: &'static str, maybe_value: Option<T>) -> String {
-    if let Some(value) = maybe_value {
-        format!("--{name} {value}", name = name, value = value)
-    } else {
-        String::new()
-    }
+/// Format a structopt `Vec<T>` argument
+fn fmt_arg_list<T: std::fmt::Display>(name: &'static str, args: Vec<T>) -> String {
+    args.into_iter()
+        .map(|arg| format!("--{name} {arg}", name = name, arg = arg))
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Extract on disk storage args

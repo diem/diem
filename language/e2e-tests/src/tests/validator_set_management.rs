@@ -36,9 +36,7 @@ fn validator_add() {
                     0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
                 ]
                 .to_vec(),
-                vec![254; 32],
                 vec![],
-                vec![253; 32],
                 vec![],
             ))
             .sequence_number(0)
@@ -92,9 +90,7 @@ fn validator_rotate_key_and_reconfigure() {
                     0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
                 ]
                 .to_vec(),
-                vec![254; 32],
                 vec![],
-                vec![253; 32],
                 vec![],
             ))
             .sequence_number(0)
@@ -135,9 +131,7 @@ fn validator_rotate_key_and_reconfigure() {
                     0x55, 0xf1, 0x2a, 0xf4, 0x66, 0x0c,
                 ]
                 .to_vec(),
-                vec![254; 32],
                 vec![],
-                vec![253; 32],
                 vec![],
             ))
             .sequence_number(1)
@@ -218,9 +212,7 @@ fn validator_set_operator_set_key_reconfigure() {
                     0x55, 0xf1, 0x2a, 0xf4, 0x66, 0x0c,
                 ]
                 .to_vec(),
-                vec![254; 32],
                 vec![],
-                vec![253; 32],
                 vec![],
             ))
             .sequence_number(0)
@@ -262,9 +254,7 @@ fn validator_set_operator_set_key_reconfigure() {
                     0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
                 ]
                 .to_vec(),
-                vec![254; 32],
                 vec![],
-                vec![253; 32],
                 vec![],
             ))
             .sequence_number(1)

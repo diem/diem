@@ -7,11 +7,15 @@ use libra_management::{
     error::Error, json_rpc::JsonRpcClientWrapper, storage::StorageWrapper, TransactionContext,
 };
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, Key, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY},
+    deserialize_addresses,
+    encrypted::{
+        self as netaddr, decrypt_addresses, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, Protocol, RawNetworkAddress,
 };
 use libra_types::account_address::AccountAddress;
-use std::convert::TryFrom;
+use std::{collections::HashMap, convert::TryFrom, iter};
 use structopt::StructOpt;
 
 // TODO: Load all chain IDs from the host
@@ -21,10 +25,10 @@ pub struct SetValidatorConfig {
     host: String,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
-    #[structopt(long, help = "Validator Network Address")]
-    validator_address: Option<NetworkAddress>,
-    #[structopt(long, help = "Full Node Network Address")]
-    fullnode_address: Option<NetworkAddress>,
+    #[structopt(long, help = "Validator Network Addresses")]
+    validator_addresses: Vec<NetworkAddress>,
+    #[structopt(long, help = "Full Node Network Addresses")]
+    full_node_addresses: Vec<NetworkAddress>,
 }
 
 impl SetValidatorConfig {
@@ -38,34 +42,47 @@ impl SetValidatorConfig {
         let client = JsonRpcClientWrapper::new(self.host);
         let sequence_number = client.sequence_number(owner_account)?;
 
-        // Retrieve the current validator / fullnode addresses and update accordingly
+        let validator_addresses = self.validator_addresses;
+        let full_node_addresses = self.full_node_addresses;
+
         let validator_config = client.validator_config(owner_account)?;
-        let validator_address = if let Some(validator_address) = self.validator_address {
-            validator_address
+        let config_validator_addresses = validator_config.validator_network_addresses;
+        let config_full_node_addresses = validator_config.full_node_network_addresses;
+
+        // TODO(philiphayes): read actual shared_val_netaddr_keys from secure storage
+        let shared_val_netaddr_keys: HashMap<_, _> = iter::once((
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            TEST_SHARED_VAL_NETADDR_KEY,
+        ))
+        .collect();
+
+        // Retrieve the current validator / fullnode addresses and update accordingly
+        let validator_addresses = if !validator_addresses.is_empty() {
+            validator_addresses
         } else {
-            decode_validator_address(
-                validator_config.validator_network_address,
+            decode_validator_addresses(
                 &owner_account,
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                0, // addr_idx
+                &shared_val_netaddr_keys,
+                &config_validator_addresses,
             )?
         };
 
-        let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
-            fullnode_address
+        let full_node_addresses = if !full_node_addresses.is_empty() {
+            full_node_addresses
         } else {
-            decode_address(validator_config.full_node_network_address)?
+            decode_full_node_addresses(&owner_account, &config_full_node_addresses)?
         };
 
         let txn = self.validator_config.build_transaction(
             sequence_number,
-            fullnode_address,
-            validator_address,
+            full_node_addresses,
+            validator_addresses,
             true,
         )?;
         client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
     }
 }
+
 #[derive(Debug, StructOpt)]
 pub struct RotateNetworkKey {
     #[structopt(long, help = "JSON-RPC Endpoint (e.g. http://localhost:8080)")]
@@ -89,8 +106,8 @@ impl RotateNetworkKey {
         let set_validator_config = SetValidatorConfig {
             host: self.host,
             validator_config: self.validator_config,
-            validator_address: None,
-            fullnode_address: None,
+            validator_addresses: Vec::new(),
+            full_node_addresses: Vec::new(),
         };
 
         set_validator_config.execute().map(|txn_ctx| (txn_ctx, key))
@@ -121,37 +138,51 @@ impl RotateFullNodeNetworkKey {
     }
 }
 
-fn decode_validator_address(
-    address: RawEncNetworkAddress,
-    account: &AccountAddress,
-    key: &Key,
-    addr_idx: u32,
-) -> Result<NetworkAddress, Error> {
-    let enc_addr = EncNetworkAddress::try_from(&address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decode network address {}",
-            e.to_string()
-        ))
-    })?;
-    let raw_addr = enc_addr.decrypt(key, account, addr_idx).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decrypt network address {}",
-            e.to_string()
-        ))
-    })?;
-    decode_address(raw_addr)
+fn decode_validator_addresses(
+    owner_account: &AccountAddress,
+    shared_val_netaddr_keys: &HashMap<netaddr::KeyVersion, netaddr::Key>,
+    validator_addresses: &[RawEncNetworkAddress],
+) -> Result<Vec<NetworkAddress>, Error> {
+    decrypt_addresses(owner_account, shared_val_netaddr_keys, validator_addresses)
+        // extract the base transport protocols only
+        .map(|maybe_addr| {
+            maybe_addr
+                .map_err(|err| {
+                    Error::UnexpectedError(format!(
+                        "Unable to read validator network address: {}",
+                        err
+                    ))
+                })
+                .and_then(|addr| parse_transport(&addr))
+        })
+        .collect::<Result<Vec<_>, _>>()
 }
 
-fn decode_address(raw_address: RawNetworkAddress) -> Result<NetworkAddress, Error> {
-    let network_address = NetworkAddress::try_from(&raw_address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decode network address {}",
-            e.to_string()
-        ))
-    })?;
-    let protocols = network_address
-        .as_slice()
-        .iter()
+fn decode_full_node_addresses(
+    owner_account: &AccountAddress,
+    full_node_addresses: &[RawNetworkAddress],
+) -> Result<Vec<NetworkAddress>, Error> {
+    deserialize_addresses(owner_account, full_node_addresses)
+        // extract the base transport protocols only
+        .map(|maybe_addr| {
+            maybe_addr
+                .map_err(|err| {
+                    Error::UnexpectedError(format!(
+                        "Unable to read full node network address: {}",
+                        err
+                    ))
+                })
+                .and_then(|addr| parse_transport(&addr))
+        })
+        .collect::<Result<Vec<_>, _>>()
+}
+
+// TODO(philiphayes): HACK: add TransportProtocol type?
+
+fn parse_transport(addr: &NetworkAddress) -> Result<NetworkAddress, Error> {
+    let protocols: Vec<_> = addr
+        .clone()
+        .into_iter()
         .filter(|protocol| match protocol {
             Protocol::Dns(_)
             | Protocol::Dns4(_)
@@ -162,7 +193,11 @@ fn decode_address(raw_address: RawNetworkAddress) -> Result<NetworkAddress, Erro
             | Protocol::Tcp(_) => true,
             _ => false,
         })
-        .cloned()
-        .collect::<Vec<_>>();
-    Ok(NetworkAddress::try_from(protocols).unwrap())
+        .collect();
+    NetworkAddress::try_from(protocols).map_err(|_| {
+        Error::UnexpectedError(format!(
+            "Error: network address does not contain any transport protocols: '{}'",
+            addr
+        ))
+    })
 }

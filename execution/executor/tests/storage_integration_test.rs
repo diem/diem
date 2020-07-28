@@ -10,7 +10,7 @@ use executor_test_helpers::{
     },
 };
 use executor_types::BlockExecutor;
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_address,
     account_config::{coin1_tag, libra_root_address, treasury_compliance_account_address},
@@ -19,7 +19,6 @@ use libra_types::{
     transaction::{authenticator::AuthenticationKey, Script},
     trusted_state::{TrustedState, TrustedStateChange},
 };
-use rand::SeedableRng;
 use std::convert::TryFrom;
 use transaction_builder::{
     encode_block_prologue_script, encode_modify_publishing_option_script,
@@ -135,8 +134,6 @@ fn test_reconfiguration() {
     let operator_account = account_address::from_public_key(&operator_key.public_key());
 
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn3 = get_test_signed_transaction(
         operator_account,
         /* sequence_number = */ 0,
@@ -145,10 +142,8 @@ fn test_reconfiguration() {
         Some(encode_set_validator_config_and_reconfigure_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
-            new_network_pubkey.as_slice().to_vec(),
-            Vec::new(),
-            new_network_pubkey.as_slice().to_vec(),
-            Vec::new(),
+            vec![],
+            vec![],
         )),
     );
 

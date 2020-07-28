@@ -5,13 +5,13 @@
 
 use libra_config::config::PersistableConfig;
 use libra_logger::prelude::*;
-use libra_network_address::NetworkAddress;
+use libra_network_address::{deserialize_addresses, NetworkAddress};
 use libra_secure_json_rpc::JsonRpcClient;
 use libra_types::{
     account_config::libra_root_address, on_chain_config::ValidatorSet,
     validator_info::ValidatorInfo, PeerId,
 };
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 
 // TODO: Use the definition from network?
@@ -39,17 +39,7 @@ fn main() {
     let seed_peers_config = validator_set
         .payload()
         .iter()
-        .filter_map(|v| match to_seed_peer(v) {
-            Ok(result) => Some(result),
-            Err(error) => {
-                warn!(
-                    "Unable to read peer id for validator {} {}",
-                    v.account_address(),
-                    error
-                );
-                None
-            }
-        })
+        .map(to_seed_peer)
         .collect::<SeedPeersConfig>();
 
     // Save to a file for loading later
@@ -66,11 +56,18 @@ fn get_validator_set(endpoint: String, peer_id: PeerId) -> anyhow::Result<Option
 }
 
 /// Convert ValidatorInfo to a seed peer
-fn to_seed_peer(
-    validator_info: &ValidatorInfo,
-) -> Result<(PeerId, Vec<NetworkAddress>), lcs::Error> {
+fn to_seed_peer(validator_info: &ValidatorInfo) -> (PeerId, Vec<NetworkAddress>) {
     let peer_id = *validator_info.account_address();
-    let network_addr =
-        NetworkAddress::try_from(&validator_info.config().full_node_network_address)?;
-    Ok((peer_id, vec![network_addr]))
+    let raw_addrs = &validator_info.config().full_node_network_addresses;
+
+    // deserialize the raw network addresses. log and skip ones that fail to deserialize
+    let addrs: Vec<NetworkAddress> = deserialize_addresses(&peer_id, raw_addrs)
+        .filter_map(|maybe_addr| {
+            maybe_addr
+                .map_err(|err| warn!("Failed to deserialize fullnode network address: {}", err))
+                .ok()
+        })
+        .collect();
+
+    (peer_id, addrs)
 }

@@ -43,8 +43,8 @@ impl ValidatorConfig {
 
         let txn = self.validator_config.build_transaction(
             0,
-            self.fullnode_address,
-            self.validator_address,
+            vec![self.fullnode_address],
+            vec![self.validator_address],
             false,
         )?;
 

@@ -30,7 +30,6 @@ use move_core_types::{
     identifier::IdentStr,
 };
 use move_vm_runtime::{data_cache::RemoteCache, session::Session};
-
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
@@ -40,6 +39,7 @@ use std::{
     collections::HashSet,
     convert::{AsMut, AsRef, TryFrom},
 };
+use vm::file_format::SignatureToken;
 
 pub struct LibraVM(LibraVMImpl);
 
@@ -695,6 +695,11 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
             TransactionArgument::Address(a) => Value::address(*a),
             TransactionArgument::Bool(b) => Value::bool(*b),
             TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+            TransactionArgument::U8VectorVector(vv) => Value::constant_vector_generic(
+                vv.iter().map(|v| Value::vector_u8(v.clone())),
+                &SignatureToken::Vector(Box::new(SignatureToken::U8)),
+            )
+            .unwrap(),
         })
         .collect()
 }

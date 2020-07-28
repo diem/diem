@@ -11,11 +11,10 @@ use libra_config::{
     utils,
     utils::get_genesis_txn,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
-use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
@@ -515,16 +514,13 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
     let mut rng = StdRng::from_seed([44u8; 32]);
     let new_privkey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_privkey.public_key();
-    let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn1 = crate::build_rotation_transaction(
         owner_account,
         operator_account,
         0,
         &new_pubkey,
-        &new_network_pubkey,
-        &RawEncNetworkAddress::new(Vec::new()),
-        &new_network_pubkey,
-        &RawNetworkAddress::new(Vec::new()),
+        vec![],
+        vec![],
         node.time.now() + TXN_EXPIRATION_SECS,
         node_config.base.chain_id,
     );

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::RawNetworkAddress;
+use crate::{NetworkAddress, RawNetworkAddress};
 use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
@@ -11,7 +11,11 @@ use move_core_types::account_address::AccountAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, mem};
+use std::{
+    collections::hash_map::{self, HashMap},
+    convert::TryFrom,
+    mem,
+};
 use thiserror::Error;
 
 /// The length in bytes of the AES-256-GCM authentication tag.
@@ -350,6 +354,101 @@ impl Arbitrary for EncNetworkAddress {
     }
 }
 
+/////////////////////
+// Bulk Operations //
+/////////////////////
+
+#[derive(Error, Debug)]
+pub enum BulkDecryptError<'a> {
+    #[error("error deserializing network address: '{0:?}', idx: {1}, account: {2}, err: {3}")]
+    DeserializeError(RawNetworkAddress, u32, String, lcs::Error),
+
+    #[error(
+        "error deserializing encrypted network address: '{0:?}', idx: {1}, account: {2}, err: {3}"
+    )]
+    DeserializeEncryptedError(&'a RawEncNetworkAddress, u32, String, lcs::Error),
+
+    #[error("unknown key version: {0}, idx: {1}, account: {2}, supported key versions: {3:?}")]
+    UnknownKeyVersion(KeyVersion, u32, String, hash_map::Keys<'a, KeyVersion, Key>),
+
+    #[error("error decrypting encrypted network address: '{0:?}', key version: {1}, idx: {2}, account: {3}")]
+    DecryptError(&'a RawEncNetworkAddress, KeyVersion, u32, String),
+}
+
+#[derive(Error, Debug)]
+pub enum BulkEncryptError<'a> {
+    #[error("error serializing network address: '{0}', err: {1}")]
+    SerializeError(&'a NetworkAddress, lcs::Error),
+
+    #[error("error serializing encrypted network address: {0:?}, err: {1}")]
+    SerializeEncryptedError(EncNetworkAddress, lcs::Error),
+}
+
+pub fn decrypt_addresses<'a>(
+    account: &'a AccountAddress,
+    key_map: &'a HashMap<KeyVersion, Key>,
+    raw_enc_addrs: &'a [RawEncNetworkAddress],
+) -> impl Iterator<Item = Result<NetworkAddress, BulkDecryptError<'a>>> + 'a {
+    raw_enc_addrs
+        .iter()
+        .enumerate()
+        .map(move |(addr_idx, raw_enc_addr)| {
+            let addr_idx = addr_idx as u32;
+            let enc_addr = EncNetworkAddress::try_from(raw_enc_addr).map_err(|err| {
+                BulkDecryptError::DeserializeEncryptedError(
+                    raw_enc_addr,
+                    addr_idx,
+                    account.short_str(),
+                    err,
+                )
+            })?;
+
+            let key_version = enc_addr.key_version();
+            let key = key_map.get(&key_version).ok_or_else(|| {
+                BulkDecryptError::UnknownKeyVersion(
+                    key_version,
+                    addr_idx,
+                    account.short_str(),
+                    key_map.keys(),
+                )
+            })?;
+
+            let raw_addr = enc_addr.decrypt(key, account, addr_idx).map_err(|_| {
+                BulkDecryptError::DecryptError(
+                    raw_enc_addr,
+                    key_version,
+                    addr_idx,
+                    account.short_str(),
+                )
+            })?;
+
+            let addr = NetworkAddress::try_from(&raw_addr).map_err(|err| {
+                BulkDecryptError::DeserializeError(raw_addr, addr_idx, account.short_str(), err)
+            })?;
+
+            Ok(addr)
+        })
+}
+
+pub fn encrypt_addresses<'a>(
+    account: &'a AccountAddress,
+    key: &'a Key,
+    key_version: KeyVersion,
+    seq_num: u64,
+    addrs: &'a [NetworkAddress],
+) -> impl Iterator<Item = Result<RawEncNetworkAddress, BulkEncryptError<'a>>> + 'a {
+    addrs.iter().enumerate().map(move |(addr_idx, addr)| {
+        let addr_idx = addr_idx as u32;
+        let raw_addr = RawNetworkAddress::try_from(addr)
+            .map_err(|err| BulkEncryptError::SerializeError(addr, err))?;
+        let enc_addr =
+            EncNetworkAddress::encrypt(raw_addr, key, key_version, account, seq_num, addr_idx);
+        let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr)
+            .map_err(|err| BulkEncryptError::SerializeEncryptedError(enc_addr, err))?;
+        Ok(raw_enc_addr)
+    })
+}
+
 ///////////
 // Tests //
 ///////////
@@ -358,6 +457,8 @@ impl Arbitrary for EncNetworkAddress {
 mod test {
     use super::*;
     use crate::NetworkAddress;
+    use proptest::collection::vec;
+    use std::iter;
 
     // Ensure that modifying the ciphertext or associated data causes a decryption
     // error.
@@ -471,6 +572,29 @@ mod test {
             let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
             let enc_addr_2 = EncNetworkAddress::try_from(&raw_enc_addr).unwrap();
             assert_eq!(enc_addr, enc_addr_2);
+        }
+
+        #[test]
+        fn bulk_encrypt_decrypt_roundtrip(
+            addrs in vec(any::<NetworkAddress>(), 1..10),
+        ) {
+            let shared_val_netaddr_key = TEST_SHARED_VAL_NETADDR_KEY;
+            let key_version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
+            let account = AccountAddress::ZERO;
+            let seq_num = 0;
+
+            let key_map: HashMap<KeyVersion, Key> = iter::once((key_version, shared_val_netaddr_key))
+                .collect();
+
+            let raw_enc_addrs = encrypt_addresses(&account, &shared_val_netaddr_key, key_version, seq_num, &addrs)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
+            let dec_addrs = decrypt_addresses(&account, &key_map, &raw_enc_addrs)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
+            assert_eq!(addrs, dec_addrs);
         }
     }
 }

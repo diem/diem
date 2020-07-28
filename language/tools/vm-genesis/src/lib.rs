@@ -11,13 +11,13 @@ use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibO
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey, Uniform, ValidCryptoMaterial,
+    PrivateKey, Uniform,
 };
 use libra_network_address::{
     encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        encrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
     },
-    RawNetworkAddress,
+    serialize_addresses,
 };
 use libra_types::{
     account_address, account_config,
@@ -42,9 +42,9 @@ use move_vm_types::{
 };
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::{collections::btree_map::BTreeMap, convert::TryFrom};
+use std::collections::btree_map::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
-use vm::CompiledModule;
+use vm::{file_format::SignatureToken, CompiledModule};
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -176,6 +176,11 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
             TransactionArgument::Address(a) => Value::address(*a),
             TransactionArgument::Bool(b) => Value::bool(*b),
             TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+            TransactionArgument::U8VectorVector(vv) => Value::constant_vector_generic(
+                vv.iter().map(|v| Value::vector_u8(v.clone())),
+                &SignatureToken::Vector(Box::new(SignatureToken::U8)),
+            )
+            .unwrap(),
         })
         .collect()
 }
@@ -575,29 +580,33 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
                 .discovery_method
                 .advertised_address()
                 .append_prod_protos(identity_key, HANDSHAKE_VERSION);
-            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
+            let addrs = [addr];
 
             let seq_num = 0;
-            let addr_idx = 0;
-            let enc_addr = raw_addr.clone().encrypt(
+            let raw_enc_addrs = encrypt_addresses(
+                &owner_account,
                 &TEST_SHARED_VAL_NETADDR_KEY,
                 TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                &owner_account,
                 seq_num,
-                addr_idx,
-            );
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
+                &addrs,
+            )
+            .map(|maybe_raw_enc_addr| maybe_raw_enc_addr.map(Into::<Vec<_>>::into))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
+            let raw_addrs = serialize_addresses(&addrs)
+                .map(|maybe_raw_addr| maybe_raw_addr.map(Into::<Vec<_>>::into))
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
             let script = transaction_builder::encode_set_validator_config_script(
                 owner_account,
                 consensus_key.to_bytes().to_vec(),
-                identity_key.to_bytes(),
-                raw_enc_addr.into(),
-                identity_key.to_bytes(),
-                raw_addr.into(),
+                raw_enc_addrs,
+                raw_addrs,
             );
             (operator_key, script)
         })

@@ -12,9 +12,8 @@ use futures::{future::FutureExt, stream::StreamExt};
 use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::*,
-    test_utils::TEST_SEED,
     traits::{PrivateKey, Uniform},
-    x25519, HashValue,
+    HashValue,
 };
 use libra_types::{
     account_address,
@@ -23,7 +22,6 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use rand::SeedableRng;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
@@ -166,8 +164,6 @@ fn test_on_chain_config_pub_sub() {
 
     // rotate the validator's consensus pubkey to trigger a reconfiguration
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
-    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn5 = get_test_signed_transaction(
         operator_account,
         /* sequence_number = */ 0,
@@ -176,10 +172,8 @@ fn test_on_chain_config_pub_sub() {
         Some(encode_set_validator_config_and_reconfigure_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
-            new_network_pubkey.as_slice().to_vec(),
-            Vec::new(),
-            new_network_pubkey.as_slice().to_vec(),
-            Vec::new(),
+            vec![],
+            vec![],
         )),
     );
 

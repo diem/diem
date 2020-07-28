@@ -13,6 +13,8 @@ pub enum TransactionArgument {
     Address(AccountAddress),
     U8Vector(#[serde(with = "serde_bytes")] Vec<u8>),
     Bool(bool),
+    // HACK
+    U8VectorVector(Vec<Vec<u8>>),
 }
 
 impl fmt::Debug for TransactionArgument {
@@ -25,6 +27,13 @@ impl fmt::Debug for TransactionArgument {
             TransactionArgument::Address(address) => write!(f, "{{ADDRESS: {:?}}}", address),
             TransactionArgument::U8Vector(vector) => {
                 write!(f, "{{U8Vector: 0x{}}}", hex::encode(vector))
+            }
+            TransactionArgument::U8VectorVector(vector) => {
+                let formatted: Vec<_> = vector
+                    .iter()
+                    .map(|bytes| format!("0x{}", hex::encode(bytes)))
+                    .collect();
+                write!(f, "{{U8VectorVector: [{}]}}", formatted.join(", "))
             }
         }
     }

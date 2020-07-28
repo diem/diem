@@ -12,6 +12,9 @@ use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
+use libra_network_address::encrypted::{
+    decrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+};
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
@@ -28,10 +31,11 @@ use libra_types::{
 use num_traits::cast::FromPrimitive;
 use rust_decimal::Decimal;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     convert::TryInto,
     fs,
     io::{self, Write},
+    iter,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,
@@ -1531,11 +1535,30 @@ fn test_network_key_rotation() {
         )
         .unwrap();
 
-    // Verify that config has been loaded correctly with new key
-    let actual_key = libra
-        .retrieve_validator_config(validator_account)
+    // TODO(philiphayes): read actual shared_val_netaddr_keys from secure storage
+    let shared_val_netaddr_keys: HashMap<_, _> = iter::once((
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        TEST_SHARED_VAL_NETADDR_KEY,
+    ))
+    .collect();
+
+    let validator_config = libra.retrieve_validator_config(validator_account).unwrap();
+
+    let validator_addresses = decrypt_addresses(
+        &validator_account,
+        &shared_val_netaddr_keys,
+        &validator_config.validator_network_addresses,
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
+
+    let actual_key = validator_addresses
+        .first()
         .unwrap()
-        .validator_network_identity_public_key;
+        .find_noise_proto()
+        .unwrap();
+
+    // Verify that config has been loaded correctly with new key
     assert_eq!(new_network_key, actual_key);
 
     // Restart validator

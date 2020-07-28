@@ -112,6 +112,7 @@ fn check_primitive_script_arg(context: &mut Context, mloc: Loc, idx: usize, ty: 
         Type_::bool(loc),
         Type_::address(loc),
         Type_::vector(loc, Type_::u8(loc)),
+        Type_::vector(loc, Type_::vector(loc, Type_::u8(loc))),
         signer_ref.clone(),
     ];
     let ty_is_unacceptable = acceptable_types.iter().all(|acceptable_type| {

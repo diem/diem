@@ -716,6 +716,40 @@ impl Arbitrary for DnsName {
     }
 }
 
+/////////////////////
+// Bulk Operations //
+/////////////////////
+
+#[derive(Error, Debug)]
+#[error("error deserializing network address: '{0:?}', idx: {1}, account: {2}, err: {3}")]
+pub struct BulkDeserializeError<'a>(&'a RawNetworkAddress, u32, String, lcs::Error);
+
+#[derive(Error, Debug)]
+#[error("error serializing network address: '{0}', err: {1}")]
+pub struct BulkSerializeError<'a>(&'a NetworkAddress, lcs::Error);
+
+pub fn deserialize_addresses<'a>(
+    account: &'a AccountAddress,
+    raw_addrs: &'a [RawNetworkAddress],
+) -> impl Iterator<Item = Result<NetworkAddress, BulkDeserializeError<'a>>> + 'a {
+    raw_addrs
+        .iter()
+        .enumerate()
+        .map(move |(addr_idx, raw_addr)| {
+            NetworkAddress::try_from(raw_addr).map_err(|err| {
+                BulkDeserializeError(raw_addr, addr_idx as u32, account.short_str(), err)
+            })
+        })
+}
+
+pub fn serialize_addresses<'a>(
+    addrs: &'a [NetworkAddress],
+) -> impl Iterator<Item = Result<RawNetworkAddress, BulkSerializeError<'a>>> + 'a {
+    addrs.iter().map(move |addr| {
+        RawNetworkAddress::try_from(addr).map_err(|err| BulkSerializeError(addr, err))
+    })
+}
+
 /////////////
 // Parsing //
 /////////////
@@ -1096,6 +1130,20 @@ mod test {
             // A valid LibraNet addr w/ unexpected trailing protocols should not parse.
             let addr = addr.extend_from_slice(addr_suffix.as_slice());
             assert!(!addr.is_libranet_addr(), "addr.is_libranet_addr() = true; addr: '{}'", addr);
+        }
+
+        #[test]
+        fn test_bulk_serialize_deserialize_roundtrip(
+            addrs in vec(any::<NetworkAddress>(), 1..10)
+        ) {
+            let account = AccountAddress::ZERO;
+            let raw_addrs = serialize_addresses(&addrs)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            let deser_addrs = deserialize_addresses(&account, &raw_addrs)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            assert_eq!(addrs, deser_addrs);
         }
     }
 }

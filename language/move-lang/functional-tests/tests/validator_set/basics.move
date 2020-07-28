@@ -63,10 +63,15 @@ script {
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;
+    use 0x1::Vector;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{vivian}},
-                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
-                                    x"", x"", x"", x"");
+        ValidatorConfig::set_config(
+            account,
+            {{vivian}},
+            x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            Vector::empty(),
+            Vector::empty(),
+        );
     }
 }
 // TODO(status_migration) remove duplicate check
@@ -78,8 +83,15 @@ script {
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;
+    use 0x1::Vector;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        ValidatorConfig::set_config(
+            account,
+            {{vivian}},
+            x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+            Vector::empty(),
+            Vector::empty(),
+        );
     }
 }
 // TODO(status_migration) remove duplicate check

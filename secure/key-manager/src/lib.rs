@@ -24,7 +24,7 @@ use crate::{
     libra_interface::LibraInterface,
     logging::{LogEntry, LogEvent, LogField},
 };
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
+use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::prelude::*;
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
@@ -251,20 +251,14 @@ where
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
         let validator_config = self.libra.retrieve_validator_config(owner_account)?;
-        let network_key = validator_config.validator_network_identity_public_key;
-        let network_address = validator_config.validator_network_address;
-        let fullnode_network_key = validator_config.full_node_network_identity_public_key;
-        let fullnode_network_address = validator_config.full_node_network_address;
 
         let txn = build_rotation_transaction(
             owner_account,
             operator_account,
             seq_id,
             &consensus_key,
-            &network_key,
-            &network_address,
-            &fullnode_network_key,
-            &fullnode_network_address,
+            validator_config.validator_network_addresses,
+            validator_config.full_node_network_addresses,
             expiration,
             self.chain_id,
         );
@@ -390,23 +384,28 @@ pub fn build_rotation_transaction(
     operator_address: AccountAddress,
     seq_id: u64,
     consensus_key: &Ed25519PublicKey,
-    network_key: &x25519::PublicKey,
-    network_address: &RawEncNetworkAddress,
-    fullnode_network_key: &x25519::PublicKey,
-    fullnode_network_address: &RawNetworkAddress,
+    validator_network_addresses: Vec<RawEncNetworkAddress>,
+    full_node_network_addresses: Vec<RawNetworkAddress>,
     expiration_timestamp_secs: u64,
     chain_id: ChainId,
 ) -> RawTransaction {
+    let validator_network_addresses = validator_network_addresses
+        .into_iter()
+        .map(RawEncNetworkAddress::into)
+        .collect();
+    let full_node_network_addresses = full_node_network_addresses
+        .into_iter()
+        .map(RawNetworkAddress::into)
+        .collect();
+
     let script = Script::new(
         libra_transaction_scripts::SET_VALIDATOR_CONFIG_AND_RECONFIGURE_TXN.clone(),
         vec![],
         vec![
             TransactionArgument::Address(owner_address),
             TransactionArgument::U8Vector(consensus_key.to_bytes().to_vec()),
-            TransactionArgument::U8Vector(network_key.as_slice().to_vec()),
-            TransactionArgument::U8Vector(network_address.as_ref().to_vec()),
-            TransactionArgument::U8Vector(fullnode_network_key.as_slice().to_vec()),
-            TransactionArgument::U8Vector(fullnode_network_address.as_ref().to_vec()),
+            TransactionArgument::U8VectorVector(validator_network_addresses),
+            TransactionArgument::U8VectorVector(full_node_network_addresses),
         ],
     );
     RawTransaction::new_script(

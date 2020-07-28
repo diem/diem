@@ -138,11 +138,14 @@ fn quote_type(type_tag: &TypeTag) -> String {
         U64 => "u64".into(),
         U128 => "u128".into(),
         Address => "AccountAddress".into(),
-        Vector(type_tag) => match type_tag.as_ref() {
+        Vector(type_tag2) => match type_tag2.as_ref() {
             U8 => "Vec<u8>".into(),
+            Vector(type_tag3) => match type_tag3.as_ref() {
+                U8 => "Vec<Vec<u8>>".into(),
+                _ => type_not_allowed(type_tag),
+            },
             _ => type_not_allowed(type_tag),
         },
-
         Struct(_) | Signer => type_not_allowed(type_tag),
     }
 }
@@ -155,7 +158,7 @@ fn make_transaction_argument(type_tag: &TypeTag, name: &str, local_types: bool) 
         U64 => format!("TransactionArgument::U64({})", name),
         U128 => format!("TransactionArgument::U128({})", name),
         Address => format!("TransactionArgument::Address({})", name),
-        Vector(type_tag) => match type_tag.as_ref() {
+        Vector(type_tag2) => match type_tag2.as_ref() {
             U8 => {
                 if local_types {
                     format!("TransactionArgument::U8Vector({})", name)
@@ -163,9 +166,12 @@ fn make_transaction_argument(type_tag: &TypeTag, name: &str, local_types: bool) 
                     format!("TransactionArgument::U8Vector(ByteBuf::from({}))", name)
                 }
             }
+            Vector(type_tag3) => match type_tag3.as_ref() {
+                U8 => format!("TransactionArgument::U8VectorVector({})", name),
+                _ => type_not_allowed(type_tag),
+            },
             _ => type_not_allowed(type_tag),
         },
-
         Struct(_) | Signer => type_not_allowed(type_tag),
     }
 }

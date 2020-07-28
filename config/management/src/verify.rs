@@ -8,6 +8,13 @@ use libra_global_constants::{
     CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, OPERATOR_KEY,
     OWNER_ACCOUNT, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
+use libra_network_address::{
+    deserialize_addresses,
+    encrypted::{
+        decrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
+    NetworkAddress,
+};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_temppath::TempPath;
 use libra_types::{
@@ -17,10 +24,12 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     fmt::Write,
     fs::File,
     io::Read,
+    iter,
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
@@ -166,6 +175,8 @@ fn compare_genesis(
     let validator_account = validator_account(storage, storage_name)?;
     let validator_config = validator_config(validator_account, db_rw.reader.clone())?;
 
+    // compare consensus public key
+
     let actual_consensus_key = ed25519_from_storage(CONSENSUS_KEY, storage)
         .map_err(|e| Error::StorageReadError(storage_name, CONSENSUS_KEY, e))?;
     let expected_consensus_key = validator_config.consensus_public_key;
@@ -175,22 +186,61 @@ fn compare_genesis(
         actual_consensus_key == expected_consensus_key,
     );
 
-    let actual_validator_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, storage)
+    // TODO(philiphayes): read actual shared_val_netaddr_keys from secure storage
+    let shared_val_netaddr_keys: HashMap<_, _> = iter::once((
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        TEST_SHARED_VAL_NETADDR_KEY,
+    ))
+    .collect();
+
+    // decrypt and deserialize validator network address
+
+    let raw_enc_val_addrs = validator_config.validator_network_addresses;
+    let val_addrs = decrypt_addresses(
+        &validator_account,
+        &shared_val_netaddr_keys,
+        &raw_enc_val_addrs,
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .map_err(|err| {
+        Error::UnexpectedError(format!("Unable to read validator network address: {}", err))
+    })?;
+    let val_pubkeys: HashSet<_> = val_addrs
+        .iter()
+        .filter_map(NetworkAddress::find_noise_proto)
+        .collect();
+
+    // deserialize full node network address
+
+    let raw_fn_addrs = validator_config.full_node_network_addresses;
+    let fn_addrs = deserialize_addresses(&validator_account, &raw_fn_addrs)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|err| {
+            Error::UnexpectedError(format!("Unable to read fullnode network address: {}", err))
+        })?;
+    let fn_pubkeys: HashSet<_> = fn_addrs
+        .iter()
+        .filter_map(NetworkAddress::find_noise_proto)
+        .collect();
+
+    // extract and compare validator network public key
+
+    let actual_validator_pubkey = x25519_from_storage(VALIDATOR_NETWORK_KEY, storage)
         .map_err(|e| Error::StorageReadError(storage_name, VALIDATOR_NETWORK_KEY, e))?;
-    let expected_validator_key = validator_config.validator_network_identity_public_key;
     write_assert(
         buffer,
         VALIDATOR_NETWORK_KEY,
-        actual_validator_key == expected_validator_key,
+        val_pubkeys.contains(&actual_validator_pubkey),
     );
 
-    let actual_fullnode_key = x25519_from_storage(FULLNODE_NETWORK_KEY, storage)
+    // extract and compare full node network public key
+
+    let actual_fullnode_pubkey = x25519_from_storage(FULLNODE_NETWORK_KEY, storage)
         .map_err(|e| Error::StorageReadError(storage_name, FULLNODE_NETWORK_KEY, e))?;
-    let expected_fullnode_key = validator_config.full_node_network_identity_public_key;
     write_assert(
         buffer,
         FULLNODE_NETWORK_KEY,
-        actual_fullnode_key == expected_fullnode_key,
+        fn_pubkeys.contains(&actual_fullnode_pubkey),
     );
 
     Ok(())

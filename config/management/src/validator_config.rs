@@ -3,23 +3,21 @@
 
 use crate::{constants, error::Error, secure_backend::ValidatorBackend, storage::StorageWrapper};
 use libra_config::config::HANDSHAKE_VERSION;
-use libra_crypto::ValidCryptoMaterial;
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{
     encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        encrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
     },
-    NetworkAddress, RawNetworkAddress,
+    serialize_addresses, NetworkAddress,
 };
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     chain_id::ChainId,
     transaction::{RawTransaction, Transaction},
 };
-use std::convert::TryFrom;
 use structopt::StructOpt;
 
 #[derive(Clone, Debug, StructOpt)]
@@ -34,8 +32,8 @@ impl ValidatorConfig {
     pub fn build_transaction(
         &self,
         sequence_number: u64,
-        fullnode_address: NetworkAddress,
-        validator_address: NetworkAddress,
+        full_node_base_addresses: Vec<NetworkAddress>,
+        validator_base_addresses: Vec<NetworkAddress>,
         reconfigure: bool,
     ) -> Result<Transaction, Error> {
         let mut storage = StorageWrapper::new(
@@ -45,41 +43,46 @@ impl ValidatorConfig {
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
 
         let consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
-        let fullnode_network_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
+        let full_node_network_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
         let validator_network_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
 
-        // Build Validator address including protocols and encryption
+        // Build Validator addresses including protocols and encryption
         // Append ln-noise-ik and ln-handshake protocols to base network addresses
         // and encrypt the validator address.
-        let validator_address =
-            validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
-        let raw_validator_address = encode_address(validator_address)?;
-        // Only supports one address for now
-        let key = TEST_SHARED_VAL_NETADDR_KEY;
-        let version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
-        let enc_validator_address = raw_validator_address.encrypt(
-            &key,
-            version,
+        // We also dedup the base addresses
+        let validator_addresses: Vec<_> = dedup_addresses(validator_base_addresses)
+            .into_iter()
+            .map(|addr| addr.append_prod_protos(validator_network_key, HANDSHAKE_VERSION))
+            .collect();
+        let full_node_addresses: Vec<_> = dedup_addresses(full_node_base_addresses)
+            .into_iter()
+            .map(|addr| addr.append_prod_protos(full_node_network_key, HANDSHAKE_VERSION))
+            .collect();
+
+        let raw_enc_validator_addresses = encrypt_addresses(
             &owner_account,
+            &TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
             // This needs to be distinct, genesis = 0, post genesis sequence_number + 1
             sequence_number + if reconfigure { 1 } else { 0 },
-            0, // addr_idx
-        );
-        let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
-            .map_err(|e| {
-                Error::UnexpectedError(format!(
-                    "error serializing encrypted address: '{:?}', error: {}",
-                    enc_validator_address, e
-                ))
-            })?;
+            &validator_addresses,
+        )
+        .map(|maybe_raw_enc_addr| {
+            maybe_raw_enc_addr.map(Into::<Vec<_>>::into).map_err(|err| {
+                Error::UnexpectedError(format!("error encrypting validator address: {}", err))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-        // Build Fullnode address including protocols
-        let fullnode_address =
-            fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-        let raw_fullnode_address = encode_address(fullnode_address)?;
+        let raw_fullnode_addresses = serialize_addresses(&full_node_addresses)
+            .map(|maybe_raw_enc_addr| {
+                maybe_raw_enc_addr.map(Into::<Vec<_>>::into).map_err(|err| {
+                    Error::UnexpectedError(format!("error serializing fullnode address: {}", err))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         // Generate the validator config script
-        // TODO(philiphayes): remove network identity pubkey field from struct
         let transaction_callback = if reconfigure {
             transaction_builder::encode_set_validator_config_and_reconfigure_script
         } else {
@@ -88,10 +91,8 @@ impl ValidatorConfig {
         let validator_config_script = transaction_callback(
             owner_account,
             consensus_key.to_bytes().to_vec(),
-            validator_network_key.to_bytes(),
-            raw_enc_validator_address.into(),
-            fullnode_network_key.to_bytes(),
-            raw_fullnode_address.into(),
+            raw_enc_validator_addresses,
+            raw_fullnode_addresses,
         );
 
         // Create and sign the validator-config transaction
@@ -112,12 +113,13 @@ impl ValidatorConfig {
     }
 }
 
-/// Encode an address into bytes
-fn encode_address(address: NetworkAddress) -> Result<RawNetworkAddress, Error> {
-    RawNetworkAddress::try_from(&address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "error serializing address: '{}', error: {}",
-            address, e
-        ))
-    })
+// Dedup a vec of addresses while preserving the relative ordering
+fn dedup_addresses(addrs: Vec<NetworkAddress>) -> Vec<NetworkAddress> {
+    let mut deduped_addrs = Vec::new();
+    for addr in addrs {
+        if !deduped_addrs.contains(&addr) {
+            deduped_addrs.push(addr);
+        }
+    }
+    deduped_addrs
 }

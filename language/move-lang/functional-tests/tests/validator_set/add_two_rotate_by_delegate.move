@@ -25,8 +25,10 @@ script {
 // check bob can not rotate his consensus key
 script {
     use 0x1::ValidatorConfig;
+    use 0x1::Vector;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                                    Vector::empty(), Vector::empty());
     }
 }
 
@@ -39,8 +41,10 @@ script {
 // check bob can not rotate alice's consensus key
 script {
     use 0x1::ValidatorConfig;
+    use 0x1::Vector;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{alice}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{alice}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                                    Vector::empty(), Vector::empty());
     }
 }
 
@@ -53,8 +57,10 @@ script {
 // check alice can rotate bob's consensus key
 script {
     use 0x1::ValidatorConfig;
+    use 0x1::Vector;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                                    Vector::empty(), Vector::empty());
         assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 99);
     }
 }

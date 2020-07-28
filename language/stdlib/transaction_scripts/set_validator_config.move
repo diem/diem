@@ -9,19 +9,15 @@ script {
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
-        validator_network_identity_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        fullnodes_network_identity_pubkey: vector<u8>,
-        fullnodes_network_address: vector<u8>,
+        validator_network_addresses: vector<vector<u8>>,
+        full_node_network_addresses: vector<vector<u8>>,
     ) {
         ValidatorConfig::set_config(
             account,
             validator_account,
             consensus_pubkey,
-            validator_network_identity_pubkey,
-            validator_network_address,
-            fullnodes_network_identity_pubkey,
-            fullnodes_network_address
+            validator_network_addresses,
+            full_node_network_addresses
         );
      }
 }

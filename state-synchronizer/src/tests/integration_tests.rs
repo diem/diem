@@ -19,9 +19,9 @@ use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x2
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{
     encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        encrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
     },
-    NetworkAddress, RawNetworkAddress,
+    NetworkAddress,
 };
 use libra_types::{
     chain_id::ChainId, contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
@@ -45,10 +45,9 @@ use network_builder::builder::NetworkBuilder;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
+    iter,
     num::NonZeroUsize,
     ops::DerefMut,
-    str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -139,7 +138,7 @@ struct SynchronizerEnv {
     storage_proxies: Vec<Arc<RwLock<MockStorage>>>, // to directly modify peers storage
     signers: Vec<ValidatorSigner>,
     network_keys: Vec<x25519::PrivateKey>,
-    public_keys: Vec<ValidatorInfo>,
+    validator_infos: Vec<ValidatorInfo>,
     network_id: NetworkId,
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<NetworkAddress>,
@@ -169,43 +168,42 @@ impl SynchronizerEnv {
             .map(|_| x25519::PrivateKey::generate(&mut rng))
             .collect();
 
-        let mut validators_keys = vec![];
-        // The voting power of peer 0 is enough to generate an LI that passes validation.
+        let mut validator_infos = vec![];
         for (idx, signer) in signers.iter().enumerate() {
-            let voting_power = if idx == 0 { 1000 } else { 1 };
-            let addr = NetworkAddress::from_str("/memory/0").unwrap();
-            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-            let enc_addr = raw_addr.clone().encrypt(
+            let addr = NetworkAddress::mock().append_prod_protos(network_keys[idx].public_key(), 0);
+            let addrs = [addr];
+            let raw_enc_validator_network_addresses = encrypt_addresses(
+                &signer.author(),
                 &TEST_SHARED_VAL_NETADDR_KEY,
                 TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                &signer.author(),
                 0,
-                0,
-            );
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
+                &addrs,
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
-                network_keys[idx].public_key(),
-                raw_enc_addr,
-                network_keys[idx].public_key(),
-                raw_addr,
+                raw_enc_validator_network_addresses,
+                vec![],
             );
+            // The voting power of peer 0 is enough to generate an LI that passes validation.
+            let voting_power = if idx == 0 { 1000 } else { 1 };
             let validator_info =
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);
-            validators_keys.push(validator_info);
+            validator_infos.push(validator_info);
         }
-        (signers, validators_keys, network_keys)
+        (signers, validator_infos, network_keys)
     }
 
     // Moves peer 0 to the next epoch. Note that other peers are not going to be able to discover
     // their new signers: they're going to learn about the new epoch public key through state
     // synchronization, but private keys are discovered separately.
     pub fn move_to_next_epoch(&self) {
-        let num_peers = self.public_keys.len();
+        let num_peers = self.validator_infos.len();
         let (signers, _verifier) = random_validator_verifier(num_peers, None, true);
         let new_keys = self
-            .public_keys
+            .validator_infos
             .iter()
             .enumerate()
             .map(|(idx, validator_keys)| {
@@ -233,7 +231,7 @@ impl SynchronizerEnv {
     fn new(num_peers: usize) -> Self {
         ::libra_logger::Logger::new().environment_only(true).init();
         let runtime = Runtime::new().unwrap();
-        let (signers, public_keys, network_keys) = Self::initial_setup(num_peers);
+        let (signers, validator_infos, network_keys) = Self::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();
 
         Self {
@@ -244,7 +242,7 @@ impl SynchronizerEnv {
             signers,
             network_id: NetworkId::Validator,
             network_keys,
-            public_keys,
+            validator_infos,
             peer_ids,
             peer_addresses: vec![],
             mempools: vec![],
@@ -284,12 +282,12 @@ impl SynchronizerEnv {
     ) {
         let new_peer_idx = self.synchronizers.len();
         let seed_pubkeys: HashMap<_, _> = self
-            .public_keys
+            .validator_infos
             .iter()
-            .map(|public_keys| {
-                let peer_id = *public_keys.account_address();
-                let pubkey = public_keys.network_identity_public_key();
-                let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+            .zip(self.network_keys.iter())
+            .map(|(validator_info, network_key)| {
+                let peer_id = *validator_info.account_address();
+                let pubkey_set: HashSet<_> = iter::once(network_key.public_key()).collect();
                 (peer_id, pubkey_set)
             })
             .collect();
@@ -409,7 +407,7 @@ impl SynchronizerEnv {
             network_handles.push((NodeNetworkId::new(network_id, 0), sender, events));
         };
 
-        let genesis_li = Self::genesis_li(&self.public_keys);
+        let genesis_li = Self::genesis_li(&self.validator_infos);
         let storage_proxy = Arc::new(RwLock::new(MockStorage::new(
             genesis_li,
             self.signers[new_peer_idx].clone(),

@@ -11,8 +11,7 @@ use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    traits::ValidCryptoMaterial,
-    x25519, ValidCryptoMaterialStringExt,
+    ValidCryptoMaterialStringExt,
 };
 use libra_json_rpc_client::views::{
     AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
@@ -20,9 +19,9 @@ use libra_json_rpc_client::views::{
 use libra_logger::prelude::*;
 use libra_network_address::{
     encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+        encrypt_addresses, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
     },
-    NetworkAddress, RawNetworkAddress,
+    serialize_addresses, NetworkAddress,
 };
 use libra_temppath::TempPath;
 use libra_types::{
@@ -60,6 +59,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     str::{self, FromStr},
+    string::ToString,
     thread, time,
 };
 use transaction_builder::encode_set_validator_config_script;
@@ -673,43 +673,53 @@ impl ClientProxy {
         );
 
         // parse args
-        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
+        let (account, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
         let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
         let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
-        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_address = NetworkAddress::from_str(space_delim_strings[5])?;
-        let raw_network_address = RawNetworkAddress::try_from(&network_address)?;
-        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[6])?;
+        // let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[4])?;
+        let validator_network_address = NetworkAddress::from_str(space_delim_strings[5])?;
+        let validator_network_addresses = [validator_network_address];
+        // let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[6])?;
         let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[7])?;
-        let raw_fullnode_network_address = RawNetworkAddress::try_from(&fullnode_network_address)?;
+        let fullnode_network_addresses = [fullnode_network_address];
 
         let mut sender = Self::get_account_data_from_address(
             &mut self.client,
-            address,
+            account,
             true,
             Some(KeyPair::from(private_key)),
             None,
         )?;
 
         let seq_num = sender.sequence_number;
-        let addr_idx = 0;
 
-        let enc_network_address = raw_network_address.encrypt(
+        let raw_enc_validator_network_addresses = encrypt_addresses(
+            &account,
             &TEST_SHARED_VAL_NETADDR_KEY,
             TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            &address,
             seq_num,
-            addr_idx,
-        );
-        let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
+            &validator_network_addresses,
+        )
+        .map(|maybe_raw_enc_addr| {
+            maybe_raw_enc_addr
+                .map(Into::<Vec<_>>::into)
+                .map_err(|err| format_err!("{}", err))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+        let raw_fullnode_network_addresses = serialize_addresses(&fullnode_network_addresses)
+            .map(|maybe_raw_enc_addr| {
+                maybe_raw_enc_addr
+                    .map(Into::<Vec<_>>::into)
+                    .map_err(|err| format_err!("{}", err))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
 
         let program = encode_set_validator_config_script(
-            address,
+            account,
             consensus_public_key.to_bytes().to_vec(),
-            network_identity_key.to_bytes(),
-            raw_enc_network_address.into(),
-            fullnode_identity_key.to_bytes(),
-            raw_fullnode_network_address.into(),
+            raw_enc_validator_network_addresses,
+            raw_fullnode_network_addresses,
         );
         let txn = self.create_txn_to_submit(
             TransactionPayload::Script(program),
@@ -720,7 +730,7 @@ impl ClientProxy {
         )?;
         self.client.submit_transaction(Some(&mut sender), txn)?;
         if is_blocking {
-            self.wait_for_transaction(sender.address, sender.sequence_number)?;
+            self.wait_for_transaction(account, sender.sequence_number)?;
         }
         Ok(())
     }
