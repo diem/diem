@@ -1472,24 +1472,18 @@ fn test_consensus_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
-    // Load the node configs
-    let node_configs: Vec<_> = swarm
-        .validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config_path| NodeConfig::load(config_path).unwrap())
-        .collect();
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
 
     // Connect the operator tool to the first node's JSON RPC API
-    let node_config = (&node_configs).first().unwrap();
     let op_tool = OperationalTool::new(
         format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
         ChainId::test(),
     );
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let backend = load_backend_storage(&&node_config);
 
     // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
@@ -1519,24 +1513,18 @@ fn test_operator_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
-    // Load the node configs
-    let node_configs: Vec<_> = swarm
-        .validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config_path| NodeConfig::load(config_path).unwrap())
-        .collect();
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
 
     // Connect the operator tool to the first node's JSON RPC API
-    let node_config = (&node_configs).first().unwrap();
     let op_tool = OperationalTool::new(
         format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
         ChainId::test(),
     );
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let backend = load_backend_storage(&&node_config);
 
     let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
@@ -1572,24 +1560,18 @@ fn test_network_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
-    // Load the node configs
-    let node_configs: Vec<_> = swarm
-        .validator_swarm
-        .config
-        .config_files
-        .iter()
-        .map(|config_path| NodeConfig::load(config_path).unwrap())
-        .collect();
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
 
     // Connect the operator tool to the first node's JSON RPC API
-    let node_config = (&node_configs).first().unwrap();
     let op_tool = OperationalTool::new(
         format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
         ChainId::test(),
     );
 
     // Load validator's on disk storage
-    let backend = load_backend_storage(&node_config);
+    let backend = load_backend_storage(&&node_config);
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
