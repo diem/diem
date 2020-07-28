@@ -8,6 +8,7 @@ use backup_cli::{
         state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
         transaction::backup::{TransactionBackupController, TransactionBackupOpt},
     },
+    coordinator::{BackupCoordinator, BackupCoordinatorOpt},
     metadata::{cache, cache::MetadataCacheOpt},
     storage::StorageOpt,
     utils::{
@@ -23,6 +24,8 @@ use structopt::StructOpt;
 enum Command {
     #[structopt(about = "Manually run one shot commands.")]
     OneShot(OneShotCommand),
+    #[structopt(about = "Long running process backing up the chain continuously.")]
+    Coordinator(CoordinatorCommand),
 }
 
 #[derive(StructOpt)]
@@ -94,6 +97,27 @@ enum BackupType {
     },
 }
 
+#[derive(StructOpt)]
+enum CoordinatorCommand {
+    #[structopt(about = "Run the coordinator.")]
+    Run(CoordinatorRunOpt),
+}
+
+#[derive(StructOpt)]
+struct CoordinatorRunOpt {
+    #[structopt(flatten)]
+    global: GlobalBackupOpt,
+
+    #[structopt(flatten)]
+    client: BackupServiceClientOpt,
+
+    #[structopt(flatten)]
+    coordinator: BackupCoordinatorOpt,
+
+    #[structopt(subcommand)]
+    storage: StorageOpt,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cmd = Command::from_args();
@@ -153,6 +177,18 @@ async fn main() -> Result<()> {
                         .await?;
                     }
                 }
+            }
+        },
+        Command::Coordinator(coordinator_cmd) => match coordinator_cmd {
+            CoordinatorCommand::Run(opt) => {
+                BackupCoordinator::new(
+                    opt.coordinator,
+                    opt.global,
+                    Arc::new(BackupServiceClient::new_with_opt(opt.client)),
+                    opt.storage.init_storage().await?,
+                )
+                .run()
+                .await?;
             }
         },
     }
