@@ -153,7 +153,7 @@ impl BackupHandler {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct DbState {
     pub epoch: u64,
     pub committed_version: Version,
