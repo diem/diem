@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_proptest_helpers::ValueGenerator;
+use rand::RngCore;
 use std::{fmt, ops::Deref, str::FromStr};
 
 pub mod commands;
@@ -21,7 +22,12 @@ pub trait FuzzTargetImpl: Sync + Send + fmt::Debug {
     /// of the item being generated, starting from 0.
     ///
     /// Returns `Some(bytes)` if a value was generated, or `None` if no value can be generated.
-    fn generate(&self, idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>>;
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        let mut output = vec![0u8; 4096];
+        let mut rng = rand::thread_rng();
+        rng.fill_bytes(&mut output);
+        Some(output)
+    }
 
     /// Fuzz the target with this data. The fuzzer tests for panics or OOMs with this method.
     fn fuzz(&self, data: &[u8]);

@@ -22,13 +22,6 @@ impl FuzzTargetImpl for StorageSaveBlocks {
         "Storage save blocks"
     }
 
-    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        let mut output = vec![0u8; 4096];
-        let mut rng = rand::thread_rng();
-        rng.fill_bytes(&mut output);
-        Some(output)
-    }
-
     fn fuzz(&self, data: &[u8]) {
         let passthrough_rng =
             test_runner::TestRng::from_seed(test_runner::RngAlgorithm::PassThrough, &data);
