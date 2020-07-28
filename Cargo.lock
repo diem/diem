@@ -6061,6 +6061,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
