@@ -60,10 +60,6 @@ fiat = ["curve25519-dalek", "ed25519-dalek", "x25519-dalek"]
 vanilla = ["vanilla-curve25519-dalek", "vanilla-ed25519-dalek", "vanilla-x25519-dalek"]
 
 [[bench]]
-name = "hash"
-harness = false
-
-[[bench]]
 name = "noise"
 harness = false
 
