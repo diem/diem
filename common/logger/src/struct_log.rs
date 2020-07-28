@@ -1,6 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-
+use crate::counters::{
+    PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
+    STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
+    STRUCT_LOG_TCP_CONNECT_COUNT,
+};
 use chrono::Utc;
 use once_cell::sync::Lazy;
 use serde::Serialize;
@@ -419,6 +423,7 @@ impl TCPStructLog {
 impl StructLogSink for TCPStructLog {
     fn send(&self, entry: StructuredLogEntry) {
         if let Err(e) = self.sender.try_send(entry) {
+            STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
             // Use log crate macro to avoid generation of structured log in this case
             // Otherwise we will have infinite loop
             log::error!("[Logging] Failed to send structured log: {}", e);
@@ -440,14 +445,19 @@ impl TCPStructLogThread {
     // Continually iterate over requests unless writing fails.
     fn process_requests(&self, stream: &mut TcpStream) {
         for entry in &self.receiver {
+            PROCESSED_STRUCT_LOG_COUNT.inc();
             // Parse string, skipping over anything that can't be parsed
             let json_string = match entry.to_json_string() {
                 Ok(json_string) => json_string,
-                Err(_) => continue,
+                Err(_) => {
+                    STRUCT_LOG_PARSE_ERROR_COUNT.inc();
+                    continue;
+                }
             };
 
             // If we fail to write, exit out and create a new stream
             if let Err(e) = stream.write(json_string.as_bytes()) {
+                STRUCT_LOG_SEND_ERROR_COUNT.inc();
                 println!(
                     "[Logging] Error while sending data to logstash({}): {}",
                     self.address, e
@@ -460,6 +470,8 @@ impl TCPStructLogThread {
 
                 // Start over stream
                 return;
+            } else {
+                SENT_STRUCT_LOG_COUNT.inc()
             }
         }
     }
@@ -479,6 +491,7 @@ impl TCPStructLogThread {
     pub fn run(self) {
         loop {
             let mut maybe_stream = self.connect();
+            STRUCT_LOG_TCP_CONNECT_COUNT.inc();
 
             // This is to ensure that we do actually connect before sending requests
             // If the request process loop ends, the stream is broken.  Reset and create a new one.
@@ -488,22 +501,27 @@ impl TCPStructLogThread {
                     if let Err(err) =
                         stream.set_write_timeout(Some(Duration::from_millis(WRITE_TIMEOUT_MS)))
                     {
+                        STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
                         println!("[Logging] Failed to set write timeout: {}", err);
                         continue;
                     }
 
                     // Write a log signifying that the logger connected, and test the stream
                     if let Err(err) = Self::write_control_msg(stream, "connected") {
+                        STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
                         println!("[Logging] control message failed: {}", err);
                         continue;
                     }
 
                     self.process_requests(&mut stream)
                 }
-                Err(err) => println!(
-                    "[Logging] Failed to connect to {}, cause {}",
-                    self.address, err
-                ),
+                Err(err) => {
+                    STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
+                    println!(
+                        "[Logging] Failed to connect to {}, cause {}",
+                        self.address, err
+                    )
+                }
             }
         }
     }
