@@ -1627,12 +1627,12 @@ fn test_network_key_rotation() {
 }
 
 #[test]
-fn test_stop_consensus() {
+fn test_sync_only() {
     let mut env = TestEnvironment::new(4);
-    println!("1. set stop_consensus = true for the first node and check it can sync to others");
+    println!("1. set sync_only = true for the first node and check it can sync to others");
     let config_path = env.validator_swarm.config.config_files.first().unwrap();
     let mut node_config = NodeConfig::load(config_path).unwrap();
-    node_config.consensus.stop_consensus = true;
+    node_config.consensus.sync_only = true;
     node_config.save(config_path).unwrap();
     env.validator_swarm.launch();
     // 1. test the stopped node still syncs the transaction
@@ -1641,7 +1641,7 @@ fn test_stop_consensus() {
     client_proxy
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
-    println!("2. set stop_consensus = true for all nodes and restart");
+    println!("2. set sync_only = true for all nodes and restart");
     for (i, config_path) in env
         .validator_swarm
         .config
@@ -1651,12 +1651,12 @@ fn test_stop_consensus() {
         .enumerate()
     {
         let mut node_config = NodeConfig::load(config_path).unwrap();
-        node_config.consensus.stop_consensus = true;
+        node_config.consensus.sync_only = true;
         node_config.save(config_path).unwrap();
         env.validator_swarm.kill_node(i);
         env.validator_swarm.add_node(i, false).unwrap();
     }
-    println!("3. delete one node's db and test they can still sync when stop_consensus is true for every nodes");
+    println!("3. delete one node's db and test they can still sync when sync_only is true for every nodes");
     env.validator_swarm.kill_node(0);
     fs::remove_dir_all(node_config.storage.dir()).unwrap();
     env.validator_swarm.add_node(0, false).unwrap();

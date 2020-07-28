@@ -183,7 +183,7 @@ pub struct RoundManager {
     network: NetworkSender,
     txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
-    stop_consensus: bool,
+    sync_only: bool,
 }
 
 impl RoundManager {
@@ -197,7 +197,7 @@ impl RoundManager {
         network: NetworkSender,
         txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
-        stop_consensus: bool,
+        sync_only: bool,
     ) -> Self {
         Self {
             epoch_state,
@@ -209,7 +209,7 @@ impl RoundManager {
             txn_manager,
             network,
             storage,
-            stop_consensus,
+            sync_only,
         }
     }
 
@@ -404,8 +404,8 @@ impl RoundManager {
             return Ok(());
         }
 
-        if self.stop_consensus {
-            debug!("[RoundManager] stop_consensus flag is set, broadcasting SyncInfo");
+        if self.sync_only {
+            debug!("[RoundManager] sync_only flag is set, broadcasting SyncInfo");
             self.network
                 .broadcast(ConsensusMsg::SyncInfo(Box::new(
                     self.block_store.sync_info(),
@@ -542,8 +542,8 @@ impl RoundManager {
         );
 
         ensure!(
-            !self.stop_consensus,
-            "[RoundManager] stop_consensus flag is set, stop voting"
+            !self.sync_only,
+            "[RoundManager] sync_only flag is set, stop voting"
         );
 
         let maybe_signed_vote_proposal = executed_block.maybe_signed_vote_proposal();
