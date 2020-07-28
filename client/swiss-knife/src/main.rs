@@ -164,6 +164,7 @@ struct GenerateRawTxnRequest {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 struct GenerateRawTxnResponse {
+    pub script: String,
     pub raw_txn: String,
 }
 
@@ -191,10 +192,12 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
             )
         }
     };
+    let payload = TransactionPayload::Script(script);
+    let script_hex = hex::encode(lcs::to_bytes(&payload).unwrap());
     let raw_txn = RawTransaction::new(
         helpers::account_address_parser(&g.txn_params.sender_address),
         g.txn_params.sequence_number,
-        TransactionPayload::Script(script),
+        payload,
         g.txn_params.max_gas_amount,
         g.txn_params.gas_unit_price,
         g.txn_params.gas_currency_code,
@@ -202,6 +205,7 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
         ChainId::from_str(&g.txn_params.chain_id).expect("Failed to convert str to ChainId"),
     );
     GenerateRawTxnResponse {
+        script: script_hex,
         raw_txn: hex::encode(
             lcs::to_bytes(&raw_txn)
                 .map_err(|err| {
