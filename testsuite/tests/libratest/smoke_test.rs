@@ -13,6 +13,7 @@ use libra_key_manager::{
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
 use libra_operational_tool::test_helper::OperationalTool;
+use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
@@ -1490,6 +1491,7 @@ fn test_consensus_key_rotation() {
     // Load validator's on disk storage
     let backend = load_backend_storage(&node_config);
 
+    // Rotate the consensus key
     let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
     client
@@ -1510,6 +1512,59 @@ fn test_consensus_key_rotation() {
         .consensus_public_key
         .clone();
     assert_eq!(new_consensus_key, info_consensus_key)
+}
+
+#[test]
+fn test_operator_key_rotation() {
+    let mut swarm = TestEnvironment::new(5);
+    swarm.validator_swarm.launch();
+
+    // Load the node configs
+    let node_configs: Vec<_> = swarm
+        .validator_swarm
+        .config
+        .config_files
+        .iter()
+        .map(|config_path| NodeConfig::load(config_path).unwrap())
+        .collect();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let node_config = (&node_configs).first().unwrap();
+    let op_tool = OperationalTool::new(
+        format!("http://127.0.0.1:{}", node_config.rpc.address.port()),
+        ChainId::test(),
+    );
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&node_config);
+
+    let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that the transaction was executed correctly
+    let result = op_tool
+        .validate_transaction(txn_ctx.address, txn_ctx.sequence_number)
+        .unwrap();
+    let vm_status = result.unwrap();
+    assert_eq!(VMStatusView::Executed, vm_status);
+
+    // Rotate the consensus key to verify the operator key has been updated
+    let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that the config has been updated correctly with the new consensus key
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let config_consensus_key = op_tool
+        .validator_config(validator_account)
+        .unwrap()
+        .consensus_public_key;
+    assert_eq!(new_consensus_key, config_consensus_key);
 }
 
 #[test]

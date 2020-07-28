@@ -84,6 +84,15 @@ impl OperationalTool {
         })
     }
 
+    pub fn rotate_operator_key(
+        &self,
+        backend: &config::SecureBackend,
+    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        self.rotate_key(backend, CommandName::RotateOperatorKey, |cmd| {
+            cmd.rotate_operator_key()
+        })
+    }
+
     pub fn rotate_validator_network_key(
         &self,
         backend: &config::SecureBackend,
