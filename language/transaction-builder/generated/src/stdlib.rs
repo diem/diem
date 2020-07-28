@@ -16,9 +16,8 @@ use libra_types::{
     transaction::{Script, TransactionArgument},
 };
 use move_core_types::language_storage::TypeTag;
+use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
-
-type Bytes = Vec<u8>;
 
 /// Structured representation of a call into a known Move script.
 /// ```ignore
@@ -27,6 +26,7 @@ type Bytes = Vec<u8>;
 ///     pub fn decode(&Script) -> Option<ScriptCall> { .. }
 /// }
 /// ```
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, PartialOrd)]
 pub enum ScriptCall {
     /// Add a `Currency` balance to `account`, which will enable `account` to send and receive
     /// `Libra<Currency>`.
@@ -382,6 +382,9 @@ pub enum ScriptCall {
         allow_minting: bool,
     },
 }
+
+// Type alias used for code generation.
+type Bytes = Vec<u8>;
 
 impl ScriptCall {
     /// Build a Libra `Script` from a structured object `ScriptCall`.
