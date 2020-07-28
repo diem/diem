@@ -5,7 +5,7 @@
 pub mod command;
 mod genesis;
 mod key;
-mod layout;
+pub mod layout;
 mod validator_config;
 mod validator_operator;
 mod verify;

@@ -688,9 +688,15 @@ dependencies = [
  "kube 0.38.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-genesis-tool 0.1.0",
+ "libra-global-constants 0.1.0",
  "libra-json-rpc-client 0.1.0",
  "libra-logger 0.1.0",
+ "libra-management 0.1.0",
+ "libra-network-address 0.1.0",
+ "libra-operational-tool 0.1.0",
  "libra-retrier 0.1.0",
+ "libra-secure-storage 0.1.0",
  "libra-trace 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -709,6 +715,7 @@ dependencies = [
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "termion 1.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "toml 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
 ]
 

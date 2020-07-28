@@ -668,47 +668,6 @@ impl ClusterSwarmKube {
         .await
     }
 
-    async fn put_file(
-        &self,
-        node: &str,
-        pod_name: &str,
-        path: &str,
-        content: Vec<u8>,
-    ) -> Result<()> {
-        let bucket = "toro-cluster-test-flamegraphs";
-        let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
-            let run_id = &run_id;
-            let content = content.clone();
-            Box::pin(async move {
-                self.s3_client
-                    .put_object(PutObjectRequest {
-                        bucket: bucket.to_string(),
-                        key: format!("data/{}/{}/{}", run_id, pod_name, path),
-                        body: Some(content.into()),
-                        ..Default::default()
-                    })
-                    .await
-                    .map_err(|e| format_err!("put_object failed : {}", e))
-            })
-        })
-        .await?;
-        self.util_cmd(
-            format!(
-                "aws s3 cp s3://{}/data/{}/{}/{path} {path}",
-                bucket,
-                run_id,
-                pod_name,
-                path = path
-            ),
-            node,
-            "put-file",
-        )
-        .await
-        .map_err(|e| format_err!("aws s3 cp failed : {}", e))?;
-        Ok(())
-    }
-
     async fn config_fluentbit(&self, input_tag: &str, pod_name: &str, node: &str) -> Result<()> {
         let parsers_config = include_str!("fluent-bit/parsers.conf").to_string();
         let fluentbit_config = format!(
@@ -759,6 +718,47 @@ impl ClusterSwarm for ClusterSwarmKube {
             "http://grafana.{}-k8s-testnet.aws.hlw3truzy4ls.com",
             workspace
         ))
+    }
+
+    async fn put_file(
+        &self,
+        node: &str,
+        pod_name: &str,
+        path: &str,
+        content: Vec<u8>,
+    ) -> Result<()> {
+        let bucket = "toro-cluster-test-flamegraphs";
+        let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+            let run_id = &run_id;
+            let content = content.clone();
+            Box::pin(async move {
+                self.s3_client
+                    .put_object(PutObjectRequest {
+                        bucket: bucket.to_string(),
+                        key: format!("data/{}/{}/{}", run_id, pod_name, path),
+                        body: Some(content.into()),
+                        ..Default::default()
+                    })
+                    .await
+                    .map_err(|e| format_err!("put_object failed : {}", e))
+            })
+        })
+        .await?;
+        self.util_cmd(
+            format!(
+                "aws s3 cp s3://{}/data/{}/{}/{path} {path}",
+                bucket,
+                run_id,
+                pod_name,
+                path = path
+            ),
+            node,
+            "put-file",
+        )
+        .await
+        .map_err(|e| format_err!("aws s3 cp failed : {}", e))?;
+        Ok(())
     }
 }
 
