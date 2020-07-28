@@ -319,7 +319,7 @@ impl EpochManager {
             network_sender,
             self.txn_manager.clone(),
             self.storage.clone(),
-            self.config.stop_consensus,
+            self.config.sync_only,
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));

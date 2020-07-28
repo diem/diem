@@ -15,7 +15,9 @@ pub struct ConsensusConfig {
     pub round_initial_timeout_ms: u64,
     pub proposer_type: ConsensusProposerType,
     pub safety_rules: SafetyRulesConfig,
-    pub stop_consensus: bool,
+    // Only sync committed transactions but not vote for any pending blocks. This is useful when
+    // validators coordinate on the latest version to apply a manual transaction.
+    pub sync_only: bool,
 }
 
 impl Default for ConsensusConfig {
@@ -30,7 +32,7 @@ impl Default for ConsensusConfig {
                 inactive_weights: 1,
             }),
             safety_rules: SafetyRulesConfig::default(),
-            stop_consensus: false,
+            sync_only: false,
         }
     }
 }
