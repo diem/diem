@@ -1256,7 +1256,7 @@ fn test_vfn_failover() {
     vfn_0_client
         .mint_coins(&["mb", "1", "50", "Coin1"], true)
         .unwrap();
-    for _ in 0..20 {
+    for _ in 0..8 {
         vfn_0_client
             .transfer_coins(&["t", "0", "1", "1", "Coin1"], false)
             .unwrap();
@@ -1265,6 +1265,13 @@ fn test_vfn_failover() {
         .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
         .unwrap();
 
+    // wait for VFN 1 to catch up with creation and sender account
+    vfn_1_client
+        .wait_for_transaction(creation_account, 3)
+        .unwrap();
+    vfn_1_client
+        .wait_for_transaction(sender_account, 2)
+        .unwrap();
     vfn_1_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
@@ -1334,14 +1341,14 @@ fn test_vfn_failover() {
     assert!(env.validator_swarm.add_node(0, false).is_ok());
     // check all txns submitted so far (even those submitted during overlapping validator downtime) are committed
     let vfn_0_acct_0 = vfn_0_client.copy_all_accounts().get(0).unwrap().address;
-    vfn_0_client.wait_for_transaction(vfn_0_acct_0, 26).unwrap();
+    vfn_0_client.wait_for_transaction(vfn_0_acct_0, 14).unwrap();
     let vfn_1_acct_0 = vfn_1_client.copy_all_accounts().get(2).unwrap().address;
     vfn_1_client.wait_for_transaction(vfn_1_acct_0, 10).unwrap();
     let pfn_acct_0 = pfn_0_client.copy_all_accounts().get(4).unwrap().address;
     pfn_0_client.wait_for_transaction(pfn_acct_0, 7).unwrap();
 
     // submit txns to vfn of dead V
-    for _ in 0..20 {
+    for _ in 0..5 {
         vfn_1_client
             .transfer_coins(&["t", "2", "3", "1", "Coin1"], false)
             .unwrap();
@@ -1354,7 +1361,7 @@ fn test_vfn_failover() {
     assert!(env.validator_swarm.add_node(1, false).is_ok());
 
     // just for kicks: check regular minting still works with revived validators
-    for _ in 0..20 {
+    for _ in 0..5 {
         pfn_0_client
             .transfer_coins(&["t", "4", "5", "1", "Coin1"], false)
             .unwrap();
