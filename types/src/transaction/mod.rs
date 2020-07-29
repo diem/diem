@@ -965,9 +965,8 @@ pub enum Transaction {
     ///       transaction types we had in our codebase.
     UserTransaction(SignedTransaction),
 
-    /// Transaction that applies a WriteSet to the current storage. This should be used for ONLY for
-    /// genesis right now.
-    WaypointWriteSet(ChangeSet),
+    /// Transaction that applies a WriteSet to the current storage, it's applied manually via db-bootstrapper.
+    GenesisTransaction(WriteSetPayload),
 
     /// Transaction to update the block metadata resource at the beginning of a block.
     BlockMetadata(BlockMetadata),
@@ -987,7 +986,7 @@ impl Transaction {
                 user_txn.format_for_client(get_transaction_name)
             }
             // TODO: display proper information for client
-            Transaction::WaypointWriteSet(_write_set) => String::from("genesis"),
+            Transaction::GenesisTransaction(_write_set) => String::from("genesis"),
             // TODO: display proper information for client
             Transaction::BlockMetadata(_block_metadata) => String::from("block_metadata"),
         }

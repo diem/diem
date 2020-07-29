@@ -303,6 +303,45 @@ impl LibraVM {
         }
     }
 
+    fn execute_writeset(
+        &self,
+        remote_cache: &StateViewCache<'_>,
+        writeset_payload: &WriteSetPayload,
+    ) -> Result<ChangeSet, Result<(VMStatus, TransactionOutput), VMStatus>> {
+        let gas_schedule = zero_cost_schedule();
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
+
+        Ok(match writeset_payload {
+            WriteSetPayload::Direct(change_set) => change_set.clone(),
+            WriteSetPayload::Script {
+                script,
+                execute_as: signer,
+            } => {
+                let mut tmp_session = self.0.new_session(remote_cache);
+                let execution_result = tmp_session
+                    .execute_script(
+                        script.code().to_vec(),
+                        script.ty_args().to_vec(),
+                        convert_txn_args(script.args()),
+                        *signer,
+                        &mut cost_strategy,
+                    )
+                    .and_then(|_| tmp_session.finish())
+                    .map_err(|e| e.into_vm_status());
+                match execution_result {
+                    Ok(effect) => {
+                        let (cs, events) =
+                            txn_effects_to_writeset_and_events(effect).map_err(Err)?;
+                        ChangeSet::new(cs, events)
+                    }
+                    Err(e) => {
+                        return Err(Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET))))
+                    }
+                }
+            }
+        })
+    }
+
     fn read_writeset(
         &self,
         remote_cache: &StateViewCache<'_>,
@@ -321,8 +360,12 @@ impl LibraVM {
     fn process_waypoint_change_set(
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
-        change_set: ChangeSet,
+        writeset_payload: WriteSetPayload,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        let change_set = match self.execute_writeset(remote_cache, &writeset_payload) {
+            Ok(cs) => cs,
+            Err(e) => return e,
+        };
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         SYSTEM_TRANSACTIONS_EXECUTED.inc();
@@ -409,30 +452,10 @@ impl LibraVM {
             .map_err(|e| e.into_vm_status())?;
 
         let change_set = match txn.payload() {
-            TransactionPayload::WriteSet(WriteSetPayload::Direct(change_set)) => change_set.clone(),
-            TransactionPayload::WriteSet(WriteSetPayload::Script {
-                script,
-                execute_as: signer,
-            }) => {
-                let mut tmp_session = self.0.new_session(remote_cache);
-                let execution_result = tmp_session
-                    .execute_script(
-                        script.code().to_vec(),
-                        script.ty_args().to_vec(),
-                        convert_txn_args(script.args()),
-                        *signer,
-                        &mut cost_strategy,
-                    )
-                    .and_then(|_| tmp_session.finish())
-                    .map_err(|e| e.into_vm_status());
-                match execution_result {
-                    Ok(effect) => {
-                        let (cs, events) = txn_effects_to_writeset_and_events(effect)?;
-                        ChangeSet::new(cs, events)
-                    }
-                    Err(e) => {
-                        return Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET)));
-                    }
+            TransactionPayload::WriteSet(writeset_payload) => {
+                match self.execute_writeset(remote_cache, writeset_payload) {
+                    Ok(change_set) => change_set,
+                    Err(e) => return e,
                 }
             }
             TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
@@ -553,8 +576,8 @@ impl LibraVM {
                     trace_code_block!("libra_vm::execute_block_impl", {"block", current_block_id}, execute_block_trace_guard);
                     self.process_block_prologue(data_cache, block_metadata)?
                 }
-                Ok(PreprocessedTransaction::WaypointWriteSet(change_set)) => self
-                    .process_waypoint_change_set(data_cache, change_set)
+                Ok(PreprocessedTransaction::WaypointWriteSet(write_set_payload)) => self
+                    .process_waypoint_change_set(data_cache, write_set_payload)
                     .unwrap_or_else(discard_error_vm_status),
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
@@ -613,7 +636,7 @@ impl LibraVM {
 fn preprocess_transaction(txn: Transaction) -> Result<PreprocessedTransaction, VMStatus> {
     Ok(match txn {
         Transaction::BlockMetadata(b) => PreprocessedTransaction::BlockPrologue(b),
-        Transaction::WaypointWriteSet(cs) => PreprocessedTransaction::WaypointWriteSet(cs),
+        Transaction::GenesisTransaction(ws) => PreprocessedTransaction::WaypointWriteSet(ws),
         Transaction::UserTransaction(txn) => {
             let checked_txn = txn
                 .check_signature()
@@ -639,7 +662,7 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
 /// Transaction flows are different across different types of transactions.
 enum PreprocessedTransaction {
     UserTransaction(Box<SignatureCheckedTransaction>),
-    WaypointWriteSet(ChangeSet),
+    WaypointWriteSet(WriteSetPayload),
     BlockPrologue(BlockMetadata),
     WriteSet(Box<SignatureCheckedTransaction>),
 }

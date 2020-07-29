@@ -26,6 +26,7 @@ use libra_types::{
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
+        WriteSetPayload,
     },
 };
 use libra_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
@@ -70,7 +71,7 @@ pub fn encode_genesis_transaction(
     vm_publishing_option: Option<VMPublishingOption>,
     chain_id: ChainId,
 ) -> Transaction {
-    Transaction::WaypointWriteSet(
+    Transaction::GenesisTransaction(WriteSetPayload::Direct(
         encode_genesis_change_set(
             &public_key,
             operator_assignments,
@@ -81,7 +82,7 @@ pub fn encode_genesis_transaction(
             chain_id,
         )
         .0,
-    )
+    ))
 }
 
 fn merge_txn_effects(

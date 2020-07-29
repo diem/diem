@@ -126,7 +126,7 @@ mod test {
     use super::*;
     use libra_temppath::TempPath;
     use libra_types::{
-        transaction::{ChangeSet, Transaction},
+        transaction::{ChangeSet, Transaction, WriteSetPayload},
         write_set::WriteSetMut,
     };
 
@@ -142,9 +142,8 @@ mod test {
 
     #[test]
     fn test_some_and_load_genesis() {
-        let fake_genesis = Transaction::WaypointWriteSet(ChangeSet::new(
-            WriteSetMut::new(vec![]).freeze().unwrap(),
-            vec![],
+        let fake_genesis = Transaction::GenesisTransaction(WriteSetPayload::Direct(
+            ChangeSet::new(WriteSetMut::new(vec![]).freeze().unwrap(), vec![]),
         ));
         let (mut config, path) = generate_config();
         config.genesis = Some(fake_genesis.clone());
