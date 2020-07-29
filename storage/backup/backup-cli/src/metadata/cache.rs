@@ -12,17 +12,37 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+use structopt::StructOpt;
 use tokio::{
     fs::{create_dir_all, read_dir, remove_file, OpenOptions},
     io::{AsyncRead, AsyncReadExt},
     stream::StreamExt,
 };
 
-const CACHE_DIR: &str = "cache";
+#[derive(StructOpt)]
+pub struct MetadataCacheOpt {
+    #[structopt(long, parse(from_os_str), help = "Metadata cache dir.")]
+    dir: Option<PathBuf>,
+}
+
+impl MetadataCacheOpt {
+    // in cache we save things other than the cached files.
+    const SUB_DIR: &'static str = "cache";
+
+    fn cache_dir(&self) -> PathBuf {
+        self.dir
+            .clone()
+            .unwrap_or_else(|| std::env::temp_dir().join("libra_backup_metadata"))
+            .join(Self::SUB_DIR)
+    }
+}
 
 /// Sync local cache folder with remote storage, and load all metadata entries from the cache.
-pub async fn sync_and_load(dir: &PathBuf, storage: Arc<dyn BackupStorage>) -> Result<MetadataView> {
-    let cache_dir = dir.join(CACHE_DIR);
+pub async fn sync_and_load(
+    opt: &MetadataCacheOpt,
+    storage: Arc<dyn BackupStorage>,
+) -> Result<MetadataView> {
+    let cache_dir = opt.cache_dir();
     create_dir_all(&cache_dir).await?; // create if not present already
 
     // List cached metadata files.
