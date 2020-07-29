@@ -8,14 +8,14 @@ use backup_cli::{
         state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
         transaction::backup::{TransactionBackupController, TransactionBackupOpt},
     },
-    metadata::cache,
+    metadata::{cache, cache::MetadataCacheOpt},
     storage::StorageOpt,
     utils::{
         backup_service_client::{BackupServiceClient, BackupServiceClientOpt},
         GlobalBackupOpt,
     },
 };
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -54,8 +54,8 @@ struct OneShotQueryNodeStateOpt {
 
 #[derive(StructOpt)]
 struct OneShotQueryBackupStorageStateOpt {
-    #[structopt(long, parse(from_os_str), help = "Metadata cache dir.")]
-    metadata_cache_dir: Option<PathBuf>,
+    #[structopt(flatten)]
+    metadata_cache: MetadataCacheOpt,
     #[structopt(subcommand)]
     storage: StorageOpt,
 }
@@ -109,10 +109,8 @@ async fn main() -> Result<()> {
                     }
                 }
                 OneShotQueryType::BackupStorageState(opt) => {
-                    println!("{:?}", opt.metadata_cache_dir);
                     let view = cache::sync_and_load(
-                        &opt.metadata_cache_dir
-                            .unwrap_or_else(|| std::env::temp_dir().join("libra_backup_metadata")),
+                        &opt.metadata_cache,
                         opt.storage.init_storage().await?,
                     )
                     .await?;
