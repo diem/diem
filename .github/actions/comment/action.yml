@@ -1,0 +1,17 @@
+name: Comment on issue
+description: Comment on issue
+inputs:
+  comment:
+    description: comment text
+    required: true
+  tag:
+    description: tag attached to the comment in the hidden metadata
+    required: false
+    default: unknown
+  delete-older:
+    description: whether to delete older comments with the given tag
+    required: false
+    default: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

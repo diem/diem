@@ -1,0 +1,18 @@
+name: (hyperjump) labels
+description: (hyperjump) Backend for labels action
+inputs:
+  github-token:
+    description: GitHub token
+    required: true
+  number:
+    description: issue number
+    required: true
+  add:
+    description: label strings to add
+    required: false
+  remove:
+    description: label strings to remove
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
