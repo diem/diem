@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data::{
+    error::*,
+    interface::{
         LibraP2PTransferTransactionArgument, LibraRawTransaction, LibraSignedTransaction,
         LibraStatus, LibraTransactionPayload, TransactionType, LIBRA_PUBKEY_SIZE,
         LIBRA_SIGNATURE_SIZE,
     },
-    error::*,
 };
 use lcs::{from_bytes, to_bytes};
 use libra_crypto::{
