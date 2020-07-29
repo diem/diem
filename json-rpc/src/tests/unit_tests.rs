@@ -480,7 +480,7 @@ fn test_get_transactions() {
                     }
                     _ => panic!("Returned value doesn't match!"),
                 },
-                Transaction::WaypointWriteSet(_) => match view.transaction {
+                Transaction::GenesisTransaction(_) => match view.transaction {
                     TransactionDataView::WriteSet { .. } => {}
                     _ => panic!("Returned value doesn't match!"),
                 },

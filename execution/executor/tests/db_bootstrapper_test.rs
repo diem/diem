@@ -32,7 +32,8 @@ use libra_types::{
     on_chain_config::{config_address, ConfigurationResource, OnChainConfig, ValidatorSet},
     proof::SparseMerkleRangeProof,
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Transaction, Version, PRE_GENESIS_VERSION,
+        authenticator::AuthenticationKey, ChangeSet, Transaction, Version, WriteSetPayload,
+        PRE_GENESIS_VERSION,
     },
     trusted_state::TrustedState,
     validator_signer::ValidatorSigner,
@@ -283,7 +284,7 @@ fn test_pre_genesis() {
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
 
     // New genesis transaction: set validator set and overwrite account1 balance
-    let genesis_txn = Transaction::WaypointWriteSet(ChangeSet::new(
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
                 ValidatorSet::CONFIG_ID.access_path(),
@@ -302,7 +303,7 @@ fn test_pre_genesis() {
             coin1_tag(),
             vec![],
         )],
-    ));
+    )));
 
     // Bootstrap DB on top of pre-genesis state.
     let tree_state = db_rw.reader.get_latest_tree_state().unwrap();
@@ -352,7 +353,7 @@ fn test_new_genesis() {
 
     // New genesis transaction: set validator set, bump epoch and overwrite account1 balance.
     let configuration = get_configuration(&db);
-    let genesis_txn = Transaction::WaypointWriteSet(ChangeSet::new(
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(ChangeSet::new(
         WriteSetMut::new(vec![
             (
                 ValidatorSet::CONFIG_ID.access_path(),
@@ -375,7 +376,7 @@ fn test_new_genesis() {
             coin1_tag(),
             vec![],
         )],
-    ));
+    )));
 
     // Bootstrap DB into new genesis.
     let tree_state = db.reader.get_latest_tree_state().unwrap();

@@ -71,6 +71,15 @@ impl WriteSet {
     }
 }
 
+impl Arbitrary for WriteSetPayload {
+    type Parameters = ();
+    fn arbitrary_with(_args: ()) -> Self::Strategy {
+        any::<ChangeSet>().prop_map(WriteSetPayload::Direct).boxed()
+    }
+
+    type Strategy = BoxedStrategy<Self>;
+}
+
 impl Arbitrary for WriteSet {
     type Parameters = ();
     fn arbitrary_with(_args: ()) -> Self::Strategy {

@@ -869,7 +869,7 @@ pub fn process_write_set(
                 // should not reach this code path. The exception is genesis transaction (and
                 // maybe other writeset transactions).
                 match transaction {
-                    Transaction::WaypointWriteSet(_) => (),
+                    Transaction::GenesisTransaction(_) => (),
                     Transaction::BlockMetadata(_) => {
                         bail!("Write set should be a subset of read set.")
                     }

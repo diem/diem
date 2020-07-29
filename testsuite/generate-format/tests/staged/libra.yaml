@@ -136,9 +136,9 @@ Transaction:
         NEWTYPE:
           TYPENAME: SignedTransaction
     1:
-      WaypointWriteSet:
+      GenesisTransaction:
         NEWTYPE:
-          TYPENAME: ChangeSet
+          TYPENAME: WriteSetPayload
     2:
       BlockMetadata:
         NEWTYPE:

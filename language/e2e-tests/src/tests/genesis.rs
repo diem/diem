@@ -5,7 +5,7 @@ use crate::{
     account::AccountData, common_transactions::peer_to_peer_txn, data_store::GENESIS_CHANGE_SET,
     executor::FakeExecutor,
 };
-use libra_types::transaction::{Transaction, TransactionStatus};
+use libra_types::transaction::{Transaction, TransactionStatus, WriteSetPayload};
 
 #[test]
 fn no_deletion_in_genesis() {
@@ -16,7 +16,7 @@ fn no_deletion_in_genesis() {
 #[test]
 fn execute_genesis_write_set() {
     let executor = FakeExecutor::no_genesis();
-    let txn = Transaction::WaypointWriteSet(GENESIS_CHANGE_SET.clone());
+    let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(GENESIS_CHANGE_SET.clone()));
     let mut output = executor.execute_transaction_block(vec![txn]).unwrap();
 
     // Executing the genesis transaction should succeed
@@ -27,7 +27,7 @@ fn execute_genesis_write_set() {
 #[test]
 fn execute_genesis_and_drop_other_transaction() {
     let executor = FakeExecutor::no_genesis();
-    let txn = Transaction::WaypointWriteSet(GENESIS_CHANGE_SET.clone());
+    let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(GENESIS_CHANGE_SET.clone()));
 
     let sender = AccountData::new(1_000_000, 10);
     let receiver = AccountData::new(100_000, 10);

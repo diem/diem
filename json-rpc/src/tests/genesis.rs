@@ -5,7 +5,9 @@ use compiled_stdlib::StdLibOptions;
 use executor::process_write_set;
 use executor_types::ProofReader;
 use libra_types::{
-    account_address::AccountAddress, account_state_blob::AccountStateBlob, transaction::Transaction,
+    account_address::AccountAddress,
+    account_state_blob::AccountStateBlob,
+    transaction::{Transaction, WriteSetPayload},
 };
 use scratchpad::SparseMerkleTree;
 use std::{collections::HashMap, sync::Arc};
@@ -17,7 +19,7 @@ pub fn generate_genesis_state() -> (
     Arc<SparseMerkleTree>,
 ) {
     let change_set = generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
-    let txn = Transaction::WaypointWriteSet(change_set.clone());
+    let txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(change_set.clone()));
     let proof_reader = ProofReader::new(HashMap::new());
     let tree: SparseMerkleTree = Default::default();
     let mut account_states = HashMap::new();
