@@ -17,7 +17,7 @@ use std::{
     io,
     io::Write as IoWrite,
     marker::PhantomData,
-    net::{SocketAddr, TcpStream},
+    net::{TcpStream, ToSocketAddrs},
     str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -414,7 +414,7 @@ struct TCPStructLog {
 impl TCPStructLog {
     pub fn start_new(address: String) -> io::Result<Self> {
         let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
-        let sink_thread = TCPStructLogThread::new(receiver, &address);
+        let sink_thread = TCPStructLogThread::new(receiver, address);
         thread::spawn(move || sink_thread.run());
         Ok(Self { sender })
     }
@@ -433,12 +433,11 @@ impl StructLogSink for TCPStructLog {
 
 struct TCPStructLogThread {
     receiver: Receiver<StructuredLogEntry>,
-    address: SocketAddr,
+    address: String,
 }
 
 impl TCPStructLogThread {
-    fn new(receiver: Receiver<StructuredLogEntry>, address: &str) -> TCPStructLogThread {
-        let address = SocketAddr::from_str(address).unwrap();
+    fn new(receiver: Receiver<StructuredLogEntry>, address: String) -> TCPStructLogThread {
         TCPStructLogThread { receiver, address }
     }
 
@@ -476,8 +475,20 @@ impl TCPStructLogThread {
         }
     }
 
-    pub fn connect(&self) -> io::Result<TcpStream> {
-        TcpStream::connect_timeout(&self.address, Duration::from_millis(CONNECTION_TIMEOUT_MS))
+    pub fn connect(&mut self) -> io::Result<TcpStream> {
+        // resolve addresses to handle DNS names
+        let mut last_error = io::Error::new(
+            io::ErrorKind::Other,
+            format!("Unable to resolve and connect to {}", self.address),
+        );
+        for addr in self.address.to_socket_addrs()? {
+            match TcpStream::connect_timeout(&addr, Duration::from_millis(CONNECTION_TIMEOUT_MS)) {
+                Ok(stream) => return Ok(stream),
+                Err(err) => last_error = err,
+            }
+        }
+
+        Err(last_error)
     }
 
     pub fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<usize> {
@@ -488,7 +499,7 @@ impl TCPStructLogThread {
         stream.write(entry.as_bytes())
     }
 
-    pub fn run(self) {
+    pub fn run(mut self) {
         loop {
             let mut maybe_stream = self.connect();
             STRUCT_LOG_TCP_CONNECT_COUNT.inc();
