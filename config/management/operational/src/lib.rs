@@ -4,12 +4,13 @@
 #![forbid(unsafe_code)]
 
 pub mod command;
-pub mod governance;
+mod governance;
 mod json_rpc;
-pub mod operator_key;
-pub mod validate_transaction;
-pub mod validator_config;
-pub mod validator_set;
+mod keys;
+mod operator_key;
+mod validate_transaction;
+mod validator_config;
+mod validator_set;
 mod waypoint;
 
 #[cfg(any(test, feature = "testing"))]

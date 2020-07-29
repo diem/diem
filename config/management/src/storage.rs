@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    x25519,
+};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_types::{
     account_address::AccountAddress,
@@ -87,6 +90,13 @@ impl StorageWrapper {
             .get_public_key(key_name)
             .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))?
             .public_key)
+    }
+
+    /// Retrieves public key from the stored private key
+    pub fn ed25519_private(&self, key_name: &'static str) -> Result<Ed25519PrivateKey, Error> {
+        self.storage
+            .export_private_key(key_name)
+            .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))
     }
 
     /// Retrieves public key from the stored private key
