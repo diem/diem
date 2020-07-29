@@ -75,7 +75,7 @@ fn test_peer_manager_request_metadata() {
     }
     assert!(peer_manager.get_first_request_time(1).is_none());
     peer_manager.process_request(1, peers[0].clone());
-    peer_manager.process_timeout(1, true);
+    peer_manager.process_timeout(1);
     peer_manager.process_request(1, peers[1].clone());
     assert!(peer_manager.peer_score(&peers[0]).unwrap() < 99.0);
     assert!(peer_manager.peer_score(&peers[1]).unwrap() > 99.0);

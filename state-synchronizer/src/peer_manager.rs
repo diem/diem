@@ -232,10 +232,7 @@ impl PeerManager {
         self.requests = self.requests.split_off(&(version + 1));
     }
 
-    pub fn process_timeout(&mut self, version: u64, penalize: bool) {
-        if !penalize {
-            return;
-        }
+    pub fn process_timeout(&mut self, version: u64) {
         let peer_to_penalize = match self.requests.get(&version) {
             Some(prev_request) => prev_request.last_request_peer.clone(),
             None => {

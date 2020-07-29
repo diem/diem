@@ -971,8 +971,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // if coordinator didn't make progress by expected time, issue new request
         if let Some(tst) = last_request_tst.checked_add(self.retry_timeout) {
             if SystemTime::now().duration_since(tst).is_ok() {
-                self.peer_manager
-                    .process_timeout(known_version + 1, self.role == RoleType::Validator);
+                self.peer_manager.process_timeout(known_version + 1);
                 if let Err(e) = self.send_chunk_request(known_version, self.local_state.epoch()) {
                     error!("[state sync] Failed to send chunk request: {}", e);
                 }
