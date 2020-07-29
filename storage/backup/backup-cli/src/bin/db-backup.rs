@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use backup_cli::{
     backup_types::{
         epoch_ending::backup::{EpochEndingBackupController, EpochEndingBackupOpt},
@@ -130,9 +130,7 @@ async fn main() -> Result<()> {
                             storage.init_storage().await?,
                         )
                         .run()
-                        .await
-                        .map(|m| println!("Epoch ending backup success. Manifest: {}", m))
-                        .context("Failed to back up epoch ending information.")?;
+                        .await?;
                     }
                     BackupType::StateSnapshot { opt, storage } => {
                         StateSnapshotBackupController::new(
@@ -142,9 +140,7 @@ async fn main() -> Result<()> {
                             storage.init_storage().await?,
                         )
                         .run()
-                        .await
-                        .map(|m| println!("State snapshot backup success. Manifest: {}", m))
-                        .context("Failed to back up state snapshot.")?;
+                        .await?;
                     }
                     BackupType::Transaction { opt, storage } => {
                         TransactionBackupController::new(
@@ -154,9 +150,7 @@ async fn main() -> Result<()> {
                             storage.init_storage().await?,
                         )
                         .run()
-                        .await
-                        .map(|m| println!("Transaction backup success. Manifest: {}", m))
-                        .context("Failed to back up transactions.")?;
+                        .await?;
                     }
                 }
             }

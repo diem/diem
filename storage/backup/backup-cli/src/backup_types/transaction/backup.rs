@@ -10,7 +10,7 @@ use crate::{
         should_cut_chunk, GlobalBackupOpt,
     },
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use libra_types::transaction::Version;
 use once_cell::sync::Lazy;
 use std::{convert::TryInto, str::FromStr, sync::Arc};
@@ -51,6 +51,21 @@ impl TransactionBackupController {
     }
 
     pub async fn run(self) -> Result<FileHandle> {
+        println!(
+            "Transaction backup started, starting from version {}, for {} transactions in total.",
+            self.start_version, self.num_transactions,
+        );
+        let ret = self
+            .run_impl()
+            .await
+            .map_err(|e| anyhow!("Transaction backup failed: {}", e))?;
+        println!("Transaction backup succeeded. Manifest: {}", ret);
+        Ok(ret)
+    }
+}
+
+impl TransactionBackupController {
+    async fn run_impl(self) -> Result<FileHandle> {
         let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
 
         let mut chunks = Vec::new();
@@ -65,8 +80,6 @@ impl TransactionBackupController {
 
         while let Some(record_bytes) = transactions_file.read_record_bytes().await? {
             if should_cut_chunk(&chunk_bytes, &record_bytes, self.max_chunk_size) {
-                println!("New chunk.");
-
                 let chunk = self
                     .write_chunk(
                         &backup_handle,
@@ -90,7 +103,6 @@ impl TransactionBackupController {
             current_ver,
             self.start_version + self.num_transactions as u64
         );
-        println!("Last chunk.");
         let chunk = self
             .write_chunk(
                 &backup_handle,
@@ -104,9 +116,7 @@ impl TransactionBackupController {
         self.write_manifest(&backup_handle, self.start_version, current_ver - 1, chunks)
             .await
     }
-}
 
-impl TransactionBackupController {
     fn backup_name(&self) -> ShellSafeName {
         format!("transaction_{}-", self.start_version)
             .try_into()
