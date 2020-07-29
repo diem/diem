@@ -3,7 +3,7 @@
 
 use thiserror::Error;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("Invalid key value found in backend: {0}")]
     BackendInvalidKeyValue(String),
@@ -15,6 +15,10 @@ pub enum Error {
     CommandArgumentError(String),
     #[error("Unable to load config: {0}")]
     ConfigError(String),
+    #[error("Error accessing {0}: {1}")]
+    IO(String, #[source] std::io::Error),
+    #[error("Error (de)serializing {0}: {1}")]
+    LCS(String, #[source] lcs::Error),
     #[error("Failed to read '{0}' from JSON-RPC: {1}")]
     JsonRpcReadError(&'static str, String),
     #[error("Failed to write '{0}' from JSON-RPC: {1}")]

@@ -11,8 +11,16 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used for Operators")]
 pub enum Command {
+    #[structopt(about = "Remove a validator from ValidatorSet")]
+    AddValidator(crate::governance::AddValidator),
+    #[structopt(about = "Extract a private key from the validator storage")]
+    ExtractPrivateKey(crate::keys::ExtractPrivateKey),
+    #[structopt(about = "Extract a public key from the validator storage")]
+    ExtractPublicKey(crate::keys::ExtractPublicKey),
     #[structopt(about = "Set the waypoint in the validator storage")]
     InsertWaypoint(crate::waypoint::InsertWaypoint),
+    #[structopt(about = "Remove a validator from ValidatorSet")]
+    RemoveValidator(crate::governance::RemoveValidator),
     #[structopt(about = "Rotates the consensus key for a validator")]
     RotateConsensusKey(crate::validator_config::RotateConsensusKey),
     #[structopt(about = "Rotates a full node network key")]
@@ -29,15 +37,15 @@ pub enum Command {
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Displays the current validator set infos registered on the blockchain")]
     ValidatorSet(crate::validator_set::ValidatorSet),
-    #[structopt(about = "Remove a validator from ValidatorSet")]
-    AddValidator(crate::governance::AddValidator),
-    #[structopt(about = "Remove a validator from ValidatorSet")]
-    RemoveValidator(crate::governance::RemoveValidator),
 }
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
+    AddValidator,
+    ExtractPrivateKey,
+    ExtractPublicKey,
     InsertWaypoint,
+    RemoveValidator,
     RotateConsensusKey,
     RotateOperatorKey,
     RotateFullNodeNetworkKey,
@@ -46,14 +54,16 @@ pub enum CommandName {
     ValidateTransaction,
     ValidatorConfig,
     ValidatorSet,
-    AddValidator,
-    RemoveValidator,
 }
 
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
+            Command::AddValidator(_) => CommandName::AddValidator,
+            Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
+            Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
+            Command::RemoveValidator(_) => CommandName::RemoveValidator,
             Command::RotateConsensusKey(_) => CommandName::RotateConsensusKey,
             Command::RotateOperatorKey(_) => CommandName::RotateOperatorKey,
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
@@ -62,8 +72,6 @@ impl From<&Command> for CommandName {
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::ValidatorSet(_) => CommandName::ValidatorSet,
-            Command::AddValidator(_) => CommandName::AddValidator,
-            Command::RemoveValidator(_) => CommandName::RemoveValidator,
         }
     }
 }
@@ -71,7 +79,11 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
+            CommandName::AddValidator => "add-validator",
+            CommandName::ExtractPrivateKey => "extract-private-key",
+            CommandName::ExtractPublicKey => "extract-public-key",
             CommandName::InsertWaypoint => "insert-waypoint",
+            CommandName::RemoveValidator => "remove-validator",
             CommandName::RotateConsensusKey => "rotate-consensus-key",
             CommandName::RotateOperatorKey => "rotate-operator-key",
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
@@ -80,8 +92,6 @@ impl std::fmt::Display for CommandName {
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::ValidatorSet => "validator-set",
-            CommandName::AddValidator => "add-validator",
-            CommandName::RemoveValidator => "remove-validator",
         };
         write!(f, "{}", name)
     }
@@ -90,9 +100,11 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match self {
-            Command::InsertWaypoint(cmd) => {
-                format!("{:?}", cmd.execute().map(|()| "success").unwrap())
-            }
+            Command::AddValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::InsertWaypoint(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
+            Command::ExtractPrivateKey(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
+            Command::ExtractPublicKey(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
+            Command::RemoveValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateOperatorKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
@@ -101,8 +113,27 @@ impl Command {
             Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
             Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::AddValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RemoveValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
+        }
+    }
+
+    pub fn add_validator(self) -> Result<TransactionContext, Error> {
+        match self {
+            Command::AddValidator(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::AddValidator)),
+        }
+    }
+
+    pub fn extract_private_key(self) -> Result<(), Error> {
+        match self {
+            Command::ExtractPrivateKey(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::ExtractPrivateKey)),
+        }
+    }
+
+    pub fn extract_public_key(self) -> Result<(), Error> {
+        match self {
+            Command::ExtractPublicKey(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::ExtractPublicKey)),
         }
     }
 
@@ -110,6 +141,13 @@ impl Command {
         match self {
             Command::InsertWaypoint(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
+        }
+    }
+
+    pub fn remove_validator(self) -> Result<TransactionContext, Error> {
+        match self {
+            Command::RemoveValidator(cmd) => cmd.execute(),
+            _ => Err(self.unexpected_command(CommandName::RemoveValidator)),
         }
     }
 
@@ -170,20 +208,6 @@ impl Command {
         match self {
             Command::ValidatorSet(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorSet)),
-        }
-    }
-
-    pub fn add_validator(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::AddValidator(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::AddValidator)),
-        }
-    }
-
-    pub fn remove_validator(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::RemoveValidator(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RemoveValidator)),
         }
     }
 
