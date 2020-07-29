@@ -9,7 +9,7 @@ use move_core_types::move_resource::MoveResource;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
 pub struct ValidatorConfigResource {
     pub validator_config: Option<ValidatorConfig>,
     pub delegated_account: Option<AccountAddress>,
