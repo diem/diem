@@ -52,7 +52,7 @@ fn output_preamble(out: &mut dyn Write, local_types: bool) -> Result<()> {
 
 // This file was generated. Do not modify!
 //
-// To re-generate this code, run: `(cd language/stdlib && cargo run --release)`
+// To re-generate this code, run: `cargo run --release -p stdlib`
 "#
         )?;
     }

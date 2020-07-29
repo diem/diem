@@ -3,7 +3,7 @@
 
 // This file was generated. Do not modify!
 //
-// To re-generate this code, run: `(cd language/stdlib && cargo run --release)`
+// To re-generate this code, run: `cargo run --release -p stdlib`
 
 //! Conversion library between a structured representation of a Move script call (`ScriptCall`) and the
 //! standard LCS-compatible representation used in Libra transactions (`Script`).
