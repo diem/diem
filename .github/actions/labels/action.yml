@@ -1,0 +1,12 @@
+name: Add/remove labels
+description: Add/remove labels on an issue
+inputs:
+  add:
+    description: label list (comma separated)
+    required: false
+  remove:
+    description: label list (comma separated)
+    required: false
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

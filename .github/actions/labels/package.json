@@ -1,0 +1,20 @@
+{
+  "name": "labels",
+  "version": "1.0.0",
+  "description": "GitHub Action to add/remove labels on an issue",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "ncc build src/index.js -o dist --source-map"
+  },
+  "author": "Libra Association <opensource@libra.org>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@actions/core": "^1.2.4",
+    "@actions/github": "^4.0.0",
+    "got": "^11.5.1"
+  },
+  "devDependencies": {
+    "@zeit/ncc": "^0.22.3"
+  }
+}

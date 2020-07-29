@@ -1,0 +1,21 @@
+name: (hyperjump) comment
+
+on:
+  repository_dispatch:
+    types: [comment]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    name: (hyperjump) comment
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: comment
+        uses: ./.github/actions/hyperjump-comment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ github.event.client_payload.number }}
+          comment: ${{ github.event.client_payload.comment }}
+          tag: ${{ github.event.client_payload.tag }}
+          delete-older: ${{ github.event.client_payload.delete_older }}
