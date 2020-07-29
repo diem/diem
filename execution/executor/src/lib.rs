@@ -5,6 +5,7 @@
 
 #[cfg(test)]
 mod executor_test;
+mod metrics;
 #[cfg(test)]
 mod mock_vm;
 mod speculation_cache;
@@ -13,6 +14,11 @@ mod types;
 pub mod db_bootstrapper;
 
 use crate::{
+    metrics::{
+        LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
+        LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
+        LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+    },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
 };
@@ -425,7 +431,8 @@ where
             self.cache.synced_trees().state_tree(),
         );
         let vm_outputs = {
-            let _timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
+            let __timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
+            let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
             V::execute_block(transactions.clone(), &state_view)?
         };
 
@@ -643,7 +650,8 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         } else {
             debug!("Received block {:x} to execute.", block_id);
 
-            let _timer = OP_COUNTERS.timer("block_execute_time_s");
+            let __timer = OP_COUNTERS.timer("block_execute_time_s");
+            let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
 
@@ -654,7 +662,8 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
-                let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
+                let __timer = OP_COUNTERS.timer("vm_execute_block_time_s");
+                let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
 
@@ -793,8 +802,11 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let _timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
+            let __timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
+            let _timer = LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS.start_timer();
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
+            LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
+
             assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
             self.db.writer.save_transactions(
                 txns_to_commit,
