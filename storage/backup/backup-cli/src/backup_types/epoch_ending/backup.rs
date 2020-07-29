@@ -10,7 +10,7 @@ use crate::{
         should_cut_chunk, GlobalBackupOpt,
     },
 };
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use libra_types::{ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint};
 use once_cell::sync::Lazy;
 use std::{convert::TryInto, str::FromStr, sync::Arc};
@@ -54,6 +54,21 @@ impl EpochEndingBackupController {
     }
 
     pub async fn run(self) -> Result<FileHandle> {
+        println!(
+            "Epoch ending backup started, starting from epoch {}, unill epoch {} (excluded).",
+            self.start_epoch, self.end_epoch,
+        );
+        let ret = self
+            .run_impl()
+            .await
+            .map_err(|e| anyhow!("Epoch ending backup failed: {}", e))?;
+        println!("Epoch ending backup succeeded. Manifest: {}", ret);
+        Ok(ret)
+    }
+}
+
+impl EpochEndingBackupController {
+    async fn run_impl(self) -> Result<FileHandle> {
         let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
 
         let mut chunks = Vec::new();
@@ -69,7 +84,6 @@ impl EpochEndingBackupController {
 
         while let Some(record_bytes) = ledger_infos_file.read_record_bytes().await? {
             if should_cut_chunk(&chunk_bytes, &record_bytes, self.max_chunk_size) {
-                println!("New chunk.");
                 let chunk = self
                     .write_chunk(
                         &backup_handle,
@@ -91,7 +105,6 @@ impl EpochEndingBackupController {
 
         assert!(!chunk_bytes.is_empty());
         assert_eq!(current_epoch, self.end_epoch);
-        println!("Last chunk.");
         let chunk = self
             .write_chunk(
                 &backup_handle,
@@ -104,9 +117,7 @@ impl EpochEndingBackupController {
 
         self.write_manifest(&backup_handle, waypoints, chunks).await
     }
-}
 
-impl EpochEndingBackupController {
     fn backup_name(&self) -> ShellSafeName {
         format!("epoch_ending_{}-", self.start_epoch)
             .try_into()
