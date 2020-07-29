@@ -22,6 +22,7 @@ fn test_that_generated_file_are_up_to_date_in_git() {
     assert_that_version_control_has_no_unstaged_changes();
 
     assert!(Command::new("cargo")
+        .current_dir("../..")
         .arg("run")
         .arg("--release")
         .arg("-p")

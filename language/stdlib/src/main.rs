@@ -52,6 +52,14 @@ fn main() {
     let no_script_builder = matches.is_present("no-script-builder");
     let no_compiler = matches.is_present("no-compiler");
 
+    // Make sure that the current directory is `language/stdlib` from now on.
+    let exec_path = std::env::args().next().expect("path of the executable");
+    let base_path = std::path::Path::new(&exec_path)
+        .parent()
+        .unwrap()
+        .join("../../language/stdlib");
+    std::env::set_current_dir(&base_path).expect("failed to change directory");
+
     #[cfg(debug_assertions)]
     {
         println!("NOTE: run this program in --release mode for better speed");
