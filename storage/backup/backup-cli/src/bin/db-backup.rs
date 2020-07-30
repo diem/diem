@@ -36,15 +36,18 @@ enum OneShotCommand {
 #[derive(StructOpt)]
 enum OneShotQueryType {
     #[structopt(
-        help = "Queries the latest epoch, committed version and synced version of the DB."
+        about = "Queries the latest epoch, committed version and synced version of the local Libra \
+        node, via the backup service within it."
     )]
-    DbState(OneShotQueryDbStateOpt),
-    #[structopt(help = "Queries the latest epoch and versions in the backup storage.")]
+    NodeState(OneShotQueryNodeStateOpt),
+    #[structopt(
+        about = "Queries the latest epoch and versions of the existing backups in the storage."
+    )]
     BackupStorageState(OneShotQueryBackupStorageStateOpt),
 }
 
 #[derive(StructOpt)]
-struct OneShotQueryDbStateOpt {
+struct OneShotQueryNodeStateOpt {
     #[structopt(flatten)]
     client: BackupServiceClientOpt,
 }
@@ -97,7 +100,7 @@ async fn main() -> Result<()> {
     match cmd {
         Command::OneShot(one_shot_cmd) => match one_shot_cmd {
             OneShotCommand::Query(typ) => match typ {
-                OneShotQueryType::DbState(opt) => {
+                OneShotQueryType::NodeState(opt) => {
                     let client = BackupServiceClient::new_with_opt(opt.client);
                     if let Some(db_state) = client.get_db_state().await? {
                         println!("{}", db_state)
