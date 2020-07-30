@@ -365,13 +365,16 @@ where
             .with_label_values(&[role, "connected"])
             .set(total as i64);
 
-        counters::LIBRA_NETWORK_PEERS
-            .with_label_values(&[role, "inbound"])
-            .set(inbound as i64);
-
-        counters::LIBRA_NETWORK_PEERS
-            .with_label_values(&[role, "outbound"])
-            .set(outbound as i64);
+        counters::update_libra_connections(
+            &self.network_context,
+            ConnectionOrigin::Inbound,
+            inbound,
+        );
+        counters::update_libra_connections(
+            &self.network_context,
+            ConnectionOrigin::Outbound,
+            outbound,
+        );
     }
 
     /// Get the [`NetworkAddress`] we're listening for incoming connections on
