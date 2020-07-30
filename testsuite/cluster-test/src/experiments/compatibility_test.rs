@@ -29,8 +29,6 @@ pub async fn update_batch_instance(
     updated_lsr: &[Instance],
     updated_tag: String,
 ) -> anyhow::Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(2 * 60);
-
     info!("Stop Existing instances.");
     let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
     try_join_all(futures).await?;
@@ -65,6 +63,7 @@ pub async fn update_batch_instance(
     let instances = try_join_all(futures).await?;
 
     info!("Wait for the instances to recover.");
+    let deadline = Instant::now() + Duration::from_secs(5 * 60);
     let futures: Vec<_> = instances
         .iter()
         .map(|instance| instance.wait_json_rpc(deadline))
