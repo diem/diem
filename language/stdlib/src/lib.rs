@@ -165,13 +165,34 @@ fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_scr
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 
+// TODO: remove once https://github.com/facebookincubator/serde-reflection/issues/32 is closed
+fn post_process_add_proptest_derivations(buffer: &[u8]) {
+    let contents = std::str::from_utf8(buffer).unwrap();
+    let mut file = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
+        .expect("Failed to open file for Rust script build generation");
+    write!(
+        file,
+        "{}",
+        contents.replacen(
+            "pub enum ScriptCall",
+            r#"
+#[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+pub enum ScriptCall"#,
+            1
+        )
+    )
+    .expect("Unable to write generated Rust script builders");
+}
+
 pub fn generate_rust_transaction_builders() {
     let abis = transaction_builder_generator::read_abis(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR)
         .expect("Failed to read generated ABIs");
-    let mut f = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
-        .expect("Failed to open file for Rust script build generation");
-    transaction_builder_generator::rust::output(&mut f, &abis, /* local types */ true)
+    let mut buf = vec![];
+    transaction_builder_generator::rust::output(&mut buf, &abis, /* local types */ true)
         .expect("Failed to generate Rust builders for Libra");
+
+    post_process_add_proptest_derivations(&buf);
 
     std::process::Command::new("rustfmt")
         .arg("--config")
