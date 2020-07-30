@@ -54,6 +54,25 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
         .cloned()
         .collect();
     assert_eq!(actual_epoch_change_lis, expected_epoch_change_lis);
+
+    let mut last_ver = 0;
+    for li in ledger_infos_with_sigs {
+        let this_ver = li.ledger_info().version();
+
+        // a version potentially without ledger_info ever committed
+        let v1 = (last_ver + this_ver) / 2;
+        if v1 != last_ver && v1 != this_ver {
+            assert!(db.get_epoch_ending_ledger_info(v1).is_err());
+        }
+
+        // a version where there was a ledger_info once
+        if li.ledger_info().ends_epoch() {
+            assert_eq!(db.get_epoch_ending_ledger_info(this_ver).unwrap(), *li);
+        } else {
+            assert!(db.get_epoch_ending_ledger_info(this_ver).is_err());
+        }
+        last_ver = this_ver;
+    }
 }
 
 pub fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {

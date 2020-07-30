@@ -585,7 +585,7 @@ impl DbReader for LibraDB {
         Ok(events)
     }
 
-    /// Gets ledger info at specified version and ensures it's an epoch change.
+    /// Gets ledger info at specified version and ensures it's an epoch ending.
     fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
             .with_label_values(&["get_epoch_ending_ledger_info"])
