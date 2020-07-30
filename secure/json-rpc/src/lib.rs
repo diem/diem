@@ -17,7 +17,7 @@ use libra_types::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{convert::TryFrom, io};
+use std::{convert::TryFrom, env, io};
 use thiserror::Error;
 use ureq::Response;
 
@@ -177,13 +177,38 @@ impl JsonRpcClient {
     }
 
     // Executes the specified request method using the given parameters by contacting the JSON RPC
-    // server.
+    // server. If the 'http_proxy' or 'https_proxy' environment variable is set, enable the proxy.
     fn execute_request(&self, method: String, params: Vec<Value>) -> Response {
-        ureq::post(&self.host)
+        let mut request = ureq::post(&self.host)
             .timeout_connect(REQUEST_TIMEOUT)
-            .send_json(
-                json!({"jsonrpc": JSON_RPC_VERSION, "method": method, "params": params, "id": 0}),
-            )
+            .build();
+
+        let scheme = request
+            .get_scheme()
+            .expect("Unable to get the scheme from the host");
+        match scheme.as_str() {
+            "http" => {
+                if let Ok(proxy) = env::var("http_proxy") {
+                    request.set_proxy(
+                        ureq::Proxy::new(proxy)
+                            .expect("Unable to parse http_proxy environment variable"),
+                    );
+                };
+            }
+            "https" => {
+                if let Ok(proxy) = env::var("https_proxy") {
+                    request.set_proxy(
+                        ureq::Proxy::new(proxy)
+                            .expect("Unable to parse https_proxy environment variable"),
+                    );
+                };
+            }
+            _ => {}
+        }
+
+        request.send_json(
+            json!({"jsonrpc": JSON_RPC_VERSION, "method": method, "params": params, "id": 0}),
+        )
     }
 }
 
