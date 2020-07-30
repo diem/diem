@@ -87,8 +87,8 @@ module DesignatedDealer {
         };
     }
     spec fun publish_designated_dealer_credential {
-        /// TODO(wrwg): times out
-        pragma verify = false;
+        /// TODO(wrwg): takes a long time but verifies.
+        pragma verify_duration_estimate = 80;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -115,10 +115,6 @@ module DesignatedDealer {
         add_tier<CoinType>(tc_account, dd_addr, TIER_1_DEFAULT * coin_scaling_factor);
         add_tier<CoinType>(tc_account, dd_addr, TIER_2_DEFAULT * coin_scaling_factor);
         add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
-    }
-    spec fun add_currency {
-        // TODO(wrwg): times out
-        pragma verify = false;
     }
 
     public fun add_tier<CoinType>(
@@ -199,9 +195,6 @@ module DesignatedDealer {
     }
 
     spec fun tiered_mint {
-        /// TODO(wrwg): this currently does not verify. It probably never did as it was timing out in the past
-        /// (which it does not any longer)
-        pragma verify = false;
         // modifies global<TierInfo<CoinType>>@dd_addr.{window_start, window_inflow, mint_event_handle}
         let dealer = global<TierInfo<CoinType>>(dd_addr);
         let current_time = LibraTimestamp::spec_now_microseconds();

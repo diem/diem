@@ -141,17 +141,17 @@ module AccountFreezing {
         }
 
         /// FreezeEventsHolder always exists after genesis.
-        invariant !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
             exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
 
         /// The account of LibraRoot is not freezable [G2].
         /// After genesis, FreezingBit of LibraRoot is always false.
-        invariant !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
             spec_account_is_not_frozen(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
 
         /// The account of TreasuryCompliance is not freezable [G3].
         /// After genesis, FreezingBit of TreasuryCompliance is always false.
-        invariant !LibraTimestamp::spec_is_genesis() ==>
+        invariant [global] !LibraTimestamp::spec_is_genesis() ==>
             spec_account_is_not_frozen(CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS());
 
         /// The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B17].

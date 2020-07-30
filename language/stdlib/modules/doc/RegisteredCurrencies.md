@@ -217,5 +217,15 @@ Helper to get the currency code vector.
 Global invariant that currency config is always available after genesis.
 
 
-<pre><code><b>invariant</b> !spec_is_genesis() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
+<pre><code><b>invariant</b> [<b>global</b>] !spec_is_genesis() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
+</code></pre>
+
+
+Global invariant that only LIBRA_ROOT can have a currency registration.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] !spec_is_genesis() ==&gt; (
+    forall holder: address where exists&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;&gt;(holder):
+        holder == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
+);
 </code></pre>

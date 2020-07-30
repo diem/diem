@@ -939,39 +939,40 @@ module Libra {
 
     /// For an SCS coin, the mint capability cannot move or disappear.
     /// TODO: Specify that they're published at the one true treasurycompliance address?
-    spec schema MintCapabilitySpecs {
+
+    spec module {
+
         /// If an address has a mint capability, it is an SCS currency.
-        invariant module forall coin_type: type
-                             where (exists addr3: address : spec_has_mint_capability<coin_type>(addr3)) :
-                                  spec_is_SCS_currency<coin_type>();
+        invariant [global]
+            forall coin_type: type
+                where (exists addr3: address : spec_has_mint_capability<coin_type>(addr3)) :
+                spec_is_SCS_currency<coin_type>();
 
         /// If there is a pending offer for a mint capability, the coin_type is an SCS currency and
         /// there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
-        invariant module forall coin_type: type :
-                                  spec_is_SCS_currency<coin_type>()
-                                  && (forall addr3: address : !spec_has_mint_capability<coin_type>(addr3));
+        invariant [global]
+            forall coin_type: type :
+                spec_is_SCS_currency<coin_type>()
+                && (forall addr3: address : !spec_has_mint_capability<coin_type>(addr3));
 
         // At most one address has a mint capability for SCS CoinType
-        invariant module forall coin_type: type where spec_is_SCS_currency<coin_type>():
-            forall addr1: address, addr2: address
-                 where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
-                      addr1 == addr2;
+        invariant [global]
+            forall coin_type: type where spec_is_SCS_currency<coin_type>():
+                forall addr1: address, addr2: address
+                     where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
+                          addr1 == addr2;
 
         // Once a MintCapability appears at an address, it stays there.
-        ensures forall coin_type: type:
-            forall addr1: address where old(exists<MintCapability<coin_type>>(addr1)):
-                exists<MintCapability<coin_type>>(addr1);
-
-        // TODO: Only the account managing the currency may mint.  (add manager field to CurrencyInfo?)
+        invariant update [global]
+            forall coin_type: type:
+                forall addr1: address where old(exists<MintCapability<coin_type>>(addr1)):
+                    exists<MintCapability<coin_type>>(addr1);
 
         // If address has a mint capability, it has the treasury compliance role
-        ensures forall coin_type: type:
-            forall addr1: address where exists<MintCapability<coin_type>>(addr1):
-                 Roles::spec_has_treasury_compliance_role_addr(addr1);
-    }
-
-    spec module {
-        apply MintCapabilitySpecs to *<T>, *;
+        invariant [global]
+            forall coin_type: type:
+                forall addr1: address where exists<MintCapability<coin_type>>(addr1):
+                     Roles::spec_has_treasury_compliance_role_addr(addr1);
     }
 
 

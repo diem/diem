@@ -302,21 +302,10 @@ Returns true if
 
 
 
-<a name="0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap">RecoveryAddressHasItsOwnKeyRotationCap</a> {
-    <b>invariant</b> <b>module</b> forall addr1: address
-        where <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1):
-            len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)) &gt; 0
-            && <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)[0].account_address == addr1;
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap">RecoveryAddressHasItsOwnKeyRotationCap</a> <b>to</b> *;
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall addr1: address where <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1):
+        len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)) &gt; 0 &&
+        <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)[0].account_address == addr1;
 </code></pre>
 
 
@@ -327,20 +316,9 @@ Returns true if
 
 
 
-<a name="0x1_RecoveryAddress_RecoveryAddressStays"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressStays">RecoveryAddressStays</a> {
-    <b>ensures</b> forall addr1: address:
-        <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1))
-        ==&gt; <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressStays">RecoveryAddressStays</a> <b>to</b> *;
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+   forall addr1: address:
+       <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1)) ==&gt; <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1);
 </code></pre>
 
 
@@ -351,21 +329,11 @@ Returns true if
 
 
 
-<a name="0x1_RecoveryAddress_RecoveryAddressRemainsSame"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressRemainsSame">RecoveryAddressRemainsSame</a> {
-    <b>ensures</b> forall recovery_addr: address, to_recovery_addr: address
-        where <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr)):
-            <b>old</b>(<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr))
-            ==&gt; <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressRemainsSame">RecoveryAddressRemainsSame</a> <b>to</b> *;
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
+    forall recovery_addr: address, to_recovery_addr: address
+    where <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr)):
+        <b>old</b>(<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr))
+        ==&gt; <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr);
 </code></pre>
 
 
@@ -376,20 +344,9 @@ Returns true if
 
 
 
-<a name="0x1_RecoveryAddress_RecoveryAddressIsVASP"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressIsVASP">RecoveryAddressIsVASP</a> {
-    <b>invariant</b> <b>module</b> forall recovery_addr: address
-        where <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr):
-            <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(recovery_addr);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressIsVASP">RecoveryAddressIsVASP</a> <b>to</b> *;
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall recovery_addr: address where <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr):
+        <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(recovery_addr);
 </code></pre>
 
 
