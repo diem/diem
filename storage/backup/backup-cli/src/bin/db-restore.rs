@@ -8,6 +8,7 @@ use backup_cli::{
         state_snapshot::restore::{StateSnapshotRestoreController, StateSnapshotRestoreOpt},
         transaction::restore::{TransactionRestoreController, TransactionRestoreOpt},
     },
+    coordinators::restore::{RestoreCoordinator, RestoreCoordinatorOpt},
     storage::StorageOpt,
     utils::GlobalRestoreOpt,
 };
@@ -41,6 +42,12 @@ enum RestoreType {
     Transaction {
         #[structopt(flatten)]
         opt: TransactionRestoreOpt,
+        #[structopt(subcommand)]
+        storage: StorageOpt,
+    },
+    Auto {
+        #[structopt(flatten)]
+        opt: RestoreCoordinatorOpt,
         #[structopt(subcommand)]
         storage: StorageOpt,
     },
@@ -84,6 +91,16 @@ async fn main() -> Result<()> {
         }
         RestoreType::Transaction { opt, storage } => {
             TransactionRestoreController::new(
+                opt,
+                global_opt,
+                storage.init_storage().await?,
+                restore_handler,
+            )
+            .run()
+            .await?;
+        }
+        RestoreType::Auto { opt, storage } => {
+            RestoreCoordinator::new(
                 opt,
                 global_opt,
                 storage.init_storage().await?,

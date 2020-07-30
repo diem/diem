@@ -4,6 +4,8 @@
 use crate::metadata::{
     EpochEndingBackupMeta, Metadata, StateSnapshotBackupMeta, TransactionBackupMeta,
 };
+use anyhow::{ensure, Result};
+use itertools::Itertools;
 use libra_types::transaction::Version;
 use serde::export::Formatter;
 use std::fmt::Display;
@@ -31,6 +33,73 @@ impl MetadataView {
             latest_state_snapshot_version,
             latest_transaction_version,
         }
+    }
+
+    pub fn select_state_snapshot(
+        &self,
+        target_version: Version,
+    ) -> Result<Option<StateSnapshotBackupMeta>> {
+        Ok(self
+            .state_snapshot_backups
+            .iter()
+            .sorted()
+            .rev()
+            .find(|m| m.version <= target_version)
+            .map(Clone::clone))
+    }
+
+    pub fn select_transaction_backups(
+        &self,
+        target_version: Version,
+    ) -> Result<Vec<TransactionBackupMeta>> {
+        // This can be more flexible, but for now we assume and check backups are continuous in
+        // range (which is always true when we backup from a single backup coordinator)
+        let mut next_ver = 0;
+        let mut res = Vec::new();
+        for backup in self.transaction_backups.iter().sorted() {
+            if backup.first_version > target_version {
+                break;
+            }
+            ensure!(
+                backup.first_version == next_ver,
+                "Transactioon backup ranges not continuous, expecting version {}, got {}.",
+                next_ver,
+                backup.first_version,
+            );
+
+            res.push(backup.clone());
+
+            next_ver = backup.last_version + 1;
+        }
+
+        Ok(res)
+    }
+
+    pub fn select_epoch_ending_backups(
+        &self,
+        target_version: Version,
+    ) -> Result<Vec<EpochEndingBackupMeta>> {
+        // This can be more flexible, but for now we assume and check backups are continuous in
+        // range (which is always true when we backup from a single backup coordinator)
+        let mut next_epoch = 0;
+        let mut res = Vec::new();
+        for backup in self.epoch_ending_backups.iter().sorted() {
+            if backup.first_version > target_version {
+                break;
+            }
+
+            ensure!(
+                backup.first_epoch == next_epoch,
+                "Epoch ending backup ranges not continuous, expecting epoch {}, got {}.",
+                next_epoch,
+                backup.first_epoch,
+            );
+            res.push(backup.clone());
+
+            next_epoch = backup.last_epoch + 1;
+        }
+
+        Ok(res)
     }
 }
 
