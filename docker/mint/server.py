@@ -81,3 +81,8 @@ def send_transaction():
         raise
 
     return str(next_dd_seq)
+
+
+@application.route("/-/healthy", methods=('GET',))
+def health_check():
+    return "libra-faucet:ok"
