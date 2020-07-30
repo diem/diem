@@ -268,6 +268,31 @@ pub enum VMStatusView {
     PublishingFailure,
 }
 
+impl std::fmt::Display for VMStatusView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VMStatusView::Executed => write!(f, "Executed"),
+            VMStatusView::OutOfGas => write!(f, "Out of Gas"),
+            VMStatusView::MoveAbort {
+                location,
+                abort_code,
+            } => write!(f, "Move Abort: {} at {}", abort_code, location),
+            VMStatusView::ExecutionFailure {
+                location,
+                function_index,
+                code_offset,
+            } => write!(
+                f,
+                "Execution failure: {} {} {}",
+                location, function_index, code_offset
+            ),
+            VMStatusView::VerificationError => write!(f, "Verification Error"),
+            VMStatusView::DeserializationError => write!(f, "Deserialization Error"),
+            VMStatusView::PublishingFailure => write!(f, "Publishing Failure"),
+        }
+    }
+}
+
 /// Below is a sample response from a failed JSON RPC call:
 /// "{
 ///   "error": {
