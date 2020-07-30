@@ -3,7 +3,7 @@
 
 use crate::{
     counters,
-    errors::JsonRpcError,
+    errors::{ErrorData, ExceedBatchSizeLimit, JsonRpcError},
     methods::{build_registry, JsonRpcRequest, JsonRpcService, RpcRegistry},
 };
 use futures::future::join_all;
@@ -34,6 +34,7 @@ const LABEL_SUCCESS: &str = "success";
 /// Returns handle to corresponding Tokio runtime
 pub fn bootstrap(
     address: SocketAddr,
+    batch_size_limit: u16,
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
@@ -47,7 +48,7 @@ pub fn bootstrap(
         .expect("[rpc] failed to create runtime");
 
     let registry = Arc::new(build_registry());
-    let service = JsonRpcService::new(libra_db, mp_sender, role, chain_id);
+    let service = JsonRpcService::new(libra_db, mp_sender, role, chain_id, batch_size_limit);
 
     let base_route = warp::any()
         .and(warp::post())
@@ -90,6 +91,7 @@ pub fn bootstrap_from_config(
 ) -> Runtime {
     bootstrap(
         config.rpc.address,
+        config.rpc.batch_size_limit,
         libra_db,
         mp_sender,
         config.base.role,
@@ -111,17 +113,31 @@ async fn rpc_endpoint(
         .map_err(|_| reject::custom(DatabaseError))?;
 
     let resp = Ok(if let Value::Array(requests) = data {
-        // batch API call
-        let futures = requests.into_iter().map(|req| {
-            rpc_request_handler(
-                req,
-                service.clone(),
-                Arc::clone(&registry),
-                ledger_info.clone(),
-            )
-        });
-        let responses = join_all(futures).await;
-        warp::reply::json(&Value::Array(responses))
+        if requests.len() > service.batch_size_limit as usize {
+            let data = ErrorData::ExceedBatchSizeLimit(ExceedBatchSizeLimit {
+                limit: service.batch_size_limit,
+                batch_request_size: requests.len(),
+            });
+            let mut resp = Map::new();
+            resp.insert(
+                "error".to_string(),
+                JsonRpcError::invalid_request_with_data(Some(data)).serialize(),
+            );
+
+            warp::reply::json(&resp)
+        } else {
+            // batch API call
+            let futures = requests.into_iter().map(|req| {
+                rpc_request_handler(
+                    req,
+                    service.clone(),
+                    Arc::clone(&registry),
+                    ledger_info.clone(),
+                )
+            });
+            let responses = join_all(futures).await;
+            warp::reply::json(&Value::Array(responses))
+        }
     } else {
         // single API call
         let resp = rpc_request_handler(data, service, registry, ledger_info).await;

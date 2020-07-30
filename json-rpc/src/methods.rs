@@ -37,6 +37,7 @@ pub(crate) struct JsonRpcService {
     mempool_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
+    pub batch_size_limit: u16,
 }
 
 impl JsonRpcService {
@@ -45,12 +46,14 @@ impl JsonRpcService {
         mempool_sender: MempoolClientSender,
         role: RoleType,
         chain_id: ChainId,
+        batch_size_limit: u16,
     ) -> Self {
         Self {
             db,
             mempool_sender,
             role,
             chain_id,
+            batch_size_limit,
         }
     }
 

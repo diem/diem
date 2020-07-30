@@ -35,6 +35,7 @@ pub enum ServerCode {
 pub enum ErrorData {
     InvalidArguments(InvalidArguments),
     StatusCode(StatusCode),
+    ExceedBatchSizeLimit(ExceedBatchSizeLimit),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
@@ -49,6 +50,12 @@ pub struct JsonRpcError {
     pub code: i16,
     pub message: String,
     pub data: Option<ErrorData>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ExceedBatchSizeLimit {
+    pub limit: u16,
+    pub batch_request_size: usize,
 }
 
 impl std::error::Error for JsonRpcError {}
@@ -77,10 +84,14 @@ impl JsonRpcError {
     }
 
     pub fn invalid_request() -> Self {
+        Self::invalid_request_with_data(Option::None)
+    }
+
+    pub fn invalid_request_with_data(data: Option<ErrorData>) -> Self {
         Self {
             code: -32600,
             message: "Invalid Request".to_string(),
-            data: None,
+            data,
         }
     }
 
