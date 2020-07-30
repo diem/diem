@@ -30,6 +30,7 @@ RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release
 RUN mkdir -p /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
+COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
 
 ARG BUILD_DATE
 ARG GIT_REV
