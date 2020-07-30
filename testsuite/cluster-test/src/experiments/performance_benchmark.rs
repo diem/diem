@@ -233,13 +233,10 @@ impl PerformanceBenchmark {
             .ok_or_else(|| anyhow!("No up validator."))?
             .clone();
 
-        const COMMAND: &str = "while true; do \
-            /opt/libra/bin/db-backup one-shot backup \
-            --max-chunk-size 1073741824 --backup-service-port 7777 \
-            state-snapshot \
-            --state-version $(/opt/libra/bin/db-backup one-shot query node-state --backup-service-port 7777 | sed -n 's/.* committed_version: \\([0-9]*\\).*/\\1/p') \
-            local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX); \
-            done";
+        const COMMAND: &str = "/opt/libra/bin/db-backup coordinator run \
+            --transaction-batch-size 20000 \
+            --state-snapshot-interval 1000 \
+            local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX);";
 
         Ok(Some(tokio::spawn(async move {
             validator.exec(COMMAND, true).await.unwrap_or_else(|e| {

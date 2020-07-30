@@ -15,7 +15,11 @@ use tokio::fs::metadata;
 
 #[derive(Clone, StructOpt)]
 pub struct GlobalBackupOpt {
-    #[structopt(long = "max-chunk-size", help = "Maximum chunk file size in bytes.")]
+    #[structopt(
+        long = "max-chunk-size",
+        default_value = "1073741824",
+        help = "Maximum chunk file size in bytes."
+    )]
     pub max_chunk_size: usize,
 }
 

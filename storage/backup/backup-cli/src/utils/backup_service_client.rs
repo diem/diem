@@ -14,6 +14,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 pub struct BackupServiceClientOpt {
     #[structopt(
         long = "backup-service-port",
+        default_value = "7777",
         help = "Backup service port. The service must listen on localhost."
     )]
     pub port: u16,
