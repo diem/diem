@@ -110,84 +110,13 @@ fn struct_borrow_nested() -> PartialVMResult<()> {
 
 #[test]
 fn global_value_non_struct() -> PartialVMResult<()> {
-    assert!(GlobalValue::new(Value::u64(100)).is_err());
-    assert!(GlobalValue::new(Value::bool(false)).is_err());
+    assert!(GlobalValue::cached(Value::u64(100)).is_err());
+    assert!(GlobalValue::cached(Value::bool(false)).is_err());
 
     let mut locals = Locals::new(1);
     locals.store_loc(0, Value::u8(0))?;
     let r = locals.borrow_loc(0)?;
-    assert!(GlobalValue::new(r).is_err());
-
-    Ok(())
-}
-
-#[test]
-fn global_value() -> PartialVMResult<()> {
-    let gv = GlobalValue::new(Value::struct_(Struct::pack(
-        vec![Value::u8(100), Value::u64(200)],
-        true,
-    )))?;
-
-    {
-        let r: StructRef = gv.borrow_global()?.value_as()?;
-        let f1: Reference = r.borrow_field(0)?.value_as()?;
-        let f2: Reference = r.borrow_field(1)?.value_as()?;
-        assert!(f1.read_ref()?.equals(&Value::u8(100))?);
-        assert!(f2.read_ref()?.equals(&Value::u64(200))?);
-    }
-
-    assert!(gv.is_clean()?);
-
-    {
-        let r: StructRef = gv.borrow_global()?.value_as()?;
-        let f1: Reference = r.borrow_field(0)?.value_as()?;
-        f1.write_ref(Value::u8(222))?;
-    }
-
-    assert!(gv.is_dirty()?);
-
-    {
-        let r: StructRef = gv.borrow_global()?.value_as()?;
-        let f1: Reference = r.borrow_field(0)?.value_as()?;
-        let f2: Reference = r.borrow_field(1)?.value_as()?;
-        assert!(f1.read_ref()?.equals(&Value::u8(222))?);
-        assert!(f2.read_ref()?.equals(&Value::u64(200))?);
-    }
-
-    Ok(())
-}
-
-#[test]
-fn global_value_nested() -> PartialVMResult<()> {
-    let gv: GlobalValue = GlobalValue::new(Value::struct_(Struct::pack(
-        vec![Value::struct_(Struct::pack(vec![Value::u64(100)], false))],
-        true,
-    )))?;
-
-    {
-        let r1: StructRef = gv.borrow_global()?.value_as()?;
-        let r2: StructRef = r1.borrow_field(0)?.value_as()?;
-        let r3: Reference = r2.borrow_field(0)?.value_as()?;
-        assert!(r3.read_ref()?.equals(&Value::u64(100))?);
-    }
-
-    assert!(gv.is_clean()?);
-
-    {
-        let r1: StructRef = gv.borrow_global()?.value_as()?;
-        let r2: StructRef = r1.borrow_field(0)?.value_as()?;
-        let r3: Reference = r2.borrow_field(0)?.value_as()?;
-        r3.write_ref(Value::u64(0))?;
-    }
-
-    assert!(gv.is_dirty()?);
-
-    {
-        let r1: StructRef = gv.borrow_global()?.value_as()?;
-        let r2: StructRef = r1.borrow_field(0)?.value_as()?;
-        let r3: Reference = r2.borrow_field(0)?.value_as()?;
-        assert!(r3.read_ref()?.equals(&Value::u64(0))?);
-    }
+    assert!(GlobalValue::cached(r).is_err());
 
     Ok(())
 }
@@ -205,7 +134,7 @@ fn cannot_copy_resource() -> PartialVMResult<()> {
 
 #[test]
 fn container_ref_cannot_read_resource() -> PartialVMResult<()> {
-    let gv = GlobalValue::new(dummy_resource())?;
+    let gv = GlobalValue::cached(dummy_resource())?;
     let r: Reference = gv.borrow_global()?.value_as()?;
     assert!(r.read_ref().is_err());
     Ok(())
@@ -213,7 +142,7 @@ fn container_ref_cannot_read_resource() -> PartialVMResult<()> {
 
 #[test]
 fn container_ref_cannot_overwrite_resource() -> PartialVMResult<()> {
-    let gv = GlobalValue::new(dummy_resource())?;
+    let gv = GlobalValue::cached(dummy_resource())?;
     let r: Reference = gv.borrow_global()?.value_as()?;
     assert!(r.write_ref(dummy_resource()).is_err());
     Ok(())
