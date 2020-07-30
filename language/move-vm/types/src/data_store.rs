@@ -19,27 +19,13 @@ pub trait DataStore {
     // StateStore operations
     // ---
 
-    /// Publish a resource.
-    fn publish_resource(
-        &mut self,
-        addr: AccountAddress,
-        ty: Type,
-        gv: GlobalValue,
-    ) -> PartialVMResult<()>;
-
-    /// Get a reference to a resource.
-    fn borrow_resource(
+    /// Try to load a resource from remote storage and create a corresponding GlobalValue
+    /// that is owned by the data store.
+    fn load_resource(
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<Option<&GlobalValue>>;
-
-    /// Transfer ownership of a resource to the VM.
-    fn move_resource_from(
-        &mut self,
-        addr: AccountAddress,
-        ty: &Type,
-    ) -> PartialVMResult<Option<GlobalValue>>;
+    ) -> PartialVMResult<&mut GlobalValue>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>>;

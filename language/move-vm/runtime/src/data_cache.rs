@@ -30,7 +30,7 @@ pub trait RemoteCache {
 }
 
 pub struct AccountDataCache {
-    data_map: BTreeMap<Type, Option<GlobalValue>>,
+    data_map: BTreeMap<Type, GlobalValue>,
     module_map: BTreeMap<ModuleId, Vec<u8>>,
 }
 
@@ -93,21 +93,20 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         let mut resources = vec![];
         for (addr, account_cache) in self.account_map {
             let mut vals = vec![];
-            for (ty, gv_opt) in account_cache.data_map {
-                match gv_opt {
-                    None => {
-                        let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                        vals.push((ty_tag, None));
-                    }
-                    Some(gv) => {
-                        if gv.is_dirty()? {
+            for (ty, gv) in account_cache.data_map {
+                if let Some(eff) = gv.into_effect()? {
+                    match eff {
+                        Some(val) => {
                             let ty_tag = self.loader.type_to_type_tag(&ty)?;
                             let ty_layout = self.loader.type_to_type_layout(&ty)?;
-                            let val = Value::struct_(gv.into_owned_struct()?);
                             vals.push((ty_tag, Some((ty_layout, val))));
                         }
+                        None => {
+                            let ty_tag = self.loader.type_to_type_tag(&ty)?;
+                            vals.push((ty_tag, None));
+                        }
                     }
-                };
+                }
             }
             if !vals.is_empty() {
                 resources.push((addr, vals));
@@ -149,15 +148,18 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         }
         map.get_mut(k).unwrap()
     }
+}
 
+// `DataStore` implementation for the `TransactionDataCache`
+impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
-    fn load_data(
+    fn load_resource(
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> PartialVMResult<&mut Option<GlobalValue>> {
+    ) -> PartialVMResult<&mut GlobalValue> {
         let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
             (addr, AccountDataCache::new())
         });
@@ -165,56 +167,23 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         if !account_cache.data_map.contains_key(ty) {
             let ty_tag = self.loader.type_to_type_tag(ty)?;
 
-            let blob = self.remote.get_resource(&addr, &ty_tag)?.ok_or_else(|| {
-                PartialVMError::new(StatusCode::MISSING_DATA)
-                    .with_message(format!("Cannot find resource of type {}", ty_tag))
-            })?;
+            let gv = match self.remote.get_resource(&addr, &ty_tag)? {
+                Some(blob) => {
+                    let ty_layout = self.loader.type_to_type_layout(ty)?;
+                    let ty_kind_info = self.loader.type_to_kind_info(ty)?;
+                    let val = Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout)?;
+                    GlobalValue::cached(val)?
+                }
+                None => GlobalValue::none(),
+            };
 
-            let ty_layout = self.loader.type_to_type_layout(ty)?;
-            let ty_kind_info = self.loader.type_to_kind_info(ty)?;
-            let val = Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout)?;
-            let gv = GlobalValue::new(val)?;
-
-            account_cache.data_map.insert(ty.clone(), Some(gv));
+            account_cache.data_map.insert(ty.clone(), gv);
         }
 
-        Ok(account_cache.data_map.get_mut(ty).unwrap())
-    }
-}
-
-// `DataStore` implementation for the `TransactionDataCache`
-impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
-    fn publish_resource(
-        &mut self,
-        addr: AccountAddress,
-        ty: Type,
-        g: GlobalValue,
-    ) -> PartialVMResult<()> {
-        let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
-            (addr, AccountDataCache::new())
-        });
-
-        account_cache.data_map.insert(ty, Some(g));
-
-        Ok(())
-    }
-
-    fn borrow_resource(
-        &mut self,
-        addr: AccountAddress,
-        ty: &Type,
-    ) -> PartialVMResult<Option<&GlobalValue>> {
-        Ok(self.load_data(addr, ty)?.as_ref())
-    }
-
-    fn move_resource_from(
-        &mut self,
-        addr: AccountAddress,
-        ty: &Type,
-    ) -> PartialVMResult<Option<GlobalValue>> {
-        // .take() means that the entry is removed from the data map -- this marks the
-        // access path for deletion.
-        Ok(self.load_data(addr, ty)?.take())
+        Ok(account_cache
+            .data_map
+            .get_mut(ty)
+            .expect("global value must exist"))
     }
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {

@@ -1,0 +1,27 @@
+module M {
+    import 0x1.Signer;
+
+    resource R { x: bool }
+
+    public test(s: &signer) acquires R {
+        let x: bool;
+        move_to<R>(copy(s), R { x: false });
+        R { x } = move_from<R>(Signer.address_of(move(s)));
+        return;
+    }
+}
+// check: EXECUTED
+
+
+//! new-transaction
+import {{default}}.M;
+
+main(s: &signer) {
+    M.test(move(s));
+    return;
+}
+// The following checks ensure that we do not emit a deletion op for R.
+//
+// check: WriteSet
+// not: Deletion
+// check: EXECUTED

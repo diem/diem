@@ -178,23 +178,29 @@ pub struct Struct {
     fields: Vec<ValueImpl>,
 }
 
-/// A special value that lives in global storage.
-///
-/// Callers are allowed to take global references from a `GlobalValue`. A global value also contains
-/// an internal flag, indicating whether the value has potentially been modified or not.
-///
-/// For any given value in storage, only one `GlobalValue` may exist to represent it at any time.
-/// This means that:
-/// * `GlobalValue` **does not** and **should not** implement `Clone`!
-/// * a borrowed reference through `borrow_global` is represented through a `&GlobalValue`.
-/// * `borrow_global_mut` is also represented through a `&GlobalValue` -- the bytecode verifier
-///   enforces mutability restrictions.
-/// * `move_from` is represented through an owned `GlobalValue`.
+/// A special "slot" in global storage that can hold a resource. It also keeps track of the status
+/// of the resource relative to the global state, which is necessary to compute the effects to emit
+/// at the end of transaction execution.
 #[derive(Debug)]
-pub struct GlobalValue {
-    status: Rc<RefCell<GlobalDataStatus>>,
-    fields: Rc<RefCell<Vec<ValueImpl>>>,
+enum GlobalValueImpl {
+    /// No resource resides in this slot or in storage.
+    None,
+    /// A resource has been published to this slot and it did not previously exist in storage.
+    Fresh { fields: Rc<RefCell<Vec<ValueImpl>>> },
+    /// A resource resides in this slot and also in storage. The status flag indicates whether
+    /// it has potentially been altered.
+    Cached {
+        fields: Rc<RefCell<Vec<ValueImpl>>>,
+        status: Rc<RefCell<GlobalDataStatus>>,
+    },
+    /// A resource used to exist in storage but has been deleted by the current transaction.
+    Deleted,
 }
+
+/// A wrapper around `GlobalValueImpl`, representing a "slot" in global storage that can
+/// hold a resource.
+#[derive(Debug)]
+pub struct GlobalValue(GlobalValueImpl);
 
 /***************************************************************************************
  *
@@ -2144,8 +2150,14 @@ impl Reference {
 
 impl GlobalValue {
     pub fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        // TODO: should it be self.container.borrow().size()
-        words_in(REFERENCE_SIZE)
+        // REVIEW: this doesn't seem quite right. Consider changing it to
+        // a constant positive size or better, something proportional to the size of the value.
+        match &self.0 {
+            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => {
+                words_in(REFERENCE_SIZE)
+            }
+            GlobalValueImpl::Deleted | GlobalValueImpl::None => AbstractMemorySize::new(0),
+        }
     }
 }
 
@@ -2178,54 +2190,133 @@ impl Struct {
  *   transaction execution the dirty ones can be identified and wrote back to storage.
  *
  **************************************************************************************/
-impl GlobalValue {
-    pub fn new(v: Value) -> PartialVMResult<Self> {
-        match v.0 {
-            ValueImpl::Container(Container::StructR(r)) => {
-                // TODO: check strong count?
-                Ok(Self {
-                    status: Rc::new(RefCell::new(GlobalDataStatus::Clean)),
-                    fields: r,
-                })
+impl GlobalValueImpl {
+    fn cached(val: ValueImpl, status: GlobalDataStatus) -> PartialVMResult<Self> {
+        match val {
+            ValueImpl::Container(Container::StructR(fields)) => {
+                let status = Rc::new(RefCell::new(status));
+                Ok(Self::Cached { fields, status })
             }
-            v => Err(
+            _ => Err(
                 PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot create global ref from {:?}", v)),
+                    .with_message("failed to publish cached: not a resource".to_string()),
             ),
         }
     }
 
-    pub fn borrow_global(&self) -> PartialVMResult<Value> {
-        Ok(Value(ValueImpl::ContainerRef(ContainerRef::Global {
-            status: Rc::clone(&self.status),
-            container: Container::StructR(Rc::clone(&self.fields)),
-        })))
+    fn fresh(val: ValueImpl) -> PartialVMResult<Self> {
+        match val {
+            ValueImpl::Container(Container::StructR(fields)) => Ok(Self::Fresh { fields }),
+            _ => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("failed to publish fresh: not a resource".to_string()),
+            ),
+        }
     }
 
-    pub fn mark_dirty(&self) -> PartialVMResult<()> {
-        *self.status.borrow_mut() = GlobalDataStatus::Dirty;
+    fn move_from(&mut self) -> PartialVMResult<ValueImpl> {
+        let fields = match self {
+            Self::None | Self::Deleted => {
+                return Err(PartialVMError::new(StatusCode::MISSING_DATA))
+            }
+            Self::Fresh { .. } => match std::mem::replace(self, Self::None) {
+                Self::Fresh { fields } => fields,
+                _ => unreachable!(),
+            },
+            Self::Cached { .. } => match std::mem::replace(self, Self::Deleted) {
+                Self::Cached { fields, .. } => fields,
+                _ => unreachable!(),
+            },
+        };
+        if Rc::strong_count(&fields) != 1 {
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("moving global resource with dangling reference".to_string()),
+            );
+        }
+        Ok(ValueImpl::Container(Container::StructR(fields)))
+    }
+
+    fn move_to(&mut self, val: ValueImpl) -> PartialVMResult<()> {
+        match self {
+            Self::Fresh { .. } | Self::Cached { .. } => {
+                return Err(PartialVMError::new(
+                    StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,
+                ))
+            }
+            Self::None => *self = Self::fresh(val)?,
+            Self::Deleted => *self = Self::cached(val, GlobalDataStatus::Dirty)?,
+        }
         Ok(())
     }
 
-    pub fn is_clean(&self) -> PartialVMResult<bool> {
-        match &*self.status.borrow() {
-            GlobalDataStatus::Clean => Ok(true),
-            _ => Ok(false),
+    fn exists(&self) -> PartialVMResult<bool> {
+        match self {
+            Self::Fresh { .. } | Self::Cached { .. } => Ok(true),
+            Self::None | Self::Deleted => Ok(false),
         }
     }
 
-    pub fn is_dirty(&self) -> PartialVMResult<bool> {
-        match &*self.status.borrow() {
-            GlobalDataStatus::Dirty => Ok(true),
-            _ => Ok(false),
+    fn borrow_global(&self) -> PartialVMResult<ValueImpl> {
+        match self {
+            Self::None | Self::Deleted => Err(PartialVMError::new(StatusCode::MISSING_DATA)),
+            Self::Fresh { fields } => Ok(ValueImpl::ContainerRef(ContainerRef::Local(
+                Container::StructR(Rc::clone(fields)),
+            ))),
+            Self::Cached { fields, status } => Ok(ValueImpl::ContainerRef(ContainerRef::Global {
+                container: Container::StructR(Rc::clone(fields)),
+                status: Rc::clone(status),
+            })),
         }
     }
 
-    pub fn into_owned_struct(self) -> PartialVMResult<Struct> {
-        Ok(Struct {
-            is_resource: true,
-            fields: take_unique_ownership(self.fields)?,
+    fn into_effect(self) -> PartialVMResult<Option<Option<ValueImpl>>> {
+        Ok(match self {
+            Self::None => None,
+            Self::Deleted => Some(None),
+            Self::Fresh { fields } => Some(Some(ValueImpl::Container(Container::StructR(fields)))),
+            Self::Cached { fields, status } => match &*status.borrow() {
+                GlobalDataStatus::Dirty => {
+                    Some(Some(ValueImpl::Container(Container::StructR(fields))))
+                }
+                GlobalDataStatus::Clean => None,
+            },
         })
+    }
+}
+
+impl GlobalValue {
+    pub fn none() -> Self {
+        Self(GlobalValueImpl::None)
+    }
+
+    pub fn cached(val: Value) -> PartialVMResult<Self> {
+        Ok(Self(GlobalValueImpl::cached(
+            val.0,
+            GlobalDataStatus::Clean,
+        )?))
+    }
+
+    pub fn move_from(&mut self) -> PartialVMResult<Value> {
+        Ok(Value(self.0.move_from()?))
+    }
+
+    pub fn move_to(&mut self, val: Value) -> PartialVMResult<()> {
+        self.0.move_to(val.0)
+    }
+
+    pub fn borrow_global(&self) -> PartialVMResult<Value> {
+        Ok(Value(self.0.borrow_global()?))
+    }
+
+    pub fn exists(&self) -> PartialVMResult<bool> {
+        self.0.exists()
+    }
+
+    pub fn into_effect(self) -> PartialVMResult<Option<Option<Value>>> {
+        self.0
+            .into_effect()
+            .map(|opt| opt.map(|opt| opt.map(Value)))
     }
 }
 

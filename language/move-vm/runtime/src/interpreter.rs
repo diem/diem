@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_operations::{borrow_global, move_resource_from, move_resource_to, resource_exists},
     loader::{Function, Loader, Resolver},
     native_functions::FunctionContext,
     trace,
@@ -17,7 +16,9 @@ use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::runtime_types::Type,
-    values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
+    values::{
+        self, GlobalValue, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value,
+    },
 };
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
@@ -62,7 +63,7 @@ impl Interpreter {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
     ) -> VMResult<()> {
@@ -85,7 +86,7 @@ impl Interpreter {
     fn execute(
         &mut self,
         loader: &Loader,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
@@ -107,7 +108,7 @@ impl Interpreter {
     fn execute_main(
         &mut self,
         loader: &Loader,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
         function: Arc<Function>,
         ty_args: Vec<Type>,
@@ -309,27 +310,49 @@ impl Interpreter {
         self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs)?)))
     }
 
+    /// Load a resource from the data store.
+    fn load_resource<'a>(
+        data_store: &'a mut impl DataStore,
+        addr: AccountAddress,
+        ty: &Type,
+    ) -> PartialVMResult<&'a mut GlobalValue> {
+        match data_store.load_resource(addr, ty) {
+            Ok(gv) => Ok(gv),
+            Err(e) => {
+                crit!(
+                    "[VM] error loading resource at ({}, {:?}): {:?} from data store",
+                    addr,
+                    ty,
+                    e
+                );
+                Err(e)
+            }
+        }
+    }
+
     /// BorrowGlobal (mutable and not) opcode.
     fn borrow_global(
         &mut self,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let g = borrow_global(data_store, addr, ty)?;
+        let g = Self::load_resource(data_store, addr, ty)?.borrow_global()?;
         let size = g.size();
-        self.operand_stack.push(g.borrow_global()?)?;
+        self.operand_stack.push(g)?;
         Ok(size)
     }
 
     /// Exists opcode.
     fn exists(
         &mut self,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let (exists, mem_size) = resource_exists(data_store, addr, ty)?;
+        let gv = Self::load_resource(data_store, addr, ty)?;
+        let mem_size = gv.size();
+        let exists = gv.exists()?;
         self.operand_stack.push(Value::bool(exists))?;
         Ok(mem_size)
     }
@@ -337,11 +360,11 @@ impl Interpreter {
     /// MoveFrom opcode.
     fn move_from(
         &mut self,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = move_resource_from(data_store, addr, ty)?;
+        let resource = Self::load_resource(data_store, addr, ty)?.move_from()?;
         let size = resource.size();
         self.operand_stack.push(resource)?;
         Ok(size)
@@ -349,18 +372,15 @@ impl Interpreter {
 
     /// MoveTo opcode.
     fn move_to(
-        resource: Struct,
-    ) -> impl FnOnce(
-        &mut Interpreter,
-        &mut dyn DataStore,
-        AccountAddress,
-        Type,
+        &mut self,
+        data_store: &mut impl DataStore,
+        addr: AccountAddress,
+        ty: &Type,
+        resource: Value,
     ) -> PartialVMResult<AbstractMemorySize<GasCarrier>> {
-        |_interpreter, data_store, addr, ty| {
-            let size = resource.size();
-            move_resource_to(data_store, addr, ty, resource)?;
-            Ok(size)
-        }
+        let size = resource.size();
+        Self::load_resource(data_store, addr, ty)?.move_to(resource)?;
+        Ok(size)
     }
 
     //
@@ -645,7 +665,7 @@ impl Frame {
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<ExitCode> {
         self.execute_code_impl(resolver, interpreter, data_store, cost_strategy)
@@ -659,7 +679,7 @@ impl Frame {
         &mut self,
         resolver: &Resolver,
         interpreter: &mut Interpreter,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> PartialVMResult<ExitCode> {
         let code = self.function.code();
@@ -1026,7 +1046,7 @@ impl Frame {
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
                     }
                     Bytecode::MoveTo(sd_idx) => {
-                        let resource = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let resource = interpreter.operand_stack.pop()?;
                         let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
                         let addr = signer_reference
                             .borrow_field(0)?
@@ -1035,12 +1055,11 @@ impl Frame {
                             .value_as::<AccountAddress>()?;
                         let ty = resolver.get_struct_type(*sd_idx);
                         // REVIEW: Can we simplify Interpreter::move_to?
-                        let size =
-                            Interpreter::move_to(resource)(interpreter, data_store, addr, ty)?;
+                        let size = interpreter.move_to(data_store, addr, &ty, resource)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO, size)?;
                     }
                     Bytecode::MoveToGeneric(si_idx) => {
-                        let resource = interpreter.operand_stack.pop_as::<Struct>()?;
+                        let resource = interpreter.operand_stack.pop()?;
                         let signer_reference = interpreter.operand_stack.pop_as::<StructRef>()?;
                         let addr = signer_reference
                             .borrow_field(0)?
@@ -1048,8 +1067,7 @@ impl Frame {
                             .read_ref()?
                             .value_as::<AccountAddress>()?;
                         let ty = resolver.instantiate_generic_type(*si_idx, self.ty_args())?;
-                        let size =
-                            Interpreter::move_to(resource)(interpreter, data_store, addr, ty)?;
+                        let size = interpreter.move_to(data_store, addr, &ty, resource)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_GENERIC, size)?;
                     }
                     Bytecode::FreezeRef => {
