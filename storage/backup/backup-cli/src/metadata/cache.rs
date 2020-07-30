@@ -32,7 +32,11 @@ impl MetadataCacheOpt {
     fn cache_dir(&self) -> PathBuf {
         self.dir
             .clone()
-            .unwrap_or_else(|| std::env::temp_dir().join("libra_backup_metadata"))
+            .unwrap_or_else(|| {
+                dirs::home_dir()
+                    .expect("Can't find home dir. Specify metadata cache path explicitly.")
+                    .join("libra_backup_metadata")
+            })
             .join(Self::SUB_DIR)
     }
 }
