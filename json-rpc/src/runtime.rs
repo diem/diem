@@ -64,7 +64,11 @@ pub fn bootstrap(
         .and(warp::path::end())
         .and(base_route);
 
-    let full_route = route_v1.or(route_root);
+    let health_route = warp::path!("-" / "healthy")
+        .and(warp::path::end())
+        .map(|| "libra-node:ok");
+
+    let full_route = health_route.or(route_v1.or(route_root));
 
     // Ensure that we actually bind to the socket first before spawning the
     // server tasks. This helps in tests to prevent races where a client attempts
