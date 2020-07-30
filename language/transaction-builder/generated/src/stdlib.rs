@@ -27,6 +27,8 @@ use std::collections::BTreeMap as Map;
 /// }
 /// ```
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, PartialOrd)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub enum ScriptCall {
     /// Add a `Currency` balance to `account`, which will enable `account` to send and receive
     /// `Libra<Currency>`.

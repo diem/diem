@@ -16,5 +16,10 @@ move-core-types = { path = "../../move-core/types", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 
+proptest = { version = "0.10.0", optional = true }
+proptest-derive = { version = "0.2.0", optional = true }
+libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }
+
 [features]
 default = []
+fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "move-core-types/fuzzing"]

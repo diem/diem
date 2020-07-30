@@ -24,6 +24,7 @@ mod rotate_key;
 mod scripts;
 mod transaction_builder;
 mod transaction_fees;
+mod transaction_fuzzer;
 mod validator_set_management;
 mod vasps;
 mod verify_txn;
