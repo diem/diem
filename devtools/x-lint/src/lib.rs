@@ -91,6 +91,8 @@ pub enum SkipReason<'l> {
     UnsupportedFile(&'l Path),
     /// The given package was unsupported by this linter.
     UnsupportedPackage(&'l PackageId),
+    /// The given file was excepted by a glob rule
+    GlobExemption(&'l str),
     // TODO: Add more reasons.
 }
 
