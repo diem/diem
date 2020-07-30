@@ -3,6 +3,8 @@
 
 use crate::{
     command::{Command, CommandName},
+    validator_config::DecryptedValidatorConfig,
+    validator_set::DecryptedValidatorInfo,
     TransactionContext,
 };
 use libra_config::config;
@@ -10,10 +12,7 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{
-    account_address::AccountAddress, chain_id::ChainId, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo,
-};
+use libra_types::{account_address::AccountAddress, chain_id::ChainId};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "libra-operational-tool";
@@ -136,7 +135,7 @@ impl OperationalTool {
     pub fn validator_config(
         &self,
         account_address: AccountAddress,
-    ) -> Result<ValidatorConfig, Error> {
+    ) -> Result<DecryptedValidatorConfig, Error> {
         let args = format!(
             "
                 {command}
@@ -155,7 +154,7 @@ impl OperationalTool {
     pub fn validator_set(
         &self,
         account_address: AccountAddress,
-    ) -> Result<Vec<ValidatorInfo>, Error> {
+    ) -> Result<Vec<DecryptedValidatorInfo>, Error> {
         let args = format!(
             "
                 {command}
