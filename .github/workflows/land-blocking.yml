@@ -18,6 +18,7 @@ jobs:
       - name: Setup env
         run: |
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
+          echo "::set-env name=MASTER_GIT_REV::$(git rev-parse --short=8 origin/master)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=PREV_TAG::land_$(git rev-parse --short=8 origin/master)"
       - name: Check kill switch
@@ -54,7 +55,7 @@ jobs:
         if: steps.check_ks.outputs.should_run == 'true'
         run: |
           set +e
-          commit_message=$(git log -1 --pretty=oneline)
+          commit_message=$(git log --pretty=oneline $MASTER_GIT_REV..$LIBRA_GIT_REV)
           echo $commit_message | grep '\[breaking\]'
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
             echo "Compat killswitch activated! Will run land_blocking suite"
