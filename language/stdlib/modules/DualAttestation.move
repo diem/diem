@@ -406,7 +406,7 @@ module DualAttestation {
     // **************************** SPECIFICATION ********************************
 
     /// The Limit resource should be published after genesis
-    spec schema LimitExists {
+    spec module {
         invariant [global] !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
     }
 
@@ -422,9 +422,6 @@ module DualAttestation {
         define spec_get_cur_microlibra_limit(): u64 {
             global<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()).micro_lbr_limit
         }
-
-        // TODO(shb): why does verification of LimitExists fail for only these two procedures?
-        apply LimitExists to * except get_cur_microlibra_limit, compliance_public_key;
     }
 }
 }

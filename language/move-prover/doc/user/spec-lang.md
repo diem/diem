@@ -629,3 +629,5 @@ verification success.
 | `requires_if_aborts`   | Makes a requires condition mandatory to hold even in cases where the function is specified to abort.
 | `addition_overflow_unchecked` | Makes addition of large integers (`u64` and `u128`) unchecked, avoiding the need to specify `aborts_if` for those.
 | `assume_no_abort_from_here` | Assumes that this function, if called from elsewhere, does not abort.
+| `timeout` | Sets a timeout (in seconds) for function or module. Overrides the timeout provided by command line flags.
+| `seed` | Sets a random seed for function or module. Overrides the seed provided by command line flags.

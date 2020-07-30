@@ -40,7 +40,7 @@ use crate::{
 };
 use spec_lang::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
-    VERIFY_DURATION_ESTIMATE,
+    SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
 };
 use std::cell::RefCell;
 
@@ -549,11 +549,10 @@ impl<'env> ModuleTranslator<'env> {
         {
             return;
         }
-        if let Some(n) = func_target
-            .module_env()
-            .env
-            .get_num_property(&func_target.get_spec().properties, VERIFY_DURATION_ESTIMATE)
-        {
+        if let Some(n) = func_target.module_env().env.get_num_property(
+            &func_target.get_spec().properties,
+            VERIFY_DURATION_ESTIMATE_PRAGMA,
+        ) {
             if n > self.options.backend.vc_timeout {
                 info!(
                     "`{}::{}` excluded from verification because it is estimated to take \
@@ -596,20 +595,30 @@ impl<'env> ModuleTranslator<'env> {
         entry_point: FunctionEntryPoint,
     ) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
-        let inline = match entry_point {
+        let attribs = match entry_point {
             FunctionEntryPoint::Definition
             | FunctionEntryPoint::VerificationDefinition
             | FunctionEntryPoint::DirectIntraModule
             | FunctionEntryPoint::Indirect
-            | FunctionEntryPoint::DirectInterModule => "{:inline 1} ",
-            _ => "",
+            | FunctionEntryPoint::DirectInterModule => "{:inline 1} ".to_string(),
+            FunctionEntryPoint::Verification => {
+                let timeout = self.options.adjust_timeout(
+                    func_target
+                        .func_env
+                        .get_num_pragma(TIMEOUT_PRAGMA, || self.options.backend.vc_timeout),
+                );
+                let seed = func_target
+                    .func_env
+                    .get_num_pragma(SEED_PRAGMA, || self.options.backend.random_seed);
+                format!("{{:timeLimit {}}} {{:random_seed {}}} ", timeout, seed)
+            }
         };
         let suffix = entry_point.suffix();
         self.writer.set_location(&func_target.get_loc());
         emitln!(
             self.writer,
             "procedure {}{}{}({}) returns ({})",
-            inline,
+            attribs,
             boogie_function_name(func_target.func_env),
             suffix,
             args,

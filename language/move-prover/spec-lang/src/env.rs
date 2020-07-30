@@ -59,9 +59,15 @@ pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";
 
+/// Pragma defining a timeout.
+pub const TIMEOUT_PRAGMA: &str = "timeout";
+
+/// Pragma defining a random seed.
+pub const SEED_PRAGMA: &str = "seed";
+
 /// Pragma indicating an estimate how long verification takes. Verification
 /// is skipped if the timeout is smaller than this.
-pub const VERIFY_DURATION_ESTIMATE: &str = "verify_duration_estimate";
+pub const VERIFY_DURATION_ESTIMATE_PRAGMA: &str = "verify_duration_estimate";
 
 /// Pragma indicating whether implementation of function should be ignored and
 /// instead treated to be like a native function.
@@ -1859,6 +1865,20 @@ impl<'env> FunctionEnv<'env> {
         }
         if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, name) {
             return b;
+        }
+        default()
+    }
+
+    /// Returns the value of a numeric pragma for this function. This first looks up a
+    /// pragma in this function, then the enclosing module, and finally uses the provided default.
+    /// value
+    pub fn get_num_pragma(&self, name: &str, default: impl FnOnce() -> usize) -> usize {
+        let env = self.module_env.env;
+        if let Some(n) = env.get_num_property(&self.get_spec().properties, name) {
+            return n;
+        }
+        if let Some(n) = env.get_num_property(&self.module_env.get_spec().properties, name) {
+            return n;
         }
         default()
     }
