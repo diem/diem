@@ -19,6 +19,7 @@
 -  [Specification](#0x1_DesignatedDealer_Specification)
     -  [Resource `TierInfo`](#0x1_DesignatedDealer_Specification_TierInfo)
     -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
+    -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
@@ -521,6 +522,24 @@ TODO(wrwg): takes a long time but verifies.
 
 
 <pre><code>pragma verify_duration_estimate = 80;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_add_currency"></a>
+
+### Function `add_currency`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
+</code></pre>
+
+
+
+TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times out in Ci
+
+
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

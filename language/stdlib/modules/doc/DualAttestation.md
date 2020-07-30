@@ -998,12 +998,7 @@ Returns true if signature is valid.
 The Limit resource should be published after genesis
 
 
-<a name="0x1_DualAttestation_LimitExists"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_DualAttestation_LimitExists">LimitExists</a> {
-    <b>invariant</b> [<b>global</b>] !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
-}
+<pre><code><b>invariant</b> [<b>global</b>] !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 </code></pre>
 
 
@@ -1035,5 +1030,4 @@ Mirrors
 <pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>(): u64 {
     <b>global</b>&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).micro_lbr_limit
 }
-<b>apply</b> <a href="#0x1_DualAttestation_LimitExists">LimitExists</a> <b>to</b> * <b>except</b> get_cur_microlibra_limit, compliance_public_key;
 </code></pre>
