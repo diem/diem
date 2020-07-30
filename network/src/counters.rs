@@ -1,10 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_config::network_id::NetworkContext;
 use libra_metrics::{
     register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
     IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
 };
+use netcore::transport::ConnectionOrigin;
 use once_cell::sync::Lazy;
 
 // some type labels
@@ -29,6 +31,33 @@ pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static LIBRA_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        // metric name
+        "libra_connections",
+        // metric description
+        "Libra connections counter",
+        // metric labels (dimensions)
+        &["role_type", "network_id", "peer_id", "direction"]
+    )
+    .unwrap()
+});
+
+pub fn update_libra_connections(
+    network_context: &NetworkContext,
+    origin: ConnectionOrigin,
+    num_connections: usize,
+) {
+    LIBRA_CONNECTIONS
+        .with_label_values(&[
+            network_context.role().as_str(),
+            network_context.network_id().to_string().as_str(),
+            network_context.peer_id().short_str().as_str(),
+            origin.to_string().as_str(),
+        ])
+        .set(num_connections as i64);
+}
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
