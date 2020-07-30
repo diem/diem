@@ -12,7 +12,7 @@ use crate::{
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
     on_chain_config::{ConfigurationResource, OnChainConfig, RegisteredCurrencies, ValidatorSet},
-    validator_config::ValidatorConfigResource,
+    validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
 use anyhow::{bail, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
@@ -77,6 +77,12 @@ impl AccountState {
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
         self.get_resource(&ValidatorConfigResource::resource_path())
+    }
+
+    pub fn get_validator_operator_config_resource(
+        &self,
+    ) -> Result<Option<ValidatorOperatorConfigResource>> {
+        self.get_resource(&ValidatorOperatorConfigResource::resource_path())
     }
 
     pub fn get_freezing_bit(&self) -> Result<Option<FreezingBit>> {
