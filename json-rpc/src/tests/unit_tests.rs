@@ -398,6 +398,22 @@ fn test_get_metadata() {
 }
 
 #[test]
+fn test_limit_batch_size() {
+    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+
+    let mut batch = JsonRpcBatch::default();
+
+    for i in 0..21 {
+        batch.add_get_metadata_request(Some(i));
+    }
+
+    let ret = runtime.block_on(client.execute(batch));
+    assert!(ret.is_err());
+    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedBatchSizeLimit(ExceedBatchSizeLimit { limit: 20, batch_request_size: 21 })) }";
+    assert_eq!(ret.unwrap_err().to_string(), expected)
+}
+
+#[test]
 fn test_get_events() {
     let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
 
