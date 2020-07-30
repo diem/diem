@@ -6,7 +6,7 @@ use crate::{
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use executor::Executor;
 use executor_types::TransactionReplayer;
 use libra_types::{
@@ -131,30 +131,21 @@ impl TransactionRestoreController {
         }
     }
 
-    fn maybe_save_frozen_subtrees(&mut self, chunk: &LoadedChunk) -> Result<()> {
-        if !self.state.frozen_subtree_confirmed {
-            self.restore_handler.confirm_or_save_frozen_subtrees(
-                chunk.manifest.first_version,
-                chunk.range_proof.left_siblings(),
-            )?;
-            self.state.frozen_subtree_confirmed = true;
-        }
+    pub async fn run(self) -> Result<()> {
+        println!(
+            "Transaction restore started. Manifest: {}",
+            self.manifest_handle
+        );
+        self.run_impl()
+            .await
+            .map_err(|e| anyhow!("Transaction restore failed: {}", e))?;
+        println!("Transaction restore succeeded.");
         Ok(())
     }
+}
 
-    fn transaction_replayer(&mut self) -> Result<&mut Executor<LibraVM>> {
-        if self.state.transaction_replayer.is_none() {
-            let replayer = Executor::new_on_unbootstrapped_db(
-                DbReaderWriter::from_arc(Arc::clone(&self.restore_handler.libradb)),
-                self.restore_handler
-                    .get_tree_state(self.replay_from_version)?,
-            );
-            self.state.transaction_replayer = Some(replayer);
-        }
-        Ok(self.state.transaction_replayer.as_mut().unwrap())
-    }
-
-    pub async fn run(mut self) -> Result<()> {
+impl TransactionRestoreController {
+    async fn run_impl(mut self) -> Result<()> {
         let manifest: TransactionBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
@@ -216,5 +207,28 @@ impl TransactionRestoreController {
         }
 
         Ok(())
+    }
+
+    fn maybe_save_frozen_subtrees(&mut self, chunk: &LoadedChunk) -> Result<()> {
+        if !self.state.frozen_subtree_confirmed {
+            self.restore_handler.confirm_or_save_frozen_subtrees(
+                chunk.manifest.first_version,
+                chunk.range_proof.left_siblings(),
+            )?;
+            self.state.frozen_subtree_confirmed = true;
+        }
+        Ok(())
+    }
+
+    fn transaction_replayer(&mut self) -> Result<&mut Executor<LibraVM>> {
+        if self.state.transaction_replayer.is_none() {
+            let replayer = Executor::new_on_unbootstrapped_db(
+                DbReaderWriter::from_arc(Arc::clone(&self.restore_handler.libradb)),
+                self.restore_handler
+                    .get_tree_state(self.replay_from_version)?,
+            );
+            self.state.transaction_replayer = Some(replayer);
+        }
+        Ok(self.state.transaction_replayer.as_mut().unwrap())
     }
 }

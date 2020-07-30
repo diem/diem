@@ -131,6 +131,7 @@ impl BackupCoordinator {
             backup_transactions,
         ]);
 
+        println!("Backup coordinator started.");
         loop {
             all_work
                 .next()
@@ -187,7 +188,6 @@ impl BackupCoordinator {
         last_snapshot_version_in_backup: Option<Version>,
         db_state: DbState,
     ) -> Result<Option<Version>> {
-        // FIXME: do real calculation
         let next_snapshot_version = get_next_snapshot(
             last_snapshot_version_in_backup,
             self.state_snapshot_interval,
