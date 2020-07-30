@@ -8,7 +8,7 @@ use backup_cli::{
         state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
         transaction::backup::{TransactionBackupController, TransactionBackupOpt},
     },
-    coordinator::{BackupCoordinator, BackupCoordinatorOpt},
+    coordinators::backup::{BackupCoordinator, BackupCoordinatorOpt},
     metadata::{cache, cache::MetadataCacheOpt},
     storage::StorageOpt,
     utils::{
