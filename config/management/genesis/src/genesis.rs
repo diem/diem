@@ -22,6 +22,8 @@ use vm_genesis::{OperatorAssignment, OperatorRegistration};
 pub struct Genesis {
     #[structopt(flatten)]
     pub config: ConfigPath,
+    #[structopt(long, required_unless("config"))]
+    pub chain_id: Option<ChainId>,
     #[structopt(flatten)]
     pub backend: SharedBackend,
     #[structopt(long)]
@@ -29,6 +31,13 @@ pub struct Genesis {
 }
 
 impl Genesis {
+    fn config(&self) -> Result<libra_management::config::Config, Error> {
+        self.config
+            .load()?
+            .override_chain_id(self.chain_id)
+            .override_shared_backend(&self.backend.shared_backend)
+    }
+
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
         let libra_root_key = self.libra_root_key(&layout)?;
@@ -39,8 +48,9 @@ impl Genesis {
             libra_root_key,
             &operator_assignments,
             &operator_registrations,
-            Some(libra_types::on_chain_config::VMPublishingOption::open()), // TODO: intended?
-            ChainId::test(), // TODO: where should we read this from?
+            // TODO: swap back by 8/15
+            Some(libra_types::on_chain_config::VMPublishingOption::open()),
+            self.config()?.chain_id,
         );
 
         if let Some(path) = self.path {
@@ -61,20 +71,14 @@ impl Genesis {
     /// Retrieves the libra root key from the remote storage. Note, at this point in time, genesis
     /// only supports a single libra root key.
     pub fn libra_root_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_shared_backend(&self.backend.shared_backend)?;
+        let config = self.config()?;
         let storage = config.shared_backend_with_namespace(layout.libra_root[0].clone());
         storage.ed25519_key(LIBRA_ROOT_KEY)
     }
 
     /// Retrieves a layout from the remote storage.
     pub fn layout(&self) -> Result<Layout, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_shared_backend(&self.backend.shared_backend)?;
+        let config = self.config()?;
         let storage = config.shared_backend_with_namespace(constants::COMMON_NS.into());
 
         let layout = storage.string(constants::LAYOUT)?;
@@ -83,10 +87,7 @@ impl Genesis {
 
     /// Produces a set of OperatorAssignments from the remote storage.
     pub fn operator_assignments(&self, layout: &Layout) -> Result<Vec<OperatorAssignment>, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_shared_backend(&self.backend.shared_backend)?;
+        let config = self.config()?;
         let mut operator_assignments = Vec::new();
 
         for owner in layout.owners.iter() {
@@ -112,10 +113,7 @@ impl Genesis {
         &self,
         layout: &Layout,
     ) -> Result<Vec<OperatorRegistration>, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_shared_backend(&self.backend.shared_backend)?;
+        let config = self.config()?;
         let mut registrations = Vec::new();
 
         for operator in layout.operators.iter() {

@@ -287,7 +287,9 @@ pub mod tests {
         // Step 7) Produce genesis
         let genesis_path = libra_temppath::TempPath::new();
         genesis_path.create_as_file().unwrap();
-        helper.genesis(genesis_path.path()).unwrap();
+        helper
+            .genesis(ChainId::test(), genesis_path.path())
+            .unwrap();
         let mut file = File::open(genesis_path.path()).unwrap();
         let mut contents = Vec::new();
         assert!(contents.is_empty());
@@ -296,7 +298,9 @@ pub mod tests {
 
         // Step 9) Verify
         for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
-            helper.create_and_insert_waypoint(ns).unwrap();
+            helper
+                .create_and_insert_waypoint(ChainId::test(), ns)
+                .unwrap();
             helper.verify_genesis(ns, genesis_path.path()).unwrap();
         }
     }

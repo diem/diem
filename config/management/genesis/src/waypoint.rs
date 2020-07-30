@@ -10,7 +10,7 @@ use libra_management::{
 };
 use libra_secure_storage::Value;
 use libra_temppath::TempPath;
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use storage_interface::DbReaderWriter;
@@ -22,6 +22,8 @@ use structopt::StructOpt;
 pub struct CreateWaypoint {
     #[structopt(flatten)]
     config: ConfigPath,
+    #[structopt(long, required_unless("config"))]
+    chain_id: Option<ChainId>,
     #[structopt(flatten)]
     shared_backend: SharedBackend,
 }
@@ -30,6 +32,7 @@ impl CreateWaypoint {
     pub fn execute(self) -> Result<Waypoint, Error> {
         let genesis_helper = crate::genesis::Genesis {
             config: self.config,
+            chain_id: self.chain_id,
             backend: self.shared_backend,
             path: None,
         };
@@ -49,6 +52,8 @@ impl CreateWaypoint {
 
 #[derive(Debug, StructOpt)]
 pub struct CreateAndInsertWaypoint {
+    #[structopt(long, required_unless("config"))]
+    chain_id: Option<ChainId>,
     #[structopt(flatten)]
     config: ConfigPath,
     #[structopt(flatten)]
@@ -60,6 +65,7 @@ pub struct CreateAndInsertWaypoint {
 impl CreateAndInsertWaypoint {
     pub fn execute(self) -> Result<Waypoint, Error> {
         let waypoint = CreateWaypoint {
+            chain_id: self.chain_id,
             config: self.config.clone(),
             shared_backend: self.shared_backend,
         }

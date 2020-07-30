@@ -159,11 +159,14 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
         let genesis_path = TempPath::new();
         genesis_path.create_as_file().unwrap();
-        let genesis = self.storage_helper.genesis(genesis_path.path()).unwrap();
+        let genesis = self
+            .storage_helper
+            .genesis(self.template.base.chain_id, genesis_path.path())
+            .unwrap();
 
         let _ = self
             .storage_helper
-            .create_and_insert_waypoint(&local_ns)
+            .create_and_insert_waypoint(self.template.base.chain_id, &local_ns)
             .unwrap();
         let output = self
             .storage_helper
