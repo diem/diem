@@ -36,11 +36,12 @@ enum OneShotCommand {
 #[derive(StructOpt)]
 enum OneShotQueryType {
     #[structopt(
-        help = "Queries the latest epoch, committed version and synced version of the local Libra node, via the backup service within it."
+        about = "Queries the latest epoch, committed version and synced version of the local Libra \
+        node, via the backup service within it."
     )]
     NodeState(OneShotQueryNodeStateOpt),
     #[structopt(
-        help = "Queries the latest epoch and versions of the existing backups in the storage."
+        about = "Queries the latest epoch and versions of the existing backups in the storage."
     )]
     BackupStorageState(OneShotQueryBackupStorageStateOpt),
 }
