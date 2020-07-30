@@ -62,17 +62,23 @@ impl StorageHelper {
         storage.set(WAYPOINT, Value::String("".into())).unwrap();
     }
 
-    pub fn create_and_insert_waypoint(&self, validator_ns: &str) -> Result<Waypoint, Error> {
+    pub fn create_and_insert_waypoint(
+        &self,
+        chain_id: ChainId,
+        validator_ns: &str,
+    ) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 libra-genesis-tool
                 create-and-insert-waypoint
+                --chain-id {chain_id}
                 --shared-backend backend={backend};\
                     path={path}
                 --validator-backend backend={backend};\
                     path={path};\
                     namespace={validator_ns}\
             ",
+            chain_id = chain_id,
             backend = DISK,
             path = self.path_string(),
             validator_ns = validator_ns,
@@ -82,15 +88,17 @@ impl StorageHelper {
         command.create_and_insert_waypoint()
     }
 
-    pub fn genesis(&self, genesis_path: &Path) -> Result<Transaction, Error> {
+    pub fn genesis(&self, chain_id: ChainId, genesis_path: &Path) -> Result<Transaction, Error> {
         let args = format!(
             "
                 libra-genesis-tool
                 genesis
+                --chain-id {chain_id}
                 --shared-backend backend={backend};\
                     path={path}
                 --path {genesis_path}
             ",
+            chain_id = chain_id,
             backend = DISK,
             path = self.path_string(),
             genesis_path = genesis_path.to_str().expect("Unable to parse genesis_path"),
