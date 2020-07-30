@@ -15,9 +15,9 @@ pub enum Error {
     CommandArgumentError(String),
     #[error("Unable to load config: {0}")]
     ConfigError(String),
-    #[error("Error accessing {0}: {1}")]
+    #[error("Error accessing '{0}': {1}")]
     IO(String, #[source] std::io::Error),
-    #[error("Error (de)serializing {0}: {1}")]
+    #[error("Error (de)serializing '{0}': {1}")]
     LCS(String, #[source] lcs::Error),
     #[error("Failed to read '{0}' from JSON-RPC: {1}")]
     JsonRpcReadError(&'static str, String),
@@ -25,17 +25,17 @@ pub enum Error {
     JsonRpcWriteError(&'static str, String),
     #[error("{0} storage unavailable, please check your configuration: {1}")]
     StorageUnavailable(&'static str, String),
-    #[error("Failed to read, {1}, from {0} storage: {2}")]
+    #[error("Failed to read '{1}' from {0} storage: {2}")]
     StorageReadError(&'static str, &'static str, String),
-    #[error("Failed to sign {1} with {2} using {0} storage: {2}")]
+    #[error("Failed to sign '{1}' with '{2}' using {0} storage: {2}")]
     StorageSigningError(&'static str, &'static str, &'static str, String),
-    #[error("Failed to write, {1}, to {0} storage: {2}")]
+    #[error("Failed to write '{1}' to {0} storage: {2}")]
     StorageWriteError(&'static str, &'static str, String),
-    #[error("Unable to parse, {0}, error {1}")]
+    #[error("Unable to parse '{0}': error: {1}")]
     UnableToParse(&'static str, String),
-    #[error("Unable to parse file, {0}, error {1}")]
+    #[error("Unable to parse file '{0}', error: {1}")]
     UnableToParseFile(String, String),
-    #[error("Unable to read file, {0}, error {1}")]
+    #[error("Unable to read file '{0}', error: {1}")]
     UnableToReadFile(String, String),
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(String, String),
