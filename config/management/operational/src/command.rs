@@ -1,14 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::TransactionContext;
+use crate::{
+    validator_config::DecryptedValidatorConfig, validator_set::DecryptedValidatorInfo,
+    TransactionContext,
+};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::error::Error;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{
-    account_address::AccountAddress, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo,
-};
+use libra_types::account_address::AccountAddress;
+use serde::Serialize;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -108,20 +109,45 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match self {
-            Command::AddValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::InsertWaypoint(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
-            Command::ExtractPrivateKey(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
-            Command::ExtractPublicKey(cmd) => cmd.execute().map(|()| "success".into()).unwrap(),
-            Command::PrintAccount(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RemoveValidator(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RotateConsensusKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RotateOperatorKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RotateFullNodeNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::RotateValidatorNetworkKey(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::SetValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::ValidateTransaction(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::ValidatorConfig(cmd) => format!("{:?}", cmd.execute().unwrap()),
-            Command::ValidatorSet(cmd) => format!("{:?}", cmd.execute().unwrap()),
+            Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
+            Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
+            Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
+            Command::PrintAccount(cmd) => Self::pretty_print(cmd.execute()),
+            Command::RemoveValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::RotateConsensusKey(cmd) => Self::pretty_print(cmd.execute()),
+            Command::RotateOperatorKey(cmd) => Self::pretty_print(cmd.execute()),
+            Command::RotateFullNodeNetworkKey(cmd) => Self::pretty_print(cmd.execute()),
+            Command::RotateValidatorNetworkKey(cmd) => Self::pretty_print(cmd.execute()),
+            Command::SetValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
+            Command::ValidateTransaction(cmd) => Self::pretty_print_option(cmd.execute()),
+            Command::ValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
+            Command::ValidatorSet(cmd) => Self::pretty_print(cmd.execute()),
+        }
+    }
+
+    /// For pretty printing options
+    fn pretty_print_option<T: Serialize>(result: Result<Option<T>, Error>) -> String {
+        match result {
+            Ok(Some(val)) => serde_json::to_string_pretty(&val).unwrap(),
+            Ok(None) => "None".into(),
+            Err(err) => err.to_string(),
+        }
+    }
+
+    /// For pretty printing events that are success or error
+    fn print_success(result: Result<(), Error>) -> String {
+        match result {
+            Ok(_) => "success".into(),
+            Err(err) => err.to_string(),
+        }
+    }
+
+    /// For pretty printing outputs in JSON
+    fn pretty_print<T: Serialize>(result: Result<T, Error>) -> String {
+        match result {
+            Ok(value) => serde_json::to_string_pretty(&value).unwrap(),
+            Err(err) => err.to_string(),
         }
     }
 
@@ -213,14 +239,14 @@ impl Command {
         }
     }
 
-    pub fn validator_config(self) -> Result<ValidatorConfig, Error> {
+    pub fn validator_config(self) -> Result<DecryptedValidatorConfig, Error> {
         match self {
             Command::ValidatorConfig(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
         }
     }
 
-    pub fn validator_set(self) -> Result<Vec<ValidatorInfo>, Error> {
+    pub fn validator_set(self) -> Result<Vec<DecryptedValidatorInfo>, Error> {
         match self {
             Command::ValidatorSet(cmd) => cmd.execute(),
             _ => Err(self.unexpected_command(CommandName::ValidatorSet)),
