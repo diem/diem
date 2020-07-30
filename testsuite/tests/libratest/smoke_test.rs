@@ -1531,7 +1531,6 @@ fn test_consensus_key_rotation() {
 
     // Verify that the validator set info contains the new consensus key
     let info_consensus_key = op_tool.validator_set(validator_account).unwrap()[0]
-        .config
         .consensus_public_key
         .clone();
     assert_eq!(new_consensus_key, info_consensus_key)
@@ -1611,13 +1610,12 @@ fn test_network_key_rotation() {
     let config_network_key = op_tool
         .validator_config(validator_account)
         .unwrap()
-        .validator_network_identity_public_key;
+        .validator_network_key;
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key = op_tool.validator_set(validator_account).unwrap()[0]
-        .config
-        .validator_network_identity_public_key;
+    let info_network_key =
+        op_tool.validator_set(validator_account).unwrap()[0].validator_network_key;
     assert_eq!(new_network_key, info_network_key);
 
     // Restart validator
