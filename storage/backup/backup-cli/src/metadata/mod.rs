@@ -22,11 +22,15 @@ impl Metadata {
     pub fn new_epoch_ending_backup(
         first_epoch: u64,
         last_epoch: u64,
+        first_version: Version,
+        last_version: Version,
         manifest: FileHandle,
     ) -> Self {
         Self::EpochEndingBackup(EpochEndingBackupMeta {
             first_epoch,
             last_epoch,
+            first_version,
+            last_version,
             manifest,
         })
     }
@@ -70,6 +74,8 @@ impl Metadata {
 pub(crate) struct EpochEndingBackupMeta {
     pub first_epoch: u64,
     pub last_epoch: u64,
+    pub first_version: Version,
+    pub last_version: Version,
     pub manifest: FileHandle,
 }
 

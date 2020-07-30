@@ -187,8 +187,13 @@ impl EpochEndingBackupController {
             .write_all(&serde_json::to_vec(&manifest)?)
             .await?;
 
-        let metadata =
-            Metadata::new_epoch_ending_backup(first_epoch, last_epoch, manifest_handle.clone());
+        let metadata = Metadata::new_epoch_ending_backup(
+            first_epoch,
+            last_epoch,
+            manifest.waypoints.first().expect("No waypoints.").version(),
+            manifest.waypoints.last().expect("No waypoints.").version(),
+            manifest_handle.clone(),
+        );
 
         self.storage
             .save_metadata_line(&metadata.name(), &metadata.to_text_line()?)
