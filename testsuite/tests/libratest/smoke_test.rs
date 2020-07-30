@@ -3,7 +3,7 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
-use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend};
+use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend, WaypointConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
 use libra_global_constants::CONSENSUS_KEY;
@@ -14,7 +14,7 @@ use libra_key_manager::{
 };
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_trace::trace::trace_node;
@@ -23,7 +23,7 @@ use libra_types::{
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
     chain_id::ChainId,
     ledger_info::LedgerInfo,
-    transaction::authenticator::AuthenticationKey,
+    transaction::{authenticator::AuthenticationKey, Transaction, WriteSetPayload},
     waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
@@ -32,6 +32,7 @@ use std::{
     collections::BTreeMap,
     convert::TryInto,
     fs,
+    fs::File,
     io::{self, Write},
     path::{Path, PathBuf},
     process::{Command, Stdio},
@@ -39,6 +40,8 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use transaction_builder::encode_remove_validator_and_reconfigure_script;
+use workspace_builder::workspace_root;
 
 const KEY_MANAGER_BIN: &str = "libra-key-manager";
 
@@ -1634,7 +1637,13 @@ fn test_network_key_rotation() {
 }
 
 #[test]
-fn test_sync_only() {
+/// This test verifies the flow of a genesis transaction after the chain starts.
+/// 1. test the consensus sync_only mode, every node should stop at the same version.
+/// 2. test the db-bootstrapper apply a manual genesis transaction (remove validator 0) on libradb directly
+/// 3. test the nodes and clients resume working after updating waypoint
+/// 4. test a node lag behind can sync to the waypoint
+fn test_genesis_transaction_flow() {
+    let db_bootstrapper = workspace_builder::get_bin("db-bootstrapper");
     let mut env = TestEnvironment::new(4);
     println!("1. set sync_only = true for the first node and check it can sync to others");
     let config_path = env.validator_swarm.config.config_files.first().unwrap();
@@ -1642,10 +1651,9 @@ fn test_sync_only() {
     node_config.consensus.sync_only = true;
     node_config.save(config_path).unwrap();
     env.validator_swarm.launch();
-    // 1. test the stopped node still syncs the transaction
-    let mut client_proxy = env.get_validator_client(0, None);
-    client_proxy.create_next_account(false).unwrap();
-    client_proxy
+    let mut client_proxy_0 = env.get_validator_client(0, None);
+    client_proxy_0.create_next_account(false).unwrap();
+    client_proxy_0
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     println!("2. set sync_only = true for all nodes and restart");
@@ -1693,4 +1701,107 @@ fn test_sync_only() {
         );
         sleep(Duration::from_secs(1));
     }
+    println!("5. kill all nodes and prepare a genesis txn to remove validator 0");
+    for index in 0..env.validator_swarm.nodes.len() {
+        env.validator_swarm.kill_node(index);
+    }
+    let validator_address = node_config.validator_network.as_ref().unwrap().peer_id();
+    let genesis_transaction = Transaction::GenesisTransaction(WriteSetPayload::Script {
+        execute_as: libra_root_address(),
+        script: encode_remove_validator_and_reconfigure_script(0, vec![], validator_address),
+    });
+    let genesis_path = TempPath::new();
+    genesis_path.create_as_file().unwrap();
+    let mut file = File::create(genesis_path.path()).unwrap();
+    file.write_all(&lcs::to_bytes(&genesis_transaction).unwrap())
+        .unwrap();
+    println!("6. prepare the waypoint with the transaction");
+    let waypoint_command = Command::new(db_bootstrapper.as_path())
+        .current_dir(workspace_root())
+        .args(&vec![
+            node_config.storage.dir().to_str().unwrap(),
+            "--genesis-txn-file",
+            genesis_path.path().to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    let output = std::str::from_utf8(&waypoint_command.stdout).unwrap();
+    println!("{:?}", output);
+    let waypoint_str = output.split('\n').collect::<Vec<_>>()[1];
+    println!("{}", waypoint_str);
+    println!("7. apply genesis transaction for nodes 1, 2, 3");
+    let set_waypoint = |backend: &SecureBackend| {
+        let mut storage: Storage = backend.into();
+        storage
+            .set(
+                libra_global_constants::WAYPOINT,
+                Value::String(waypoint_str.to_string()),
+            )
+            .expect("Unable to write waypoint");
+    };
+    for (i, config_path) in env
+        .validator_swarm
+        .config
+        .config_files
+        .clone()
+        .iter()
+        .enumerate()
+        .skip(1)
+    {
+        let mut node_config = NodeConfig::load(config_path).unwrap();
+        let output = Command::new(db_bootstrapper.as_path())
+            .current_dir(workspace_root())
+            .args(&vec![
+                node_config.storage.dir().to_str().unwrap(),
+                "--genesis-txn-file",
+                genesis_path.path().to_str().unwrap(),
+                "--waypoint-to-verify",
+                waypoint_str,
+                "--commit",
+            ])
+            .output()
+            .unwrap();
+        println!("Apply transaction for {}, output: {:?}", i, output);
+        assert!(output.status.success());
+        println!("Overwrite the waypoint in safety rules for {}", i);
+        set_waypoint(&node_config.consensus.safety_rules.backend);
+        // reset the sync_only flag to false
+        node_config.consensus.sync_only = false;
+        node_config.save(config_path).unwrap();
+    }
+    for i in 1..4 {
+        env.validator_swarm.add_node(i, false).unwrap();
+    }
+    println!("8. verify it's able to mint after the waypoint");
+    let mut client_proxy_1 =
+        env.get_validator_client(1, Some(Waypoint::from_str(waypoint_str).unwrap()));
+    client_proxy_1.set_accounts(client_proxy_0.copy_all_accounts());
+    client_proxy_1.create_next_account(false).unwrap();
+    client_proxy_1
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
+        .unwrap();
+    println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
+    let op_tool = env.get_op_tool(1);
+    let context = op_tool
+        .add_validator(validator_address, &load_libra_root_storage(&node_config))
+        .unwrap();
+    client_proxy_1
+        .wait_for_transaction(context.address, context.sequence_number)
+        .unwrap();
+    // setup the waypoint for node 0
+    set_waypoint(&node_config.consensus.safety_rules.backend);
+    match &node_config.base.waypoint {
+        WaypointConfig::FromStorage(backend) => {
+            set_waypoint(backend);
+        }
+        _ => panic!("unexpected waypoint from node config"),
+    }
+    env.validator_swarm.add_node(0, false).unwrap();
+    let mut client_proxy_0 =
+        env.get_validator_client(0, Some(Waypoint::from_str(waypoint_str).unwrap()));
+    client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
+    client_proxy_0.create_next_account(false).unwrap();
+    client_proxy_1
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
+        .unwrap();
 }
