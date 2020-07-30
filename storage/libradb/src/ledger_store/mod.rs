@@ -95,14 +95,22 @@ impl LedgerStore {
         })
     }
 
-    /// Gets ledger info at specified version and ensures it's an epoch change.
+    /// Gets ledger info at specified version and ensures it's an epoch ending.
     pub fn get_epoch_ending_ledger_info(
         &self,
         version: Version,
     ) -> Result<LedgerInfoWithSignatures> {
-        let li = self.db.get::<LedgerInfoSchema>(&version)?.ok_or_else(|| {
-            LibraDbError::NotFound(format!("Epoch change LedgerInfo at version {}", version))
-        })?;
+        let epoch = self.get_epoch(version)?;
+        let li = self
+            .db
+            .get::<LedgerInfoSchema>(&epoch)?
+            .ok_or_else(|| LibraDbError::NotFound(format!("LedgerInfo for epoch {}.", epoch)))?;
+        ensure!(
+            li.ledger_info().version() == version,
+            "Epoch {} didn't end at version {}",
+            epoch,
+            version,
+        );
         li.ledger_info()
             .next_epoch_state()
             .ok_or_else(|| format_err!("Not an epoch change at version {}", version))?;
