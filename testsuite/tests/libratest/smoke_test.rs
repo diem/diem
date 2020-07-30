@@ -54,10 +54,10 @@ struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    fn new(num_validators: usize) -> Self {
+    fn new_with_chunk_limit(num_validators: usize, chunk_limit: u64) -> Self {
         ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default_for_validator();
-        template.state_sync.chunk_limit = 5;
+        template.state_sync.chunk_limit = chunk_limit;
 
         let validator_swarm =
             LibraSwarm::configure_validator_swarm(num_validators, None, Some(template)).unwrap();
@@ -82,6 +82,9 @@ impl TestEnvironment {
             libra_root_key: (key, key_path),
             mnemonic_file,
         }
+    }
+    fn new(num_validators: usize) -> Self {
+        Self::new_with_chunk_limit(num_validators, 10)
     }
 
     fn setup_vfn_swarm(&mut self) {
@@ -657,7 +660,12 @@ fn test_basic_state_synchronization() {
     // - Restart the node
     // - Wait for all the nodes to catch up
     // - Verify that the restarted node has synced up with the submitted transactions.
-    let (mut env, mut client_proxy) = setup_swarm_and_client_proxy(5, 1);
+
+    // we set a smaller chunk limit (=5) here to properly test multi-chunk state sync
+    let mut env = TestEnvironment::new_with_chunk_limit(5, 5);
+    env.validator_swarm.launch();
+    let mut client_proxy = env.get_validator_client(1, None);
+
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
