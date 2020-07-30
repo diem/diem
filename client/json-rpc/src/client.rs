@@ -87,6 +87,24 @@ impl JsonRpcBatch {
         );
     }
 
+    pub fn add_get_account_transactions_request(
+        &mut self,
+        account: AccountAddress,
+        start: u64,
+        limit: u64,
+        include_events: bool,
+    ) {
+        self.add_request(
+            "get_account_transactions".to_string(),
+            vec![
+                json!(account.to_string()),
+                json!(start),
+                json!(limit),
+                json!(include_events),
+            ],
+        );
+    }
+
     pub fn add_get_events_request(&mut self, event_key: String, start: u64, limit: u64) {
         self.add_request(
             "get_events".to_string(),
