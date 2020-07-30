@@ -19,7 +19,6 @@
 -  [Specification](#0x1_DesignatedDealer_Specification)
     -  [Resource `TierInfo`](#0x1_DesignatedDealer_Specification_TierInfo)
     -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
-    -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
@@ -518,26 +517,10 @@ that amount that can be minted according to the bounds for the
 
 
 
-TODO(wrwg): times out
+TODO(wrwg): takes a long time but verifies.
 
 
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_Specification_add_currency"></a>
-
-### Function `add_currency`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify_duration_estimate = 80;
 </code></pre>
 
 
@@ -586,13 +569,11 @@ TODO(wrwg): times out
 
 
 
-TODO(wrwg): this currently does not verify. It probably never did as it was timing out in the past
-(which it does not any longer)
 
-
-<pre><code>pragma verify = <b>false</b>;
 <a name="0x1_DesignatedDealer_dealer$11"></a>
-<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+
+
+<pre><code><b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 <a name="0x1_DesignatedDealer_current_time$12"></a>
 <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
 <b>ensures</b> <b>old</b>(dealer.window_start) &lt;= dealer.window_start;

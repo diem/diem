@@ -81,19 +81,6 @@ module RegisteredCurrencies {
 
     // **************** Global Specification ****************
 
-    // spec schema OnlyConfigAddressHasRegisteredCurrencies {
-    //     /// There is no address with a RegisteredCurrencies value before initialization.
-    //     invariant module !spec_is_initialized()
-    //         ==> (forall addr: address: !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
-
-    //     /// *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
-    //     invariant module spec_is_initialized()
-    //         ==> LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
-    //             && (forall addr: address:
-    //                    LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
-    //                               ==> addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
-    // }
-
     spec module {
         pragma verify = true;
 
@@ -103,7 +90,13 @@ module RegisteredCurrencies {
         }
 
         /// Global invariant that currency config is always available after genesis.
-        invariant !spec_is_genesis() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
+        invariant [global] !spec_is_genesis() ==> LibraConfig::spec_is_published<RegisteredCurrencies>();
+
+        /// Global invariant that only LIBRA_ROOT can have a currency registration.
+        invariant [global] !spec_is_genesis() ==> (
+            forall holder: address where exists<LibraConfig::LibraConfig<RegisteredCurrencies>>(holder):
+                holder == CoreAddresses::LIBRA_ROOT_ADDRESS()
+        );
     }
 
 }

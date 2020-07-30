@@ -2652,17 +2652,13 @@ SCS coins
 For an SCS coin, the mint capability cannot move or disappear.
 TODO: Specify that they're published at the one true treasurycompliance address?
 
-
-<a name="0x1_Libra_MintCapabilitySpecs"></a>
-
 If an address has a mint capability, it is an SCS currency.
 
 
-<pre><code><b>schema</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type
-                         where (exists addr3: address : <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3)) :
-                              <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;();
-}
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall coin_type: type
+        where (exists addr3: address : <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3)) :
+        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;();
 </code></pre>
 
 
@@ -2670,27 +2666,23 @@ If there is a pending offer for a mint capability, the coin_type is an SCS curre
 there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
 
 
-<pre><code><b>schema</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type :
-                              <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;()
-                              && (forall addr3: address : !<a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3));
-    <b>invariant</b> <b>module</b> forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall coin_type: type :
+        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;()
+        && (forall addr3: address : !<a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3));
+<b>invariant</b> [<b>global</b>]
+    forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
         forall addr1: address, addr2: address
              where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1) && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr2):
                   addr1 == addr2;
-    <b>ensures</b> forall coin_type: type:
+<b>invariant</b> <b>update</b> [<b>global</b>]
+    forall coin_type: type:
         forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)):
             exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
-    <b>ensures</b> forall coin_type: type:
+<b>invariant</b> [<b>global</b>]
+    forall coin_type: type:
         forall addr1: address where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1):
              <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr1);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_Libra_MintCapabilitySpecs">MintCapabilitySpecs</a> <b>to</b> *&lt;T&gt;, *;
 </code></pre>
 
 

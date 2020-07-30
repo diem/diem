@@ -1002,7 +1002,7 @@ The Limit resource should be published after genesis
 
 
 <pre><code><b>schema</b> <a href="#0x1_DualAttestation_LimitExists">LimitExists</a> {
-    <b>invariant</b> <b>module</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
+    <b>invariant</b> [<b>global</b>] !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 }
 </code></pre>
 

@@ -149,51 +149,38 @@ module RecoveryAddress {
 
     /// ## RecoveryAddress has its own KeyRotationCapability
 
-    spec schema RecoveryAddressHasItsOwnKeyRotationCap {
-        invariant module forall addr1: address
-            where spec_is_recovery_address(addr1):
-                len(spec_get_rotation_caps(addr1)) > 0
-                && spec_get_rotation_caps(addr1)[0].account_address == addr1;
-    }
-
     spec module {
-        apply RecoveryAddressHasItsOwnKeyRotationCap to *;
+        invariant [global]
+            forall addr1: address where spec_is_recovery_address(addr1):
+                len(spec_get_rotation_caps(addr1)) > 0 &&
+                spec_get_rotation_caps(addr1)[0].account_address == addr1;
     }
 
     /// ## RecoveryAddress resource stays
 
-    spec schema RecoveryAddressStays {
-        ensures forall addr1: address:
-            old(spec_is_recovery_address(addr1))
-            ==> spec_is_recovery_address(addr1);
-    }
-
     spec module {
-        apply RecoveryAddressStays to *;
+        invariant update [global]
+           forall addr1: address:
+               old(spec_is_recovery_address(addr1)) ==> spec_is_recovery_address(addr1);
     }
 
     /// ## RecoveryAddress remains same
 
-    spec schema RecoveryAddressRemainsSame {
-        ensures forall recovery_addr: address, to_recovery_addr: address
+    spec module {
+        invariant update [global]
+            forall recovery_addr: address, to_recovery_addr: address
             where old(spec_is_recovery_address(recovery_addr)):
                 old(spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr))
                 ==> spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr);
     }
 
-    spec module {
-        apply RecoveryAddressRemainsSame to *;
-    }
 
     /// ## Only VASPs can be RecoveryAddress
-    spec schema RecoveryAddressIsVASP {
-        invariant module forall recovery_addr: address
-            where spec_is_recovery_address(recovery_addr):
-                VASP::spec_is_vasp(recovery_addr);
-    }
 
     spec module {
-        apply RecoveryAddressIsVASP to *;
+        invariant [global]
+            forall recovery_addr: address where spec_is_recovery_address(recovery_addr):
+                VASP::spec_is_vasp(recovery_addr);
     }
 
     /// # Specifications for individual functions

@@ -407,7 +407,7 @@ module DualAttestation {
 
     /// The Limit resource should be published after genesis
     spec schema LimitExists {
-        invariant module !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
+        invariant [global] !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
     }
 
     spec module {
