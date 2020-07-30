@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use glob::Pattern;
 use x_lint::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -14,7 +15,7 @@ impl Linter for EofNewline {
 
 impl ContentLinter for EofNewline {
     fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
-        Ok(skip_whitespace_checks(file_ctx.extension()))
+        Ok(skip_whitespace_checks(file_ctx))
     }
 
     fn run<'l>(
@@ -44,7 +45,7 @@ impl Linter for TrailingWhitespace {
 
 impl ContentLinter for TrailingWhitespace {
     fn pre_run<'l>(&self, file_ctx: &FileContext<'l>) -> Result<RunStatus<'l>> {
-        Ok(skip_whitespace_checks(file_ctx.extension()))
+        Ok(skip_whitespace_checks(file_ctx))
     }
 
     fn run<'l>(
@@ -80,9 +81,25 @@ impl ContentLinter for TrailingWhitespace {
     }
 }
 
-fn skip_whitespace_checks(ext: Option<&str>) -> RunStatus {
-    match ext {
-        Some("exp") => RunStatus::Skipped(SkipReason::UnsupportedExtension(ext)),
-        _ => RunStatus::Executed,
+fn skip_whitespace_checks<'l>(file: &FileContext<'l>) -> RunStatus<'l> {
+    // glob based opt outs
+    let patterns = [".github/actions/*/dist/*"];
+
+    if let Some(pattern) = patterns
+        .iter()
+        .find(|s| Pattern::new(s).unwrap().matches_path(file.file_path()))
+    {
+        return RunStatus::Skipped(SkipReason::GlobExemption(pattern));
+    };
+
+    // extension based opt outs
+    #[allow(clippy::single_match)]
+    match file.extension() {
+        Some("exp") => {
+            return RunStatus::Skipped(SkipReason::UnsupportedExtension(file.extension()))
+        }
+        _ => (),
     }
+
+    RunStatus::Executed
 }
