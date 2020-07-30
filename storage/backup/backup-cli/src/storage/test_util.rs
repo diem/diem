@@ -9,11 +9,8 @@ use proptest::{
     collection::{hash_map, vec},
     prelude::*,
 };
-use std::collections::HashMap;
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    time::{delay_for, Duration},
-};
+use std::{collections::HashMap, process::Stdio};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn to_file_name(tmpdir: &TempPath, backup_name: &str, file_name: &str) -> String {
     tmpdir
@@ -73,9 +70,9 @@ pub async fn test_save_and_list_metadata_files_impl(
         store.save_metadata_line(name, &content).await.unwrap();
     }
 
-    // It takes a little time for the ls command to reflect newly created entries
+    // It takes a little time for the ls command to reflect newly created entries if not synced.
     // it's not a problem in real world.
-    delay_for(Duration::from_millis(50)).await;
+    sync_fs().await;
 
     let mut read_back = Vec::new();
     for file_handle in store.list_metadata_files().await.unwrap() {
@@ -108,4 +105,15 @@ pub async fn test_save_and_list_metadata_files_impl(
 
 pub fn arb_metadata_files() -> impl Strategy<Value = Vec<(ShellSafeName, TextLine)>> {
     vec(any::<(ShellSafeName, TextLine)>(), 0..10)
+}
+
+async fn sync_fs() {
+    tokio::process::Command::new("sync")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap()
+        .await
+        .unwrap();
 }
