@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod account;
 pub mod command;
 mod governance;
 mod json_rpc;
