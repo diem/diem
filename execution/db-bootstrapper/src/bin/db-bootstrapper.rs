@@ -54,7 +54,7 @@ fn main() -> Result<()> {
     let committer = calculate_genesis::<LibraVM>(&db, tree_state, &genesis_txn)
         .with_context(|| format_err!("Failed to calculate genesis."))?;
     println!("Successfully calculated genesis.");
-    println!("{:?}", committer.waypoint());
+    println!("{}", committer.waypoint());
 
     if let Some(waypoint) = opt.waypoint_to_verify {
         ensure!(

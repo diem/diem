@@ -908,15 +908,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         target: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
-        let target_epoch_and_round = (target.ledger_info().epoch(), target.ledger_info().round());
-        let local_epoch_and_round = (
+        let target_epoch_and_version =
+            (target.ledger_info().epoch(), target.ledger_info().version());
+        let local_epoch_and_version = (
             self.local_state.highest_local_li.ledger_info().epoch(),
-            self.local_state.highest_local_li.ledger_info().round(),
+            self.local_state.highest_local_li.ledger_info().version(),
         );
-        if target_epoch_and_round < local_epoch_and_round {
+        if target_epoch_and_version < local_epoch_and_version {
             warn!(
-                "Ledger info is too old: local epoch/round: {:?}, epoch/round in request: {:?}.",
-                local_epoch_and_round, target_epoch_and_round,
+                "Ledger info is too old: local epoch/version: {:?}, epoch/version in request: {:?}.",
+                local_epoch_and_version, target_epoch_and_version,
             );
             return Ok(());
         }
