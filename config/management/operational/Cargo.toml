@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.31"
 serde = { version = "1.0.114", features = ["rc"], default-features = false }
+serde_json = "1.0.56"
 structopt = "0.3.15"
 thiserror = "1.0.20"
 toml = { version = "0.5.6", default-features = false }

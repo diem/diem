@@ -18,9 +18,10 @@ mod waypoint;
 pub mod test_helper;
 
 use libra_types::account_address::AccountAddress;
+use serde::Serialize;
 
 /// Information for validating a transaction after it's been submitted
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct TransactionContext {
     pub address: AccountAddress,
     pub sequence_number: u64,
