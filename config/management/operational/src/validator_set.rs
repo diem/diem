@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{json_rpc::JsonRpcClientWrapper, validator_config::DecryptedValidatorConfig};
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{config::ConfigPath, error::Error};
-use libra_network_address::encrypted::{Key, TEST_SHARED_VAL_NETADDR_KEY};
+use libra_network_address::{
+    encrypted::{Key, TEST_SHARED_VAL_NETADDR_KEY},
+    NetworkAddress,
+};
 use libra_types::{account_address::AccountAddress, validator_info::ValidatorInfo};
 use serde::Serialize;
 use structopt::StructOpt;
@@ -40,14 +44,12 @@ impl ValidatorSet {
 
 #[derive(Serialize)]
 pub struct DecryptedValidatorInfo {
-    // The validator's account address. AccountAddresses are initially derived from the account
-    // auth pubkey; however, the auth key can be rotated, so one should not rely on this
-    // initial property.
     pub account_address: AccountAddress,
-    // Voting power of this validator
-    pub consensus_voting_power: u64,
-    // Validator config
-    pub config: DecryptedValidatorConfig,
+    pub consensus_public_key: Ed25519PublicKey,
+    pub full_node_network_key: x25519::PublicKey,
+    pub full_node_network_address: NetworkAddress,
+    pub validator_network_key: x25519::PublicKey,
+    pub validator_network_address: NetworkAddress,
 }
 
 impl DecryptedValidatorInfo {
@@ -57,15 +59,20 @@ impl DecryptedValidatorInfo {
         validator_info: &ValidatorInfo,
     ) -> Result<DecryptedValidatorInfo, Error> {
         let account = *validator_info.account_address();
+        let config = DecryptedValidatorConfig::from_validator_config(
+            account,
+            validator_encryption_key,
+            addr_idx,
+            validator_info.config(),
+        )?;
+
         Ok(DecryptedValidatorInfo {
             account_address: account,
-            consensus_voting_power: validator_info.consensus_voting_power(),
-            config: DecryptedValidatorConfig::from_validator_config(
-                account,
-                validator_encryption_key,
-                addr_idx,
-                validator_info.config(),
-            )?,
+            consensus_public_key: config.consensus_public_key,
+            full_node_network_key: config.full_node_network_key,
+            full_node_network_address: config.full_node_network_address,
+            validator_network_key: config.validator_network_key,
+            validator_network_address: config.validator_network_address,
         })
     }
 }
