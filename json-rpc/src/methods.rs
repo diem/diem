@@ -18,7 +18,7 @@ use libra_mempool::MempoolClientSender;
 use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, libra_root_address},
+    account_config::{from_currency_code_string, libra_root_address, AccountResource},
     account_state::AccountState,
     chain_id::ChainId,
     event::EventKey,
@@ -28,7 +28,7 @@ use libra_types::{
 };
 use network::counters;
 use serde_json::Value;
-use std::{collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
+use std::{cmp::min, collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
 use storage_interface::DbReader;
 
 #[derive(Clone)]
@@ -345,6 +345,73 @@ async fn currencies_info(
     }
 }
 
+/// Returns all account transactions
+async fn get_account_transactions(
+    service: JsonRpcService,
+    request: JsonRpcRequest,
+) -> Result<Vec<TransactionView>> {
+    let p_account: String = serde_json::from_value(request.get_param(0))?;
+    let start: u64 = serde_json::from_value(request.get_param(1))?;
+    let limit: u64 = serde_json::from_value(request.get_param(2))?;
+    let include_events: bool = serde_json::from_value(request.get_param(3))?;
+
+    service.validate_page_size_limit(limit as usize)?;
+
+    let account = AccountAddress::try_from(p_account)?;
+    let account_seq = AccountResource::try_from(
+        &service
+            .db
+            .get_latest_account_state(account)?
+            .ok_or_else(|| format_err!("Account doesn't exist"))?,
+    )?
+    .sequence_number();
+
+    if start >= account_seq {
+        return Ok(vec![]);
+    }
+
+    let mut all_txs = vec![];
+    let end = min(
+        start
+            .checked_add(limit)
+            .ok_or_else(|| format_err!("overflow!"))?,
+        account_seq,
+    );
+
+    for seq in start..end {
+        let tx = service
+            .db
+            .get_txn_by_account(account, seq, request.version(), include_events)?
+            .ok_or_else(|| format_err!("Can not find transaction for seq {}!", seq))?;
+
+        let tx_version = tx.version;
+        let events = if include_events {
+            ensure!(
+                tx.events.is_some(),
+                "Storage layer didn't return events when requested!"
+            );
+            tx.events
+                .unwrap_or_default()
+                .into_iter()
+                .map(|x| ((tx_version, x).into()))
+                .collect()
+        } else {
+            vec![]
+        };
+
+        all_txs.push(TransactionView {
+            version: tx.version,
+            hash: tx.transaction.hash().to_hex(),
+            transaction: tx.transaction.into(),
+            events,
+            vm_status: tx.proof.transaction_info().status().into(),
+            gas_used: tx.proof.transaction_info().gas_used(),
+        });
+    }
+
+    Ok(all_txs)
+}
+
 /// Returns proof of new state relative to version known to client
 async fn get_state_proof(
     service: JsonRpcService,
@@ -404,6 +471,13 @@ pub(crate) fn build_registry() -> RpcRegistry {
         "get_account_transaction",
         get_account_transaction,
         3,
+        0
+    );
+    register_rpc_method!(
+        registry,
+        "get_account_transactions",
+        get_account_transactions,
+        4,
         0
     );
     register_rpc_method!(registry, "get_events", get_events, 3, 0);

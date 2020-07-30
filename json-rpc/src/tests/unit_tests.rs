@@ -49,7 +49,13 @@ use move_core_types::{
 };
 use move_vm_types::values::{Struct, Value};
 use proptest::prelude::*;
-use std::{collections::HashMap, convert::TryFrom, str::FromStr, sync::Arc};
+use std::{
+    cmp::{max, min},
+    collections::HashMap,
+    convert::TryFrom,
+    str::FromStr,
+    sync::Arc,
+};
 use storage_interface::DbReader;
 use tokio::runtime::Runtime;
 use vm_validator::{
@@ -624,6 +630,21 @@ fn test_get_account_transaction() {
     }
 }
 
+#[test]
+fn test_get_account_transactions() {
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+
+    for (acc, blob) in mock_db.all_accounts.iter() {
+        let total = AccountResource::try_from(blob).unwrap().sequence_number();
+
+        let mut batch = JsonRpcBatch::default();
+        batch.add_get_account_transactions_request(*acc, 0, max(1, min(1000, total * 2)), true);
+
+        let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
+        let tx_views = TransactionView::vec_from_response(result).unwrap();
+        assert_eq!(tx_views.len() as u64, total);
+    }
+}
 #[test]
 // Check that if version and ledger_version parameters are None, then the server returns the latest
 // known state.
