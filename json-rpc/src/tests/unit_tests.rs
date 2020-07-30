@@ -409,7 +409,34 @@ fn test_limit_batch_size() {
 
     let ret = runtime.block_on(client.execute(batch));
     assert!(ret.is_err());
-    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedBatchSizeLimit(ExceedBatchSizeLimit { limit: 20, batch_request_size: 21 })) }";
+    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 20, size: 21, name: \"batch size\" })) }";
+    assert_eq!(ret.unwrap_err().to_string(), expected)
+}
+
+#[test]
+fn test_get_events_page_limit() {
+    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+
+    let mut batch = JsonRpcBatch::default();
+
+    batch.add_get_events_request("event_key".to_string(), 0, 1001);
+
+    let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
+    assert!(ret.is_err());
+    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 1000, size: 1001, name: \"page size\" })) }";
+    assert_eq!(ret.unwrap_err().to_string(), expected)
+}
+
+#[test]
+fn test_get_transactions_page_limit() {
+    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+
+    let mut batch = JsonRpcBatch::default();
+    batch.add_get_transactions_request(0, 1001, false);
+
+    let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
+    assert!(ret.is_err());
+    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 1000, size: 1001, name: \"page size\" })) }";
     assert_eq!(ret.unwrap_err().to_string(), expected)
 }
 

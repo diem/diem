@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Error, Result};
-use libra_config::config::{RoleType, DEFAULT_BATCH_SIZE_LIMIT};
+use libra_config::config::{RoleType, DEFAULT_BATCH_SIZE_LIMIT, DEFAULT_PAGE_SIZE_LIMIT};
 use libra_crypto::HashValue;
 use libra_mempool::MempoolClientSender;
 use libra_types::{
@@ -41,6 +41,7 @@ pub fn test_bootstrap(
     crate::bootstrap(
         address,
         DEFAULT_BATCH_SIZE_LIMIT,
+        DEFAULT_PAGE_SIZE_LIMIT,
         libra_db,
         mp_sender,
         RoleType::Validator,

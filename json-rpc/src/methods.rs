@@ -3,7 +3,7 @@
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::{
-    errors::{ErrorData, InvalidArguments, JsonRpcError},
+    errors::{ErrorData, ExceedSizeLimit, InvalidArguments, JsonRpcError},
     views::{
         AccountStateWithProofView, AccountView, BlockMetadata, CurrencyInfoView, EventView,
         StateProofView, TransactionView,
@@ -37,7 +37,8 @@ pub(crate) struct JsonRpcService {
     mempool_sender: MempoolClientSender,
     role: RoleType,
     chain_id: ChainId,
-    pub batch_size_limit: u16,
+    batch_size_limit: u16,
+    page_size_limit: u16,
 }
 
 impl JsonRpcService {
@@ -47,6 +48,7 @@ impl JsonRpcService {
         role: RoleType,
         chain_id: ChainId,
         batch_size_limit: u16,
+        page_size_limit: u16,
     ) -> Self {
         Self {
             db,
@@ -54,6 +56,7 @@ impl JsonRpcService {
             role,
             chain_id,
             batch_size_limit,
+            page_size_limit,
         }
     }
 
@@ -63,6 +66,28 @@ impl JsonRpcService {
 
     pub fn chain_id(&self) -> ChainId {
         self.chain_id
+    }
+
+    pub fn validate_batch_size_limit(&self, size: usize) -> Result<(), JsonRpcError> {
+        self.validate_size_limit("batch size", self.batch_size_limit, size)
+    }
+
+    pub fn validate_page_size_limit(&self, size: usize) -> Result<(), JsonRpcError> {
+        self.validate_size_limit("page size", self.page_size_limit, size)
+    }
+
+    fn validate_size_limit(&self, name: &str, limit: u16, size: usize) -> Result<(), JsonRpcError> {
+        if size > limit as usize {
+            Err(JsonRpcError::invalid_request_with_data(Some(
+                ErrorData::ExceedSizeLimit(ExceedSizeLimit {
+                    limit,
+                    size,
+                    name: name.to_string(),
+                }),
+            )))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -189,10 +214,7 @@ async fn get_transactions(
     let limit: u64 = serde_json::from_value(request.get_param(1))?;
     let include_events: bool = serde_json::from_value(request.get_param(2))?;
 
-    ensure!(
-        limit > 0 && limit <= 1000,
-        "limit must be smaller than 1000"
-    );
+    service.validate_page_size_limit(limit as usize)?;
 
     let txs =
         service
@@ -287,6 +309,8 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
     let raw_event_key: String = serde_json::from_value(request.get_param(0))?;
     let start: u64 = serde_json::from_value(request.get_param(1))?;
     let limit: u64 = serde_json::from_value(request.get_param(2))?;
+
+    service.validate_page_size_limit(limit as usize)?;
 
     let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
     let events_with_proof = service.db.get_events(&event_key, start, true, limit)?;
