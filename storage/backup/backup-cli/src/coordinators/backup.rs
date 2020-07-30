@@ -124,6 +124,7 @@ impl BackupCoordinator {
             )
             .boxed_local();
 
+        println!("Backup coordinator started.");
         let mut all_work = stream::select_all(vec![
             watch_db_state,
             backup_epoch_endings,

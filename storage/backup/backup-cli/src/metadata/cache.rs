@@ -21,7 +21,11 @@ use tokio::{
 
 #[derive(StructOpt)]
 pub struct MetadataCacheOpt {
-    #[structopt(long, parse(from_os_str), help = "Metadata cache dir.")]
+    #[structopt(
+        long = "metadata-cache-dir",
+        parse(from_os_str),
+        help = "Metadata cache dir."
+    )]
     dir: Option<PathBuf>,
 }
 

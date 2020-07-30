@@ -70,8 +70,8 @@ impl Metadata {
     }
 }
 
-#[derive(Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct EpochEndingBackupMeta {
+#[derive(Clone, Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
+pub struct EpochEndingBackupMeta {
     pub first_epoch: u64,
     pub last_epoch: u64,
     pub first_version: Version,
@@ -79,14 +79,14 @@ pub(crate) struct EpochEndingBackupMeta {
     pub manifest: FileHandle,
 }
 
-#[derive(Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct StateSnapshotBackupMeta {
+#[derive(Clone, Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
+pub struct StateSnapshotBackupMeta {
     pub version: Version,
     pub manifest: FileHandle,
 }
 
-#[derive(Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
-pub(crate) struct TransactionBackupMeta {
+#[derive(Clone, Deserialize, Serialize, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TransactionBackupMeta {
     pub first_version: Version,
     pub last_version: Version,
     pub manifest: FileHandle,
