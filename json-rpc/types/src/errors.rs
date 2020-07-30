@@ -35,7 +35,7 @@ pub enum ServerCode {
 pub enum ErrorData {
     InvalidArguments(InvalidArguments),
     StatusCode(StatusCode),
-    ExceedBatchSizeLimit(ExceedBatchSizeLimit),
+    ExceedSizeLimit(ExceedSizeLimit),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Copy)]
@@ -53,9 +53,10 @@ pub struct JsonRpcError {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ExceedBatchSizeLimit {
+pub struct ExceedSizeLimit {
     pub limit: u16,
-    pub batch_request_size: usize,
+    pub size: usize,
+    pub name: String,
 }
 
 impl std::error::Error for JsonRpcError {}
