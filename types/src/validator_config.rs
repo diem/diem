@@ -9,7 +9,7 @@ use move_core_types::move_resource::MoveResource;
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct ValidatorConfigResource {
     pub validator_config: Option<ValidatorConfig>,
     pub delegated_account: Option<AccountAddress>,
@@ -19,6 +19,16 @@ pub struct ValidatorConfigResource {
 impl MoveResource for ValidatorConfigResource {
     const MODULE_NAME: &'static str = "ValidatorConfig";
     const STRUCT_NAME: &'static str = "ValidatorConfig";
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Default)]
+pub struct ValidatorOperatorConfigResource {
+    pub human_name: Vec<u8>,
+}
+
+impl MoveResource for ValidatorOperatorConfigResource {
+    const MODULE_NAME: &'static str = "ValidatorOperatorConfig";
+    const STRUCT_NAME: &'static str = "ValidatorOperatorConfig";
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
