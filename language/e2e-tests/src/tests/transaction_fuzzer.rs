@@ -54,6 +54,7 @@ proptest! {
                 .transaction()
                 .script(encode_create_parent_vasp_account_script(
                         account_config::type_tag_for_currency_code(coins[i % coins.len()].clone()),
+                        0,
                         *account.address(),
                         account.auth_key_prefix(),
                         vec![],

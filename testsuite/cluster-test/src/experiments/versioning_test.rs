@@ -165,11 +165,13 @@ impl Experiment for ValidatorVersioning {
 
         info!("5. Send a transaction to activate such feature");
         let mut faucet_account = context.tx_emitter.load_faucet_account(&full_node).await?;
+        let allowed_nonce = 0;
         let update_txn = create_user_txn(
             &faucet_account.key_pair,
-            TransactionPayload::Script(encode_update_libra_version_script(LibraVersion {
-                major: 11,
-            })),
+            TransactionPayload::Script(encode_update_libra_version_script(
+                allowed_nonce,
+                LibraVersion { major: 11 },
+            )),
             faucet_account.address,
             faucet_account.sequence_number,
             123456,

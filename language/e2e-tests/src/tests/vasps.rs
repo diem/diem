@@ -24,6 +24,7 @@ fn valid_creator_already_vasp() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *account.address(),
                 account.auth_key_prefix(),
                 vec![],
@@ -68,6 +69,7 @@ fn max_child_accounts_for_vasp() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *account.address(),
                 account.auth_key_prefix(),
                 vec![],

@@ -11,7 +11,9 @@ use crate::{
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
     libra_timestamp::LibraTimestampResource,
-    on_chain_config::{ConfigurationResource, OnChainConfig, RegisteredCurrencies, ValidatorSet},
+    on_chain_config::{
+        ConfigurationResource, LibraVersion, OnChainConfig, RegisteredCurrencies, ValidatorSet,
+    },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
 use anyhow::{bail, Error, Result};
@@ -130,6 +132,10 @@ impl AccountState {
 
     pub fn get_validator_set(&self) -> Result<Option<ValidatorSet>> {
         self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
+    }
+
+    pub fn get_libra_version(&self) -> Result<Option<LibraVersion>> {
+        self.get_resource(&LibraVersion::CONFIG_ID.access_path().path)
     }
 
     pub fn get_registered_currency_info_resources(

@@ -81,7 +81,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
-//! args: {{vasp}}, {{vasp::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", false
+//! args: 0, {{vasp}}, {{vasp::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", false
 stdlib_script::create_parent_vasp_account
 // check: EXECUTED
 

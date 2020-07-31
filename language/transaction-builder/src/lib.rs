@@ -19,8 +19,12 @@ pub fn encode_modify_publishing_option_script(config: VMPublishingOption) -> Scr
     transaction_builder_generated::stdlib::encode_modify_publishing_option_script(bytes)
 }
 
-pub fn encode_update_libra_version_script(libra_version: LibraVersion) -> Script {
+pub fn encode_update_libra_version_script(
+    sliding_nonce: u64,
+    libra_version: LibraVersion,
+) -> Script {
     transaction_builder_generated::stdlib::encode_update_libra_version_script(
+        sliding_nonce,
         libra_version.major as u64,
     )
 }

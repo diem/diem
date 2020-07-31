@@ -123,8 +123,10 @@ pub enum ScriptCall {
     /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added. This can only be invoked by an Association account.
+    /// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
     CreateParentVaspAccount {
         coin_type: TypeTag,
+        sliding_nonce: u64,
         new_account_address: AccountAddress,
         auth_key_prefix: Bytes,
         human_name: Bytes,
@@ -387,7 +389,8 @@ pub enum ScriptCall {
     },
 
     /// Update Libra version.
-    UpdateLibraVersion { major: u64 },
+    /// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
+    UpdateLibraVersion { sliding_nonce: u64, major: u64 },
 
     /// Allows--true--or disallows--false--minting of `currency` based upon `allow_minting`.
     UpdateMintingAbility {
@@ -461,6 +464,7 @@ impl ScriptCall {
             ),
             CreateParentVaspAccount {
                 coin_type,
+                sliding_nonce,
                 new_account_address,
                 auth_key_prefix,
                 human_name,
@@ -469,6 +473,7 @@ impl ScriptCall {
                 add_all_currencies,
             } => encode_create_parent_vasp_account_script(
                 coin_type,
+                sliding_nonce,
                 new_account_address,
                 auth_key_prefix,
                 human_name,
@@ -665,7 +670,10 @@ impl ScriptCall {
                 new_exchange_rate_numerator,
                 new_exchange_rate_denominator,
             ),
-            UpdateLibraVersion { major } => encode_update_libra_version_script(major),
+            UpdateLibraVersion {
+                sliding_nonce,
+                major,
+            } => encode_update_libra_version_script(sliding_nonce, major),
             UpdateMintingAbility {
                 currency,
                 allow_minting,
@@ -836,8 +844,10 @@ pub fn encode_create_designated_dealer_script(
 /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If
 /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
 /// also be added. This can only be invoked by an Association account.
+/// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 pub fn encode_create_parent_vasp_account_script(
     coin_type: TypeTag,
+    sliding_nonce: u64,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
     human_name: Vec<u8>,
@@ -849,6 +859,7 @@ pub fn encode_create_parent_vasp_account_script(
         CREATE_PARENT_VASP_ACCOUNT_CODE.to_vec(),
         vec![coin_type],
         vec![
+            TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U8Vector(human_name),
@@ -1358,11 +1369,15 @@ pub fn encode_update_exchange_rate_script(
 }
 
 /// Update Libra version.
-pub fn encode_update_libra_version_script(major: u64) -> Script {
+/// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
+pub fn encode_update_libra_version_script(sliding_nonce: u64, major: u64) -> Script {
     Script::new(
         UPDATE_LIBRA_VERSION_CODE.to_vec(),
         vec![],
-        vec![TransactionArgument::U64(major)],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::U64(major),
+        ],
     )
 }
 
@@ -1442,12 +1457,13 @@ fn decode_create_designated_dealer_script(script: &Script) -> Option<ScriptCall>
 fn decode_create_parent_vasp_account_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::CreateParentVaspAccount {
         coin_type: script.ty_args().get(0)?.clone(),
-        new_account_address: decode_address_argument(script.args().get(0)?.clone())?,
-        auth_key_prefix: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        human_name: decode_u8vector_argument(script.args().get(2)?.clone())?,
-        base_url: decode_u8vector_argument(script.args().get(3)?.clone())?,
-        compliance_public_key: decode_u8vector_argument(script.args().get(4)?.clone())?,
-        add_all_currencies: decode_bool_argument(script.args().get(5)?.clone())?,
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        new_account_address: decode_address_argument(script.args().get(1)?.clone())?,
+        auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
+        human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
+        base_url: decode_u8vector_argument(script.args().get(4)?.clone())?,
+        compliance_public_key: decode_u8vector_argument(script.args().get(5)?.clone())?,
+        add_all_currencies: decode_bool_argument(script.args().get(6)?.clone())?,
     })
 }
 
@@ -1673,7 +1689,8 @@ fn decode_update_exchange_rate_script(script: &Script) -> Option<ScriptCall> {
 
 fn decode_update_libra_version_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::UpdateLibraVersion {
-        major: decode_u64_argument(script.args().get(0)?.clone())?,
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        major: decode_u64_argument(script.args().get(1)?.clone())?,
     })
 }
 
@@ -1969,12 +1986,14 @@ const CREATE_DESIGNATED_DEALER_CODE: &[u8] = &[
 ];
 
 const CREATE_PARENT_VASP_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 17, 7, 27, 40, 8, 67, 16, 0,
-    0, 0, 1, 0, 1, 1, 1, 0, 2, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 1, 0, 1, 9, 0, 12, 76, 105,
-    98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 26, 99, 114, 101, 97, 116, 101, 95, 112, 97, 114,
-    101, 110, 116, 95, 118, 97, 115, 112, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 9, 11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11, 5, 10, 6, 56,
-    0, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 35, 7, 52, 75, 8, 127, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 7, 6, 12, 5, 10, 2, 10, 2,
+    10, 2, 10, 2, 1, 8, 6, 12, 3, 5, 10, 2, 10, 2, 10, 2, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114,
+    97, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
+    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
+    111, 114, 116, 26, 99, 114, 101, 97, 116, 101, 95, 112, 97, 114, 101, 110, 116, 95, 118, 97,
+    115, 112, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+    1, 1, 3, 1, 12, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 11, 5, 11, 6, 10, 7, 56, 0, 2,
 ];
 
 const CREATE_RECOVERY_ADDRESS_CODE: &[u8] = &[
@@ -2287,9 +2306,12 @@ const UPDATE_EXCHANGE_RATE_CODE: &[u8] = &[
 ];
 
 const UPDATE_LIBRA_VERSION_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 17, 8, 29, 16, 0, 0, 0, 1,
-    0, 1, 0, 2, 6, 12, 3, 0, 12, 76, 105, 98, 114, 97, 86, 101, 114, 115, 105, 111, 110, 3, 115,
-    101, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 10, 7, 24, 52, 8, 76, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 0, 1, 0, 2, 6, 12, 3, 0, 3, 6, 12, 3, 3, 12, 76, 105, 98, 114, 97, 86,
+    101, 114, 115, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 3,
+    115, 101, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
+    97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 7, 10, 0, 10,
+    1, 17, 1, 11, 0, 10, 2, 17, 0, 2,
 ];
 
 const UPDATE_MINTING_ABILITY_CODE: &[u8] = &[
