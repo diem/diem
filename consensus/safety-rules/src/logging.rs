@@ -45,6 +45,8 @@ pub enum LogEvent {
     Request,
     Success,
     Update,
+    // lwg: hack
+    Enter,
 }
 
 impl LogEvent {
