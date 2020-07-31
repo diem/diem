@@ -45,6 +45,7 @@ fn freeze_unfreeze_account() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *account.address(),
                 account.auth_key_prefix(),
                 vec![],
@@ -110,6 +111,7 @@ fn create_parent_and_child_vasp() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
+                0,
                 *parent.address(),
                 parent.auth_key_prefix(),
                 vec![],
@@ -176,6 +178,7 @@ fn create_child_vasp_all_currencies() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *parent.address(),
                 parent.auth_key_prefix(),
                 vec![],
@@ -255,6 +258,7 @@ fn create_child_vasp_with_balance() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *parent.address(),
                 parent.auth_key_prefix(),
                 vec![],
@@ -335,6 +339,7 @@ fn dual_attestation_payment() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *payment_sender.address(),
                 payment_sender.auth_key_prefix(),
                 vec![],
@@ -351,6 +356,7 @@ fn dual_attestation_payment() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *payment_receiver.address(),
                 payment_receiver.auth_key_prefix(),
                 vec![],
@@ -648,6 +654,7 @@ fn dd_dual_attestation_payments() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *parent_vasp.address(),
                 parent_vasp.auth_key_prefix(),
                 vec![],
@@ -856,6 +863,7 @@ fn recovery_address() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
+                0,
                 *parent.address(),
                 parent.auth_key_prefix(),
                 vec![],
@@ -944,6 +952,7 @@ fn recovery_address() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
+                0,
                 *other_vasp.address(),
                 other_vasp.auth_key_prefix(),
                 vec![],
@@ -1012,6 +1021,7 @@ fn account_limits() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *vasp_a.address(),
                 vasp_a.auth_key_prefix(),
                 vec![],
@@ -1028,6 +1038,7 @@ fn account_limits() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *vasp_b.address(),
                 vasp_b.auth_key_prefix(),
                 vec![],
@@ -1581,6 +1592,7 @@ fn add_child_currencies() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *vasp_a.address(),
                 vasp_a.auth_key_prefix(),
                 vec![],
@@ -1676,6 +1688,7 @@ fn add_child_currencies() {
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *vasp_b.address(),
                 vasp_b.auth_key_prefix(),
                 vec![],

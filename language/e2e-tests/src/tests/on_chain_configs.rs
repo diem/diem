@@ -32,7 +32,7 @@ fn initial_libra_version() {
         .script(Script::new(
             StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
             vec![],
-            vec![TransactionArgument::U64(2)],
+            vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))
         .sequence_number(1)
         .sign();
@@ -62,7 +62,7 @@ fn drop_txn_after_reconfiguration() {
         .script(Script::new(
             StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
             vec![],
-            vec![TransactionArgument::U64(2)],
+            vec![TransactionArgument::U64(0), TransactionArgument::U64(2)],
         ))
         .sequence_number(1)
         .sign();
