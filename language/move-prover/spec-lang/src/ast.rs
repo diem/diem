@@ -387,6 +387,9 @@ pub enum Operation {
     MaxU8,
     MaxU64,
     MaxU128,
+
+    // Operation with no effect
+    NoOp,
 }
 
 #[derive(Debug, Clone, PartialEq)]

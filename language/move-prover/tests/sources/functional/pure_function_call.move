@@ -8,19 +8,22 @@ module TestPureFun {
 
     public fun init(lr_account: &signer): bool {
         assert(Signer::address_of(lr_account) == 0xA550C18, 0);
-        move_to(lr_account, T { x: 0 });
+        move_to(lr_account, T { x: 2 });
         false
     }
 
     spec fun init {
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::LIBRA_ROOT_ADDRESS();
         aborts_if exists<T>(Signer::spec_address_of(lr_account));
-        ensures lr_x() == 0;
+        ensures lr_x() == pure_f_2();
     }
 
     public fun get_x(addr: address): u64 acquires T {
+        assert(exists<T>(addr), 10);
+        assert(true, 0); // assertions are ignored when translating move funs to spec funs.
         *&borrow_global<T>(addr).x
     }
+
 
     public fun get_x_plus_one(addr: address): u64 acquires T {
         get_x(addr) + 1
@@ -34,6 +37,18 @@ module TestPureFun {
     spec fun increment_x {
         ensures get_x(addr) == old(get_x(addr)) + 1;
         ensures get_x(addr) == old(get_x_plus_one(addr));
+    }
+
+    public fun pure_f_2(): u64 {
+        pure_f_1() + 1
+    }
+
+    public fun pure_f_1(): u64 {
+        pure_f_0() + 1
+    }
+
+    public fun pure_f_0(): u64 {
+        0
     }
 
     spec module {

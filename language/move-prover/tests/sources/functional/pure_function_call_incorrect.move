@@ -28,11 +28,31 @@ module TestPureFun {
     }
 
     spec fun increment_x_incorrect {
-        // error: calling impure function `init` is disallowed.
+        // error: calling impure function `init` is not allowed.
         aborts_if !init(account);
     }
 
+    /// impure function
+    public fun impure_f_0(): u64 {
+        if (true) { abort 42 };
+        0
+    }
+
+    public fun impure_f_1(): u64 {
+        impure_f_0() + 1
+    }
+
+    /// pure-looking function which indirectly calls an impure function
+    public fun impure_f_2(): u64 {
+        impure_f_1() + 1
+    }
+
     spec module {
+        define two(): u64 {
+            // error: calling impure function `impure_f_2` is not allowed.
+            impure_f_2()
+        }
+
         define lr_x(): u64 {
             get_x(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }

@@ -171,9 +171,9 @@ module LibraAccount {
     spec module {
         define spec_should_track_limits_for_account(payer: address, payee: address, is_withdrawal: bool): bool {
             if (is_withdrawal) {
-                VASP::spec_is_vasp(payer) && (!VASP::spec_is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
+                VASP::is_vasp(payer) && (!VASP::is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
             } else {
-                VASP::spec_is_vasp(payee) && (!VASP::spec_is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
+                VASP::is_vasp(payee) && (!VASP::is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
             }
         }
     }

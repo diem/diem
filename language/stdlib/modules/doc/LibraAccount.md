@@ -2013,9 +2013,9 @@ a writeset transaction is committed.
 
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool {
     <b>if</b> (is_withdrawal) {
-        <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
     } <b>else</b> {
-        <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payee, payer))
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payee, payer))
     }
 }
 </code></pre>

@@ -7,3 +7,12 @@ error: calling impure function `TestPureFun::init` is not allowed
     │                    ^^^^^^^^^^^^^
     │
     = impure function `TestPureFun::init(&signer): bool`
+
+error: calling impure function `TestPureFun::impure_f_2` is not allowed
+
+    ┌── tests/sources/functional/pure_function_call_incorrect.move:53:13 ───
+    │
+ 53 │             impure_f_2()
+    │             ^^^^^^^^^^^^
+    │
+    = impure function `TestPureFun::impure_f_2(): u64`
