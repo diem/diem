@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1595918359539,
+  "iteration": 1596217357392,
   "links": [],
   "panels": [
     {
@@ -39,6 +39,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -133,6 +139,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -228,6 +240,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 5,
       "fillGradient": 0,
       "gridPos": {
@@ -323,6 +341,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -358,8 +382,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(\n    irate(schemadb_duration_count{op=~\"db_batch_commit_bytes_.*\"}[1m]),\n    \"db\", \"$1\", \"op\", \"db_batch_commit_bytes_(.*)\"\n)",
-          "legendFormat": "{{peer_id}} {{db}}",
+          "expr": "irate(libra_schemadb_batch_commit_bytes_count[1m])",
+          "interval": "",
+          "legendFormat": "{{peer_id}} {{db_name}}",
           "refId": "A"
         }
       ],
@@ -410,6 +435,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -445,8 +476,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(\n    irate(schemadb_duration_sum{op=~\"db_batch_commit_bytes_.*\"}[1m]),\n    \"db\", \"$1\", \"op\", \"db_batch_commit_bytes_(.*)\"\n)",
-          "legendFormat": "{{peer_id}} {{db}}",
+          "expr": "irate(libra_schemadb_batch_commit_bytes_sum[1m])",
+          "interval": "",
+          "legendFormat": "{{peer_id}} {{db_name}}",
           "refId": "A"
         }
       ],
@@ -497,6 +529,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -532,7 +570,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(\n    schemadb_duration_sum{op=~\"db_batch_commit_bytes_.*\"} / schemadb_duration_count{op=~\"db_batch_commit_bytes_.*\"},\n    \"db\", \"$1\", \"op\", \"db_batch_commit_bytes_(.*)\"\n)",
+          "expr": "rate(libra_schemadb_batch_commit_bytes_sum[1m])/rate(libra_schemadb_batch_commit_bytes_count[1m])",
+          "interval": "",
           "legendFormat": "{{peer_id}} {{db}}",
           "refId": "A"
         }
@@ -598,6 +637,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -644,7 +689,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "storage_gauge{op='cf_size_bytes_$cf_name'}",
+          "expr": "libra_storage_cf_size_bytes{cf_name=\"$cf_name\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -699,6 +744,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -732,7 +783,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -802,6 +853,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -835,7 +892,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -905,6 +962,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -938,7 +1001,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1008,6 +1071,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1041,7 +1110,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1111,6 +1180,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1144,7 +1219,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1214,6 +1289,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1247,7 +1328,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1317,6 +1398,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1350,7 +1437,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1420,6 +1507,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1453,7 +1546,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1523,6 +1616,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1556,7 +1655,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1626,6 +1725,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1659,7 +1764,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1729,6 +1834,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1762,7 +1873,7 @@
       "renderer": "flot",
       "repeat": null,
       "repeatDirection": "h",
-      "repeatIteration": 1595918359539,
+      "repeatIteration": 1596217357392,
       "repeatPanelId": 4,
       "scopedVars": {
         "cf_name": {
@@ -1846,6 +1957,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1882,7 +1999,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(irate(libra_storage_ledger{type=\"new_state_leaves\"}[10m]) / ignoring(type) irate(libra_storage_latest_transaction_version[10m]))",
+          "expr": "max(irate(libra_storage_ledger{type=\"new_state_leaves\"}[1m]) / ignoring(type) irate(libra_storage_latest_transaction_version[1m]))",
           "interval": "",
           "legendFormat": "accounts/txn",
           "refId": "A"
@@ -1935,6 +2052,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1971,7 +2094,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(irate(libra_storage_ledger{type=\"events_created\"}[10m]) / on(peer_id) irate(libra_storage_latest_transaction_version[10m]))",
+          "expr": "max(rate(libra_storage_ledger{type=\"events_created\"}[10m]) / on(peer_id) rate(libra_storage_latest_transaction_version[10m]))",
           "interval": "",
           "legendFormat": "events/txn",
           "refId": "A"
@@ -2024,6 +2147,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -2060,7 +2189,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max(irate(libra_storage_ledger{type=\"new_state_nodes\"}[10m]) / ignoring(type) irate(libra_storage_ledger{type=\"new_state_leaves\"}[10m])) - 1",
+          "expr": "max(irate(libra_storage_ledger{type=\"new_state_nodes\"}[1m]) / ignoring(type) irate(libra_storage_ledger{type=\"new_state_leaves\"}[1m])) - 1",
           "interval": "",
           "legendFormat": "internal nodes/accounts",
           "refId": "A"
@@ -2113,6 +2242,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -2149,11 +2284,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "label_replace(\n    avg by(op)(rate(schemadb_duration_sum{op=~\"db_put_bytes_.*\"}[10m])) / avg by(op)(rate(schemadb_duration_count{op=~\"db_put_bytes_.*\"}[10m])),\n    \"cf\", \"$1\", \"op\", \"db_put_bytes_(.*)\"\n)",
+          "expr": "avg by(cf_name)(rate(libra_schemadb_put_bytes_sum[10m])) / avg by(cf_name)(rate(libra_schemadb_put_bytes_count[10m]))",
           "format": "time_series",
           "hide": false,
+          "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{cf}}",
+          "legendFormat": "{{cf_name}}",
           "refId": "A"
         }
       ],
@@ -3413,7 +3549,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 22,
+  "schemaVersion": 25,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -3421,6 +3557,7 @@
       {
         "allValue": null,
         "current": {
+          "selected": true,
           "text": "All",
           "value": [
             "$__all"
@@ -3430,7 +3567,6 @@
         "definition": "storage_gauge",
         "hide": 0,
         "includeAll": true,
-        "index": -1,
         "label": null,
         "multi": true,
         "name": "cf_name",
@@ -3449,6 +3585,7 @@
       {
         "allValue": null,
         "current": {
+          "selected": true,
           "text": "All",
           "value": [
             "$__all"
@@ -3458,7 +3595,6 @@
         "definition": "libra_storage_api_latency_seconds_count",
         "hide": 0,
         "includeAll": true,
-        "index": -1,
         "label": null,
         "multi": true,
         "name": "api_name",
@@ -3508,8 +3644,5 @@
   "timezone": "",
   "title": "Storage",
   "uid": "2Q0p7AVWk",
-  "variables": {
-    "list": []
-  },
   "version": 1
 }
