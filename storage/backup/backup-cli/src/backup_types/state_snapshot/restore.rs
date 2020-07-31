@@ -44,7 +44,7 @@ impl StateSnapshotRestoreController {
             restore_handler,
             version: opt.version,
             manifest_handle: opt.manifest_handle,
-            target_version: global_opt.target_version,
+            target_version: global_opt.target_version(),
         }
     }
 

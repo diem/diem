@@ -56,7 +56,7 @@ fn end_to_end() {
             EpochEndingRestoreOpt { manifest_handle },
             GlobalRestoreOpt {
                 db_dir: PathBuf::new(),
-                target_version,
+                target_version: Some(target_version),
             },
             store,
             Arc::new(tgt_db.get_restore_handler()),

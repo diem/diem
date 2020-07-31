@@ -28,10 +28,18 @@ pub struct TransactionRestoreOpt {
     #[structopt(long = "transaction-manifest")]
     pub manifest_handle: FileHandle,
     #[structopt(
-        long = "replay-transaction-from-version",
-        default_value = "Version::max_value()"
+        long = "replay-transactions-from-version",
+        help = "Transactions with this version and above will be replayed so state and events are \
+        gonna pop up. Requires state at the version right before this to exist, either by \
+        recovering a state snapshot, or previous transaction replay."
     )]
-    pub replay_from_version: Version,
+    pub replay_from_version: Option<Version>,
+}
+
+impl TransactionRestoreOpt {
+    pub fn replay_from_version(&self) -> Version {
+        self.replay_from_version.unwrap_or(Version::max_value())
+    }
 }
 
 pub struct TransactionRestoreController {
@@ -116,9 +124,9 @@ impl TransactionRestoreController {
         Self {
             storage,
             restore_handler,
+            replay_from_version: opt.replay_from_version(),
             manifest_handle: opt.manifest_handle,
-            target_version: global_opt.target_version,
-            replay_from_version: opt.replay_from_version,
+            target_version: global_opt.target_version(),
             state: State::default(),
         }
     }
