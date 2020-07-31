@@ -5,8 +5,8 @@ async function main() {
   try {
     const github_token = core.getInput("github-token", {required: true});
     const number = core.getInput("number", {required: true});
-    const add_labels = core.getInput("add", {required: true});
-    const remove_labels = core.getInput("remove", {required: true});
+    const add_labels = core.getInput("add", {required: false});
+    const remove_labels = core.getInput("remove", {required: false});
 
     if (!add_labels && !remove_labels) {
       core.warning("add and remove fields both empty");
