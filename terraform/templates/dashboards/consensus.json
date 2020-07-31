@@ -2381,7 +2381,14 @@
           "format": "time_series",
           "legendFormat": "{{peer_id}} ",
           "refId": "A"
+        },
+        {
+          "expr": "irate(consensus_duration_sum{op='safety_rules_init'}[1m]) / irate(consensus_duration_count{op='safety_rules_init'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
         }
+
       ],
       "thresholds": [],
       "timeFrom": null,
