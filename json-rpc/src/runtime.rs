@@ -24,10 +24,6 @@ use warp::{
 
 // Counter labels for runtime metrics
 const LABEL_FAIL: &str = "fail";
-const LABEL_INVALID_FORMAT: &str = "invalid_format";
-const LABEL_INVALID_METHOD: &str = "invalid_method";
-const LABEL_INVALID_PARAMS: &str = "invalid_params";
-const LABEL_MISSING_METHOD: &str = "method_not_found";
 const LABEL_SUCCESS: &str = "success";
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
@@ -139,7 +135,7 @@ async fn rpc_endpoint(
             }
             Err(err) => {
                 let mut resp = Map::new();
-                resp.insert("error".to_string(), err.serialize());
+                set_response_error(&mut resp, err);
 
                 warp::reply::json(&resp)
             }
@@ -187,11 +183,7 @@ async fn rpc_request_handler(
             request = data;
         }
         _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_request(),
-                Some(LABEL_INVALID_FORMAT),
-            );
+            set_response_error(&mut response, JsonRpcError::invalid_format());
             return Value::Object(response);
         }
     }
@@ -202,14 +194,14 @@ async fn rpc_request_handler(
             response.insert("id".to_string(), request_id);
         }
         Err(err) => {
-            set_response_error(&mut response, err, Some(LABEL_INVALID_FORMAT));
+            set_response_error(&mut response, err);
             return Value::Object(response);
         }
     };
 
     // verify protocol version
     if let Err(err) = verify_protocol(&request) {
-        set_response_error(&mut response, err, Some(LABEL_INVALID_FORMAT));
+        set_response_error(&mut response, err);
         return Value::Object(response);
     }
 
@@ -220,11 +212,7 @@ async fn rpc_request_handler(
             params = parameters.to_vec();
         }
         _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_params(None),
-                Some(LABEL_INVALID_PARAMS),
-            );
+            set_response_error(&mut response, JsonRpcError::invalid_params(None));
             return Value::Object(response);
         }
     }
@@ -246,12 +234,11 @@ async fn rpc_request_handler(
                 Err(err) => {
                     // check for custom error
                     if let Some(custom_error) = err.downcast_ref::<JsonRpcError>() {
-                        set_response_error(&mut response, custom_error.clone(), None);
+                        set_response_error(&mut response, custom_error.clone());
                     } else {
                         set_response_error(
                             &mut response,
                             JsonRpcError::internal_error(err.to_string()),
-                            None,
                         );
                     }
                     counters::REQUESTS
@@ -260,19 +247,11 @@ async fn rpc_request_handler(
                 }
             },
             None => {
-                set_response_error(
-                    &mut response,
-                    JsonRpcError::method_not_found(),
-                    Some(LABEL_MISSING_METHOD),
-                );
+                set_response_error(&mut response, JsonRpcError::method_not_found());
             }
         },
         _ => {
-            set_response_error(
-                &mut response,
-                JsonRpcError::invalid_request(),
-                Some(LABEL_INVALID_METHOD),
-            );
+            set_response_error(&mut response, JsonRpcError::method_not_found());
         }
     }
 
@@ -281,10 +260,21 @@ async fn rpc_request_handler(
 
 // Sets the JSON RPC error value for a given response.
 // If a counter label is supplied, also increments the invalid request counter using the label,
-fn set_response_error(response: &mut Map<String, Value>, error: JsonRpcError, label: Option<&str>) {
+fn set_response_error(response: &mut Map<String, Value>, error: JsonRpcError) {
+    let err_code = error.code;
     response.insert("error".to_string(), error.serialize());
 
-    if let Some(label) = label {
+    if err_code <= -32000 && err_code >= -32099 {
+        counters::INTERNAL_ERRORS.inc();
+    } else {
+        let label = match err_code {
+            -32600 => "invalid_request",
+            -32601 => "method_not_found",
+            -32602 => "invalid_params",
+            -32603 => "invalid_format",
+            -32700 => "parse_error",
+            _ => "unexpected_code",
+        };
         counters::INVALID_REQUESTS.with_label_values(&[label]).inc();
     }
 }
@@ -295,7 +285,7 @@ fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError>
             if req_id.is_string() || req_id.is_number() || req_id.is_null() {
                 Ok(req_id.clone())
             } else {
-                Err(JsonRpcError::invalid_request())
+                Err(JsonRpcError::invalid_format())
             }
         }
         None => Ok(Value::Null),
