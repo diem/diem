@@ -28,11 +28,17 @@ pub struct GlobalRestoreOpt {
     #[structopt(long = "target-db-dir", parse(from_os_str))]
     pub db_dir: PathBuf,
     #[structopt(
-        long = "target-version",
-        default_value = "Version::max_value()",
-        help = "Content newer than this version will not be recovered to DB."
+        long,
+        help = "Content newer than this version will not be recovered to DB, \
+        defaulting to the largest version possible, meaning recover everything in the backups."
     )]
-    pub target_version: Version,
+    pub target_version: Option<Version>,
+}
+
+impl GlobalRestoreOpt {
+    pub fn target_version(&self) -> Version {
+        self.target_version.unwrap_or(Version::max_value())
+    }
 }
 
 pub(crate) fn should_cut_chunk(chunk: &[u8], record: &[u8], max_chunk_size: usize) -> bool {

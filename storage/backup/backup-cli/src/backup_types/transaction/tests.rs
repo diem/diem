@@ -74,11 +74,11 @@ fn end_to_end() {
         TransactionRestoreController::new(
             TransactionRestoreOpt {
                 manifest_handle,
-                replay_from_version: Version::max_value(),
+                replay_from_version: None, // max
             },
             GlobalRestoreOpt {
                 db_dir: PathBuf::new(),
-                target_version,
+                target_version: Some(target_version),
             },
             store,
             Arc::new(tgt_db.get_restore_handler()),

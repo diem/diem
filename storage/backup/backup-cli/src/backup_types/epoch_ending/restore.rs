@@ -38,7 +38,7 @@ impl EpochEndingRestoreController {
             storage,
             restore_handler,
             manifest_handle: opt.manifest_handle,
-            target_version: global_opt.target_version,
+            target_version: global_opt.target_version(),
         }
     }
 

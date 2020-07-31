@@ -107,7 +107,7 @@ fn test_end_to_end_impl(d: TestData) {
     // Restore
     let global_restore_opt = GlobalRestoreOpt {
         db_dir: PathBuf::new(), // doesn't matter, we opened storage above manually.
-        target_version: d.target_ver,
+        target_version: Some(d.target_ver),
     };
     if let Some(version) = d.state_snapshot_ver {
         rt.block_on(
@@ -128,7 +128,9 @@ fn test_end_to_end_impl(d: TestData) {
         TransactionRestoreController::new(
             TransactionRestoreOpt {
                 manifest_handle: txn_manifest,
-                replay_from_version: d.state_snapshot_ver.unwrap_or(Version::max_value() - 1) + 1,
+                replay_from_version: Some(
+                    d.state_snapshot_ver.unwrap_or(Version::max_value() - 1) + 1,
+                ),
             },
             global_restore_opt,
             store,
