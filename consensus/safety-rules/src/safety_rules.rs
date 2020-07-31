@@ -405,9 +405,9 @@ impl TSafetyRules for SafetyRules {
         &mut self,
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
-        // lwg: hack 
+        // lwg: hack
         send_struct_log!(
-                logging::safety_log(LogEntry::ConstructAndSignProposal, LogEvent::Enter)
+                logging::safety_log(LogEntry::ConstructAndSignVote, LogEvent::Enter)
                     .data(LogField::Message.as_str(), "construct & sign enter")
         );
         let round = maybe_signed_vote_proposal.vote_proposal.block().round();

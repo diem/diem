@@ -56,6 +56,7 @@ impl LogEvent {
             LogEvent::Request => "request",
             LogEvent::Success => "success",
             LogEvent::Update => "update",
+            LogEvent::Enter => "enter",
         }
     }
 }
