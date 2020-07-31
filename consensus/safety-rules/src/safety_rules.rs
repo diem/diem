@@ -25,6 +25,7 @@ use libra_crypto::{
     traits::Signature,
 };
 use libra_logger::prelude::*;
+use libra_trace::prelude::*;
 use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
     ledger_info::LedgerInfo, validator_signer::ValidatorSigner, waypoint::Waypoint,
@@ -406,13 +407,11 @@ impl TSafetyRules for SafetyRules {
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
         // lwg: hack
-        send_struct_log!(
-                logging::safety_log(LogEntry::ConstructAndSignVote, LogEvent::Enter)
-                    .data(LogField::Message.as_str(), "construct & sign enter")
-        );
         let round = maybe_signed_vote_proposal.vote_proposal.block().round();
+        trace_code_block!("safety_rules::construct_and_sign_vote", {"round", round});
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_construct_and_sign_vote(maybe_signed_vote_proposal);
+        // lwg: this marks the end
         run_and_log(
             cb,
             &COUNTERS.construct_and_sign_vote_request,
