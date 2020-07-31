@@ -66,12 +66,14 @@ commands:
       - run:
           name: Set cargo Environment
           command: |
+            # Turn on the experimental feature resolver in cargo. See:
             # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
             export CARGOFLAGS=$(cat cargo-flags)
             echo 'export CARGOFLAGS='${CARGOFLAGS} >> $BASH_ENV
             # Use nightly version of cargo to access the new feature resolver
-            echo 'export CARGO=$(rustup which cargo --toolchain $RUST_NIGHTLY)' >> $BASH_ENV
-            # Turn on the experimental feature resolver in cargo. See:
+            echo 'export CARGO="$(rustup which cargo --toolchain $RUST_NIGHTLY)"' >> $BASH_ENV
+            # Pin the version of RUSTC used for all invocations of cargo
+            echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
   install_docker_linter:
     steps:
       - run:
