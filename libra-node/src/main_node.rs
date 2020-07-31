@@ -16,11 +16,14 @@ use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
+use libra_types::{
+    account_config::libra_root_address, account_state::AccountState, chain_id::ChainId,
+};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network_builder::builder::NetworkBuilder;
 use state_synchronizer::StateSynchronizer;
-use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
+use std::{boxed::Box, convert::TryFrom, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
 use tokio::runtime::{Builder, Runtime};
@@ -36,6 +39,21 @@ pub struct LibraHandle {
     _consensus_runtime: Option<Runtime>,
     _debug: NodeDebugService,
     _backup: Runtime,
+}
+
+// Fetch chain ID from on-chain resource
+fn fetch_chain_id(db: &DbReaderWriter) -> ChainId {
+    let blob = db
+        .reader
+        .get_latest_account_state(libra_root_address())
+        .expect("[libra-node] failed to get Libra root address account state")
+        .expect("[libra-node] missing Libra root address account state");
+    AccountState::try_from(&blob)
+        .expect("[libra-node] failed to convert blob to account state")
+        .get_chain_id_resource()
+        .expect("[libra-node] failed to get chain ID resource")
+        .expect("[libra-node] missing chain ID resource")
+        .chain_id()
 }
 
 fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
@@ -105,6 +123,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
         "ChunkExecutor setup in {} ms",
         instant.elapsed().as_millis()
     );
+    let chain_id = fetch_chain_id(&db_rw);
     let mut network_runtimes = vec![];
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
@@ -137,8 +156,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (idx, (role, network_config)) in network_configs.into_iter().enumerate() {
         // Perform common instantiation steps
-        let mut network_builder =
-            NetworkBuilder::create(node_config.base.chain_id, role, network_config);
+        let mut network_builder = NetworkBuilder::create(chain_id, role, network_config);
         let network_id = network_config.network_id.clone();
 
         // Create the endpoints to connect the Network to StateSynchronizer.
@@ -225,7 +243,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     );
     let (mp_client_sender, mp_client_events) = channel(AC_SMP_CHANNEL_BUFFER_SIZE);
 
-    let rpc_runtime = bootstrap_rpc(&node_config, libra_db.clone(), mp_client_sender);
+    let rpc_runtime = bootstrap_rpc(&node_config, chain_id, libra_db.clone(), mp_client_sender);
 
     let mut consensus_runtime = None;
     let (consensus_to_mempool_sender, consensus_requests) = channel(INTRA_NODE_CHANNEL_BUFFER_SIZE);

@@ -94,6 +94,7 @@ pub fn bootstrap(
 /// Creates JSON RPC endpoint by given node config
 pub fn bootstrap_from_config(
     config: &NodeConfig,
+    chain_id: ChainId,
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
 ) -> Runtime {
@@ -104,7 +105,7 @@ pub fn bootstrap_from_config(
         libra_db,
         mp_sender,
         config.base.role,
-        config.base.chain_id,
+        chain_id,
     )
 }
 
