@@ -136,8 +136,6 @@ use move_core_types::{
 /// This trait describes the VM's validation interfaces.
 pub trait VMValidator {
     /// Executes the prologue of the Libra Account and verifies that the transaction is valid.
-    /// only. Returns `None` if the transaction was validated, or Some(VMStatus) if the transaction
-    /// was unable to be validated with status `VMStatus`.
     fn validate_transaction(
         &self,
         transaction: SignedTransaction,

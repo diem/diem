@@ -55,33 +55,39 @@ pub const PRE_GENESIS_VERSION: Version = u64::max_value();
 
 pub const MAX_TRANSACTION_SIZE_IN_BYTES: usize = 4096;
 
-/// RawTransaction is the portion of a transaction that a client signs
+/// RawTransaction is the portion of a transaction that a client signs.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, LCSCryptoHash)]
 pub struct RawTransaction {
     /// Sender's address.
     sender: AccountAddress,
-    // Sequence number of this transaction corresponding to sender's account.
+
+    /// Sequence number of this transaction. This must match the sequence number
+    /// stored in the sender's account at the time the transaction executes.
     sequence_number: u64,
-    // The transaction script to execute.
+
+    /// The transaction payload, e.g., a script to execute.
     payload: TransactionPayload,
 
-    // Maximal total gas specified by wallet to spend for this transaction.
+    /// Maximal total gas to spend for this transaction.
     max_gas_amount: u64,
-    // Maximal price can be paid per gas.
+
+    /// Price to be paid per gas unit.
     gas_unit_price: u64,
 
+    /// The currency code, e.g., "LBR", used to pay for gas. The `max_gas_amount`
+    /// and `gas_unit_price` values refer to units of this currency.
     gas_currency_code: String,
 
-    // Expiration timestamp for this transaction. timestamp is represented
-    // as u64 in seconds from Unix Epoch. If storage is queried and
-    // the time returned is greater than or equal to this time and this
-    // transaction has not been included, you can be certain that it will
-    // never be included.
-    // A transaction that doesn't expire is represented by a very large value like
-    // u64::max_value().
+    /// Expiration timestamp for this transaction, represented
+    /// as seconds from the Unix Epoch. If the current blockchain timestamp
+    /// is greater than or equal to this time, then the transaction has
+    /// expired and will be discarded. The maximum valid value is
+    /// u64::max_value() / 1_000_000 (so that it can be converted to
+    /// microseconds without overflowing); this value can be used to
+    /// indicate that a transaction does not expire.
     expiration_timestamp_secs: u64,
 
-    // chain ID of the Libra network this transaction is intended for
+    /// Chain ID of the Libra network this transaction is intended for.
     chain_id: ChainId,
 }
 
@@ -297,8 +303,10 @@ impl RawTransaction {
     }
 }
 
+/// Different kinds of transactions.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
+    /// A system maintenance transaction.
     WriteSet(WriteSetPayload),
     /// A transaction that executes code.
     Script(Script),
@@ -306,11 +314,12 @@ pub enum TransactionPayload {
     Module(Module),
 }
 
+/// Two different kinds of WriteSet transactions.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum WriteSetPayload {
-    /// Directly passing in the write set.
+    /// Directly passing in the WriteSet.
     Direct(ChangeSet),
-    /// Generate the writeset by running a script.
+    /// Generate the WriteSet by running a script.
     Script {
         /// Execute the script as the designated signer.
         execute_as: AccountAddress,
@@ -633,8 +642,17 @@ impl GovernanceRole {
 /// The result of running the transaction through the VM validator.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VMValidatorResult {
+    /// Result of the validation: `None` if the transaction was successfully validated
+    /// or `Some(DiscardedVMStatus)` if the transaction should be discarded.
     status: Option<DiscardedVMStatus>,
+
+    /// Score for ranking the transaction priority (e.g., based on the gas price).
+    /// Only used when the status is `None`. Higher values indicate a higher priority.
     score: u64,
+
+    /// The account role for the transaction sender, so that certain
+    /// governance transactions can be prioritized above normal transactions.
+    /// Only used when the status is `None`.
     governance_role: GovernanceRole,
 }
 

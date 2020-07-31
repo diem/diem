@@ -39,8 +39,9 @@ module LibraTransactionTimeout {
   }
 
   public fun is_valid_transaction_timestamp(timestamp: u64): bool acquires TTL {
-    // Reject timestamp greater than u64::MAX / 1_000_000
-    if(timestamp > MAX_TIMESTAMP) {
+    // Reject timestamp greater than u64::MAX / 1_000_000.
+    // This allows converting the timestamp from seconds to microseconds.
+    if (timestamp > MAX_TIMESTAMP) {
       return false
     };
 
