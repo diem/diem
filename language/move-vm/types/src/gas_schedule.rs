@@ -9,8 +9,7 @@
 use libra_types::{transaction::MAX_TRANSACTION_SIZE_IN_BYTES, vm_status::StatusCode};
 use mirai_annotations::*;
 use move_core_types::gas_schedule::{
-    words_in, AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost,
-    GasUnits,
+    AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasConstants, GasCost, GasUnits,
 };
 use vm::{
     errors::{Location, PartialVMError, PartialVMResult, VMResult},
@@ -280,7 +279,7 @@ pub fn calculate_intrinsic_gas(
     let min_transaction_fee = gas_constants.min_transaction_gas_units;
 
     if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {
-        let excess = words_in(transaction_size.sub(gas_constants.large_transaction_cutoff));
+        let excess = transaction_size.sub(gas_constants.large_transaction_cutoff);
         min_transaction_fee.add(gas_constants.instrinsic_gas_per_byte.mul(excess))
     } else {
         min_transaction_fee.unitary_cast()
