@@ -5,11 +5,15 @@ use crate::{config::CargoConfig, utils::project_root, Result};
 use anyhow::anyhow;
 use log::{info, warn};
 use std::{
+    env,
     ffi::{OsStr, OsString},
     path::Path,
     process::{Command, Output, Stdio},
     time::Instant,
 };
+
+const RUST_TOOLCHAIN_VERSION: &str = include_str!("../../../rust-toolchain");
+const RUSTUP_TOOLCHAIN: &str = "RUSTUP_TOOLCHAIN";
 
 pub struct Cargo {
     inner: Command,
@@ -54,6 +58,13 @@ impl Cargo {
         if let Some(flags) = &cargo_flags {
             inner.arg(&flags);
         }
+
+        // The environment is inherited for child processes so we only need to set RUSTUP_TOOLCHAIN
+        // if it isn't already present in the environment
+        if env::var_os(RUSTUP_TOOLCHAIN).is_none() {
+            inner.env(RUSTUP_TOOLCHAIN, RUST_TOOLCHAIN_VERSION);
+        }
+
         inner.arg(command);
         Self {
             inner,
