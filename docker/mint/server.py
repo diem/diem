@@ -45,6 +45,7 @@ create_client()
 
 
 @application.route("/", methods=('POST',))
+@application.route("/mint", methods=('POST',))
 def send_transaction():
     auth_key = flask.request.args['auth_key']
 
