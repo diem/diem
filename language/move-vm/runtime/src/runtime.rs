@@ -90,7 +90,7 @@ impl VMRuntime {
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
         mut args: Vec<Value>,
-        sender: AccountAddress,
+        senders: Vec<AccountAddress>,
         data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -106,11 +106,22 @@ impl VMRuntime {
         // load the script, perform verification
         let (main, type_params) = self.loader.load_script(&script, &ty_args, data_store)?;
 
-        // build the arguments list for the main and check the arguments are of restricted types
-        let first_param_opt = main.parameters().0.get(0);
-        if first_param_opt.map_or(false, |sig| is_signer_reference(sig)) {
-            args.insert(0, Value::transaction_argument_signer_reference(sender))
+        // Build the arguments list for the main and check the arguments are of restricted types.
+        // Signers are built up from left-to-right. Either all signer arguments are used, or no
+        // signer arguments can be be used by a script.
+        let parameters = &main.parameters().0;
+        let first_param_is_signer_ref = parameters.get(0).map_or(false, is_signer_reference);
+        if first_param_is_signer_ref {
+            if parameters.len() != args.len() + senders.len() {
+                return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
+                    .with_message("Scripts must use all or no signers".to_string())
+                    .finish(Location::Script));
+            }
+            senders.into_iter().for_each(|addr| {
+                args.insert(0, Value::transaction_argument_signer_reference(addr))
+            });
         }
+
         check_args(&args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script

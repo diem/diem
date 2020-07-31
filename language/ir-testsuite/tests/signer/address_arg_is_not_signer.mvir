@@ -19,4 +19,4 @@ main(s: &signer) {
 main(s: &signer, s2: &signer) {
     return;
 }
-// check: INVALID_MAIN_FUNCTION_SIGNATURE
+// check: TYPE_MISMATCH

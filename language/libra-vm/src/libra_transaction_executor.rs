@@ -27,6 +27,7 @@ use libra_types::{
     write_set::{WriteSet, WriteSetMut},
 };
 use move_core_types::{
+    account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
 };
@@ -171,7 +172,7 @@ impl LibraVM {
                     script.code().to_vec(),
                     script.ty_args().to_vec(),
                     convert_txn_args(script.args()),
-                    txn_data.sender(),
+                    vec![txn_data.sender()],
                     cost_strategy,
                 )
                 .map_err(|e| e.into_vm_status())?;
@@ -308,23 +309,26 @@ impl LibraVM {
         &self,
         remote_cache: &StateViewCache<'_>,
         writeset_payload: &WriteSetPayload,
+        txn_sender: Option<AccountAddress>,
     ) -> Result<ChangeSet, Result<(VMStatus, TransactionOutput), VMStatus>> {
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
         Ok(match writeset_payload {
             WriteSetPayload::Direct(change_set) => change_set.clone(),
-            WriteSetPayload::Script {
-                script,
-                execute_as: signer,
-            } => {
+            WriteSetPayload::Script { script, execute_as } => {
                 let mut tmp_session = self.0.new_session(remote_cache);
+                let args = convert_txn_args(script.args());
+                let senders = match txn_sender {
+                    None => vec![*execute_as],
+                    Some(sender) => vec![*execute_as, sender],
+                };
                 let execution_result = tmp_session
                     .execute_script(
                         script.code().to_vec(),
                         script.ty_args().to_vec(),
-                        convert_txn_args(script.args()),
-                        *signer,
+                        args,
+                        senders,
                         &mut cost_strategy,
                     )
                     .and_then(|_| tmp_session.finish())
@@ -363,7 +367,7 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         writeset_payload: WriteSetPayload,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-        let change_set = match self.execute_writeset(remote_cache, &writeset_payload) {
+        let change_set = match self.execute_writeset(remote_cache, &writeset_payload, None) {
             Ok(cs) => cs,
             Err(e) => return e,
         };
@@ -453,7 +457,8 @@ impl LibraVM {
 
         let change_set = match txn.payload() {
             TransactionPayload::WriteSet(writeset_payload) => {
-                match self.execute_writeset(remote_cache, writeset_payload) {
+                match self.execute_writeset(remote_cache, writeset_payload, Some(txn_data.sender()))
+                {
                     Ok(change_set) => change_set,
                     Err(e) => return e,
                 }
@@ -660,6 +665,7 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
 
 /// Transactions divided by transaction flow.
 /// Transaction flows are different across different types of transactions.
+#[derive(Debug)]
 enum PreprocessedTransaction {
     UserTransaction(Box<SignatureCheckedTransaction>),
     WaypointWriteSet(WriteSetPayload),

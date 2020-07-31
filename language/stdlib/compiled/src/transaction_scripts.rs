@@ -45,6 +45,7 @@ pub enum StdlibScript {
     RemoveValidatorAndReconfigure,
     RotateAuthenticationKey,
     RotateAuthenticationKeyWithNonce,
+    RotateAuthenticationKeyWithNonceAdmin,
     RotateAuthenticationKeyWithRecoveryAddress,
     RotateDualAttestationInfo,
     RotateSharedEd2551PublicKey,
@@ -92,6 +93,7 @@ impl StdlibScript {
             RemoveValidatorAndReconfigure,
             RotateAuthenticationKey,
             RotateAuthenticationKeyWithNonce,
+            RotateAuthenticationKeyWithNonceAdmin,
             RotateAuthenticationKeyWithRecoveryAddress,
             RotateDualAttestationInfo,
             RotateSharedEd2551PublicKey,
@@ -219,6 +221,8 @@ impl fmt::Display for StdlibScript {
                 RemoveValidatorAndReconfigure => "remove_validator_and_reconfigure",
                 RotateAuthenticationKey => "rotate_authentication_key",
                 RotateAuthenticationKeyWithNonce => "rotate_authentication_key_with_nonce",
+                RotateAuthenticationKeyWithNonceAdmin =>
+                    "rotate_authentication_key_with_nonce_admin",
                 RotateAuthenticationKeyWithRecoveryAddress =>
                     "rotate_authentication_key_with_recovery_address",
                 RotateDualAttestationInfo => "rotate_dual_attestation_info",

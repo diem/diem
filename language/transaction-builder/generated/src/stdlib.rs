@@ -270,10 +270,15 @@ pub enum ScriptCall {
     /// * Aborts with `LibraAccount::EMALFORMED_AUTHENTICATION_KEY` if the length of `new_key` != 32.
     RotateAuthenticationKey { new_key: Bytes },
 
-    /// Rotate the sender's authentication key to `new_key`.
+    /// Rotate `account`'s authentication key to `new_key`.
     /// `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
     /// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
     RotateAuthenticationKeyWithNonce { sliding_nonce: u64, new_key: Bytes },
+
+    /// Rotate `account`'s authentication key to `new_key`.
+    /// `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
+    /// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
+    RotateAuthenticationKeyWithNonceAdmin { sliding_nonce: u64, new_key: Bytes },
 
     /// Rotate the authentication key of `account` to `new_key` using the `KeyRotationCapability`
     /// stored under `recovery_address`.
@@ -563,6 +568,10 @@ impl ScriptCall {
                 sliding_nonce,
                 new_key,
             } => encode_rotate_authentication_key_with_nonce_script(sliding_nonce, new_key),
+            RotateAuthenticationKeyWithNonceAdmin {
+                sliding_nonce,
+                new_key,
+            } => encode_rotate_authentication_key_with_nonce_admin_script(sliding_nonce, new_key),
             RotateAuthenticationKeyWithRecoveryAddress {
                 recovery_address,
                 to_recover,
@@ -1106,7 +1115,7 @@ pub fn encode_rotate_authentication_key_script(new_key: Vec<u8>) -> Script {
     )
 }
 
-/// Rotate the sender's authentication key to `new_key`.
+/// Rotate `account`'s authentication key to `new_key`.
 /// `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
 /// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
 pub fn encode_rotate_authentication_key_with_nonce_script(
@@ -1115,6 +1124,23 @@ pub fn encode_rotate_authentication_key_with_nonce_script(
 ) -> Script {
     Script::new(
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE.to_vec(),
+        vec![],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::U8Vector(new_key),
+        ],
+    )
+}
+
+/// Rotate `account`'s authentication key to `new_key`.
+/// `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
+/// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
+pub fn encode_rotate_authentication_key_with_nonce_admin_script(
+    sliding_nonce: u64,
+    new_key: Vec<u8>,
+) -> Script {
+    Script::new(
+        ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE.to_vec(),
         vec![],
         vec![
             TransactionArgument::U64(sliding_nonce),
@@ -1554,6 +1580,13 @@ fn decode_rotate_authentication_key_with_nonce_script(script: &Script) -> Option
     })
 }
 
+fn decode_rotate_authentication_key_with_nonce_admin_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::RotateAuthenticationKeyWithNonceAdmin {
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        new_key: decode_u8vector_argument(script.args().get(1)?.clone())?,
+    })
+}
+
 fn decode_rotate_authentication_key_with_recovery_address_script(
     script: &Script,
 ) -> Option<ScriptCall> {
@@ -1762,6 +1795,10 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     map.insert(
         ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE.to_vec(),
         Box::new(decode_rotate_authentication_key_with_nonce_script),
+    );
+    map.insert(
+        ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE.to_vec(),
+        Box::new(decode_rotate_authentication_key_with_nonce_admin_script),
     );
     map.insert(
         ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE.to_vec(),
@@ -2126,6 +2163,22 @@ const ROTATE_AUTHENTICATION_KEY_WITH_NONCE_CODE: &[u8] = &[
     104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 3, 12, 10, 0, 10, 1, 17, 0, 11, 0, 17, 1, 12, 3, 14, 3, 11, 2,
     17, 3, 11, 3, 17, 2, 2,
+];
+
+const ROTATE_AUTHENTICATION_KEY_WITH_NONCE_ADMIN_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 2, 4, 4, 3, 8, 20, 5, 28, 25, 7, 53, 160, 1, 8, 213,
+    1, 16, 0, 0, 0, 1, 0, 3, 1, 0, 1, 2, 0, 1, 0, 0, 4, 2, 3, 0, 0, 5, 3, 1, 0, 0, 6, 4, 1, 0, 2,
+    6, 12, 3, 0, 1, 6, 12, 1, 8, 0, 2, 6, 8, 0, 10, 2, 4, 6, 12, 6, 12, 3, 10, 2, 12, 76, 105, 98,
+    114, 97, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110,
+    99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
+    111, 114, 116, 21, 75, 101, 121, 82, 111, 116, 97, 116, 105, 111, 110, 67, 97, 112, 97, 98,
+    105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 107, 101, 121, 95, 114, 111,
+    116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 114, 101,
+    115, 116, 111, 114, 101, 95, 107, 101, 121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99,
+    97, 112, 97, 98, 105, 108, 105, 116, 121, 25, 114, 111, 116, 97, 116, 101, 95, 97, 117, 116,
+    104, 101, 110, 116, 105, 99, 97, 116, 105, 111, 110, 95, 107, 101, 121, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 3, 12, 11, 0, 10, 2, 17, 0, 11, 1, 17, 1, 12, 4, 14, 4, 11, 3,
+    17, 3, 11, 4, 17, 2, 2,
 ];
 
 const ROTATE_AUTHENTICATION_KEY_WITH_RECOVERY_ADDRESS_CODE: &[u8] = &[

@@ -176,7 +176,7 @@ fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
         script,
         vec![],
         args,
-        AccountAddress::random(),
+        vec![AccountAddress::random()],
         &mut cost_strategy,
     )
 }

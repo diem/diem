@@ -53,23 +53,25 @@ pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
 }
 
 fn verify_main_signature_impl(script: &CompiledScript) -> PartialVMResult<()> {
-    fn is_valid_arg_type(idx: usize, arg_type: &SignatureToken) -> bool {
-        use SignatureToken as S;
-        match arg_type {
-            // &signer is a type that can only be populated by the Move VM. And its value is filled
-            // based on the sender of the transaction
-            S::Reference(inner) => idx == 0 && matches!(&**inner, S::Signer),
-            _ => arg_type.is_valid_for_constant(),
-        }
+    use SignatureToken as S;
+    let arguments = &script.signature_at(script.as_inner().parameters).0;
+    // Check that all `&signer` arguments occur before non-`&signer` arguments
+    let all_args_have_valid_type = arguments
+        .iter()
+        .skip_while(|typ| {
+            match typ {
+                // &signer is a type that can only be populated by the Move VM. And its value is filled
+                // based on the sender of the transaction
+                S::Reference(inner) => matches!(&**inner, S::Signer),
+                _ => false,
+            }
+        })
+        .all(|typ| typ.is_valid_for_constant());
+    if !all_args_have_valid_type {
+        Err(PartialVMError::new(
+            StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
+        ))
+    } else {
+        Ok(())
     }
-
-    let arguments = script.signature_at(script.as_inner().parameters);
-    for (idx, arg_type) in arguments.0.iter().enumerate() {
-        if !is_valid_arg_type(idx, arg_type) {
-            return Err(PartialVMError::new(
-                StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
-            ));
-        }
-    }
-    Ok(())
 }

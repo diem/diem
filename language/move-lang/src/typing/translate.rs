@@ -101,7 +101,12 @@ fn script(context: &mut Context, nscript: N::Script) -> T::Script {
     }
 }
 
-fn check_primitive_script_arg(context: &mut Context, mloc: Loc, idx: usize, ty: &Type) {
+fn check_primitive_script_arg(
+    context: &mut Context,
+    mloc: Loc,
+    seen_non_signer: &mut bool,
+    ty: &Type,
+) {
     let current_function = context.current_function.clone().unwrap();
     let mk_msg = move || {
         format!(
@@ -119,17 +124,19 @@ fn check_primitive_script_arg(context: &mut Context, mloc: Loc, idx: usize, ty: 
         result.is_ok()
     };
     if is_signer_ref {
-        if idx == 0 {
+        if !*seen_non_signer {
             return;
         } else {
             let msg = mk_msg();
             let tmsg = format!(
-                "{} must be the first argument to a script",
+                "{}s must be a prefix of the arguments to a script--they must come before any non-signer types",
                 core::error_format(&signer_ref, &Subst::empty()),
             );
             context.error(vec![(mloc, msg), (loc, tmsg)]);
             return;
         }
+    } else {
+        *seen_non_signer = true;
     }
 
     check_valid_constant::signature(context, mloc, mk_msg, ty);
@@ -158,8 +165,9 @@ fn function(
 
     function_signature(context, &signature);
     if is_script {
-        for (idx, (_, param_ty)) in signature.parameters.iter().enumerate() {
-            check_primitive_script_arg(context, loc, idx, param_ty);
+        let mut seen_non_signer = false;
+        for (_, param_ty) in signature.parameters.iter() {
+            check_primitive_script_arg(context, loc, &mut seen_non_signer, param_ty);
         }
         subtype(
             context,

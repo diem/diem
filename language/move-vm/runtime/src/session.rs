@@ -47,14 +47,14 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         script: Vec<u8>,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        sender: AccountAddress,
+        senders: Vec<AccountAddress>,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         self.runtime.execute_script(
             script,
             ty_args,
             args,
-            sender,
+            senders,
             &mut self.data_cache,
             cost_strategy,
         )

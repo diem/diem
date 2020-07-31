@@ -211,7 +211,7 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
             script.code().to_vec(),
             script.ty_args().to_vec(),
             convert_txn_args(script.args()),
-            sender,
+            vec![sender],
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
         )
         .unwrap()
