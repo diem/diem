@@ -9,10 +9,10 @@ inputs:
     required: true
   add:
     description: label strings to add
-    required: true
+    required: false
   remove:
     description: label strings to remove
-    required: true
+    required: false
 runs:
   using: 'node12'
   main: 'dist/index.js'
