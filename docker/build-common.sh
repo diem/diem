@@ -35,4 +35,4 @@ ${CARGO} ${CARGOFLAGS} build --release \
 rm -rf target/release/{build,deps,incremental}
 
 STRIP_DIR=${STRIP_DIR:-/libra/target}
-find "$STRIP_DIR/release" -maxdepth 1 -executable -type f | xargs strip
+find "$STRIP_DIR/release" -maxdepth 1 -executable -type f | grep -Ev 'libra-node|safety-rules' | xargs strip
