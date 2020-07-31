@@ -599,7 +599,7 @@
         "y": 26
       },
       "hiddenSeries": false,
-      "id": 52,
+      "id": 53,
       "legend": {
         "avg": false,
         "current": false,
@@ -626,9 +626,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_network_peers{role_type=\"validator\", state=\"inbound\"}\n",
-          "format": "time_series",
-          "intervalFactor": 1,
+          "expr": "libra_connections{network_id=\"Validator\", direction=\"Inbound\"}",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
@@ -637,7 +635,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Inbound Connected Peers",
+      "title": "Inbound Validator Network Connections",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -689,7 +687,95 @@
         "y": 26
       },
       "hiddenSeries": false,
-      "id": 53,
+      "id": 55,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_connections{network_id=\"Validator\", direction=\"Outbound\"}",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Outbound Validator Network Connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 34
+      },
+      "hiddenSeries": false,
+      "id": 54,
       "legend": {
         "avg": false,
         "current": false,
@@ -716,9 +802,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_network_peers{role_type=\"validator\", state=\"outbound\"}\n",
-          "format": "time_series",
-          "intervalFactor": 1,
+          "expr": "libra_connections{network_id=\"Public\", direction=\"Inbound\"}",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
@@ -727,7 +811,95 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Outbound Connected Peers",
+      "title": "Inbound Public Network Connections",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 34
+      },
+      "hiddenSeries": false,
+      "id": 56,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_connections{network_id=\"Public\", direction=\"Outbound\"}",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Outbound Public Network Connections",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -771,7 +943,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 42
       },
       "id": 38,
       "panels": [],
@@ -790,7 +962,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 39,
@@ -880,7 +1052,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 35
+        "y": 43
       },
       "hiddenSeries": false,
       "id": 40,
@@ -979,7 +1151,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 51
       },
       "id": 28,
       "panels": [],
@@ -999,7 +1171,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 26,
@@ -1090,7 +1262,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 44
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 29,
@@ -1181,7 +1353,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 60
       },
       "hiddenSeries": false,
       "id": 30,
@@ -1266,7 +1438,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "id": 33,
       "panels": [],
@@ -1286,7 +1458,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 61
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 31,
@@ -1377,7 +1549,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 61
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 34,
@@ -1468,7 +1640,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 69
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 35,
@@ -1559,7 +1731,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 69
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 36,
@@ -1644,7 +1816,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 77
+        "y": 85
       },
       "id": 43,
       "panels": [],
@@ -1664,7 +1836,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 78
+        "y": 86
       },
       "hiddenSeries": false,
       "id": 41,
@@ -1755,7 +1927,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 78
+        "y": 86
       },
       "hiddenSeries": false,
       "id": 44,
@@ -1840,7 +2012,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 86
+        "y": 94
       },
       "id": 46,
       "panels": [],
@@ -1860,7 +2032,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 87
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 47,
@@ -1951,7 +2123,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 87
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 48,
@@ -2042,7 +2214,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 49,
