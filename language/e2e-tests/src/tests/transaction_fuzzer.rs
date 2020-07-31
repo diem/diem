@@ -36,6 +36,7 @@ proptest! {
     }
 
     #[test]
+    #[ignore]
     fn fuzz_scripts(
         txns in vec(any::<ScriptCall>(), 0..100),
     ) {
