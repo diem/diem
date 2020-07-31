@@ -31,6 +31,15 @@ pub enum ServerCode {
     MempoolUnknownError = -32012,
 }
 
+/// JSON RPC server error codes for invalid request
+pub enum InvalidRequestCode {
+    InvalidRequest = -32600,
+    MethodNotFound = -32601,
+    InvalidParams = -32602,
+    InvalidFormat = -32603,
+    ParseError = -32700,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ErrorData {
     InvalidArguments(InvalidArguments),
@@ -90,15 +99,23 @@ impl JsonRpcError {
 
     pub fn invalid_request_with_data(data: Option<ErrorData>) -> Self {
         Self {
-            code: -32600,
+            code: InvalidRequestCode::InvalidRequest as i16,
             message: "Invalid Request".to_string(),
             data,
         }
     }
 
+    pub fn invalid_format() -> Self {
+        Self {
+            code: InvalidRequestCode::InvalidFormat as i16,
+            message: "Invalid request format".to_string(),
+            data: None,
+        }
+    }
+
     pub fn invalid_params(data: Option<ErrorData>) -> Self {
         Self {
-            code: -32602,
+            code: InvalidRequestCode::InvalidParams as i16,
             message: "Invalid params".to_string(),
             data,
         }
@@ -106,7 +123,7 @@ impl JsonRpcError {
 
     pub fn method_not_found() -> Self {
         Self {
-            code: -32601,
+            code: InvalidRequestCode::MethodNotFound as i16,
             message: "Method not found".to_string(),
             data: None,
         }

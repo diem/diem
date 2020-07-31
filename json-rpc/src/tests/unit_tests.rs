@@ -185,7 +185,7 @@ fn test_json_rpc_protocol() {
         serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": true});
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
-    assert_eq!(error_code(resp), -32600);
+    assert_eq!(error_code(resp), -32603);
 
     // invalid rpc method
     let request = serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1});
