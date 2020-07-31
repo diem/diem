@@ -17,14 +17,13 @@ use std::{
     io,
     io::Write as IoWrite,
     marker::PhantomData,
-    net::{SocketAddr, TcpStream},
+    net::UdpSocket,
     str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         mpsc::{self, Receiver, SyncSender},
     },
     thread,
-    time::Duration,
 };
 
 pub trait StructLogSink: Sync {
@@ -49,8 +48,6 @@ const SEVERITY_WARNING: usize = 2;
 const MAX_LOG_LINE_SIZE: usize = 4096; // 4KiB
 const LOG_INFO_OFFSET: usize = 256;
 const WRITE_CHANNEL_SIZE: usize = 1024;
-const WRITE_TIMEOUT_MS: u64 = 2000;
-const CONNECTION_TIMEOUT_MS: u64 = 5000;
 
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
@@ -255,7 +252,7 @@ impl<D> LoggingField<D> {
 
 // This is exact copy of similar function in log crate
 /// Sets structured logger
-pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), InitLoggerError> {
+pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), ()> {
     unsafe {
         match STRUCT_LOGGER_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
             UNINITIALIZED => {
@@ -265,9 +262,9 @@ pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), InitL
             }
             INITIALIZING => {
                 while STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                Err(InitLoggerError::StructLoggerAlreadySet)
+                Err(())
             }
-            _ => Err(InitLoggerError::StructLoggerAlreadySet),
+            _ => Err(()),
         }
     }
 }
@@ -288,16 +285,13 @@ pub fn struct_logger_set() -> bool {
 }
 
 /// Initializes struct logger from STRUCT_LOG_FILE env var.
-/// If STRUCT_LOG_FILE is set, STRUCT_LOG_TCP_ADDR will be ignored.
+/// If STRUCT_LOG_FILE is set, STRUCT_LOG_UDP_ADDR will be ignored.
 /// Can only be called once
 pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
     if let Ok(file) = env::var("STRUCT_LOG_FILE") {
         init_file_struct_log(file)
-    } else if let Ok(address) = env::var("STRUCT_LOG_TCP_ADDR") {
-        init_tcp_struct_log(address)
-    } else if let Ok(address) = env::var("STRUCT_LOG_UDP_ADDR") {
-        // Remove once all usages of STRUCT_LOG_UDP_ADDR are transferred over
-        init_tcp_struct_log(address)
+    } else if let Ok(udp_address) = env::var("STRUCT_LOG_UDP_ADDR") {
+        init_udp_struct_log(udp_address)
     } else {
         Ok(())
     }
@@ -308,20 +302,20 @@ pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
 pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
     let logger = FileStructLog::start_new(file_path).map_err(InitLoggerError::IoError)?;
     let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
-/// Initializes struct logger sink that stream logs through TCP protocol.
+/// Initializes struct logger sink that stream logs through UDP protocol.
 /// Can only be called once
-pub fn init_tcp_struct_log(address: String) -> Result<(), InitLoggerError> {
-    let logger = TCPStructLog::start_new(address).map_err(InitLoggerError::IoError)?;
+pub fn init_udp_struct_log(udp_address: String) -> Result<(), InitLoggerError> {
+    let logger = UDPStructLog::start_new(udp_address).map_err(InitLoggerError::IoError)?;
     let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
+    set_struct_logger(logger).map_err(|_| InitLoggerError::StructLoggerAlreadySet)
 }
 
 /// Initialize struct logger sink that prints all structured logs to stdout
 /// Can only be called once
-pub fn init_println_struct_log() -> Result<(), InitLoggerError> {
+pub fn init_println_struct_log() -> Result<(), ()> {
     let logger = PrintStructLog {};
     let logger = Box::leak(Box::new(logger));
     set_struct_logger(logger)
@@ -406,21 +400,27 @@ impl FileStructLogThread {
     }
 }
 
-/// Sink that streams all structured logs to an address through TCP protocol
-struct TCPStructLog {
+/// Sink that streams all structured logs to an address through UDP protocol
+struct UDPStructLog {
     sender: SyncSender<StructuredLogEntry>,
 }
 
-impl TCPStructLog {
-    pub fn start_new(address: String) -> io::Result<Self> {
+impl UDPStructLog {
+    /// Creates new UDPStructLog and starts async thread to send results
+    pub fn start_new(udp_address: String) -> io::Result<Self> {
         let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
-        let sink_thread = TCPStructLogThread::new(receiver, &address);
+        let socket = UdpSocket::bind("0.0.0.0:0").expect("couldn't bind to address");
+        let sink_thread = UDPStructLogThread {
+            receiver,
+            socket,
+            udp_address,
+        };
         thread::spawn(move || sink_thread.run());
         Ok(Self { sender })
     }
 }
 
-impl StructLogSink for TCPStructLog {
+impl StructLogSink for UDPStructLog {
     fn send(&self, entry: StructuredLogEntry) {
         if let Err(e) = self.sender.try_send(entry) {
             STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
@@ -431,22 +431,15 @@ impl StructLogSink for TCPStructLog {
     }
 }
 
-struct TCPStructLogThread {
+struct UDPStructLogThread {
     receiver: Receiver<StructuredLogEntry>,
-    address: SocketAddr,
+    socket: UdpSocket,
+    udp_address: String,
 }
 
-impl TCPStructLogThread {
-    fn new(receiver: Receiver<StructuredLogEntry>, address: &str) -> TCPStructLogThread {
-        let address = SocketAddr::from_str(address).unwrap();
-        TCPStructLogThread { receiver, address }
-    }
-
-    // Continually iterate over requests unless writing fails.
-    fn process_requests(&self, stream: &mut TcpStream) {
-        for entry in &self.receiver {
-            PROCESSED_STRUCT_LOG_COUNT.inc();
-            // Parse string, skipping over anything that can't be parsed
+impl UDPStructLogThread {
+    pub fn run(self) {
+        for entry in self.receiver {
             let json_string = match entry.to_json_string() {
                 Ok(json_string) => json_string,
                 Err(_) => {
@@ -454,74 +447,12 @@ impl TCPStructLogThread {
                     continue;
                 }
             };
-
-            // If we fail to write, exit out and create a new stream
-            if let Err(e) = stream.write(json_string.as_bytes()) {
-                STRUCT_LOG_SEND_ERROR_COUNT.inc();
-                println!(
-                    "[Logging] Error while sending data to logstash({}): {}",
-                    self.address, e
-                );
-
-                // Attempt to clear the buffer and send whatever we can
-                if let Err(e) = stream.flush() {
-                    println!("[Logging] Failed to flush rest of buffer: {}", e);
-                }
-
-                // Start over stream
-                return;
-            } else {
-                SENT_STRUCT_LOG_COUNT.inc()
-            }
-        }
-    }
-
-    pub fn connect(&self) -> io::Result<TcpStream> {
-        TcpStream::connect_timeout(&self.address, Duration::from_millis(CONNECTION_TIMEOUT_MS))
-    }
-
-    pub fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<usize> {
-        let entry = StructuredLogEntry::new_named("logger", msg);
-        let entry = entry
-            .to_json_string()
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
-        stream.write(entry.as_bytes())
-    }
-
-    pub fn run(self) {
-        loop {
-            let mut maybe_stream = self.connect();
-            STRUCT_LOG_TCP_CONNECT_COUNT.inc();
-
-            // This is to ensure that we do actually connect before sending requests
-            // If the request process loop ends, the stream is broken.  Reset and create a new one.
-            match maybe_stream.as_mut() {
-                Ok(mut stream) => {
-                    // Set the write timeout
-                    if let Err(err) =
-                        stream.set_write_timeout(Some(Duration::from_millis(WRITE_TIMEOUT_MS)))
-                    {
-                        STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        println!("[Logging] Failed to set write timeout: {}", err);
-                        continue;
-                    }
-
-                    // Write a log signifying that the logger connected, and test the stream
-                    if let Err(err) = Self::write_control_msg(stream, "connected") {
-                        STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        println!("[Logging] control message failed: {}", err);
-                        continue;
-                    }
-
-                    self.process_requests(&mut stream)
-                }
-                Err(err) => {
-                    STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                    println!(
-                        "[Logging] Failed to connect to {}, cause {}",
-                        self.address, err
-                    )
-                }
+            if let Err(e) = self
+                .socket
+                .send_to(json_string.as_bytes(), self.udp_address.clone())
+            {
+                // do not break on error, move on to the next log message
+                println!("[Logging] Error while sending data to socket: {}", e);
             }
         }
     }
