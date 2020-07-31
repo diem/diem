@@ -3083,6 +3083,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-transaction-replay"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-json-rpc-client 0.1.0",
+ "libra-state-view 0.1.0",
+ "libra-types 0.1.0",
+ "libra-vm 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "libradb 0.1.0",
+ "reqwest 0.10.7 (registry+https://github.com/rust-lang/crates.io-index)",
+ "resource-viewer 0.1.0",
+ "scratchpad 0.1.0",
+ "storage-interface 0.1.0",
+ "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-types"
 version = "0.1.0"
 dependencies = [
@@ -5820,6 +5839,7 @@ dependencies = [
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
  "libra-trace 0.1.0",
+ "libra-transaction-replay 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

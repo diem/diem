@@ -8,7 +8,7 @@ use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY};
-use libra_json_rpc::views::{ScriptView, TransactionDataView};
+use libra_json_rpc::views::{ScriptView, TransactionDataView, VMStatusView as JsonVMStatusView};
 use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
@@ -20,6 +20,7 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_trace::trace::trace_node;
+use libra_transaction_replay::{libra_client::LibraJsonRpcDebugger, LibraDebugger};
 use libra_types::{
     account_address::AccountAddress,
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
@@ -1933,6 +1934,47 @@ fn test_genesis_transaction_flow() {
     client_proxy_1
         .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
+}
+
+#[test]
+fn test_replay_tooling() {
+    let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
+    let validator_config = NodeConfig::load(&swarm.validator_swarm.config.config_files[0]).unwrap();
+    let swarm_rpc_endpoint = format!("http://localhost:{}", validator_config.rpc.address.port());
+    let json_debugger = LibraDebugger::new(Box::new(
+        LibraJsonRpcDebugger::new(swarm_rpc_endpoint.as_str()).unwrap(),
+    ));
+
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy.create_next_account(false).unwrap();
+    client_proxy
+        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
+        .unwrap();
+
+    client_proxy
+        .mint_coins(&["mintb", "1", "100", "Coin1"], true)
+        .unwrap();
+
+    client_proxy
+        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
+        .unwrap();
+
+    let txn = client_proxy
+        .get_committed_txn_by_acc_seq(&["txn_acc_seq", "0", "0", "false"])
+        .unwrap()
+        .unwrap();
+
+    let replay_result = json_debugger
+        .execute_past_transactions(txn.version, 1)
+        .unwrap()
+        .pop()
+        .unwrap();
+
+    assert_eq!(replay_result.gas_used(), txn.gas_used);
+    assert_eq!(
+        JsonVMStatusView::from(&replay_result.status().status().unwrap()),
+        txn.vm_status
+    );
 }
 
 fn parse_waypoint(db_bootstrapper_output: &str) -> String {

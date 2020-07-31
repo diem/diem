@@ -110,7 +110,6 @@ impl<'a> MoveValueAnnotator<'a> {
                 .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
 
             let move_struct = MoveStruct::simple_deserialize(v.as_slice(), &struct_def)?;
-            println!("annotaing: {:?}, {:?}", ty, move_struct);
             output.insert(
                 ty.struct_tag()
                     .map_err(|e| e.finish(Location::Undefined).into_vm_status())

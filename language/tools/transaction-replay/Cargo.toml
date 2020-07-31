@@ -1,0 +1,26 @@
+[package]
+name = "libra-transaction-replay"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Replay transactions stored on chain"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.31"
+reqwest = { version = "0.10.6", features = ["blocking", "json", "rustls-tls"], default-features = false }
+structopt = "0.3.15"
+
+libra-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+libradb = { path = "../../../storage/libradb", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+storage-interface = { path = "../../../storage/storage-interface", version = "0.1.0" }
+scratchpad = { path = "../../../storage/scratchpad", version = "0.1.0" }
+libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+libra-vm = { path = "../../../language/libra-vm", version = "0.1.0" }
+resource-viewer = { path = "../../../language/resource-viewer", version = "0.1.0" }
+lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
