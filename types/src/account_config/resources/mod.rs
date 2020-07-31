@@ -3,6 +3,7 @@
 
 pub mod account;
 pub mod balance;
+pub mod chain_id;
 pub mod currency_info;
 pub mod designated_dealer;
 pub mod dual_attestation;
@@ -16,6 +17,7 @@ pub mod withdraw_capability;
 
 pub use account::*;
 pub use balance::*;
+pub use chain_id::*;
 pub use currency_info::*;
 pub use designated_dealer::*;
 pub use dual_attestation::*;

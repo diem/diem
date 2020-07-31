@@ -4,8 +4,8 @@
 use crate::{
     account_address::AccountAddress,
     account_config::{
-        type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        Credential, CurrencyInfoResource, DesignatedDealer, FreezingBit, ParentVASP,
+        type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChainIdResource,
+        ChildVASP, Credential, CurrencyInfoResource, DesignatedDealer, FreezingBit, ParentVASP,
         PreburnResource, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
@@ -65,6 +65,10 @@ impl AccountState {
                     .map(|preburn_balance| preburn_balance.map(|b| (currency_code.to_owned(), b)))
             })
             .collect()
+    }
+
+    pub fn get_chain_id_resource(&self) -> Result<Option<ChainIdResource>> {
+        self.get_resource(&ChainIdResource::resource_path())
     }
 
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
