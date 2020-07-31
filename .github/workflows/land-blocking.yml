@@ -101,6 +101,7 @@ jobs:
             echo "report.json end"
           else
             echo "report.json is empty or not found."
+            ret=1
           fi
           if [ $ret -ne 0 ]; then
             jq -n \
