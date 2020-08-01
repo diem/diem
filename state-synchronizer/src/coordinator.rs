@@ -149,6 +149,8 @@ pub(crate) struct SyncCoordinator<T> {
     local_state: SynchronizerState,
     // duration with the same version before the next attempt to get the next chunk
     retry_timeout: Duration,
+    // duration with the same version before multicasting, i.e. sending the next chunk request to more networks
+    multicast_timeout: Duration,
     // config
     config: StateSyncConfig,
     // role of node
@@ -196,6 +198,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             local_state: initial_state,
             pending_ledger_infos: PendingLedgerInfos::new(),
             retry_timeout: Duration::from_millis(retry_timeout_val),
+            multicast_timeout: Duration::from_millis(config.multicast_timeout_ms),
             config,
             role,
             waypoint,
@@ -326,8 +329,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         .with_label_values(&[&peer.peer_id().to_string()])
                         .inc();
                 } else {
-                    self.peer_manager
-                        .update_score(&peer, PeerScoreUpdateType::Success);
                     // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
                     counters::APPLY_CHUNK_SUCCESS
                         .with_label_values(&[&peer.peer_id().to_string()])
@@ -494,7 +495,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         self.check_subscriptions();
-        self.peer_manager.remove_requests(synced_version);
+        self.peer_manager
+            .remove_requests(synced_version, self.multicast_timeout);
 
         if let Some(mut req) = self.sync_request.as_mut() {
             req.last_progress_tst = SystemTime::now();
@@ -758,14 +760,28 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         if chunk_start_version != known_version + 1 {
             // Old / wrong chunk.
-            self.peer_manager
-                .update_score(&peer, PeerScoreUpdateType::ChunkVersionCannotBeApplied);
-            bail!(
-                "[state sync] Non sequential chunk from {:?}: known_version: {}, received: {}",
+            if self
+                .peer_manager
+                .is_multicast_response(chunk_start_version, peer)
+            {
+                // TODO don't penalize if this response was still within the regular timeout range
+                // but should still penalize for actual timeout
+                bail!(
+                "[state sync] Received chunk for outdated request from {:?}: known_version: {}, received: {}",
                 peer,
                 known_version,
                 chunk_start_version
             );
+            } else {
+                self.peer_manager
+                    .update_score(&peer, PeerScoreUpdateType::ChunkVersionCannotBeApplied);
+                bail!(
+                    "[state sync] Non sequential chunk from {:?}: known_version: {}, received: {}",
+                    peer,
+                    known_version,
+                    chunk_start_version
+                );
+            }
         }
 
         let chunk_size = txn_list_with_proof.len() as u64;
@@ -820,7 +836,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         }
 
         self.process_commit(response.txn_list_with_proof.transactions, None)
-            .await
+            .await?;
+
+        // at this point, chunk has been successfully processed
+        self.peer_manager.process_success_response(peer);
+        Ok(())
     }
 
     /// Processing chunk responses that carry a LedgerInfo that should be verified using the
@@ -970,14 +990,29 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .unwrap_or(UNIX_EPOCH);
 
         // if coordinator didn't make progress by expected time, issue new request
-        if let Some(tst) = last_request_tst.checked_add(self.retry_timeout) {
-            if SystemTime::now().duration_since(tst).is_ok() {
-                self.peer_manager.process_timeout(known_version + 1);
-                if let Err(e) = self.send_chunk_request(known_version, self.local_state.epoch()) {
-                    error!("[state sync] Failed to send chunk request: {}", e);
-                }
-                counters::TIMEOUT.inc();
+        // TODO maybe refactor to move timeout check logic to peer manager
+        let now = SystemTime::now();
+        let is_timeout = last_request_tst
+            .checked_add(self.retry_timeout)
+            .map_or(false, |retry_deadline| {
+                now.duration_since(retry_deadline).is_ok()
+            });
+        if is_timeout {
+            let multicast_start_time = self
+                .peer_manager
+                .get_multicast_start_time(known_version + 1)
+                .unwrap_or(UNIX_EPOCH);
+            let is_multicast_timeout = multicast_start_time
+                .checked_add(self.multicast_timeout)
+                .map_or(false, |retry_deadline| {
+                    now.duration_since(retry_deadline).is_ok()
+                });
+            self.peer_manager
+                .process_timeout(known_version + 1, is_multicast_timeout);
+            if let Err(e) = self.send_chunk_request(known_version, self.local_state.epoch()) {
+                error!("[state sync] Failed to send chunk request: {}", e);
             }
+            counters::TIMEOUT.inc();
         }
     }
 
@@ -985,10 +1020,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// (might be chosen optimistically).
     /// The request includes a target for Validator and a non-zero timeout for a FullNode.
     fn send_chunk_request(&mut self, known_version: u64, known_epoch: u64) -> Result<()> {
-        let peer = self
-            .peer_manager
-            .pick_peer()
-            .ok_or_else(|| format_err!("No peers found for chunk request."))?;
+        // TODO pick peers based on multicast option
+        // if multicast, pick peers from peer manager via pick_multicast_peers
+        let peers = self.peer_manager.pick_peers();
+        if peers.is_empty() {
+            bail!("No peers found for chunk request.");
+        }
 
         let target = if !self.is_initialized() {
             let waypoint_version = self.waypoint.version();
@@ -1018,27 +1055,35 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         let req = GetChunkRequest::new(known_version, known_epoch, self.config.chunk_limit, target);
         debug!(
-            "[state sync] request next chunk. peer: {}, chunk req: {}",
-            peer, req,
+            "[state sync] request next chunk. peers: {:?}, chunk req: {}",
+            peers, req,
         );
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
         self.peer_manager
-            .process_request(known_version + 1, peer.clone());
-        let sender = self
-            .network_senders
-            .get_mut(&peer.network_id())
-            .expect("missing network sender for peer");
-        let peer_id = peer.peer_id();
-        let send_result = sender.send_to(peer_id, msg);
-        let result_label = if send_result.is_err() {
-            counters::SEND_FAIL_LABEL
+            .process_request(known_version + 1, peers.clone());
+        let mut failed_peer_sends = vec![];
+        for peer in peers {
+            let sender = self
+                .network_senders
+                .get_mut(&peer.network_id())
+                .expect("missing network sender for peer");
+            let peer_id = peer.peer_id();
+            let send_result = sender.send_to(peer_id, msg.clone());
+            let result_label = if send_result.is_err() {
+                failed_peer_sends.push((peer.clone(), send_result));
+                counters::SEND_FAIL_LABEL
+            } else {
+                counters::SEND_SUCCESS_LABEL
+            };
+            counters::REQUESTS_SENT
+                .with_label_values(&[&peer_id.to_string(), result_label])
+                .inc();
+        }
+        if failed_peer_sends.is_empty() {
+            Ok(())
         } else {
-            counters::SEND_SUCCESS_LABEL
-        };
-        counters::REQUESTS_SENT
-            .with_label_values(&[&peer_id.to_string(), result_label])
-            .inc();
-        Ok(send_result?)
+            bail!("Failed to send chunk request to: {:?}", failed_peer_sends)
+        }
     }
 
     fn deliver_subscription(
