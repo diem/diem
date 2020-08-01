@@ -36,7 +36,8 @@ pub enum InvalidRequestCode {
     InvalidRequest = -32600,
     MethodNotFound = -32601,
     InvalidParams = -32602,
-    InvalidFormat = -32603,
+    // -32603 is internal error
+    InvalidFormat = -32604,
     ParseError = -32700,
 }
 
