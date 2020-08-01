@@ -37,6 +37,10 @@ pub trait CryptoStorage: Send + Sync {
     /// Returns the Ed25519 public key stored at 'name'.
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error>;
 
+    /// Returns the previous version of the Ed25519 public key stored at 'name'. For the most recent
+    /// version, see 'get_public_key(..)' above.
+    fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error>;
+
     /// Rotates an Ed25519 private key. Future calls without version to this 'named' key will
     /// return the rotated key instance. The previous key is retained and can be accessed via
     /// the version. At most two versions are expected to be retained.

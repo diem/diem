@@ -275,6 +275,22 @@ impl CryptoStorage for VaultStorage {
         })
     }
 
+    fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        let name = self.crypto_name(name);
+        let pubkeys = self.client.read_ed25519_key(&name)?;
+        let highest_version = pubkeys.iter().map(|pubkey| pubkey.version).max();
+        match highest_version {
+            Some(version) => {
+                let pubkey = pubkeys.iter().find(|pubkey| pubkey.version == version - 1);
+                Ok(pubkey
+                    .ok_or_else(|| Error::KeyVersionNotFound(name))?
+                    .value
+                    .clone())
+            }
+            None => Err(Error::KeyVersionNotFound(name)),
+        }
+    }
+
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         let ns_name = self.crypto_name(name);
         self.client.rotate_key(&ns_name)?;

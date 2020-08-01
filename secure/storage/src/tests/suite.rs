@@ -25,6 +25,7 @@ const STORAGE_TESTS: &[fn(&mut Storage)] = &[
     test_create_sign_rotate_sign,
     test_ensure_storage_is_available,
     test_get_non_existent,
+    test_get_public_key_previous_version,
     test_get_set,
     test_get_uncreated_key_pair,
     test_hash_value,
@@ -70,6 +71,42 @@ fn test_get_non_existent(storage: &mut Storage) {
         storage.get(U64_KEY).unwrap_err(),
         Error::KeyNotSet(U64_KEY.to_string())
     );
+}
+
+/// This test tries to get previous versions of the public key after multiple rotations have
+/// occurred. It also checks that the previous versions returned can be used to fetch the correct
+/// private keys.
+fn test_get_public_key_previous_version(storage: &mut Storage) {
+    let num_rotations = 10;
+
+    let mut public_key = storage.create_key(CRYPTO_NAME).unwrap();
+    let mut private_key = storage.export_private_key(CRYPTO_NAME).unwrap();
+
+    // Verify no previous version exists
+    assert!(storage
+        .get_public_key_previous_version(CRYPTO_NAME)
+        .is_err());
+
+    for _ in 0..num_rotations {
+        let new_public_key = storage.rotate_key(CRYPTO_NAME).unwrap();
+        let new_private_key = storage.export_private_key(CRYPTO_NAME).unwrap();
+
+        // Verify the correct previous public key is returned
+        let public_key_previous_version = storage
+            .get_public_key_previous_version(CRYPTO_NAME)
+            .unwrap();
+        assert_eq!(public_key, public_key_previous_version);
+        assert_eq!(private_key.public_key(), public_key_previous_version);
+
+        // Verify the previous public key can be used to fetch the corresponding public key
+        let private_key_previous_version = storage
+            .export_private_key_for_version(CRYPTO_NAME, public_key_previous_version)
+            .unwrap();
+        assert_eq!(private_key, private_key_previous_version);
+
+        public_key = new_public_key;
+        private_key = new_private_key;
+    }
 }
 
 /// This test stores various key/value pairs in storage, updates them, retrieves the values to

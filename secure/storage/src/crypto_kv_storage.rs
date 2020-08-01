@@ -71,6 +71,14 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
         })
     }
 
+    fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        match self.export_private_key(&get_previous_version_name(name)) {
+            Ok(previous_private_key) => Ok(previous_private_key.public_key()),
+            Err(Error::KeyNotSet(_)) => Err(Error::KeyVersionNotFound(name.to_string())),
+            Err(e) => Err(e),
+        }
+    }
+
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         match self.get(name)?.value {
             Value::Ed25519PrivateKey(private_key) => {
