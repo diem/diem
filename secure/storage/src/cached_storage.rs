@@ -199,6 +199,10 @@ impl<S: CryptoStorage> CryptoStorage for CachedStorage<S> {
         self.storage.get_public_key(name)
     }
 
+    fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
+        self.storage.get_public_key_previous_version(name)
+    }
+
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
         self.storage.rotate_key(name)
     }
