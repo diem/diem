@@ -7,6 +7,7 @@ use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_management::{constants, error::Error};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::transaction::{authenticator::AuthenticationKey, RawTransaction, Transaction};
+use std::convert::TryFrom;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -20,6 +21,7 @@ pub struct RotateOperatorKey {
 
 impl RotateOperatorKey {
     pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        // Load the config, storage backend and create a json rpc client
         let config = self
             .validator_config
             .config
@@ -28,22 +30,43 @@ impl RotateOperatorKey {
             .override_validator_backend(
                 &self.validator_config.validator_backend.validator_backend,
             )?;
-
-        // Fetch the operator account from storage
         let mut storage = config.validator_backend();
-        let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
-
-        // Create a JSON RPC client and fetch the current sequence number
         let client = JsonRpcClientWrapper::new(config.json_server);
-        let sequence_number = client.sequence_number(operator_account)?;
 
-        // Rotate the operator key in storage
-        let current_operator_key = storage.ed25519_public_from_private(OPERATOR_KEY)?;
-        let new_operator_key = storage.rotate_key(OPERATOR_KEY)?;
+        // Fetch the current on-chain auth key for the operator and the current key held in storage.
+        let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
+        let account_resource = client.account_resource(operator_account)?;
+        let on_chain_key = match AuthenticationKey::try_from(account_resource.authentication_key())
+        {
+            Ok(auth_key) => auth_key,
+            Err(e) => {
+                return Err(Error::UnexpectedError(format!(
+                    "Invalid authentication key found in account resource. Error: {}",
+                    e.to_string()
+                )));
+            }
+        };
+        let mut current_storage_key = storage.ed25519_public_from_private(OPERATOR_KEY)?;
+
+        // Check that the key held in storage matches the key registered on-chain in the validator
+        // config. If so, rotate the key in storage. If not, fetch the previous key version from
+        // storage so that we can allow the next step to resubmit the key rotation transaction
+        // (to resynchronize storage with the blockchain).
+        let new_storage_key = if on_chain_key == AuthenticationKey::ed25519(&current_storage_key) {
+            storage.rotate_key(OPERATOR_KEY)?
+        } else {
+            let new_storage_key = current_storage_key;
+            current_storage_key =
+                storage.ed25519_public_from_private_previous_version(OPERATOR_KEY)?;
+            new_storage_key
+        };
+
+        // Fetch the current sequence number
+        let sequence_number = client.sequence_number(operator_account)?;
 
         // Build the operator rotation transaction
         let rotate_key_script = transaction_builder::encode_rotate_authentication_key_script(
-            AuthenticationKey::ed25519(&new_operator_key).to_vec(),
+            AuthenticationKey::ed25519(&new_storage_key).to_vec(),
         );
         let rotate_key_txn = RawTransaction::new_script(
             operator_account,
@@ -59,7 +82,7 @@ impl RotateOperatorKey {
         // Sign the operator rotation transaction
         let rotate_key_txn = storage.sign_using_version(
             OPERATOR_KEY,
-            current_operator_key,
+            current_storage_key,
             "rotate-operator-key",
             rotate_key_txn,
         )?;
@@ -68,6 +91,6 @@ impl RotateOperatorKey {
         // Submit the transaction
         let txn_ctx =
             client.submit_transaction(rotate_key_txn.as_signed_user_txn().unwrap().clone())?;
-        Ok((txn_ctx, new_operator_key))
+        Ok((txn_ctx, new_storage_key))
     }
 }

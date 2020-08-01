@@ -92,6 +92,17 @@ impl StorageWrapper {
             .public_key)
     }
 
+    /// Retrieves the previous public key from the stored private key
+    pub fn ed25519_public_from_private_previous_version(
+        &self,
+        key_name: &'static str,
+    ) -> Result<Ed25519PublicKey, Error> {
+        Ok(self
+            .storage
+            .get_public_key_previous_version(key_name)
+            .map_err(|e| Error::StorageReadError(self.storage_name, key_name, e.to_string()))?)
+    }
+
     /// Retrieves public key from the stored private key
     pub fn ed25519_private(&self, key_name: &'static str) -> Result<Ed25519PrivateKey, Error> {
         self.storage
