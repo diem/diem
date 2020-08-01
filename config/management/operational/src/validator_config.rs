@@ -90,6 +90,7 @@ impl RotateKey {
         self,
         key_name: &'static str,
     ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+        // Load the config, storage backend and create a json rpc client.
         let config = self
             .validator_config
             .config
@@ -98,18 +99,48 @@ impl RotateKey {
             .override_validator_backend(
                 &self.validator_config.validator_backend.validator_backend,
             )?;
-
         let mut storage = config.validator_backend();
-        let key = storage.rotate_key(key_name)?;
+        let client = JsonRpcClientWrapper::new(config.json_server);
 
+        // Fetch the current on-chain validator config for the node
+        let owner_account = storage.account_address(OWNER_ACCOUNT)?;
+        let validator_config = client.validator_config(owner_account)?;
+
+        // Check that the key held in storage matches the key registered on-chain in the validator
+        // config. If so, rotate the key in storage. If not, don't rotate the key in storage and
+        // rather allow the next step to resubmit the set_validator_config transaction with the
+        // current key (to resynchronize the validator config on the blockchain).
+        let mut storage_key = storage.ed25519_public_from_private(key_name)?;
+        let keys_match = match key_name {
+            CONSENSUS_KEY => storage_key == validator_config.consensus_public_key,
+            VALIDATOR_NETWORK_KEY => {
+                to_x25519(storage_key.clone())?
+                    == validator_config.validator_network_identity_public_key
+            }
+            FULLNODE_NETWORK_KEY => {
+                to_x25519(storage_key.clone())?
+                    == validator_config.full_node_network_identity_public_key
+            }
+            _ => {
+                return Err(Error::UnexpectedError(
+                    "Rotate key was called with an unknown key name!".into(),
+                ));
+            }
+        };
+        if keys_match {
+            storage_key = storage.rotate_key(key_name)?;
+        }
+
+        // Create and set the validator config state on the blockchain.
         let set_validator_config = SetValidatorConfig {
             json_server: self.json_server,
             validator_config: self.validator_config,
             validator_address: None,
             fullnode_address: None,
         };
-
-        set_validator_config.execute().map(|txn_ctx| (txn_ctx, key))
+        set_validator_config
+            .execute()
+            .map(|txn_ctx| (txn_ctx, storage_key))
     }
 }
 

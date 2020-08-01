@@ -6,12 +6,13 @@ use debug_interface::NodeDebugClient;
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend, WaypointConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
-use libra_global_constants::CONSENSUS_KEY;
+use libra_global_constants::{CONSENSUS_KEY, VALIDATOR_NETWORK_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::{
     self,
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
+use libra_management::storage::to_x25519;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
@@ -1551,7 +1552,15 @@ fn test_consensus_key_rotation() {
     let info_consensus_key = op_tool.validator_set(validator_account).unwrap()[0]
         .consensus_public_key
         .clone();
-    assert_eq!(new_consensus_key, info_consensus_key)
+    assert_eq!(new_consensus_key, info_consensus_key);
+
+    // Rotate the consensus key in storage manually and perform another rotation using the op_tool.
+    // Here, we expected the op_tool to see that the consensus key in storage doesn't match the one
+    // on-chain, and thus it should simply forward a transaction to the blockchain.
+    let mut storage: Storage = (&backend).try_into().unwrap();
+    let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
+    let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+    assert_eq!(rotated_consensus_key, new_consensus_key);
 }
 
 #[test]
@@ -1618,6 +1627,53 @@ fn test_network_key_rotation() {
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that config has been loaded correctly with new key
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let config_network_key = op_tool
+        .validator_config(validator_account)
+        .unwrap()
+        .validator_network_key;
+    assert_eq!(new_network_key, config_network_key);
+
+    // Verify that the validator set info contains the new network key
+    let info_network_key =
+        op_tool.validator_set(validator_account).unwrap()[0].validator_network_key;
+    assert_eq!(new_network_key, info_network_key);
+
+    // Restart validator
+    // At this point, the `add_node` call ensures connectivity to all nodes
+    swarm.validator_swarm.kill_node(0);
+    swarm.validator_swarm.add_node(0, false).unwrap();
+}
+
+#[test]
+fn test_network_key_rotation_recovery() {
+    let mut swarm = TestEnvironment::new(5);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&&node_config);
+
+    // Rotate the network key in storage manually and perform a key rotation using the op_tool.
+    // Here, we expected the op_tool to see that the network key in storage doesn't match the one
+    // on-chain, and thus it should simply forward a transaction to the blockchain.
+    let mut storage: Storage = (&backend).try_into().unwrap();
+    let rotated_network_key = storage.rotate_key(VALIDATOR_NETWORK_KEY).unwrap();
+    let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
+    assert_eq!(new_network_key, to_x25519(rotated_network_key).unwrap());
+
     let mut client = swarm.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
