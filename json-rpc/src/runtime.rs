@@ -271,7 +271,7 @@ fn set_response_error(response: &mut Map<String, Value>, error: JsonRpcError) {
             -32600 => "invalid_request",
             -32601 => "method_not_found",
             -32602 => "invalid_params",
-            -32603 => "invalid_format",
+            -32604 => "invalid_format",
             -32700 => "parse_error",
             _ => "unexpected_code",
         };
