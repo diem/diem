@@ -594,6 +594,10 @@ impl<V: VMExecutor> TransactionReplayer for Executor<V> {
             .update_synced_trees(output.executed_trees().clone());
         Ok(())
     }
+
+    fn expecting_version(&self) -> Version {
+        self.cache.synced_trees().version().map_or(0, |v| v + 1)
+    }
 }
 
 impl<V: VMExecutor> BlockExecutor for Executor<V> {

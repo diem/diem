@@ -185,7 +185,7 @@ impl TransactionRestoreController {
                 let num_to_replay = (last - first_to_replay + 1) as usize;
                 chunk.txns.truncate(num_to_replay);
                 chunk.txn_infos.truncate(num_to_replay);
-                self.transaction_replayer()?.replay_chunk(
+                self.transaction_replayer(first_to_replay)?.replay_chunk(
                     first_to_replay,
                     chunk.txns,
                     chunk.txn_infos,
@@ -220,14 +220,22 @@ impl TransactionRestoreController {
         Ok(())
     }
 
-    fn transaction_replayer(&mut self) -> Result<&mut Executor<LibraVM>> {
+    fn transaction_replayer(&mut self, first_version: Version) -> Result<&mut Executor<LibraVM>> {
         if self.state.transaction_replayer.is_none() {
             let replayer = Executor::new_on_unbootstrapped_db(
                 DbReaderWriter::from_arc(Arc::clone(&self.restore_handler.libradb)),
-                self.restore_handler
-                    .get_tree_state(self.replay_from_version)?,
+                self.restore_handler.get_tree_state(first_version)?,
             );
             self.state.transaction_replayer = Some(replayer);
+        } else {
+            assert_eq!(
+                self.state
+                    .transaction_replayer
+                    .as_ref()
+                    .unwrap()
+                    .expecting_version(),
+                first_version
+            );
         }
         Ok(self.state.transaction_replayer.as_mut().unwrap())
     }

@@ -82,6 +82,8 @@ pub trait TransactionReplayer: Send {
         txns: Vec<Transaction>,
         txn_infos: Vec<TransactionInfo>,
     ) -> Result<()>;
+
+    fn expecting_version(&self) -> Version;
 }
 
 /// A structure that summarizes the result of the execution needed for consensus to agree on.
