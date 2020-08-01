@@ -339,6 +339,34 @@ jobs:
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - save_sccache
       - build_teardown
+  build-individual-crates:
+    executor: build-executor
+    parallelism: 7
+    description: Build all top level individual crates
+    steps:
+      - build_setup
+      - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
+      - run:
+          name: Determine crate targets for this container.
+          command: |
+            for x in $(find . -name Cargo.toml); do dirname $x >> /tmp/crates; done
+            echo "Found $(wc -l /tmp/crates) crates"
+            cat /tmp/crates | circleci tests split > /tmp/crates_to_build
+            echo -e "This container will build these crates\n$(cat /tmp/crates_to_build)"
+      - run:
+          name: Build assigned crates in this container.
+          command: |
+            set -x
+            _pwd=$PWD
+            for crate in $(cat /tmp/crates_to_build) ; do
+              cd $_pwd/$crate
+              RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build
+              RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test --no-run
+            done
+      - save_sccache
+      - build_teardown
   run-e2e-test:
     executor: build-executor
     parallelism: 2
@@ -706,6 +734,17 @@ workflows:
                 - /^premainnet-0.[\d|.]+$/
                 - /^v[\d|.]+-release$/
       - build-dev:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d|.]+$/
+                - /^premainnet-[\d|.]+$/
+                - /^v[\d|.]+-release$/
+      - build-individual-crates:
           requires:
             - prefetch-crates
           filters:
