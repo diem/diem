@@ -170,7 +170,7 @@ impl TransactionRestoreController {
 
             // Transactions to save without replaying:
             if first_to_replay > chunk.manifest.first_version {
-                let last_to_save = min(last, first_to_replay);
+                let last_to_save = min(last, first_to_replay - 1);
                 let num_txns_to_save = (last_to_save - chunk.manifest.first_version + 1) as usize;
                 self.restore_handler.save_transactions(
                     chunk.manifest.first_version,
