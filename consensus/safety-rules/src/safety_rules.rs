@@ -203,6 +203,7 @@ impl SafetyRules {
     // Internal functions mapped to the public interface to enable exhaustive logging and metrics
 
     fn guarded_consensus_state(&mut self) -> Result<ConsensusState, Error> {
+        trace_code_block!("safety_rules::guarded_consensus_state", {"req", 0u32});
         Ok(ConsensusState::new(
             self.persistent_storage.epoch()?,
             self.persistent_storage.last_voted_round()?,
