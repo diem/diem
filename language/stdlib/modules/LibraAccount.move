@@ -995,5 +995,31 @@ module LibraAccount {
             delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
+    /// # Parent VASP setup conditions
+    spec module {
+        invariant [global]
+            forall parent_addr: address where VASP::is_parent(parent_addr):
+                Roles::spec_has_parent_VASP_role_addr(parent_addr);
+    }
+
+
+    /// # Child VASP setup conditions
+    spec module {
+        invariant [global]
+            forall child_addr: address where VASP::is_child(child_addr):
+                Roles::spec_has_child_VASP_role_addr(child_addr);
+    }
+
+    // # Parent and child are mutually exclusive
+    // Uses the previous two properties: is_child ==> has_child_VASP_role, similarly
+    // for parent, and an address can only have one role.
+    // TODO (dd): I hoped that this property would speed things up by breaking the
+    // parent quantifier loop (no address can be both a vasp parent and child),
+    // but it doesn't help.
+    // spec module {
+    //        invariant [global]
+    //        forall addr1: address:
+    //            !(VASP::is_child(addr1) && VASP::is_parent(addr1));
+    // }
 }
 }

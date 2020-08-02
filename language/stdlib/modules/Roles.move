@@ -451,6 +451,10 @@ module Roles {
 
     // TODO: role-specific privileges persist, and role_ids never change?
 
+    // TODO: exists<Role>(addr) ==> exists<LibraAccount>(addr).  Or maybe the other way.
+    //   May need to set roles consistently when we create accounts (e.g., create_libra_root_account
+    //   does not set role, but create_designated_dealer_account does).
+
     // ## Capabilities
     //
     // TODO: Capability is stored a owner_address unless is_extract == true??

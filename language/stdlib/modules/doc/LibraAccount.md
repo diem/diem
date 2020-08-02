@@ -65,6 +65,8 @@
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
     -  [Function `create_designated_dealer`](#0x1_LibraAccount_Specification_create_designated_dealer)
+    -  [Parent VASP setup conditions](#0x1_LibraAccount_@Parent_VASP_setup_conditions)
+    -  [Child VASP setup conditions](#0x1_LibraAccount_@Child_VASP_setup_conditions)
 
 
 
@@ -2383,4 +2385,30 @@ The LibraAccount under addr holds either no key rotation capability
 
 <pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1):
     <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_@Parent_VASP_setup_conditions"></a>
+
+### Parent VASP setup conditions
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall parent_addr: address where <a href="VASP.md#0x1_VASP_is_parent">VASP::is_parent</a>(parent_addr):
+        <a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(parent_addr);
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_@Child_VASP_setup_conditions"></a>
+
+### Child VASP setup conditions
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall child_addr: address where <a href="VASP.md#0x1_VASP_is_child">VASP::is_child</a>(child_addr):
+        <a href="Roles.md#0x1_Roles_spec_has_child_VASP_role_addr">Roles::spec_has_child_VASP_role_addr</a>(child_addr);
 </code></pre>
