@@ -377,6 +377,8 @@ impl SafetyRules {
 
 impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
+        // lwg: this is to understand vault overhead
+        trace_code_block!("safety_rules::consensus_state", {"req", 0u32});
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_consensus_state();
         run_and_log(
