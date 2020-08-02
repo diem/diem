@@ -15,11 +15,12 @@ use log::{debug, info, warn};
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_declare_global, boogie_field_name, boogie_global_declarator,
-        boogie_local_type, boogie_resource_memory_name, boogie_saved_resource_memory_name,
-        boogie_spec_fun_name, boogie_spec_var_name, boogie_struct_name, boogie_type_value,
-        boogie_type_value_array, boogie_type_value_array_from_strings, boogie_well_formed_expr,
-        WellFormedMode,
+        boogie_byte_blob, boogie_caller_resource_memory_domain_name, boogie_declare_global,
+        boogie_field_name, boogie_global_declarator, boogie_local_type,
+        boogie_resource_memory_name, boogie_saved_resource_memory_name,
+        boogie_self_resource_memory_domain_name, boogie_spec_fun_name, boogie_spec_var_name,
+        boogie_struct_name, boogie_type_value, boogie_type_value_array,
+        boogie_type_value_array_from_strings, boogie_well_formed_expr, WellFormedMode,
     },
     cli::Options,
 };
@@ -52,6 +53,7 @@ const WRONG_ABORTS_CODE: &str = "function does not abort with any of the expecte
 const SUCCEEDS_IF_FAILS_MESSAGE: &str = "function does not succeed under this condition";
 const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
+const MODIFY_TARGET_FAILS_MESSAGE: &str = "caller does not have permission for this modify target";
 
 pub enum SpecEnv<'env> {
     Module(ModuleEnv<'env>),
@@ -618,6 +620,28 @@ impl<'env> SpecTranslator<'env> {
             distribution.add(self, for_entry_point, cond);
         }
 
+        // emit preconditions for modifies
+        // TODO: implement optimization to make sure that modifies checking is done once and not repeatedly
+        for (ty, targets) in func_target.get_modify_targets() {
+            let ty_name = boogie_caller_resource_memory_domain_name(func_target.global_env(), *ty);
+            for target in targets {
+                let loc = self.module_env().get_node_loc(target.node_id());
+                self.writer.set_location(&loc);
+                self.set_condition_info(&loc, ConditionTag::Requires, MODIFY_TARGET_FAILS_MESSAGE);
+                emit!(self.writer, "requires ");
+                let node_id = target.node_id();
+                let args = target.call_args();
+                let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                let (_, _, targs) = rty.require_struct();
+                let env = self.global_env();
+                let type_args = boogie_type_value_array(env, targs);
+                emit!(self.writer, "{}[{}, a#$Address(", ty_name, type_args);
+                self.translate_exp(&args[0]);
+                emit!(self.writer, ")];");
+                emitln!(self.writer);
+            }
+        }
+
         // Helper to filter conditions.
         let kind_filter = |k: ConditionKind| move |c: &&&Condition| c.kind == k;
 
@@ -826,7 +850,7 @@ impl<'env> SpecTranslator<'env> {
 
     /// Emit either assume or requires for preconditions. For a regular requires,
     /// 'or' them with the aborts conditions. If the condition is an aborts_if or a succeeds_if,
-    /// treat it a an [assert] or a [assume] which has been lifted as a precondition.
+    /// treat it as an [assert] or an [assume] which has been lifted as a precondition.
     fn emit_requires(&self, assume: bool, aborts_if: &[&Condition], requires: &[&Condition]) {
         let func_target = self.function_target();
         self.translate_seq(requires.iter().copied(), "\n", |cond: &Condition| {
@@ -972,6 +996,72 @@ impl<'env> SpecTranslator<'env> {
                 })
                 .collect_vec(),
         )
+    }
+
+    /// Generate initialization of modifies permissions of a function
+    pub fn emit_modifies_initialization(&self) {
+        let func_target = self.function_target();
+        for (ty, targets) in func_target.get_modify_targets() {
+            emit!(
+                self.writer,
+                "{} := {}",
+                boogie_self_resource_memory_domain_name(func_target.global_env(), *ty),
+                "$ConstMemoryDomain(false)"
+            );
+            for target in targets {
+                let node_id = target.node_id();
+                let args = target.call_args();
+                let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                let (_, _, targs) = rty.require_struct();
+                let env = func_target.global_env();
+                let type_args = boogie_type_value_array(env, targs);
+                emit!(self.writer, "[{}, a#$Address(", type_args);
+                self.translate_exp(&args[0]);
+                emit!(self.writer, ") := true]");
+            }
+            emitln!(self.writer, ";");
+        }
+    }
+
+    /// Translate modify targets to constrain havocs at opaque calls
+    pub fn translate_modify_targets(&self) {
+        let func_target = self.function_target();
+        let usage = TransitiveUsage::default();
+        let modified_types = usage.get_modified_memory(
+            self.global_env(),
+            self.targets,
+            func_target
+                .module_env()
+                .get_id()
+                .qualified(func_target.get_id()),
+        );
+        for type_name in modified_types {
+            let memory_name = self.get_memory_name(type_name);
+            emitln!(self.writer, "modifies {};", memory_name);
+            let type_name_targets = func_target.get_modify_targets_for_type(&type_name);
+            if let Some(type_name_targets) = type_name_targets {
+                let generate_ensures = |bpl_map| {
+                    emit!(self.writer, "ensures {} == old({})", bpl_map, bpl_map);
+                    for target in type_name_targets {
+                        let node_id = target.node_id();
+                        let args = target.call_args();
+                        let rty = &self.module_env().get_node_instantiation(node_id)[0];
+                        let (_, _, targs) = rty.require_struct();
+                        let env = self.global_env();
+                        let type_args = boogie_type_value_array(env, targs);
+                        emit!(self.writer, "[{}, a#$Address(", type_args);
+                        self.translate_exp(&args[0]);
+                        emit!(self.writer, ") := {}", bpl_map);
+                        emit!(self.writer, "[{}, a#$Address(", type_args);
+                        self.translate_exp(&args[0]);
+                        emit!(self.writer, ")]]");
+                    }
+                    emitln!(self.writer, ";");
+                };
+                generate_ensures(format!("contents#$Memory({})", memory_name));
+                generate_ensures(format!("domain#$Memory({})", memory_name));
+            }
+        }
     }
 
     /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
@@ -1614,7 +1704,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_call(&self, node_id: NodeId, oper: &Operation, args: &[Exp]) {
         let loc = self.module_env().get_node_loc(node_id);
         match oper {
-            Operation::AbortCodes | Operation::CondWithAbortCode => {
+            Operation::ModifyTargets | Operation::AbortCodes | Operation::CondWithAbortCode => {
                 panic!("unexpected virtual operator")
             }
             Operation::Function(module_id, fun_id) => {

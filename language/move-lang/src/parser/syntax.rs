@@ -1799,7 +1799,7 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         Tok::Define | Tok::Native => parse_spec_function(tokens),
         Tok::IdentifierValue => match tokens.content() {
             "assert" | "assume" | "decreases" | "aborts_if" | "aborts_with" | "succeeds_if"
-            | "ensures" | "requires" => parse_condition(tokens),
+            | "modifies" | "ensures" | "requires" => parse_condition(tokens),
             "include" => parse_spec_include(tokens),
             "apply" => parse_spec_apply(tokens),
             "pragma" => parse_spec_pragma(tokens),
@@ -1812,8 +1812,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
         },
         _ => Err(unexpected_token_error(
             tokens,
-            "one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, `ensures`, \
-             `requires`, `include`, `apply`, `pragma`, `global`, or a name",
+            "one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, `modifies`, \
+            `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name",
         )),
     }
 }
@@ -1832,6 +1832,7 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         "aborts_if" => SpecConditionKind::AbortsIf,
         "aborts_with" => SpecConditionKind::AbortsWith,
         "succeeds_if" => SpecConditionKind::SucceedsIf,
+        "modifies" => SpecConditionKind::Modifies,
         "ensures" => SpecConditionKind::Ensures,
         "requires" => {
             if tokens.lookahead()? == Tok::Module {
@@ -1845,14 +1846,14 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
     };
     tokens.advance()?;
     let properties = parse_condition_properties(tokens)?;
-    let exp = if kind == SpecConditionKind::AbortsWith {
+    let exp = if kind == SpecConditionKind::AbortsWith || kind == SpecConditionKind::Modifies {
         // Use a dummy expression as a placeholder for this field.
         let loc = make_loc(tokens.file_name(), start_loc, start_loc + 1);
         sp(loc, Exp_::Value(sp(loc, Value_::Bool(false))))
     } else {
         parse_exp(tokens)?
     };
-    let abort_codes = if kind == SpecConditionKind::AbortsIf
+    let additional_exps = if kind == SpecConditionKind::AbortsIf
         && tokens.peek() == Tok::IdentifierValue
         && tokens.content() == "with"
     {
@@ -1860,14 +1861,14 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         let codes = vec![parse_exp(tokens)?];
         consume_token(tokens, Tok::Semicolon)?;
         codes
-    } else if kind == SpecConditionKind::AbortsWith {
+    } else if kind == SpecConditionKind::AbortsWith || kind == SpecConditionKind::Modifies {
         parse_comma_list_after_start(
             tokens,
             tokens.start_loc(),
             tokens.peek(),
             Tok::Semicolon,
             parse_exp,
-            "a aborts code",
+            "an aborts code or modifies target",
         )?
     } else {
         consume_token(tokens, Tok::Semicolon)?;
@@ -1882,7 +1883,7 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
             kind,
             properties,
             exp,
-            abort_codes,
+            additional_exps,
         },
     ))
 }
@@ -1950,7 +1951,7 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
             kind,
             properties,
             exp,
-            abort_codes: vec![],
+            additional_exps: vec![],
         },
     ))
 }

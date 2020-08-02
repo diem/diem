@@ -24,6 +24,7 @@ pub struct TransitiveUsage {
 struct TransitiveFunctionUsage {
     called_functions: BTreeSet<QualifiedId<FunId>>,
     used_memory: BTreeSet<QualifiedId<StructId>>,
+    modified_memory: BTreeSet<QualifiedId<StructId>>,
 }
 
 impl TransitiveUsage {
@@ -68,6 +69,29 @@ impl TransitiveUsage {
         self.cache.borrow().get(&fun).unwrap().used_memory.clone()
     }
 
+    pub fn get_modified_memory(
+        &self,
+        env: &GlobalEnv,
+        targets: &FunctionTargetsHolder,
+        fun: QualifiedId<FunId>,
+    ) -> BTreeSet<QualifiedId<StructId>> {
+        if !self.cache.borrow().contains_key(&fun) {
+            Self::populate_cache(
+                &mut BTreeSet::new(),
+                &mut *self.cache.borrow_mut(),
+                env,
+                targets,
+                fun,
+            );
+        }
+        self.cache
+            .borrow()
+            .get(&fun)
+            .unwrap()
+            .modified_memory
+            .clone()
+    }
+
     fn populate_cache(
         visited: &mut BTreeSet<QualifiedId<FunId>>,
         cache: &mut BTreeMap<QualifiedId<FunId>, TransitiveFunctionUsage>,
@@ -87,6 +111,9 @@ impl TransitiveUsage {
                 .called_functions
                 .extend(annotation.called_functions.iter());
             usage.used_memory.extend(annotation.used_memory.iter());
+            usage
+                .modified_memory
+                .extend(annotation.modified_memory.iter());
             // Recursively visit all called functions and add their usage.
             for called in &annotation.called_functions {
                 Self::populate_cache(visited, cache, env, targets, *called);
@@ -95,6 +122,9 @@ impl TransitiveUsage {
                     .called_functions
                     .extend(called_usage.called_functions.iter());
                 usage.used_memory.extend(called_usage.used_memory.iter());
+                usage
+                    .modified_memory
+                    .extend(annotation.modified_memory.iter());
             }
         }
         cache.insert(fun, usage);
@@ -108,6 +138,8 @@ struct UsageAnnotation {
     called_functions: BTreeSet<QualifiedId<FunId>>,
     // The memory which is directly accessed by this function.
     used_memory: BTreeSet<QualifiedId<StructId>>,
+    // The memory which is directly modfied by this function.
+    modified_memory: BTreeSet<QualifiedId<StructId>>,
 }
 
 pub struct UsageProcessor();
@@ -127,8 +159,12 @@ impl FunctionTargetProcessor for UsageProcessor {
     ) -> FunctionTargetData {
         let mut annotation = UsageAnnotation::default();
 
+        let func_target = FunctionTarget::new(func_env, &data);
+        func_target.get_modify_targets().keys().for_each(|target| {
+            annotation.modified_memory.insert(*target);
+        });
         if !func_env.is_native() {
-            Self::analyze(&mut annotation, FunctionTarget::new(func_env, &data));
+            Self::analyze(&mut annotation, func_target);
         }
         data.annotations.set(annotation);
         data
@@ -145,12 +181,11 @@ impl UsageProcessor {
                     Function(mid, fid, _) => {
                         annotation.called_functions.insert(mid.qualified(*fid));
                     }
-                    MoveTo(mid, sid, _)
-                    | MoveFrom(mid, sid, _)
-                    | Exists(mid, sid, _)
-                    | BorrowGlobal(mid, sid, _)
-                    | GetField(mid, sid, ..)
-                    | GetGlobal(mid, sid, _) => {
+                    MoveTo(mid, sid, _) | MoveFrom(mid, sid, _) | BorrowGlobal(mid, sid, _) => {
+                        annotation.modified_memory.insert(mid.qualified(*sid));
+                        annotation.used_memory.insert(mid.qualified(*sid));
+                    }
+                    Exists(mid, sid, _) | GetField(mid, sid, ..) | GetGlobal(mid, sid, _) => {
                         annotation.used_memory.insert(mid.qualified(*sid));
                     }
                     _ => {}

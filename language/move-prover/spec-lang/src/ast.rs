@@ -58,6 +58,7 @@ pub enum ConditionKind {
     AbortsIf,
     AbortsWith,
     SucceedsIf,
+    Modifies,
     Ensures,
     Requires,
     RequiresModule,
@@ -91,7 +92,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures
+            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
         )
     }
 
@@ -100,7 +101,7 @@ impl ConditionKind {
         use ConditionKind::*;
         matches!(
             self,
-            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures
+            Requires | RequiresModule | AbortsIf | AbortsWith | SucceedsIf | Ensures | Modifies
         )
     }
 
@@ -133,6 +134,7 @@ impl std::fmt::Display for ConditionKind {
             AbortsIf => write!(f, "aborts_if"),
             AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
+            Modifies => write!(f, "modifies"),
             Ensures => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),
@@ -268,6 +270,13 @@ impl Exp {
         }
     }
 
+    pub fn call_args(&self) -> &[Exp] {
+        match self {
+            Exp::Call(_, _, args) => args,
+            _ => panic!("function must be called on Exp::Call(...)"),
+        }
+    }
+
     pub fn node_ids(&self) -> Vec<NodeId> {
         let mut ids = vec![];
         self.visit(&mut |e| {
@@ -330,6 +339,14 @@ impl Exp {
             _ => &[],
         }
     }
+
+    /// Optionally extracts list of modify targets from the special `Operation::ModifyTargets`.
+    pub fn extract_modify_targets(&self) -> &[Exp] {
+        match self {
+            Exp::Call(_, Operation::ModifyTargets, args) => args.as_slice(),
+            _ => &[],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -343,9 +360,10 @@ pub enum Operation {
     Index,
     Slice,
 
-    // Pseudo operators for aborts condition.
+    // Pseudo operators for expressions which have a special treatment in the translation.
     CondWithAbortCode, // aborts_if E with C
     AbortCodes,        // aborts_with C1, ..., Cn
+    ModifyTargets,     // modifies E1, ..., En
 
     // Binary operators
     Range,

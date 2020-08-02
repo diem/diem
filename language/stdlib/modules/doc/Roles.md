@@ -955,7 +955,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotTreasuryCompliance">CoreAddresses::AbortsIfNotTreasuryCompliance</a>{account: lr_account};
+<b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotTreasuryCompliance">CoreAddresses::AbortsIfNotTreasuryCompliance</a>{account: treasury_compliance_account};
 <b>include</b> <a href="#0x1_Roles_AbortsIfNotLibraRoot">AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="#0x1_Roles_GrantRole">GrantRole</a>{account: treasury_compliance_account, role_id: TREASURY_COMPLIANCE_ROLE_ID};
 </code></pre>
@@ -1078,6 +1078,7 @@ Assert that the account has either the parent vasp or designated dealer role.
     <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) with Errors::ALREADY_PUBLISHED;
     <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr);
     <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == role_id;
+    <b>modifies</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr);
 }
 </code></pre>
 

@@ -1415,7 +1415,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             kind,
                             properties,
                             exp,
-                            abort_codes,
+                            additional_exps,
                         } => {
                             let context = SpecBlockContext::FunctionCode(
                                 qsym.clone(),
@@ -1431,7 +1431,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                                     kind,
                                     properties,
                                     exp,
-                                    abort_codes,
+                                    additional_exps,
                                 );
                             }
                         }
@@ -1639,11 +1639,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     kind,
                     properties,
                     exp,
-                    abort_codes,
+                    additional_exps,
                 } => {
                     if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
                         let properties = self.translate_properties(properties);
-                        self.def_ana_condition(loc, context, kind, properties, exp, abort_codes)
+                        self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
                     }
                 }
                 Function {
@@ -2125,7 +2125,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         kind: ConditionKind,
         properties: PropertyBag,
         exp: &EA::Exp,
-        abort_codes: &[EA::Exp],
+        additional_exps: &[EA::Exp],
     ) {
         if kind == ConditionKind::Decreases {
             self.parent
@@ -2135,22 +2135,35 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let expected_type = self.expected_type_for_condition(&kind);
         let mut et = self.exp_translator_for_context(loc, context, Some(&kind), false);
         let translated = et.translate_exp(exp, &expected_type);
-        let translated_with_codes = if !abort_codes.is_empty() {
-            let mut args = abort_codes
-                .iter()
-                .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
-                .collect_vec();
+        let translated_with_additional_exps = if !additional_exps.is_empty() {
             let node_id = et.new_node_id_with_type_loc(&expected_type, loc);
             match kind {
                 ConditionKind::AbortsIf => {
+                    let mut args = additional_exps
+                        .iter()
+                        .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                        .collect_vec();
                     args.insert(0, translated);
                     Exp::Call(node_id, Operation::CondWithAbortCode, args)
                 }
-                ConditionKind::AbortsWith => Exp::Call(node_id, Operation::AbortCodes, args),
+                ConditionKind::AbortsWith => {
+                    let args = additional_exps
+                        .iter()
+                        .map(|code| et.translate_exp(code, &Type::Primitive(PrimitiveType::Num)))
+                        .collect_vec();
+                    Exp::Call(node_id, Operation::AbortCodes, args)
+                }
+                ConditionKind::Modifies => {
+                    let args = additional_exps
+                        .iter()
+                        .map(|target| et.translate_modify_target(target))
+                        .collect_vec();
+                    Exp::Call(node_id, Operation::ModifyTargets, args)
+                }
                 _ => {
                     et.error(
                         loc,
-                        "abort codes only allowed with `aborts_if` or `aborts_with`",
+                        "additional expressions only allowed with `aborts_if`, `aborts_with`, or `modifies`",
                     );
                     et.new_error_exp()
                 }
@@ -2166,7 +2179,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 loc: loc.clone(),
                 kind,
                 properties,
-                exp: translated_with_codes,
+                exp: translated_with_additional_exps,
             }],
             PropertyBag::default(),
             "",
@@ -2211,6 +2224,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             PK::Assert => Some((Assert, exp)),
             PK::Assume => Some((Assume, exp)),
             PK::Decreases => Some((Decreases, exp)),
+            PK::Modifies => Some((Modifies, exp)),
             PK::Ensures => Some((Ensures, exp)),
             PK::Requires => Some((Requires, exp)),
             PK::AbortsIf => Some((AbortsIf, exp)),
@@ -2477,7 +2491,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     kind,
                     properties,
                     exp,
-                    abort_codes,
+                    additional_exps,
                 } => {
                     let context = SpecBlockContext::Schema(name.clone());
                     if let Some((kind, exp)) = self.extract_condition_kind(&context, kind, exp) {
@@ -2488,7 +2502,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                             kind,
                             properties,
                             exp,
-                            abort_codes,
+                            additional_exps,
                         );
                     } else {
                         // Error reported.
@@ -4056,6 +4070,19 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 /// ## Expression Translation
 
 impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'module_translator> {
+    /// Translates an expression representing a modify target
+    fn translate_modify_target(&mut self, exp: &EA::Exp) -> Exp {
+        let loc = self.to_loc(&exp.loc);
+        let (_, exp) = self.translate_exp_free(exp);
+        match &exp {
+            Exp::Call(_, Operation::Global, _) => exp,
+            _ => {
+                self.error(&loc, "global resource access expected");
+                self.new_error_exp()
+            }
+        }
+    }
+
     /// Translates an expression, with given expected type, which might be a type variable.
     fn translate_exp(&mut self, exp: &EA::Exp, expected_type: &Type) -> Exp {
         let loc = self.to_loc(&exp.loc);

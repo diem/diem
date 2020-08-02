@@ -82,7 +82,7 @@ module Roles {
     }
     spec fun grant_treasury_compliance_role {
         include LibraTimestamp::AbortsIfNotGenesis;
-        include CoreAddresses::AbortsIfNotTreasuryCompliance{account: lr_account};
+        include CoreAddresses::AbortsIfNotTreasuryCompliance{account: treasury_compliance_account};
         include AbortsIfNotLibraRoot{account: lr_account};
         include GrantRole{account: treasury_compliance_account, role_id: TREASURY_COMPLIANCE_ROLE_ID};
     }
@@ -182,6 +182,7 @@ module Roles {
         aborts_if exists<RoleId>(addr) with Errors::ALREADY_PUBLISHED;
         ensures exists<RoleId>(addr);
         ensures global<RoleId>(addr).role_id == role_id;
+        modifies global<RoleId>(addr);
     }
 
     //  ## privilege-checking functions for roles ##

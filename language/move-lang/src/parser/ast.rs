@@ -243,7 +243,7 @@ pub enum SpecBlockMember_ {
         kind: SpecConditionKind,
         properties: Vec<PragmaProperty>,
         exp: Exp,
-        abort_codes: Vec<Exp>,
+        additional_exps: Vec<Exp>,
     },
     Function {
         uninterpreted: bool,
@@ -285,6 +285,7 @@ pub enum SpecConditionKind {
     AbortsIf,
     AbortsWith,
     SucceedsIf,
+    Modifies,
     Ensures,
     Requires,
     RequiresModule,
@@ -904,6 +905,7 @@ impl AstDebug for SpecConditionKind {
             AbortsIf => w.write("aborts_if "),
             AbortsWith => w.write("aborts_with "),
             SucceedsIf => w.write("succeeds_if "),
+            Modifies => w.write("modifies "),
             Ensures => w.write("ensures "),
             Requires => w.write("requires "),
             RequiresModule => w.write("requires module "),
@@ -923,11 +925,11 @@ impl AstDebug for SpecBlockMember_ {
                 kind,
                 properties: _,
                 exp,
-                abort_codes: aborts_if_with,
+                additional_exps,
             } => {
                 kind.ast_debug(w);
                 exp.ast_debug(w);
-                w.list(aborts_if_with, ",", |w, e| {
+                w.list(additional_exps, ",", |w, e| {
                     e.ast_debug(w);
                     true
                 });

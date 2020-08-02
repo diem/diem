@@ -12,7 +12,10 @@ use log::{debug, info, log, warn, Level};
 use spec_lang::{
     code_writer::CodeWriter,
     emit, emitln,
-    env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
+    env::{
+        ConditionInfo, ConditionTag, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructEnv, StructId,
+        TypeParameter,
+    },
     ty::{PrimitiveType, Type},
 };
 use stackless_bytecode_generator::{
@@ -30,9 +33,10 @@ use vm::file_format::CodeOffset;
 
 use crate::{
     boogie_helpers::{
-        boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
-        boogie_requires_well_formed, boogie_resource_memory_name,
-        boogie_saved_resource_memory_name, boogie_struct_name, boogie_type_value,
+        boogie_byte_blob, boogie_caller_resource_memory_domain_name, boogie_field_name,
+        boogie_function_name, boogie_local_type, boogie_requires_well_formed,
+        boogie_resource_memory_name, boogie_saved_resource_memory_name,
+        boogie_self_resource_memory_domain_name, boogie_struct_name, boogie_type_value,
         boogie_type_value_array, boogie_type_values, boogie_well_formed_check, WellFormedMode,
     },
     cli::Options,
@@ -43,6 +47,9 @@ use spec_lang::env::{
     SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
 };
 use std::cell::RefCell;
+
+const MODIFY_RESOURCE_FAILS_MESSAGE: &str =
+    "caller does not have permission for this resource modification";
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -531,11 +538,14 @@ impl<'env> ModuleTranslator<'env> {
         for entry_point in entries {
             self.generate_function_sig(func_target, entry_point);
             if opaque {
-                emitln!(self.writer, ";\nmodifies $abort_flag, $abort_code;");
+                emitln!(self.writer, ";");
+                emitln!(self.writer, "modifies $abort_flag, $abort_code;");
             }
             let st = self.new_spec_translator(func_target.clone(), true);
             let distribution = self.generate_function_spec(&st, entry_point);
-            if !opaque {
+            if opaque {
+                self.generate_havoc_modify_targets(&st);
+            } else {
                 self.generate_function_stub(&st, entry_point, Definition, distribution);
             }
             emitln!(self.writer);
@@ -646,6 +656,13 @@ impl<'env> ModuleTranslator<'env> {
                     boogie_local_type(ty)
                 )
             }))
+            .chain(func_target.get_modify_targets().keys().map(|ty| {
+                format!(
+                    "{}: {}",
+                    boogie_caller_resource_memory_domain_name(func_target.global_env(), *ty),
+                    "[$TypeValueArray, int]bool"
+                )
+            }))
             .join(", ");
         let rets = func_target
             .get_return_types()
@@ -702,6 +719,11 @@ impl<'env> ModuleTranslator<'env> {
             .translate_conditions_inside_impl(block_id);
     }
 
+    /// Generate havoc of modify targets
+    fn generate_havoc_modify_targets<'a>(&'a self, st: &SpecTranslator<'a>) {
+        st.translate_modify_targets();
+    }
+
     /// Generate function stub depending on entry point type. This forwards to the
     /// inlined function definition.
     fn generate_function_stub<'a>(
@@ -725,19 +747,23 @@ impl<'env> ModuleTranslator<'env> {
         st.translate_entry_point_assumptions(entry_point, distribution);
 
         // Generate call to inlined function.
-        let args = func_target
-            .get_type_parameters()
-            .iter()
-            .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
-            .chain((0..func_target.get_parameter_count()).map(|i| {
-                format!(
-                    "{}",
-                    func_target
-                        .get_local_name(i)
-                        .display(func_target.symbol_pool())
-                )
-            }))
-            .join(", ");
+        let args =
+            func_target
+                .get_type_parameters()
+                .iter()
+                .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
+                .chain((0..func_target.get_parameter_count()).map(|i| {
+                    format!(
+                        "{}",
+                        func_target
+                            .get_local_name(i)
+                            .display(func_target.symbol_pool())
+                    )
+                }))
+                .chain(func_target.get_modify_targets().keys().map(|ty| {
+                    boogie_caller_resource_memory_domain_name(func_target.global_env(), *ty)
+                }))
+                .join(", ");
         let rets = (0..func_target.get_return_count())
             .map(|i| format!("$ret{}", i))
             .join(", ");
@@ -793,6 +819,14 @@ impl<'env> ModuleTranslator<'env> {
             );
         }
         emitln!(self.writer, "var $tmp: $Value;");
+        func_target.get_modify_targets().keys().for_each(|ty| {
+            emitln!(
+                self.writer,
+                "var {}: {}",
+                boogie_self_resource_memory_domain_name(func_target.global_env(), *ty),
+                "[$TypeValueArray, int]bool;"
+            );
+        });
 
         emitln!(self.writer, "\n// initialize function execution");
         emitln!(self.writer, "assume !$abort_flag;");
@@ -806,6 +840,9 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, &s);
             }
         }
+
+        let st = self.new_spec_translator(func_target.clone(), false);
+        st.emit_modifies_initialization();
 
         emitln!(self.writer, "\n// bytecode translation starts here");
 
@@ -918,6 +955,28 @@ impl<'env> ModuleTranslator<'env> {
                 "if ($abort_flag) {\n  goto Abort;\n}".to_string()
             }
         };
+
+        let emit_modifies_check =
+            |memory: QualifiedId<StructId>, type_args: &String, addr_name: &String| {
+                if func_target.get_modify_targets_for_type(&memory).is_some() {
+                    let self_domain =
+                        boogie_self_resource_memory_domain_name(self.module_env.env, memory);
+                    let loc = func_target.get_bytecode_loc(bytecode.get_attr_id());
+                    self.writer.set_location(&loc);
+                    self.module_env.env.set_condition_info(
+                        loc,
+                        ConditionTag::Requires,
+                        ConditionInfo::for_message(MODIFY_RESOURCE_FAILS_MESSAGE),
+                    );
+                    emitln!(
+                        self.writer,
+                        "assert {}[{}, a#$Address({})];",
+                        self_domain,
+                        type_args,
+                        addr_name
+                    );
+                };
+            };
 
         // Translate the bytecode instruction.
         match bytecode {
@@ -1141,19 +1200,34 @@ impl<'env> ModuleTranslator<'env> {
                         let mut dest_str = String::new();
                         let mut args_str = String::new();
                         let mut dest_type_assumptions = vec![];
+                        let callee_modified_types: Vec<&QualifiedId<StructId>> =
+                            callee_target.get_modify_targets().keys().collect();
                         args_str.push_str(&boogie_type_values(
                             func_target.func_env.module_env.env,
                             type_actuals,
                         ));
-                        if !args_str.is_empty() && !srcs.is_empty() {
+                        if !args_str.is_empty()
+                            && (!srcs.is_empty() || !callee_modified_types.is_empty())
+                        {
                             args_str.push_str(", ");
                         }
                         args_str.push_str(
                             &srcs
                                 .iter()
                                 .map(|arg_idx| format!("{}", str_local(*arg_idx)))
+                                .chain(callee_modified_types.iter().map(|ty| {
+                                    if func_target.get_modify_targets_for_type(ty).is_some() {
+                                        boogie_self_resource_memory_domain_name(
+                                            func_target.global_env(),
+                                            **ty,
+                                        )
+                                    } else {
+                                        "$ConstMemoryDomain(true)".to_string()
+                                    }
+                                }))
                                 .join(", "),
                         );
+
                         dest_str.push_str(
                             &dests
                                 .iter()
@@ -1237,7 +1311,6 @@ impl<'env> ModuleTranslator<'env> {
                         );
                         emitln!(self.writer, &update_and_track_local(dest, "$tmp"));
                     }
-
                     Unpack(mid, sid, type_actuals) => {
                         let src = srcs[0];
                         let struct_env = func_target
@@ -1359,14 +1432,16 @@ impl<'env> ModuleTranslator<'env> {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory =
-                            boogie_resource_memory_name(self.module_env.env, mid.qualified(*sid));
+                        let addr_name = str_local(addr);
+                        let memory = mid.qualified(*sid);
+                        let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
+                        emit_modifies_check(memory, &type_args, &addr_name);
                         emitln!(
                             self.writer,
                             "call {} := $BorrowGlobal({}, {}, {});",
                             str_local(dest),
-                            memory,
-                            str_local(addr),
+                            memory_name,
+                            addr_name,
                             type_args,
                         );
                         emitln!(self.writer, &propagate_abort());
@@ -1415,11 +1490,17 @@ impl<'env> ModuleTranslator<'env> {
                         let value = srcs[0];
                         let signer = srcs[1];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let signer_name = str_local(signer);
                         let memory = mid.qualified(*sid);
                         let spec_translator = self.new_spec_translator_for_module();
                         spec_translator.emit_on_update_global_invariant_assumes(memory);
                         spec_translator.save_memory_for_update_invariants(memory);
                         let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
+                        emit_modifies_check(
+                            memory,
+                            &type_args,
+                            &format!("$Signer_spec_address_of({})", signer_name),
+                        );
                         emitln!(
                             self.writer,
                             "call {} := $MoveTo({}, {}, {}, {});",
@@ -1427,7 +1508,7 @@ impl<'env> ModuleTranslator<'env> {
                             memory_name,
                             type_args,
                             str_local(value),
-                            str_local(signer),
+                            signer_name,
                         );
                         emitln!(self.writer, &propagate_abort());
                         spec_translator.emit_global_invariants_for_memory(
@@ -1439,16 +1520,18 @@ impl<'env> ModuleTranslator<'env> {
                         let src = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
+                        let src_name = str_local(src);
                         let memory = mid.qualified(*sid);
                         let spec_translator = self.new_spec_translator_for_module();
                         spec_translator.save_memory_for_update_invariants(memory);
                         let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
+                        emit_modifies_check(memory, &type_args, &src_name);
                         emitln!(
                             self.writer,
                             "call {}, $tmp := $MoveFrom({}, {}, {});",
                             memory_name,
                             memory_name,
-                            str_local(src),
+                            src_name,
                             type_args,
                         );
                         emitln!(self.writer, &propagate_abort());

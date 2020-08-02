@@ -1584,7 +1584,7 @@ fn parse_spec_exp<'input>(
     parse_rhs_of_spec_exp(tokens, lhs, /* min_prec */ 1)
 }
 
-// Parse a top-level requires, ensures, aborts_if, or succeeds_if spec
+// Parse a top-level requires, modifies, ensures, aborts_if, or succeeds_if spec
 // in a function decl.  This has to set the lexer into "spec_mode" to
 // return names without eating trailing punctuation such as '<' or '.'.
 // That is needed to parse paths with dots separating field names.

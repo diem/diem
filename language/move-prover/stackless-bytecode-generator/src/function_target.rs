@@ -9,8 +9,8 @@ use crate::{
 };
 use itertools::Itertools;
 use spec_lang::{
-    ast::Spec,
-    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, StructId, TypeParameter},
+    ast::{ConditionKind, Exp, Spec},
+    env::{FunId, FunctionEnv, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructId, TypeParameter},
     symbol::{Symbol, SymbolPool},
     ty::{Type, TypeDisplayContext},
 };
@@ -24,6 +24,7 @@ pub struct FunctionTarget<'env> {
     pub func_env: &'env FunctionEnv<'env>,
     pub data: &'env FunctionTargetData,
     pub name_to_index: BTreeMap<Symbol, usize>,
+    pub modify_targets: BTreeMap<QualifiedId<StructId>, Vec<&'env Exp>>,
 
     // Used for debugging and testing, containing any attached annotation formatters.
     annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
@@ -38,6 +39,7 @@ impl<'env> Clone for FunctionTarget<'env> {
             func_env: self.func_env,
             data: self.data,
             name_to_index: self.name_to_index.clone(),
+            modify_targets: self.modify_targets.clone(),
             annotation_formatters: RefCell::new(vec![]),
         }
     }
@@ -76,10 +78,31 @@ impl<'env> FunctionTarget<'env> {
         let name_to_index = (0..func_env.get_local_count())
             .map(|idx| (func_env.get_local_name(idx), idx))
             .collect();
+
+        let modify_conditions = data
+            .rewritten_spec
+            .as_ref()
+            .unwrap_or_else(|| func_env.get_spec())
+            .filter_kind(ConditionKind::Modifies);
+        let mut modify_targets: BTreeMap<QualifiedId<StructId>, Vec<&Exp>> = BTreeMap::new();
+        for cond in modify_conditions {
+            cond.exp.extract_modify_targets().iter().for_each(|target| {
+                let node_id = target.node_id();
+                let rty = &func_env.module_env.get_node_instantiation(node_id)[0];
+                let (mid, sid, _) = rty.require_struct();
+                let type_name = mid.qualified(sid);
+                modify_targets
+                    .entry(type_name)
+                    .or_insert_with(Vec::new)
+                    .push(target);
+            });
+        }
+
         FunctionTarget {
             func_env,
             data,
             name_to_index,
+            modify_targets,
             annotation_formatters: RefCell::new(vec![]),
         }
     }
@@ -259,6 +282,16 @@ impl<'env> FunctionTarget<'env> {
     /// Returns whether a call to this function ends lifetime of input references
     pub fn call_ends_lifetime(&self) -> bool {
         self.is_public() && self.get_return_types().iter().all(|ty| !ty.is_reference())
+    }
+
+    /// Gets modify targets for a type
+    pub fn get_modify_targets_for_type(&self, ty: &QualifiedId<StructId>) -> Option<&Vec<&Exp>> {
+        self.modify_targets.get(ty)
+    }
+
+    /// Gets all modify targets
+    pub fn get_modify_targets(&self) -> &BTreeMap<QualifiedId<StructId>, Vec<&Exp>> {
+        &self.modify_targets
     }
 }
 

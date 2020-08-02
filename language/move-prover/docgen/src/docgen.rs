@@ -63,6 +63,7 @@ const WEAK_KEYWORDS: &[&str] = &[
     "assume",
     "decreases",
     "aborts_if",
+    "modifies",
     "ensures",
     "requires",
     "pack",

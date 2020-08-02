@@ -13,12 +13,13 @@ an overview of the design and usage of the Spec language. The reader is expected
 - [Spec Blocks](#spec-blocks)
 - [Pragmas](#pragmas)
 - [Helper Functions](#helper-functions)
+- [Assume and Assert Conditions](#assume-and-assert-conditions)
 - [AbortsIf Condition](#abortsif-condition)
 - [SucceedsIf Condition](#succeedsif-condition)
 - [Requires Condition](#requires-condition)
 - [Requires Module Condition](#requires-module-condition)
 - [Ensures Condition](#ensures-condition)
-- [Assume and Assert Conditions](#assume-and-assert-conditions)
+- [Modifies Condition](#modifies-condition)
 - [Invariant Condition on Functions](#invariant-condition-on-functions)
 - [Invariant Condition on Modules](#invariant-condition-on-modules)
 - [Invariant Condition on Structs](#invariant-condition-on-structs)
@@ -212,6 +213,63 @@ spec module {
 Is seen in the example, they can be generic. Helper functions can also access global state as done in the
 example.
 
+## Assume and Assert Conditions
+
+These conditions can only appear in spec blocks inside function bodies.
+A spec block can occur anywhere an ordinary Move statement block can occur.
+Here is an example:
+```
+fun simple1(x: u64, y: u64) {
+    let z;
+    y = x;
+    z = x + y;
+    spec {
+        assert x == y;
+        assert z == 2*x;
+    }
+}
+```
+An assert statement inside a spec block indicates a condition that must hold when control reaches that block.
+If the condition does not hold, an error is reported by the Move Prover.
+An assume statement, on the other hand, blocks executions violating the condition in the statement.
+The function `simple2` shown below is verified by the Move Prover.
+However, if the first spec block containing the assume statement is removed, Move Prover will
+show a violating to the assert statement in the second spec block.
+```
+fun simple2(x: u64, y: u64) {
+    let z: u64;
+    spec {
+        assume x > y;
+    };
+    z = x + y;
+    spec {
+        assert z > 2*y;
+    }
+}
+```
+An assert statement can also encode a loop invariant if it is placed at a loop head, as in the following example.
+```
+fun simple3(n: u64) {
+    let x = 0
+    loop {
+        spec {
+            assert x <= n;
+        };
+        if (x < n) {
+            x = x + 1
+        } else {
+            break
+        }
+    };
+    spec {
+        assert x == n;
+    }
+}
+```
+A loop invariant may comprise both assert and assume statements.
+The assume statements will be assumed at each entry into the loop while the assert statements will be
+checked at each entry into the loop.
+
 ## AbortsIf Condition
 
 The `aborts_if` condition is a spec block member which can appear only in a function context. It specifies conditions
@@ -359,62 +417,60 @@ spec fun increment {
 }
 ```
 
-## Assume and Assert Conditions
+## Modifies Condition
 
-These conditions can only appear in spec blocks inside function bodies.
-A spec block can occur anywhere an ordinary Move statement block can occur.
-Here is an example:
-```
-fun simple1(x: u64, y: u64) {
-    let z;
-    y = x;
-    z = x + y;
-    spec {
-        assert x == y;
-        assert z == 2*x;
-    }
+The `modifies` condition is used to provide permissions to a function to modify global storage.
+The annotation itself comprises a list of global access expressions.
+
+```move
+resource struct S {
+    x: u64
+}
+
+fun mutate_at(addr: address) acquires S {
+    let s = borrow_global_mut<S>(addr);
+    s.x = 2;
+}
+spec fun mutate_at {
+    pragma opaque = true;
+    modifies global<S>(addr);
 }
 ```
-An assert statement inside a spec block indicates a condition that must hold when control reaches that block.
-If the condition does not hold, an error is reported by the Move Prover.
-An assume statement, on the other hand, blocks executions violating the condition in the statement.
-The function `simple2` shown below is verified by the Move Prover.
-However, if the first spec block containing the assume statement is removed, Move Prover will
-show a violating to the assert statement in the second spec block.
-```
-fun simple2(x: u64, y: u64) {
-    let z: u64;
-    spec {
-        assume x > y;
-    };
-    z = x + y;
-    spec {
-        assert z > 2*y;
-    }
+
+In general, a global access expression has the form `global<type_expr>(address_expr)`.
+The address-valued expression is evaluated in the entry state of the annotated function.
+
+```move
+fun read_at(addr: address): u64 acquires S {
+    let s = borrow_global<S>(addr);
+    s.x
+}
+
+fun mutate_S_test(addr1: address, addr2: address): bool acquires T {
+    assert(addr1 != addr2, 43);
+    let x = read_at(addr2);
+    mutate_at(addr1); // Note we are mutating a different address than the one read before and after
+    x == read_at(addr2)
+}
+spec fun mutate_S_test {
+    aborts_if addr1 == addr2;
+    ensures result == true;
 }
 ```
-An assert statement can also encode a loop invariant if it is placed at a loop head, as in the following example.
-```
-fun simple3(n: u64) {
-    let x = 0
-    loop {
-        spec {
-            assert x <= n;
-        };
-        if (x < n) {
-            x = x + 1
-        } else {
-            break
-        }
-    };
-    spec {
-        assert x == n;
-    }
-}
-```
-A loop invariant may comprise both assert and assume statements.
-The assume statements will be assumed at each entry into the loop while the assert statements will be
-checked at each entry into the loop.
+
+In the function `mutate_S_test`, the assertion in the spec block is expected to hold.
+A benefit of the modifies specification on `mutate_at` is that this assertion can be proved
+whether or not `mutate_at` is inlined.
+
+If the modifies annotation is omitted on a function, then that function is deemed to have all
+possible permissions for those resources it may modify during its execution.  The set of all
+resources that may be modified by a function is obtained via an interprocedural analysis of
+the code.  In the example above, `mutate_S_test` does not have a modifies specification
+and modifies resource `S` via the call to `mutate_at`.  Therefore, it is considered to have
+modified `S` at any possible address.  Instead, if the programmer adds `modifies global<S>(addr1)`
+to the specification of `mutate_S_test`, then the call to `mutate_at` is checked to make sure
+that modify permissions granted to `mutate_S_test` cover the permissions it grants to `mutate_at`.
+
 
 ## Invariant Condition on Functions
 

@@ -1,0 +1,8 @@
+Move prover returns: exiting with modifies checking errors
+error: caller `mutate_S_test1_incorrect` specifies modify targets for `A::S` but callee does not
+
+    ┌── tests/sources/functional/ModifiesTypeTest.move:30:12 ───
+    │
+ 30 │         A::mutate_at(addr);
+    │            ^^^^^^^^^
+    │

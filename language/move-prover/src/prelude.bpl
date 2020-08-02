@@ -539,7 +539,7 @@ function {:constructor} $Local(i: int): $Location;
 function {:constructor} $Param(i: int): $Location;
 
 
-// A mutable reference which also carries its current value. Since mutual references
+// A mutable reference which also carries its current value. Since mutable references
 // are single threaded in Move, we can keep them together and treat them as a value
 // during mutation until the point they are stored back to their original location.
 type {:datatype} $Mutation;
@@ -556,6 +556,8 @@ function {:inline} $Memory__is_well_formed(m: $Memory): bool {
 
 function {:builtin "MapConst"} $ConstMemoryDomain(v: bool): [$TypeValueArray, int]bool;
 function {:builtin "MapConst"} $ConstMemoryContent(v: $Value): [$TypeValueArray, int]$Value;
+axiom $ConstMemoryDomain(false) == (lambda ta: $TypeValueArray, i: int :: false);
+axiom $ConstMemoryDomain(true) == (lambda ta: $TypeValueArray, i: int :: true);
 
 const $EmptyMemory: $Memory;
 axiom domain#$Memory($EmptyMemory) == $ConstMemoryDomain(false);
@@ -623,15 +625,19 @@ procedure {:inline 1} $MoveToRaw(m: $Memory, ta: $TypeValueArray, a: int, v: $Va
 
 procedure {:inline 1} $MoveTo(m: $Memory, ta: $TypeValueArray, v: $Value, signer: $Value) returns (m': $Memory)
 {
-    var addr: $Value;
-    call addr := $Signer_borrow_address(signer);
-    call m' := $MoveToRaw(m, ta, a#$Address(addr), v);
+    var address: $Value;
+    var a: int;
+
+    call address := $Signer_borrow_address(signer);
+    a := a#$Address(address);
+    call m' := $MoveToRaw(m, ta, a, v);
 }
 
 procedure {:inline 1} $MoveFrom(m: $Memory, address: $Value, ta: $TypeValueArray) returns (m': $Memory, dst: $Value)
 {{backend.type_requires}} is#$Address(address);
 {
     var a: int;
+
     a := a#$Address(address);
     if (!$ResourceExistsRaw(m, ta, a)) {
         call $ExecFailureAbort();
@@ -645,6 +651,7 @@ procedure {:inline 1} $BorrowGlobal(m: $Memory, address: $Value, ta: $TypeValueA
 {{backend.type_requires}} is#$Address(address);
 {
     var a: int;
+
     a := a#$Address(address);
     if (!$ResourceExistsRaw(m, ta, a)) {
         call $ExecFailureAbort();
