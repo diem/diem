@@ -393,6 +393,7 @@ impl TSafetyRules for SafetyRules {
     }
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
+        trace_code_block!("safety_rules::initialize", {"round", 0});
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_initialize(proof);
         run_and_log(
@@ -427,6 +428,7 @@ impl TSafetyRules for SafetyRules {
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         let round = block_data.round();
+        trace_code_block!("safety_rules::sign_proposal", {"round", round});
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_sign_proposal(block_data);
         run_and_log(
@@ -440,6 +442,7 @@ impl TSafetyRules for SafetyRules {
     }
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
+        trace_code_block!("safety_rules::sign_timeout", {"round", 0});
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), timeout.round());
         let cb = || self.guarded_sign_timeout(timeout);
         run_and_log(
