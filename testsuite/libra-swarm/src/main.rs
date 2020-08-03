@@ -93,7 +93,7 @@ fn main() {
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
 
     println!(
-        "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {:?}",
+        "\tcli -u {} -m {:?} --waypoint {} --chain-id {:?}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
         libra_root_key_path,
         waypoint,
@@ -117,7 +117,7 @@ fn main() {
 
     println!("To run transaction generator run:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
         libra_root_key_path, node_address_list,
     );
 
@@ -128,7 +128,7 @@ fn main() {
 
     println!("To run health check:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
         libra_root_key_path, node_address_list,
     );
 
@@ -136,7 +136,7 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {}",
+            "\tcli -u {} -m {:?} --waypoint {} --chain-id {}",
             format!("http://localhost:{}", full_node_config.rpc.address.port()),
             libra_root_key_path,
             waypoint,
