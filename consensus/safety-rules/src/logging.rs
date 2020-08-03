@@ -8,6 +8,12 @@ pub fn safety_log(entry: LogEntry, event: LogEvent) -> StructuredLogEntry {
         .data(LogField::Event.as_str(), event.as_str())
 }
 
+pub fn ts_log(entry: LogEntry, event: LogEvent) -> StructuredLogEntry {
+    StructuredLogEntry::new_named("safety_rules_ts", entry.as_str())
+        .data(LogField::Event.as_str(), event.as_str())
+}
+
+
 #[derive(Clone, Copy)]
 pub enum LogEntry {
     ConsensusState,
@@ -45,8 +51,8 @@ pub enum LogEvent {
     Request,
     Success,
     Update,
-    // lwg: hack
-    Enter,
+    // lwg: hack, taking timestamp
+    TS,
 }
 
 impl LogEvent {
@@ -56,7 +62,7 @@ impl LogEvent {
             LogEvent::Request => "request",
             LogEvent::Success => "success",
             LogEvent::Update => "update",
-            LogEvent::Enter => "enter",
+            LogEvent::TS => "timestamp",
         }
     }
 }
