@@ -35,6 +35,13 @@ impl UpstreamConfig {
                 .position(|upstream_network| upstream_network == &network)
         }
     }
+
+    /// Returns the number of upstream networks possible for a node with this config
+    pub fn upstream_count(&self) -> usize {
+        // `self.networks.len()` is not enough because for validators, this is empty
+        // but their unspecified validator network is considered upstream by default
+        std::cmp::max(1, self.networks.len())
+    }
 }
 
 #[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]

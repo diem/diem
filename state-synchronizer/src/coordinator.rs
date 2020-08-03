@@ -496,7 +496,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         self.check_subscriptions();
         self.peer_manager
-            .remove_requests(synced_version, self.multicast_timeout);
+            .remove_requests(synced_version, self.retry_timeout);
 
         if let Some(mut req) = self.sync_request.as_mut() {
             req.last_progress_tst = SystemTime::now();
@@ -764,8 +764,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 .peer_manager
                 .is_multicast_response(chunk_start_version, peer)
             {
-                // TODO don't penalize if this response was still within the regular timeout range
-                // but should still penalize for actual timeout
+                // This chunk response was in response to a past multicast response that another
+                // peer sent a response to earlier than this peer
+                // Don't penalize if this response did not technically time out
                 bail!(
                 "[state sync] Received chunk for outdated request from {:?}: known_version: {}, received: {}",
                 peer,
@@ -1020,8 +1021,6 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// (might be chosen optimistically).
     /// The request includes a target for Validator and a non-zero timeout for a FullNode.
     fn send_chunk_request(&mut self, known_version: u64, known_epoch: u64) -> Result<()> {
-        // TODO pick peers based on multicast option
-        // if multicast, pick peers from peer manager via pick_multicast_peers
         let peers = self.peer_manager.pick_peers();
         if peers.is_empty() {
             bail!("No peers found for chunk request.");

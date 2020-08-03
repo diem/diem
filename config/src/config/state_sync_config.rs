@@ -14,8 +14,8 @@ pub struct StateSyncConfig {
     pub max_chunk_limit: u64,
     // valid maximum timeout limit for sanity check
     pub max_timeout_ms: u64,
-    // default timeout set on peers from a given network to help this node make state sync progress
-    // if no progress is made by sending requests to a network,
+    // default timeout to make state sync progress by sending chunk requests to a certain number of networks
+    // if no progress is made by sending chunk requests to a number of networks,
     // the next sync request will be multicasted, i.e. sent to more networks
     pub multicast_timeout_ms: u64,
     // default timeout for sync request

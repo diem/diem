@@ -5,7 +5,7 @@ use crate::counters;
 use itertools::Itertools;
 use libra_config::{
     config::{PeerNetworkId, UpstreamConfig},
-    network_id::{NetworkId, NodeNetworkId},
+    network_id::NetworkId,
 };
 use libra_logger::prelude::*;
 use netcore::transport::ConnectionOrigin;
@@ -14,12 +14,13 @@ use rand::{
     thread_rng,
 };
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     time::{Duration, SystemTime},
 };
 
 const MAX_SCORE: f64 = 100.0;
 const MIN_SCORE: f64 = 1.0;
+const MIN_UPSTREAM_NETWORK_CT: usize = 1;
 
 #[derive(Default, Debug, Clone)]
 pub struct PeerInfo {
@@ -39,17 +40,19 @@ pub struct ChunkRequestInfo {
     version: u64,
     first_request_time: SystemTime,
     last_request_time: SystemTime,
+    multicast_level: usize,
     multicast_start_time: SystemTime,
     last_request_peers: Vec<PeerNetworkId>,
 }
 
 impl ChunkRequestInfo {
-    pub fn new(version: u64, peers: Vec<PeerNetworkId>) -> Self {
+    pub fn new(version: u64, peers: Vec<PeerNetworkId>, multicast_level: usize) -> Self {
         let now = SystemTime::now();
         Self {
             version,
             first_request_time: now,
             last_request_time: now,
+            multicast_level,
             multicast_start_time: now,
             last_request_peers: peers,
         }
@@ -74,10 +77,10 @@ pub struct PeerManager {
     peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
     upstream_config: UpstreamConfig,
-    // networks that timed out in helping this node make state sync progress
-    // the same chunk request will be multicasted across all these networks and an additional fallback
-    // if available, until we receive a successful chunk response from the primary network
-    multicast_networks: Vec<NodeNetworkId>,
+    // number of networks to try to multicast the same chunk request to
+    // the node will try send chunk requests to one peer per the first `multicast_level` networks
+    // available, in order of preference specified by the upstream config
+    multicast_level: usize,
 }
 
 impl PeerManager {
@@ -87,7 +90,7 @@ impl PeerManager {
             peers: HashMap::new(),
             requests: BTreeMap::new(),
             upstream_config,
-            multicast_networks: vec![],
+            multicast_level: MIN_UPSTREAM_NETWORK_CT,
         }
     }
 
@@ -203,62 +206,28 @@ impl PeerManager {
     }
 
     pub fn pick_peers(&self) -> Vec<PeerNetworkId> {
-        let mut picked_peers = vec![];
-        if self.multicast_networks.is_empty() {
-            // pick from first network with available peers
-            if let Some((_key, (active_peers, weighted_index))) = self.eligible_peers.iter().next()
-            {
-                if let Some(peer) = Self::pick_peer(active_peers, weighted_index) {
-                    picked_peers.push(peer);
-                }
-            }
-        } else {
-            let multicast_network_prefs = self
-                .multicast_networks
-                .iter()
-                .filter_map(|network| {
-                    self.upstream_config
-                        .get_upstream_preference(network.network_id())
-                })
-                .collect::<HashSet<_>>();
-
-            picked_peers = multicast_network_prefs
-                .iter()
-                .filter_map(|network_pref| {
-                    self.eligible_peers
-                        .get(&network_pref)
-                        .and_then(|(peers, weighted_index)| Self::pick_peer(peers, weighted_index))
-                })
-                .collect::<Vec<_>>();
-
-            // try picking another network's peer other than multicast_networks, if available
-            if let Some(failover_peer) = self
-                .eligible_peers
-                .iter()
-                .find(|(network_pref, _peers)| !multicast_network_prefs.contains(network_pref))
-                .and_then(|(_network_pref, (peers, weighted_index))| {
-                    Self::pick_peer(peers, weighted_index)
-                })
-            {
-                picked_peers.push(failover_peer);
-            }
-        }
-
-        picked_peers
+        self.eligible_peers
+            .iter()
+            .take(self.multicast_level)
+            .filter_map(|(_, (peers, weighted_index))| Self::pick_peer(peers, weighted_index))
+            .collect::<Vec<_>>()
     }
 
     pub fn process_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
-            if peers.len() > prev_request.last_request_peers.len() {
-                // update multicast start time if we are sending the request to more peers
+            if self.multicast_level != prev_request.multicast_level {
+                // update multicast start time if multicast level changed
+                prev_request.multicast_level = self.multicast_level;
                 prev_request.multicast_start_time = now;
             }
             prev_request.last_request_peers = peers;
             prev_request.last_request_time = now;
         } else {
-            self.requests
-                .insert(version, ChunkRequestInfo::new(version, peers));
+            self.requests.insert(
+                version,
+                ChunkRequestInfo::new(version, peers, self.multicast_level),
+            );
         }
     }
 
@@ -270,7 +239,7 @@ impl PeerManager {
             == Some(0);
         if is_primary_upstream_peer {
             // if chunk from a primary upstream is successful, stop multicasting the request to failover networks
-            self.multicast_networks = vec![];
+            self.multicast_level = MIN_UPSTREAM_NETWORK_CT;
         }
 
         // update score
@@ -302,25 +271,25 @@ impl PeerManager {
     }
 
     /// Removes requests for all versions before `version` (inclusive) if they are older than
-    /// now - `multicast_timeout`
-    /// We keep the requests that have not timed out for multicasting so we don't penalize
+    /// now - `timeout`
+    /// We keep the requests that have not timed out so we don't penalize
     /// peers who send chunks after the first peer who sends the first successful chunk response for a
-    /// given request
-    pub fn remove_requests(&mut self, version: u64, multicast_timeout: Duration) {
-        // only remove requests that have multicast-timed out, so we don't penalize for multicasted responses
-        // that still came back on time
+    /// multicasted request
+    pub fn remove_requests(&mut self, version: u64, timeout: Duration) {
+        // only remove requests that have timed out or sent to one peer, so we don't penalize for multicasted responses
+        // that still came back on time, based on per-peer timeout
         let now = SystemTime::now();
         let versions_to_remove = self
             .requests
             .range(..version + 1)
             .filter_map(|(version, req)| {
-                let is_multicast_timeout = req
+                let is_timeout = req
                     .last_request_time
-                    .checked_add(multicast_timeout)
+                    .checked_add(timeout)
                     .map_or(false, |retry_deadline| {
                         now.duration_since(retry_deadline).is_ok()
                     });
-                if is_multicast_timeout {
+                if is_timeout || req.last_request_peers.len() == 1 {
                     Some(*version)
                 } else {
                     None
@@ -347,10 +316,10 @@ impl PeerManager {
         // TODO make sure is_multicast_timeout means the correct thing
         // may have to track per network
         if is_multicast_timeout {
-            self.multicast_networks = peers_to_penalize
-                .into_iter()
-                .map(|peer| peer.network_id())
-                .collect();
+            self.multicast_level = std::cmp::min(
+                self.multicast_level + 1,
+                self.upstream_config.upstream_count(),
+            )
         }
     }
 

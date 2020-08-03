@@ -173,7 +173,7 @@ fn test_multicast() {
     assert_eq!(picked_peers[0].network_id(), primary_network_id);
     assert_eq!(picked_peers[1].network_id(), failover_network_0);
 
-    peer_manager.process_request(8, picked_peers.clone());
+    peer_manager.process_request(8, picked_peers);
 
     // this time, time out with multicast timeout
     peer_manager.process_timeout(8, true);
@@ -190,7 +190,7 @@ fn test_multicast() {
     assert!(networks.contains(&failover_network_1));
 
     // time out with multicast
-    peer_manager.process_request(8, picked_peers.clone());
+    peer_manager.process_request(8, picked_peers);
 
     // this time, time out with multicast timeout
     peer_manager.process_timeout(8, true);
