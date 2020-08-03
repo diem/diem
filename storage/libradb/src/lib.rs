@@ -802,6 +802,8 @@ impl DbWriter for LibraDB {
         if let Some(x) = ledger_info_with_sigs {
             self.ledger_store.set_latest_ledger_info(x.clone());
 
+            self.wake_pruner(x.ledger_info().version());
+
             LIBRA_STORAGE_LEDGER_VERSION.set(x.ledger_info().version() as i64);
             LIBRA_STORAGE_NEXT_BLOCK_EPOCH.set(x.ledger_info().next_block_epoch() as i64);
         }
@@ -817,8 +819,6 @@ impl DbWriter for LibraDB {
             counters
                 .expect("Counters should be bumped with transactions being saved.")
                 .bump_op_counters();
-
-            self.wake_pruner(last_version);
         }
 
         Ok(())
