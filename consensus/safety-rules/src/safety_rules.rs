@@ -333,12 +333,22 @@ impl SafetyRules {
     }
 
     fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+        let now = SystemTime::now();
         self.signer()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch())?;
         self.verify_last_vote_round(&block_data)?;
         self.verify_qc(block_data.quorum_cert())?;
         self.verify_and_update_preferred_round(block_data.quorum_cert())?;
+
+        let dur = now.elapsed().unwrap().as_nanos();
+        send_struct_log!(
+                logging::ts_log(
+                    LogEntry::SignProposal,
+                    LogEvent::TS)
+                .data(LogField::Message.as_str(),
+                    "verification takes:".to_owned() + dur.to_string().as_str())
+        );
 
         Ok(Block::new_proposal_from_block_data(
             block_data,
