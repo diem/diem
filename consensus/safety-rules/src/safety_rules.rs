@@ -381,17 +381,9 @@ impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         // lwg: this is to understand vault overhead
         //trace_code_block!("safety_rules::consensus_state", {"req", 0u32});
-        let now = SystemTime::now();
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_consensus_state();
 
-        let duration = now.duration_since(now).unwrap().as_nanos();
-        send_struct_log!(
-            logging::ts_log(
-                LogEntry::ConsensusState,
-                LogEvent::TS)
-            .data(LogField::Message.as_str(), duration.to_string().as_str())
-        );
 
         run_and_log(
             cb,
@@ -480,7 +472,8 @@ where
 {
     send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
     entry_counter.inc();
-    callback()
+    let now = SystemTime::now();
+    let ret = callback()
         .map(|v| {
             send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
             success_counter.inc();
@@ -491,5 +484,13 @@ where
                 .data(LogField::Message.as_str(), &err));
             error_counter.inc();
             err
-        })
+        });
+    let duration = now.duration_since(now).unwrap().as_nanos();
+    send_struct_log!(
+            logging::ts_log(
+                LogEntry::ConsensusState,
+                LogEvent::TS)
+            .data(LogField::Message.as_str(), duration.to_string().as_str())
+    );
+    ret
 }
