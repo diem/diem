@@ -386,12 +386,12 @@ impl TSafetyRules for SafetyRules {
         let cb = || self.guarded_consensus_state();
 
         let duration = now.duration_since(now).unwrap().as_nanos();
-        send_struct_log!(
-            logging::ts_log(
-                LogEntry::ConsensusState,
-                LogEvent::TS)
-            .data(LogField::Message.as_str(), duration)
-        );
+        //send_struct_log!(
+            //logging::ts_log(
+                //LogEntry::ConsensusState,
+                //LogEvent::TS)
+            //.data(LogField::Message.as_str(), duration)
+        //);
 
         run_and_log(
             cb,
