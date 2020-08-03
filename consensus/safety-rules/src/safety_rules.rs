@@ -485,7 +485,8 @@ where
             error_counter.inc();
             err
         });
-    let duration = now.duration_since(now).unwrap().as_nanos();
+    //let duration = now.duration_since(now).unwrap().as_nanos();
+    let duration = now.elapsed().unwrap().as_nanos();
     send_struct_log!(
             logging::ts_log(
                 LogEntry::ConsensusState,
