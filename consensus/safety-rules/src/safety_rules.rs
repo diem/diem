@@ -489,7 +489,7 @@ where
     let duration = now.elapsed().unwrap().as_nanos();
     send_struct_log!(
             logging::ts_log(
-                LogEntry::ConsensusState,
+                log_entry,
                 LogEvent::TS)
             .data(LogField::Message.as_str(), duration.to_string().as_str())
     );
