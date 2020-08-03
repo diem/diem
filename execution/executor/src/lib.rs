@@ -24,7 +24,7 @@ use crate::{
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{anyhow, bail, ensure, format_err, Result};
 use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
     TransactionReplayer,
@@ -181,10 +181,16 @@ where
         if txn_list_with_proof.transactions.is_empty() {
             return Ok((Vec::new(), Vec::new()));
         }
-        let first_txn_version = txn_list_with_proof
-            .first_transaction_version
-            .expect("first_transaction_version should exist.")
-            as Version;
+        let first_txn_version = match txn_list_with_proof.first_transaction_version {
+            Some(tx) => tx as Version,
+            None => {
+                send_struct_log!(StructuredLogEntry::new_named("MUST_FIX", "assertion")
+                    .data("details", "first_transaction_version should exist.")
+                    .critical());
+                return Err(anyhow!("first_transaction_version should exist."));
+            }
+        };
+
         let num_committed_txns = self.cache.synced_trees().txn_accumulator().num_leaves();
         ensure!(
             first_txn_version <= num_committed_txns,
