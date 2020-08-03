@@ -595,7 +595,7 @@ jobs:
           name: should pre build docker images (targeting a release branch)?
           command: |
             export commit_message=$( git log -1 --pretty=%B )
-            export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
+            export pr_num=`echo "$commit_message" | tail -1 | sed 's/Closes: #//'`
             if [ -z $pr_num ]; then
               echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
               exit 1
