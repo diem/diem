@@ -3240,20 +3240,15 @@ dependencies = [
  "config-builder 0.1.0",
  "ctrlc 3.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "debug-interface 0.1.0",
- "generate-key 0.1.0",
  "libra-config 0.1.0",
- "libra-crypto 0.1.0",
  "libra-genesis-tool 0.1.0",
  "libra-logger 0.1.0",
- "libra-management 0.1.0",
- "libra-secure-storage 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "reqwest 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "workspace-builder 0.1.0",
 ]
 
 [[package]]
