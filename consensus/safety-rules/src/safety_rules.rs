@@ -31,6 +31,7 @@ use libra_types::{
     ledger_info::LedgerInfo, validator_signer::ValidatorSigner, waypoint::Waypoint,
 };
 use std::cmp::Ordering;
+use std::time::{SystemTime, Duration};
 
 /// @TODO consider a cache of verified QCs to cut down on verification costs
 pub struct SafetyRules {
@@ -379,9 +380,19 @@ impl SafetyRules {
 impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         // lwg: this is to understand vault overhead
-        trace_code_block!("safety_rules::consensus_state", {"req", 0u32});
+        //trace_code_block!("safety_rules::consensus_state", {"req", 0u32});
+        let now = SystemTime::now();
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_consensus_state();
+
+        let duration = now.duration_since(now).unwrap().as_nanos();
+        send_struct_log!(
+            logging::ts_log(
+                LogEntry::ConsensusState,
+                LogEvent::TS)
+            .data(LogField::Message.as_str(), duration)
+        );
+
         run_and_log(
             cb,
             &COUNTERS.consensus_state_request,
@@ -393,7 +404,6 @@ impl TSafetyRules for SafetyRules {
     }
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
-        trace_code_block!("safety_rules::initialize", {"round", 0});
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_initialize(proof);
         run_and_log(
