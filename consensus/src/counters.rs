@@ -348,34 +348,64 @@ pub static CREATION_TO_QC_S: Lazy<DurationHistogram> = Lazy::new(|| {
     )
 });
 
-/// Histogram of the time it takes for a block to get x-strong committed with x=1.25f.
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.1f.
 /// Measured as the strong commit time minus block's timestamp.
 pub static CREATION_TO_STRONG_COMMIT_1_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_1_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.25f. Measured as the strong commit time minus block's timestamp.").unwrap())
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_1_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.1f. Measured as the strong commit time minus block's timestamp.").unwrap())
+});
+
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.2f.
+/// Measured as the strong commit time minus block's timestamp.
+pub static CREATION_TO_STRONG_COMMIT_2_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_2_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.2f. Measured as the strong commit time minus block's timestamp.").unwrap())
+});
+
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.3f.
+/// Measured as the strong commit time minus block's timestamp.
+pub static CREATION_TO_STRONG_COMMIT_3_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_3_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.3f. Measured as the strong commit time minus block's timestamp.").unwrap())
+});
+
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.4f.
+/// Measured as the strong commit time minus block's timestamp.
+pub static CREATION_TO_STRONG_COMMIT_4_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_4_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.4f. Measured as the strong commit time minus block's timestamp.").unwrap())
 });
 
 /// Histogram of the time it takes for a block to get x-strong committed with x=1.5f.
 /// Measured as the strong commit time minus block's timestamp.
-pub static CREATION_TO_STRONG_COMMIT_2_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_2_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.5f. Measured as the strong commit time minus block's timestamp.").unwrap())
+pub static CREATION_TO_STRONG_COMMIT_5_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_5_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.5f. Measured as the strong commit time minus block's timestamp.").unwrap())
 });
 
-/// Histogram of the time it takes for a block to get x-strong committed with x=1.75f.
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.6f.
 /// Measured as the strong commit time minus block's timestamp.
-pub static CREATION_TO_STRONG_COMMIT_3_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_3_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.75f. Measured as the strong commit time minus block's timestamp.").unwrap())
+pub static CREATION_TO_STRONG_COMMIT_6_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_6_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.6f. Measured as the strong commit time minus block's timestamp.").unwrap())
 });
 
-/// Histogram of the time it takes for a block to get x-strong committed with x=2f-1.
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.7f.
 /// Measured as the strong commit time minus block's timestamp.
-pub static CREATION_TO_STRONG_COMMIT_4_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_4_s", "Histogram of the time it takes for a block to get x-strong committed with x=2f-1. Measured as the strong commit time minus block's timestamp.").unwrap())
+pub static CREATION_TO_STRONG_COMMIT_7_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_7_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.7f. Measured as the strong commit time minus block's timestamp.").unwrap())
+});
+
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.8f.
+/// Measured as the strong commit time minus block's timestamp.
+pub static CREATION_TO_STRONG_COMMIT_8_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_8_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.8f. Measured as the strong commit time minus block's timestamp.").unwrap())
+});
+
+/// Histogram of the time it takes for a block to get x-strong committed with x=1.9f.
+/// Measured as the strong commit time minus block's timestamp.
+pub static CREATION_TO_STRONG_COMMIT_9_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_9_s", "Histogram of the time it takes for a block to get x-strong committed with x=1.9f. Measured as the strong commit time minus block's timestamp.").unwrap())
 });
 
 /// Histogram of the time it takes for a block to get x-strong committed with x=2f.
 /// Measured as the strong commit time minus block's timestamp.
-pub static CREATION_TO_STRONG_COMMIT_5_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_5_s", "Histogram of the time it takes for a block to get x-strong committed with x=2f. Measured as the strong commit time minus block's timestamp.").unwrap())
+pub static CREATION_TO_STRONG_COMMIT_10_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_creation_to_strong_commit_10_s", "Histogram of the time it takes for a block to get x-strong committed with x=2.0f. Measured as the strong commit time minus block's timestamp.").unwrap())
 });
 
 /// Duration between block generation time until the moment it is received and ready for execution.

@@ -714,15 +714,34 @@ where
             self.id_to_strong_commit
                 .insert(grandparent_id, *voting_powers);
 
-            let voting_power_1 = (verifier.total_voting_power() - verifier.quorum_voting_power())
-                / 4
+            let voting_power_1 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 1
+                / 10
                 + verifier.quorum_voting_power();
-            let voting_power_2 = (verifier.total_voting_power() - verifier.quorum_voting_power())
-                / 2
+            let voting_power_2 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 2
+                / 10
                 + verifier.quorum_voting_power();
-            let voting_power_3 =
-                (verifier.total_voting_power() - verifier.quorum_voting_power()) * 3 / 4
-                    + verifier.quorum_voting_power();
+            let voting_power_3 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 3
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_4 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 4
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_5 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 5
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_6 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 6
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_7 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 7
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_8 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 8
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_9 = (verifier.total_voting_power() - verifier.quorum_voting_power()) * 9
+                / 10
+                + verifier.quorum_voting_power();
+            let voting_power_10 = verifier.total_voting_power();
 
             if previous_voting_powers < voting_power_1 && *voting_powers >= voting_power_1 {
                 if let Some(time_to_strong_commit_1) =
@@ -748,9 +767,7 @@ where
                         .observe_duration(time_to_strong_commit_3);
                 }
             }
-            if previous_voting_powers < verifier.total_voting_power() - 1
-                && *voting_powers >= verifier.total_voting_power() - 1
-            {
+            if previous_voting_powers < voting_power_4 && *voting_powers >= voting_power_4 {
                 if let Some(time_to_strong_commit_4) =
                     duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
                 {
@@ -758,14 +775,52 @@ where
                         .observe_duration(time_to_strong_commit_4);
                 }
             }
-            if previous_voting_powers < verifier.total_voting_power()
-                && *voting_powers >= verifier.total_voting_power()
-            {
+            if previous_voting_powers < voting_power_5 && *voting_powers >= voting_power_5 {
                 if let Some(time_to_strong_commit_5) =
                     duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
                 {
                     counters::CREATION_TO_STRONG_COMMIT_5_S
                         .observe_duration(time_to_strong_commit_5);
+                }
+            }
+            if previous_voting_powers < voting_power_6 && *voting_powers >= voting_power_6 {
+                if let Some(time_to_strong_commit_6) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_6_S
+                        .observe_duration(time_to_strong_commit_6);
+                }
+            }
+            if previous_voting_powers < voting_power_7 && *voting_powers >= voting_power_7 {
+                if let Some(time_to_strong_commit_7) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_7_S
+                        .observe_duration(time_to_strong_commit_7);
+                }
+            }
+            if previous_voting_powers < voting_power_8 && *voting_powers >= voting_power_8 {
+                if let Some(time_to_strong_commit_8) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_8_S
+                        .observe_duration(time_to_strong_commit_8);
+                }
+            }
+            if previous_voting_powers < voting_power_9 && *voting_powers >= voting_power_9 {
+                if let Some(time_to_strong_commit_9) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_9_S
+                        .observe_duration(time_to_strong_commit_9);
+                }
+            }
+            if previous_voting_powers < voting_power_10 && *voting_powers >= voting_power_10 {
+                if let Some(time_to_strong_commit_10) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_10_S
+                        .observe_duration(time_to_strong_commit_10);
                 }
             }
         }

@@ -37,11 +37,9 @@ impl ExperimentParam for PerformanceBenchmarkThreeRegionSimulationParams {
 #[async_trait]
 impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        // let num_nodes = self.cluster.validator_instances().len();
-        // let split_country_num = 2 as usize;
-        // let split_region_num = split_country_num / 2;
-        let (us, euro) = self.cluster.split_n_validators_random(20);
-        let (us_west, us_east) = us.split_n_validators_random(10);
+        let num_nodes = self.cluster.validator_instances().len();
+        let (us, euro) = self.cluster.split_n_validators_random(num_nodes * 2 / 3);
+        let (us_west, us_east) = us.split_n_validators_random(num_nodes / 3);
         three_region_simulation_effects_k8s(
             (
                 us_west.validator_instances().to_vec(),

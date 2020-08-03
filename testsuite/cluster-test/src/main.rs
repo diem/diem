@@ -75,6 +75,8 @@ struct Args {
     strong_commit_nodes_down: bool,
     #[structopt(long, group = "action")]
     strong_commit_region: bool,
+    #[structopt(long, group = "action")]
+    strong_commit_all: bool,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -189,6 +191,8 @@ pub fn main() {
         process::exit(1);
     } else if args.strong_commit_region {
         perf_msg = Some(runner.strong_commit_region());
+    } else if args.strong_commit_all {
+        perf_msg = Some(runner.strong_commit_all());
     } else if args.strong_commit_normal {
         perf_msg = Some(runner.strong_commit_normal());
     } else if args.strong_commit_nodes_down {
@@ -667,6 +671,12 @@ impl ClusterTestRunner {
 
     pub fn perf_run(&mut self) -> String {
         let suite = ExperimentSuite::new_perf_suite(&self.cluster);
+        self.run_suite(suite).unwrap();
+        self.report.to_string()
+    }
+
+    pub fn strong_commit_all(&mut self) -> String {
+        let suite = ExperimentSuite::new_strong_commit_all(&self.cluster);
         self.run_suite(suite).unwrap();
         self.report.to_string()
     }
