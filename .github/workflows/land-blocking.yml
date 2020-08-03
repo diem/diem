@@ -76,24 +76,16 @@ jobs:
           date
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
+          cmd=""
           if [ $TEST_COMPAT -eq 1 ]; then
-            ./scripts/cti \
-              --tag ${PREV_TAG} \
-              --cluster-test-tag ${TEST_TAG} \
-              -E RUST_LOG=debug \
-              -E BATCH_SIZE=15 \
-              -E UPDATE_TO_TAG=${TEST_TAG} \
-              -E DISABLE_FN_UPGRADE=1 \
-              --report report.json \
-              --suite land_blocking_compat
+            cmd="./scripts/cti --tag ${PREV_TAG} --cluster-test-tag ${TEST_TAG} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${TEST_TAG} -E DISABLE_FN_UPGRADE=1 --report report.json --suite land_blocking_compat"
           else
-            ./scripts/cti \
-              --tag ${TEST_TAG} \
-              -E RUST_LOG=debug \
-              --report report.json \
-              --suite land_blocking
+            cmd="./scripts/cti --tag ${TEST_TAG} -E RUST_LOG=debug --report report.json --suite land_blocking"
           fi
+          eval $cmd
           ret=$?
+          echo "cti exit code: $ret"
+          echo "::set-env name=CTI_REPRO_CMD::$cmd"
           echo "::set-env name=CTI_EXIT_CODE::$ret"
           if [ -s "report.json" ]; then
             echo "report.json start"
@@ -200,19 +192,12 @@ jobs:
             }
             // Add repro cmd to message
             try {
-              if (parseInt(env_vars.TEST_COMPAT) === 1) {
-                body += "\nRepro cmd:\n";
-                body += `
-                  ./scripts/cti --tag ${env_vars.PREV_TAG} --cluster-test-tag ${env_vars.TEST_TAG} \\ \n
-                      -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${env_vars.TEST_TAG} -E DISABLE_FN_UPGRADE=1 \\ \n
-                      --suite land_blocking_compat
-                `;
-              } else {
-                body += "\nRepro cmd:\n";
-                body += `
-                  ./scripts/cti --tag ${env_vars.TEST_TAG} --suite land_blocking
-                `;
-              }
+              body += "\nRepro cmd:\n";
+              body += `
+              \`\`\`
+              ${env_vars.CTI_REPRO_CMD}
+              \`\`\`
+              `
             } catch (err) {
               if (err.code === 'ReferenceError') {
                 console.error("One of the following env vars is not set: $TEST_COMPAT, $TEST_TAG, $PREV_TAG");
