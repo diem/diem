@@ -47,6 +47,22 @@ pub static LIBRA_STORAGE_LATEST_TXN_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static LIBRA_STORAGE_LEDGER_VERSION: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_storage_ledger_version",
+        "Version in the latest saved ledger info."
+    )
+    .unwrap()
+});
+
+pub static LIBRA_STORAGE_NEXT_BLOCK_EPOCH: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_storage_next_block_epoch",
+        "ledger_info.next_block_epoch() for the latest saved ledger info."
+    )
+    .unwrap()
+});
+
 pub static LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_storage_pruner_least_readable_state_version",
