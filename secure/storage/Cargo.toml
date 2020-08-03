@@ -12,10 +12,10 @@ edition = "2018"
 [dependencies]
 base64 = "0.12.3"
 chrono = "0.4.13"
-enum_dispatch = "0.3.1"
+enum_dispatch = "0.3.2"
 rand = "0.7.3"
 serde = { version = "1.0.114", features = ["rc"], default-features = false }
-serde_json = "1.0.56"
+serde_json = "1.0.57"
 thiserror = "1.0.20"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

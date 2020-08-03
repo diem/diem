@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
+anyhow = "1.0.32"
 bytes = "0.5.6"
 vanilla-curve25519-dalek = { version = "2.1.0", package = 'curve25519-dalek', optional = true }
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat2", default-features = false, features = ["std", "fiat_u64_backend"], optional = true }
@@ -48,7 +48,7 @@ proptest-derive = "0.2.0"
 ripemd160 = "0.9.1"
 criterion = "0.3.3"
 sha3 = "0.9.1"
-serde_json = "1.0.56"
+serde_json = "1.0.57"
 trybuild = "1.0"
 
 [features]

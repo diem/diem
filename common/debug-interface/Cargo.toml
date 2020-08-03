@@ -10,10 +10,10 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
-tokio = { version = "0.2.21", features = ["full"] }
-reqwest = { version = "0.10.6", features = ["blocking", "json"], default_features = false }
-warp = "0.2.3"
+anyhow = "1.0.32"
+tokio = { version = "0.2.22", features = ["full"] }
+reqwest = { version = "0.10.7", features = ["blocking", "json"], default_features = false }
+warp = "0.2.4"
 
 libra-logger = { path = "../logger", version = "0.1.0" }
 libra-metrics = { path = "../metrics", version = "0.1.0" }

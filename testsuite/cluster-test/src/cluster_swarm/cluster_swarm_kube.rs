@@ -258,8 +258,6 @@ impl ClusterSwarmKube {
             .map(|job| -> Result<String, anyhow::Error> {
                 Ok(job
                     .metadata
-                    .as_ref()
-                    .ok_or_else(|| format_err!("metadata not found for job {:?}", &job))?
                     .name
                     .as_ref()
                     .ok_or_else(|| format_err!("name not found for job {:?}", &job))?
@@ -523,8 +521,6 @@ impl ClusterSwarmKube {
                 debug!(
                     "Created pod {}",
                     o.metadata
-                        .as_ref()
-                        .ok_or_else(|| { format_err!("metadata not found for pod {}", pod_name) })?
                         .name
                         .as_ref()
                         .ok_or_else(|| { format_err!("name not found for pod {}", pod_name) })?
@@ -538,8 +534,6 @@ impl ClusterSwarmKube {
                 debug!(
                     "Created service {}",
                     o.metadata
-                        .as_ref()
-                        .ok_or_else(|| { format_err!("metadata not found for service") })?
                         .name
                         .as_ref()
                         .ok_or_else(|| { format_err!("name not found for service") })?
@@ -603,8 +597,6 @@ impl ClusterSwarmKube {
             .map(|pod| -> Result<String, anyhow::Error> {
                 Ok(pod
                     .metadata
-                    .as_ref()
-                    .ok_or_else(|| format_err!("metadata not found for pod"))?
                     .name
                     .as_ref()
                     .ok_or_else(|| format_err!("name not found for pod"))?
@@ -626,8 +618,6 @@ impl ClusterSwarmKube {
             .map(|service| -> Result<String, anyhow::Error> {
                 Ok(service
                     .metadata
-                    .as_ref()
-                    .ok_or_else(|| format_err!("metadata not found for service"))?
                     .name
                     .as_ref()
                     .ok_or_else(|| format_err!("name not found for service"))?
@@ -649,8 +639,6 @@ impl ClusterSwarmKube {
             .map(|job| -> Result<String, anyhow::Error> {
                 Ok(job
                     .metadata
-                    .as_ref()
-                    .ok_or_else(|| format_err!("metadata not found for job"))?
                     .name
                     .as_ref()
                     .ok_or_else(|| format_err!("name not found for job"))?
@@ -776,9 +764,7 @@ impl TryFrom<Node> for KubeNode {
     type Error = anyhow::Error;
 
     fn try_from(node: Node) -> Result<Self, Self::Error> {
-        let metadata = node
-            .metadata
-            .ok_or_else(|| format_err!("metadata not found for node"))?;
+        let metadata = node.metadata;
         let spec = node
             .spec
             .ok_or_else(|| format_err!("spec not found for node"))?;

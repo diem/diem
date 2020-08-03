@@ -21,7 +21,7 @@ bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 
 # external dependencies
-anyhow = "1.0.31"
+anyhow = "1.0.32"
 clap = "2.33.1"
 codespan = "0.8.0"
 codespan-reporting = "0.8.0"

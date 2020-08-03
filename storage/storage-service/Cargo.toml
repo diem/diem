@@ -10,9 +10,9 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
+anyhow = "1.0.32"
 async-trait = "0.1.36"
-tokio = { version = "0.2.21", features = ["full"] }
+tokio = { version = "0.2.22", features = ["full"] }
 futures = "0.3.5"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

@@ -9,7 +9,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
+anyhow = "1.0.32"
 structopt = "0.3.15"
 tempfile = "3.1.0"
 

@@ -15,10 +15,10 @@ required-features = ["enable-inject-error"]
 
 [dependencies]
 quote = "1.0.7"
-syn = {version = "1.0.33", features = ["full", "extra-traits"]}
+syn = { version = "1.0.37", features = ["full", "extra-traits"] }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 # dependencies for the test binary
-anyhow = "1.0.31"
+anyhow = "1.0.32"
 rand = "0.7.3"
 
 [features]
