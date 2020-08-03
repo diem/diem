@@ -52,6 +52,7 @@ libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"]
 libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
+network = { path = "../network", version = "0.1.0", features = ["testing"] }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }

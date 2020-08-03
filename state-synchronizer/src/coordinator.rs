@@ -914,7 +914,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             self.local_state.highest_local_li.ledger_info().epoch(),
             self.local_state.highest_local_li.ledger_info().version(),
         );
-        if target_epoch_and_version < local_epoch_and_version {
+        if target_epoch_and_version <= local_epoch_and_version {
             warn!(
                 "Ledger info is too old: local epoch/version: {:?}, epoch/version in request: {:?}.",
                 local_epoch_and_version, target_epoch_and_version,
