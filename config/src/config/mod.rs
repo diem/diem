@@ -5,7 +5,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashSet,
-    fmt,
+    fmt, fs,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -114,6 +114,7 @@ impl Default for BaseConfig {
 #[serde(rename_all = "snake_case")]
 pub enum WaypointConfig {
     FromConfig(Waypoint),
+    FromFile(PathBuf),
     FromStorage(SecureBackend),
     None,
 }
@@ -130,6 +131,14 @@ impl WaypointConfig {
     pub fn waypoint(&self) -> Waypoint {
         let waypoint = match &self {
             WaypointConfig::FromConfig(waypoint) => Some(*waypoint),
+            WaypointConfig::FromFile(path) => {
+                let content = fs::read_to_string(path)
+                    .unwrap_or_else(|_| panic!("Failed to read waypoint file {}", path.display()));
+                Some(
+                    Waypoint::from_str(&content.trim())
+                        .unwrap_or_else(|_| panic!("Failed to parse waypoint: {}", content.trim())),
+                )
+            }
             WaypointConfig::FromStorage(backend) => {
                 let storage: Storage = backend.into();
                 let waypoint = storage
