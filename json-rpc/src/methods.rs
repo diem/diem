@@ -169,7 +169,7 @@ async fn get_account(
         .get_freezing_bit()?
         .ok_or_else(|| format_err!("invalid account data: no freezing bit"))?;
 
-    let currency_info = currencies_info(service, request).await?;
+    let currency_info = get_currencies(service, request).await?;
     let currencies: Vec<_> = currency_info
         .into_iter()
         .map(|info| from_currency_code_string(&info.code))
@@ -325,7 +325,7 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
 }
 
 /// Returns meta information about supported currencies
-async fn currencies_info(
+async fn get_currencies(
     service: JsonRpcService,
     request: JsonRpcRequest,
 ) -> Result<Vec<CurrencyInfoView>> {
@@ -481,7 +481,7 @@ pub(crate) fn build_registry() -> RpcRegistry {
         0
     );
     register_rpc_method!(registry, "get_events", get_events, 3, 0);
-    register_rpc_method!(registry, "get_currencies", currencies_info, 0, 0);
+    register_rpc_method!(registry, "get_currencies", get_currencies, 0, 0);
 
     register_rpc_method!(registry, "get_state_proof", get_state_proof, 1, 0);
     register_rpc_method!(
