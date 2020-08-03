@@ -39,6 +39,13 @@ struct Args {
     /// Path to the libra-node binary
     #[structopt(long, default_value = "libra-node")]
     pub libra_node: String,
+
+    /// Path to the cli binary
+    #[structopt(long, default_value = "cli")]
+    pub cli_path: String,
+    /// Path to the faucet binary
+    #[structopt(long, default_value = "libra-faucet")]
+    pub faucet_path: String,
 }
 
 fn main() {
@@ -141,8 +148,12 @@ fn main() {
         let faucet_port = libra_config::utils::get_available_port();
         let server_port = validator_swarm.get_client_port(0);
         println!("Starting faucet service at port: {}", faucet_port);
-        let process =
-            faucet::Process::start(faucet_port, server_port, Path::new(&libra_root_key_path));
+        let process = faucet::Process::start(
+            args.faucet_path.as_ref(),
+            faucet_port,
+            server_port,
+            Path::new(&libra_root_key_path),
+        );
         println!("Waiting for faucet connectivity");
         process
             .wait_for_connectivity()
@@ -158,9 +169,15 @@ fn main() {
 
         let port = validator_swarm.get_client_port(0);
         let client = if let Some(ref f) = faucet {
-            client::InteractiveClient::new_with_inherit_io_faucet(port, f.mint_url(), waypoint)
+            client::InteractiveClient::new_with_inherit_io_faucet(
+                args.cli_path.as_ref(),
+                port,
+                f.mint_url(),
+                waypoint,
+            )
         } else {
             client::InteractiveClient::new_with_inherit_io(
+                args.cli_path.as_ref(),
                 port,
                 Path::new(&libra_root_key_path),
                 &tmp_mnemonic_file.path(),
