@@ -600,10 +600,24 @@ impl ClusterTestRunner {
     }
 
     pub async fn run_and_report(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
-        self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
-            .await?;
-        self.print_report();
-        Ok(())
+        let experiment_name = format!("{}", experiment);
+        match self
+            .run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
+            .await
+        {
+            Ok(_) => {
+                self.print_report();
+                Ok(())
+            }
+            Err(err) => {
+                self.report.report_text(format!(
+                    "Experiment `{}` failed: `{}`",
+                    experiment_name, err
+                ));
+                self.print_report();
+                Err(err)
+            }
+        }
     }
 
     pub async fn run_single_experiment(
