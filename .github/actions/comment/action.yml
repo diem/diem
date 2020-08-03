@@ -3,7 +3,7 @@ description: Comment on issue
 inputs:
   comment:
     description: comment text
-    required: true
+    required: false
   tag:
     description: tag attached to the comment in the hidden metadata
     required: false

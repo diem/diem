@@ -8,7 +8,7 @@ const hyperjump_url = "http://github.aws.hlw3truzy4ls.com:6080/hyperjump/jump";
 async function main() {
   try {
     const { owner, repo, number } = github.context.issue;
-    const comment = core.getInput("comment", {required: true});
+    const comment = core.getInput("comment", {required: false}) || "";
     const tag = core.getInput("tag", {required: false});
     const delete_older = core.getInput("delete-older", {required: false}) || false;
 

@@ -1,7 +1,8 @@
 # comment
 
 This action adds a comment to an issue or pull request. The issue or pull
-request is implied by where the action is triggered.
+request is implied by where the action is triggered. It can also tag the
+comments and remove older instances of comments with the same tag.
 
 ## Usage
 
@@ -24,7 +25,8 @@ Here's an example workflow using this action:
 
 ### `comment`
 
-The comment text.
+The comment text. If this is blank, no new comment will be added, but
+`delete-older` can still be used.
 
 ### `tag`
 

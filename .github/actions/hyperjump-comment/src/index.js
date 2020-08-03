@@ -4,12 +4,17 @@ const github = require("@actions/github");
 async function main() {
   try {
     const github_token = core.getInput("github-token", {required: true});
-    const comment = core.getInput("comment", {required: true});
+    const comment = core.getInput("comment", {required: false}) || "";
     const number = core.getInput("number", {required: true});
     const tag = core.getInput("tag", {required: true});
     const delete_older = core.getInput("delete-older", {required: true});
 
     const client = new github.getOctokit(github_token);
+
+    if (!comment && !delete_older) {
+      core.setFailed("no comment given but delete-older is not true");
+      return;
+    }
 
     const metadata = {
       "tag": tag,
@@ -40,12 +45,14 @@ async function main() {
       }
     }
 
-    await client.issues.createComment({
-      owner: repository.owner.login,
-      repo: repository.name,
-      issue_number: number,
-      body: comment_with_metadata,
-    });
+    if (comment) {
+      await client.issues.createComment({
+        owner: repository.owner.login,
+        repo: repository.name,
+        issue_number: number,
+        body: comment_with_metadata,
+      });
+    }
   } catch (error) {
     core.setFailed(error.message);
   }

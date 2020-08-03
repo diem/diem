@@ -9,7 +9,7 @@ inputs:
     required: true
   comment:
     description: comment text
-    required: true
+    required: false
   tag:
     description: metadata tag
     required: true

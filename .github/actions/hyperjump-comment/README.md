@@ -30,6 +30,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           number: ${{ github.event.client_payload.number }}
           comment: ${{ github.event.client_payload.comment }}
+          tag: ${{ github.event.client_payload.tag }}
+          delete-older: ${{ github.event.client_payload.tag }}
 ```
 
 ## Updating
