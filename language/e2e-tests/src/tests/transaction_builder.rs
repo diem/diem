@@ -17,10 +17,12 @@ use crate::{
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
 use libra_types::{
+    account_address::AccountAddress,
     account_config,
-    transaction::{authenticator::AuthenticationKey, TransactionOutput, TransactionStatus},
+    transaction::{authenticator::AuthenticationKey, Script, TransactionOutput, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode},
 };
+use move_core_types::language_storage::TypeTag;
 use transaction_builder::*;
 
 const COIN1_THRESHOLD: u64 = 10_000_000_000 / 5;
@@ -367,23 +369,18 @@ fn dual_attestation_payment() {
             .sequence_number(2)
             .sign(),
     );
-
-    // give `payment_sender` enough coins to make a `num_payments` payments at or above the dual
-    // attestation threshold. We have to split this into multiple txes because DD -> VASP txes are
-    // subject to the travel rule too!
-    let num_payments = 5;
-    for i in 0..num_payments {
-        executor.execute_and_apply(
-            dd.transaction()
-                .script(encode_testnet_mint_script(
-                    account_config::coin1_tag(),
-                    *payment_sender.address(),
-                    COIN1_THRESHOLD - 1,
-                ))
-                .sequence_number(i)
-                .sign(),
-        );
-    }
+    executor.execute_and_apply(
+        dd.transaction()
+            .script(encode_peer_to_peer_with_metadata_script(
+                account_config::coin1_tag(),
+                *payment_sender.address(),
+                COIN1_THRESHOLD * 10,
+                vec![],
+                vec![],
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(
@@ -404,31 +401,16 @@ fn dual_attestation_payment() {
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
         // in transaction from sender's account
         let ref_id = lcs::to_bytes(&7777u64).unwrap();
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
-        let message = {
-            let mut msg = ref_id.clone();
-            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
-            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
-            msg.append(&mut domain_separator);
-            msg
-        };
-        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
-            &receiver_vasp_compliance_private_key,
-            &message,
-        );
         let output = executor.execute_and_apply(
             payment_sender
                 .transaction()
-                .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                .script(create_dual_attestation_payment(
+                    *payment_sender.address(),
                     *payment_receiver.address(),
                     payment_amount,
+                    account_config::coin1_tag(),
                     ref_id,
-                    signature.to_bytes().to_vec(),
+                    &receiver_vasp_compliance_private_key,
                 ))
                 .sequence_number(1)
                 .sign(),
@@ -462,32 +444,17 @@ fn dual_attestation_payment() {
     {
         // transaction >= 1_000_000 threshold goes through signature verification with invalid signature, aborts
         let ref_id = lcs::to_bytes(&9999u64).unwrap();
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
-        let message = {
-            let mut msg = ref_id.clone();
-            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
-            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
-            msg.append(&mut domain_separator);
-            msg
-        };
-        // Sign with the wrong private key
-        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
-            &sender_vasp_compliance_private_key,
-            &message,
-        );
         let output = executor.execute_transaction(
             payment_sender
                 .transaction()
-                .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                .script(create_dual_attestation_payment(
+                    *payment_sender.address(),
                     *payment_receiver.address(),
                     payment_amount,
+                    account_config::coin1_tag(),
                     ref_id,
-                    signature.to_bytes().to_vec(),
+                    // Sign with the wrong private key
+                    &sender_vasp_compliance_private_key,
                 ))
                 .sequence_number(2)
                 .sign(),
@@ -502,32 +469,16 @@ fn dual_attestation_payment() {
     {
         // similar, but with empty payment ID (make sure signature is still invalid!)
         let ref_id = vec![];
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
-        let message = {
-            let mut msg = ref_id.clone();
-            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
-            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
-            msg.append(&mut domain_separator);
-            msg
-        };
-        // Sign with the wrong private key
-        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
-            &sender_vasp_compliance_private_key,
-            &message,
-        );
         let output = executor.execute_transaction(
             payment_sender
                 .transaction()
-                .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                .script(create_dual_attestation_payment(
+                    *payment_sender.address(),
                     *payment_receiver.address(),
                     payment_amount,
+                    account_config::coin1_tag(),
                     ref_id,
-                    signature.to_bytes().to_vec(),
+                    &sender_vasp_compliance_private_key,
                 ))
                 .sequence_number(2)
                 .sign(),
@@ -549,11 +500,27 @@ fn dual_attestation_payment() {
                     *sender_child.address(),
                     payment_amount * 2,
                     vec![0],
-                    b"what a bad signature".to_vec(),
+                    vec![],
                 ))
                 .sequence_number(2)
                 .sign(),
         );
+
+        // However, should still fail if we opt-in to dual attestation with a bad signature
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *sender_child.address(),
+                    payment_amount * 2,
+                    vec![0],
+                    b"invalid signature".to_vec(),
+                ))
+                .sequence_number(3)
+                .sign(),
+        );
+        assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE)
     }
     {
         // Checking isn't performed on intra-vasp transfers
@@ -566,7 +533,7 @@ fn dual_attestation_payment() {
                     *payment_sender.address(),
                     payment_amount,
                     vec![0],
-                    b"what a bad signature".to_vec(),
+                    vec![],
                 ))
                 .sequence_number(0)
                 .sign(),
@@ -590,38 +557,57 @@ fn dual_attestation_payment() {
         // This previously succeeded, but should now fail since their public key has changed
         // in transaction from sender's account. This tests to make sure their public key was
         // rotated.
-        let ref_id = lcs::to_bytes(&9999u64).unwrap();
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
-        let message = {
-            let mut msg = ref_id.clone();
-            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
-            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
-            msg.append(&mut domain_separator);
-            msg
-        };
-        let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
-            &receiver_vasp_compliance_private_key,
-            &message,
-        );
         let output = executor.execute_transaction(
             payment_sender
                 .transaction()
-                .script(encode_peer_to_peer_with_metadata_script(
-                    account_config::coin1_tag(),
+                .script(create_dual_attestation_payment(
+                    *payment_sender.address(),
                     *payment_receiver.address(),
                     payment_amount,
-                    ref_id,
-                    signature.to_bytes().to_vec(),
+                    account_config::coin1_tag(),
+                    // pick an arbitrary ref_id
+                    lcs::to_bytes(&9999u64).unwrap(),
+                    &receiver_vasp_compliance_private_key,
                 ))
                 .sequence_number(3)
                 .sign(),
         );
+        println!("{:?}", output);
         assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
     }
+}
+
+fn create_dual_attestation_payment(
+    sender_address: AccountAddress,
+    receiver_address: AccountAddress,
+    amount: u64,
+    coin_type: TypeTag,
+    ref_id: Vec<u8>,
+    receiver_compliance_private_key: &Ed25519PrivateKey,
+) -> Script {
+    // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
+    let mut domain_separator = vec![
+        0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45, 0x53,
+        0x54, 0x24, 0x24, 0x40, 0x40,
+    ];
+    let message = {
+        let mut msg = ref_id.clone();
+        msg.append(&mut lcs::to_bytes(&sender_address).unwrap());
+        msg.append(&mut lcs::to_bytes(&amount).unwrap());
+        msg.append(&mut domain_separator);
+        msg
+    };
+    let signature = <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(
+        &receiver_compliance_private_key,
+        &message,
+    );
+    encode_peer_to_peer_with_metadata_script(
+        coin_type,
+        receiver_address,
+        amount,
+        ref_id,
+        signature.to_bytes().to_vec(),
+    )
 }
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
@@ -631,7 +617,7 @@ fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
     ));
 }
 
-// Check that DD <-> DD and DD <-> VASP payments over the threshold fail without dual attesation.
+// Check that DD <-> DD and DD <-> VASP payments over the threshold work with and without dual attesation.
 #[test]
 fn dd_dual_attestation_payments() {
     let mut executor = FakeExecutor::from_genesis_file();
@@ -643,10 +629,10 @@ fn dd_dual_attestation_payments() {
     let blessed = Account::new_blessed_tc();
     let mint_dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
-    let (_parent_vasp_compliance_private_key, parent_vasp_compliance_public_key) =
+    let (parent_vasp_compliance_private_key, parent_vasp_compliance_public_key) =
         keygen.generate_keypair();
-    let (_dd1_compliance_private_key, dd1_compliance_public_key) = keygen.generate_keypair();
-    let (_dd2_compliance_private_key, dd2_compliance_public_key) = keygen.generate_keypair();
+    let (dd1_compliance_private_key, dd1_compliance_public_key) = keygen.generate_keypair();
+    let (dd2_compliance_private_key, dd2_compliance_public_key) = keygen.generate_keypair();
 
     // create the VASP account
     executor.execute_and_apply(
@@ -704,81 +690,121 @@ fn dd_dual_attestation_payments() {
     executor.execute_and_apply(
         mint_dd
             .transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *dd1.address(),
-                COIN1_THRESHOLD - 1,
+                COIN1_THRESHOLD * 4,
+                vec![],
+                vec![],
             ))
             .sequence_number(0)
-            .sign(),
-    );
-    executor.execute_and_apply(
-        mint_dd
-            .transaction()
-            .script(encode_testnet_mint_script(
-                account_config::coin1_tag(),
-                *dd1.address(),
-                COIN1_THRESHOLD - 1,
-            ))
-            .sequence_number(1)
             .sign(),
     );
     // Give VASP some funds
     executor.execute_and_apply(
         mint_dd
             .transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *parent_vasp.address(),
-                COIN1_THRESHOLD - 1,
+                COIN1_THRESHOLD * 2,
+                vec![],
+                vec![],
             ))
-            .sequence_number(2)
-            .sign(),
-    );
-    executor.execute_and_apply(
-        mint_dd
-            .transaction()
-            .script(encode_testnet_mint_script(
-                account_config::coin1_tag(),
-                *parent_vasp.address(),
-                COIN1_THRESHOLD - 1,
-            ))
-            .sequence_number(3)
+            .sequence_number(1)
             .sign(),
     );
 
-    // DD <-> DD over threshold without attestation fails
-    // Checking isn't performed on UHW->VASP
-    let output = executor.execute_transaction(
+    // DD <-> DD over threshold without attestation succeeds
+    executor.execute_and_apply(
         dd1.transaction()
             .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *dd2.address(),
                 COIN1_THRESHOLD,
                 vec![0],
-                b"what a bad signature".to_vec(),
+                vec![],
             ))
             .sequence_number(0)
             .sign(),
     );
-    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
+    // DD <-> DD over threshold with attestation succeeds
+    executor.execute_and_apply(
+        dd1.transaction()
+            .script(create_dual_attestation_payment(
+                *dd1.address(),
+                *dd2.address(),
+                COIN1_THRESHOLD,
+                account_config::coin1_tag(),
+                // pick an arbitrary ref_id
+                lcs::to_bytes(&9999u64).unwrap(),
+                &dd2_compliance_private_key,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
 
-    // DD -> VASP over threshold without attestation fails
-    let output = executor.execute_transaction(
+    // DD -> VASP over threshold without attestation succeeds
+    executor.execute_and_apply(
         dd1.transaction()
             .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *parent_vasp.address(),
                 COIN1_THRESHOLD,
                 vec![0],
-                b"what a bad signature".to_vec(),
+                vec![],
             ))
-            .sequence_number(0) // didn't apply result of previous tx, so seq doesn't change
+            .sequence_number(2)
             .sign(),
     );
-    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
+    // DD -> VASP over threshold with attestation succeeds
+    executor.execute_and_apply(
+        dd1.transaction()
+            .script(create_dual_attestation_payment(
+                *dd1.address(),
+                *parent_vasp.address(),
+                COIN1_THRESHOLD,
+                account_config::coin1_tag(),
+                // pick an arbitrary ref_id
+                lcs::to_bytes(&9999u64).unwrap(),
+                &parent_vasp_compliance_private_key,
+            ))
+            .sequence_number(3)
+            .sign(),
+    );
 
-    // VASP -> DD over threshold without attestation fails
+    // VASP -> DD over threshold without attestation succeeds
+    executor.execute_and_apply(
+        parent_vasp
+            .transaction()
+            .script(encode_peer_to_peer_with_metadata_script(
+                account_config::coin1_tag(),
+                *dd1.address(),
+                COIN1_THRESHOLD,
+                vec![0],
+                vec![],
+            ))
+            .sequence_number(0)
+            .sign(),
+    );
+    // VASP -> DD over threshold with attestation succeeds
+    executor.execute_and_apply(
+        parent_vasp
+            .transaction()
+            .script(create_dual_attestation_payment(
+                *parent_vasp.address(),
+                *dd1.address(),
+                COIN1_THRESHOLD,
+                account_config::coin1_tag(),
+                // pick an arbitrary ref_id
+                lcs::to_bytes(&9999u64).unwrap(),
+                &dd1_compliance_private_key,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
+
+    // VASP -> DD over threshold with opt-in, but bad attestation fails
     let output = executor.execute_transaction(
         parent_vasp
             .transaction()
@@ -789,10 +815,10 @@ fn dd_dual_attestation_payments() {
                 vec![0],
                 b"what a bad signature".to_vec(),
             ))
-            .sequence_number(0)
+            .sequence_number(2)
             .sign(),
     );
-    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
+    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE)
 }
 
 #[test]

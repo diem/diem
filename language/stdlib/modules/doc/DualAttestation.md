@@ -403,23 +403,9 @@ Helper which returns true if dual attestion is required for a deposit.
         <b>return</b> <b>false</b>
     };
     // dual attestation is required <b>if</b> the amount is above the limit AND between distinct
-    // entities. E.g.:
-    // (1) inter-<a href="VASP.md#0x1_VASP">VASP</a>
-    // (2) inter-DD
-    // (3) <a href="VASP.md#0x1_VASP">VASP</a> -&gt; DD
-    // (4) DD -&gt; <a href="VASP.md#0x1_VASP">VASP</a>
-    // We <b>assume</b> that any DD &lt;-&gt; DD payment is inter-DD because each DD has a single account
-    <b>let</b> is_payer_vasp = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer);
-    <b>let</b> is_payee_vasp = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee);
-    <b>let</b> is_payer_dd = <a href="DesignatedDealer.md#0x1_DesignatedDealer_exists_at">DesignatedDealer::exists_at</a>(payer);
-    <b>let</b> is_payee_dd = <a href="DesignatedDealer.md#0x1_DesignatedDealer_exists_at">DesignatedDealer::exists_at</a>(payee);
-    <b>let</b> is_inter_vasp =
-        is_payer_vasp && is_payee_vasp &&
-        <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee);
-    is_inter_vasp || // (1) inter-<a href="VASP.md#0x1_VASP">VASP</a>
-        (is_payer_dd && is_payee_dd) || // (2) inter-DD
-        (is_payer_vasp && is_payee_dd) || // (3) <a href="VASP.md#0x1_VASP">VASP</a> -&gt; DD
-        (is_payer_dd && is_payee_vasp) // (4) DD -&gt; <a href="VASP.md#0x1_VASP">VASP</a>
+    // VASPs
+    <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) &&
+        <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee)
 }
 </code></pre>
 
@@ -546,7 +532,9 @@ the conditions in (2) is not met.
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a>, <a href="#0x1_DualAttestation_Limit">Limit</a> {
-    <b>if</b> (<a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)) {
+    <b>if</b> (!<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&metadata_signature) || // allow opt-in dual attestation
+        <a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)
+    ) {
       <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value)
     }
 }
@@ -815,18 +803,6 @@ Spec version of
     <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee)
         && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
 }
-<a name="0x1_DualAttestation_spec_is_inter_dd"></a>
-<b>define</b> <a href="#0x1_DualAttestation_spec_is_inter_dd">spec_is_inter_dd</a>(payer: address, payee: address): bool {
-    <a href="DesignatedDealer.md#0x1_DesignatedDealer_spec_exists_at">DesignatedDealer::spec_exists_at</a>(payer) && <a href="DesignatedDealer.md#0x1_DesignatedDealer_spec_exists_at">DesignatedDealer::spec_exists_at</a>(payee)
-}
-<a name="0x1_DualAttestation_spec_is_vasp_to_dd"></a>
-<b>define</b> <a href="#0x1_DualAttestation_spec_is_vasp_to_dd">spec_is_vasp_to_dd</a>(payer: address, payee: address): bool {
-    <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && <a href="DesignatedDealer.md#0x1_DesignatedDealer_spec_exists_at">DesignatedDealer::spec_exists_at</a>(payee)
-}
-<a name="0x1_DualAttestation_spec_is_dd_to_vasp"></a>
-<b>define</b> <a href="#0x1_DualAttestation_spec_is_dd_to_vasp">spec_is_dd_to_vasp</a>(payer: address, payee: address): bool {
-    <a href="DesignatedDealer.md#0x1_DesignatedDealer_spec_exists_at">DesignatedDealer::spec_exists_at</a>(payer) && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee)
-}
 </code></pre>
 
 
@@ -843,10 +819,7 @@ Helper functions which simulates
     <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
             &gt;= <a href="#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>() &&
     payer != payee &&
-    (<a href="#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer, payee) ||
-     <a href="#0x1_DualAttestation_spec_is_inter_dd">spec_is_inter_dd</a>(payer, payee) ||
-     <a href="#0x1_DualAttestation_spec_is_vasp_to_dd">spec_is_vasp_to_dd</a>(payer, payee) ||
-     <a href="#0x1_DualAttestation_spec_is_dd_to_vasp">spec_is_dd_to_vasp</a>(payer, payee))
+    <a href="#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer, payee)
 }
 </code></pre>
 
@@ -972,8 +945,10 @@ Returns true if signature is valid.
     value: u64;
     metadata: vector&lt;u8&gt;;
     metadata_signature: vector&lt;u8&gt;;
-    <b>aborts_if</b> <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)
-        && !<a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value);
+    <b>aborts_if</b>
+        (len(metadata_signature) != 0 ||
+         <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)) &&
+        !<a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value);
 }
 </code></pre>
 

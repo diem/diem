@@ -2,7 +2,6 @@ address 0x1 {
 
 module DualAttestation {
     use 0x1::CoreAddresses;
-    use 0x1::DesignatedDealer;
     use 0x1::LBR::LBR;
     use 0x1::LCS;
     use 0x1::Libra;
@@ -201,23 +200,9 @@ module DualAttestation {
             return false
         };
         // dual attestation is required if the amount is above the limit AND between distinct
-        // entities. E.g.:
-        // (1) inter-VASP
-        // (2) inter-DD
-        // (3) VASP -> DD
-        // (4) DD -> VASP
-        // We assume that any DD <-> DD payment is inter-DD because each DD has a single account
-        let is_payer_vasp = VASP::is_vasp(payer);
-        let is_payee_vasp = VASP::is_vasp(payee);
-        let is_payer_dd = DesignatedDealer::exists_at(payer);
-        let is_payee_dd = DesignatedDealer::exists_at(payee);
-        let is_inter_vasp =
-            is_payer_vasp && is_payee_vasp &&
-            VASP::parent_address(payer) != VASP::parent_address(payee);
-        is_inter_vasp || // (1) inter-VASP
-            (is_payer_dd && is_payee_dd) || // (2) inter-DD
-            (is_payer_vasp && is_payee_dd) || // (3) VASP -> DD
-            (is_payer_dd && is_payee_vasp) // (4) DD -> VASP
+        // VASPs
+        VASP::is_vasp(payer) && VASP::is_vasp(payee) &&
+            VASP::parent_address(payer) != VASP::parent_address(payee)
     }
     spec fun dual_attestation_required {
         pragma opaque = true;
@@ -233,15 +218,6 @@ module DualAttestation {
             VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
                 && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
         }
-        define spec_is_inter_dd(payer: address, payee: address): bool {
-            DesignatedDealer::spec_exists_at(payer) && DesignatedDealer::spec_exists_at(payee)
-        }
-        define spec_is_vasp_to_dd(payer: address, payee: address): bool {
-            VASP::spec_is_vasp(payer) && DesignatedDealer::spec_exists_at(payee)
-        }
-        define spec_is_dd_to_vasp(payer: address, payee: address): bool {
-            DesignatedDealer::spec_exists_at(payer) && VASP::spec_is_vasp(payee)
-        }
         /// Helper functions which simulates `Self::dual_attestation_required`.
         define spec_dual_attestation_required<Token>(
             payer: address, payee: address, deposit_value: u64
@@ -249,10 +225,7 @@ module DualAttestation {
             Libra::spec_approx_lbr_for_value<Token>(deposit_value)
                     >= spec_get_cur_microlibra_limit() &&
             payer != payee &&
-            (spec_is_inter_vasp(payer, payee) ||
-             spec_is_inter_dd(payer, payee) ||
-             spec_is_vasp_to_dd(payer, payee) ||
-             spec_is_dd_to_vasp(payer, payee))
+            spec_is_inter_vasp(payer, payee)
         }
     }
 
@@ -347,7 +320,9 @@ module DualAttestation {
         metadata: vector<u8>,
         metadata_signature: vector<u8>
     ) acquires Credential, Limit {
-        if (dual_attestation_required<Currency>(payer, payee, value)) {
+        if (!Vector::is_empty(&metadata_signature) || // allow opt-in dual attestation
+            dual_attestation_required<Currency>(payer, payee, value)
+        ) {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
     }
@@ -361,8 +336,10 @@ module DualAttestation {
         value: u64;
         metadata: vector<u8>;
         metadata_signature: vector<u8>;
-        aborts_if spec_dual_attestation_required<Currency>(payer, payee, value)
-            && !spec_signature_is_valid(payer, payee, metadata_signature, metadata, value);
+        aborts_if
+            (len(metadata_signature) != 0 ||
+             spec_dual_attestation_required<Currency>(payer, payee, value)) &&
+            !spec_signature_is_valid(payer, payee, metadata_signature, metadata, value);
     }
 
     ///////////////////////////////////////////////////////////////////////////
