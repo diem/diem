@@ -51,7 +51,7 @@ pub struct PerformanceBenchmark {
     trace: bool,
 }
 
-pub const DEFAULT_BENCH_DURATION: u64 = 120;
+pub const DEFAULT_BENCH_DURATION: u64 = 300;
 
 impl PerformanceBenchmarkParams {
     pub fn new_nodes_down(percent_nodes_down: usize) -> Self {
