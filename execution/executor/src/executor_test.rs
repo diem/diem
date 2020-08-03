@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::{
-    db_bootstrapper::bootstrap_db_if_empty,
+    db_bootstrapper::{generate_waypoint, maybe_bootstrap},
     mock_vm::{
         encode_mint_transaction, encode_reconfiguration_transaction, encode_transfer_transaction,
         MockVM, DISCARD_STATUS, KEEP_STATUS,
@@ -32,7 +32,9 @@ fn build_test_config() -> (NodeConfig, Ed25519PrivateKey) {
 
 fn create_storage(config: &NodeConfig) -> DbReaderWriter {
     let db = DbReaderWriter::new(LibraDB::new_for_test(config.storage.dir()));
-    bootstrap_db_if_empty::<MockVM>(&db, get_genesis_txn(&config).unwrap())
+    // can't use executor-test-helper because the static op_counter conflict
+    let waypoint = generate_waypoint::<MockVM>(&db, get_genesis_txn(&config).unwrap()).unwrap();
+    maybe_bootstrap::<MockVM>(&db, get_genesis_txn(&config).unwrap(), waypoint)
         .expect("Db-bootstrapper should not fail.");
     db
 }

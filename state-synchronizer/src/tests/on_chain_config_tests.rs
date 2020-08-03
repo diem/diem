@@ -3,9 +3,10 @@
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
 use compiled_stdlib::transaction_scripts::StdlibScript;
-use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor::Executor;
 use executor_test_helpers::{
-    gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    bootstrap_genesis, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
+    get_test_signed_transaction,
 };
 use executor_types::BlockExecutor;
 use futures::{future::FutureExt, stream::StreamExt};
@@ -41,7 +42,7 @@ fn test_on_chain_config_pub_sub() {
 
     let (config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
+    bootstrap_genesis::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
 
     let mut block_executor = Box::new(Executor::<LibraVM>::new(db_rw.clone()));
     let chunk_executor = Box::new(Executor::<LibraVM>::new(db_rw));

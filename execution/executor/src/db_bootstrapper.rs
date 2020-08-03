@@ -24,19 +24,41 @@ use move_core_types::move_resource::MoveResource;
 use std::collections::btree_map::BTreeMap;
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
 
-pub fn bootstrap_db_if_empty<V: VMExecutor>(
+pub fn generate_waypoint<V: VMExecutor>(
     db: &DbReaderWriter,
     genesis_txn: &Transaction,
-) -> Result<Option<Waypoint>> {
+) -> Result<Waypoint> {
     let tree_state = db.reader.get_latest_tree_state()?;
-    if !tree_state.is_empty() {
-        return Ok(None);
+
+    let committer = calculate_genesis::<V>(db, tree_state, genesis_txn)?;
+    Ok(committer.waypoint)
+}
+
+/// If current version + 1 != waypoint.version(), return Ok(false) indicating skipping the txn.
+/// otherwise apply the txn and commit it if the result matches the waypoint.
+/// Returns Ok(true) if committed otherwise Err.
+pub fn maybe_bootstrap<V: VMExecutor>(
+    db: &DbReaderWriter,
+    genesis_txn: &Transaction,
+    waypoint: Waypoint,
+) -> Result<bool> {
+    let tree_state = db.reader.get_latest_tree_state()?;
+    // if the waypoint is not targeted with the genesis txn, it may be either already bootstrapped, or
+    // aiming for state sync to catch up.
+    if tree_state.num_transactions != waypoint.version() {
+        info!("Skip genesis txn");
+        return Ok(false);
     }
 
     let committer = calculate_genesis::<V>(db, tree_state, genesis_txn)?;
-    let waypoint = committer.waypoint;
+    ensure!(
+        waypoint == committer.waypoint(),
+        "Waypoint verification failed. Expected {:?}, got {:?}.",
+        waypoint,
+        committer.waypoint(),
+    );
     committer.commit()?;
-    Ok(Some(waypoint))
+    Ok(true)
 }
 
 pub struct GenesisCommitter<V: VMExecutor> {

@@ -204,9 +204,10 @@ fn compute_genesis(
     let genesis = lcs::from_bytes(&buffer)
         .map_err(|e| Error::UnexpectedError(format!("Unable to parse genesis: {}", e)))?;
 
-    let waypoint = db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)
-        .map_err(|e| Error::UnexpectedError(e.to_string()))?
-        .ok_or_else(|| Error::UnexpectedError("Unable to generate a waypoint".to_string()))?;
+    let waypoint = db_bootstrapper::generate_waypoint::<LibraVM>(&db_rw, &genesis)
+        .map_err(|e| Error::UnexpectedError(e.to_string()))?;
+    db_bootstrapper::maybe_bootstrap::<LibraVM>(&db_rw, &genesis, waypoint)
+        .map_err(|e| Error::UnexpectedError(format!("Unable to commit genesis: {}", e)))?;
 
     Ok((db_rw, waypoint))
 }

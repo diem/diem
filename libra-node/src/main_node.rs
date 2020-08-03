@@ -4,7 +4,7 @@
 use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
 use debug_interface::node_debug_service::NodeDebugService;
-use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor::{db_bootstrapper::maybe_bootstrap, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
@@ -109,8 +109,12 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
         Arc::clone(&libra_db),
     );
 
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(&node_config).unwrap())
-        .expect("Db-bootstrapper should not fail.");
+    let waypoint = node_config.base.waypoint.waypoint();
+    // if there's genesis txn and waypoint, commit it if the result matches.
+    if let Some(genesis) = get_genesis_txn(&node_config) {
+        maybe_bootstrap::<LibraVM>(&db_rw, genesis, waypoint)
+            .expect("Db-bootstrapper should not fail.");
+    }
 
     debug!(
         "Storage service started in {} ms",
@@ -137,8 +141,6 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     let (consensus_reconfig_subscription, consensus_reconfig_events) =
         gen_consensus_reconfig_subscription();
     reconfig_subscriptions.push(consensus_reconfig_subscription);
-
-    let waypoint = node_config.base.waypoint.waypoint();
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig

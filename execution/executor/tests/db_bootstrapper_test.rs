@@ -6,11 +6,11 @@
 use anyhow::Result;
 use config_builder::test_config;
 use executor::{
-    db_bootstrapper::{bootstrap_db_if_empty, calculate_genesis},
+    db_bootstrapper::{generate_waypoint, maybe_bootstrap},
     Executor,
 };
 use executor_test_helpers::{
-    extract_signer, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    bootstrap_genesis, extract_signer, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use executor_types::BlockExecutor;
 use libra_config::utils::get_genesis_txn;
@@ -62,9 +62,8 @@ fn test_empty_db() {
 
     // Bootstrap empty DB.
     let genesis_txn = get_genesis_txn(&config).unwrap();
-    let waypoint = bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
-        .expect("Should not fail.")
-        .expect("Should not be None.");
+    let waypoint = generate_waypoint::<LibraVM>(&db_rw, genesis_txn).expect("Should not fail.");
+    maybe_bootstrap::<LibraVM>(&db_rw, genesis_txn, waypoint).unwrap();
     let startup_info = db_rw
         .reader
         .get_startup_info()
@@ -80,10 +79,8 @@ fn test_empty_db() {
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
 
-    // `bootstrap_db_if_empty()` does nothing on non-empty DB.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, genesis_txn)
-        .unwrap()
-        .is_none())
+    // `maybe_bootstrap()` does nothing on non-empty DB.
+    assert!(!maybe_bootstrap::<LibraVM>(&db_rw, genesis_txn, waypoint).unwrap());
 }
 
 fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter, signer: &ValidatorSigner) {
@@ -257,7 +254,7 @@ fn test_pre_genesis() {
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&tmp_dir));
     let signer = extract_signer(&mut config);
     let genesis_txn = get_genesis_txn(&config).unwrap().clone();
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis_txn).unwrap();
+    let waypoint = bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
@@ -276,10 +273,8 @@ fn test_pre_genesis() {
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&tmp_dir));
     restore_state_to_db(&db, accounts_backup, proof, root_hash, PRE_GENESIS_VERSION);
 
-    // DB is not empty, `bootstrap_db_if_empty()` won't apply default genesis txn.
-    assert!(bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis_txn)
-        .unwrap()
-        .is_none());
+    // DB is not empty, `maybe_bootstrap()` will try to apply and fail the waypoint check.
+    assert!(maybe_bootstrap::<LibraVM>(&db_rw, &genesis_txn, waypoint).is_err());
     // Nor is it able to boot Executor.
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
 
@@ -306,10 +301,8 @@ fn test_pre_genesis() {
     )));
 
     // Bootstrap DB on top of pre-genesis state.
-    let tree_state = db_rw.reader.get_latest_tree_state().unwrap();
-    let committer = calculate_genesis::<LibraVM>(&db_rw, tree_state, &genesis_txn).unwrap();
-    let waypoint = committer.waypoint();
-    committer.commit().unwrap();
+    let waypoint = generate_waypoint::<LibraVM>(&db_rw, &genesis_txn).unwrap();
+    assert!(maybe_bootstrap::<LibraVM>(&db_rw, &genesis_txn, waypoint).unwrap());
     let (li, epoch_change_proof, _) = db_rw.reader.get_state_proof(waypoint.version()).unwrap();
     let trusted_state = TrustedState::from(waypoint);
     trusted_state
@@ -330,9 +323,7 @@ fn test_new_genesis() {
     let db = DbReaderWriter::new(LibraDB::new_for_test(&tmp_dir));
     let waypoint = {
         let genesis_txn = get_genesis_txn(&config).unwrap();
-        bootstrap_db_if_empty::<LibraVM>(&db, genesis_txn)
-            .unwrap()
-            .unwrap()
+        bootstrap_genesis::<LibraVM>(&db, genesis_txn).unwrap()
     };
     let signer = extract_signer(&mut config);
 
@@ -379,10 +370,8 @@ fn test_new_genesis() {
     )));
 
     // Bootstrap DB into new genesis.
-    let tree_state = db.reader.get_latest_tree_state().unwrap();
-    let committer = calculate_genesis::<LibraVM>(&db, tree_state, &genesis_txn).unwrap();
-    let waypoint = committer.waypoint();
-    committer.commit().unwrap();
+    let waypoint = generate_waypoint::<LibraVM>(&db, &genesis_txn).unwrap();
+    assert!(maybe_bootstrap::<LibraVM>(&db, &genesis_txn, waypoint).unwrap());
     assert_eq!(waypoint.version(), 5);
 
     // Client bootable from waypoint.

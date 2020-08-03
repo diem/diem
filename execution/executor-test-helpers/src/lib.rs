@@ -3,7 +3,7 @@
 
 pub mod integration_test_impl;
 
-use executor::db_bootstrapper::bootstrap_db_if_empty;
+use executor::db_bootstrapper::{generate_waypoint, maybe_bootstrap};
 use executor_types::StateComputeResult;
 use libra_config::{config::NodeConfig, utils};
 use libra_crypto::{
@@ -18,8 +18,9 @@ use libra_types::{
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Script, Transaction},
     validator_signer::ValidatorSigner,
+    waypoint::Waypoint,
 };
-use libra_vm::LibraVM;
+use libra_vm::{LibraVM, VMExecutor};
 use libradb::LibraDB;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -29,6 +30,16 @@ use std::{
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 
+/// Helper function for test to blindly bootstrap without waypoint.
+pub fn bootstrap_genesis<V: VMExecutor>(
+    db: &DbReaderWriter,
+    genesis_txn: &Transaction,
+) -> anyhow::Result<Waypoint> {
+    let waypoint = generate_waypoint::<V>(db, genesis_txn)?;
+    maybe_bootstrap::<V>(db, genesis_txn, waypoint)?;
+    Ok(waypoint)
+}
+
 pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>) {
     let (mut config, _genesis_key) = config_builder::test_config();
     let tmp_dir = libra_temppath::TempPath::new();
@@ -37,7 +48,7 @@ pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>
     let server_port = utils::get_available_port();
     config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
+    bootstrap_genesis::<LibraVM>(&db_rw, utils::get_genesis_txn(&config).unwrap()).unwrap();
     let handle = start_storage_service_with_db(&config, db.clone());
     (config, handle, db as Arc<dyn DbReader>)
 }

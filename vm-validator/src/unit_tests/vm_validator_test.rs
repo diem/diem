@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use executor::db_bootstrapper::bootstrap_db_if_empty;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -26,8 +25,11 @@ struct TestValidator {
 impl TestValidator {
     fn new(config: &NodeConfig) -> Self {
         let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-        bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
-            .expect("Db-bootstrapper should not fail.");
+        executor_test_helpers::bootstrap_genesis::<LibraVM>(
+            &db_rw,
+            get_genesis_txn(config).unwrap(),
+        )
+        .expect("Db-bootstrapper should not fail.");
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.

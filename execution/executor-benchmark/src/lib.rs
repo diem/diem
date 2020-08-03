@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor::{
+    db_bootstrapper::{generate_waypoint, maybe_bootstrap},
+    Executor,
+};
 use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{
@@ -301,7 +304,8 @@ fn create_storage_service_and_executor(
         )
         .expect("DB should open."),
     );
-    bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
+    let waypoint = generate_waypoint::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap()).unwrap();
+    maybe_bootstrap::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap(), waypoint).unwrap();
 
     let _handle = start_storage_service_with_db(config, db.clone());
     let executor = Executor::new(

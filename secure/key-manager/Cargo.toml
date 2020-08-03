@@ -35,6 +35,7 @@ tokio = { version = "0.2.22", features = ["full"] }
 
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
+executor-test-helpers = { path = "../../execution/executor-test-helpers", version = "0.1.0" }
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }

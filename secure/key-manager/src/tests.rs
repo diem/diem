@@ -3,7 +3,7 @@
 
 use crate::{libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface};
 use anyhow::Result;
-use executor::{db_bootstrapper, Executor};
+use executor::Executor;
 use executor_types::BlockExecutor;
 use futures::{channel::mpsc::channel, StreamExt};
 use libra_config::{
@@ -350,7 +350,7 @@ fn setup_node_using_test_mocks() -> Node<MockLibraInterface> {
 // Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
 fn setup_libra_db(config: &NodeConfig) -> (Arc<LibraDB>, DbReaderWriter) {
     let (storage, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
+    executor_test_helpers::bootstrap_genesis::<LibraVM>(&db_rw, get_genesis_txn(config).unwrap())
         .expect("Failed to execute genesis");
 
     (storage, db_rw)

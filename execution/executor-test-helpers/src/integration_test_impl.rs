@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{extract_signer, gen_block_id, gen_ledger_info_with_sigs, get_test_signed_transaction};
+use crate::{
+    bootstrap_genesis, extract_signer, gen_block_id, gen_ledger_info_with_sigs,
+    get_test_signed_transaction,
+};
 use anyhow::{anyhow, ensure, Result};
-use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
+use executor::Executor;
 use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
@@ -483,7 +486,7 @@ pub fn create_db_and_executor(
     config: &NodeConfig,
 ) -> (Arc<LibraDB>, DbReaderWriter, Executor<LibraVM>) {
     let (db, dbrw) = DbReaderWriter::wrap(LibraDB::new_for_test(config.storage.dir()));
-    bootstrap_db_if_empty::<LibraVM>(&dbrw, get_genesis_txn(config).unwrap()).unwrap();
+    bootstrap_genesis::<LibraVM>(&dbrw, get_genesis_txn(config).unwrap()).unwrap();
     let executor = Executor::<LibraVM>::new(dbrw.clone());
 
     (db, dbrw, executor)

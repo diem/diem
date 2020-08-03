@@ -44,9 +44,8 @@ impl CreateWaypoint {
             LibraDB::open(&path, false, None).map_err(|e| Error::UnexpectedError(e.to_string()))?;
         let db_rw = DbReaderWriter::new(libradb);
 
-        db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)
-            .map_err(|e| Error::UnexpectedError(e.to_string()))?
-            .ok_or_else(|| Error::UnexpectedError("Unable to generate a waypoint".to_string()))
+        db_bootstrapper::generate_waypoint::<LibraVM>(&db_rw, &genesis)
+            .map_err(|e| Error::UnexpectedError(e.to_string()))
     }
 }
 

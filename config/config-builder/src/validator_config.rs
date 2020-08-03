@@ -165,8 +165,7 @@ impl ValidatorConfig {
                 &path, false, /* readonly */
                 None,  /* pruner */
             )?);
-            let waypoint = db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
-                .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?;
+            let waypoint = db_bootstrapper::generate_waypoint::<LibraVM>(&db_rw, &genesis)?;
             (WaypointConfig::FromConfig(waypoint), Some(waypoint))
         } else {
             (WaypointConfig::None, None)
