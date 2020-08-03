@@ -36,6 +36,9 @@ struct Args {
     /// Used for manual testing faucet service integration.
     #[structopt(short = "m", long)]
     pub start_faucet: bool,
+    /// Path to the libra-node binary
+    #[structopt(long, default_value = "libra-node")]
+    pub libra_node: String,
 }
 
 fn main() {
@@ -45,13 +48,18 @@ fn main() {
 
     libra_logger::Logger::new().init();
 
-    let mut validator_swarm =
-        LibraSwarm::configure_validator_swarm(num_nodes, args.config_dir.clone(), None)
-            .expect("Failed to configure validator swarm");
+    let mut validator_swarm = LibraSwarm::configure_validator_swarm(
+        args.libra_node.as_ref(),
+        num_nodes,
+        args.config_dir.clone(),
+        None,
+    )
+    .expect("Failed to configure validator swarm");
 
     let mut full_node_swarm = if num_full_nodes > 0 {
         Some(
             LibraSwarm::configure_fn_swarm(
+                args.libra_node.as_ref(),
                 None, /* config dir */
                 None,
                 &validator_swarm.config,
