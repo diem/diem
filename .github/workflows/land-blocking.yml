@@ -228,3 +228,4 @@ jobs:
             if (should_fail) {
               throw "Land-blocking test failed";
             }
+            throw "Induce failure"
