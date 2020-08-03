@@ -985,10 +985,11 @@ where
             }
             Err(error) => {
                 error!(
-                    "{} Error dialing Peer {} at {}",
+                    "{} Error dialing Peer {} at {}: {}",
                     self.network_context,
                     peer_id.short_str(),
-                    addr
+                    addr,
+                    error
                 );
 
                 if response_tx
