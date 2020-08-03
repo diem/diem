@@ -183,6 +183,12 @@ impl Ed25519Signature {
         }
     }
 
+    /// return an all-zero signature (for test only)
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn dummy_signature() -> Self {
+        Self::from_bytes_unchecked(&[0u8; Self::LENGTH]).unwrap()
+    }
+
     /// Check for correct size and third-party based signature malleability issues.
     /// This method is required to ensure that given a valid signature for some message under some
     /// key, an attacker cannot produce another valid signature for the same message and key.

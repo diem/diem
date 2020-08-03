@@ -28,6 +28,7 @@ mod network_noise_initiator;
 mod network_noise_responder;
 mod state_sync_msg;
 //mod storage_save_blocks;
+mod execute_and_commit_chunk;
 mod storage_schema_decode;
 mod vm_value;
 
@@ -46,6 +47,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
         Box::new(storage_schema_decode::StorageSchemaDecode::default()),
         Box::new(vm_value::ValueTarget::default()),
+        Box::new(execute_and_commit_chunk::ExecuteAndCommitChunk::default()),
     ];
     targets
         .into_iter()

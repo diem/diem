@@ -5,6 +5,8 @@
 
 #[cfg(test)]
 mod executor_test;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod fuzzing;
 mod metrics;
 #[cfg(test)]
 mod mock_vm;

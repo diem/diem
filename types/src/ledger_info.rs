@@ -248,6 +248,39 @@ impl LedgerInfoWithV0 {
     }
 }
 
+//
+// Arbitrary implementation of LedgerInfoWithV0 (for fuzzing)
+//
+
+#[cfg(any(test, feature = "fuzzing"))]
+use ::proptest::prelude::*;
+
+#[cfg(any(test, feature = "fuzzing"))]
+impl Arbitrary for LedgerInfoWithV0 {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        let dummy_signature = Ed25519Signature::dummy_signature();
+        (
+            proptest::arbitrary::any::<LedgerInfo>(),
+            proptest::collection::vec(proptest::arbitrary::any::<AccountAddress>(), 0..100),
+        )
+            .prop_map(move |(ledger_info, addresses)| {
+                let mut signatures = BTreeMap::new();
+                for address in addresses {
+                    let signature = dummy_signature.clone();
+                    signatures.insert(address, signature);
+                }
+                Self {
+                    ledger_info,
+                    signatures,
+                }
+            })
+            .boxed()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

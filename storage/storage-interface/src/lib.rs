@@ -15,6 +15,7 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
+    on_chain_config::ValidatorSet,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
 };
@@ -48,6 +49,26 @@ impl StartupInfo {
         committed_tree_state: TreeState,
         synced_tree_state: Option<TreeState>,
     ) -> Self {
+        Self {
+            latest_ledger_info,
+            latest_epoch_state,
+            committed_tree_state,
+            synced_tree_state,
+        }
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_for_testing() -> Self {
+        let latest_ledger_info =
+            LedgerInfoWithSignatures::genesis(HashValue::zero(), ValidatorSet::empty());
+        let latest_epoch_state = None;
+        let committed_tree_state = TreeState {
+            num_transactions: 0,
+            ledger_frozen_subtree_hashes: Vec::new(),
+            account_state_root_hash: HashValue::zero(),
+        };
+        let synced_tree_state = None;
+
         Self {
             latest_ledger_info,
             latest_epoch_state,
