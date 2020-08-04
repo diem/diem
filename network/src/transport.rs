@@ -246,6 +246,7 @@ async fn upgrade_inbound<T: TSocket>(
     let (socket, peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
         // security logging
         send_struct_log!(security_log(security_events::INVALID_NETWORK_PEER)
+            .warning()
             .data_display("error", &err)
             .field(network_events::NETWORK_ADDRESS, &addr));
         err
