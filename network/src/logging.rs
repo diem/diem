@@ -29,6 +29,7 @@ pub fn network_log(label: &'static str, network_context: &NetworkContext) -> Str
 /// This module is to ensure no conflicts with already existing constants
 pub mod network_events {
     use crate::{
+        connectivity_manager::DiscoverySource,
         peer_manager::{ConnectionNotification, ConnectionRequest, PeerManagerRequest},
         ConnectivityRequest,
     };
@@ -62,4 +63,6 @@ pub mod network_events {
         &LoggingField::new("peer_manager_request");
     pub const NETWORK_ADDRESS: &LoggingField<&NetworkAddress> =
         &LoggingField::new("network_address");
+    pub const DISCOVERY_SOURCE: &LoggingField<&DiscoverySource> =
+        &LoggingField::new("discovery_source");
 }
