@@ -137,13 +137,28 @@ pub use log::Level;
 pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
 pub mod counters;
 
+use serde::Serialize;
+
+// severity level - lower is worse
+// TODO: We can remove this if we get rid of critical
+// TODO: should we serialize it into text?
+#[derive(Serialize, Clone, Copy, Debug)]
+pub enum LogLevel {
+    Critical = 1,
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace,
+}
+
 /// Define crit macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
 #[macro_export]
 macro_rules! crit {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Error) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Critical, $($arg)+);
         }
         $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -155,7 +170,7 @@ macro_rules! crit {
 macro_rules! debug {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Debug) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Debug, $($arg)+);
         }
         $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -166,7 +181,7 @@ macro_rules! debug {
 macro_rules! error {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Error) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Error, $($arg)+);
         }
         $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -177,7 +192,7 @@ macro_rules! error {
 macro_rules! info {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Info) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Info, $($arg)+);
         }
         $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -188,7 +203,7 @@ macro_rules! info {
 macro_rules! trace {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Trace) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Trace, $($arg)+);
         }
         $crate::log::trace!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -199,7 +214,7 @@ macro_rules! trace {
 macro_rules! warn {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Warn) {
-            $crate::struct_log!($($arg)+);
+            $crate::struct_log!($crate::LogLevel::Warning, $($arg)+);
         }
         $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -214,8 +229,8 @@ macro_rules! struct_log_enabled {
 
 #[macro_export]
 macro_rules! struct_log {
-    ($($arg:tt)+) => {
-        let mut entry = $crate::StructuredLogEntry::new_unnamed();
+    ($level:expr,$($arg:tt)+) => {
+        let mut entry = $crate::StructuredLogEntry::new_unnamed().level($level);
         $crate::format_struct_args_and_pattern!(entry, $($arg)+);
         $crate::send_struct_log!(entry);
     }
