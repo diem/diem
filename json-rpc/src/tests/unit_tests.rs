@@ -229,10 +229,8 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params",
-                    "data": {
-                        "InvalidArguments": {"given": 2, "optional": 0, "required": 1}
-                    }
+                    "message": "Invalid params: wrong number of arguments (given 2, expected 1)",
+                    "data": null
                 },
                 "id": 1,
                 "jsonrpc": "2.0",
@@ -247,10 +245,8 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params",
-                    "data": {
-                        "InvalidArguments": {"given": 0, "optional": 0, "required": 1}
-                    }
+                    "message": "Invalid params: wrong number of arguments (given 0, expected 1)",
+                    "data": null
                 },
                 "id": 1,
                 "jsonrpc": "2.0",
@@ -265,10 +261,8 @@ fn test_json_rpc_protocol_invalid_requests() {
             json!({
                 "error": {
                     "code": -32602,
-                    "message": "Invalid params",
-                    "data": {
-                        "InvalidArguments": {"given": 2, "optional": 1, "required": 0}
-                    }
+                    "message": "Invalid params: wrong number of arguments (given 2, expected 0..1)",
+                    "data": null
                 },
                 "id": 1,
                 "jsonrpc": "2.0",
@@ -927,7 +921,7 @@ fn test_limit_batch_size() {
 
     let ret = runtime.block_on(client.execute(batch));
     assert!(ret.is_err());
-    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 20, size: 21, name: \"batch size\" })) }";
+    let expected = "JsonRpcError JsonRpcError { code: -32600, message: \"Invalid Request: batch size = 21, exceed limit 20\", data: None }";
     assert_eq!(ret.unwrap_err().to_string(), expected)
 }
 
@@ -945,7 +939,7 @@ fn test_get_events_page_limit() {
 
     let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
     assert!(ret.is_err());
-    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 1000, size: 1001, name: \"page size\" })) }";
+    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
     assert_eq!(ret.unwrap_err().to_string(), expected)
 }
 
@@ -958,7 +952,7 @@ fn test_get_transactions_page_limit() {
 
     let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
     assert!(ret.is_err());
-    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request\", data: Some(ExceedSizeLimit(ExceedSizeLimit { limit: 1000, size: 1001, name: \"page size\" })) }";
+    let expected = "JsonRpcError { code: -32600, message: \"Invalid Request: page size = 1001, exceed limit 1000\", data: None }";
     assert_eq!(ret.unwrap_err().to_string(), expected)
 }
 

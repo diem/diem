@@ -3,7 +3,7 @@
 
 //! Module contains RPC method handlers for Full Node JSON-RPC interface
 use crate::{
-    errors::{ErrorData, ExceedSizeLimit, InvalidArguments, JsonRpcError},
+    errors::JsonRpcError,
     views::{
         AccountStateWithProofView, AccountView, BlockMetadata, CurrencyInfoView, EventView,
         StateProofView, TransactionView,
@@ -29,7 +29,7 @@ use libra_types::{
 use network::counters;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::{cmp::min, collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
+use std::{cmp::min, collections::HashMap, convert::TryFrom, pin::Pin, sync::Arc};
 use storage_interface::{DbReader, Order};
 
 #[derive(Clone)]
@@ -79,12 +79,9 @@ impl JsonRpcService {
 
     fn validate_size_limit(&self, name: &str, limit: u16, size: usize) -> Result<(), JsonRpcError> {
         if size > limit as usize {
-            Err(JsonRpcError::invalid_request_with_data(Some(
-                ErrorData::ExceedSizeLimit(ExceedSizeLimit {
-                    limit,
-                    size,
-                    name: name.to_string(),
-                }),
+            Err(JsonRpcError::invalid_request_with_msg(format!(
+                "{} = {}, exceed limit {}",
+                name, size, limit
             )))
         } else {
             Ok(())

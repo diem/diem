@@ -43,16 +43,7 @@ pub enum InvalidRequestCode {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ErrorData {
-    InvalidArguments(InvalidArguments),
     StatusCode(StatusCode),
-    ExceedSizeLimit(ExceedSizeLimit),
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, Copy)]
-pub struct InvalidArguments {
-    pub required: usize,
-    pub optional: usize,
-    pub given: usize,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -60,13 +51,6 @@ pub struct JsonRpcError {
     pub code: i16,
     pub message: String,
     pub data: Option<ErrorData>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ExceedSizeLimit {
-    pub limit: u16,
-    pub size: usize,
-    pub name: String,
 }
 
 impl std::error::Error for JsonRpcError {}
@@ -106,6 +90,14 @@ impl JsonRpcError {
         }
     }
 
+    pub fn invalid_request_with_msg(msg: String) -> Self {
+        Self {
+            code: InvalidRequestCode::InvalidRequest as i16,
+            message: format!("Invalid Request: {}", msg),
+            data: None,
+        }
+    }
+
     pub fn invalid_format() -> Self {
         Self {
             code: InvalidRequestCode::InvalidFormat as i16,
@@ -119,6 +111,14 @@ impl JsonRpcError {
             code: InvalidRequestCode::InvalidParams as i16,
             message: "Invalid params".to_string(),
             data,
+        }
+    }
+
+    pub fn invalid_params_size(msg: String) -> Self {
+        Self {
+            code: InvalidRequestCode::InvalidParams as i16,
+            message: format!("Invalid params: {}", msg),
+            data: None,
         }
     }
 
@@ -195,13 +195,6 @@ impl JsonRpcError {
 
     pub fn as_status_code(&self) -> Option<StatusCode> {
         if let Some(ErrorData::StatusCode(data)) = &self.data {
-            return Some(*data);
-        }
-        None
-    }
-
-    pub fn as_invalid_arguments(&self) -> Option<InvalidArguments> {
-        if let Some(ErrorData::InvalidArguments(data)) = &self.data {
             return Some(*data);
         }
         None

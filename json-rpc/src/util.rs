@@ -16,12 +16,19 @@ macro_rules! register_rpc_method {
                     if request.params.len() < $required_num_args
                         || request.params.len() > $required_num_args + $opt_num_args
                     {
-                        anyhow::bail!(JsonRpcError::invalid_params(Some(
-                            ErrorData::InvalidArguments(InvalidArguments {
-                                required: $required_num_args,
-                                optional: $opt_num_args,
-                                given: request.params.len(),
-                            })
+                        let expected = if $opt_num_args == 0 {
+                            format!("{}", $required_num_args)
+                        } else {
+                            format!(
+                                "{}..{}",
+                                $required_num_args,
+                                $required_num_args + $opt_num_args
+                            )
+                        };
+                        anyhow::bail!(JsonRpcError::invalid_params_size(format!(
+                            "wrong number of arguments (given {}, expected {})",
+                            request.params.len(),
+                            expected,
                         )));
                     }
 
