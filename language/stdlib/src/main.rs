@@ -6,17 +6,21 @@
 use clap::{App, Arg};
 use rayon::prelude::*;
 use std::{
-    io::Write,
+    collections::BTreeMap,
+    fs::File,
+    io::{Read, Write},
     path::{Path, PathBuf},
     time::Instant,
 };
 use stdlib::{
     build_stdlib, build_stdlib_doc, build_stdlib_error_code_map, build_transaction_script_abi,
     build_transaction_script_doc, compile_script, filter_move_files,
-    generate_rust_transaction_builders, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH,
-    COMPILED_STDLIB_DIR, COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR,
-    STD_LIB_DOC_DIR, TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
+    generate_rust_transaction_builders, save_binary, Compatibility, COMPILED_EXTENSION,
+    COMPILED_OUTPUT_PATH, COMPILED_STDLIB_DIR, COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
+    COMPILED_TRANSACTION_SCRIPTS_DIR, STD_LIB_DOC_DIR, TRANSACTION_SCRIPTS,
+    TRANSACTION_SCRIPTS_DOC_DIR,
 };
+use vm::{normalized::Module, CompiledModule};
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
 // modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for
@@ -45,12 +49,19 @@ fn main() {
             Arg::with_name("no-compiler")
                 .long("no-compiler")
                 .help("do not compile modules and scripts"),
+        )
+        .arg(
+            Arg::with_name("no-check-linking-layout-compatibility")
+                .long("no-check-linking-layout-compatiblity")
+                .help("do not print information about linking and layout compatibility between the old and new standard library"),
         );
     let matches = cli.get_matches();
     let no_doc = matches.is_present("no-doc");
     let no_script_abi = matches.is_present("no-script-abi");
     let no_script_builder = matches.is_present("no-script-builder");
     let no_compiler = matches.is_present("no-compiler");
+    let no_check_linking_layout_compatibility =
+        matches.is_present("no-check-liking-layout-compatibility");
 
     // Make sure that the current directory is `language/stdlib` from now on.
     let exec_path = std::env::args().next().expect("path of the executable");
@@ -65,22 +76,65 @@ fn main() {
         println!("NOTE: run this program in --release mode for better speed");
     }
 
+    let mut old_module_apis = BTreeMap::new();
+    if !no_check_linking_layout_compatibility {
+        time_it(
+            "Extracting linking/layout ABIs from old module bytecodes",
+            || {
+                let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
+                module_path.push(COMPILED_STDLIB_DIR);
+                for f in datatest_stable::utils::iterate_directory(&module_path) {
+                    let mut bytes = Vec::new();
+                    File::open(f)
+                        .expect("Failed to open module bytecode file")
+                        .read_to_end(&mut bytes)
+                        .expect("Failed to read module bytecode file");
+                    let m = CompiledModule::deserialize(&bytes)
+                        .expect("Failed to deserialize module bytecode");
+                    old_module_apis.insert(m.self_id(), Module::new(&m));
+                }
+            },
+        );
+    }
+
     if !no_compiler {
-        time_it("Creating stdlib blob", || {
+        time_it("Compiling modules and checking ABI compatibility", || {
             std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
             let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
             module_path.push(COMPILED_STDLIB_DIR);
+            let new_modules = build_stdlib();
+
+            let mut is_linking_layout_compatible = true;
+            if !no_check_linking_layout_compatibility {
+                for module in new_modules.values() {
+                    // extract new linking/layout API and check compatibility with old
+                    let new_module_id = module.self_id();
+                    if let Some(old_api) = old_module_apis.get(&new_module_id) {
+                        let new_api = Module::new(module);
+                        let compatibility = Compatibility::check(old_api, &new_api);
+                        if is_linking_layout_compatible && !compatibility.is_fully_compatible() {
+                            println!("Found linking/layout-incompatible change:");
+                            is_linking_layout_compatible = false
+                        }
+                        if !compatibility.struct_and_function_linking {
+                            println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", new_module_id.name())
+                        }
+                        if !compatibility.struct_layout {
+                            println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", new_module_id.name())
+                        }
+                    }
+                }
+            }
+
+            // write module bytecodes to disk. start by clearing out all of the old ones
             std::fs::remove_dir_all(&module_path).unwrap();
             std::fs::create_dir_all(&module_path).unwrap();
-            for (name, module) in build_stdlib().into_iter() {
+            for (name, module) in new_modules {
                 let mut bytes = Vec::new();
                 module.serialize(&mut bytes).unwrap();
                 module_path.push(name);
                 module_path.set_extension(COMPILED_EXTENSION);
-                if save_binary(&module_path, &bytes) {
-                    // TODO(tzakian): this sometimes prints when module binaries don't change
-                    //println!("Compiled module binary {:?} has changed", module_path);
-                };
+                save_binary(&module_path, &bytes);
                 module_path.pop();
             }
         });
@@ -92,7 +146,7 @@ fn main() {
         .flat_map(|path| path.into_os_string().into_string().ok())
         .collect::<Vec<_>>();
     if !no_compiler {
-        time_it("Staging transaction scripts", || {
+        time_it("Compiling transaction scripts", || {
             std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap_or(());
             std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap();
 
@@ -146,9 +200,9 @@ fn main() {
     });
 }
 
-fn time_it<F>(msg: &str, f: F)
+fn time_it<F>(msg: &str, mut f: F)
 where
-    F: Fn(),
+    F: FnMut(),
 {
     let now = Instant::now();
     print!("{} ... ", msg);
