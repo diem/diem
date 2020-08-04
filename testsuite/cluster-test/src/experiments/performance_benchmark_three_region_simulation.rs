@@ -47,8 +47,8 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 euro.validator_instances().to_vec(),
             ),
             (
-                Duration::from_millis(200), // us_east<->eu one way delay
-                Duration::from_millis(200), // us_west<->eu one way delay
+                Duration::from_millis(100), // us_east<->eu one way delay
+                Duration::from_millis(100), // us_west<->eu one way delay
                 Duration::from_millis(20), // us_west<->us_east one way delay
             ),
             context.cluster_swarm,
