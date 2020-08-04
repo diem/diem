@@ -55,6 +55,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::time;
+use tokio_retry::strategy::jitter;
 
 pub mod builder;
 #[cfg(test)]
@@ -893,6 +894,8 @@ where
     }
 
     fn next_backoff_delay(&mut self, max_delay: Duration) -> Duration {
-        min(max_delay, self.backoff.next().unwrap_or(max_delay))
+        let jitter = jitter(Duration::from_millis(100));
+
+        min(max_delay, self.backoff.next().unwrap_or(max_delay)) + jitter
     }
 }
