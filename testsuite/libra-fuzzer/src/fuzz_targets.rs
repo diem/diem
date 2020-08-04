@@ -44,6 +44,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
         Box::new(network_noise_responder::NetworkNoiseResponder::default()),
         Box::new(state_sync_msg::StateSyncMsg::default()),
+        Box::new(language_transaction_execution::LanguageTransactionExecution::default()),
         //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
         Box::new(storage_schema_decode::StorageSchemaDecode::default()),
         Box::new(vm_value::ValueTarget::default()),
