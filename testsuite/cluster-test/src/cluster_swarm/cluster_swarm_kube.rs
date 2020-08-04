@@ -292,7 +292,7 @@ impl ClusterSwarmKube {
     {
         debug!("Deleting {} {}", T::KIND, name);
         let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 30), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 60), || {
             let resource_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
