@@ -46,11 +46,14 @@ const SEVERITY_CRITICAL: usize = 1;
 const SEVERITY_WARNING: usize = 2;
 
 // Size configurations
-const MAX_LOG_LINE_SIZE: usize = 4096; // 4KiB
+const MAX_LOG_LINE_SIZE: usize = 10240; // 10KiB
 const LOG_INFO_OFFSET: usize = 256;
 const WRITE_CHANNEL_SIZE: usize = 1024;
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
+
+// Fields to keep when over size
+static FIELDS_TO_KEEP: &[&str] = &["error"];
 
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
@@ -148,6 +151,15 @@ impl StructuredLogEntry {
                     format!("Message exceeded MAX_LOG_LINE_SIZE {}", MAX_LOG_LINE_SIZE),
                 )
                 .data("OriginalLength", json_string.len());
+
+            // Keep important values around
+            // TODO: We should work on decreasing log sizes, as this isn't sustainable
+            for field in FIELDS_TO_KEEP {
+                if let Some(value) = self.data.get(field) {
+                    entry = entry.json_data(field, value.clone());
+                }
+            }
+
             json_string = entry.to_json()?.to_string();
         }
 
