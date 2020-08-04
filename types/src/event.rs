@@ -135,7 +135,7 @@ impl TryFrom<String> for EventKey {
     type Error = Error;
 
     /// Tries to convert the provided String into Event Key.
-    fn try_from(raw_event_key: String) -> Result<EventKey> {
+    fn try_from(raw_event_key: String) -> Result<Self> {
         EventKey::try_from(&hex::decode(raw_event_key)?[..])
     }
 }

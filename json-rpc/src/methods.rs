@@ -21,7 +21,6 @@ use libra_types::{
     account_config::{from_currency_code_string, libra_root_address, AccountResource},
     account_state::AccountState,
     chain_id::ChainId,
-    event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     mempool_status::MempoolStatusCode,
     transaction::SignedTransaction,
@@ -122,58 +121,56 @@ impl JsonRpcRequest {
         self.ledger_info.ledger_info().version()
     }
 
-    fn parse_submit_signed_transaction(
-        &self,
-        index: usize,
-        name: &str,
-    ) -> Result<SignedTransaction> {
-        let payload: String = self.parse_param(index, name)?;
-        Ok(SignedTransaction::try_from(payload).map_err(|_| {
-            JsonRpcError::invalid_param(
-                index,
-                name,
-                "hex-encoded string of LCS serialized Libra SignedTransaction type",
-            )
-        })?)
-    }
-
+    /// Return AccountAddress by try parse from params[index]
     fn parse_account_address(&self, index: usize) -> Result<AccountAddress> {
-        let name = "account address";
-        let address: String = self.parse_param(index, name)?;
-        Ok(AccountAddress::from_str(&address)
-            .map_err(|_| JsonRpcError::invalid_param(index, name, "hex-encoded string"))?)
+        self.try_parse_param(index, "account address")
     }
 
-    fn parse_event_key(&self, index: usize, name: &str) -> Result<EventKey> {
-        let raw_event_key: String = self.parse_param(index, name)?;
-        Ok(EventKey::try_from(raw_event_key)
-            .map_err(|_| JsonRpcError::invalid_param(index, name, "hex-encoded string"))?)
+    /// Return type T instance with 2 steps parsing:
+    ///   1. deserialize params[index] into String type.
+    ///   2. call TryFrom<String> to create target T instance.
+    /// The name argument is for creating helpful error messsage in case deserialization
+    /// failed.
+    fn try_parse_param<T>(&self, index: usize, name: &str) -> Result<T>
+    where
+        T: TryFrom<String>,
+    {
+        let raw_str: String = self.parse_param(index, name)?;
+        Ok(T::try_from(raw_str).map_err(|_| self.invalid_param(index, name))?)
     }
 
+    /// Return native type of params[index] deserialized by from json value.
+    /// The name argument is for creating helpful error messsage in case deserialization
+    /// failed.
     fn parse_param<T>(&self, index: usize, name: &str) -> Result<T>
     where
         T: DeserializeOwned,
     {
-        Ok(serde_json::from_value(self.get_param(index)).map_err(|_| {
-            let type_info = match name {
-                "start" => "unsigned int64",
-                "start_version" => "unsigned int64",
-                "limit" => "unsigned int64",
-                "account sequence number" => "unsigned int64",
-                "include_events" => "boolean",
-                "account address" => "hex-encoded string",
-                "event key" => "hex-encoded string",
-                "known version" => "unsigned int64",
-                _ => "unknown",
-            };
-            JsonRpcError::invalid_param(index, name, type_info)
-        })?)
+        Ok(serde_json::from_value(self.get_param(index))
+            .map_err(|_| self.invalid_param(index, name))?)
+    }
+
+    /// Returns invalid param JsonRpcError for the param[index] with name and type info
+    fn invalid_param(&self, index: usize, name: &str) -> JsonRpcError {
+        let type_info = match name {
+            "start" => "unsigned int64",
+            "start_version" => "unsigned int64",
+            "limit" => "unsigned int64",
+            "account sequence number" => "unsigned int64",
+            "include_events" => "boolean",
+            "account address" => "hex-encoded string",
+            "event key" => "hex-encoded string",
+            "known version" => "unsigned int64",
+            "data" => "hex-encoded string of LCS serialized Libra SignedTransaction type",
+            _ => "unknown",
+        };
+        JsonRpcError::invalid_param(index, name, type_info)
     }
 }
 
 /// Submits transaction to full node
 async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<()> {
-    let transaction: SignedTransaction = request.parse_submit_signed_transaction(0, "data")?;
+    let transaction: SignedTransaction = request.try_parse_param(0, "data")?;
 
     trace_code_block!("json-rpc::submit", {"txn", transaction.sender(), transaction.sequence_number()});
 
@@ -352,7 +349,7 @@ async fn get_account_transaction(
 
 /// Returns events by given access path
 async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<Vec<EventView>> {
-    let event_key = request.parse_event_key(0, "event key")?;
+    let event_key = request.try_parse_param(0, "event key")?;
 
     let start: u64 = request.parse_param(1, "start")?;
     let limit: u64 = request.parse_param(2, "limit")?;
