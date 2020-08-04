@@ -750,7 +750,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_10_S
                         .observe_duration(time_to_strong_commit_10);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_9 && *voting_powers >= voting_power_9 {
                 if let Some(time_to_strong_commit_9) =
@@ -759,7 +758,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_9_S
                         .observe_duration(time_to_strong_commit_9);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_8 && *voting_powers >= voting_power_8 {
                 if let Some(time_to_strong_commit_8) =
@@ -768,7 +766,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_8_S
                         .observe_duration(time_to_strong_commit_8);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_7 && *voting_powers >= voting_power_7 {
                 if let Some(time_to_strong_commit_7) =
@@ -777,7 +774,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_7_S
                         .observe_duration(time_to_strong_commit_7);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_6 && *voting_powers >= voting_power_6 {
                 if let Some(time_to_strong_commit_6) =
@@ -786,7 +782,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_6_S
                         .observe_duration(time_to_strong_commit_6);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_5 && *voting_powers >= voting_power_5 {
                 if let Some(time_to_strong_commit_5) =
@@ -795,7 +790,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_5_S
                         .observe_duration(time_to_strong_commit_5);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_4 && *voting_powers >= voting_power_4 {
                 if let Some(time_to_strong_commit_4) =
@@ -804,7 +798,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_4_S
                         .observe_duration(time_to_strong_commit_4);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_3 && *voting_powers >= voting_power_3 {
                 if let Some(time_to_strong_commit_3) =
@@ -813,7 +806,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_3_S
                         .observe_duration(time_to_strong_commit_3);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_2 && *voting_powers >= voting_power_2 {
                 if let Some(time_to_strong_commit_2) =
@@ -822,7 +814,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_2_S
                         .observe_duration(time_to_strong_commit_2);
                 }
-                continue;
             }
             if previous_voting_powers < voting_power_1 && *voting_powers >= voting_power_1 {
                 if let Some(time_to_strong_commit_1) =
@@ -831,7 +822,6 @@ where
                     counters::CREATION_TO_STRONG_COMMIT_1_S
                         .observe_duration(time_to_strong_commit_1);
                 }
-                continue;
             }
         }
         // self.print_strong_commit();

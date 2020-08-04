@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use crate::{
     cluster::Cluster,
     cluster_swarm::ClusterSwarm,
@@ -98,6 +99,8 @@ impl Experiment for PerformanceBenchmark {
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
+        // add latency to all validator pairs
+        add_all_latencies_simulation_effects_k8s(self.up_validators.to_vec(), Duration::from_millis(50), context.cluster_swarm).await?;
         let instance_configs = instance::instance_configs(&self.down_validators)?;
         let futures: Vec<_> = instance_configs
             .into_iter()
@@ -203,6 +206,77 @@ impl Experiment for PerformanceBenchmark {
     fn deadline(&self) -> Duration {
         Duration::from_secs(600)
     }
+}
+
+async fn add_network_delay_k8s(
+    instance: Instance,
+    configuration: Vec<(Vec<Instance>, Duration)>,
+    cluster_swarm: &ClusterSwarmKube,
+) -> Result<()> {
+    let mut command = "".to_string();
+    command += "tc qdisc delete dev eth0 root; ";
+    // Create a HTB https://linux.die.net/man/8/tc-htb
+    command += "tc qdisc add dev eth0 root handle 1: htb; ";
+    for i in 0..configuration.len() {
+        // Create a class within the HTB https://linux.die.net/man/8/tc
+        command += format!(
+            "tc class add dev eth0 parent 1: classid 1:{} htb rate 1tbit; ",
+            i + 1
+        )
+        .as_str();
+    }
+    for (i, config) in configuration.iter().enumerate() {
+        // Create u32 filters so that all the target instances are classified as class 1:(i+1)
+        // http://man7.org/linux/man-pages/man8/tc-u32.8.html
+        for target_instance in &config.0 {
+            command += format!("tc filter add dev eth0 parent 1: protocol ip prio 1 u32 flowid 1:{} match ip dst {}; ", i+1, target_instance.ip()).as_str();
+        }
+    }
+    for (i, config) in configuration.iter().enumerate() {
+        // Use netem to delay packets to this class
+        command += format!(
+            "tc qdisc add dev eth0 parent 1:{} handle {}0: netem delay {}ms; ",
+            i + 1,
+            i + 1,
+            config.1.as_millis(),
+        )
+        .as_str();
+    }
+
+    cluster_swarm
+        .run(
+            &instance,
+            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
+            command,
+            "add-network-delay",
+        )
+        .await
+}
+
+async fn add_all_latencies_simulation_effects_k8s(
+    nodes: Vec<Instance>,
+    delays: Duration,
+    cluster_swarm: &ClusterSwarmKube,
+) -> Result<()> {
+    let mut futures = vec![];
+    for i in 0..nodes.len() {
+        let instance = nodes[i].clone();
+        let mut others = vec![];
+        for j in 0..nodes.len() {
+            if i != j {
+                others.push(nodes[j].clone());
+            }
+        }
+        let configuration = vec![
+            (others, delays),
+        ];
+        futures.push(add_network_delay_k8s(
+            instance.clone(),
+            configuration,
+            cluster_swarm,
+        ));
+    }
+    try_join_all(futures).await.map(|_| ())
 }
 
 impl Display for PerformanceBenchmark {

@@ -147,6 +147,7 @@ async fn add_network_delay_k8s(
         .await
 }
 
+
 async fn three_region_simulation_effects_k8s(
     regions: (Vec<Instance>, Vec<Instance>, Vec<Instance>),
     delays_bw_regions: (Duration, Duration, Duration),
