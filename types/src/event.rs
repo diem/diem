@@ -131,15 +131,6 @@ impl TryFrom<&[u8]> for EventKey {
     }
 }
 
-impl TryFrom<String> for EventKey {
-    type Error = Error;
-
-    /// Tries to convert the provided String into Event Key.
-    fn try_from(raw_event_key: String) -> Result<Self> {
-        EventKey::try_from(&hex::decode(raw_event_key)?[..])
-    }
-}
-
 /// A Rust representation of an Event Handle Resource.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EventHandle {
