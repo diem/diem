@@ -1,11 +1,10 @@
 script {
 use 0x1::LibraAccount;
 // Prover deps:
-use 0x1::LibraAccount::{Balance, LibraAccount, WithdrawCapability};
+use 0x1::LibraAccount::{Balance, LibraAccount};
 use 0x1::AccountFreezing;
 use 0x1::AccountLimits;
 use 0x1::DualAttestation;
-use 0x1::Option;
 use 0x1::Signer;
 use 0x1::VASP;
 
@@ -59,37 +58,37 @@ fun peer_to_peer_with_metadata<Currency>(
 }
 
 spec fun peer_to_peer_with_metadata {
+    let payer_addr = Signer::spec_address_of(payer);
 
-    /// > TODO(emmazzz): This pre-condition is supposed to be a global property in LibraAccount:
-    ///  The LibraAccount under addr holds either no withdraw capability
-    ///  or the withdraw capability for addr itself.
-    requires spec_get_withdraw_cap(Signer::spec_address_of(payer)).account_address
-        == Signer::spec_address_of(payer);
-
-    include AbortsIfPayerInvalid<Currency>;
-    include AbortsIfPayeeInvalid<Currency>;
-    include AbortsIfAmountInvalid<Currency>;
-    include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: Signer::spec_address_of(payer), value: amount};
-    include AbortsIfAmountExceedsLimit<Currency>;
-
-    /// Post condition: the balances of payer and payee are changed correctly.
-    ensures Signer::spec_address_of(payer) != payee
+    /// ## Post conditions
+    /// The balances of payer and payee are changed correctly if payer and payee are different.
+    ensures payer_addr != payee
                 ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee)) + amount;
-    ensures Signer::spec_address_of(payer) != payee
-                ==> spec_balance_of<Currency>(Signer::spec_address_of(payer))
-                    == old(spec_balance_of<Currency>(Signer::spec_address_of(payer))) - amount;
+    ensures payer_addr != payee
+                ==> spec_balance_of<Currency>(payer_addr) == old(spec_balance_of<Currency>(payer_addr)) - amount;
+
     /// If payer and payee are the same, the balance does not change.
-    ensures Signer::spec_address_of(payer) == payee
-                ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee));
+    ensures payer_addr == payee ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee));
+
+
+    /// ## Abort conditions
+    include AbortsIfPayerInvalid<Currency>{payer: payer_addr};
+    include AbortsIfPayeeInvalid<Currency>;
+    include AbortsIfAmountInvalid<Currency>{payer: payer_addr};
+    include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: payer_addr, value: amount};
+    include AbortsIfAmountExceedsLimit<Currency>{payer: payer_addr};
+    include LibraAccount::spec_should_track_limits_for_account(payer_addr, payee, false) ==>
+                AccountLimits::UpdateDepositLimitsAbortsIf<Currency> {
+                    addr: VASP::spec_parent_address(payee),
+                };
+    include LibraAccount::spec_should_track_limits_for_account(payer_addr, payee, true) ==>
+                AccountLimits::UpdateWithdrawalLimitsAbortsIf<Currency> {
+                    addr: VASP::spec_parent_address(payer_addr),
+                };
 }
 
 spec module {
     pragma verify = true, aborts_if_is_strict = true;
-
-    /// Returns the `withdrawal_capability` of LibraAccount under `addr`.
-    define spec_get_withdraw_cap(addr: address): WithdrawCapability {
-        Option::spec_get(global<LibraAccount>(addr).withdrawal_capability)
-    }
 
     /// Returns the value of balance under addr.
     define spec_balance_of<Currency>(addr: address): u64 {
@@ -98,41 +97,38 @@ spec module {
 }
 
 spec schema AbortsIfPayerInvalid<Currency> {
-    payer: signer;
-    aborts_if !exists<LibraAccount>(Signer::spec_address_of(payer));
-    aborts_if AccountFreezing::spec_account_is_frozen(Signer::spec_address_of(payer));
-    aborts_if !exists<Balance<Currency>>(Signer::spec_address_of(payer));
+    payer: address;
+    aborts_if !exists<LibraAccount>(payer);
+    aborts_if AccountFreezing::account_is_frozen(payer);
+    aborts_if !exists<Balance<Currency>>(payer);
     /// Aborts if payer's withdrawal_capability has been delegated.
-    aborts_if Option::spec_is_none(
-        global<LibraAccount>(
-            Signer::spec_address_of(payer)
-        ).withdrawal_capability);
+    aborts_if LibraAccount::spec_delegated_withdraw_cap(payer);
 }
 
 spec schema AbortsIfPayeeInvalid<Currency> {
     payee: address;
     aborts_if !exists<LibraAccount>(payee);
-    aborts_if AccountFreezing::spec_account_is_frozen(payee);
+    aborts_if AccountFreezing::account_is_frozen(payee);
     aborts_if !exists<Balance<Currency>>(payee);
 }
 
 spec schema AbortsIfAmountInvalid<Currency> {
-    payer: &signer;
+    payer: address;
     payee: address;
     amount: u64;
     aborts_if amount == 0;
     /// Aborts if arithmetic overflow happens.
-    aborts_if global<Balance<Currency>>(Signer::spec_address_of(payer)).coin.value < amount;
-    aborts_if Signer::spec_address_of(payer) != payee
+    aborts_if global<Balance<Currency>>(payer).coin.value < amount;
+    aborts_if payer != payee
             && global<Balance<Currency>>(payee).coin.value + amount > max_u64();
 }
 
 spec schema AbortsIfAmountExceedsLimit<Currency> {
-    payer: &signer;
+    payer: address;
     payee: address;
     amount: u64;
     /// Aborts if the amount exceeds payee's deposit limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account(Signer::spec_address_of(payer), payee, false)
+    aborts_if LibraAccount::spec_should_track_limits_for_account(payer, payee, false)
                 && (!LibraAccount::spec_has_account_operations_cap()
                     || !AccountLimits::spec_update_deposit_limits<Currency>(
                             amount,
@@ -140,17 +136,16 @@ spec schema AbortsIfAmountExceedsLimit<Currency> {
                         )
                     );
     /// Aborts if the amount exceeds payer's withdraw limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account(Signer::spec_address_of(payer), payee, true)
+    aborts_if LibraAccount::spec_should_track_limits_for_account(payer, payee, true)
                 && (!LibraAccount::spec_has_account_operations_cap()
                     || !AccountLimits::spec_update_withdrawal_limits<Currency>(
                             amount,
-                            VASP::spec_parent_address(Signer::spec_address_of(payer))
+                            VASP::spec_parent_address(payer)
                         )
                     );
 }
 
 spec module {
-    /// > TODO(emmazzz): turn verify on when non-termination issue is resolved.
-    pragma verify = false;
+    pragma verify = true;
 }
 }

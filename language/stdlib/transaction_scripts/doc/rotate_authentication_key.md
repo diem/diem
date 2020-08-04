@@ -67,6 +67,8 @@ Rotate the sender's authentication key to
 
 
 <pre><code>pragma verify = <b>true</b>;
+<a name="SCRIPT_account_addr$1"></a>
+<b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 </code></pre>
 
 
@@ -75,14 +77,14 @@ This rotates the authentication key of
 <code>new_key</code>
 
 
-<pre><code><b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_rotate_authentication_key">LibraAccount::spec_rotate_authentication_key</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account), new_key);
+<pre><code><b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_rotate_authentication_key">LibraAccount::spec_rotate_authentication_key</a>(account_addr, new_key);
 </code></pre>
 
 
 If the sending account doesn't exist this will abort
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>aborts_if</b> !exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(account_addr);
 </code></pre>
 
 
@@ -90,18 +92,7 @@ If the sending account doesn't exist this will abort
 <code>account</code> must not have delegated its rotation capability
 
 
-<pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_delegated_key_rotation_capability">LibraAccount::spec_delegated_key_rotation_capability</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-</code></pre>
-
-
-
-<code>account</code> must hold its own rotation capability
-
-
-<pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_key_rotation_capability_address">LibraAccount::spec_key_rotation_capability_address</a>(
-            <a href="../../modules/doc/Option.md#0x1_Option_spec_get">Option::spec_get</a>(
-                <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
-          )) != <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_delegated_key_rotation_cap">LibraAccount::spec_delegated_key_rotation_cap</a>(account_addr);
 </code></pre>
 
 
