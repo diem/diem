@@ -26,7 +26,7 @@ use proptest::{
     strategy::{Strategy, ValueTree},
     test_runner::{self, TestRunner},
 };
-use storage_interface::{DbReader, DbReaderWriter, DbWriter, StartupInfo, TreeState};
+use storage_interface::{DbReader, DbReaderWriter, DbWriter, Order, StartupInfo, TreeState};
 
 pub fn fuzz(data: &[u8]) {
     // setup fake db
@@ -102,7 +102,7 @@ impl DbReader for FakeDb {
         &self,
         _event_key: &EventKey,
         _start: u64,
-        _ascending: bool,
+        _order: Order,
         _limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         unimplemented!();

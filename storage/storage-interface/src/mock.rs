@@ -3,7 +3,7 @@
 
 //! This module provides mock dbreader for tests.
 
-use crate::{DbReader, StartupInfo, TreeState};
+use crate::{DbReader, Order, StartupInfo, TreeState};
 use anyhow::Result;
 use libra_crypto::HashValue;
 use libra_types::{
@@ -48,7 +48,7 @@ impl DbReader for MockDbReader {
         &self,
         _event_key: &EventKey,
         _start: u64,
-        _ascending: bool,
+        _order: Order,
         _limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         unimplemented!()

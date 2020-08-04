@@ -398,7 +398,7 @@ mod test {
     };
     use libradb::errors::LibraDbError::NotFound;
     use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
-    use storage_interface::{DbReader, StartupInfo, TreeState};
+    use storage_interface::{DbReader, Order, StartupInfo, TreeState};
     use tokio::runtime::Runtime;
     use vm_validator::{
         mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
@@ -636,7 +636,7 @@ mod test {
             &self,
             _event_key: &EventKey,
             _start: u64,
-            _ascending: bool,
+            _order: Order,
             _limit: u64,
         ) -> Result<Vec<(u64, ContractEvent)>> {
             unimplemented!()

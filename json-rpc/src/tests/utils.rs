@@ -28,7 +28,7 @@ use std::{
     net::SocketAddr,
     sync::Arc,
 };
-use storage_interface::{DbReader, StartupInfo, TreeState};
+use storage_interface::{DbReader, Order, StartupInfo, TreeState};
 use tokio::runtime::Runtime;
 
 /// Creates JSON RPC server for a Validator node
@@ -192,7 +192,7 @@ impl DbReader for MockLibraDB {
         &self,
         key: &EventKey,
         start: u64,
-        _ascending: bool,
+        _order: Order,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         let events = self

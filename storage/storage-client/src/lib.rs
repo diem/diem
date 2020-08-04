@@ -20,8 +20,8 @@ use libra_types::{
 use serde::de::DeserializeOwned;
 use std::{net::SocketAddr, sync::Mutex};
 use storage_interface::{
-    DbReader, DbWriter, Error, GetAccountStateWithProofByVersionRequest, SaveTransactionsRequest,
-    StartupInfo, StorageRequest, TreeState,
+    DbReader, DbWriter, Error, GetAccountStateWithProofByVersionRequest, Order,
+    SaveTransactionsRequest, StartupInfo, StorageRequest, TreeState,
 };
 
 pub struct StorageClient {
@@ -130,7 +130,7 @@ impl DbReader for StorageClient {
         &self,
         _key: &EventKey,
         _start: u64,
-        _ascending: bool,
+        _order: Order,
         _limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         unimplemented!()

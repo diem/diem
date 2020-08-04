@@ -29,7 +29,7 @@ use libra_types::{
 use network::counters;
 use serde_json::Value;
 use std::{cmp::min, collections::HashMap, convert::TryFrom, pin::Pin, str::FromStr, sync::Arc};
-use storage_interface::DbReader;
+use storage_interface::{DbReader, Order};
 
 #[derive(Clone)]
 pub(crate) struct JsonRpcService {
@@ -313,7 +313,9 @@ async fn get_events(service: JsonRpcService, request: JsonRpcRequest) -> Result<
     service.validate_page_size_limit(limit as usize)?;
 
     let event_key = EventKey::try_from(&hex::decode(raw_event_key)?[..])?;
-    let events_with_proof = service.db.get_events(&event_key, start, true, limit)?;
+    let events_with_proof = service
+        .db
+        .get_events(&event_key, start, Order::Ascending, limit)?;
 
     let req_version = request.version();
     let events = events_with_proof

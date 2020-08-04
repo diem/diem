@@ -76,7 +76,7 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use schemadb::{DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
-use storage_interface::{DbReader, DbWriter, StartupInfo, TreeState};
+use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
 
 static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
@@ -271,12 +271,12 @@ impl LibraDB {
         &self,
         event_key: &EventKey,
         start_seq_num: u64,
-        ascending: bool,
+        order: Order,
         limit: u64,
         ledger_version: Version,
     ) -> Result<Vec<EventWithProof>> {
         error_if_too_many_requested(limit, MAX_LIMIT)?;
-        let get_latest = !ascending && start_seq_num == u64::max_value();
+        let get_latest = order == Order::Descending && start_seq_num == u64::max_value();
 
         let cursor = if get_latest {
             // Caller wants the latest, figure out the latest seq_num.
@@ -289,7 +289,7 @@ impl LibraDB {
         };
 
         // Convert requested range and order to a range in ascending order.
-        let (first_seq, real_limit) = get_first_seq_num_and_limit(ascending, cursor, limit)?;
+        let (first_seq, real_limit) = get_first_seq_num_and_limit(order, cursor, limit)?;
 
         // Query the index.
         let mut event_keys = self.event_store.lookup_events_by_key(
@@ -305,7 +305,7 @@ impl LibraDB {
         // For example, if the latest sequence number is 100, and the caller is asking for 110 to
         // 90, we will get 90 to 100 from the index lookup above. Seeing that the last item
         // is 100 instead of 110 tells us 110 is out of bound.
-        if !ascending {
+        if order == Order::Descending {
             if let Some((seq_num, _, _)) = event_keys.last() {
                 if *seq_num < cursor {
                     event_keys = Vec::new();
@@ -332,7 +332,7 @@ impl LibraDB {
                 Ok(EventWithProof::new(ver, idx, event, proof))
             })
             .collect::<Result<Vec<_>>>()?;
-        if !ascending {
+        if order == Order::Descending {
             events_with_proof.reverse();
         }
 
@@ -566,7 +566,7 @@ impl DbReader for LibraDB {
         &self,
         event_key: &EventKey,
         start: u64,
-        ascending: bool,
+        order: Order,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
         let _timer = LIBRA_STORAGE_API_LATENCY_SECONDS
@@ -579,7 +579,7 @@ impl DbReader for LibraDB {
             .ledger_info()
             .version();
         let events = self
-            .get_events_by_event_key(event_key, start, ascending, limit, version)?
+            .get_events_by_event_key(event_key, start, order, limit, version)?
             .into_iter()
             .map(|e| (e.transaction_version, e.event))
             .collect();
@@ -826,10 +826,10 @@ impl DbWriter for LibraDB {
 }
 
 // Convert requested range and order to a range in ascending order.
-fn get_first_seq_num_and_limit(ascending: bool, cursor: u64, limit: u64) -> Result<(u64, u64)> {
+fn get_first_seq_num_and_limit(order: Order, cursor: u64, limit: u64) -> Result<(u64, u64)> {
     ensure!(limit > 0, "limit should > 0, got {}", limit);
 
-    Ok(if ascending {
+    Ok(if order == Order::Ascending {
         (cursor, limit)
     } else if limit <= cursor {
         (cursor - limit + 1, limit)

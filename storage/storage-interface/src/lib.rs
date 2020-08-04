@@ -146,6 +146,12 @@ impl From<libra_secure_net::Error> for Error {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum Order {
+    Ascending,
+    Descending,
+}
+
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
@@ -175,7 +181,7 @@ pub trait DbReader: Send + Sync {
         &self,
         event_key: &EventKey,
         start: u64,
-        ascending: bool,
+        order: Order,
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
 

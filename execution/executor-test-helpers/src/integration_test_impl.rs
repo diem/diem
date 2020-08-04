@@ -25,7 +25,7 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
-use storage_interface::DbReaderWriter;
+use storage_interface::{DbReaderWriter, Order};
 use transaction_builder::{
     encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
     encode_testnet_mint_script,
@@ -294,37 +294,67 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 
     let account1_sent_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account1, 1), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account1, 1),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account1_sent_events.len(), 2);
 
     let account2_sent_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account2, 1), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account2, 1),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account2_sent_events.len(), 1);
 
     let account3_sent_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account3, 1), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account3, 1),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account3_sent_events.len(), 0);
 
     let account1_received_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account1, 0), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account1, 0),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account1_received_events.len(), 1);
 
     let account2_received_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account2, 0), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account2, 0),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account2_received_events.len(), 2);
 
     let account3_received_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account3, 0), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account3, 0),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account3_received_events.len(), 3);
 
@@ -342,7 +372,12 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 
     let account4_sent_events = db
         .reader
-        .get_events(&EventKey::new_from_address(&account4, 1), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account4, 1),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert!(account4_sent_events.is_empty());
 
@@ -397,13 +432,23 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 
     let account1_sent_events_batch1 = db
         .reader
-        .get_events(&EventKey::new_from_address(&account1, 1), 0, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account1, 1),
+            0,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account1_sent_events_batch1.len(), 10);
 
     let account1_sent_events_batch2 = db
         .reader
-        .get_events(&EventKey::new_from_address(&account1, 1), 10, true, 10)
+        .get_events(
+            &EventKey::new_from_address(&account1, 1),
+            10,
+            Order::Ascending,
+            10,
+        )
         .unwrap();
     assert_eq!(account1_sent_events_batch2.len(), 6);
 
@@ -412,7 +457,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         .get_events(
             &EventKey::new_from_address(&account3, 0),
             u64::max_value(),
-            false,
+            Order::Descending,
             10,
         )
         .unwrap();
@@ -421,7 +466,12 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 
     let account3_received_events_batch2 = db
         .reader
-        .get_events(&EventKey::new_from_address(&account3, 0), 6, false, 10)
+        .get_events(
+            &EventKey::new_from_address(&account3, 0),
+            6,
+            Order::Descending,
+            10,
+        )
         .unwrap();
     assert_eq!(account3_received_events_batch2.len(), 7);
     assert_eq!(account3_received_events_batch2[0].1.sequence_number(), 6);
