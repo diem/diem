@@ -677,14 +677,22 @@ impl ClusterSwarmKube {
     ) -> Result<()> {
         let bucket = "toro-cluster-test-flamegraphs";
         let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
-        self.s3_client
-            .put_object(PutObjectRequest {
-                bucket: bucket.to_string(),
-                key: format!("data/{}/{}/{}", run_id, pod_name, path),
-                body: Some(content.into()),
-                ..Default::default()
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+            let run_id = &run_id;
+            let content = content.clone();
+            Box::pin(async move {
+                self.s3_client
+                    .put_object(PutObjectRequest {
+                        bucket: bucket.to_string(),
+                        key: format!("data/{}/{}/{}", run_id, pod_name, path),
+                        body: Some(content.into()),
+                        ..Default::default()
+                    })
+                    .await
+                    .map_err(|e| format_err!("put_object failed : {}", e))
             })
-            .await?;
+        })
+        .await?;
         self.util_cmd(
             format!(
                 "aws s3 cp s3://{}/data/{}/{}/{path} {path}",
@@ -696,7 +704,8 @@ impl ClusterSwarmKube {
             node,
             "put-file",
         )
-        .await?;
+        .await
+        .map_err(|e| format_err!("aws s3 cp failed : {}", e))?;
         Ok(())
     }
 
