@@ -45,10 +45,6 @@ The transaction will abort:
 <code>parent_vasp</code> already has 256 child accounts with error:
 <code>VASP::ETOO_MANY_CHILDREN</code>
 * If
-<code>parent_vasp</code> does not hold limits for
-<code>CoinType</code> with error:
-<code>VASP::ENOT_A_PARENT_VASP</code>
-* If
 <code>CoinType</code> is not a registered currency with error:
 <code>LibraAccount::ENOT_A_CURRENCY</code>
 * If

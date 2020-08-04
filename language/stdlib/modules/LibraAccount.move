@@ -115,7 +115,6 @@ module LibraAccount {
     const ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
     const ENOT_LIBRA_ROOT: u64 = 11;
     const EACCOUNT_ALREADY_EXISTS: u64 = 12;
-    const EPARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 13;
     const ENOT_A_CURRENCY: u64 = 14;
     const EADD_EXISTING_CURRENCY: u64 = 15;
     const EACCOUNT_FROZEN: u64 = 16;
@@ -153,27 +152,49 @@ module LibraAccount {
         );
     }
 
+    /// Return `true` if `addr` has already published account limits for `Token`
+    fun has_published_account_limits<Token>(addr: address): bool {
+        if (VASP::is_vasp(addr)) VASP::has_account_limits<Token>(addr)
+        else AccountLimits::has_window_published<Token>(addr)
+    }
+
     /// Returns whether we should track and record limits for the `payer` or `payee` account.
     /// Depending on the `is_withdrawal` flag passed in we determine whether the
     /// `payer` or `payee` account is being queried. `VASP->any` and
     /// `any->VASP` transfers are tracked in the VASP.
-    fun should_track_limits_for_account(payer: address, payee: address, is_withdrawal: bool): bool {
+    fun should_track_limits_for_account<Token>(
+        payer: address, payee: address, is_withdrawal: bool
+    ): bool {
         if (is_withdrawal) {
-            VASP::is_vasp(payer) && (!VASP::is_vasp(payee) || !VASP::is_same_vasp(payer, payee))
+            has_published_account_limits<Token>(payer) &&
+            VASP::is_vasp(payer) &&
+            (!VASP::is_vasp(payee) || !VASP::is_same_vasp(payer, payee))
         } else {
-            VASP::is_vasp(payee) && (!VASP::is_vasp(payer) || !VASP::is_same_vasp(payee, payer))
+            has_published_account_limits<Token>(payee) &&
+            VASP::is_vasp(payee) &&
+            (!VASP::is_vasp(payer) || !VASP::is_same_vasp(payee, payer))
         }
     }
     spec fun should_track_limits_for_account {
         pragma opaque = true;
-        ensures result == spec_should_track_limits_for_account(payer, payee, is_withdrawal);
+        ensures result == spec_should_track_limits_for_account<Token>(payer, payee, is_withdrawal);
     }
     spec module {
-        define spec_should_track_limits_for_account(payer: address, payee: address, is_withdrawal: bool): bool {
+        define spec_has_published_account_limits<Token>(addr: address): bool {
+            if (VASP::is_vasp(addr)) VASP::spec_has_account_limits<Token>(addr)
+            else AccountLimits::has_window_published<Token>(addr)
+        }
+        define spec_should_track_limits_for_account<Token>(
+            payer: address, payee: address, is_withdrawal: bool
+        ): bool {
             if (is_withdrawal) {
-                VASP::is_vasp(payer) && (!VASP::is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
+                spec_has_published_account_limits<Token>(payer) &&
+                VASP::is_vasp(payer) &&
+                (!VASP::is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
             } else {
-                VASP::is_vasp(payee) && (!VASP::is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
+                spec_has_published_account_limits<Token>(payee) &&
+                VASP::is_vasp(payee) &&
+                (!VASP::is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
             }
         }
     }
@@ -240,7 +261,7 @@ module LibraAccount {
         );
         // Ensure that this deposit is compliant with the account limits on
         // this account.
-        if (should_track_limits_for_account(payer, payee, false)) {
+        if (should_track_limits_for_account<Token>(payer, payee, false)) {
             assert(
                 AccountLimits::update_deposit_limits<Token>(
                     deposit_value,
@@ -279,15 +300,15 @@ module LibraAccount {
         aborts_if amount == 0;
         include DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
         aborts_if
-            spec_should_track_limits_for_account(payer, payee, false) &&
+            spec_should_track_limits_for_account<Token>(payer, payee, false) &&
             !spec_has_account_operations_cap();
         include
-            spec_should_track_limits_for_account(payer, payee, false) ==>
+            spec_should_track_limits_for_account<Token>(payer, payee, false) ==>
             AccountLimits::UpdateDepositLimitsAbortsIf<Token> {
                 addr: VASP::spec_parent_address(payee),
             };
         aborts_if
-            spec_should_track_limits_for_account(payer, payee, false) &&
+            spec_should_track_limits_for_account<Token>(payer, payee, false) &&
             !AccountLimits::spec_update_deposit_limits<Token>(amount, VASP::spec_parent_address(payee));
         aborts_if !exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64();
@@ -340,7 +361,7 @@ module LibraAccount {
         assert(!AccountFreezing::account_is_frozen(payer), EACCOUNT_FROZEN);
         // Make sure that this withdrawal is compliant with the limits on
         // the account if it's a inter-VASP transfer,
-        if (should_track_limits_for_account(payer, payee, true)) {
+        if (should_track_limits_for_account<Token>(payer, payee, true)) {
             let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
                     amount,
                     VASP::parent_address(payer),
@@ -364,12 +385,12 @@ module LibraAccount {
         amount: u64;
         aborts_if AccountFreezing::spec_account_is_frozen(payer);
         include
-            spec_should_track_limits_for_account(payer, payee, true) ==>
+            spec_should_track_limits_for_account<Token>(payer, payee, true) ==>
             AccountLimits::UpdateWithdrawalLimitsAbortsIf<Token> {
                 addr: VASP::spec_parent_address(payer),
             };
         aborts_if
-            spec_should_track_limits_for_account(payer, payee, true) &&
+            spec_should_track_limits_for_account<Token>(payer, payee, true) &&
             (   !spec_has_account_operations_cap() ||
                 !AccountLimits::spec_update_withdrawal_limits<Token>(amount, VASP::spec_parent_address(payer))
             );
@@ -686,15 +707,7 @@ module LibraAccount {
         balance_for(borrow_global<Balance<Token>>(addr))
     }
 
-    /// Return `true` if `addr` has already published account limits for `Token`
-    fun has_published_account_limits<Token>(addr: address): bool {
-        if (VASP::is_vasp(addr)) VASP::has_account_limits<Token>(addr)
-        else AccountLimits::has_window_published<Token>(addr)
-    }
-
-    /// Add a balance of `Token` type to the sending account.
-    /// If the account has a role that is subject to limits, it may need to publish account limits
-    /// as well
+    /// Add a balance of `Token` type to the sending account
     public fun add_currency<Token>(account: &signer) {
         // aborts if `Token` is not a currency type in the system
         assert(Libra::is_currency<Token>(), ENOT_A_CURRENCY);
@@ -703,14 +716,6 @@ module LibraAccount {
         // aborts if this account already has a balance in `Token`
         let addr = Signer::address_of(account);
         assert(!exists<Balance<Token>>(addr), EADD_EXISTING_CURRENCY);
-        // Check whether account limits are needed and add them if so
-        if (Roles::needs_account_limits(account) && !has_published_account_limits<Token>(addr)) {
-            if (VASP::is_vasp(addr)) {
-                VASP::add_account_limits<Token>(account)
-            } else {
-                // TODO(shb): need to add limits to unhosted as well
-            }
-        };
 
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }

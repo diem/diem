@@ -104,27 +104,6 @@ module VASP {
     public fun has_account_limits<CoinType>(addr: address): bool acquires ChildVASP {
         AccountLimits::has_window_published<CoinType>(parent_address(addr))
     }
-    spec fun has_account_limits {
-        ensures result == spec_has_account_limits<CoinType>(addr);
-    }
-    spec module {
-        define spec_has_account_limits<CoinType>(addr: address): bool {
-            AccountLimits::spec_has_window_published<CoinType>(spec_parent_address(addr))
-        }
-    }
-
-    /// Publish an `AccountLimits<CoinType>` resource under `account`.
-    /// Aborts if `account` is not a ParentVASP
-    /// Aborts if `account` already contains a `AccountLimits<CoinType>` resource
-    public fun add_account_limits<CoinType>(account: &signer) acquires VASPOperationsResource {
-        assert(Roles::has_parent_VASP_role(account), ENOT_A_PARENT_VASP);
-
-        AccountLimits::publish_window<CoinType>(
-            account,
-            &borrow_global<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap,
-            CoreAddresses::LIBRA_ROOT_ADDRESS()
-        )
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Publicly callable APIs
@@ -153,6 +132,9 @@ module VASP {
             } else {
                 global<ChildVASP>(addr).parent_vasp_addr
             }
+        }
+        define spec_has_account_limits<Token>(addr: address): bool {
+            AccountLimits::has_window_published<Token>(spec_parent_address(addr))
         }
     }
 

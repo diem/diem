@@ -25,12 +25,6 @@ Aborts with NOT_A_CURRENCY if
 Aborts with
 <code>LibraAccount::ADD_EXISTING_CURRENCY</code> if the account already holds a balance in
 <code>Currency</code>.
-Aborts with
-<code>LibraAccount::PARENT_VASP_CURRENCY_LIMITS_DNE</code> if
-<code>account</code> is a
-<code>ChildVASP</code> whose
-parent does not have an
-<code><a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;Currency&gt;</code> resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
@@ -68,7 +62,6 @@ parent does not have an
 
 
 <pre><code>pragma verify = <b>true</b>;
-pragma aborts_if_is_partial = <b>true</b>;
 </code></pre>
 
 
@@ -102,19 +95,4 @@ This publishes a
 
 
 <pre><code><b>aborts_if</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-</code></pre>
-
-
-If
-<code>account</code> is a child VASP, its parent must have a published
-<code><a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;Currency&gt;</code>
-
-
-<pre><code><b>aborts_if</b>
-    <a href="../../modules/doc/Roles.md#0x1_Roles_spec_needs_account_limits_addr">Roles::spec_needs_account_limits_addr</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) &&
-    <a href="../../modules/doc/Roles.md#0x1_Roles_spec_has_child_VASP_role_addr">Roles::spec_has_child_VASP_role_addr</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) &&
-    !<a href="../../modules/doc/VASP.md#0x1_VASP_spec_has_account_limits">VASP::spec_has_account_limits</a>&lt;Currency&gt;(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) &&
-    // TODO(shb): teach prover that Roles::spec_has_child_VASP_roles ==&gt; <a href="../../modules/doc/VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a> and
-    // then eliminate this
-    <a href="../../modules/doc/VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 </code></pre>

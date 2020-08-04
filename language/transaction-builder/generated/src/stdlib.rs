@@ -35,8 +35,6 @@ pub enum ScriptCall {
     /// Aborts with NOT_A_CURRENCY if `Currency` is not an accepted currency type in the Libra system
     /// Aborts with `LibraAccount::ADD_EXISTING_CURRENCY` if the account already holds a balance in
     /// `Currency`.
-    /// Aborts with `LibraAccount::PARENT_VASP_CURRENCY_LIMITS_DNE` if `account` is a `ChildVASP` whose
-    /// parent does not have an `AccountLimits<Currency>` resource.
     AddCurrencyToAccount { currency: TypeTag },
 
     /// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress` resource under `recovery_address`.
@@ -91,7 +89,6 @@ pub enum ScriptCall {
     /// * If `parent_vasp` is not a parent vasp with error: `Roles::EINVALID_PARENT_ROLE`
     /// * If `child_address` already exists with error: `Roles::EROLE_ALREADY_ASSIGNED`
     /// * If `parent_vasp` already has 256 child accounts with error: `VASP::ETOO_MANY_CHILDREN`
-    /// * If `parent_vasp` does not hold limits for `CoinType` with error: `VASP::ENOT_A_PARENT_VASP`
     /// * If `CoinType` is not a registered currency with error: `LibraAccount::ENOT_A_CURRENCY`
     /// * If `parent_vasp`'s withdrawal capability has been extracted with error:  `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
     /// * If `parent_vasp` doesn't hold `CoinType` and `child_initial_balance > 0` with error: `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`
@@ -231,11 +228,6 @@ pub enum ScriptCall {
     /// This will only succeed if `account` already has a published `Preburn<Token>` resource.
     Preburn { token: TypeTag, amount: u64 },
 
-    /// Publishes an unrestricted `LimitsDefintion<CoinType>` under `account`.
-    /// Will abort if a resource with the same type already exists under `account`.
-    /// No windows will point to this limit at the time it is published.
-    PublishAccountLimitDefinition { coin_type: TypeTag },
-
     /// (1) Rotate the authentication key of the sender to `public_key`
     /// (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
     ///     of the sender under the sender's address.
@@ -346,30 +338,6 @@ pub enum ScriptCall {
     /// Unmints `amount_lbr` LBR from the sending account into the constituent coins and deposits
     /// the resulting coins into the sending account."
     UnmintLbr { amount_lbr: u64 },
-
-    /// Optionally update thresholds of max balance, inflow, outflow
-    /// for any limits-bound accounts with their limits defined at `limit_address`.
-    /// Limits are defined in terms of base (on-chain) currency units for `CoinType`.
-    /// If a new threshold is 0, that particular config does not get updated.
-    /// `sliding_nonce` is a unique nonce for operation, see SlidingNonce.move for details.
-    UpdateAccountLimitDefinition {
-        coin_type: TypeTag,
-        limit_address: AccountAddress,
-        sliding_nonce: u64,
-        new_max_inflow: u64,
-        new_max_outflow: u64,
-        new_max_holding_balance: u64,
-        new_time_period: u64,
-    },
-
-    /// * Sets the account limits window `tracking_balance` field for `CoinType` at `window_address` to `aggregate_balance` if `aggregate_balance != 0`.
-    /// * Sets the account limits window `limit_address` field for `CoinType` at `window_address` to `new_limit_address`.
-    UpdateAccountLimitWindowInfo {
-        coin_type: TypeTag,
-        window_address: AccountAddress,
-        aggregate_balance: u64,
-        new_limit_address: AccountAddress,
-    },
 
     /// Update the dual attesation limit to `new_micro_lbr_limit`.
     UpdateDualAttestationLimit {
@@ -533,9 +501,6 @@ impl ScriptCall {
                 metadata_signature,
             ),
             Preburn { token, amount } => encode_preburn_script(token, amount),
-            PublishAccountLimitDefinition { coin_type } => {
-                encode_publish_account_limit_definition_script(coin_type)
-            }
             PublishSharedEd25519PublicKey { public_key } => {
                 encode_publish_shared_ed25519_public_key_script(public_key)
             }
@@ -624,34 +589,6 @@ impl ScriptCall {
                 to_unfreeze_account,
             } => encode_unfreeze_account_script(sliding_nonce, to_unfreeze_account),
             UnmintLbr { amount_lbr } => encode_unmint_lbr_script(amount_lbr),
-            UpdateAccountLimitDefinition {
-                coin_type,
-                limit_address,
-                sliding_nonce,
-                new_max_inflow,
-                new_max_outflow,
-                new_max_holding_balance,
-                new_time_period,
-            } => encode_update_account_limit_definition_script(
-                coin_type,
-                limit_address,
-                sliding_nonce,
-                new_max_inflow,
-                new_max_outflow,
-                new_max_holding_balance,
-                new_time_period,
-            ),
-            UpdateAccountLimitWindowInfo {
-                coin_type,
-                window_address,
-                aggregate_balance,
-                new_limit_address,
-            } => encode_update_account_limit_window_info_script(
-                coin_type,
-                window_address,
-                aggregate_balance,
-                new_limit_address,
-            ),
             UpdateDualAttestationLimit {
                 sliding_nonce,
                 new_micro_lbr_limit,
@@ -692,8 +629,6 @@ impl ScriptCall {
 /// Aborts with NOT_A_CURRENCY if `Currency` is not an accepted currency type in the Libra system
 /// Aborts with `LibraAccount::ADD_EXISTING_CURRENCY` if the account already holds a balance in
 /// `Currency`.
-/// Aborts with `LibraAccount::PARENT_VASP_CURRENCY_LIMITS_DNE` if `account` is a `ChildVASP` whose
-/// parent does not have an `AccountLimits<Currency>` resource.
 pub fn encode_add_currency_to_account_script(currency: TypeTag) -> Script {
     Script::new(
         ADD_CURRENCY_TO_ACCOUNT_CODE.to_vec(),
@@ -784,7 +719,6 @@ pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress
 /// * If `parent_vasp` is not a parent vasp with error: `Roles::EINVALID_PARENT_ROLE`
 /// * If `child_address` already exists with error: `Roles::EROLE_ALREADY_ASSIGNED`
 /// * If `parent_vasp` already has 256 child accounts with error: `VASP::ETOO_MANY_CHILDREN`
-/// * If `parent_vasp` does not hold limits for `CoinType` with error: `VASP::ENOT_A_PARENT_VASP`
 /// * If `CoinType` is not a registered currency with error: `LibraAccount::ENOT_A_CURRENCY`
 /// * If `parent_vasp`'s withdrawal capability has been extracted with error:  `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
 /// * If `parent_vasp` doesn't hold `CoinType` and `child_initial_balance > 0` with error: `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`
@@ -1035,17 +969,6 @@ pub fn encode_preburn_script(token: TypeTag, amount: u64) -> Script {
     )
 }
 
-/// Publishes an unrestricted `LimitsDefintion<CoinType>` under `account`.
-/// Will abort if a resource with the same type already exists under `account`.
-/// No windows will point to this limit at the time it is published.
-pub fn encode_publish_account_limit_definition_script(coin_type: TypeTag) -> Script {
-    Script::new(
-        PUBLISH_ACCOUNT_LIMIT_DEFINITION_CODE.to_vec(),
-        vec![coin_type],
-        vec![],
-    )
-}
-
 /// (1) Rotate the authentication key of the sender to `public_key`
 /// (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
 ///     of the sender under the sender's address.
@@ -1289,53 +1212,6 @@ pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
     )
 }
 
-/// Optionally update thresholds of max balance, inflow, outflow
-/// for any limits-bound accounts with their limits defined at `limit_address`.
-/// Limits are defined in terms of base (on-chain) currency units for `CoinType`.
-/// If a new threshold is 0, that particular config does not get updated.
-/// `sliding_nonce` is a unique nonce for operation, see SlidingNonce.move for details.
-pub fn encode_update_account_limit_definition_script(
-    coin_type: TypeTag,
-    limit_address: AccountAddress,
-    sliding_nonce: u64,
-    new_max_inflow: u64,
-    new_max_outflow: u64,
-    new_max_holding_balance: u64,
-    new_time_period: u64,
-) -> Script {
-    Script::new(
-        UPDATE_ACCOUNT_LIMIT_DEFINITION_CODE.to_vec(),
-        vec![coin_type],
-        vec![
-            TransactionArgument::Address(limit_address),
-            TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U64(new_max_inflow),
-            TransactionArgument::U64(new_max_outflow),
-            TransactionArgument::U64(new_max_holding_balance),
-            TransactionArgument::U64(new_time_period),
-        ],
-    )
-}
-
-/// * Sets the account limits window `tracking_balance` field for `CoinType` at `window_address` to `aggregate_balance` if `aggregate_balance != 0`.
-/// * Sets the account limits window `limit_address` field for `CoinType` at `window_address` to `new_limit_address`.
-pub fn encode_update_account_limit_window_info_script(
-    coin_type: TypeTag,
-    window_address: AccountAddress,
-    aggregate_balance: u64,
-    new_limit_address: AccountAddress,
-) -> Script {
-    Script::new(
-        UPDATE_ACCOUNT_LIMIT_WINDOW_INFO_CODE.to_vec(),
-        vec![coin_type],
-        vec![
-            TransactionArgument::Address(window_address),
-            TransactionArgument::U64(aggregate_balance),
-            TransactionArgument::Address(new_limit_address),
-        ],
-    )
-}
-
 /// Update the dual attesation limit to `new_micro_lbr_limit`.
 pub fn encode_update_dual_attestation_limit_script(
     sliding_nonce: u64,
@@ -1536,12 +1412,6 @@ fn decode_preburn_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_publish_account_limit_definition_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::PublishAccountLimitDefinition {
-        coin_type: script.ty_args().get(0)?.clone(),
-    })
-}
-
 fn decode_publish_shared_ed25519_public_key_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::PublishSharedEd25519PublicKey {
         public_key: decode_u8vector_argument(script.args().get(0)?.clone())?,
@@ -1651,27 +1521,6 @@ fn decode_unmint_lbr_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_update_account_limit_definition_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::UpdateAccountLimitDefinition {
-        coin_type: script.ty_args().get(0)?.clone(),
-        limit_address: decode_address_argument(script.args().get(0)?.clone())?,
-        sliding_nonce: decode_u64_argument(script.args().get(1)?.clone())?,
-        new_max_inflow: decode_u64_argument(script.args().get(2)?.clone())?,
-        new_max_outflow: decode_u64_argument(script.args().get(3)?.clone())?,
-        new_max_holding_balance: decode_u64_argument(script.args().get(4)?.clone())?,
-        new_time_period: decode_u64_argument(script.args().get(5)?.clone())?,
-    })
-}
-
-fn decode_update_account_limit_window_info_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::UpdateAccountLimitWindowInfo {
-        coin_type: script.ty_args().get(0)?.clone(),
-        window_address: decode_address_argument(script.args().get(0)?.clone())?,
-        aggregate_balance: decode_u64_argument(script.args().get(1)?.clone())?,
-        new_limit_address: decode_address_argument(script.args().get(2)?.clone())?,
-    })
-}
-
 fn decode_update_dual_attestation_limit_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::UpdateDualAttestationLimit {
         sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
@@ -1773,10 +1622,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     );
     map.insert(PREBURN_CODE.to_vec(), Box::new(decode_preburn_script));
     map.insert(
-        PUBLISH_ACCOUNT_LIMIT_DEFINITION_CODE.to_vec(),
-        Box::new(decode_publish_account_limit_definition_script),
-    );
-    map.insert(
         PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE.to_vec(),
         Box::new(decode_publish_shared_ed25519_public_key_script),
     );
@@ -1829,14 +1674,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         Box::new(decode_unfreeze_account_script),
     );
     map.insert(UNMINT_LBR_CODE.to_vec(), Box::new(decode_unmint_lbr_script));
-    map.insert(
-        UPDATE_ACCOUNT_LIMIT_DEFINITION_CODE.to_vec(),
-        Box::new(decode_update_account_limit_definition_script),
-    );
-    map.insert(
-        UPDATE_ACCOUNT_LIMIT_WINDOW_INFO_CODE.to_vec(),
-        Box::new(decode_update_account_limit_window_info_script),
-    );
     map.insert(
         UPDATE_DUAL_ATTESTATION_LIMIT_CODE.to_vec(),
         Box::new(decode_update_dual_attestation_limit_script),
@@ -2095,14 +1932,6 @@ const PREBURN_CODE: &[u8] = &[
     10, 0, 17, 0, 12, 2, 11, 0, 14, 2, 10, 1, 56, 0, 11, 2, 17, 2, 2,
 ];
 
-const PUBLISH_ACCOUNT_LIMIT_DEFINITION_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 42, 8, 59, 16, 0,
-    0, 0, 1, 0, 1, 1, 1, 0, 2, 1, 6, 12, 0, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110, 116, 76, 105,
-    109, 105, 116, 115, 27, 112, 117, 98, 108, 105, 115, 104, 95, 117, 110, 114, 101, 115, 116,
-    114, 105, 99, 116, 101, 100, 95, 108, 105, 109, 105, 116, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 1, 1, 0, 1, 3, 11, 0, 56, 0, 2,
-];
-
 const PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE: &[u8] = &[
     161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 31, 8, 44, 16, 0, 0, 0, 1,
     0, 1, 0, 2, 6, 12, 10, 2, 0, 22, 83, 104, 97, 114, 101, 100, 69, 100, 50, 53, 53, 49, 57, 80,
@@ -2256,25 +2085,6 @@ const UNMINT_LBR_CODE: &[u8] = &[
     119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 12, 117, 110, 115, 116, 97, 112, 108,
     101, 95, 108, 98, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 1, 9, 11, 0, 17,
     0, 12, 2, 14, 2, 10, 1, 17, 2, 11, 2, 17, 1, 2,
-];
-
-const UPDATE_ACCOUNT_LIMIT_DEFINITION_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 25, 7, 42, 74, 8, 116, 16,
-    0, 0, 0, 1, 0, 2, 0, 1, 1, 1, 1, 3, 2, 1, 0, 0, 4, 6, 6, 12, 5, 3, 3, 3, 3, 0, 2, 6, 12, 3, 7,
-    6, 12, 5, 3, 3, 3, 3, 3, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110, 116, 76, 105, 109, 105, 116,
-    115, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 24, 117, 112, 100, 97, 116,
-    101, 95, 108, 105, 109, 105, 116, 115, 95, 100, 101, 102, 105, 110, 105, 116, 105, 111, 110,
-    21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111,
-    114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 11, 10, 0, 10, 2, 17, 1,
-    11, 0, 10, 1, 10, 3, 10, 4, 10, 5, 10, 6, 56, 0, 2,
-];
-
-const UPDATE_ACCOUNT_LIMIT_WINDOW_INFO_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 10, 7, 20, 33, 8, 53, 16, 0,
-    0, 0, 1, 0, 1, 1, 1, 0, 2, 4, 6, 12, 5, 3, 5, 0, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110, 116,
-    76, 105, 109, 105, 116, 115, 18, 117, 112, 100, 97, 116, 101, 95, 119, 105, 110, 100, 111, 119,
-    95, 105, 110, 102, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 6, 11, 0,
-    10, 1, 10, 2, 10, 3, 56, 0, 2,
 ];
 
 const UPDATE_DUAL_ATTESTATION_LIMIT_CODE: &[u8] = &[

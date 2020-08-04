@@ -77,11 +77,11 @@ spec fun peer_to_peer_with_metadata {
     include AbortsIfAmountInvalid<Currency>{payer: payer_addr};
     include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: payer_addr, value: amount};
     include AbortsIfAmountExceedsLimit<Currency>{payer: payer_addr};
-    include LibraAccount::spec_should_track_limits_for_account(payer_addr, payee, false) ==>
+    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, false) ==>
                 AccountLimits::UpdateDepositLimitsAbortsIf<Currency> {
                     addr: VASP::spec_parent_address(payee),
                 };
-    include LibraAccount::spec_should_track_limits_for_account(payer_addr, payee, true) ==>
+    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, true) ==>
                 AccountLimits::UpdateWithdrawalLimitsAbortsIf<Currency> {
                     addr: VASP::spec_parent_address(payer_addr),
                 };
@@ -128,7 +128,7 @@ spec schema AbortsIfAmountExceedsLimit<Currency> {
     payee: address;
     amount: u64;
     /// Aborts if the amount exceeds payee's deposit limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account(payer, payee, false)
+    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, false)
                 && (!LibraAccount::spec_has_account_operations_cap()
                     || !AccountLimits::spec_update_deposit_limits<Currency>(
                             amount,
@@ -136,7 +136,7 @@ spec schema AbortsIfAmountExceedsLimit<Currency> {
                         )
                     );
     /// Aborts if the amount exceeds payer's withdraw limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account(payer, payee, true)
+    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, true)
                 && (!LibraAccount::spec_has_account_operations_cap()
                     || !AccountLimits::spec_update_withdrawal_limits<Currency>(
                             amount,

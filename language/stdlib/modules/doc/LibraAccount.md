@@ -13,6 +13,7 @@
 -  [Struct `SentPaymentEvent`](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
+-  [Function `has_published_account_limits`](#0x1_LibraAccount_has_published_account_limits)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
 -  [Function `unstaple_lbr`](#0x1_LibraAccount_unstaple_lbr)
@@ -39,7 +40,6 @@
 -  [Function `destroy_signer`](#0x1_LibraAccount_destroy_signer)
 -  [Function `balance_for`](#0x1_LibraAccount_balance_for)
 -  [Function `balance`](#0x1_LibraAccount_balance)
--  [Function `has_published_account_limits`](#0x1_LibraAccount_has_published_account_limits)
 -  [Function `add_currency`](#0x1_LibraAccount_add_currency)
 -  [Function `accepts_currency`](#0x1_LibraAccount_accepts_currency)
 -  [Function `sequence_number_for_account`](#0x1_LibraAccount_sequence_number_for_account)
@@ -402,6 +402,35 @@ Initialize this module. This is only callable from genesis.
 
 </details>
 
+<a name="0x1_LibraAccount_has_published_account_limits"></a>
+
+## Function `has_published_account_limits`
+
+Return
+<code><b>true</b></code> if
+<code>addr</code> has already published account limits for
+<code>Token</code>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr: address): bool {
+    <b>if</b> (<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr)) <a href="VASP.md#0x1_VASP_has_account_limits">VASP::has_account_limits</a>&lt;Token&gt;(addr)
+    <b>else</b> <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;Token&gt;(addr)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_LibraAccount_should_track_limits_for_account"></a>
 
 ## Function `should_track_limits_for_account`
@@ -417,7 +446,7 @@ Depending on the
 <code>any-&gt;<a href="VASP.md#0x1_VASP">VASP</a></code> transfers are tracked in the VASP.
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(payer: address, payee: address, is_withdrawal: bool): bool
 </code></pre>
 
 
@@ -426,11 +455,17 @@ Depending on the
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool {
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(
+    payer: address, payee: address, is_withdrawal: bool
+): bool {
     <b>if</b> (is_withdrawal) {
-        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payer, payee))
+        <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(payer) &&
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) &&
+        (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payer, payee))
     } <b>else</b> {
-        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payee, payer))
+        <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(payee) &&
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) &&
+        (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_is_same_vasp">VASP::is_same_vasp</a>(payee, payer))
     }
 }
 </code></pre>
@@ -571,7 +606,7 @@ Record a payment of
     );
     // Ensure that this deposit is compliant with the account limits on
     // this account.
-    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>false</b>)) {
+    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>)) {
         <b>assert</b>(
             <a href="AccountLimits.md#0x1_AccountLimits_update_deposit_limits">AccountLimits::update_deposit_limits</a>&lt;Token&gt;(
                 deposit_value,
@@ -695,7 +730,7 @@ Helper to withdraw
     <b>assert</b>(!<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(payer), EACCOUNT_FROZEN);
     // Make sure that this withdrawal is compliant with the limits on
     // the account <b>if</b> it's a inter-<a href="VASP.md#0x1_VASP">VASP</a> transfer,
-    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>true</b>)) {
+    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>true</b>)) {
         <b>let</b> can_withdraw = <a href="AccountLimits.md#0x1_AccountLimits_update_withdrawal_limits">AccountLimits::update_withdrawal_limits</a>&lt;Token&gt;(
                 amount,
                 <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer),
@@ -1394,43 +1429,12 @@ Return the current balance of the account at
 
 </details>
 
-<a name="0x1_LibraAccount_has_published_account_limits"></a>
-
-## Function `has_published_account_limits`
-
-Return
-<code><b>true</b></code> if
-<code>addr</code> has already published account limits for
-<code>Token</code>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr: address): bool {
-    <b>if</b> (<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr)) <a href="VASP.md#0x1_VASP_has_account_limits">VASP::has_account_limits</a>&lt;Token&gt;(addr)
-    <b>else</b> <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;Token&gt;(addr)
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_LibraAccount_add_currency"></a>
 
 ## Function `add_currency`
 
 Add a balance of
-<code>Token</code> type to the sending account.
-If the account has a role that is subject to limits, it may need to publish account limits
-as well
+<code>Token</code> type to the sending account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
@@ -1450,14 +1454,6 @@ as well
     // aborts <b>if</b> this account already has a balance in `Token`
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(!exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr), EADD_EXISTING_CURRENCY);
-    // Check whether account limits are needed and add them <b>if</b> so
-    <b>if</b> (<a href="Roles.md#0x1_Roles_needs_account_limits">Roles::needs_account_limits</a>(account) && !<a href="#0x1_LibraAccount_has_published_account_limits">has_published_account_limits</a>&lt;Token&gt;(addr)) {
-        <b>if</b> (<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr)) {
-            <a href="VASP.md#0x1_VASP_add_account_limits">VASP::add_account_limits</a>&lt;Token&gt;(account)
-        } <b>else</b> {
-            // TODO(shb): need <b>to</b> add limits <b>to</b> unhosted <b>as</b> well
-        }
-    };
 
     move_to(account, <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;Token&gt;() })
 }
@@ -1995,27 +1991,38 @@ a writeset transaction is committed.
 ### Function `should_track_limits_for_account`
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>&lt;Token&gt;(payer: address, payee: address, is_withdrawal: bool): bool
 </code></pre>
 
 
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>ensures</b> result == <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, is_withdrawal);
+<b>ensures</b> result == <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, is_withdrawal);
 </code></pre>
 
 
 
 
+<a name="0x1_LibraAccount_spec_has_published_account_limits"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_has_published_account_limits">spec_has_published_account_limits</a>&lt;Token&gt;(addr: address): bool {
+    <b>if</b> (<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr)) <a href="VASP.md#0x1_VASP_spec_has_account_limits">VASP::spec_has_account_limits</a>&lt;Token&gt;(addr)
+    <b>else</b> <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;Token&gt;(addr)
+}
 <a name="0x1_LibraAccount_spec_should_track_limits_for_account"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool {
+<b>define</b> <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(
+    payer: address, payee: address, is_withdrawal: bool
+): bool {
     <b>if</b> (is_withdrawal) {
-        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
+        <a href="#0x1_LibraAccount_spec_has_published_account_limits">spec_has_published_account_limits</a>&lt;Token&gt;(payer) &&
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) &&
+        (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payer, payee))
     } <b>else</b> {
-        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payee, payer))
+        <a href="#0x1_LibraAccount_spec_has_published_account_limits">spec_has_published_account_limits</a>&lt;Token&gt;(payee) &&
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) &&
+        (!<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) || !<a href="VASP.md#0x1_VASP_spec_is_same_vasp">VASP::spec_is_same_vasp</a>(payee, payer))
     }
 }
 </code></pre>
@@ -2053,15 +2060,15 @@ a writeset transaction is committed.
     <b>aborts_if</b> amount == 0;
     <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Token&gt;{value: amount};
     <b>aborts_if</b>
-        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) &&
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>) &&
         !<a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>();
     <b>include</b>
-        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) ==&gt;
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>) ==&gt;
         <a href="AccountLimits.md#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">AccountLimits::UpdateDepositLimitsAbortsIf</a>&lt;Token&gt; {
             addr: <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee),
         };
     <b>aborts_if</b>
-        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>) &&
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>false</b>) &&
         !<a href="AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">AccountLimits::spec_update_deposit_limits</a>&lt;Token&gt;(amount, <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
     <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value + amount &gt; max_u64();
@@ -2114,12 +2121,12 @@ a writeset transaction is committed.
     amount: u64;
     <b>aborts_if</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">AccountFreezing::spec_account_is_frozen</a>(payer);
     <b>include</b>
-        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>true</b>) ==&gt;
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>true</b>) ==&gt;
         <a href="AccountLimits.md#0x1_AccountLimits_UpdateWithdrawalLimitsAbortsIf">AccountLimits::UpdateWithdrawalLimitsAbortsIf</a>&lt;Token&gt; {
             addr: <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer),
         };
     <b>aborts_if</b>
-        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>(payer, payee, <b>true</b>) &&
+        <a href="#0x1_LibraAccount_spec_should_track_limits_for_account">spec_should_track_limits_for_account</a>&lt;Token&gt;(payer, payee, <b>true</b>) &&
         (   !<a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>() ||
             !<a href="AccountLimits.md#0x1_AccountLimits_spec_update_withdrawal_limits">AccountLimits::spec_update_withdrawal_limits</a>&lt;Token&gt;(amount, <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer))
         );

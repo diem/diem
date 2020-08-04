@@ -12,7 +12,6 @@
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
 -  [Function `has_account_limits`](#0x1_VASP_has_account_limits)
--  [Function `add_account_limits`](#0x1_VASP_add_account_limits)
 -  [Function `parent_address`](#0x1_VASP_parent_address)
 -  [Function `is_parent`](#0x1_VASP_is_parent)
 -  [Function `is_child`](#0x1_VASP_is_child)
@@ -22,7 +21,6 @@
 -  [Specification](#0x1_VASP_Specification)
     -  [Function `publish_parent_vasp_credential`](#0x1_VASP_Specification_publish_parent_vasp_credential)
     -  [Function `publish_child_vasp_credential`](#0x1_VASP_Specification_publish_child_vasp_credential)
-    -  [Function `has_account_limits`](#0x1_VASP_Specification_has_account_limits)
     -  [Function `parent_address`](#0x1_VASP_Specification_parent_address)
     -  [Function `is_parent`](#0x1_VASP_Specification_is_parent)
     -  [Function `is_child`](#0x1_VASP_Specification_is_child)
@@ -268,44 +266,6 @@ Aborts if
 
 </details>
 
-<a name="0x1_VASP_add_account_limits"></a>
-
-## Function `add_account_limits`
-
-Publish an
-<code><a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;CoinType&gt;</code> resource under
-<code>account</code>.
-Aborts if
-<code>account</code> is not a ParentVASP
-Aborts if
-<code>account</code> already contains a
-<code><a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a>&lt;CoinType&gt;</code> resource
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_add_account_limits">add_account_limits</a>&lt;CoinType&gt;(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_add_account_limits">add_account_limits</a>&lt;CoinType&gt;(account: &signer) <b>acquires</b> <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(account), ENOT_A_PARENT_VASP);
-
-    <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(
-        account,
-        &borrow_global&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap,
-        <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
-    )
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_VASP_parent_address"></a>
 
 ## Function `parent_address`
@@ -522,33 +482,6 @@ Aborts if
 
 
 
-<a name="0x1_VASP_Specification_has_account_limits"></a>
-
-### Function `has_account_limits`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_has_account_limits">has_account_limits</a>&lt;CoinType&gt;(addr: address): bool
-</code></pre>
-
-
-
-
-<pre><code><b>ensures</b> result == <a href="#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;CoinType&gt;(addr);
-</code></pre>
-
-
-
-
-<a name="0x1_VASP_spec_has_account_limits"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;CoinType&gt;(addr: address): bool {
-    <a href="AccountLimits.md#0x1_AccountLimits_spec_has_window_published">AccountLimits::spec_has_window_published</a>&lt;CoinType&gt;(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr))
-}
-</code></pre>
-
-
-
 <a name="0x1_VASP_Specification_parent_address"></a>
 
 ### Function `parent_address`
@@ -579,6 +512,10 @@ Spec version of
     } <b>else</b> {
         <b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
     }
+}
+<a name="0x1_VASP_spec_has_account_limits"></a>
+<b>define</b> <a href="#0x1_VASP_spec_has_account_limits">spec_has_account_limits</a>&lt;Token&gt;(addr: address): bool {
+    <a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;Token&gt;(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr))
 }
 </code></pre>
 

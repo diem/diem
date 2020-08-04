@@ -102,4 +102,4 @@ stdlib_script::create_child_vasp_account
 //! sender: child
 //! type-args: 0x1::LBR::LBR
 stdlib_script::add_currency_to_account
-// check: "Keep(ABORTED { code: 4,"
+// check: EXECUTED

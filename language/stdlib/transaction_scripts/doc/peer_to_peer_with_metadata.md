@@ -208,11 +208,11 @@ If payer and payee are the same, the balance does not change.
 <b>include</b> <a href="#SCRIPT_AbortsIfAmountInvalid">AbortsIfAmountInvalid</a>&lt;Currency&gt;{payer: payer_addr};
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_AssertPaymentOkAbortsIf">DualAttestation::AssertPaymentOkAbortsIf</a>&lt;Currency&gt;{payer: payer_addr, value: amount};
 <b>include</b> <a href="#SCRIPT_AbortsIfAmountExceedsLimit">AbortsIfAmountExceedsLimit</a>&lt;Currency&gt;{payer: payer_addr};
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>(payer_addr, payee, <b>false</b>) ==&gt;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>&lt;Currency&gt;(payer_addr, payee, <b>false</b>) ==&gt;
             <a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">AccountLimits::UpdateDepositLimitsAbortsIf</a>&lt;Currency&gt; {
                 addr: <a href="../../modules/doc/VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee),
             };
-<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>(payer_addr, payee, <b>true</b>) ==&gt;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>&lt;Currency&gt;(payer_addr, payee, <b>true</b>) ==&gt;
             <a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_UpdateWithdrawalLimitsAbortsIf">AccountLimits::UpdateWithdrawalLimitsAbortsIf</a>&lt;Currency&gt; {
                 addr: <a href="../../modules/doc/VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer_addr),
             };
@@ -316,7 +316,7 @@ Aborts if the amount exceeds payee's deposit limit.
 
 
 <pre><code><b>schema</b> <a href="#SCRIPT_AbortsIfAmountExceedsLimit">AbortsIfAmountExceedsLimit</a>&lt;Currency&gt; {
-    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>(payer, payee, <b>false</b>)
+    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>&lt;Currency&gt;(payer, payee, <b>false</b>)
                 && (!<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_has_account_operations_cap">LibraAccount::spec_has_account_operations_cap</a>()
                     || !<a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_spec_update_deposit_limits">AccountLimits::spec_update_deposit_limits</a>&lt;Currency&gt;(
                             amount,
@@ -331,7 +331,7 @@ Aborts if the amount exceeds payer's withdraw limit.
 
 
 <pre><code><b>schema</b> <a href="#SCRIPT_AbortsIfAmountExceedsLimit">AbortsIfAmountExceedsLimit</a>&lt;Currency&gt; {
-    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>(payer, payee, <b>true</b>)
+    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_should_track_limits_for_account">LibraAccount::spec_should_track_limits_for_account</a>&lt;Currency&gt;(payer, payee, <b>true</b>)
                 && (!<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_has_account_operations_cap">LibraAccount::spec_has_account_operations_cap</a>()
                     || !<a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_spec_update_withdrawal_limits">AccountLimits::spec_update_withdrawal_limits</a>&lt;Currency&gt;(
                             amount,

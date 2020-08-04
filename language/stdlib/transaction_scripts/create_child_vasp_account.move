@@ -19,7 +19,6 @@ use 0x1::Signer;
 /// * If `parent_vasp` is not a parent vasp with error: `Roles::EINVALID_PARENT_ROLE`
 /// * If `child_address` already exists with error: `Roles::EROLE_ALREADY_ASSIGNED`
 /// * If `parent_vasp` already has 256 child accounts with error: `VASP::ETOO_MANY_CHILDREN`
-/// * If `parent_vasp` does not hold limits for `CoinType` with error: `VASP::ENOT_A_PARENT_VASP`
 /// * If `CoinType` is not a registered currency with error: `LibraAccount::ENOT_A_CURRENCY`
 /// * If `parent_vasp`'s withdrawal capability has been extracted with error:  `LibraAccount::EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
 /// * If `parent_vasp` doesn't hold `CoinType` and `child_initial_balance > 0` with error: `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`
