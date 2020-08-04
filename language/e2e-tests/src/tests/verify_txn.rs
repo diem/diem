@@ -12,6 +12,7 @@ use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
+    account_address::AccountAddress,
     account_config::{self, lbr_type_tag},
     chain_id::ChainId,
     on_chain_config::VMPublishingOption,
@@ -19,8 +20,13 @@ use libra_types::{
     transaction::{Script, TransactionArgument, TransactionStatus, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_status::{KeptVMStatus, StatusCode},
 };
-use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
+use move_core_types::{
+    gas_schedule::{GasAlgebra, GasConstants},
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
 use transaction_builder::encode_peer_to_peer_with_metadata_script;
+use vm::file_format::CompiledModule;
 
 #[test]
 fn verify_signature() {
@@ -615,11 +621,7 @@ pub fn test_open_publishing() {
     );
 }
 
-#[test]
-fn test_dependency_fails_verification() {
-    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
-
-    // Get a module that fails verification into the store.
+fn bad_module() -> CompiledModule {
     let bad_module_code = "
     module Test {
         resource R1 { b: bool }
@@ -637,12 +639,45 @@ fn test_dependency_fails_verification() {
     let compiler = Compiler {
         ..Compiler::default()
     };
-    let module = compiler
+    compiler
         .into_compiled_module("file_name", bad_module_code)
-        .expect("Failed to compile");
+        .expect("Failed to compile")
+}
+
+fn good_module_uses_bad(address: AccountAddress, bad_dep: CompiledModule) -> CompiledModule {
+    let good_module_code = "
+    module Test2 {
+        import 0x1.Test;
+        struct S { b: bool }
+
+        foo(): Test.S1 {
+            return Test.new_S1();
+        }
+        public bar() {
+            return;
+        }
+    }
+    ";
+
+    let compiler = Compiler {
+        address,
+        extra_deps: vec![bad_dep],
+        ..Compiler::default()
+    };
+    compiler
+        .into_compiled_module("file_name", good_module_code)
+        .expect("Failed to compile")
+}
+
+#[test]
+fn test_script_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let module = bad_module();
     executor.add_module(&module.self_id(), &module);
 
-    // Create a transaction that tries to use that module.
+    // Create a module that tries to use that module.
     let sender = AccountData::new(1_000_000, 10);
     executor.add_account_data(&sender);
 
@@ -673,14 +708,275 @@ fn test_dependency_fails_verification() {
         .max_gas_amount(100_000)
         .gas_unit_price(1)
         .sign();
-    // As of now, we don't verify dependencies in verify_transaction.
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     match executor.execute_transaction(txn).status() {
-        TransactionStatus::Keep(status) => {
-            assert!(status == &KeptVMStatus::VerificationError);
-            // assert!(status.status_code() == StatusCode::INVALID_RESOURCE_FIELD);
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
         }
-        _ => panic!("Failed to find missing dependency in bytecode verifier"),
+        _ => panic!("Kept transaction with an invariant violation!"),
+    }
+}
+
+#[test]
+fn test_module_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let bad_module = bad_module();
+    executor.add_module(&bad_module.self_id(), &bad_module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+    let good_module = {
+        let m = good_module_uses_bad(*sender.address(), bad_module);
+        let mut serialized_module = Vec::<u8>::new();
+        m.serialize(&mut serialized_module).unwrap();
+        libra_types::transaction::Module::new(serialized_module)
+    };
+
+    let txn = sender
+        .account()
+        .transaction()
+        .module(good_module)
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
+        }
+        _ => panic!("Kept transaction with an invariant violation!"),
+    }
+}
+
+#[test]
+fn test_type_tag_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let module = bad_module();
+    executor.add_module(&module.self_id(), &module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let code = "
+    main<T>() {
+        return;
+    }
+    ";
+
+    let compiler = Compiler {
+        address: *sender.address(),
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![module],
+        ..Compiler::default()
+    };
+    let script = compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(
+            script,
+            vec![TypeTag::Struct(StructTag {
+                address: account_config::CORE_CODE_ADDRESS,
+                module: Identifier::new("Test").unwrap(),
+                name: Identifier::new("S1").unwrap(),
+                type_params: vec![],
+            })],
+            vec![],
+        ))
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
+        }
+        _ => panic!("Kept transaction with an invariant violation!"),
+    }
+}
+
+#[test]
+fn test_script_transitive_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let bad_module = bad_module();
+    executor.add_module(&bad_module.self_id(), &bad_module);
+
+    // Create a module that tries to use that module.
+    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), &good_module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let code = "
+    import 0x1.Test2;
+
+    main() {
+        Test2.bar();
+        return;
+    }
+    ";
+
+    let compiler = Compiler {
+        address: *sender.address(),
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![good_module],
+        ..Compiler::default()
+    };
+    let script = compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(script, vec![], vec![]))
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
+        }
+        _ => panic!("Kept transaction with an invariant violation!"),
+    }
+}
+
+#[test]
+fn test_module_transitive_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let bad_module = bad_module();
+    executor.add_module(&bad_module.self_id(), &bad_module);
+
+    // Create a module that tries to use that module.
+    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), &good_module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let module_code = "
+    module Test3 {
+        import 0x1.Test2;
+        public bar() {
+            Test2.bar();
+            return;
+        }
+    }
+    ";
+    let module = {
+        let compiler = Compiler {
+            address: *sender.address(),
+            extra_deps: vec![good_module],
+            ..Compiler::default()
+        };
+        libra_types::transaction::Module::new(
+            compiler
+                .into_module_blob("file_name", module_code)
+                .expect("Module compilation failed"),
+        )
+    };
+
+    let txn = sender
+        .account()
+        .transaction()
+        .module(module)
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
+        }
+        _ => panic!("Kept transaction with an invariant violation!"),
+    }
+}
+
+#[test]
+fn test_type_tag_transitive_dependency_fails_verification() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    // Get a module that fails verification into the store.
+    let bad_module = bad_module();
+    executor.add_module(&bad_module.self_id(), &bad_module);
+
+    // Create a module that tries to use that module.
+    let good_module = good_module_uses_bad(account_config::CORE_CODE_ADDRESS, bad_module);
+    executor.add_module(&good_module.self_id(), &good_module);
+
+    // Create a transaction that tries to use that module.
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let code = "
+    main<T>() {
+        return;
+    }
+    ";
+
+    let compiler = Compiler {
+        address: *sender.address(),
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![good_module],
+        ..Compiler::default()
+    };
+    let script = compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(
+            script,
+            vec![TypeTag::Struct(StructTag {
+                address: account_config::CORE_CODE_ADDRESS,
+                module: Identifier::new("Test2").unwrap(),
+                name: Identifier::new("S").unwrap(),
+                type_params: vec![],
+            })],
+            vec![],
+        ))
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    // As of now, we verify module/script dependencies. This will result in an
+    // invariant violation as we try to load `Test`
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    match executor.execute_transaction(txn).status() {
+        TransactionStatus::Discard(status) => {
+            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
+        }
+        _ => panic!("Kept transaction with an invariant violation!"),
     }
 }
 

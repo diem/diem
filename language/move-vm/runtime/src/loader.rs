@@ -484,12 +484,11 @@ impl Loader {
         match self.verify_script(&script) {
             Ok(_) => {
                 // verify dependencies
-                let deps = load_script_dependencies(&script);
-                let mut dependencies = vec![];
-                for dep in &deps {
-                    dependencies.push(self.load_module(dep, data_store)?);
-                }
-                self.verify_script_dependencies(script, dependencies)
+                let deps = script_dependencies(&script);
+                let loaded_deps =
+                    self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?;
+                self.verify_script_dependencies(&script, loaded_deps)?;
+                Ok(script)
             }
             Err(err) => {
                 error!(
@@ -514,14 +513,14 @@ impl Loader {
 
     fn verify_script_dependencies(
         &self,
-        script: CompiledScript,
+        script: &CompiledScript,
         dependencies: Vec<Arc<Module>>,
-    ) -> VMResult<CompiledScript> {
+    ) -> VMResult<()> {
         let mut deps = vec![];
         for dep in &dependencies {
             deps.push(dep.module());
         }
-        DependencyChecker::verify_script(&script, deps).map(|_| script)
+        DependencyChecker::verify_script(script, deps)
     }
 
     //
@@ -538,7 +537,7 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-        self.load_module(module_id, data_store)?;
+        self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
         let idx = self
             .module_cache
             .lock()
@@ -563,7 +562,28 @@ impl Loader {
     // This step performs all verification steps to load the module without loading it.
     // The module is not added to the code cache. It is simply published to the data cache.
     // See `verify_script()` for script verification steps.
-    pub(crate) fn verify_module(&self, module: &CompiledModule) -> VMResult<()> {
+    pub(crate) fn verify_module_verify_no_missing_dependencies(
+        &self,
+        module: &CompiledModule,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<()> {
+        self.verify_module(module, data_store, true)
+    }
+
+    fn verify_module_expect_no_missing_dependencies(
+        &self,
+        module: &CompiledModule,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<()> {
+        self.verify_module(module, data_store, false)
+    }
+
+    fn verify_module(
+        &self,
+        module: &CompiledModule,
+        data_store: &mut impl DataStore,
+        verify_no_missing_modules: bool,
+    ) -> VMResult<()> {
         DuplicationChecker::verify_module(&module)?;
         SignatureChecker::verify_module(&module)?;
         InstructionConsistency::verify_module(&module)?;
@@ -572,53 +592,16 @@ impl Loader {
         RecursiveStructDefChecker::verify_module(&module)?;
         InstantiationLoopChecker::verify_module(&module)?;
         CodeUnitVerifier::verify_module(&module)?;
-        Self::check_natives(&module)
-    }
+        Self::check_natives(&module)?;
 
-    // The process of loading is recursive, and module are cached by the loader as soon as
-    // they are verifiable (including dependencies).
-    // Effectively that means modules are cached from leaf to root in the dependency DAG.
-    // If a dependency error is found, loading stops and the error is returned.
-    // However all modules cached up to that point stay loaded.
-    // In principle that is not the safest model but it is justified
-    // by the fact that publishing is limited, and complex/tricky dependencies error
-    // are difficult or impossible to accomplish in reality.
-
-    // The process of deserialization and verification is not and it must not be under lock.
-    // So when publishing modules through the dependency DAG it may happen that a different
-    // thread had loaded the module after this process fetched it from storage.
-    // Caching will take care of that by asking for each dependency module again under lock.
-    fn deserialize_and_verify_module(
-        &self,
-        id: &ModuleId,
-        data_store: &mut impl DataStore,
-    ) -> VMResult<CompiledModule> {
-        let module = match data_store.load_module(id) {
-            Ok(bytes) => CompiledModule::deserialize(&bytes).map_err(|_| {
-                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                    .finish(Location::Undefined)
-            })?,
-            Err(err) => {
-                crit!("[VM] Error fetching module with id {:?}", id);
-                return Err(err);
-            }
+        let deps = module_dependencies(&module);
+        let loaded_deps = if verify_no_missing_modules {
+            self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?
+        } else {
+            self.load_dependencies_expect_no_missing_dependencies(deps, data_store)?
         };
-        self.verify_module(&module)?;
-        self.check_dependencies(&module, data_store)?;
-        Ok(module)
-    }
 
-    fn check_dependencies(
-        &self,
-        module: &CompiledModule,
-        data_store: &mut impl DataStore,
-    ) -> VMResult<()> {
-        let deps = load_module_dependencies(module);
-        let mut dependencies = vec![];
-        for dep in &deps {
-            dependencies.push(self.load_module(dep, data_store)?);
-        }
-        self.verify_module_dependencies(module, dependencies)
+        self.verify_module_dependencies(module, loaded_deps)
     }
 
     fn verify_module_dependencies(
@@ -688,7 +671,7 @@ impl Loader {
             TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
             TypeTag::Struct(struct_tag) => {
                 let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module(&module_id, data_store)?;
+                self.load_module_verify_no_missing_dependencies(&module_id, data_store)?;
                 let (idx, struct_type) = self
                     .module_cache
                     .lock()
@@ -711,12 +694,96 @@ impl Loader {
         })
     }
 
-    fn load_module(&self, id: &ModuleId, data_store: &mut impl DataStore) -> VMResult<Arc<Module>> {
+    // The process of loading is recursive, and module are cached by the loader as soon as
+    // they are verifiable (including dependencies).
+    // Effectively that means modules are cached from leaf to root in the dependency DAG.
+    // If a dependency error is found, loading stops and the error is returned.
+    // However all modules cached up to that point stay loaded.
+    // In principle that is not the safest model but it is justified
+    // by the fact that publishing is limited, and complex/tricky dependencies error
+    // are difficult or impossible to accomplish in reality.
+
+    // The process of deserialization and verification is not and it must not be under lock.
+    // So when publishing modules through the dependency DAG it may happen that a different
+    // thread had loaded the module after this process fetched it from storage.
+    // Caching will take care of that by asking for each dependency module again under lock.
+    fn load_module(
+        &self,
+        id: &ModuleId,
+        data_store: &mut impl DataStore,
+        verify_no_missing_modules: bool,
+    ) -> VMResult<Arc<Module>> {
+        // kept private to `load_module` to prevent verification errors from leaking
+        // and not being marked as invariant violations
+        fn deserialize_and_verify_module(
+            loader: &Loader,
+            bytes: Vec<u8>,
+            data_store: &mut impl DataStore,
+        ) -> VMResult<CompiledModule> {
+            let module = CompiledModule::deserialize(&bytes).map_err(|_| {
+                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                    .finish(Location::Undefined)
+            })?;
+            loader.verify_module_expect_no_missing_dependencies(&module, data_store)?;
+            Ok(module)
+        }
+
         if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
             return Ok(module);
         }
-        let module = self.deserialize_and_verify_module(id, data_store)?;
+
+        let bytes = match data_store.load_module(id) {
+            Ok(bytes) => bytes,
+            Err(err) if verify_no_missing_modules => return Err(err),
+            Err(err) => {
+                crit!("[VM] Error fetching module with id {:?}", id);
+                return Err(err.expect_no_verification_errors());
+            }
+        };
+
+        let module = deserialize_and_verify_module(self, bytes, data_store)
+            .map_err(|e| e.expect_no_verification_errors())?;
         self.module_cache.lock().unwrap().insert(id.clone(), module)
+    }
+
+    // Returns a verifier error if the module does not exist
+    fn load_module_verify_no_missing_dependencies(
+        &self,
+        id: &ModuleId,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<Arc<Module>> {
+        self.load_module(id, data_store, true)
+    }
+
+    // Expects all modules to be on chain. Gives an invariant violation if it is not found
+    fn load_module_expect_no_missing_dependencies(
+        &self,
+        id: &ModuleId,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<Arc<Module>> {
+        self.load_module(id, data_store, false)
+    }
+
+    // Returns a verifier error if the module does not exist
+    fn load_dependencies_verify_no_missing_dependencies(
+        &self,
+        deps: Vec<ModuleId>,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<Vec<Arc<Module>>> {
+        deps.into_iter()
+            .map(|dep| self.load_module_verify_no_missing_dependencies(&dep, data_store))
+            .collect()
+    }
+
+    // Expects all modules to be on chain. Gives an invariant violation if it is not found
+    fn load_dependencies_expect_no_missing_dependencies(
+        &self,
+        deps: Vec<ModuleId>,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<Vec<Arc<Module>>> {
+        deps.into_iter()
+            .map(|dep| self.load_module_expect_no_missing_dependencies(&dep, data_store))
+            .collect()
     }
 
     // Verify the kind (constraints) of an instantiation.
@@ -1557,7 +1624,7 @@ struct FieldInstantiation {
 // Utility functions
 //
 
-fn load_script_dependencies(script: &CompiledScript) -> Vec<ModuleId> {
+fn script_dependencies(script: &CompiledScript) -> Vec<ModuleId> {
     let mut deps = vec![];
     for module in script.module_handles() {
         deps.push(ModuleId::new(
@@ -1568,7 +1635,7 @@ fn load_script_dependencies(script: &CompiledScript) -> Vec<ModuleId> {
     deps
 }
 
-fn load_module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
+fn module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
     let self_module = module.self_handle();
     let mut deps = vec![];
     for module_handle in module.module_handles() {

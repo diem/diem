@@ -104,6 +104,37 @@ impl VMError {
         }
     }
 
+    pub fn expect_no_verification_errors(self) -> Self {
+        match self.status_type() {
+            status_type @ StatusType::Deserialization | status_type @ StatusType::Verification => {
+                let message = format!("Unexpected verifier/deserialization error! This likely means there is code stored on chain is unverifiable!\nPrevious error {:?}", &self);
+                let Self {
+                    major_status: _old_status,
+                    sub_status: _old_sub_status,
+                    message: _old_message,
+                    location,
+                    indices,
+                    offsets,
+                } = self;
+                let major_status = match status_type {
+                    StatusType::Deserialization => StatusCode::UNEXPECTED_DESERIALIZATION_ERROR,
+                    StatusType::Verification => StatusCode::UNEXPECTED_VERIFIER_ERROR,
+                    _ => unreachable!(),
+                };
+                let sub_status = None;
+                Self {
+                    major_status,
+                    sub_status,
+                    message: Some(message),
+                    location,
+                    indices,
+                    offsets,
+                }
+            }
+            _ => self,
+        }
+    }
+
     pub fn major_status(&self) -> StatusCode {
         self.major_status
     }

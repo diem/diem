@@ -9,10 +9,13 @@ use libra_types::{
     transaction::{Script, TransactionStatus},
     vm_status::KeptVMStatus,
 };
-use move_core_types::identifier::Identifier;
+use move_core_types::{
+    identifier::Identifier,
+    language_storage::{StructTag, TypeTag},
+};
 use vm::file_format::{
     empty_script, AddressIdentifierIndex, Bytecode, FunctionHandle, FunctionHandleIndex,
-    IdentifierIndex, ModuleHandle, ModuleHandleIndex, SignatureIndex,
+    IdentifierIndex, Kind, ModuleHandle, ModuleHandleIndex, SignatureIndex,
 };
 
 #[test]
@@ -268,6 +271,132 @@ fn script_bad_sig_function_dep() {
         status.status(),
         // StatusCode::TYPE_MISMATCH
         Ok(KeptVMStatus::VerificationError)
+    );
+    executor.apply_write_set(output.write_set());
+
+    // Check that numbers in store are correct.
+    let gas = output.gas_used();
+    let balance = 1_000_000 - gas;
+    let updated_sender = executor
+        .read_account_resource(sender.account())
+        .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .expect("sender balance must exist");
+    assert_eq!(balance, updated_sender_balance.coin());
+    assert_eq!(11, updated_sender.sequence_number());
+}
+
+#[test]
+fn script_type_argument_module_does_not_exist() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    // create and publish sender
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    // create a bogus script
+    let mut script = empty_script();
+
+    // make a non existent external module
+    let address = AccountAddress::new([2u8; AccountAddress::LENGTH]);
+    let module = Identifier::new("module").unwrap();
+    script.address_identifiers.push(address);
+    script.identifiers.push(module.clone());
+    let module_handle = ModuleHandle {
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
+        name: IdentifierIndex((script.identifiers.len() - 1) as u16),
+    };
+    script.module_handles.push(module_handle);
+    script.code.code = vec![Bytecode::Ret];
+    script.type_parameters = vec![Kind::All];
+    let mut blob = vec![];
+    script.serialize(&mut blob).expect("script must serialize");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(
+            blob,
+            vec![TypeTag::Struct(StructTag {
+                address,
+                module,
+                name: Identifier::new("fake").unwrap(),
+                type_params: vec![],
+            })],
+            vec![],
+        ))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
+
+    // execute transaction
+    let output = &executor.execute_transaction(txn);
+    let status = output.status();
+    assert_eq!(
+        status,
+        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
+    );
+    executor.apply_write_set(output.write_set());
+
+    // Check that numbers in store are correct.
+    let gas = output.gas_used();
+    let balance = 1_000_000 - gas;
+    let updated_sender = executor
+        .read_account_resource(sender.account())
+        .expect("sender must exist");
+    let updated_sender_balance = executor
+        .read_balance_resource(sender.account(), account::lbr_currency_code())
+        .expect("sender balance must exist");
+    assert_eq!(balance, updated_sender_balance.coin());
+    assert_eq!(11, updated_sender.sequence_number());
+}
+
+#[test]
+fn script_nested_type_argument_module_does_not_exist() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+    // create and publish sender
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    // create a bogus script
+    let mut script = empty_script();
+
+    // make a non existent external module
+    let address = AccountAddress::new([2u8; AccountAddress::LENGTH]);
+    let module = Identifier::new("module").unwrap();
+    script.address_identifiers.push(address);
+    script.identifiers.push(module.clone());
+    let module_handle = ModuleHandle {
+        address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
+        name: IdentifierIndex((script.identifiers.len() - 1) as u16),
+    };
+    script.module_handles.push(module_handle);
+    script.code.code = vec![Bytecode::Ret];
+    script.type_parameters = vec![Kind::All];
+    let mut blob = vec![];
+    script.serialize(&mut blob).expect("script must serialize");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(
+            blob,
+            vec![TypeTag::Vector(Box::new(TypeTag::Struct(StructTag {
+                address,
+                module,
+                name: Identifier::new("fake").unwrap(),
+                type_params: vec![],
+            })))],
+            vec![],
+        ))
+        .sequence_number(10)
+        .gas_unit_price(1)
+        .sign();
+
+    // execute transaction
+    let output = &executor.execute_transaction(txn);
+    let status = output.status();
+    assert_eq!(
+        status,
+        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
     );
     executor.apply_write_set(output.write_set());
 
