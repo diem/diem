@@ -615,10 +615,12 @@ fn gen_submit_transaction_request(
 fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedTransaction {
     let receiver = faucet_account.address;
     gen_submit_transaction_request(
-        transaction_builder::encode_testnet_mint_script(
+        transaction_builder::encode_peer_to_peer_with_metadata_script(
             account_config::coin1_tag(),
             receiver,
             num_coins,
+            vec![],
+            vec![],
         ),
         faucet_account,
     )
@@ -682,10 +684,12 @@ fn gen_mint_txn_request(
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_testnet_mint_script(
+        transaction_builder::encode_peer_to_peer_with_metadata_script(
             account_config::coin1_tag(),
             *receiver,
             num_coins,
+            vec![],
+            vec![],
         ),
         sender,
     )

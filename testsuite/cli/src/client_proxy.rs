@@ -500,10 +500,12 @@ impl ClientProxy {
         println!(">> Sending coins from faucet");
         match self.testnet_designated_dealer_account {
             Some(_) => {
-                let script = transaction_builder::encode_testnet_mint_script(
+                let script = transaction_builder::encode_peer_to_peer_with_metadata_script(
                     type_tag_for_currency_code(currency_code),
                     receiver,
                     num_coins,
+                    vec![],
+                    vec![],
                 );
                 self.association_transaction_with_local_testnet_dd_account(
                     TransactionPayload::Script(script),

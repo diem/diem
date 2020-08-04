@@ -189,8 +189,8 @@ pub enum ScriptCall {
     /// `metadata` and an (optional) `metadata_signature` on the message
     /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
     /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
-    /// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct entities
-    /// (e.g., different VASPs, or a VASP and a DesignatedDealer).
+    /// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct VASPs.
+    /// However, a transaction sender can opt in to dual attestation even when it is not required (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
     /// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
     ///
     /// ## Events
@@ -317,13 +317,6 @@ pub enum ScriptCall {
     SetValidatorOperator {
         operator_name: Bytes,
         operator_account: AccountAddress,
-    },
-
-    /// Send `amount` coins of type `Token` to `payee`.
-    TestnetMint {
-        token: TypeTag,
-        payee: AccountAddress,
-        amount: u64,
     },
 
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
@@ -604,11 +597,6 @@ impl ScriptCall {
                 operator_name,
                 operator_account,
             } => encode_set_validator_operator_script(operator_name, operator_account),
-            TestnetMint {
-                token,
-                payee,
-                amount,
-            } => encode_testnet_mint_script(token, payee, amount),
             TieredMint {
                 coin_type,
                 sliding_nonce,
@@ -979,8 +967,8 @@ pub fn encode_modify_publishing_option_script(args: Vec<u8>) -> Script {
 /// `metadata` and an (optional) `metadata_signature` on the message
 /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
-/// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct entities
-/// (e.g., different VASPs, or a VASP and a DesignatedDealer).
+/// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct VASPs.
+/// However, a transaction sender can opt in to dual attestation even when it is not required (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
 /// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
 ///
 /// ## Events
@@ -1222,18 +1210,6 @@ pub fn encode_set_validator_operator_script(
         vec![
             TransactionArgument::U8Vector(operator_name),
             TransactionArgument::Address(operator_account),
-        ],
-    )
-}
-
-/// Send `amount` coins of type `Token` to `payee`.
-pub fn encode_testnet_mint_script(token: TypeTag, payee: AccountAddress, amount: u64) -> Script {
-    Script::new(
-        TESTNET_MINT_CODE.to_vec(),
-        vec![token],
-        vec![
-            TransactionArgument::Address(payee),
-            TransactionArgument::U64(amount),
         ],
     )
 }
@@ -1619,14 +1595,6 @@ fn decode_set_validator_operator_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
-fn decode_testnet_mint_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::TestnetMint {
-        token: script.ty_args().get(0)?.clone(),
-        payee: decode_address_argument(script.args().get(0)?.clone())?,
-        amount: decode_u64_argument(script.args().get(1)?.clone())?,
-    })
-}
-
 fn decode_tiered_mint_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::TieredMint {
         coin_type: script.ty_args().get(0)?.clone(),
@@ -1814,10 +1782,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     map.insert(
         SET_VALIDATOR_OPERATOR_CODE.to_vec(),
         Box::new(decode_set_validator_operator_script),
-    );
-    map.insert(
-        TESTNET_MINT_CODE.to_vec(),
-        Box::new(decode_testnet_mint_script),
     );
     map.insert(
         TIERED_MINT_CODE.to_vec(),
@@ -2207,28 +2171,6 @@ const SET_VALIDATOR_OPERATOR_CODE: &[u8] = &[
     111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 5,
     15, 10, 2, 17, 0, 11, 1, 33, 12, 3, 11, 3, 3, 11, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11,
     0, 10, 2, 17, 1, 2,
-];
-
-const TESTNET_MINT_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 8, 1, 0, 8, 2, 8, 4, 3, 12, 37, 4, 49, 4, 5, 53, 40, 7, 93, 193,
-    1, 8, 158, 2, 16, 6, 174, 2, 22, 0, 0, 0, 1, 0, 2, 0, 3, 2, 7, 1, 0, 0, 4, 0, 1, 0, 3, 5, 2, 3,
-    0, 1, 6, 1, 1, 1, 1, 2, 8, 3, 4, 0, 2, 9, 2, 5, 0, 2, 10, 6, 0, 1, 1, 2, 11, 5, 0, 0, 2, 9, 5,
-    9, 0, 1, 3, 1, 6, 12, 1, 5, 1, 1, 1, 8, 0, 5, 6, 8, 0, 5, 3, 10, 2, 10, 2, 3, 6, 12, 5, 3, 7,
-    8, 0, 1, 3, 1, 3, 1, 3, 1, 9, 0, 15, 68, 117, 97, 108, 65, 116, 116, 101, 115, 116, 97, 116,
-    105, 111, 110, 5, 76, 105, 98, 114, 97, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110,
-    116, 6, 83, 105, 103, 110, 101, 114, 24, 103, 101, 116, 95, 99, 117, 114, 95, 109, 105, 99,
-    114, 111, 108, 105, 98, 114, 97, 95, 108, 105, 109, 105, 116, 10, 97, 100, 100, 114, 101, 115,
-    115, 95, 111, 102, 20, 97, 112, 112, 114, 111, 120, 95, 108, 98, 114, 95, 102, 111, 114, 95,
-    118, 97, 108, 117, 101, 18, 87, 105, 116, 104, 100, 114, 97, 119, 67, 97, 112, 97, 98, 105,
-    108, 105, 116, 121, 9, 101, 120, 105, 115, 116, 115, 95, 97, 116, 27, 101, 120, 116, 114, 97,
-    99, 116, 95, 119, 105, 116, 104, 100, 114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108, 105,
-    116, 121, 8, 112, 97, 121, 95, 102, 114, 111, 109, 27, 114, 101, 115, 116, 111, 114, 101, 95,
-    119, 105, 116, 104, 100, 114, 97, 119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    221, 10, 2, 1, 0, 1, 1, 7, 8, 43, 10, 1, 17, 3, 12, 4, 11, 4, 3, 9, 11, 0, 1, 6, 203, 21, 122,
-    0, 0, 0, 0, 0, 39, 10, 0, 17, 1, 7, 0, 33, 12, 6, 11, 6, 3, 20, 11, 0, 1, 6, 204, 21, 122, 0,
-    0, 0, 0, 0, 39, 10, 2, 56, 0, 17, 0, 35, 12, 8, 11, 8, 3, 31, 11, 0, 1, 6, 205, 21, 122, 0, 0,
-    0, 0, 0, 39, 11, 0, 17, 4, 12, 3, 14, 3, 10, 1, 10, 2, 7, 1, 7, 1, 56, 1, 11, 3, 17, 6, 2,
 ];
 
 const TIERED_MINT_CODE: &[u8] = &[

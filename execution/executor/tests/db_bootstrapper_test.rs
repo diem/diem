@@ -48,7 +48,6 @@ use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReader, DbReaderWriter};
 use transaction_builder::{
     encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
-    encode_testnet_mint_script,
 };
 
 #[test]
@@ -137,7 +136,13 @@ fn get_mint_transaction(
         /* sequence_number = */ libra_root_seq_num,
         libra_root_key.clone(),
         libra_root_key.public_key(),
-        Some(encode_testnet_mint_script(coin1_tag(), *account, amount)),
+        Some(encode_peer_to_peer_with_metadata_script(
+            coin1_tag(),
+            *account,
+            amount,
+            vec![],
+            vec![],
+        )),
     )
 }
 

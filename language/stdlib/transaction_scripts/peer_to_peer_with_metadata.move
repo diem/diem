@@ -13,8 +13,8 @@ use 0x1::VASP;
 /// `metadata` and an (optional) `metadata_signature` on the message
 /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
-/// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct entities
-/// (e.g., different VASPs, or a VASP and a DesignatedDealer).
+/// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct VASPs.
+/// However, a transaction sender can opt in to dual attestation even when it is not required (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
 /// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
 ///
 /// ## Events

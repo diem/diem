@@ -31,7 +31,6 @@ use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReaderWriter, Order};
 use transaction_builder::{
     encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
-    encode_testnet_mint_script,
 };
 
 pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
@@ -112,7 +111,13 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_testnet_mint_script(coin1_tag(), account1, 2_000_000)),
+        Some(encode_peer_to_peer_with_metadata_script(
+            coin1_tag(),
+            account1,
+            2_000_000,
+            vec![],
+            vec![],
+        )),
     );
 
     // Create account2 with 1.2M coins.
@@ -121,7 +126,13 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_testnet_mint_script(coin1_tag(), account2, 1_200_000)),
+        Some(encode_peer_to_peer_with_metadata_script(
+            coin1_tag(),
+            account2,
+            1_200_000,
+            vec![],
+            vec![],
+        )),
     );
 
     // Create account3 with 1M coins.
@@ -130,7 +141,13 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_testnet_mint_script(coin1_tag(), account3, 1_000_000)),
+        Some(encode_peer_to_peer_with_metadata_script(
+            coin1_tag(),
+            account3,
+            1_000_000,
+            vec![],
+            vec![],
+        )),
     );
 
     // Transfer 20k coins from account1 to account2.

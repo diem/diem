@@ -196,10 +196,12 @@ fn create_child_vasp_all_currencies() {
     // mint to the parent VASP
     executor.execute_and_apply(
         dd.transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *parent.address(),
                 amount,
+                vec![],
+                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -276,10 +278,12 @@ fn create_child_vasp_with_balance() {
     // mint to the parent VASP
     executor.execute_and_apply(
         dd.transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *parent.address(),
                 amount,
+                vec![],
+                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -572,7 +576,6 @@ fn dual_attestation_payment() {
                 .sequence_number(3)
                 .sign(),
         );
-        println!("{:?}", output);
         assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
     }
 }
@@ -585,11 +588,7 @@ fn create_dual_attestation_payment(
     ref_id: Vec<u8>,
     receiver_compliance_private_key: &Ed25519PrivateKey,
 ) -> Script {
-    // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-    let mut domain_separator = vec![
-        0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45, 0x53,
-        0x54, 0x24, 0x24, 0x40, 0x40,
-    ];
+    let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
     let message = {
         let mut msg = ref_id.clone();
         msg.append(&mut lcs::to_bytes(&sender_address).unwrap());
@@ -1110,10 +1109,12 @@ fn account_limits() {
     // mint money to both vasp A & B
     executor.execute_and_apply(
         dd.transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a.address(),
                 2 * mint_amount,
+                vec![],
+                vec![],
             ))
             .sequence_number(0)
             .ttl(ttl)
@@ -1121,10 +1122,12 @@ fn account_limits() {
     );
     executor.execute_and_apply(
         dd.transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_b.address(),
                 2 * mint_amount,
+                vec![],
+                vec![],
             ))
             .sequence_number(1)
             .ttl(ttl)
@@ -1266,10 +1269,12 @@ fn account_limits() {
         // DD deposit fails since vasp A is at inflow limit
         let output = executor.execute_transaction(
             dd.transaction()
-                .script(encode_testnet_mint_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
+                    vec![],
+                    vec![],
                 ))
                 .sequence_number(2)
                 .ttl(ttl)
@@ -1285,10 +1290,12 @@ fn account_limits() {
         // DD deposit now succeeds since window is reset
         let output = executor.execute_transaction(
             dd.transaction()
-                .script(encode_testnet_mint_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
+                    vec![],
+                    vec![],
                 ))
                 .sequence_number(2)
                 .ttl(ttl)
@@ -1564,10 +1571,12 @@ fn account_limits() {
         // DD deposit fails since vasp A is at holding limit
         let output = executor.execute_transaction(
             dd.transaction()
-                .script(encode_testnet_mint_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
+                    vec![],
+                    vec![],
                 ))
                 .sequence_number(2)
                 .ttl(ttl)
@@ -1584,10 +1593,12 @@ fn account_limits() {
         // and because holdings are not reset from one window to the next.
         let output = executor.execute_transaction(
             dd.transaction()
-                .script(encode_testnet_mint_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
+                    vec![],
+                    vec![],
                 ))
                 .sequence_number(2)
                 .ttl(ttl)

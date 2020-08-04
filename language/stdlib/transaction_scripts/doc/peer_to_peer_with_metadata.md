@@ -36,8 +36,9 @@ The
 <code>amount</code> >=
 <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microlibra_limit">DualAttestation::get_cur_microlibra_limit</a></code> LBR and
 <code>payer</code> and
-<code>payee</code> are distinct entities
-(e.g., different VASPs, or a VASP and a DesignatedDealer).
+<code>payee</code> are distinct VASPs.
+However, a transaction sender can opt in to dual attestation even when it is not required (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty
+<code>metadata_signature</code>.
 Standardized
 <code>metadata</code> LCS format can be found in
 <code>libra_types::transaction::metadata::Metadata</code>.
