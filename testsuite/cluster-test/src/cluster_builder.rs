@@ -192,7 +192,7 @@ impl ClusterBuilder {
                 .collect();
             lsrs.append(&mut lsr_instances);
         }
-
+        println!("hello");
         let validator_nodes = try_join_all((0..num_validators).map(|i| async move {
             let pod_name = validator_pod_name(i);
             self.cluster_swarm.allocate_node(&pod_name).await
