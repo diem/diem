@@ -830,7 +830,7 @@ impl<'env> ModuleTranslator<'env> {
         let spec_check = spec_check_opt
             .expect("There should be at least one assertion for the specification check.");
 
-        let spec_translator = self.new_spec_translator_for_module();
+        let spec_translator = self.new_spec_translator(func_target.clone(), false);
 
         spec_translator.ensure_postcondition(spec_check);
 

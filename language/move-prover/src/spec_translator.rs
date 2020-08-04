@@ -981,7 +981,6 @@ impl<'env> SpecTranslator<'env> {
     /// Assumes preconditions for function. This is used for the top-level verification
     /// entry point of a function.
     pub fn assume_preconditions(&self) {
-        emitln!(self.writer, "assume $Memory__is_well_formed($m);");
         let func_target = self.function_target();
         // Assume requires.
         let requires = func_target

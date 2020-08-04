@@ -1,6 +1,6 @@
 module TestEnsuresFalseSmokeTest {
     spec module {
-        // pragma verify = true;
+        pragma verify = false;
         pragma writeref_test = true;
     }
 
@@ -27,7 +27,7 @@ module TestEnsuresFalseSmokeTest {
     }
 
     spec fun mod_T_x {
-        // ensures global<T>(addr).x == 0;
+        ensures global<T>(addr).x == 0;
         // ensures global<T>(addr).y == 10;
         // ensures true;
     }

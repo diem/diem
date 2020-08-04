@@ -1,5 +1,6 @@
 module TestAbortsIf {
     spec module {
+        pragma verify = false;
         pragma const_sub_exp = true;
     }
 

@@ -2,9 +2,9 @@ module TestEnsuresFalseSmokeTest {
     use 0x1::Signer;
 
     spec module {
-        // pragma verify = true;
+        pragma verify = false;
         // pragma always_aborts_test = true;
-        pragma const_exp_test = true;
+        pragma const_field_test = true;
         pragma const_sc_addr = 0x0;
     }
 

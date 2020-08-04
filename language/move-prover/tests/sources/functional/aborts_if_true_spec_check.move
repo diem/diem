@@ -1,6 +1,6 @@
 module TestEnsuresFalseSmokeTest {
     spec module {
-        pragma verify = true;
+        pragma verify = false;
         pragma always_aborts_test = true;
     }
 
