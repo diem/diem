@@ -100,7 +100,7 @@ impl Experiment for PerformanceBenchmark {
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
         // add latency to all validator pairs
-        add_all_latencies_simulation_effects_k8s(self.up_validators.to_vec(), Duration::from_millis(10), context.cluster_swarm).await?;
+        add_all_latencies_simulation_effects_k8s(self.up_validators.to_vec(), Duration::from_millis(50), context.cluster_swarm).await?;
         let instance_configs = instance::instance_configs(&self.down_validators)?;
         let futures: Vec<_> = instance_configs
             .into_iter()
