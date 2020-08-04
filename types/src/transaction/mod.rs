@@ -1021,3 +1021,11 @@ impl TryFrom<Transaction> for SignedTransaction {
         }
     }
 }
+
+impl TryFrom<String> for SignedTransaction {
+    type Error = Error;
+
+    fn try_from(txn_payload: String) -> Result<Self> {
+        Ok(lcs::from_bytes(&hex::decode(txn_payload)?)?)
+    }
+}

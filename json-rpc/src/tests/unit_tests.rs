@@ -2,13 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    errors::{InvalidArguments, JsonRpcError, ServerCode},
+    errors::{JsonRpcError, ServerCode},
     tests::{
         genesis::generate_genesis_state,
         utils::{test_bootstrap, MockLibraDB},
     },
 };
-use futures::{channel::mpsc::channel, StreamExt};
+use futures::{
+    channel::{
+        mpsc::{channel, Receiver},
+        oneshot,
+    },
+    StreamExt,
+};
 use libra_config::utils;
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use libra_json_rpc_client::{
@@ -18,17 +24,14 @@ use libra_json_rpc_client::{
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
-use libra_json_rpc_types::{
-    response::JsonRpcErrorResponse,
-    views::{
-        JSONRPC_LIBRA_CHAIN_ID, JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
-    },
-};
-
+use libra_mempool::SubmissionStatus;
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{from_currency_code_string, AccountResource, FreezingBit, LBR_NAME},
+    account_config::{
+        from_currency_code_string, libra_root_address, testnet_dd_account_address, AccountResource,
+        FreezingBit, LBR_NAME,
+    },
     account_state::AccountState,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     chain_id::ChainId,
@@ -38,7 +41,7 @@ use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
     proof::{SparseMerkleProof, TransactionAccumulatorProof, TransactionInfoWithProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
-    transaction::{Transaction, TransactionInfo, TransactionPayload},
+    transaction::{SignedTransaction, Transaction, TransactionInfo, TransactionPayload},
     vm_status::StatusCode,
 };
 use libradb::test_helper::arb_blocks_to_commit;
@@ -62,7 +65,7 @@ use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
 
-type JsonMap = HashMap<String, serde_json::Value>;
+use serde_json::json;
 
 // returns MockLibraDB for unit-testing
 fn mock_db() -> MockLibraDB {
@@ -144,109 +147,618 @@ fn mock_db() -> MockLibraDB {
 }
 
 #[test]
-fn test_json_rpc_protocol() {
-    let address = format!("0.0.0.0:{}", utils::get_available_port());
-    let mock_db = mock_db();
-    let mp_sender = channel(1024).0;
-    let _runtime = test_bootstrap(address.parse().unwrap(), Arc::new(mock_db), mp_sender);
+fn test_json_rpc_url() {
+    let (_mock_db, _runtime, url, _) = create_db_and_runtime();
+
     let client = reqwest::blocking::Client::new();
 
     // check that only root path is accessible
-    let url = format!("http://{}/fake_path", address);
-    let resp = client.get(&url).send().unwrap();
+    let fake_path = format!("{}/fake_path", url);
+    let resp = client.get(&fake_path).send().unwrap();
     assert_eq!(resp.status(), 404);
 
     // only post method is allowed
-    let url = format!("http://{}/v1", address);
     let resp = client.get(&url).send().unwrap();
-    assert_eq!(resp.status(), 405);
+    assert_eq!(resp.status(), 405, "{}", url);
 
     // empty payload is not allowed
     let resp = client.post(&url).send().unwrap();
     assert_eq!(resp.status(), 400);
 
     // For now /v1 and / are both supported
-    {
-        let url_v1 = format!("http://{}", address);
-        let resp = client.post(&url_v1).send().unwrap();
-        assert_eq!(resp.status(), 400);
-
-        let url_v2 = format!("http://{}/v2", address);
-        let resp = client.post(&url_v2).send().unwrap();
-        assert_eq!(resp.status(), 404);
-    }
-
-    // non json payload
-    let resp = client.post(&url).body("non json").send().unwrap();
+    let url_v1 = format!("{}/v1", url);
+    let resp = client.post(&url_v1).send().unwrap();
     assert_eq!(resp.status(), 400);
 
-    // invalid version of protocol
-    let request = serde_json::json!({"jsonrpc": "1.0", "method": "add", "params": [1, 2], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    assert_eq!(error_code(resp), -32600);
+    let resp = client.post(&url).body("non json").send().unwrap();
+    assert_eq!(resp.status(), 400);
+}
 
-    // invalid request id
-    let request =
-        serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": true});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    assert_eq!(error_code(resp), -32604);
+#[test]
+fn test_json_rpc_protocol_invalid_requests() {
+    let (mock_db, _runtime, url, _) = create_db_and_runtime();
+    let client = reqwest::blocking::Client::new();
+    let version = mock_db.version;
+    let timestamp = mock_db.get_block_timestamp(version).unwrap();
+    let calls = vec![
+        (
+            "invalid protocol version",
+            json!({"jsonrpc": "1.0", "method": "get_metadata", "params": [], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32600, "data": null, "message": "Invalid Request",
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "invalid request format: invalid id type",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": true}),
+            json!({
+                "error": {
+                    "code": -32604, "data": null, "message": "Invalid request format",
+                },
+                "id": null,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "method not found",
+            json!({"jsonrpc": "2.0", "method": "add", "params": [], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32601, "data": null, "message": "Method not found",
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "invalid arguments: too many arguments",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params",
+                    "data": {
+                        "InvalidArguments": {"given": 2, "optional": 0, "required": 1}
+                    }
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "invalid arguments: not enough arguments",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": [], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params",
+                    "data": {
+                        "InvalidArguments": {"given": 0, "optional": 0, "required": 1}
+                    }
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "invalid arguments: too many arguments for a method has optional arguments",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [1, 2], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params",
+                    "data": {
+                        "InvalidArguments": {"given": 2, "optional": 1, "required": 0}
+                    }
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account invalid param data type",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": [false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account invalid account address str",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": ["helloworld"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "submit invalid data",
+            json!({"jsonrpc": "2.0", "method": "submit", "params": ["helloworld"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param data(params[0]): should be hex-encoded string of LCS serialized Libra SignedTransaction type",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions: invalid start_version param",
+            json!({"jsonrpc": "2.0", "method": "get_transactions", "params": ["helloworld", 1, true], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param start_version(params[0]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions: invalid limit param",
+            json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [1, false, true], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param limit(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_transactions: invalid include_events param",
+            json!({"jsonrpc": "2.0", "method": "get_transactions", "params": [1, 10, "true"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param include_events(params[2]): should be boolean",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_events: invalid event_key type",
+            json!({"jsonrpc": "2.0", "method": "get_events", "params": [false, 1, 10], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_events: event_key is not hex-encoded string",
+            json!({"jsonrpc": "2.0", "method": "get_events", "params": ["helloworld", 1, 10], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param event key(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_events: invalid start param",
+            json!({"jsonrpc": "2.0", "method": "get_events", "params": ["13000000000000000000000000000000000000000a550c18", false, 1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_events: invalid limit param",
+            json!({"jsonrpc": "2.0", "method": "get_events", "params": ["13000000000000000000000000000000000000000a550c18", 1, "invalid"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transaction: invalid account",
+            json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["invalid", 1, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transaction: invalid sequence",
+            json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", false, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account sequence number(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transaction: invalid include_event",
+            json!({"jsonrpc": "2.0", "method": "get_account_transaction", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", 1, "false"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param include_events(params[2]): should be boolean",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions: invalid account",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["invalid", 1, 2, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions: invalid start param",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", false, 2, false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param start(params[1]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions: invalid limit param",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", 1, "invalid", false], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param limit(params[2]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_transactions: invalid include_event",
+            json!({"jsonrpc": "2.0", "method": "get_account_transactions", "params": ["e1b3d22871989e9fd9dc6814b2f4fc41", 1, 5, "false"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param include_events(params[3]): should be boolean",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_state_proof: invalid known_version",
+            json!({"jsonrpc": "2.0", "method": "get_state_proof", "params": ["invalid"], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param known version(params[0]): should be unsigned int64",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+        (
+            "get_account_state_with_proof: invalid account address",
+            json!({"jsonrpc": "2.0", "method": "get_account_state_with_proof", "params": ["invalid", 1, 1], "id": 1}),
+            json!({
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid param account address(params[0]): should be hex-encoded string",
+                    "data": null
+                },
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version
+            }),
+        ),
+    ];
+    for (name, request, expected) in calls {
+        let resp = client.post(&url).json(&request).send().unwrap();
+        assert_eq!(resp.status(), 200);
 
-    // invalid rpc method
-    let request = serde_json::json!({"jsonrpc": "2.0", "method": "add", "params": [1, 2], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    assert_eq!(error_code(resp), -32601);
+        let resp_json: serde_json::Value = resp.json().unwrap();
+        assert_eq!(expected, resp_json, "test: {}", name);
+    }
+}
 
-    // invalid arguments: too many arguments
-    let request =
-        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    let error_resp: JsonRpcErrorResponse = resp.json().unwrap();
-    assert_eq!(error_resp.error.code, -32602);
-    assert_eq!(error_resp.error.message, "Invalid params");
+#[test]
+fn test_json_rpc_protocol() {
+    let (mock_db, _runtime, url, _) = create_db_and_runtime();
 
-    let invalid_args: InvalidArguments = error_resp.error.as_invalid_arguments().unwrap();
-    assert_eq!(invalid_args.required, 1);
-    assert_eq!(invalid_args.optional, 0);
-    assert_eq!(invalid_args.given, 2);
+    let version = mock_db.version;
+    let timestamp = mock_db.get_block_timestamp(version).unwrap();
 
-    // invalid arguments: not enough arguments
-    let request =
-        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    assert_eq!(error_code(resp), -32602);
+    let calls = vec![
+        (
+            "get_currencies",
+            json!({"jsonrpc": "2.0", "method": "get_currencies", "params": [], "id": 1}),
+            json!({
+              "id": 1,
+              "jsonrpc": "2.0",
+              "libra_chain_id": ChainId::test().id(),
+              "libra_ledger_timestampusec": timestamp,
+              "libra_ledger_version": version,
+              "result": [
+                {
+                  "burn_events_key": "02000000000000000000000000000000000000000a550c18",
+                  "cancel_burn_events_key": "04000000000000000000000000000000000000000a550c18",
+                  "code": "Coin1",
+                  "exchange_rate_update_events_key": "05000000000000000000000000000000000000000a550c18",
+                  "fractional_part": 100,
+                  "mint_events_key": "01000000000000000000000000000000000000000a550c18",
+                  "preburn_events_key": "03000000000000000000000000000000000000000a550c18",
+                  "scaling_factor": 1000000,
+                  "to_lbr_exchange_rate": 0.5
+                },
+                {
+                  "burn_events_key": "07000000000000000000000000000000000000000a550c18",
+                  "cancel_burn_events_key": "09000000000000000000000000000000000000000a550c18",
+                  "code": "Coin2",
+                  "exchange_rate_update_events_key": "0a000000000000000000000000000000000000000a550c18",
+                  "fractional_part": 100,
+                  "mint_events_key": "06000000000000000000000000000000000000000a550c18",
+                  "preburn_events_key": "08000000000000000000000000000000000000000a550c18",
+                  "scaling_factor": 1000000,
+                  "to_lbr_exchange_rate": 0.5
+                },
+                {
+                  "burn_events_key": "0c000000000000000000000000000000000000000a550c18",
+                  "cancel_burn_events_key": "0e000000000000000000000000000000000000000a550c18",
+                  "code": "LBR",
+                  "exchange_rate_update_events_key": "0f000000000000000000000000000000000000000a550c18",
+                  "fractional_part": 1000,
+                  "mint_events_key": "0b000000000000000000000000000000000000000a550c18",
+                  "preburn_events_key": "0d000000000000000000000000000000000000000a550c18",
+                  "scaling_factor": 1000000,
+                  "to_lbr_exchange_rate": 1.0
+                }
+              ]
+            }),
+        ),
+        (
+            "get_metadata without version parameter",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [], "id": 1}),
+            json!({
+              "id": 1,
+              "jsonrpc": "2.0",
+              "libra_chain_id": ChainId::test().id(),
+              "libra_ledger_timestampusec": timestamp,
+              "libra_ledger_version": version,
+              "result": {
+                "timestamp": timestamp,
+                "version": version
+              }
+            }),
+        ),
+        (
+            "get_metadata with version",
+            json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [0], "id": 1}),
+            json!({
+              "id": 1,
+              "jsonrpc": "2.0",
+              "libra_chain_id": ChainId::test().id(),
+              "libra_ledger_timestampusec": timestamp,
+              "libra_ledger_version": version,
+              "result": {
+                "timestamp": 0,
+                "version": 0
+              }
+            }),
+        ),
+        (
+            "get_account: root account",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": [libra_root_address().to_string()], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": {
+                    "authentication_key": "1304972f9242cbc3528a1e286323471ab891baa37e0053b85651693a79854a00",
+                    "balances": [],
+                    "delegated_key_rotation_capability": false,
+                    "delegated_withdrawal_capability": false,
+                    "is_frozen": false,
+                    "received_events_key": "12000000000000000000000000000000000000000a550c18",
+                    "role": "unknown",
+                    "sent_events_key": "13000000000000000000000000000000000000000a550c18",
+                    "sequence_number": 1
+                }
+            }),
+        ),
+        (
+            "get_account: testnet dd account",
+            json!({"jsonrpc": "2.0", "method": "get_account", "params": [testnet_dd_account_address().to_string()], "id": 1}),
+            json!({
+                "id": 1,
+                "jsonrpc": "2.0",
+                "libra_chain_id": ChainId::test().id(),
+                "libra_ledger_timestampusec": timestamp,
+                "libra_ledger_version": version,
+                "result": {
+                    "authentication_key": "1304972f9242cbc3528a1e286323471ab891baa37e0053b85651693a79854a00",
+                    "balances": [
+                        {
+                            "amount": 4611686018427387903 as u64,
+                            "currency": "Coin1"
+                        },
+                        {
+                            "amount": 4611686018427387903 as u64,
+                            "currency": "Coin2"
+                        },
+                        {
+                            "amount": 9223372036854775807 as u64,
+                            "currency": "LBR"
+                        }
+                    ],
+                    "delegated_key_rotation_capability": false,
+                    "delegated_withdrawal_capability": false,
+                    "is_frozen": false,
+                    "received_events_key": "0100000000000000000000000000000000000000000000dd",
+                    "role": {
+                        "designated_dealer": {
+                            "base_url": "https://libra.org",
+                            "compliance_key": "f66bf0ce5ceb582b93d6780820c2025b9967aedaa259bdbb9f3d0297eced0e18",
+                            "expiration_time": 18446744073709551615 as u64,
+                            "human_name": "moneybags",
+                            "preburn_balances": [
+                                {
+                                    "amount": 0,
+                                    "currency": "Coin1"
+                                },
+                                {
+                                    "amount": 0,
+                                    "currency": "Coin2"
+                                }
+                            ],
+                            "received_mint_events_key": "0000000000000000000000000000000000000000000000dd"
+                        }
+                    },
+                    "sent_events_key": "0200000000000000000000000000000000000000000000dd",
+                    "sequence_number": 0
+                }
+            }),
+        ),
+    ];
 
-    // invalid arguments: too many arguments for a method has optional arguments
-    let request =
-        serde_json::json!({"jsonrpc": "2.0", "method": "get_metadata", "params": [1, 2], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-
-    let error_resp: JsonRpcErrorResponse = resp.json().unwrap();
-    assert_eq!(error_resp.error.code, -32602);
-    assert_eq!(error_resp.error.message, "Invalid params");
-
-    let invalid_args: InvalidArguments = error_resp.error.as_invalid_arguments().unwrap();
-    assert_eq!(invalid_args.required, 0);
-    assert_eq!(invalid_args.optional, 1);
-    assert_eq!(invalid_args.given, 2);
-
-    // Response includes two mandatory field, regardless of errors
-    let request =
-        serde_json::json!({"jsonrpc": "2.0", "method": "get_account", "params": [1, 2], "id": 1});
-    let resp = client.post(&url).json(&request).send().unwrap();
-    assert_eq!(resp.status(), 200);
-    let data: JsonMap = resp.json().unwrap();
-    assert!(data.get(JSONRPC_LIBRA_LEDGER_VERSION).is_some());
-    assert!(data.get(JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS).is_some());
-    assert_eq!(
-        data.get(JSONRPC_LIBRA_CHAIN_ID).expect("must have"),
-        ChainId::test().id()
-    );
+    let client = reqwest::blocking::Client::new();
+    for (name, request, expected) in calls {
+        let resp = client.post(&url).json(&request).send().unwrap();
+        assert_eq!(resp.status(), 200);
+        let resp_json: serde_json::Value = resp.json().unwrap();
+        assert_eq!(expected, resp_json, "test: {}", name);
+    }
 }
 
 #[test]
@@ -307,7 +819,7 @@ fn test_transaction_submission() {
 
 #[test]
 fn test_get_account() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1024);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     // test case 1: single call
     let (first_account, blob) = mock_db.all_accounts.iter().next().unwrap();
@@ -376,7 +888,7 @@ fn test_get_account() {
 
 #[test]
 fn test_get_metadata_latest() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let (actual_version, actual_timestamp) = mock_db.get_latest_commit_metadata().unwrap();
     let mut batch = JsonRpcBatch::default();
@@ -391,7 +903,7 @@ fn test_get_metadata_latest() {
 
 #[test]
 fn test_get_metadata() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
     batch.add_get_metadata_request(Some(1));
@@ -405,7 +917,7 @@ fn test_get_metadata() {
 
 #[test]
 fn test_limit_batch_size() {
-    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+    let (_, client, mut runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
 
@@ -421,11 +933,15 @@ fn test_limit_batch_size() {
 
 #[test]
 fn test_get_events_page_limit() {
-    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+    let (_, client, mut runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
 
-    batch.add_get_events_request("event_key".to_string(), 0, 1001);
+    batch.add_get_events_request(
+        "13000000000000000000000000000000000000000a550c18".to_string(),
+        0,
+        1001,
+    );
 
     let ret = runtime.block_on(client.execute(batch)).unwrap().remove(0);
     assert!(ret.is_err());
@@ -435,7 +951,7 @@ fn test_get_events_page_limit() {
 
 #[test]
 fn test_get_transactions_page_limit() {
-    let (_, client, mut runtime) = create_database_client_and_runtime(1);
+    let (_, client, mut runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
     batch.add_get_transactions_request(0, 1001, false);
@@ -448,7 +964,7 @@ fn test_get_transactions_page_limit() {
 
 #[test]
 fn test_get_events() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let event_index = 0;
     let mock_db_events = mock_db.events;
@@ -478,7 +994,7 @@ fn test_get_events() {
 
 #[test]
 fn test_get_transactions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let version = mock_db.get_latest_version().unwrap();
     let page = 800usize;
@@ -556,7 +1072,7 @@ fn test_get_transactions() {
 
 #[test]
 fn test_get_account_transaction() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     for (acc, blob) in mock_db.all_accounts.iter() {
         let ar = AccountResource::try_from(blob).unwrap();
@@ -632,7 +1148,7 @@ fn test_get_account_transaction() {
 
 #[test]
 fn test_get_account_transactions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     for (acc, blob) in mock_db.all_accounts.iter() {
         let total = AccountResource::try_from(blob).unwrap().sequence_number();
@@ -649,7 +1165,7 @@ fn test_get_account_transactions() {
 // Check that if version and ledger_version parameters are None, then the server returns the latest
 // known state.
 fn test_get_account_state_with_proof_null_versions() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let account = get_first_account_from_mock_db(&mock_db);
     let mut batch = JsonRpcBatch::default();
@@ -666,7 +1182,7 @@ fn test_get_account_state_with_proof_null_versions() {
 
 #[test]
 fn test_get_account_state_with_proof() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let account = get_first_account_from_mock_db(&mock_db);
     let mut batch = JsonRpcBatch::default();
@@ -714,7 +1230,7 @@ fn test_get_account_state_with_proof() {
 
 #[test]
 fn test_get_state_proof() {
-    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1024);
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let version = mock_db.version;
     let mut batch = JsonRpcBatch::default();
@@ -728,7 +1244,7 @@ fn test_get_state_proof() {
 
 #[test]
 fn test_get_network_status() {
-    let (_mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+    let (_mock_db, client, mut runtime) = create_database_client_and_runtime();
 
     let mut batch = JsonRpcBatch::default();
     batch.add_get_network_status_request();
@@ -745,27 +1261,36 @@ fn test_get_network_status() {
 
 /// Creates and returns a MockLibraDB, JsonRpcAsyncClient and corresponding server Runtime tuple for
 /// testing. The given channel_buffer specifies the buffer size of the mempool client sender channel.
-fn create_database_client_and_runtime(
-    channel_buffer: usize,
-) -> (MockLibraDB, JsonRpcAsyncClient, Runtime) {
+fn create_database_client_and_runtime() -> (MockLibraDB, JsonRpcAsyncClient, Runtime) {
+    let (mock_db, runtime, url, _) = create_db_and_runtime();
+    let client =
+        JsonRpcAsyncClient::new(reqwest::Url::from_str(url.as_str()).expect("invalid url"));
+
+    (mock_db, client, runtime)
+}
+
+fn create_db_and_runtime() -> (
+    MockLibraDB,
+    Runtime,
+    String,
+    Receiver<(
+        SignedTransaction,
+        oneshot::Sender<anyhow::Result<SubmissionStatus>>,
+    )>,
+) {
     let mock_db = mock_db();
 
     let host = "0.0.0.0";
     let port = utils::get_available_port();
     let address = format!("{}:{}", host, port);
-    let mp_sender = channel(channel_buffer).0;
+    let (mp_sender, mp_events) = channel(1);
 
     let runtime = test_bootstrap(
         address.parse().unwrap(),
         Arc::new(mock_db.clone()),
         mp_sender,
     );
-    let client = JsonRpcAsyncClient::new(
-        reqwest::Url::from_str(format!("http://127.0.0.1:{}/v1", port).as_str())
-            .expect("invalid url"),
-    );
-
-    (mock_db, client, runtime)
+    (mock_db, runtime, format!("http://{}", address), mp_events)
 }
 
 /// Returns the first account address stored in the given mock database.
@@ -798,9 +1323,4 @@ fn execute_batch_and_get_first_response(
         .unwrap()
         .remove(0)
         .unwrap()
-}
-
-fn error_code(resp: reqwest::blocking::Response) -> i16 {
-    let err_resp: JsonRpcErrorResponse = resp.json().unwrap();
-    err_resp.error.code
 }

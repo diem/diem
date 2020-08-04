@@ -84,7 +84,7 @@ impl DbReader for MockLibraDB {
                     HashValue::zero(),
                     HashValue::zero(),
                     self.version,
-                    *self.timestamps.last().expect("must have"),
+                    self.get_block_timestamp(self.version).unwrap(),
                     None,
                 ),
                 HashValue::zero(),
@@ -281,6 +281,9 @@ impl DbReader for MockLibraDB {
     }
 
     fn get_block_timestamp(&self, version: u64) -> Result<u64> {
-        Ok(self.timestamps[version as usize])
+        Ok(match self.timestamps.get(version as usize) {
+            Some(t) => *t,
+            None => *self.timestamps.last().unwrap(),
+        })
     }
 }

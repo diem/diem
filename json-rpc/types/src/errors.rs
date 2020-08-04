@@ -122,6 +122,17 @@ impl JsonRpcError {
         }
     }
 
+    pub fn invalid_param(index: usize, name: &str, type_info: &str) -> Self {
+        Self {
+            code: InvalidRequestCode::InvalidParams as i16,
+            message: format!(
+                "Invalid param {}(params[{}]): should be {}",
+                name, index, type_info
+            ),
+            data: None,
+        }
+    }
+
     pub fn method_not_found() -> Self {
         Self {
             code: InvalidRequestCode::MethodNotFound as i16,
