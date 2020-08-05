@@ -15,7 +15,6 @@ use libra_types::{
     event::EventKey,
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
-    on_chain_config::ValidatorSet,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
     transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
 };
@@ -59,6 +58,8 @@ impl StartupInfo {
 
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_for_testing() -> Self {
+        use libra_types::on_chain_config::ValidatorSet;
+
         let latest_ledger_info =
             LedgerInfoWithSignatures::genesis(HashValue::zero(), ValidatorSet::empty());
         let latest_epoch_state = None;
