@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, tests::suite, SafetyRulesManager};
+use crate::suite;
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_types::validator_signer::ValidatorSigner;
+use safety_rules::{test_utils, SafetyRulesManager};
 
 #[test]
 fn test() {
@@ -16,7 +17,7 @@ fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
         let signer = ValidatorSigner::from_int(0);
         let storage = test_utils::test_storage(&signer);
         let safety_rules_manager =
-            SafetyRulesManager::new_local(storage, verify_vote_proposal_signature);
+            SafetyRulesManager::new_serializer(storage, verify_vote_proposal_signature);
         let safety_rules = safety_rules_manager.client();
         (
             safety_rules,

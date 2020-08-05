@@ -71,6 +71,7 @@ pub enum SafetyRulesService {
 #[serde(deny_unknown_fields)]
 pub struct RemoteService {
     pub server_address: NetworkAddress,
+    pub bin_path: Option<String>,
 }
 
 impl RemoteService {

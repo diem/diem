@@ -28,11 +28,18 @@ pub struct ProcessClientWrapper {
 }
 
 impl ProcessClientWrapper {
-    pub fn new(backend: SecureBackend, verify_vote_proposal_signature: bool) -> Self {
+    pub fn new(
+        bin_path: &str,
+        backend: SecureBackend,
+        verify_vote_proposal_signature: bool,
+    ) -> Self {
         let server_port = utils::get_available_port();
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into();
 
-        let remote_service = RemoteService { server_address };
+        let remote_service = RemoteService {
+            server_address,
+            bin_path: Some(bin_path.into()),
+        };
         let mut config = NodeConfig::random().consensus.safety_rules;
         let test_config = config.test.as_mut().unwrap();
         let author = test_config.author;

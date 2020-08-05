@@ -200,6 +200,7 @@ impl ValidatorConfig {
         if let Some(server_address) = self.safety_rules_addr {
             safety_rules_config.service = SafetyRulesService::Process(RemoteService {
                 server_address: server_address.into(),
+                bin_path: None,
             })
         }
 

@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
     block::block_test_utils::random_payload, common::Round, quorum_cert::QuorumCert,
     timeout::Timeout, vote_proposal::MaybeSignedVoteProposal,
@@ -16,6 +15,7 @@ use libra_types::{
     epoch_state::EpochState, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
+use safety_rules::{test_utils, Error, SafetyRules, TSafetyRules};
 
 type Proof = test_utils::Proof;
 

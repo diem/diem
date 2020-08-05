@@ -22,14 +22,18 @@ impl SpawnedProcess {
         config.save_config(&config_path).unwrap();
 
         let service = &config.service;
-        let server_addr = if let SafetyRulesService::SpawnedProcess(process_config) = service {
-            process_config.server_address()
-        } else {
-            panic!("Invalid SafeRulesService, expected SpawnedProcess.");
-        };
+        let (server_addr, bin_path) =
+            if let SafetyRulesService::SpawnedProcess(process_config) = service {
+                (
+                    process_config.server_address(),
+                    process_config.bin_path.as_ref().unwrap(),
+                )
+            } else {
+                panic!("Invalid SafeRulesService, expected SpawnedProcess.");
+            };
 
         Self {
-            handle: runner::run(&config_path.path()),
+            handle: runner::run(bin_path.as_ref(), &config_path.path()),
             server_addr,
             _config_path: config_path,
             network_timeout_ms: config.network_timeout_ms,
@@ -60,24 +64,14 @@ impl Drop for SpawnedProcess {
     }
 }
 
-#[cfg(test)]
 mod runner {
-    const BINARY: &str = "safety-rules";
-
-    pub fn run(path: &std::path::Path) -> std::process::Child {
-        let mut command = std::process::Command::new(workspace_builder::get_bin(BINARY));
+    pub fn run(bin_path: &std::path::Path, path: &std::path::Path) -> std::process::Child {
+        let mut command = std::process::Command::new(bin_path);
         command
             .arg(path)
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit());
         command.spawn().unwrap()
-    }
-}
-
-#[cfg(not(test))]
-mod runner {
-    pub fn run(_path: &std::path::Path) -> std::process::Child {
-        panic!("Not supported outside of testing");
     }
 }

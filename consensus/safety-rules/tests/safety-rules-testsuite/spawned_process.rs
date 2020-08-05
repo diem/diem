@@ -1,8 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{process_client_wrapper::ProcessClientWrapper, tests::suite};
+use crate::suite;
 use libra_config::config::SecureBackend;
+use safety_rules::process_client_wrapper::ProcessClientWrapper;
+
+//const BINARY: &str = "safety-rules";
+const BINARY: &str = env!("CARGO_BIN_EXE_safety-rules");
 
 #[test]
 fn test() {
@@ -13,6 +17,7 @@ fn test() {
 fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
     Box::new(move || {
         let mut client_wrapper = ProcessClientWrapper::new(
+            BINARY,
             SecureBackend::InMemoryStorage,
             verify_vote_proposal_signature,
         );
