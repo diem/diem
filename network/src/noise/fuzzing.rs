@@ -9,11 +9,12 @@
 //
 
 use crate::{
-    noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
+    noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     testutils::fake_socket::{ReadOnlyTestSocket, ReadWriteTestSocket},
 };
 use futures::{executor::block_on, future::join};
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
+use futures_util::io::AsyncReadExt;
+use libra_crypto::{noise::NoiseSession, test_utils::TEST_SEED, x25519, Uniform as _};
 use libra_types::PeerId;
 use once_cell::sync::Lazy;
 use rand_core::SeedableRng;
@@ -123,6 +124,7 @@ fn fake_timestamp() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE] {
     [0u8; AntiReplayTimestamps::TIMESTAMP_SIZE]
 }
 
+/// Fuzz a client during the handshake
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
     let ((initiator_private_key, _, initiator_peer_id), (_, responder_public_key, _)) =
@@ -141,6 +143,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let _ = block_on(initiator.upgrade_outbound(fake_socket, responder_public_key, fake_timestamp));
 }
 
+/// Fuzz a server during the handshake
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
     let (_, (responder_private_key, _, responder_peer_id)) = KEYPAIRS.clone();
@@ -158,6 +161,27 @@ pub fn fuzz_responder(data: &[u8]) {
     let _ = block_on(responder.upgrade_inbound(fake_socket));
 }
 
+/// Fuzz a peer post-handshake
+pub fn fuzz_post_handshake(data: &[u8]) {
+    if data.is_empty() {
+        return;
+    }
+
+    // setup fake socket
+    let mut fake_socket = ReadOnlyTestSocket::new(data);
+    fake_socket.set_trailing();
+
+    // setup a NoiseStream with a dummy state
+    let noise_session = NoiseSession::new_for_fuzzing();
+    let mut peer = NoiseStream::new(fake_socket, noise_session);
+
+    // read fuzz data
+    let _ = block_on(async move {
+        let mut buffer = [0u8; 1024];
+        let _ = peer.read(&mut buffer).await;
+    });
+}
+
 //
 // Tests
 // =====
@@ -166,8 +190,9 @@ pub fn fuzz_responder(data: &[u8]) {
 //
 
 #[test]
-fn test_noise_fuzzer() {
+fn test_noise_fuzzers() {
     let (init_msg, resp_msg) = generate_first_two_messages();
     fuzz_responder(&init_msg);
     fuzz_initiator(&resp_msg);
+    fuzz_post_handshake(&resp_msg);
 }

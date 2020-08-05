@@ -26,6 +26,7 @@ mod language_transaction_execution;
 mod mempool;
 mod network_noise_initiator;
 mod network_noise_responder;
+mod network_noise_stream;
 mod state_sync_msg;
 //mod storage_save_blocks;
 mod execute_and_commit_chunk;
@@ -43,6 +44,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(mempool::MempoolIncomingTransactions::default()),
         Box::new(network_noise_initiator::NetworkNoiseInitiator::default()),
         Box::new(network_noise_responder::NetworkNoiseResponder::default()),
+        Box::new(network_noise_stream::NetworkNoiseStream::default()),
         Box::new(state_sync_msg::StateSyncMsg::default()),
         Box::new(language_transaction_execution::LanguageTransactionExecution::default()),
         //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),

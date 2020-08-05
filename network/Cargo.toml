@@ -57,7 +57,7 @@ socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.
 
 [features]
 default = []
-fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "rand_core", "memsocket/testing", "netcore/fuzzing"]
+fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "rand_core", "memsocket/testing", "netcore/fuzzing", "libra-crypto/fuzzing"]
 testing = ["libra-config/testing", "memsocket/testing", "netcore/testing"]
 
 [[bench]]

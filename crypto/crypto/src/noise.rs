@@ -616,6 +616,16 @@ impl NoiseSession {
         }
     }
 
+    /// create a dummy session with 0 keys
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn new_for_fuzzing() -> Self {
+        Self::new(
+            vec![0u8; 32],
+            vec![0u8; 32],
+            [0u8; x25519::PUBLIC_KEY_SIZE].into(),
+        )
+    }
+
     /// obtain remote static public key
     pub fn get_remote_static(&self) -> x25519::PublicKey {
         self.remote_public_key
