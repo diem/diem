@@ -435,16 +435,20 @@ jobs:
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS test \
               --features='vanilla' \
               --no-default-features
-  compile-benches:
-    executor: unittest-executor
+  build-benchmark:
+    executor: build-executor
     description: Compile (but don't run) the benchmarks, to insulate against bit rot
     steps:
       - build_setup
+      - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
-          name: Run bench --no-run
+          name: Build benchmark targets without running
           command: |
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x bench \
               --no-run
+      - save_sccache
   run-flaky-unit-test:
     executor: test-executor
     description: Run a list of known flaky tests.
@@ -749,7 +753,7 @@ workflows:
                 - /^testflow[\d|.]+$/
                 - /^premainnet-[\d|.]+$/
                 - /^v[\d|.]+-release$/
-      - compile-benches:
+      - build-benchmark:
           requires:
             - prefetch-crates
           filters:
