@@ -226,7 +226,7 @@ impl ValidatorVerifier {
             }
         }
 
-        if aggregated_voting_power < self.quorum_voting_power + (self.total_voting_power-self.quorum_voting_power) * 8 / 10 {
+        if aggregated_voting_power < self.quorum_voting_power + (self.total_voting_power-self.quorum_voting_power) * 7 / 10 {
             return Err(VerifyError::TooLittleVotingPower {
                 voting_power: aggregated_voting_power,
                 quorum_voting_power: self.quorum_voting_power,
