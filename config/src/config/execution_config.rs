@@ -119,6 +119,7 @@ pub enum ExecutionCorrectnessService {
 #[serde(deny_unknown_fields)]
 pub struct RemoteExecutionService {
     pub server_address: SocketAddr,
+    pub bin_path: Option<String>,
 }
 
 #[cfg(test)]

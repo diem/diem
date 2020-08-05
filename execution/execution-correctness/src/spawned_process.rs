@@ -20,15 +20,18 @@ impl SpawnedProcess {
         config_path.create_as_file().unwrap();
         config.save_config(&config_path).unwrap();
         let service = &config.execution.service;
-        let server_addr =
+        let (server_addr, bin_path) =
             if let ExecutionCorrectnessService::SpawnedProcess(remote_service) = service {
-                remote_service.server_address
+                (
+                    remote_service.server_address,
+                    remote_service.bin_path.as_ref().unwrap(),
+                )
             } else {
                 panic!("Invalid ExecutionCorrectnessService, expected SpawnedProcess.");
             };
 
         Self {
-            handle: runner::run(&config_path.path()),
+            handle: runner::run(bin_path.as_ref(), &config_path.path()),
             server_addr,
             _config_path: config_path,
             network_timeout: config.execution.network_timeout_ms,
@@ -64,10 +67,8 @@ impl Drop for SpawnedProcess {
 
 #[cfg(any(test, feature = "testing"))]
 mod runner {
-    const BINARY: &str = "execution-correctness";
-
-    pub fn run(path: &std::path::Path) -> std::process::Child {
-        let mut command = std::process::Command::new(workspace_builder::get_bin(BINARY));
+    pub fn run(bin_path: &std::path::Path, path: &std::path::Path) -> std::process::Child {
+        let mut command = std::process::Command::new(bin_path);
         command
             .arg(path)
             .stdin(std::process::Stdio::inherit())
@@ -79,7 +80,7 @@ mod runner {
 
 #[cfg(not(any(test, feature = "testing")))]
 mod runner {
-    pub fn run(_path: &std::path::Path) -> std::process::Child {
+    pub fn run(_bin_path: &std::path::Path, _path: &std::path::Path) -> std::process::Child {
         panic!("Not supported outside of testing");
     }
 }

@@ -21,12 +21,9 @@ pub use crate::{
     execution_correctness_manager::ExecutionCorrectnessManager, process::Process,
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 #[path = "process_client_wrapper.rs"]
 pub mod process_client_wrapper;
-
-#[cfg(test)]
-mod tests;
 
 fn id_and_transactions_from_block(block: &Block) -> (HashValue, Vec<Transaction>) {
     let id = block.id();

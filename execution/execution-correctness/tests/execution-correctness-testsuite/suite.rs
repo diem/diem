@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::execution_correctness::ExecutionCorrectness;
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
+use execution_correctness::ExecutionCorrectness;
 use executor_test_helpers::{extract_signer, gen_ledger_info_with_sigs};
 use libra_crypto::{ed25519::*, traits::Signature};
 

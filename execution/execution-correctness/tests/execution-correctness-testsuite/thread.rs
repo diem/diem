@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    execution_correctness::ExecutionCorrectness, tests::suite, ExecutionCorrectnessManager,
-};
+use crate::suite;
+use execution_correctness::{ExecutionCorrectness, ExecutionCorrectnessManager};
 use executor_test_helpers::start_storage_service;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -27,9 +26,10 @@ fn execution_correctness(
     } else {
         (None, None)
     };
-    // Timeout value of 5 seconds for network operations.
-    let timeout_ms = 5_000;
+    // Test value for network_timeout, in seconds.
+    let network_timeout_ms = 5_000;
+
     let execution_correctness_manager =
-        ExecutionCorrectnessManager::new_local(config.storage.address, prikey, timeout_ms);
+        ExecutionCorrectnessManager::new_thread(config.storage.address, prikey, network_timeout_ms);
     (execution_correctness_manager.client(), pubkey)
 }

@@ -64,6 +64,7 @@ impl Drop for SpawnedProcess {
     }
 }
 
+#[cfg(any(test, feature = "testing"))]
 mod runner {
     pub fn run(bin_path: &std::path::Path, path: &std::path::Path) -> std::process::Child {
         let mut command = std::process::Command::new(bin_path);
@@ -73,5 +74,12 @@ mod runner {
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit());
         command.spawn().unwrap()
+    }
+}
+
+#[cfg(not(any(test, feature = "testing")))]
+mod runner {
+    pub fn run(_bin_path: &std::path::Path, _path: &std::path::Path) -> std::process::Child {
+        panic!("Not supported outside of testing");
     }
 }

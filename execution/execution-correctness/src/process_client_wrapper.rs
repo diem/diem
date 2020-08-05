@@ -25,7 +25,7 @@ pub struct ProcessClientWrapper {
 }
 
 impl ProcessClientWrapper {
-    pub fn new(storage_addr: SocketAddr) -> Self {
+    pub fn new(bin_path: &str, storage_addr: SocketAddr) -> Self {
         let server_port = utils::get_available_port();
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
@@ -36,7 +36,10 @@ impl ProcessClientWrapper {
             .as_ref()
             .map(|key| key.private_key());
         config.execution.service =
-            ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
+            ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService {
+                server_address,
+                bin_path: Some(bin_path.into()),
+            });
         config.storage.address = storage_addr;
 
         let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);

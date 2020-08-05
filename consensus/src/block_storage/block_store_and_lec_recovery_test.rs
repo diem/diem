@@ -101,8 +101,10 @@ fn test_executor_restart() {
     let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
     // Start LEC service as a process.
-    config.execution.service =
-        ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
+    config.execution.service = ExecutionCorrectnessService::Process(RemoteExecutionService {
+        server_address,
+        bin_path: None,
+    });
 
     // Store the config
     let config_path = TempPath::new();
@@ -156,8 +158,10 @@ fn test_block_store_restart() {
     let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
 
     // Start LEC service as a process.
-    config.execution.service =
-        ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
+    config.execution.service = ExecutionCorrectnessService::Process(RemoteExecutionService {
+        server_address,
+        bin_path: None,
+    });
 
     // Store the config
     let config_path = TempPath::new();
