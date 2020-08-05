@@ -7,7 +7,7 @@ use crate::{
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
-        should_cut_chunk, GlobalBackupOpt,
+        should_cut_chunk, storage_ext::BackupStorageExt, GlobalBackupOpt,
     },
 };
 use anyhow::{anyhow, ensure, Result};
@@ -69,7 +69,10 @@ impl EpochEndingBackupController {
 
 impl EpochEndingBackupController {
     async fn run_impl(self) -> Result<FileHandle> {
-        let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
+        let backup_handle = self
+            .storage
+            .create_backup_with_random_suffix(&self.backup_name())
+            .await?;
 
         let mut chunks = Vec::new();
         let mut waypoints = Vec::new();
@@ -118,10 +121,8 @@ impl EpochEndingBackupController {
         self.write_manifest(&backup_handle, waypoints, chunks).await
     }
 
-    fn backup_name(&self) -> ShellSafeName {
+    fn backup_name(&self) -> String {
         format!("epoch_ending_{}-", self.start_epoch)
-            .try_into()
-            .unwrap()
     }
 
     fn manifest_name() -> &'static ShellSafeName {

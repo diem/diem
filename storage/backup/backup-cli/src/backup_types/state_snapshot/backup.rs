@@ -7,7 +7,7 @@ use crate::{
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
-        should_cut_chunk, GlobalBackupOpt,
+        should_cut_chunk, storage_ext::BackupStorageExt, GlobalBackupOpt,
     },
 };
 use anyhow::{anyhow, Result};
@@ -67,7 +67,10 @@ impl StateSnapshotBackupController {
     }
 
     async fn run_impl(self) -> Result<FileHandle> {
-        let backup_handle = self.storage.create_backup(&self.backup_name()).await?;
+        let backup_handle = self
+            .storage
+            .create_backup_with_random_suffix(&self.backup_name())
+            .await?;
 
         let mut chunks = vec![];
 
@@ -124,8 +127,8 @@ impl StateSnapshotBackupController {
 }
 
 impl StateSnapshotBackupController {
-    fn backup_name(&self) -> ShellSafeName {
-        format!("state_ver_{}", self.version).try_into().unwrap()
+    fn backup_name(&self) -> String {
+        format!("state_ver_{}", self.version)
     }
 
     fn manifest_name() -> &'static ShellSafeName {
