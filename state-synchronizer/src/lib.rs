@@ -17,7 +17,7 @@ pub mod coordinator;
 mod counters;
 mod executor_proxy;
 pub mod network;
-mod peer_manager;
+mod request_manager;
 mod synchronizer;
 
 /// The state distinguishes between the following fields:

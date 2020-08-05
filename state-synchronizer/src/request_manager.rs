@@ -1,11 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters;
+use crate::{
+    chunk_request::GetChunkRequest,
+    counters,
+    network::{StateSynchronizerMsg, StateSynchronizerSender},
+};
+use anyhow::{bail, Result};
 use itertools::Itertools;
 use libra_config::{
     config::{PeerNetworkId, UpstreamConfig},
-    network_id::NetworkId,
+    network_id::{NetworkId, NodeNetworkId},
 };
 use libra_logger::prelude::*;
 use netcore::transport::ConnectionOrigin;
@@ -15,7 +20,7 @@ use rand::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    time::{Duration, SystemTime},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const MAX_SCORE: f64 = 100.0;
@@ -70,27 +75,40 @@ pub enum PeerScoreUpdateType {
     TimeOut,
 }
 
-pub struct PeerManager {
+pub struct RequestManager {
     // list of peers that are eligible for this node to send sync requests to
     // grouped by network preference
     eligible_peers: BTreeMap<usize, (Vec<PeerNetworkId>, Option<WeightedIndex<f64>>)>,
     peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
     upstream_config: UpstreamConfig,
+    // duration with the same version before the next attempt to get the next chunk
+    request_timeout: Duration,
+    // duration with the same version before multicasting, i.e. sending the next chunk request to more networks
+    multicast_timeout: Duration,
     // number of networks to try to multicast the same chunk request to
     // the node will try send chunk requests to one peer per the first `multicast_level` networks
     // available, in order of preference specified by the upstream config
     multicast_level: usize,
+    network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
 }
 
-impl PeerManager {
-    pub fn new(upstream_config: UpstreamConfig) -> Self {
+impl RequestManager {
+    pub fn new(
+        upstream_config: UpstreamConfig,
+        request_timeout: Duration,
+        multicast_timeout: Duration,
+        network_senders: HashMap<NodeNetworkId, StateSynchronizerSender>,
+    ) -> Self {
         Self {
             eligible_peers: BTreeMap::new(),
             peers: HashMap::new(),
             requests: BTreeMap::new(),
             upstream_config,
+            request_timeout,
+            multicast_timeout,
             multicast_level: MIN_UPSTREAM_NETWORK_CT,
+            network_senders,
         }
     }
 
@@ -116,7 +134,7 @@ impl PeerManager {
         self.update_peer_selection_data();
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub fn no_available_peers(&self) -> bool {
         self.eligible_peers.is_empty()
     }
 
@@ -213,7 +231,47 @@ impl PeerManager {
             .collect::<Vec<_>>()
     }
 
-    pub fn process_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) {
+    pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
+        // update internal state
+        let peers = self.pick_peers();
+        if peers.is_empty() {
+            bail!("No peers to send chunk request to");
+        }
+
+        debug!(
+            "[state sync] request next chunk. peers: {:?}, chunk req: {}",
+            peers, req,
+        );
+        self.add_request(req.known_version + 1, peers.clone());
+
+        // actually execute network send
+        let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
+        let mut failed_peer_sends = vec![];
+        for peer in peers {
+            let sender = self
+                .network_senders
+                .get_mut(&peer.network_id())
+                .expect("missing network sender for peer");
+            let peer_id = peer.peer_id();
+            let send_result = sender.send_to(peer_id, msg.clone());
+            let result_label = if send_result.is_err() {
+                failed_peer_sends.push((peer.clone(), send_result));
+                counters::SEND_FAIL_LABEL
+            } else {
+                counters::SEND_SUCCESS_LABEL
+            };
+            counters::REQUESTS_SENT
+                .with_label_values(&[&peer_id.to_string(), result_label])
+                .inc();
+        }
+        if failed_peer_sends.is_empty() {
+            Ok(())
+        } else {
+            bail!("Failed to send chunk request to: {:?}", failed_peer_sends)
+        }
+    }
+
+    pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
             if self.multicast_level != prev_request.multicast_level {
@@ -246,6 +304,34 @@ impl PeerManager {
         self.update_score(peer, PeerScoreUpdateType::Success);
     }
 
+    // penalize peer's score for giving chunk with starting version that doesn't match local synced version
+    pub fn process_bad_chunk_start(
+        &mut self,
+        peer: &PeerNetworkId,
+        chunk_version: u64,
+        synced_version: u64,
+    ) -> Result<()> {
+        if self.is_multicast_response(chunk_version, peer) {
+            // This chunk response was in response to a past multicast response that another
+            // peer sent a response to earlier than this peer
+            // Don't penalize if this response did not technically time out
+            bail!(
+                "[state sync] Received chunk for outdated request from {:?}: known_version: {}, received: {}",
+                peer,
+                synced_version,
+                chunk_version
+            );
+        } else {
+            self.update_score(&peer, PeerScoreUpdateType::ChunkVersionCannotBeApplied);
+            bail!(
+                "[state sync] Non sequential chunk from {:?}: known_version: {}, received: {}",
+                peer,
+                synced_version,
+                chunk_version
+            );
+        }
+    }
+
     pub fn is_multicast_response(&self, version: u64, peer: &PeerNetworkId) -> bool {
         self.requests.get(&version).map_or(false, |req| {
             req.last_request_peers.contains(peer) && req.last_request_peers.len() > 1
@@ -256,12 +342,6 @@ impl PeerManager {
         self.requests
             .get(&version)
             .map(|req_info| req_info.last_request_time)
-    }
-
-    pub fn get_multicast_start_time(&self, version: u64) -> Option<SystemTime> {
-        self.requests
-            .get(&version)
-            .map(|req_info| req_info.multicast_start_time)
     }
 
     pub fn get_first_request_time(&self, version: u64) -> Option<SystemTime> {
@@ -275,7 +355,7 @@ impl PeerManager {
     /// We keep the requests that have not timed out so we don't penalize
     /// peers who send chunks after the first peer who sends the first successful chunk response for a
     /// multicasted request
-    pub fn remove_requests(&mut self, version: u64, timeout: Duration) {
+    pub fn remove_requests(&mut self, version: u64) {
         // only remove requests that have timed out or sent to one peer, so we don't penalize for multicasted responses
         // that still came back on time, based on per-peer timeout
         let now = SystemTime::now();
@@ -285,7 +365,7 @@ impl PeerManager {
             .filter_map(|(version, req)| {
                 let is_timeout = req
                     .last_request_time
-                    .checked_add(timeout)
+                    .checked_add(self.request_timeout)
                     .map_or(false, |retry_deadline| {
                         now.duration_since(retry_deadline).is_ok()
                     });
@@ -302,25 +382,45 @@ impl PeerManager {
         }
     }
 
-    pub fn process_timeout(&mut self, version: u64, is_multicast_timeout: bool) {
+    /// Checks whether the request sent for this version is timed out
+    /// Returns true if request for this version timed out or there is no request for this, else false
+    pub fn check_timeout(&mut self, version: u64) -> bool {
+        let start = SystemTime::now();
+        let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
+
+        let is_timeout = last_request_time
+            .checked_add(self.request_timeout)
+            .map_or(false, |retry_deadline| {
+                start.duration_since(retry_deadline).is_ok()
+            });
+        if !is_timeout {
+            return is_timeout;
+        }
+
+        // update peer info based on timeout
         let peers_to_penalize = match self.requests.get(&version) {
             Some(prev_request) => prev_request.last_request_peers.clone(),
             None => {
-                return;
+                return is_timeout;
             }
         };
         for peer in peers_to_penalize.iter() {
             self.update_score(peer, PeerScoreUpdateType::TimeOut);
         }
 
-        // TODO make sure is_multicast_timeout means the correct thing
-        // may have to track per network
+        // increment multicast level if this request is also multicast-timedout
+        let is_multicast_timeout = last_request_time
+            .checked_add(self.multicast_timeout)
+            .map_or(false, |retry_deadline| {
+                start.duration_since(retry_deadline).is_ok()
+            });
         if is_multicast_timeout {
             self.multicast_level = std::cmp::min(
                 self.multicast_level + 1,
                 self.upstream_config.upstream_count(),
             )
         }
+        is_timeout
     }
 
     fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
