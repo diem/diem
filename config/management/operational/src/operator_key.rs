@@ -4,9 +4,8 @@
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_management::{constants, error::Error};
-use libra_secure_time::{RealTimeService, TimeService};
-use libra_types::transaction::{authenticator::AuthenticationKey, RawTransaction, Transaction};
+use libra_management::{error::Error, transaction::build_raw_transaction};
+use libra_types::transaction::{authenticator::AuthenticationKey, Transaction};
 use std::convert::TryFrom;
 use structopt::StructOpt;
 
@@ -24,12 +23,8 @@ impl RotateOperatorKey {
         // Load the config, storage backend and create a json rpc client
         let config = self
             .validator_config
-            .config
-            .load()?
-            .override_json_server(&self.json_server)
-            .override_validator_backend(
-                &self.validator_config.validator_backend.validator_backend,
-            )?;
+            .config()?
+            .override_json_server(&self.json_server);
         let mut storage = config.validator_backend();
         let client = JsonRpcClientWrapper::new(config.json_server);
 
@@ -68,15 +63,11 @@ impl RotateOperatorKey {
         let rotate_key_script = transaction_builder::encode_rotate_authentication_key_script(
             AuthenticationKey::ed25519(&new_storage_key).to_vec(),
         );
-        let rotate_key_txn = RawTransaction::new_script(
+        let rotate_key_txn = build_raw_transaction(
+            config.chain_id,
             operator_account,
             sequence_number,
             rotate_key_script,
-            constants::MAX_GAS_AMOUNT,
-            constants::GAS_UNIT_PRICE,
-            constants::GAS_CURRENCY_CODE.to_owned(),
-            RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS,
-            config.chain_id,
         );
 
         // Sign the operator rotation transaction

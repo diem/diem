@@ -26,12 +26,8 @@ impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
         let config = self
             .validator_config
-            .config
-            .load()?
-            .override_shared_backend(&self.shared_backend.shared_backend)?
-            .override_validator_backend(
-                &self.validator_config.validator_backend.validator_backend,
-            )?;
+            .config()?
+            .override_shared_backend(&self.shared_backend.shared_backend)?;
 
         // Retrieve and set owner account
         let owner_shared_storage = config.shared_backend_with_namespace(self.owner_name.clone());

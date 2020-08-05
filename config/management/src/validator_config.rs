@@ -1,7 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::ConfigPath, constants, error::Error, secure_backend::ValidatorBackend};
+use crate::{
+    config::{Config, ConfigPath},
+    error::Error,
+    secure_backend::ValidatorBackend,
+    transaction::build_raw_transaction,
+};
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::ValidCryptoMaterial;
 use libra_global_constants::{
@@ -14,11 +19,7 @@ use libra_network_address::{
     },
     NetworkAddress, RawNetworkAddress,
 };
-use libra_secure_time::{RealTimeService, TimeService};
-use libra_types::{
-    chain_id::ChainId,
-    transaction::{RawTransaction, Transaction},
-};
+use libra_types::{chain_id::ChainId, transaction::Transaction};
 use std::convert::TryFrom;
 use structopt::StructOpt;
 
@@ -33,6 +34,13 @@ pub struct ValidatorConfig {
 }
 
 impl ValidatorConfig {
+    pub fn config(&self) -> Result<Config, Error> {
+        self.config
+            .load()?
+            .override_chain_id(self.chain_id)
+            .override_validator_backend(&self.validator_backend.validator_backend)
+    }
+
     pub fn build_transaction(
         &self,
         sequence_number: u64,
@@ -40,11 +48,7 @@ impl ValidatorConfig {
         validator_address: NetworkAddress,
         reconfigure: bool,
     ) -> Result<Transaction, Error> {
-        let config = self
-            .config
-            .load()?
-            .override_chain_id(self.chain_id)
-            .override_validator_backend(&self.validator_backend.validator_backend)?;
+        let config = self.config()?;
         let mut storage = config.validator_backend();
 
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
@@ -100,15 +104,11 @@ impl ValidatorConfig {
         );
 
         // Create and sign the validator-config transaction
-        let raw_txn = RawTransaction::new_script(
+        let raw_txn = build_raw_transaction(
+            config.chain_id,
             storage.account_address(OPERATOR_ACCOUNT)?,
             sequence_number,
             validator_config_script,
-            constants::MAX_GAS_AMOUNT,
-            constants::GAS_UNIT_PRICE,
-            constants::GAS_CURRENCY_CODE.to_owned(),
-            RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS,
-            config.chain_id,
         );
         let signed_txn = storage.sign(OPERATOR_KEY, "validator-config", raw_txn)?;
         let txn = Transaction::UserTransaction(signed_txn);

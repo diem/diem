@@ -6,7 +6,7 @@ use crate::{
     TransactionContext,
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::error::Error;
+use libra_management::{error::Error, execute_command};
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
@@ -160,109 +160,95 @@ impl Command {
     }
 
     pub fn add_validator(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::AddValidator(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::AddValidator)),
-        }
+        execute_command!(self, Command::AddValidator, CommandName::AddValidator)
     }
 
     pub fn extract_private_key(self) -> Result<(), Error> {
-        match self {
-            Command::ExtractPrivateKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ExtractPrivateKey)),
-        }
+        execute_command!(
+            self,
+            Command::ExtractPrivateKey,
+            CommandName::ExtractPrivateKey
+        )
     }
 
     pub fn extract_public_key(self) -> Result<(), Error> {
-        match self {
-            Command::ExtractPublicKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ExtractPublicKey)),
-        }
+        execute_command!(
+            self,
+            Command::ExtractPublicKey,
+            CommandName::ExtractPublicKey
+        )
     }
 
     pub fn insert_waypoint(self) -> Result<(), Error> {
-        match self {
-            Command::InsertWaypoint(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
-        }
+        execute_command!(self, Command::InsertWaypoint, CommandName::InsertWaypoint)
     }
 
     pub fn print_account(self) -> Result<AccountAddress, Error> {
-        match self {
-            Command::PrintAccount(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::PrintAccount)),
-        }
+        execute_command!(self, Command::PrintAccount, CommandName::PrintAccount)
     }
 
     pub fn remove_validator(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::RemoveValidator(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RemoveValidator)),
-        }
+        execute_command!(self, Command::RemoveValidator, CommandName::RemoveValidator)
     }
 
     pub fn rotate_consensus_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
-        match self {
-            Command::RotateConsensusKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RotateConsensusKey)),
-        }
+        execute_command!(
+            self,
+            Command::RotateConsensusKey,
+            CommandName::RotateConsensusKey
+        )
     }
 
     pub fn rotate_operator_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
-        match self {
-            Command::RotateOperatorKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RotateOperatorKey)),
-        }
+        execute_command!(
+            self,
+            Command::RotateOperatorKey,
+            CommandName::RotateOperatorKey
+        )
     }
 
     pub fn rotate_fullnode_network_key(
         self,
     ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        match self {
-            Command::RotateFullNodeNetworkKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RotateFullNodeNetworkKey)),
-        }
+        execute_command!(
+            self,
+            Command::RotateFullNodeNetworkKey,
+            CommandName::RotateFullNodeNetworkKey
+        )
     }
 
     pub fn rotate_validator_network_key(
         self,
     ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
-        match self {
-            Command::RotateValidatorNetworkKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::RotateValidatorNetworkKey)),
-        }
+        execute_command!(
+            self,
+            Command::RotateValidatorNetworkKey,
+            CommandName::RotateValidatorNetworkKey
+        )
     }
 
     pub fn set_validator_config(self) -> Result<TransactionContext, Error> {
-        match self {
-            Command::SetValidatorConfig(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::SetValidatorConfig)),
-        }
+        execute_command!(
+            self,
+            Command::SetValidatorConfig,
+            CommandName::SetValidatorConfig
+        )
     }
 
     pub fn validate_transaction(self) -> Result<Option<VMStatusView>, Error> {
-        match self {
-            Command::ValidateTransaction(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ValidateTransaction)),
-        }
+        execute_command!(
+            self,
+            Command::ValidateTransaction,
+            CommandName::ValidateTransaction
+        )
     }
 
     pub fn validator_config(self) -> Result<DecryptedValidatorConfig, Error> {
-        match self {
-            Command::ValidatorConfig(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
-        }
+        execute_command!(self, Command::ValidatorConfig, CommandName::ValidatorConfig)
     }
 
     pub fn validator_set(self) -> Result<Vec<DecryptedValidatorInfo>, Error> {
-        match self {
-            Command::ValidatorSet(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ValidatorSet)),
-        }
-    }
-
-    fn unexpected_command(self, expected: CommandName) -> Error {
-        Error::UnexpectedCommand(expected.to_string(), CommandName::from(&self).to_string())
+        execute_command!(self, Command::ValidatorSet, CommandName::ValidatorSet)
     }
 }
 

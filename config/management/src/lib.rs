@@ -7,6 +7,7 @@ pub mod config;
 pub mod error;
 pub mod secure_backend;
 pub mod storage;
+pub mod transaction;
 pub mod validator_config;
 
 pub mod constants {
@@ -20,4 +21,18 @@ pub mod constants {
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
     pub const GAS_CURRENCY_CODE: &str = LBR_NAME;
     pub const TXN_EXPIRATION_SECS: u64 = 3600;
+}
+
+#[macro_export]
+macro_rules! execute_command {
+    ($obj:ident, $command:path, $expected_name:path) => {
+        if let $command(cmd) = $obj {
+            cmd.execute()
+        } else {
+            Err(Error::UnexpectedCommand(
+                $expected_name.to_string(),
+                CommandName::from(&$obj).to_string(),
+            ))
+        }
+    };
 }

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_management::error::Error;
+use libra_management::{error::Error, execute_command};
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use structopt::StructOpt;
 
@@ -98,77 +98,47 @@ impl Command {
     }
 
     pub fn create_and_insert_waypoint(self) -> Result<Waypoint, Error> {
-        match self {
-            Command::CreateAndInsertWaypoint(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::CreateAndInsertWaypoint)),
-        }
+        execute_command!(
+            self,
+            Command::CreateAndInsertWaypoint,
+            CommandName::CreateAndInsertWaypoint
+        )
     }
 
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
-        match self {
-            Command::CreateWaypoint(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::CreateWaypoint)),
-        }
+        execute_command!(self, Command::CreateWaypoint, CommandName::CreateWaypoint)
     }
 
     pub fn genesis(self) -> Result<Transaction, Error> {
-        match self {
-            Command::Genesis(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::Genesis)),
-        }
+        execute_command!(self, Command::Genesis, CommandName::Genesis)
     }
 
     pub fn libra_root_key(self) -> Result<Ed25519PublicKey, Error> {
-        match self {
-            Command::LibraRootKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::LibraRootKey)),
-        }
+        execute_command!(self, Command::LibraRootKey, CommandName::LibraRootKey)
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
-        match self {
-            Command::OperatorKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::OperatorKey)),
-        }
+        execute_command!(self, Command::OperatorKey, CommandName::OperatorKey)
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
-        match self {
-            Command::OwnerKey(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::OwnerKey)),
-        }
+        execute_command!(self, Command::OwnerKey, CommandName::OwnerKey)
     }
 
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
-        match self {
-            Command::SetLayout(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::SetLayout)),
-        }
+        execute_command!(self, Command::SetLayout, CommandName::SetLayout)
     }
 
     pub fn set_operator(self) -> Result<String, Error> {
-        match self {
-            Command::SetOperator(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::SetOperator)),
-        }
+        execute_command!(self, Command::SetOperator, CommandName::SetOperator)
     }
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
-        match self {
-            Command::ValidatorConfig(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
-        }
+        execute_command!(self, Command::ValidatorConfig, CommandName::ValidatorConfig)
     }
 
     pub fn verify(self) -> Result<String, Error> {
-        match self {
-            Command::Verify(cmd) => cmd.execute(),
-            _ => Err(self.unexpected_command(CommandName::Verify)),
-        }
-    }
-
-    fn unexpected_command(self, expected: CommandName) -> Error {
-        Error::UnexpectedCommand(expected.to_string(), CommandName::from(&self).to_string())
+        execute_command!(self, Command::Verify, CommandName::Verify)
     }
 }
 

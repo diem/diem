@@ -36,6 +36,7 @@ impl SetValidatorConfig {
             .validator_config
             .config
             .load()?
+            .override_chain_id(self.validator_config.chain_id)
             .override_json_server(&self.json_server)
             .override_validator_backend(
                 &self.validator_config.validator_backend.validator_backend,
@@ -93,12 +94,8 @@ impl RotateKey {
         // Load the config, storage backend and create a json rpc client.
         let config = self
             .validator_config
-            .config
-            .load()?
-            .override_json_server(&self.json_server)
-            .override_validator_backend(
-                &self.validator_config.validator_backend.validator_backend,
-            )?;
+            .config()?
+            .override_json_server(&self.json_server);
         let mut storage = config.validator_backend();
         let client = JsonRpcClientWrapper::new(config.json_server);
 
