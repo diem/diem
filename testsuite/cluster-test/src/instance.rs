@@ -294,6 +294,19 @@ impl Instance {
             .await
     }
 
+    pub async fn spawn_job(
+        &self,
+        docker_image: &str,
+        command: &str,
+        job_name: &str,
+    ) -> Result<String> {
+        let backend = self.k8s_backend();
+        backend
+            .kube
+            .spawn_job(&backend.k8s_node, docker_image, command, job_name)
+            .await
+    }
+
     pub fn instance_config(&self) -> &InstanceConfig {
         let backend = self.k8s_backend();
         &backend.instance_config

@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod client_compatibility_test;
 mod compatibility_test;
 mod cpu_flamegraph;
 mod packet_loss_random_validators;
@@ -20,6 +21,7 @@ use std::{
     time::Duration,
 };
 
+pub use client_compatibility_test::{ClientCompatibilityTest, ClientCompatiblityTestParams};
 pub use compatibility_test::{CompatibilityTest, CompatiblityTestParams};
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
@@ -149,6 +151,10 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
     known_experiments.insert("compatibility_test", f::<CompatiblityTestParams>());
+    known_experiments.insert(
+        "client_compatibility_test",
+        f::<ClientCompatiblityTestParams>(),
+    );
     known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");

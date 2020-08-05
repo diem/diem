@@ -78,7 +78,7 @@ impl ClusterBuilderParams {
 
 pub struct ClusterBuilder {
     pub current_tag: String,
-    cluster_swarm: ClusterSwarmKube,
+    pub cluster_swarm: ClusterSwarmKube,
 }
 
 impl ClusterBuilder {
