@@ -1,40 +1,138 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::type_not_allowed;
+use crate::common::{make_abi_enum_container, mangle_type, type_not_allowed};
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
+use serde_generate::indent::{IndentConfig, IndentedWriter};
 
+use heck::{CamelCase, ShoutySnakeCase};
 use std::{
+    collections::BTreeMap,
     io::{Result, Write},
     path::PathBuf,
 };
 
-/// Output transaction builders in Java for the given ABIs.
-pub fn output(
-    out: &mut dyn Write,
+/// Output transaction builders and decoders in Java for the given ABIs.
+/// Source files will be located in a subdirectory of `install_dir` corresponding to the given
+/// package name (if any, otherwise `install_dir` it self).
+pub fn write_source_files(
+    install_dir: std::path::PathBuf,
+    package_name: Option<&str>,
     abis: &[ScriptABI],
-    package: Option<&str>,
-    class_name: &str,
 ) -> Result<()> {
-    output_preamble(out, package)?;
-    writeln!(out, "\npublic final class {} {{\n", class_name)?;
-    for abi in abis {
-        output_builder(out, abi)?;
+    write_script_call_files(install_dir.clone(), package_name, abis)?;
+    write_helper_file(install_dir, package_name, abis)
+}
+
+/// Output transaction helper functions for the given ABIs.
+fn write_helper_file(
+    install_dir: std::path::PathBuf,
+    package_name: Option<&str>,
+    abis: &[ScriptABI],
+) -> Result<()> {
+    let mut dir_path = install_dir;
+    if let Some(package) = package_name {
+        let parts = package.split('.').collect::<Vec<_>>();
+        for part in &parts {
+            dir_path = dir_path.join(part);
+        }
     }
-    writeln!(out, "\n}}\n")?;
+    std::fs::create_dir_all(&dir_path)?;
+
+    let mut file = std::fs::File::create(dir_path.join("Helpers.java"))?;
+    let mut emitter = JavaEmitter {
+        out: IndentedWriter::new(&mut file, IndentConfig::Space(4)),
+        package_name,
+    };
+    emitter.output_preamble()?;
+    writeln!(emitter.out, "\npublic final class Helpers {{")?;
+    emitter.out.indent();
+
+    emitter.output_encode_method(abis)?;
+    emitter.output_decode_method()?;
+
+    for abi in abis {
+        emitter.output_script_encoder_function(abi)?;
+    }
+    for abi in abis {
+        emitter.output_script_decoder_function(abi)?;
+    }
+
+    emitter.output_decoding_helpers()?;
+
+    for abi in abis {
+        emitter.output_code_constant(abi)?;
+    }
+    // Must be defined after the constants.
+    emitter.output_decoder_map(abis)?;
+
+    emitter.out.unindent();
+    writeln!(emitter.out, "\n}}\n")
+}
+
+fn write_script_call_files(
+    install_dir: std::path::PathBuf,
+    package_name: Option<&str>,
+    abis: &[ScriptABI],
+) -> Result<()> {
+    let external_definitions = crate::common::get_external_definitions("org.libra.types");
+    let script_registry: BTreeMap<_, _> =
+        vec![("ScriptCall".to_string(), make_abi_enum_container(abis))]
+            .into_iter()
+            .collect();
+    let mut comments: BTreeMap<_, _> = abis
+        .iter()
+        .map(|abi| {
+            let mut paths = match package_name {
+                None => Vec::new(),
+                Some(name) => name.split('.').map(String::from).collect(),
+            };
+            paths.push("ScriptCall".to_string());
+            paths.push(abi.name().to_camel_case());
+            (paths, crate::common::prepare_doc_string(abi.doc()))
+        })
+        .collect();
+    comments.insert(
+        vec!["ScriptCall".to_string()],
+        "Structured representation of a call into a known Move script.".into(),
+    );
+    serde_generate::java::write_source_files(
+        install_dir,
+        package_name,
+        /* with serialization */ false,
+        &script_registry,
+        &external_definitions,
+        &comments,
+    )
+    .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
     Ok(())
 }
 
-fn output_preamble(out: &mut dyn Write, package: Option<&str>) -> Result<()> {
-    if let Some(name) = package {
-        writeln!(out, "package {};\n", name)?;
-    }
-    writeln!(
-        out,
-        r#"
+/// Shared state for the Java code generator.
+struct JavaEmitter<'a, T> {
+    /// Writer.
+    out: IndentedWriter<T>,
+    ///  name of the package owning the generated definitions (e.g. "com.facebook.my_package")
+    package_name: Option<&'a str>,
+}
+
+impl<'a, T> JavaEmitter<'a, T>
+where
+    T: Write,
+{
+    fn output_preamble(&mut self) -> Result<()> {
+        if let Some(name) = self.package_name {
+            writeln!(self.out, "package {};\n", name)?;
+        }
+        writeln!(
+            self.out,
+            r#"
 import java.math.BigInteger;
+import java.lang.IllegalArgumentException;
+import java.lang.IndexOutOfBoundsException;
 import java.util.Arrays;
+import java.util.HashMap;
 import org.libra.types.AccountAddress;
 import org.libra.types.Script;
 import org.libra.types.TransactionArgument;
@@ -43,113 +141,294 @@ import com.facebook.serde.Int128;
 import com.facebook.serde.Unsigned;
 import com.facebook.serde.Bytes;
 "#,
-    )?;
-    Ok(())
-}
+        )?;
+        Ok(())
+    }
 
-fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
-    writeln!(
-        out,
-        "\n{}public static Script encode_{}_script({}) {{",
-        quote_doc(abi.doc()),
-        abi.name(),
-        [
-            quote_type_parameters(abi.ty_args()),
-            quote_parameters(abi.args()),
-        ]
-        .concat()
-        .join(", ")
-    )?;
-    writeln!(
-        out,
-        r#"    Script.Builder builder = new Script.Builder();
-    builder.code = new Bytes(new byte[]{});
-    builder.ty_args = Arrays.asList({});
-    builder.args = Arrays.asList({});
-    return builder.build();
+    fn output_encode_method(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+/**
+ * Build a Libra `Script` from a structured object `ScriptCall`.
+ */
+public static Script encode(ScriptCall call) {{"#
+        )?;
+        self.out.indent();
+        for abi in abis {
+            self.output_variant_encoder(abi)?;
+        }
+        writeln!(self.out, "return null;")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
+    fn output_variant_encoder(&mut self, abi: &ScriptABI) -> Result<()> {
+        let params = std::iter::empty()
+            .chain(abi.ty_args().iter().map(TypeArgumentABI::name))
+            .chain(abi.args().iter().map(ArgumentABI::name))
+            .map(|name| format!("obj.{}", name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        writeln!(
+            self.out,
+            r#"if (call instanceof ScriptCall.{0}) {{
+    ScriptCall.{0} obj = (ScriptCall.{0})call;
+    return encode_{1}_script({2});
 }}"#,
-        quote_code(abi.code()),
-        quote_type_arguments(abi.ty_args()),
-        quote_arguments(abi.args()),
-    )?;
-    Ok(())
-}
+            abi.name().to_camel_case(),
+            abi.name(),
+            params
+        )
+    }
 
-fn quote_doc(doc: &str) -> String {
-    let doc = crate::common::prepare_doc_string(doc);
-    let text = textwrap::fill(&doc, 86);
-    format!("/**\n{} */\n", textwrap::indent(&text, " * "))
-}
+    fn output_decode_method(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+/**
+ * Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
+ */
+public static ScriptCall decode(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
+    DecodingHelper helper = SCRIPT_DECODER_MAP.get(script.code);
+    if (helper == null) {{
+        throw new IllegalArgumentException("Unknown script bytecode");
+    }}
+    return helper.decode(script);
+}}
+"#
+        )
+    }
 
-fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
-    ty_args
-        .iter()
-        .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
-        .collect()
-}
+    fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+        writeln!(
+            self.out,
+            "\n{}public static Script encode_{}_script({}) {{",
+            Self::quote_doc(abi.doc()),
+            abi.name(),
+            [
+                Self::quote_type_parameters(abi.ty_args()),
+                Self::quote_parameters(abi.args()),
+            ]
+            .concat()
+            .join(", ")
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            r#"Script.Builder builder = new Script.Builder();
+builder.code = new Bytes({}_CODE);
+builder.ty_args = Arrays.asList({});
+builder.args = Arrays.asList({});
+return builder.build();"#,
+            abi.name().to_shouty_snake_case(),
+            Self::quote_type_arguments(abi.ty_args()),
+            Self::quote_arguments(abi.args()),
+        )?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
 
-fn quote_parameters(args: &[ArgumentABI]) -> Vec<String> {
-    args.iter()
-        .map(|arg| format!("{} {}", quote_type(arg.type_tag()), arg.name()))
-        .collect()
-}
+    fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+        writeln!(
+            self.out,
+            "\nprivate static ScriptCall decode_{}_script(Script {}script) throws IllegalArgumentException, IndexOutOfBoundsException {{",
+            abi.name(),
+            // prevent warning "unused variable"
+            if abi.ty_args().is_empty() && abi.args().is_empty() {
+            "_"
+            } else {
+                ""
+            }
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "ScriptCall.{0}.Builder builder = new ScriptCall.{0}.Builder();",
+            abi.name().to_camel_case(),
+        )?;
+        for (index, ty_arg) in abi.ty_args().iter().enumerate() {
+            writeln!(
+                self.out,
+                "builder.{} = script.ty_args.get({});",
+                ty_arg.name(),
+                index,
+            )?;
+        }
+        for (index, arg) in abi.args().iter().enumerate() {
+            writeln!(
+                self.out,
+                "builder.{} = Helpers.decode_{}_argument(script.args.get({}));",
+                arg.name(),
+                mangle_type(arg.type_tag()),
+                index,
+            )?;
+        }
+        writeln!(self.out, "return builder.build();")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")?;
+        Ok(())
+    }
 
-fn quote_code(code: &[u8]) -> String {
-    format!(
-        "{{{}}}",
-        code.iter()
-            .map(|x| format!("{}", *x as i8))
+    fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+interface DecodingHelper {{
+    public ScriptCall decode(Script script);
+}}
+
+private static final java.util.Map<Bytes, DecodingHelper> SCRIPT_DECODER_MAP = initDecoderMap();
+
+private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "HashMap<Bytes, DecodingHelper> map = new HashMap<>();"
+        )?;
+        for abi in abis {
+            writeln!(
+                self.out,
+                "map.put(new Bytes({}_CODE), (DecodingHelper)((script) -> Helpers.decode_{}_script(script)));",
+                abi.name().to_shouty_snake_case(),
+                abi.name()
+            )?;
+        }
+        writeln!(self.out, "return map;")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
+    fn output_decoding_helpers(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+private static Boolean decode_bool_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.Bool)) {{
+        throw new IllegalArgumentException("Was expecting a Bool argument");
+    }}
+    return ((TransactionArgument.Bool) arg).value;
+}}
+
+private static @com.facebook.serde.Unsigned Byte decode_u8_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.U8)) {{
+        throw new IllegalArgumentException("Was expecting a U8 argument");
+    }}
+    return ((TransactionArgument.U8) arg).value;
+}}
+
+private static @com.facebook.serde.Unsigned Long decode_u64_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.U64)) {{
+        throw new IllegalArgumentException("Was expecting a U64 argument");
+    }}
+    return ((TransactionArgument.U64) arg).value;
+}}
+
+private static @com.facebook.serde.Unsigned @com.facebook.serde.Int128 BigInteger decode_u128_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.U128)) {{
+        throw new IllegalArgumentException("Was expecting a U128 argument");
+    }}
+    return ((TransactionArgument.U128) arg).value;
+}}
+
+private static AccountAddress decode_address_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.Address)) {{
+        throw new IllegalArgumentException("Was expecting an Address argument");
+    }}
+    return ((TransactionArgument.Address) arg).value;
+}}
+
+private static Bytes decode_u8vector_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.U8Vector)) {{
+        throw new IllegalArgumentException("Was expecting a U8Vector argument");
+    }}
+    return ((TransactionArgument.U8Vector) arg).value;
+}}
+"#
+        )
+    }
+
+    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+        writeln!(
+            self.out,
+            "\npublic static byte[] {}_CODE = {{{}}};",
+            abi.name().to_shouty_snake_case(),
+            abi.code()
+                .iter()
+                .map(|x| format!("{}", *x as i8))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )?;
+        Ok(())
+    }
+
+    fn quote_doc(doc: &str) -> String {
+        let doc = crate::common::prepare_doc_string(doc);
+        let text = textwrap::indent(&doc, " * ").replace("\n\n", "\n *\n");
+        format!("/**\n{} */\n", text)
+    }
+
+    fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
+        ty_args
+            .iter()
+            .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
+            .collect()
+    }
+
+    fn quote_parameters(args: &[ArgumentABI]) -> Vec<String> {
+        args.iter()
+            .map(|arg| format!("{} {}", Self::quote_type(arg.type_tag()), arg.name()))
+            .collect()
+    }
+
+    fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {
+        ty_args
+            .iter()
+            .map(|ty_arg| ty_arg.name().to_string())
             .collect::<Vec<_>>()
             .join(", ")
-    )
-}
-
-fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {
-    ty_args
-        .iter()
-        .map(|ty_arg| ty_arg.name().to_string())
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn quote_arguments(args: &[ArgumentABI]) -> String {
-    args.iter()
-        .map(|arg| make_transaction_argument(arg.type_tag(), arg.name()))
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn quote_type(type_tag: &TypeTag) -> String {
-    use TypeTag::*;
-    match type_tag {
-        Bool => "Boolean".into(),
-        U8 => "@Unsigned Byte".into(),
-        U64 => "@Unsigned Long".into(),
-        U128 => "@Unsigned @Int128 BigInteger".into(),
-        Address => "AccountAddress".into(),
-        Vector(type_tag) => match type_tag.as_ref() {
-            U8 => "Bytes".into(),
-            _ => type_not_allowed(type_tag),
-        },
-
-        Struct(_) | Signer => type_not_allowed(type_tag),
     }
-}
 
-fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
-    use TypeTag::*;
-    match type_tag {
-        Bool => format!("new TransactionArgument.Bool({})", name),
-        U8 => format!("new TransactionArgument.U8({})", name),
-        U64 => format!("new TransactionArgument.U64({})", name),
-        U128 => format!("new TransactionArgument.U128({})", name),
-        Address => format!("new TransactionArgument.Address({})", name),
-        Vector(type_tag) => match type_tag.as_ref() {
-            U8 => format!("new TransactionArgument.U8Vector({})", name),
-            _ => type_not_allowed(type_tag),
-        },
+    fn quote_arguments(args: &[ArgumentABI]) -> String {
+        args.iter()
+            .map(|arg| Self::make_transaction_argument(arg.type_tag(), arg.name()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
 
-        Struct(_) | Signer => type_not_allowed(type_tag),
+    fn quote_type(type_tag: &TypeTag) -> String {
+        use TypeTag::*;
+        match type_tag {
+            Bool => "Boolean".into(),
+            U8 => "@Unsigned Byte".into(),
+            U64 => "@Unsigned Long".into(),
+            U128 => "@Unsigned @Int128 BigInteger".into(),
+            Address => "AccountAddress".into(),
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => "Bytes".into(),
+                _ => type_not_allowed(type_tag),
+            },
+
+            Struct(_) | Signer => type_not_allowed(type_tag),
+        }
+    }
+
+    fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+        use TypeTag::*;
+        match type_tag {
+            Bool => format!("new TransactionArgument.Bool({})", name),
+            U8 => format!("new TransactionArgument.U8({})", name),
+            U64 => format!("new TransactionArgument.U64({})", name),
+            U128 => format!("new TransactionArgument.U128({})", name),
+            Address => format!("new TransactionArgument.Address({})", name),
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => format!("new TransactionArgument.U8Vector({})", name),
+                _ => type_not_allowed(type_tag),
+            },
+
+            Struct(_) | Signer => type_not_allowed(type_tag),
+        }
     }
 }
 
@@ -168,25 +447,10 @@ impl crate::SourceInstaller for Installer {
 
     fn install_transaction_builders(
         &self,
-        name: &str,
+        package_name: &str,
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
-        let parts = name.split('.').collect::<Vec<_>>();
-        let mut dir_path = self.install_dir.clone();
-        let mut package_name = None;
-        for part in &parts[..parts.len() - 1] {
-            dir_path = dir_path.join(part);
-            package_name = match package_name {
-                Some(previous) => Some(format!("{}.{}", previous, part)),
-                None => Some(part.to_string()),
-            };
-        }
-        let class_name = parts.last().unwrap().to_string();
-
-        std::fs::create_dir_all(&dir_path)?;
-
-        let mut file = std::fs::File::create(dir_path.join(class_name.clone() + ".java"))?;
-        output(&mut file, abis, package_name.as_deref(), &class_name)?;
+        write_source_files(self.install_dir.clone(), Some(package_name), abis)?;
         Ok(())
     }
 }

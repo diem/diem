@@ -72,3 +72,36 @@ pub(crate) fn make_abi_enum_container(abis: &[ScriptABI]) -> ContainerFormat {
     }
     ContainerFormat::Enum(variants)
 }
+
+pub(crate) fn mangle_type(type_tag: &TypeTag) -> String {
+    use TypeTag::*;
+    match type_tag {
+        Bool => "bool".into(),
+        U8 => "u8".into(),
+        U64 => "u64".into(),
+        U128 => "u128".into(),
+        Address => "address".into(),
+        Vector(type_tag) => match type_tag.as_ref() {
+            U8 => "u8vector".into(),
+            _ => type_not_allowed(type_tag),
+        },
+
+        Struct(_) | Signer => type_not_allowed(type_tag),
+    }
+}
+
+pub(crate) fn get_external_definitions(libra_types: &str) -> serde_generate::ExternalDefinitions {
+    let definitions = vec![(
+        libra_types,
+        vec!["AccountAddress", "TypeTag", "Script", "TransactionArgument"],
+    )];
+    definitions
+        .into_iter()
+        .map(|(module, defs)| {
+            (
+                module.to_string(),
+                defs.into_iter().map(String::from).collect(),
+            )
+        })
+        .collect()
+}

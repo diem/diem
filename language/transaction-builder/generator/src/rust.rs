@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::{make_abi_enum_container, type_not_allowed};
+use crate::common::{make_abi_enum_container, mangle_type, type_not_allowed};
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::rust::output_with_external_dependencies_and_comments;
@@ -441,23 +441,6 @@ fn quote_type(type_tag: &TypeTag, local_types: bool) -> String {
                     "Bytes".into()
                 }
             }
-            _ => type_not_allowed(type_tag),
-        },
-
-        Struct(_) | Signer => type_not_allowed(type_tag),
-    }
-}
-
-fn mangle_type(type_tag: &TypeTag) -> String {
-    use TypeTag::*;
-    match type_tag {
-        Bool => "bool".into(),
-        U8 => "u8".into(),
-        U64 => "u64".into(),
-        U128 => "u128".into(),
-        Address => "address".into(),
-        Vector(type_tag) => match type_tag.as_ref() {
-            U8 => "u8vector".into(),
             _ => type_not_allowed(type_tag),
         },
 

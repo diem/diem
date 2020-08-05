@@ -232,7 +232,7 @@ fn test_that_java_code_compiles_and_demo_runs() {
 
     let abi_installer = buildgen::java::Installer::new(dir.path().to_path_buf());
     abi_installer
-        .install_transaction_builders("org.libra.stdlib.Stdlib", &abis)
+        .install_transaction_builders("org.libra.stdlib", &abis)
         .unwrap();
 
     std::fs::copy(
@@ -266,9 +266,10 @@ fn test_that_java_code_compiles_and_demo_runs() {
         .arg("StdlibDemo")
         .output()
         .unwrap();
-    assert!(output.status.success());
+    assert_eq!(std::str::from_utf8(&output.stderr).unwrap(), String::new());
     assert_eq!(
         std::str::from_utf8(&output.stdout).unwrap(),
         EXPECTED_OUTPUT
     );
+    assert!(output.status.success());
 }

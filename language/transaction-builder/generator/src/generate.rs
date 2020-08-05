@@ -46,7 +46,7 @@ struct Options {
 
     /// Module name for the transaction builders installed in the `target_source_dir`.
     /// Rust crates may contain a version number, e.g. "test:1.2.0".
-    /// In Java, this is expected to be a class name, e.g. "com.test.Test" to create `com/test/Test.java`.
+    /// In Java, this is expected to be a package name, e.g. "com.test" to create Java files in `com/test`.
     #[structopt(long)]
     module_name: Option<String>,
 
@@ -82,14 +82,7 @@ fn main() {
                     buildgen::cpp::output(&mut out, &abis, options.module_name.as_deref()).unwrap()
                 }
                 Language::Java => {
-                    let module_name = options.module_name.as_deref().unwrap_or("Helpers");
-                    let parts = module_name.rsplitn(2, '.').collect::<Vec<_>>();
-                    let (package_name, class_name) = if parts.len() > 1 {
-                        (Some(parts[1]), parts[0])
-                    } else {
-                        (None, parts[0])
-                    };
-                    buildgen::java::output(&mut out, &abis, package_name, class_name).unwrap()
+                    panic!("Code generation in Java requires --target_source_dir");
                 }
             }
             return;
