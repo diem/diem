@@ -823,6 +823,14 @@ where
                         .observe_duration(time_to_strong_commit_1);
                 }
             }
+            if previous_voting_powers < verifier.quorum_voting_power() && *voting_powers >= verifier.quorum_voting_power() {
+                if let Some(time_to_strong_commit_0) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_0_S
+                        .observe_duration(time_to_strong_commit_0);
+                }
+            }
         }
         // self.print_strong_commit();
         Ok(())
