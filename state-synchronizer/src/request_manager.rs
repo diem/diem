@@ -275,7 +275,7 @@ impl RequestManager {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
             if self.multicast_level != prev_request.multicast_level {
-                // update multicast start time if multicast level changed
+                // restart multicast timer for this request if multicast level changed
                 prev_request.multicast_level = self.multicast_level;
                 prev_request.multicast_start_time = now;
             }
@@ -358,18 +358,11 @@ impl RequestManager {
     pub fn remove_requests(&mut self, version: u64) {
         // only remove requests that have timed out or sent to one peer, so we don't penalize for multicasted responses
         // that still came back on time, based on per-peer timeout
-        let now = SystemTime::now();
         let versions_to_remove = self
             .requests
             .range(..version + 1)
             .filter_map(|(version, req)| {
-                let is_timeout = req
-                    .last_request_time
-                    .checked_add(self.request_timeout)
-                    .map_or(false, |retry_deadline| {
-                        now.duration_since(retry_deadline).is_ok()
-                    });
-                if is_timeout || req.last_request_peers.len() == 1 {
+                if Self::is_timeout(req.last_request_time, self.request_timeout) {
                     Some(*version)
                 } else {
                     None
@@ -385,14 +378,9 @@ impl RequestManager {
     /// Checks whether the request sent for this version is timed out
     /// Returns true if request for this version timed out or there is no request for this, else false
     pub fn check_timeout(&mut self, version: u64) -> bool {
-        let start = SystemTime::now();
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 
-        let is_timeout = last_request_time
-            .checked_add(self.request_timeout)
-            .map_or(false, |retry_deadline| {
-                start.duration_since(retry_deadline).is_ok()
-            });
+        let is_timeout = Self::is_timeout(last_request_time, self.request_timeout);
         if !is_timeout {
             return is_timeout;
         }
@@ -408,13 +396,8 @@ impl RequestManager {
             self.update_score(peer, PeerScoreUpdateType::TimeOut);
         }
 
-        // increment multicast level if this request is also multicast-timedout
-        let is_multicast_timeout = last_request_time
-            .checked_add(self.multicast_timeout)
-            .map_or(false, |retry_deadline| {
-                start.duration_since(retry_deadline).is_ok()
-            });
-        if is_multicast_timeout {
+        // increment multicast level if this request is also multicast-timed-out
+        if Self::is_timeout(last_request_time, self.multicast_timeout) {
             self.multicast_level = std::cmp::min(
                 self.multicast_level + 1,
                 self.upstream_config.upstream_count(),
@@ -439,5 +422,15 @@ impl RequestManager {
     #[cfg(test)]
     pub fn peer_score(&self, peer: &PeerNetworkId) -> Option<f64> {
         self.peers.get(peer).map(|p| p.score)
+    }
+
+    // Returns whether the timeout for the given params has occurred, compared to SystemTime at function call
+    // returns true if the timeout (=`timeout_start + timeout_duration`) has happened, else false
+    fn is_timeout(timeout_start: SystemTime, timeout_duration: Duration) -> bool {
+        timeout_start
+            .checked_add(timeout_duration)
+            .map_or(false, |deadline| {
+                SystemTime::now().duration_since(deadline).is_ok()
+            })
     }
 }

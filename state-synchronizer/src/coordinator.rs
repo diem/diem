@@ -539,7 +539,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         Ok(())
     }
 
-    fn get_state(&self, callback: oneshot::Sender<SynchronizerState>) {
+    fn get_state(&mut self, callback: oneshot::Sender<SynchronizerState>) {
+        if let Err(e) = self.sync_state_with_local_storage() {
+            error!(
+                "[state sync] failed to sync with local storage for get_state request: {:?}",
+                e
+            );
+        }
         if callback.send(self.local_state.clone()).is_err() {
             error!("[state sync] failed to send internal state");
         }
