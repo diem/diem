@@ -8,8 +8,12 @@ pub mod storage_ext;
 #[cfg(test)]
 pub mod test_utils;
 
+use anyhow::{anyhow, Result};
 use libra_types::transaction::Version;
-use std::{mem::size_of, path::PathBuf};
+use std::{
+    mem::size_of,
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 use tokio::fs::metadata;
 
@@ -48,4 +52,18 @@ pub(crate) fn should_cut_chunk(chunk: &[u8], record: &[u8], max_chunk_size: usiz
 // TODO: use Path::exists() when Rust 1.5 stabilizes.
 pub(crate) async fn path_exists(path: &PathBuf) -> bool {
     metadata(&path).await.is_ok()
+}
+
+pub(crate) trait PathToString {
+    fn path_to_string(&self) -> Result<String>;
+}
+
+impl<T: AsRef<Path>> PathToString for T {
+    fn path_to_string(&self) -> Result<String> {
+        self.as_ref()
+            .to_path_buf()
+            .into_os_string()
+            .into_string()
+            .map_err(|s| anyhow!("into_string failed for OsString '{:?}'", s))
+    }
 }

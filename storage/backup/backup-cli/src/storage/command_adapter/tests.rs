@@ -20,10 +20,10 @@ fn get_store(tmpdir: &TempPath) -> Box<dyn BackupStorage> {
 
                 [commands]
                 create_backup = 'cd "$FOLDER" && mkdir $BACKUP_NAME && echo $BACKUP_NAME'
-                create_for_write = 'cd "$FOLDER" && cd "$BACKUP_HANDLE" && test ! -f $FILE_NAME && touch $FILE_NAME && echo `pwd`/$FILE_NAME && exec >&- && cat > $FILE_NAME'
-                open_for_read = 'cat "$FILE_HANDLE"'
+                create_for_write = 'cd "$FOLDER" && cd "$BACKUP_HANDLE" && test ! -f $FILE_NAME && touch $FILE_NAME && echo $BACKUP_HANDLE/$FILE_NAME && exec >&- && cat > $FILE_NAME'
+                open_for_read = 'cat "$FOLDER/$FILE_HANDLE"'
                 save_metadata_line= 'cd "$FOLDER" && mkdir -p metadata && cd metadata && cat > $FILE_NAME'
-                list_metadata_files = 'cd "$FOLDER" && (test -d metadata && cd metadata && ls -1 || exec) | while read f; do echo `pwd`/metadata/$f; done'
+                list_metadata_files = 'cd "$FOLDER" && (test -d metadata && cd metadata && ls -1 || exec) | while read f; do echo metadata/$f; done'
             "#, tmpdir.path().to_str().unwrap()),
     ).unwrap();
 
@@ -40,7 +40,7 @@ proptest! {
         let mut rt = Runtime::new().unwrap();
         let tmpdir = TempPath::new();
 
-        rt.block_on(test_write_and_read_impl(get_store(&tmpdir), &tmpdir, backups));
+        rt.block_on(test_write_and_read_impl(get_store(&tmpdir), backups));
     }
 
     #[test]

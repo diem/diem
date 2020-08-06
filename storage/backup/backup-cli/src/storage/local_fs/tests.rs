@@ -22,7 +22,7 @@ proptest! {
         let store = LocalFs::new(tmpdir.path().to_path_buf());
 
         let mut rt = Runtime::new().unwrap();
-        rt.block_on(test_write_and_read_impl(Box::new(store), &tmpdir, backups));
+        rt.block_on(test_write_and_read_impl(Box::new(store), backups));
     }
 
     #[test]
