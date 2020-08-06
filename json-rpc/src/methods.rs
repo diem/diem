@@ -301,6 +301,7 @@ async fn get_transactions(
         result.push(TransactionView {
             version: start_version + v as u64,
             hash: tx.hash().to_hex(),
+            bytes: lcs::to_bytes(&tx)?.into(),
             transaction: tx.into(),
             events,
             vm_status: info.status().into(),
@@ -342,6 +343,7 @@ async fn get_account_transaction(
         Ok(Some(TransactionView {
             version: tx_version,
             hash: tx.transaction.hash().to_hex(),
+            bytes: lcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().status().into(),
@@ -451,6 +453,7 @@ async fn get_account_transactions(
         all_txs.push(TransactionView {
             version: tx.version,
             hash: tx.transaction.hash().to_hex(),
+            bytes: lcs::to_bytes(&tx.transaction)?.into(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().status().into(),
