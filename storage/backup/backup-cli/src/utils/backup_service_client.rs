@@ -13,26 +13,26 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 #[derive(StructOpt)]
 pub struct BackupServiceClientOpt {
     #[structopt(
-        long = "backup-service-port",
-        default_value = "7777",
-        help = "Backup service port. The service must listen on localhost."
+        long = "backup-service-address",
+        default_value = "http://localhost:7777",
+        help = "Backup service address."
     )]
-    pub port: u16,
+    pub address: String,
 }
 
 pub struct BackupServiceClient {
-    port: u16,
+    address: String,
     client: reqwest::Client,
 }
 
 impl BackupServiceClient {
     pub fn new_with_opt(opt: BackupServiceClientOpt) -> Self {
-        Self::new(opt.port)
+        Self::new(opt.address)
     }
 
-    pub fn new(port: u16) -> Self {
+    pub fn new(address: String) -> Self {
         Self {
-            port,
+            address,
             client: reqwest::Client::builder()
                 .no_proxy()
                 .build()
@@ -43,7 +43,7 @@ impl BackupServiceClient {
     async fn get(&self, path: &str) -> Result<impl AsyncRead> {
         Ok(self
             .client
-            .get(&format!("http://localhost:{}/{}", self.port, path))
+            .get(&format!("{}/{}", self.address, path))
             .send()
             .await?
             .error_for_status()?

@@ -32,7 +32,10 @@ fn end_to_end() {
 
     let port = get_available_port();
     let mut rt = start_backup_service(port, src_db);
-    let client = Arc::new(BackupServiceClient::new(port));
+    let client = Arc::new(BackupServiceClient::new(format!(
+        "http://localhost:{}",
+        port
+    )));
 
     let latest_version = blocks.last().unwrap().1.ledger_info().version();
     let total_txns = blocks.iter().fold(0, |x, b| x + b.0.len());

@@ -30,7 +30,10 @@ fn end_to_end() {
 
     let port = get_available_port();
     let mut rt = start_backup_service(port, src_db);
-    let client = Arc::new(BackupServiceClient::new(port));
+    let client = Arc::new(BackupServiceClient::new(format!(
+        "http://localhost:{}",
+        port
+    )));
 
     let latest_epoch = blocks.last().unwrap().1.ledger_info().next_block_epoch();
     let target_version = blocks[blocks.len() / 2].1.ledger_info().version() + 1;

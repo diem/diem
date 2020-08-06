@@ -36,7 +36,10 @@ fn end_to_end() {
 
     let port = get_available_port();
     let mut rt = start_backup_service(port, src_db);
-    let client = Arc::new(BackupServiceClient::new(port));
+    let client = Arc::new(BackupServiceClient::new(format!(
+        "http://localhost:{}",
+        port
+    )));
 
     let manifest_handle = rt
         .block_on(

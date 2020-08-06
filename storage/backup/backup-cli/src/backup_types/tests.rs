@@ -70,7 +70,10 @@ fn test_end_to_end_impl(d: TestData) {
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
     let port = get_available_port();
     let mut rt = start_backup_service(port, Arc::clone(&d.db));
-    let client = Arc::new(BackupServiceClient::new(port));
+    let client = Arc::new(BackupServiceClient::new(format!(
+        "http://localhost:{}",
+        port
+    )));
     let num_txns_to_backup = d.target_ver - d.txn_start_ver + 1;
 
     // Backup
