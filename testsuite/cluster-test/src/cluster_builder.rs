@@ -4,7 +4,11 @@
 use crate::{
     aws,
     cluster::Cluster,
-    cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
+    cluster_swarm::{
+        cluster_swarm_kube::{ClusterSwarmKube, KubeNode},
+        ClusterSwarm,
+    },
+    genesis_helper::GenesisHelper,
     instance::{
         fullnode_pod_name, lsr_pod_name, validator_pod_name, vault_pod_name,
         ApplicationConfig::{Fullnode, Validator, Vault, LSR},
@@ -13,9 +17,30 @@ use crate::{
     },
 };
 use anyhow::{format_err, Result};
-use futures::{future::try_join_all, try_join};
+use futures::future::try_join_all;
 use libra_logger::info;
+use std::{
+    fs::{self, File},
+    io::Write,
+    path::Path,
+};
 use structopt::StructOpt;
+
+use libra_genesis_tool::layout::Layout;
+use libra_global_constants::{
+    CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
+    VALIDATOR_NETWORK_KEY,
+};
+use libra_network_address::NetworkAddress;
+use libra_secure_storage::{CryptoStorage, VaultStorage};
+use libra_types::chain_id::ChainId;
+use std::str::FromStr;
+
+const VAULT_TOKEN: &str = "root";
+const VAULT_PORT: u32 = 8200;
+const LIBRA_ROOT_NAME: &str = "libra";
+const VAULT_BACKEND: &str = "vault";
+const GENESIS_PATH: &str = "/tmp/genesis.blob";
 
 #[derive(Clone, StructOpt, Debug)]
 pub struct ClusterBuilderParams {
@@ -163,8 +188,9 @@ impl ClusterBuilder {
                     })
                     .collect();
                 vaults.append(&mut vault_instances);
+            } else {
+                vault_nodes = vec![];
             }
-
             lsrs_nodes = try_join_all((0..num_validators).map(|i| async move {
                 let pod_name = lsr_pod_name(i);
                 self.cluster_swarm.allocate_node(&pod_name).await
@@ -191,13 +217,47 @@ impl ClusterBuilder {
                 })
                 .collect();
             lsrs.append(&mut lsr_instances);
+        } else {
+            vault_nodes = vec![];
         }
+
+        let lsrs = try_join_all(lsrs).await?;
+        let vaults = try_join_all(vaults).await?;
 
         let validator_nodes = try_join_all((0..num_validators).map(|i| async move {
             let pod_name = validator_pod_name(i);
             self.cluster_swarm.allocate_node(&pod_name).await
         }))
         .await?;
+
+        let fullnode_nodes = try_join_all((0..num_validators).flat_map(move |validator_index| {
+            (0..num_fullnodes_per_validator).map(move |fullnode_index| async move {
+                let pod_name = fullnode_pod_name(validator_index, fullnode_index);
+                self.cluster_swarm.allocate_node(&pod_name).await
+            })
+        }))
+        .await?;
+
+        if !vault_nodes.is_empty() {
+            info!("Generating genesis with management tool.");
+            try_join_all(vault_nodes.iter().enumerate().map(|(i, node)| async move {
+                libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+                    Box::pin(async move { self.initialize_vault(i as u32, node).await })
+                })
+                .await
+            }))
+            .await?;
+
+            self.generate_genesis(
+                num_validators,
+                &vault_nodes,
+                &validator_nodes,
+                &fullnode_nodes,
+            )
+            .await?;
+            info!("Done generating genesis.");
+        }
+
         let validators = (0..num_validators).map(|i| {
             let validator_nodes = &validator_nodes;
             let lsrs_nodes = &lsrs_nodes;
@@ -231,13 +291,6 @@ impl ClusterBuilder {
             }
         });
 
-        let fullnode_nodes = try_join_all((0..num_validators).flat_map(move |validator_index| {
-            (0..num_fullnodes_per_validator).map(move |fullnode_index| async move {
-                let pod_name = fullnode_pod_name(validator_index, fullnode_index);
-                self.cluster_swarm.allocate_node(&pod_name).await
-            })
-        }))
-        .await?;
         let fullnodes = (0..num_validators).flat_map(|validator_index| {
             let fullnode_nodes = &fullnode_nodes;
             let validator_nodes = &validator_nodes;
@@ -272,11 +325,198 @@ impl ClusterBuilder {
             })
         });
 
-        try_join!(
-            try_join_all(validators),
-            try_join_all(lsrs),
-            try_join_all(vaults),
-            try_join_all(fullnodes),
+        let validators = try_join_all(validators).await?;
+        let fullnodes = try_join_all(fullnodes).await?;
+        Ok((validators, lsrs, vaults, fullnodes))
+    }
+
+    async fn initialize_vault(&self, validator_index: u32, vault_node: &KubeNode) -> Result<()> {
+        let addr = vault_node.internal_ip.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut vault_storage = Box::new(VaultStorage::new(
+                format!("http://{}:{}", addr, VAULT_PORT),
+                VAULT_TOKEN.to_string(),
+                None,
+                None,
+            ));
+            if validator_index == 0 {
+                let libra_root_key = format!("{}__{}", LIBRA_ROOT_NAME, LIBRA_ROOT_KEY);
+                vault_storage
+                    .create_key(&libra_root_key)
+                    .map_err(|e| format_err!("Failed to create {} : {}", libra_root_key, e))?;
+            }
+            let pod_name = validator_pod_name(validator_index);
+            let keys = vec![
+                OWNER_KEY,
+                OPERATOR_KEY,
+                CONSENSUS_KEY,
+                EXECUTION_KEY,
+                VALIDATOR_NETWORK_KEY,
+                FULLNODE_NETWORK_KEY,
+            ];
+            for key in keys {
+                let key = format!("{}__{}", pod_name, key);
+                vault_storage
+                    .create_key(&key)
+                    .map_err(|e| format_err!("Failed to create {} : {}", key, e))?;
+            }
+            Ok::<(), anyhow::Error>(())
+        })
+        .await??;
+        Ok(())
+    }
+
+    async fn generate_genesis(
+        &self,
+        num_validators: u32,
+        vault_nodes: &[KubeNode],
+        validator_nodes: &[KubeNode],
+        fullnode_nodes: &[KubeNode],
+    ) -> Result<()> {
+        let genesis_helper = GenesisHelper::new("/tmp/genesis.json");
+        let owners: Vec<_> = (0..num_validators).map(validator_pod_name).collect();
+        let layout = Layout {
+            owners: owners.clone(),
+            operators: owners,
+            libra_root: vec![LIBRA_ROOT_NAME.to_string()],
+        };
+        let layout_path = "/tmp/layout.yaml";
+        write!(
+            File::create(layout_path).map_err(|e| format_err!(
+                "Failed to create {} : {}",
+                layout_path,
+                e
+            ))?,
+            "{}",
+            toml::to_string(&layout)?
         )
+        .map_err(|e| format_err!("Failed to write {} : {}", layout_path, e))?;
+        let token_path = "/tmp/token";
+        write!(
+            File::create(token_path).map_err(|e| format_err!(
+                "Failed to create {} : {}",
+                token_path,
+                e
+            ))?,
+            "{}",
+            VAULT_TOKEN
+        )
+        .map_err(|e| format_err!("Failed to write {} : {}", token_path, e))?;
+        genesis_helper
+            .set_layout(layout_path, "common")
+            .await
+            .map_err(|e| format_err!("Failed to set_layout : {}", e))?;
+        genesis_helper
+            .libra_root_key(
+                VAULT_BACKEND,
+                format!("http://{}:{}", vault_nodes[0].internal_ip, VAULT_PORT).as_str(),
+                token_path,
+                LIBRA_ROOT_NAME,
+                LIBRA_ROOT_NAME,
+            )
+            .await
+            .map_err(|e| format_err!("Failed to libra_root_key : {}", e))?;
+
+        for (i, node) in vault_nodes.iter().enumerate() {
+            let pod_name = validator_pod_name(i as u32);
+            genesis_helper
+                .owner_key(
+                    VAULT_BACKEND,
+                    format!("http://{}:{}", node.internal_ip, VAULT_PORT).as_str(),
+                    token_path,
+                    &pod_name,
+                    &pod_name,
+                )
+                .await
+                .map_err(|e| format_err!("Failed to owner_key for {} : {}", pod_name, e))?;
+            genesis_helper
+                .operator_key(
+                    VAULT_BACKEND,
+                    format!("http://{}:{}", node.internal_ip, VAULT_PORT).as_str(),
+                    token_path,
+                    &pod_name,
+                    &pod_name,
+                )
+                .await
+                .map_err(|e| format_err!("Failed to operator_key for {} : {}", pod_name, e))?;
+            genesis_helper
+                .validator_config(
+                    &pod_name,
+                    NetworkAddress::from_str(
+                        format!("/ip4/{}/tcp/{}", validator_nodes[i].internal_ip, 6180).as_str(),
+                    )
+                    .expect("Failed to parse network address"),
+                    NetworkAddress::from_str(
+                        format!("/ip4/{}/tcp/{}", fullnode_nodes[i].internal_ip, 6180).as_str(),
+                    )
+                    .expect("Failed to parse network address"),
+                    ChainId::new(1),
+                    VAULT_BACKEND,
+                    format!("http://{}:{}", node.internal_ip, VAULT_PORT).as_str(),
+                    token_path,
+                    &pod_name,
+                    &pod_name,
+                )
+                .await
+                .map_err(|e| format_err!("Failed to validator_config for {} : {}", pod_name, e))?;
+            genesis_helper
+                .set_operator(&pod_name, &pod_name)
+                .await
+                .map_err(|e| format_err!("Failed to set_operator for {} : {}", pod_name, e))?;
+        }
+        genesis_helper
+            .genesis(ChainId::new(1), Path::new(GENESIS_PATH))
+            .await?;
+        for (i, node) in vault_nodes.iter().enumerate() {
+            let pod_name = validator_pod_name(i as u32);
+            genesis_helper
+                .create_and_insert_waypoint(
+                    ChainId::new(1),
+                    VAULT_BACKEND,
+                    format!("http://{}:{}", node.internal_ip, VAULT_PORT).as_str(),
+                    token_path,
+                    &pod_name,
+                )
+                .await
+                .map_err(|e| {
+                    format_err!(
+                        "Failed to create_and_insert_waypoint for {} : {}",
+                        pod_name,
+                        e
+                    )
+                })?;
+        }
+        genesis_helper
+            .extract_private_key(
+                format!("{}__{}", LIBRA_ROOT_NAME, LIBRA_ROOT_KEY).as_str(),
+                "/tmp/mint.key",
+                VAULT_BACKEND,
+                format!("http://{}:{}", vault_nodes[0].internal_ip, VAULT_PORT).as_str(),
+                token_path,
+            )
+            .await
+            .map_err(|e| format_err!("Failed to extract_private_key : {}", e))?;
+
+        try_join_all(
+            validator_nodes
+                .iter()
+                .enumerate()
+                .map(|(i, node)| async move {
+                    let genesis = fs::read(GENESIS_PATH)
+                        .map_err(|e| format_err!("Failed to read {} : {}", GENESIS_PATH, e))?;
+                    self.cluster_swarm
+                        .put_file(
+                            &node.name,
+                            validator_pod_name(i as u32).as_str(),
+                            "/opt/libra/etc/genesis2.blob",
+                            genesis,
+                        )
+                        .await
+                }),
+        )
+        .await
+        .map_err(|e| format_err!("Failed to copy genesis.blob to validator nodes : {}", e))?;
+
+        Ok(())
     }
 }

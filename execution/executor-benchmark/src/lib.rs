@@ -39,7 +39,6 @@ use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use transaction_builder::{
     encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
-    encode_testnet_mint_script,
 };
 
 struct AccountData {
@@ -151,7 +150,13 @@ impl TransactionGenerator {
                     (i * block_size + j) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_testnet_mint_script(coin1_tag(), account.address, init_account_balance),
+                    encode_peer_to_peer_with_metadata_script(
+                        coin1_tag(),
+                        account.address,
+                        init_account_balance,
+                        vec![],
+                        vec![],
+                    ),
                 );
                 transactions.push(txn);
             }

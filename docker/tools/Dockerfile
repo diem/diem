@@ -24,11 +24,13 @@ RUN ./docker/build-common.sh
 ### Production Image ###
 FROM debian:buster-slim AS prod
 
-RUN apt-get update && apt-get -y install socat && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install socat awscli && apt-get clean && rm -r /var/lib/apt/lists/*
 
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
 COPY --from=builder /libra/target/release/db-bootstrapper /usr/local/bin
+COPY --from=builder /libra/target/release/db-backup /usr/local/bin
+COPY --from=builder /libra/target/release/db-restore /usr/local/bin
 
 ARG BUILD_DATE
 ARG GIT_REV

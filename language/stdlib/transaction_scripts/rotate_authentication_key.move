@@ -3,7 +3,6 @@ use 0x1::LibraAccount;
 
 // imports for the prover
 use 0x1::Signer;
-use 0x1::Option;
 
 /// Rotate the sender's authentication key to `new_key`.
 /// `new_key` should be a 256 bit sha3 hash of an ed25519 public key.
@@ -18,18 +17,14 @@ fun rotate_authentication_key(account: &signer, new_key: vector<u8>) {
 }
 spec fun rotate_authentication_key {
     pragma verify = true;
+    let account_addr = Signer::spec_address_of(account);
     /// This rotates the authentication key of `account` to `new_key`
-    ensures LibraAccount::spec_rotate_authentication_key(Signer::spec_address_of(account), new_key);
+    ensures LibraAccount::spec_rotate_authentication_key(account_addr, new_key);
 
     /// If the sending account doesn't exist this will abort
-    aborts_if !exists<LibraAccount::LibraAccount>(Signer::spec_address_of(account));
+    aborts_if !exists<LibraAccount::LibraAccount>(account_addr);
     /// `account` must not have delegated its rotation capability
-    aborts_if LibraAccount::spec_delegated_key_rotation_capability(Signer::spec_address_of(account));
-    /// `account` must hold its own rotation capability
-    aborts_if LibraAccount::spec_key_rotation_capability_address(
-                Option::spec_get(
-                    LibraAccount::spec_get_key_rotation_cap(Signer::spec_address_of(account))
-              )) != Signer::spec_address_of(account);
+    aborts_if LibraAccount::spec_delegated_key_rotation_cap(account_addr);
     /// `new_key`'s length must be `32`.
     aborts_if len(new_key) != 32;
 }

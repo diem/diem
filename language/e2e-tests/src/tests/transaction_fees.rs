@@ -14,9 +14,7 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use std::convert::TryFrom;
-use transaction_builder::{
-    encode_burn_txn_fees_script, encode_create_testing_account_script, encode_testnet_mint_script,
-};
+use transaction_builder::*;
 
 #[test]
 fn burn_txn_fees() {
@@ -41,10 +39,12 @@ fn burn_txn_fees() {
 
     executor.execute_and_apply(
         dd.transaction()
-            .script(encode_testnet_mint_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *sender.address(),
                 10_000_000,
+                vec![],
+                vec![],
             ))
             .sequence_number(0)
             .sign(),

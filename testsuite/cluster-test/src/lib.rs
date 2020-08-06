@@ -8,6 +8,7 @@ pub mod cluster_builder;
 pub mod cluster_swarm;
 pub mod effects;
 pub mod experiments;
+pub mod genesis_helper;
 pub mod github;
 pub mod health;
 pub mod instance;

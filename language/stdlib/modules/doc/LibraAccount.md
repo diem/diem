@@ -2185,8 +2185,8 @@ a writeset transaction is committed.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>ensures</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>aborts_if</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_cap">spec_delegated_key_rotation_cap</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_cap">spec_delegated_key_rotation_cap</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 </code></pre>
 
 
@@ -2203,7 +2203,7 @@ a writeset transaction is committed.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
-<b>aborts_if</b> !<a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(cap.account_address);
+<b>aborts_if</b> !<a href="#0x1_LibraAccount_spec_delegated_key_rotation_cap">spec_delegated_key_rotation_cap</a>(cap.account_address);
 <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
 </code></pre>
 
@@ -2266,14 +2266,14 @@ Returns true if the LibraAccount at
 
 
 Returns true if the LibraAccount at
-<code>addr</code> holds a
+<code>addr</code> does not hold a
 <code><a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a></code>.
 
 
-<a name="0x1_LibraAccount_spec_delegated_key_rotation_capability"></a>
+<a name="0x1_LibraAccount_spec_delegated_key_rotation_cap"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_capability">spec_delegated_key_rotation_capability</a>(addr: address): bool {
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_delegated_key_rotation_cap">spec_delegated_key_rotation_cap</a>(addr: address): bool {
     <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
 }
 </code></pre>
@@ -2293,9 +2293,62 @@ Returns true if
 <b>define</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr: address): bool {
     <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability)
 }
+</code></pre>
+
+
+Returns field
+<code>withdrawal_capability</code> of LibraAccount under
+<code>addr</code>.
+
+
+<a name="0x1_LibraAccount_spec_get_withdraw_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>&gt; {
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability
+}
+</code></pre>
+
+
+Returns true if the LibraAccount at
+<code>addr</code> holds a
+<code><a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code>.
+
+
 <a name="0x1_LibraAccount_spec_has_withdraw_cap"></a>
-<b>define</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr: address): bool {
-    <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability)
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr: address): bool {
+    <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr))
+}
+</code></pre>
+
+
+Returns true if the LibraAccount at
+<code>addr</code> does not hold a
+<code><a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code>.
+
+
+<a name="0x1_LibraAccount_spec_delegated_withdraw_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_delegated_withdraw_cap">spec_delegated_withdraw_cap</a>(addr: address): bool {
+    <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr))
+}
+</code></pre>
+
+
+Returns true if the LibraAccount at
+<code>addr</code> holds
+<code><a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for itself.
+
+
+<a name="0x1_LibraAccount_spec_holds_own_withdraw_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr: address): bool {
+    <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr)
+    && addr == <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address
 }
 </code></pre>
 
@@ -2336,4 +2389,23 @@ the permission "WithdrawalCapability(addr)" is granted to the account at addr [B
 
 
 <pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a>{account: new_account} <b>to</b> make_account;
+</code></pre>
+
+
+
+The LibraAccount under addr holds either no withdraw capability
+(withdraw cap has been delegated) or the withdraw capability for addr itself.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1):
+    <a href="#0x1_LibraAccount_spec_delegated_withdraw_cap">spec_delegated_withdraw_cap</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr1);
+</code></pre>
+
+
+The LibraAccount under addr holds either no key rotation capability
+(key rotation cap has been delegated) or the key rotation capability for addr itself.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1):
+    <a href="#0x1_LibraAccount_spec_delegated_key_rotation_cap">spec_delegated_key_rotation_cap</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
 </code></pre>

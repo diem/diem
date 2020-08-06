@@ -28,6 +28,7 @@ rusoto_autoscaling = { version = "0.45.0", default-features = false, features = 
 rusoto_sts = { version = "0.45.0", default-features = false, features = ["rustls"] }
 rusoto_s3 = { version = "0.45.0", default-features = false, features = ["rustls"] }
 chrono = "0.4.13"
+toml = { version = "0.5.6", default-features = false }
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
@@ -38,7 +39,13 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
+libra-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
+libra-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
+libra-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
+libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
 libra-trace = {path = "../../common/trace", version = "0.1.0"}
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
