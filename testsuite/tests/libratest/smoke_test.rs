@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend, WaypointConfig};
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
@@ -1156,18 +1156,11 @@ fn test_e2e_modify_publishing_option() {
         1
     );
 
-    client_proxy
-        .disable_custom_script(&["disable_custom_script"], true)
-        .unwrap();
+    let hash = hex::encode(&HashValue::random().to_vec());
 
-    // mint another 10 coins after restart
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
+        .add_to_script_allow_list(&["add_to_script_allow_list", hash.as_str()], true)
         .unwrap();
-    assert!(compare_balances(
-        vec![(20.0, "Coin1".to_string())],
-        client_proxy.get_balances(&["b", "0"]).unwrap(),
-    ));
 
     // Now that publishing option was changed to locked, this transaction will be rejected.
     assert!(format!(

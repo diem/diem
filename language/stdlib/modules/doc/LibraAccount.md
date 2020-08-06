@@ -50,7 +50,9 @@
 -  [Function `withdraw_capability_address`](#0x1_LibraAccount_withdraw_capability_address)
 -  [Function `key_rotation_capability_address`](#0x1_LibraAccount_key_rotation_capability_address)
 -  [Function `exists_at`](#0x1_LibraAccount_exists_at)
--  [Function `prologue`](#0x1_LibraAccount_prologue)
+-  [Function `module_prologue`](#0x1_LibraAccount_module_prologue)
+-  [Function `script_prologue`](#0x1_LibraAccount_script_prologue)
+-  [Function `prologue_common`](#0x1_LibraAccount_prologue_common)
 -  [Function `epilogue`](#0x1_LibraAccount_epilogue)
 -  [Function `success_epilogue`](#0x1_LibraAccount_success_epilogue)
 -  [Function `failure_epilogue`](#0x1_LibraAccount_failure_epilogue)
@@ -1735,18 +1737,14 @@ Checks if an account exists at
 
 </details>
 
-<a name="0x1_LibraAccount_prologue"></a>
+<a name="0x1_LibraAccount_module_prologue"></a>
 
-## Function `prologue`
+## Function `module_prologue`
 
-The prologue is invoked at the beginning of every transaction
-It verifies:
-- The account's auth key matches the transaction's public key
-- That the account has enough balance to pay for all of the gas
-- That the sequence number matches the transaction's sequence key
+The prologue for module transaction
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue">prologue</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8)
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_module_prologue">module_prologue</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8)
 </code></pre>
 
 
@@ -1755,14 +1753,111 @@ It verifies:
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue">prologue</a>&lt;Token&gt;(
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_module_prologue">module_prologue</a>&lt;Token&gt;(
     sender: &signer,
     txn_sequence_number: u64,
     txn_public_key: vector&lt;u8&gt;,
     txn_gas_price: u64,
     txn_max_gas_units: u64,
     txn_expiration_time: u64,
-    chain_id: u8
+    chain_id: u8,
+) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
+    <b>assert</b>(
+        <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">LibraTransactionPublishingOption::is_module_allowed</a>(sender),
+        EPROLOGUE_MODULE_NOT_ALLOWED
+    );
+
+    <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
+        sender,
+        txn_sequence_number,
+        txn_public_key,
+        txn_gas_price,
+        txn_max_gas_units,
+        txn_expiration_time,
+        chain_id,
+    )
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_script_prologue"></a>
+
+## Function `script_prologue`
+
+The prologue for script transaction
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_script_prologue">script_prologue</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8, script_hash: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_script_prologue">script_prologue</a>&lt;Token&gt;(
+    sender: &signer,
+    txn_sequence_number: u64,
+    txn_public_key: vector&lt;u8&gt;,
+    txn_gas_price: u64,
+    txn_max_gas_units: u64,
+    txn_expiration_time: u64,
+    chain_id: u8,
+    script_hash: vector&lt;u8&gt;,
+) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
+    <b>assert</b>(
+        <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">LibraTransactionPublishingOption::is_script_allowed</a>(sender, &script_hash),
+        EPROLOGUE_SCRIPT_NOT_ALLOWED
+    );
+
+    <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
+        sender,
+        txn_sequence_number,
+        txn_public_key,
+        txn_gas_price,
+        txn_max_gas_units,
+        txn_expiration_time,
+        chain_id,
+    )
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_prologue_common"></a>
+
+## Function `prologue_common`
+
+The common prologue is invoked at the beginning of every transaction
+It verifies:
+- The account's auth key matches the transaction's public key
+- That the account has enough balance to pay for all of the gas
+- That the sequence number matches the transaction's sequence key
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
+    sender: &signer,
+    txn_sequence_number: u64,
+    txn_public_key: vector&lt;u8&gt;,
+    txn_gas_price: u64,
+    txn_max_gas_units: u64,
+    txn_expiration_time: u64,
+    chain_id: u8,
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
 
@@ -2367,7 +2462,7 @@ After genesis, the
 
 
 
-<a name="0x1_LibraAccount_account_addr$55"></a>
+<a name="0x1_LibraAccount_account_addr$57"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);

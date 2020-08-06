@@ -20,12 +20,11 @@ mod libra_version;
 mod registered_currencies;
 mod validator_set;
 mod vm_config;
+mod vm_publishing_option;
 
 pub use self::{
-    libra_version::LibraVersion,
-    registered_currencies::RegisteredCurrencies,
-    validator_set::ValidatorSet,
-    vm_config::{ModulePublishingOption, ScriptPublishingOption, VMConfig, VMPublishingOption},
+    libra_version::LibraVersion, registered_currencies::RegisteredCurrencies,
+    validator_set::ValidatorSet, vm_config::VMConfig, vm_publishing_option::VMPublishingOption,
 };
 
 /// To register an on-chain config in Rust:
@@ -53,6 +52,7 @@ impl ConfigID {
 /// State sync will panic if the value of any config in this registry is uninitialized
 pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     VMConfig::CONFIG_ID,
+    VMPublishingOption::CONFIG_ID,
     LibraVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,

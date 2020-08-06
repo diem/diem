@@ -21,13 +21,12 @@ module FooConfig {
 
 //! new-transaction
 //! sender: libraroot
-//! args: x"0100010000000000000000000000000a550c18",
-// Step 2: Change option to CustomScript
+// Step 2: Change option to CustomModule
 script {
-use 0x1::LibraVMConfig;
+use 0x1::LibraTransactionPublishingOption;
 
-fun main(config: &signer, args: vector<u8>) {
-    LibraVMConfig::set_publishing_option(config, args)
+fun main(config: &signer) {
+    LibraTransactionPublishingOption::set_open_module(config, false)
 }
 }
 

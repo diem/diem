@@ -9,7 +9,6 @@
 -  [Struct `GasSchedule`](#0x1_LibraVMConfig_GasSchedule)
 -  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
 -  [Function `initialize`](#0x1_LibraVMConfig_initialize)
--  [Function `set_publishing_option`](#0x1_LibraVMConfig_set_publishing_option)
 -  [Specification](#0x1_LibraVMConfig_Specification)
 
 
@@ -30,13 +29,6 @@
 
 
 <dl>
-<dt>
-
-<code>publishing_option: vector&lt;u8&gt;</code>
-</dt>
-<dd>
-
-</dd>
 <dt>
 
 <code>gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">LibraVMConfig::GasSchedule</a></code>
@@ -199,7 +191,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -210,7 +202,6 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(
     lr_account: &signer,
-    publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
 ) {
@@ -236,7 +227,6 @@
     <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
         lr_account,
         <a href="#0x1_LibraVMConfig">LibraVMConfig</a> {
-            publishing_option,
             gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">GasSchedule</a> {
                 instruction_schedule,
                 native_schedule,
@@ -244,33 +234,6 @@
             }
         },
     );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraVMConfig_set_publishing_option"></a>
-
-## Function `set_publishing_option`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;) {
-    // TODO: who is allowed <b>to</b> do this?
-    <b>let</b> current_config = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
-    current_config.publishing_option = publishing_option;
-    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(account, current_config);
 }
 </code></pre>
 

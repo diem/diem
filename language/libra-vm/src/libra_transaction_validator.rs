@@ -9,7 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{self, RoleId},
-    on_chain_config::{LibraVersion, VMConfig},
+    on_chain_config::{LibraVersion, VMConfig, VMPublishingOption},
     transaction::{
         GovernanceRole, SignatureCheckedTransaction, SignedTransaction, TransactionPayload,
         VMValidatorResult,
@@ -32,8 +32,16 @@ impl LibraVMValidator {
         Self(LibraVMImpl::new(state))
     }
 
-    pub fn init_with_config(version: LibraVersion, on_chain_config: VMConfig) -> Self {
-        LibraVMValidator(LibraVMImpl::init_with_config(version, on_chain_config))
+    pub fn init_with_config(
+        version: LibraVersion,
+        on_chain_config: VMConfig,
+        publishing_option: VMPublishingOption,
+    ) -> Self {
+        LibraVMValidator(LibraVMImpl::init_with_config(
+            version,
+            on_chain_config,
+            publishing_option,
+        ))
     }
 
     fn verify_transaction_impl(
@@ -46,10 +54,9 @@ impl LibraVMValidator {
         let mut session = self.0.new_session(remote_cache);
         let mut cost_strategy = CostStrategy::system(self.0.get_gas_schedule()?, GasUnits::new(0));
         match transaction.payload() {
-            TransactionPayload::Script(script) => {
+            TransactionPayload::Script(_script) => {
                 self.0.check_gas(&txn_data)?;
-                self.0.is_allowed_script(script)?;
-                self.0.run_prologue(
+                self.0.run_script_prologue(
                     &mut session,
                     &mut cost_strategy,
                     &txn_data,
@@ -58,8 +65,7 @@ impl LibraVMValidator {
             }
             TransactionPayload::Module(_module) => {
                 self.0.check_gas(&txn_data)?;
-                self.0.is_allowed_module(&txn_data, remote_cache)?;
-                self.0.run_prologue(
+                self.0.run_module_prologue(
                     &mut session,
                     &mut cost_strategy,
                     &txn_data,

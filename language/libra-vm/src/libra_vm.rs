@@ -3,7 +3,7 @@
 
 use crate::{
     access_path_cache::AccessPathCache,
-    data_cache::{RemoteStorage, StateViewCache},
+    data_cache::RemoteStorage,
     errors::{
         convert_normal_prologue_error, convert_normal_success_epilogue_error,
         convert_write_set_prologue_error, expect_only_successful_execution,
@@ -18,8 +18,8 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     event::EventKey,
-    on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig},
-    transaction::{ChangeSet, Script, TransactionOutput, TransactionStatus},
+    on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig, VMPublishingOption},
+    transaction::{ChangeSet, TransactionOutput, TransactionStatus},
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -47,6 +47,7 @@ pub struct LibraVMImpl {
     move_vm: Arc<MoveVM>,
     on_chain_config: Option<VMConfig>,
     version: Option<LibraVersion>,
+    publishing_option: Option<VMPublishingOption>,
 }
 
 impl LibraVMImpl {
@@ -57,17 +58,23 @@ impl LibraVMImpl {
             move_vm: Arc::new(inner),
             on_chain_config: None,
             version: None,
+            publishing_option: None,
         };
         vm.load_configs_impl(&RemoteStorage::new(state));
         vm
     }
 
-    pub fn init_with_config(version: LibraVersion, on_chain_config: VMConfig) -> Self {
+    pub fn init_with_config(
+        version: LibraVersion,
+        on_chain_config: VMConfig,
+        publishing_option: VMPublishingOption,
+    ) -> Self {
         let inner = MoveVM::new();
         Self {
             move_vm: Arc::new(inner),
             on_chain_config: Some(on_chain_config),
             version: Some(version),
+            publishing_option: Some(publishing_option),
         }
     }
 
@@ -76,9 +83,9 @@ impl LibraVMImpl {
         LibraVMInternals(self)
     }
 
-    pub(crate) fn on_chain_config(&self) -> Result<&VMConfig, VMStatus> {
-        self.on_chain_config.as_ref().ok_or_else(|| {
-            error!("VM Startup Failed. On Chain Config Not Found");
+    pub(crate) fn publishing_option(&self) -> Result<&VMPublishingOption, VMStatus> {
+        self.publishing_option.as_ref().ok_or_else(|| {
+            error!("VM Startup Failed. PublishingOption Not Found");
             VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
         })
     }
@@ -86,6 +93,7 @@ impl LibraVMImpl {
     fn load_configs_impl<S: ConfigStorage>(&mut self, data_cache: &S) {
         self.on_chain_config = VMConfig::fetch_config(data_cache);
         self.version = LibraVersion::fetch_config(data_cache);
+        self.publishing_option = VMPublishingOption::fetch_config(data_cache);
     }
 
     pub fn get_gas_schedule(&self) -> Result<&CostTable, VMStatus> {
@@ -178,39 +186,9 @@ impl LibraVMImpl {
         Ok(())
     }
 
-    pub(crate) fn is_allowed_script(&self, script: &Script) -> Result<(), VMStatus> {
-        if !self
-            .on_chain_config()?
-            .publishing_option
-            .is_allowed_script(&script.code())
-        {
-            warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
-            Err(VMStatus::Error(StatusCode::UNKNOWN_SCRIPT))
-        } else {
-            Ok(())
-        }
-    }
-
-    pub(crate) fn is_allowed_module(
-        &self,
-        txn_data: &TransactionMetadata,
-        _remote_cache: &StateViewCache,
-    ) -> Result<(), VMStatus> {
-        if !&self
-            .on_chain_config()?
-            .publishing_option
-            .is_allowed_module(&txn_data.sender)
-        {
-            warn!("[VM] Custom modules not allowed");
-            Err(VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER))
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
+    /// Run the prologue of a transaction by calling into `SCRIPT_PROLOGUE_NAME` function stored
     /// in the `ACCOUNT_MODULE` on chain.
-    pub(crate) fn run_prologue<R: RemoteCache>(
+    pub(crate) fn run_script_prologue<R: RemoteCache>(
         &self,
         session: &mut Session<R>,
         cost_strategy: &mut CostStrategy,
@@ -227,7 +205,44 @@ impl LibraVMImpl {
         let chain_id = txn_data.chain_id();
         session.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &PROLOGUE_NAME,
+            &SCRIPT_PROLOGUE_NAME,
+            vec![gas_currency_ty],
+            vec![
+                Value::transaction_argument_signer_reference(txn_data.sender),
+                Value::u64(txn_sequence_number),
+                Value::vector_u8(txn_public_key),
+                Value::u64(txn_gas_price),
+                Value::u64(txn_max_gas_units),
+                Value::u64(txn_expiration_timestamp_secs),
+                Value::u8(chain_id.id()),
+                Value::vector_u8(txn_data.script_hash.clone()),
+            ],
+            txn_data.sender,
+            cost_strategy,
+            convert_normal_prologue_error,
+        )
+    }
+
+    /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
+    /// in the `ACCOUNT_MODULE` on chain.
+    pub(crate) fn run_module_prologue<R: RemoteCache>(
+        &self,
+        session: &mut Session<R>,
+        cost_strategy: &mut CostStrategy,
+        txn_data: &TransactionMetadata,
+        account_currency_symbol: &IdentStr,
+    ) -> Result<(), VMStatus> {
+        let gas_currency_ty =
+            account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
+        let txn_sequence_number = txn_data.sequence_number();
+        let txn_public_key = txn_data.authentication_key_preimage().to_vec();
+        let txn_gas_price = txn_data.gas_unit_price().get();
+        let txn_max_gas_units = txn_data.max_gas_amount().get();
+        let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
+        let chain_id = txn_data.chain_id();
+        session.execute_function(
+            &account_config::ACCOUNT_MODULE,
+            &MODULE_PROLOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -321,7 +336,7 @@ impl LibraVMImpl {
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         session.execute_function(
             &LIBRA_WRITESET_MANAGER_MODULE,
-            &PROLOGUE_NAME,
+            &WRITESET_PROLOGUE_NAME,
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),

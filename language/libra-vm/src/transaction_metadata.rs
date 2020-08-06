@@ -1,11 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey};
 use libra_types::{
     account_address::AccountAddress,
     chain_id::ChainId,
-    transaction::{authenticator::AuthenticationKeyPreimage, SignedTransaction},
+    transaction::{
+        authenticator::AuthenticationKeyPreimage, SignedTransaction, TransactionPayload,
+    },
 };
 use move_core_types::gas_schedule::{
     AbstractMemorySize, GasAlgebra, GasCarrier, GasPrice, GasUnits,
@@ -21,6 +23,7 @@ pub struct TransactionMetadata {
     pub transaction_size: AbstractMemorySize<GasCarrier>,
     pub expiration_timestamp_secs: u64,
     pub chain_id: ChainId,
+    pub script_hash: Vec<u8>,
 }
 
 impl TransactionMetadata {
@@ -37,6 +40,11 @@ impl TransactionMetadata {
             transaction_size: AbstractMemorySize::new(txn.raw_txn_bytes_len() as u64),
             expiration_timestamp_secs: txn.expiration_timestamp_secs(),
             chain_id: txn.chain_id(),
+            script_hash: match txn.payload() {
+                TransactionPayload::Script(s) => HashValue::sha3_256_of(s.code()).to_vec(),
+                TransactionPayload::Module(_) => vec![],
+                TransactionPayload::WriteSet(_) => vec![],
+            },
         }
     }
 
@@ -87,6 +95,7 @@ impl Default for TransactionMetadata {
             transaction_size: AbstractMemorySize::new(0),
             expiration_timestamp_secs: 0,
             chain_id: ChainId::test(),
+            script_hash: vec![],
         }
     }
 }

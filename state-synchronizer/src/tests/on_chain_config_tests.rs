@@ -20,7 +20,7 @@ use libra_crypto::{
 use libra_types::{
     account_address,
     account_config::{lbr_type_tag, libra_root_address},
-    on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
+    on_chain_config::{OnChainConfig, VMPublishingOption},
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -28,7 +28,7 @@ use rand::SeedableRng;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
-    encode_block_prologue_script, encode_modify_publishing_option_script,
+    encode_add_to_script_allow_list_script, encode_block_prologue_script,
     encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
 };
 
@@ -38,7 +38,7 @@ fn test_on_chain_config_pub_sub() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     // set up reconfig subscription
     let (subscription, mut reconfig_receiver) =
-        ReconfigSubscription::subscribe_all(vec![VMConfig::CONFIG_ID], vec![]);
+        ReconfigSubscription::subscribe_all(vec![VMPublishingOption::CONFIG_ID], vec![]);
 
     let (config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
@@ -107,8 +107,9 @@ fn test_on_chain_config_pub_sub() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_modify_publishing_option_script(
-            vm_publishing_option.clone(),
+        Some(encode_add_to_script_allow_list_script(
+            HashValue::sha3_256_of(&[]).to_vec(),
+            0,
         )),
     );
 
@@ -138,8 +139,8 @@ fn test_on_chain_config_pub_sub() {
 
     let receive_reconfig = async {
         let payload = reconfig_receiver.select_next_some().await;
-        let received_config = payload.get::<VMConfig>().unwrap();
-        assert_eq!(received_config.publishing_option, vm_publishing_option);
+        let received_config = payload.get::<VMPublishingOption>().unwrap();
+        assert_eq!(received_config, vm_publishing_option);
     };
 
     rt.block_on(receive_reconfig);

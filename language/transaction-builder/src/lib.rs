@@ -7,17 +7,12 @@ use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use libra_types::{
     access_path::AccessPath,
     block_metadata::BlockMetadata,
-    on_chain_config::{LibraVersion, VMPublishingOption},
+    on_chain_config::LibraVersion,
     transaction::{ChangeSet, Script, Transaction},
     write_set::{WriteOp, WriteSetMut},
 };
 use std::convert::TryFrom;
 pub use transaction_builder_generated::stdlib::*;
-
-pub fn encode_modify_publishing_option_script(config: VMPublishingOption) -> Script {
-    let bytes = lcs::to_bytes(&config).expect("Cannot deserialize VMPublishingOption");
-    transaction_builder_generated::stdlib::encode_modify_publishing_option_script(bytes)
-}
 
 pub fn encode_update_libra_version_script(
     sliding_nonce: u64,

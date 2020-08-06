@@ -149,11 +149,11 @@ impl Command for DevCommandEnableCustomScript {
     }
 }
 
-pub struct DevCommandDisableCustomScript {}
+pub struct AddToScriptAllowList {}
 
-impl Command for DevCommandDisableCustomScript {
+impl Command for AddToScriptAllowList {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["disable_custom_script"]
+        vec!["add_to_script_allow_list"]
     }
 
     fn get_params_help(&self) -> &'static str {
@@ -161,15 +161,15 @@ impl Command for DevCommandDisableCustomScript {
     }
 
     fn get_description(&self) -> &'static str {
-        "Only allow executing predefined stdlib script in the network."
+        "Add a script hash to the allow list"
     }
 
     fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
-        if params.len() != 1 {
+        if params.len() != 2 {
             println!("Invalid number of arguments");
             return;
         }
-        match client.disable_custom_script(params, true) {
+        match client.add_to_script_allow_list(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

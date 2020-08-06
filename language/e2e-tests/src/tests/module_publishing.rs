@@ -224,7 +224,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
         .module(random_script)
         .sequence_number(1)
         .sign();
-    // Doesn't work because the core code address doesn't have a PublishModuleCapability
+    // Doesn't work because the core code address doesn't exist
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),

@@ -152,8 +152,7 @@ impl LibraVM {
         {
             cost_strategy.disable_metering();
             self.0.check_gas(txn_data)?;
-            self.0.is_allowed_script(script)?;
-            self.0.run_prologue(
+            self.0.run_script_prologue(
                 &mut session,
                 cost_strategy,
                 &txn_data,
@@ -204,8 +203,7 @@ impl LibraVM {
         // Run validation logic
         cost_strategy.disable_metering();
         self.0.check_gas(txn_data)?;
-        self.0.is_allowed_module(txn_data, remote_cache)?;
-        self.0.run_prologue(
+        self.0.run_module_prologue(
             &mut session,
             cost_strategy,
             txn_data,
@@ -213,7 +211,7 @@ impl LibraVM {
         )?;
 
         // Publish the module
-        let module_address = if self.0.on_chain_config()?.publishing_option.is_open_module() {
+        let module_address = if self.0.publishing_option()?.is_open_module() {
             txn_data.sender()
         } else {
             account_config::CORE_CODE_ADDRESS

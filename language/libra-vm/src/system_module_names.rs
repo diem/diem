@@ -24,7 +24,12 @@ pub static LIBRA_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
 });
 
 // Names for special functions and structs
-pub static PROLOGUE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("prologue").unwrap());
+pub static SCRIPT_PROLOGUE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("script_prologue").unwrap());
+pub static MODULE_PROLOGUE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("module_prologue").unwrap());
+pub static WRITESET_PROLOGUE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("prologue").unwrap());
 pub static WRITESET_EPILOGUE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("epilogue").unwrap());
 pub static SUCCESS_EPILOGUE_NAME: Lazy<Identifier> =

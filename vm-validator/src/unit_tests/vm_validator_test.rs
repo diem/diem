@@ -244,7 +244,7 @@ fn test_validate_unknown_script() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::libra_root_address();
+    let address = account_config::testnet_dd_account_address();
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,

@@ -16,7 +16,7 @@ use libra_types::{
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     chain_id::ChainId,
-    on_chain_config::{OnChainConfig, ScriptPublishingOption, VMPublishingOption, ValidatorSet},
+    on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
@@ -83,7 +83,7 @@ impl FakeExecutor {
     /// publishing options given by `publishing_options`. These can only be either `Open` or
     /// `CustomScript`.
     pub fn from_genesis_with_options(publishing_options: VMPublishingOption) -> Self {
-        if let ScriptPublishingOption::Locked(_) = publishing_options.script_option {
+        if !publishing_options.is_open_script() {
             panic!("Allowlisted transactions are not supported as a publishing option")
         }
 

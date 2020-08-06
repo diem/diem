@@ -17,6 +17,8 @@ pub const EACCOUNT_DOES_NOT_EXIST: u64 = 4; // transaction sender's account does
 pub const EINSUFFICIENT_BALANCE: u64 = 5; // insufficient balance (to pay for gas deposit)
 pub const ETRANSACTION_EXPIRED: u64 = 6; // transaction expiration time exceeds block time.
 pub const EBAD_CHAIN_ID: u64 = 7; // chain_id in transaction doesn't match the one on-chain
+pub const ESCRIPT_NOT_ALLOWED: u64 = 8;
+pub const EMODULE_NOT_ALLOWED: u64 = 9;
 
 // invalid sender (not libra root) for write set
 pub const EINVALID_WRITESET_SENDER: u64 = 33;
@@ -53,6 +55,8 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
                 EINSUFFICIENT_BALANCE => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
                 ETRANSACTION_EXPIRED => StatusCode::TRANSACTION_EXPIRED,
                 EBAD_CHAIN_ID => StatusCode::BAD_CHAIN_ID,
+                ESCRIPT_NOT_ALLOWED => StatusCode::UNKNOWN_SCRIPT,
+                EMODULE_NOT_ALLOWED => StatusCode::INVALID_MODULE_PUBLISHER,
                 code => {
                     crit!(
                         "[libra_vm] Unexpected prologue move abort: {:?}::{:?}",

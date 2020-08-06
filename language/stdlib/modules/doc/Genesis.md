@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
 </code></pre>
 
 
@@ -29,7 +29,8 @@
     tc_account: &signer,
     tc_addr: address,
     genesis_auth_key: vector&lt;u8&gt;,
-    publishing_option: vector&lt;u8&gt;,
+    initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
+    is_open_module: bool,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
     chain_id: u8,
@@ -96,9 +97,14 @@
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&lr_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(lr_rotate_key_cap);
 
+    <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_initialize">LibraTransactionPublishingOption::initialize</a>(
+        lr_account,
+        initial_script_allow_list,
+        is_open_module,
+    );
+
     <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">LibraVMConfig::initialize</a>(
         lr_account,
-        publishing_option,
         instruction_schedule,
         native_schedule,
     );

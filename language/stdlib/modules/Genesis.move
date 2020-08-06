@@ -18,6 +18,7 @@ module Genesis {
     use 0x1::LibraConfig;
     use 0x1::LibraSystem;
     use 0x1::LibraTimestamp;
+    use 0x1::LibraTransactionPublishingOption;
     use 0x1::LibraTransactionTimeout;
     use 0x1::LibraVersion;
     use 0x1::LibraWriteSetManager;
@@ -31,7 +32,8 @@ module Genesis {
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
-        publishing_option: vector<u8>,
+        initial_script_allow_list: vector<vector<u8>>,
+        is_open_module: bool,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
         chain_id: u8,
@@ -98,9 +100,14 @@ module Genesis {
         LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(lr_rotate_key_cap);
 
+        LibraTransactionPublishingOption::initialize(
+            lr_account,
+            initial_script_allow_list,
+            is_open_module,
+        );
+
         LibraVMConfig::initialize(
             lr_account,
-            publishing_option,
             instruction_schedule,
             native_schedule,
         );

@@ -636,6 +636,7 @@ dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "compiled-stdlib 0.1.0",
+ "compiler 0.1.0",
  "crash-handler 0.1.0",
  "generate-key 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1415,6 +1416,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "compiled-stdlib 0.1.0",
+ "compiler 0.1.0",
  "config-builder 0.1.0",
  "consensus-types 0.1.0",
  "executor-test-helpers 0.1.0",
@@ -5824,6 +5826,7 @@ dependencies = [
  "cli 0.1.0",
  "debug-interface 0.1.0",
  "generate-key 0.1.0",
+ "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",

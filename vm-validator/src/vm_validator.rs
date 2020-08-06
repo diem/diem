@@ -6,7 +6,7 @@ use libra_state_view::StateViewId;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
-    on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig},
+    on_chain_config::{LibraVersion, OnChainConfigPayload, VMConfig, VMPublishingOption},
     transaction::{SignedTransaction, VMValidatorResult},
 };
 use libra_vm::LibraVMValidator;
@@ -78,8 +78,9 @@ impl TransactionValidation for VMValidator {
     fn restart(&mut self, config: OnChainConfigPayload) -> Result<()> {
         let vm_config = config.get::<VMConfig>()?;
         let version = config.get::<LibraVersion>()?;
+        let publishing_option = config.get::<VMPublishingOption>()?;
 
-        self.vm = LibraVMValidator::init_with_config(version, vm_config);
+        self.vm = LibraVMValidator::init_with_config(version, vm_config, publishing_option);
         Ok(())
     }
 }

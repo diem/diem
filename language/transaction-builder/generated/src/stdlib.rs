@@ -46,6 +46,9 @@ pub enum ScriptCall {
     /// * Aborts with `RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION` if `to_recover_account` and `recovery_address` do not belong to the same VASP.
     AddRecoveryRotationCapability { recovery_address: AccountAddress },
 
+    /// Append the `hash` to script hashes list allowed to be executed by the network.
+    AddToScriptAllowList { hash: Bytes, sliding_nonce: u64 },
+
     /// Add `new_validator` to the validator set.
     /// Fails if the `new_validator` address is already in the validator set
     /// or does not have a `ValidatorConfig` resource stored at the address.
@@ -179,9 +182,6 @@ pub enum ScriptCall {
     /// Mint `amount_lbr` LBR from the sending account's constituent coins and deposits the
     /// resulting LBR into the sending account.
     MintLbr { amount_lbr: u64 },
-
-    /// Modify publishing options. Takes the LCS bytes of a `VMPublishingOption` object as input.
-    ModifyPublishingOption { args: Bytes },
 
     /// Transfer `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
     /// `metadata` and an (optional) `metadata_signature` on the message
@@ -384,6 +384,10 @@ impl ScriptCall {
             AddRecoveryRotationCapability { recovery_address } => {
                 encode_add_recovery_rotation_capability_script(recovery_address)
             }
+            AddToScriptAllowList {
+                hash,
+                sliding_nonce,
+            } => encode_add_to_script_allow_list_script(hash, sliding_nonce),
             AddValidatorAndReconfigure {
                 sliding_nonce,
                 validator_name,
@@ -493,7 +497,6 @@ impl ScriptCall {
                 to_freeze_account,
             } => encode_freeze_account_script(sliding_nonce, to_freeze_account),
             MintLbr { amount_lbr } => encode_mint_lbr_script(amount_lbr),
-            ModifyPublishingOption { args } => encode_modify_publishing_option_script(args),
             PeerToPeerWithMetadata {
                 currency,
                 payee,
@@ -664,6 +667,18 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
         ADD_RECOVERY_ROTATION_CAPABILITY_CODE.to_vec(),
         vec![],
         vec![TransactionArgument::Address(recovery_address)],
+    )
+}
+
+/// Append the `hash` to script hashes list allowed to be executed by the network.
+pub fn encode_add_to_script_allow_list_script(hash: Vec<u8>, sliding_nonce: u64) -> Script {
+    Script::new(
+        ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
+        vec![],
+        vec![
+            TransactionArgument::U8Vector(hash),
+            TransactionArgument::U64(sliding_nonce),
+        ],
     )
 }
 
@@ -910,15 +925,6 @@ pub fn encode_mint_lbr_script(amount_lbr: u64) -> Script {
         MINT_LBR_CODE.to_vec(),
         vec![],
         vec![TransactionArgument::U64(amount_lbr)],
-    )
-}
-
-/// Modify publishing options. Takes the LCS bytes of a `VMPublishingOption` object as input.
-pub fn encode_modify_publishing_option_script(args: Vec<u8>) -> Script {
-    Script::new(
-        MODIFY_PUBLISHING_OPTION_CODE.to_vec(),
-        vec![],
-        vec![TransactionArgument::U8Vector(args)],
     )
 }
 
@@ -1315,6 +1321,13 @@ fn decode_add_recovery_rotation_capability_script(script: &Script) -> Option<Scr
     })
 }
 
+fn decode_add_to_script_allow_list_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::AddToScriptAllowList {
+        hash: decode_u8vector_argument(script.args().get(0)?.clone())?,
+        sliding_nonce: decode_u64_argument(script.args().get(1)?.clone())?,
+    })
+}
+
 fn decode_add_validator_and_reconfigure_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::AddValidatorAndReconfigure {
         sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
@@ -1421,12 +1434,6 @@ fn decode_freeze_account_script(script: &Script) -> Option<ScriptCall> {
 fn decode_mint_lbr_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::MintLbr {
         amount_lbr: decode_u64_argument(script.args().get(0)?.clone())?,
-    })
-}
-
-fn decode_modify_publishing_option_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::ModifyPublishingOption {
-        args: decode_u8vector_argument(script.args().get(0)?.clone())?,
     })
 }
 
@@ -1610,6 +1617,10 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         Box::new(decode_add_recovery_rotation_capability_script),
     );
     map.insert(
+        ADD_TO_SCRIPT_ALLOW_LIST_CODE.to_vec(),
+        Box::new(decode_add_to_script_allow_list_script),
+    );
+    map.insert(
         ADD_VALIDATOR_AND_RECONFIGURE_CODE.to_vec(),
         Box::new(decode_add_validator_and_reconfigure_script),
     );
@@ -1655,10 +1666,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         Box::new(decode_freeze_account_script),
     );
     map.insert(MINT_LBR_CODE.to_vec(), Box::new(decode_mint_lbr_script));
-    map.insert(
-        MODIFY_PUBLISHING_OPTION_CODE.to_vec(),
-        Box::new(decode_modify_publishing_option_script),
-    );
     map.insert(
         PEER_TO_PEER_WITH_METADATA_CODE.to_vec(),
         Box::new(decode_peer_to_peer_with_metadata_script),
@@ -1807,6 +1814,17 @@ const ADD_RECOVERY_ROTATION_CAPABILITY_CODE: &[u8] = &[
     5, 11, 0, 17, 0, 10, 1, 17, 1, 2,
 ];
 
+const ADD_TO_SCRIPT_ALLOW_LIST_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 16, 7, 30, 93, 8, 123, 16, 0, 0, 0,
+    1, 0, 2, 0, 1, 0, 1, 3, 2, 1, 0, 2, 6, 12, 10, 2, 0, 2, 6, 12, 3, 3, 6, 12, 10, 2, 3, 32, 76,
+    105, 98, 114, 97, 84, 114, 97, 110, 115, 97, 99, 116, 105, 111, 110, 80, 117, 98, 108, 105,
+    115, 104, 105, 110, 103, 79, 112, 116, 105, 111, 110, 12, 83, 108, 105, 100, 105, 110, 103, 78,
+    111, 110, 99, 101, 24, 97, 100, 100, 95, 116, 111, 95, 115, 99, 114, 105, 112, 116, 95, 97,
+    108, 108, 111, 119, 95, 108, 105, 115, 116, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110,
+    99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 0, 3, 1, 7, 10, 0, 10, 2, 17, 1, 11, 0, 11, 1, 17, 0, 2,
+];
+
 const ADD_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[
     161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 24, 7, 45, 92, 8, 137, 1, 16, 0, 0,
     0, 1, 0, 2, 1, 3, 0, 1, 0, 2, 4, 2, 3, 0, 0, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1, 5, 1, 10, 2, 2, 6,
@@ -1945,13 +1963,6 @@ const MINT_LBR_CODE: &[u8] = &[
     119, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 10, 115, 116, 97, 112, 108, 101, 95,
     108, 98, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 1, 9, 11, 0, 17, 0, 12, 2,
     14, 2, 10, 1, 17, 2, 11, 2, 17, 1, 2,
-];
-
-const MODIFY_PUBLISHING_OPTION_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 6, 7, 13, 36, 8, 49, 16, 0, 0, 0, 1,
-    0, 1, 0, 2, 6, 12, 10, 2, 0, 13, 76, 105, 98, 114, 97, 86, 77, 67, 111, 110, 102, 105, 103, 21,
-    115, 101, 116, 95, 112, 117, 98, 108, 105, 115, 104, 105, 110, 103, 95, 111, 112, 116, 105,
-    111, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 11, 1, 17, 0, 2,
 ];
 
 const PEER_TO_PEER_WITH_METADATA_CODE: &[u8] = &[

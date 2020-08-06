@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use compiled_stdlib::transaction_scripts::StdlibScript;
+use compiler::Compiler;
 use executor_test_helpers::{
     extract_signer, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
     get_test_signed_transaction,
@@ -15,14 +15,13 @@ use libra_types::{
     account_address,
     account_config::{coin1_tag, libra_root_address, treasury_compliance_account_address},
     account_state::AccountState,
-    on_chain_config::VMPublishingOption,
     transaction::{authenticator::AuthenticationKey, Script},
     trusted_state::{TrustedState, TrustedStateChange},
 };
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use transaction_builder::{
-    encode_block_prologue_script, encode_modify_publishing_option_script,
+    encode_add_to_script_allow_list_script, encode_block_prologue_script,
     encode_peer_to_peer_with_metadata_script, encode_set_validator_config_and_reconfigure_script,
 };
 
@@ -308,14 +307,32 @@ fn test_change_publishing_option_to_custom() {
     // Create a dummy block prologue transaction that will bump the timer.
     let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
+    let script_body = {
+        let code = "
+    import 0x1.LibraTransactionPublishingOption;
+
+    main(account: &signer) {
+      LibraTransactionPublishingOption.set_open_script(move(account));
+
+      return;
+    }
+";
+
+        let compiler = Compiler {
+            address: libra_types::account_config::CORE_CODE_ADDRESS,
+            extra_deps: vec![],
+            ..Compiler::default()
+        };
+        compiler
+            .into_script_blob("file_name", code)
+            .expect("Failed to compile")
+    };
     let txn5 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_modify_publishing_option_script(
-            VMPublishingOption::custom_scripts(),
-        )),
+        Some(Script::new(script_body, vec![], vec![])),
     );
 
     let block1_id = gen_block_id(1);
@@ -482,19 +499,14 @@ fn test_extend_allowlist() {
     let txn4 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
     // Add script1 to allowlist.
-    let new_allowlist = {
-        let mut existing_list = StdlibScript::allowlist();
-        existing_list.push(*HashValue::sha3_256_of(&[]).as_ref());
-        existing_list
-    };
-
     let txn5 = get_test_signed_transaction(
         genesis_account,
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_modify_publishing_option_script(
-            VMPublishingOption::locked(new_allowlist),
+        Some(encode_add_to_script_allow_list_script(
+            HashValue::sha3_256_of(&[]).to_vec(),
+            0,
         )),
     );
 

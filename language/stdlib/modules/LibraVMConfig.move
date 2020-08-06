@@ -9,7 +9,6 @@ module LibraVMConfig {
     // * publishing_option: Defines Scripts/Modules that are allowed to execute in the current configuration.
     // * gas_schedule: Cost of running the VM.
     struct LibraVMConfig {
-        publishing_option: vector<u8>,
         gas_schedule: GasSchedule,
     }
 
@@ -70,7 +69,6 @@ module LibraVMConfig {
     // Initialize the table under the libra root account
     public fun initialize(
         lr_account: &signer,
-        publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
     ) {
@@ -96,7 +94,6 @@ module LibraVMConfig {
         LibraConfig::publish_new_config(
             lr_account,
             LibraVMConfig {
-                publishing_option,
                 gas_schedule: GasSchedule {
                     instruction_schedule,
                     native_schedule,
@@ -105,13 +102,5 @@ module LibraVMConfig {
             },
         );
     }
-
-    public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {
-        // TODO: who is allowed to do this?
-        let current_config = LibraConfig::get<LibraVMConfig>();
-        current_config.publishing_option = publishing_option;
-        LibraConfig::set<LibraVMConfig>(account, current_config);
-    }
-
 }
 }

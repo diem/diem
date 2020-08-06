@@ -7,7 +7,8 @@ use crate::{
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
-use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
+use compiled_stdlib::StdLibOptions;
+use compiler::Compiler;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
@@ -35,7 +36,7 @@ use libra_types::{
     account_state::AccountState,
     chain_id::ChainId,
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::{LibraVersion, VMPublishingOption},
+    on_chain_config::LibraVersion,
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
@@ -536,39 +537,56 @@ impl ClientProxy {
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
+        let script_body = {
+            let code = "
+    import 0x1.LibraTransactionPublishingOption;
+
+    main(account: &signer) {
+      LibraTransactionPublishingOption.set_open_script(move(account));
+
+      return;
+    }
+";
+
+            let compiler = Compiler {
+                address: libra_types::account_config::CORE_CODE_ADDRESS,
+                extra_deps: vec![],
+                ..Compiler::default()
+            };
+            compiler
+                .into_script_blob("file_name", code)
+                .expect("Failed to compile")
+        };
         match self.libra_root_account {
             Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_modify_publishing_option_script(
-                        VMPublishingOption::custom_scripts(),
-                    ),
-                ),
+                TransactionPayload::Script(Script::new(script_body, vec![], vec![])),
                 is_blocking,
             ),
             None => unimplemented!(),
         }
     }
 
-    /// Only allow executing predefined script in the Move standard library in the network.
-    pub fn disable_custom_script(
+    /// Add a hash to the allowlist that could be executed by the network.
+    pub fn add_to_script_allow_list(
         &mut self,
         space_delim_strings: &[&str],
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            space_delim_strings[0] == "disable_custom_script",
-            "inconsistent command '{}' for disable_custom_script",
+            space_delim_strings[0] == "add_to_script_allow_list",
+            "inconsistent command '{}' for add_to_script_allow_list",
             space_delim_strings[0]
         );
         ensure!(
-            space_delim_strings.len() == 1,
-            "Invalid number of arguments for setting publishing option"
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments for adding hash to script whitelist"
         );
         match self.libra_root_account {
             Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::Script(
-                    transaction_builder::encode_modify_publishing_option_script(
-                        VMPublishingOption::locked(StdlibScript::allowlist()),
+                    transaction_builder::encode_add_to_script_allow_list_script(
+                        hex::decode(space_delim_strings[1])?,
+                        self.libra_root_account.as_ref().unwrap().sequence_number,
                     ),
                 ),
                 is_blocking,
