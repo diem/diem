@@ -225,7 +225,7 @@ impl ValidatorVerifier {
                 None => return Err(VerifyError::UnknownAuthor),
             }
         }
-
+        info!("daniel quorum size: {:?}", self.quorum_voting_power());
         if aggregated_voting_power < self.quorum_voting_power + (self.total_voting_power-self.quorum_voting_power) * 0 / 10 {
             return Err(VerifyError::TooLittleVotingPower {
                 voting_power: aggregated_voting_power,
