@@ -6,8 +6,10 @@ use crate::{
     executor::FakeExecutor,
     keygen::KeyGen,
 };
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::account_config;
 use proptest::{collection::vec, prelude::*};
+use std::convert::TryFrom;
 use transaction_builder::encode_create_parent_vasp_account_script;
 use transaction_builder_generated::stdlib::ScriptCall;
 
@@ -36,7 +38,6 @@ proptest! {
     }
 
     #[test]
-    #[ignore]
     fn fuzz_scripts(
         txns in vec(any::<ScriptCall>(), 0..100),
     ) {
@@ -75,14 +76,22 @@ proptest! {
         for (i, txn) in txns.into_iter().enumerate() {
             let script = txn.encode();
             let (account, account_sequence_number) = accounts.get_mut(i % num_accounts).unwrap();
+            let script_is_rotate = StdlibScript::try_from(script.code()).map(|script|
+                script == StdlibScript::RotateAuthenticationKey ||
+                script == StdlibScript::RotateAuthenticationKeyWithNonce ||
+                script == StdlibScript::RotateAuthenticationKeyWithRecoveryAddress
+            ).unwrap_or(false);
             let output = executor.execute_transaction(
                 account.transaction()
                 .script(script.clone())
                 .sequence_number(*account_sequence_number)
                 .sign());
                 prop_assert!(!output.status().is_discarded());
-                executor.apply_write_set(output.write_set());
-                *account_sequence_number += 1;
+                // Don't apply key rotation transactions since that will bork future txns
+                if !script_is_rotate {
+                    executor.apply_write_set(output.write_set());
+                    *account_sequence_number += 1;
+                }
         }
     }
 }
