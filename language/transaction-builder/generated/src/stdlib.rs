@@ -18,6 +18,10 @@ use libra_types::{
 use move_core_types::language_storage::TypeTag;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest::prelude::*;
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
 
 /// Structured representation of a call into a known Move script.
 /// ```ignore
