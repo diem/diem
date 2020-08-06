@@ -27,13 +27,14 @@ use crate::instance::{
 use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
-use libra_config::config::DEFAULT_JSON_RPC_PORT;
+use libra_config::config::{
+    NodeConfig, PersistableConfig, SafetyRulesConfig, DEFAULT_JSON_RPC_PORT,
+};
 use reqwest::Client as HttpClient;
-use std::{collections::HashSet, convert::TryFrom, process::Command};
-
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use rusoto_sts::WebIdentityProvider;
+use std::{collections::HashSet, convert::TryFrom, process::Command};
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -41,6 +42,8 @@ pub const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337
 const CFG_FULLNODE_SEED: &str = "2674267426742674267426742674267426742674267426742674267426742674";
 
 const ERROR_NOT_FOUND: u16 = 404;
+
+const GENESIS_PATH: &str = "/tmp/genesis.blob";
 
 #[derive(Clone)]
 pub struct ClusterSwarmKube {
@@ -156,6 +159,7 @@ impl ClusterSwarmKube {
         num_validators: u32,
         num_fullnodes: u32,
         enable_lsr: bool,
+        enable_mgmt_tool: bool,
         node_name: &str,
         image_tag: &str,
         seed_peer_ip: &str,
@@ -181,6 +185,7 @@ impl ClusterSwarmKube {
             cfg_seed_peer_ip = seed_peer_ip,
             cfg_safety_rules_addr = safety_rules_addr,
             cfg_fullnode_seed = cfg_fullnode_seed,
+            cfg_enable_mgmt_tool = enable_mgmt_tool,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         let pod_spec = serde_json::value::to_value(pod_spec)?;
@@ -525,19 +530,34 @@ impl ClusterSwarmKube {
             .allocate_node(&pod_name)
             .await
             .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
-        debug!("Configuring fluent-bit for pod {} on {:?}", pod_name, node);
+        debug!(
+            "Configuring fluent-bit, genesis and config for pod {} on {}",
+            pod_name, node.name
+        );
         match &instance_config.application_config {
-            Validator(_) => {
-                self.config_fluentbit("validator-events", pod_name.as_str(), &node.name)
-                    .await?
+            Validator(validator_config) => {
+                self.config_fluentbit("validator-events", &pod_name, &node.name)
+                    .await?;
+                if validator_config.enable_mgmt_tool {
+                    self.put_genesis_file(&pod_name, &node.name).await?;
+                    self.generate_config(&instance_config, &pod_name, &node.name)
+                        .await?;
+                }
             }
-            Fullnode(_) => {
-                self.config_fluentbit("validator-events", pod_name.as_str(), &node.name)
-                    .await?
+            Fullnode(fullnode_config) => {
+                self.config_fluentbit("validator-events", &pod_name, &node.name)
+                    .await?;
+                if fullnode_config.enable_mgmt_tool {
+                    self.put_genesis_file(&pod_name, &node.name).await?;
+                    self.generate_config(&instance_config, &pod_name, &node.name)
+                        .await?;
+                }
             }
             LSR(_) => {
-                self.config_fluentbit("safety-rules-events", pod_name.as_str(), &node.name)
-                    .await?
+                self.config_fluentbit("safety-rules-events", &pod_name, &node.name)
+                    .await?;
+                self.generate_config(&instance_config, &pod_name, &node.name)
+                    .await?;
             }
             _ => {}
         }
@@ -550,6 +570,7 @@ impl ClusterSwarmKube {
                     validator_config.num_validators,
                     validator_config.num_fullnodes,
                     validator_config.enable_lsr,
+                    validator_config.enable_mgmt_tool,
                     &node.name,
                     &validator_config.image_tag,
                     &validator_config.seed_peer_ip,
@@ -745,8 +766,6 @@ impl ClusterSwarmKube {
             pod_name = pod_name
         );
         let dir = "/opt/libra/data/fluent-bit/";
-        self.util_cmd(format!("mkdir -p {}", dir), node, "mkdir-fluentbit")
-            .await?;
         self.put_file(
             node,
             pod_name,
@@ -761,6 +780,84 @@ impl ClusterSwarmKube {
             fluentbit_config.into_bytes(),
         )
         .await?;
+        Ok(())
+    }
+
+    async fn put_genesis_file(&self, pod_name: &str, node: &str) -> Result<()> {
+        let genesis = std::fs::read(GENESIS_PATH)
+            .map_err(|e| format_err!("Failed to read {} : {}", GENESIS_PATH, e))?;
+        self.put_file(node, pod_name, "/opt/libra/etc/genesis.blob", genesis)
+            .await?;
+        Ok(())
+    }
+
+    async fn generate_config(
+        &self,
+        instance_config: &InstanceConfig,
+        pod_name: &str,
+        node: &str,
+    ) -> Result<()> {
+        let node_config = match &instance_config.application_config {
+            Validator(validator_config) => {
+                let config = format!(
+                    include_str!("configs/validator.yaml"),
+                    vault_addr = validator_config
+                        .vault_addr
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    vault_ns = validator_config
+                        .vault_namespace
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    safety_rules_addr = validator_config
+                        .safety_rules_addr
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                );
+                Some(serde_yaml::to_vec(&NodeConfig::parse(&config).map_err(
+                    |e| format_err!("Failed to parse config template : {}", e),
+                )?)?)
+            }
+            Fullnode(fullnode_config) => {
+                let config = format!(
+                    include_str!("configs/fullnode.yaml"),
+                    vault_addr = fullnode_config
+                        .vault_addr
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    vault_ns = fullnode_config
+                        .vault_namespace
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                    seed_peer_ip = fullnode_config.seed_peer_ip,
+                );
+                Some(serde_yaml::to_vec::<NodeConfig>(
+                    &NodeConfig::parse(&config)
+                        .map_err(|e| format_err!("Failed to parse config template : {}", e))?,
+                )?)
+            }
+            LSR(lsr_config) => {
+                let config = format!(
+                    include_str!("configs/safetyrules.yaml"),
+                    vault_addr = lsr_config.vault_addr.as_ref().unwrap_or(&"".to_string()),
+                    vault_ns = lsr_config
+                        .vault_namespace
+                        .as_ref()
+                        .unwrap_or(&"".to_string()),
+                );
+                Some(serde_yaml::to_vec::<SafetyRulesConfig>(
+                    &SafetyRulesConfig::parse(&config)
+                        .map_err(|e| format_err!("Failed to parse config template : {}", e))?,
+                )?)
+            }
+            _ => None,
+        };
+
+        if let Some(node_config) = node_config {
+            self.put_file(node, pod_name, "/opt/libra/etc/node.yaml", node_config)
+                .await?;
+        }
+
         Ok(())
     }
 }

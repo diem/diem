@@ -1,0 +1,9 @@
+service:
+  type: "process"
+  server_address: "/ip4/0.0.0.0/tcp/6185"
+backend:
+  type: "vault"
+  server: "http://{vault_addr}:8200"
+  namespace: "{vault_ns}"
+  token:
+    from_config: root

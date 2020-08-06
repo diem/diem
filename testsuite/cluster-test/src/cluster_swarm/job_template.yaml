@@ -22,6 +22,8 @@ spec:
         volumeMounts:
           - mountPath: /opt/libra/data
             name: data
+          - mountPath: /opt/libra/etc
+            name: config
         imagePullPolicy: Always
         command: ["sh",  "-c", "{command}"]
         securityContext:
@@ -34,5 +36,9 @@ spec:
         - name: data
           hostPath:
             path: /data
+            type: DirectoryOrCreate
+        - name: config
+          hostPath:
+            path: /config
             type: DirectoryOrCreate
   backoffLimit: {back_off_limit}

@@ -47,6 +47,8 @@ pub struct LSRConfig {
     pub num_validators: u32,
     pub image_tag: String,
     pub lsr_backend: String,
+    pub vault_addr: Option<String>,
+    pub vault_namespace: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -58,6 +60,9 @@ pub struct ValidatorConfig {
     pub config_overrides: Vec<String>,
     pub seed_peer_ip: String,
     pub safety_rules_addr: Option<String>,
+    pub vault_addr: Option<String>,
+    pub vault_namespace: Option<String>,
+    pub enable_mgmt_tool: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +73,9 @@ pub struct FullnodeConfig {
     pub image_tag: String,
     pub config_overrides: Vec<String>,
     pub seed_peer_ip: String,
+    pub vault_addr: Option<String>,
+    pub vault_namespace: Option<String>,
+    pub enable_mgmt_tool: bool,
 }
 
 #[derive(Clone)]

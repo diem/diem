@@ -280,6 +280,26 @@ impl GenesisHelper {
             .expect("tokio spawn_blocking runtime error")
     }
 
+    pub async fn create_waypoint(&self, chain_id: ChainId) -> Result<Waypoint, Error> {
+        let args = format!(
+            "
+                libra-genesis-tool
+                create-waypoint
+                --chain-id {chain_id}
+                --shared-backend backend={backend};\
+                    path={path}\
+            ",
+            chain_id = chain_id,
+            backend = DISK,
+            path = self.path,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        spawn_blocking(|| command.create_waypoint())
+            .await
+            .expect("tokio spawn_blocking runtime error")
+    }
+
     pub async fn extract_private_key(
         &self,
         key_name: &str,

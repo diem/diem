@@ -78,12 +78,12 @@ spec:
       ports:
         - containerPort: 6185
       volumeMounts:
-        - name: config-built
-          mountPath: /opt/libra/etc
-        - name: libra-data
-          mountPath: /opt/libra/data
-        - name: vault-token
-          mountPath: /opt/vault
+        - mountPath: /opt/libra/etc
+          name: config-built
+        - mountPath: /opt/libra/data
+          name: libra-data
+        - mountPath: /opt/vault
+          name: vault-token
       env:
         - name: RUST_LOG
           value: debug
@@ -93,7 +93,9 @@ spec:
           value: "http://libra-testnet-prometheus-pushgateway:9091/metrics/job/safety_rules/instance/lsr-{validator_index}"
   volumes:
     - name: config-built
-      emptyDir: {{}}
+      hostPath:
+        path: /config
+        type: DirectoryOrCreate
     - name: libra-data
       hostPath:
         path: /data

@@ -63,6 +63,8 @@ spec:
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
+    - mountPath: /opt/libra/etc
+      name: config
     env:
     - name: CFG_NUM_VALIDATORS
       value: "{num_validators}"
@@ -101,6 +103,10 @@ spec:
   - name: data
     hostPath:
       path: /data
+      type: Directory
+  - name: config
+    hostPath:
+      path: /config
       type: Directory
   affinity:
     podAntiAffinity:

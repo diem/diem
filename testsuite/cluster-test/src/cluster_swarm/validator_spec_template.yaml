@@ -75,6 +75,8 @@ spec:
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
+    - mountPath: /opt/libra/etc
+      name: config
     env:
     - name: CFG_NODE_INDEX
       value: "{index}"
@@ -86,8 +88,10 @@ spec:
       value: "{cfg_seed}"
     - name: CFG_SEED_PEER_IP
       value: "{cfg_seed_peer_ip}"
-    - name : CFG_SAFETY_RULES_ADDR_OR_DEFAULT
+    - name: CFG_SAFETY_RULES_ADDR_OR_DEFAULT
       value: "{cfg_safety_rules_addr}"
+    - name: CFG_ENABLE_MGMT_TOOL
+      value: "{cfg_enable_mgmt_tool}"
     - name: CFG_FULLNODE_SEED
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
@@ -118,6 +122,10 @@ spec:
   - name: data
     hostPath:
       path: /data
+      type: Directory
+  - name: config
+    hostPath:
+      path: /config
       type: Directory
   affinity:
     podAntiAffinity:
