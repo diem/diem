@@ -838,6 +838,7 @@ impl<T: Payload> EventProcessor<T> {
     /// 2) call process_certificates(), which will start a new round in return.
     async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
         debug!("Add vote: {}", vote);
+        info!("daniel quorum size: {:?}", self.epoch_info().verifier.quorum_voting_power());
         let block_id = vote.vote_data().proposed().id();
         let ts = vote.vote_data().proposed().timestamp_usecs();
         // Check if the block already had a QC
