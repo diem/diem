@@ -13,6 +13,8 @@ use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt};
 use thiserror::Error;
+use libra_logger::prelude::*;
+use libra_security_logger::{security_log, SecurityEvent};
 
 /// Errors possible during signature verification.
 #[derive(Debug, Error, PartialEq)]
