@@ -26,7 +26,7 @@ JSON-RPC is a stateless, light-weight remote procedure call (RPC) protocol. Refe
 JSON-RPC response object is extended with the following fields:
 
 | field                      | type           | meaning                                      |
-|----------------------------|---------------------------------------------------------------|
+|----------------------------|----------------|----------------------------------------------|
 | libra_chain_id             | unsigned int8  | network chain id, e.g. testnet chain id is 2 |
 | libra_ledger_version       | unsigned int64 | server side latest ledger version number     |
 | libra_ledger_timestampusec | unsigned int64 | server side latest ledger timestampusec      |
@@ -70,3 +70,9 @@ For any invalid request or parameters request, standard Error code and message w
 | -32604 | invalid format                          |
 
 Unless specifically mentioned below, Libra JSON-RPC will return the default error code - 32000 for generic server-side errors. More information may be returned in the ‘message’ and the ‘data’ fields, but this is not guaranteed.
+
+## Versioning
+
+We use URI versioning to version our API, current version is v1.
+For example, to hit testnet, the server url is: https://client.testnet.libra.org/v1.
+You may check [API-CHANGELOG.md] and learn more about our API changes.
