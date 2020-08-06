@@ -51,7 +51,7 @@ pub struct ClusterBuilderParams {
     #[structopt(long, parse(try_from_str), default_value = "30")]
     pub num_validators: u32,
     #[structopt(long)]
-    pub enable_lsr: bool,
+    pub enable_lsr: Option<bool>,
     #[structopt(
         long,
         help = "Backend used by lsr. Possible Values are in-memory, on-disk, vault",
@@ -69,6 +69,10 @@ impl ClusterBuilderParams {
         overrides.extend(self.cfg.iter().cloned());
 
         overrides
+    }
+
+    pub fn enable_lsr(&self) -> bool {
+        self.enable_lsr.unwrap_or(true)
     }
 }
 
@@ -108,7 +112,7 @@ impl ClusterBuilder {
         );
         let mut instance_count =
             params.num_validators + (params.fullnodes_per_validator * params.num_validators);
-        if params.enable_lsr {
+        if params.enable_lsr() {
             if params.lsr_backend == "vault" {
                 instance_count += params.num_validators * 2;
             } else {
@@ -130,7 +134,7 @@ impl ClusterBuilder {
             .spawn_validator_and_fullnode_set(
                 params.num_validators,
                 params.fullnodes_per_validator,
-                params.enable_lsr,
+                params.enable_lsr(),
                 &params.lsr_backend,
                 current_tag,
                 &params.cfg_overrides(),
