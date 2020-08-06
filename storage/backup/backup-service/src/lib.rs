@@ -12,7 +12,7 @@ use std::{
 use tokio::runtime::{Builder, Runtime};
 
 pub fn start_backup_service(port: u16, db: Arc<LibraDB>) -> Runtime {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port);
+    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
 
