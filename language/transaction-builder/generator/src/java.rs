@@ -49,7 +49,7 @@ fn write_helper_file(
     writeln!(emitter.out, "\npublic final class Helpers {{")?;
     emitter.out.indent();
 
-    emitter.output_encode_method(abis)?;
+    emitter.output_encode_method()?;
     emitter.output_decode_method()?;
 
     for abi in abis {
@@ -59,13 +59,14 @@ fn write_helper_file(
         emitter.output_script_decoder_function(abi)?;
     }
 
-    emitter.output_decoding_helpers()?;
-
+    emitter.output_encoder_map(abis)?;
     for abi in abis {
         emitter.output_code_constant(abi)?;
     }
     // Must be defined after the constants.
     emitter.output_decoder_map(abis)?;
+
+    emitter.output_decoding_helpers()?;
 
     emitter.out.unindent();
     writeln!(emitter.out, "\n}}\n")
@@ -131,8 +132,6 @@ where
 import java.math.BigInteger;
 import java.lang.IllegalArgumentException;
 import java.lang.IndexOutOfBoundsException;
-import java.util.Arrays;
-import java.util.HashMap;
 import org.libra.types.AccountAddress;
 import org.libra.types.Script;
 import org.libra.types.TransactionArgument;
@@ -145,40 +144,17 @@ import com.facebook.serde.Bytes;
         Ok(())
     }
 
-    fn output_encode_method(&mut self, abis: &[ScriptABI]) -> Result<()> {
+    fn output_encode_method(&mut self) -> Result<()> {
         writeln!(
             self.out,
             r#"
 /**
  * Build a Libra `Script` from a structured object `ScriptCall`.
  */
-public static Script encode(ScriptCall call) {{"#
-        )?;
-        self.out.indent();
-        for abi in abis {
-            self.output_variant_encoder(abi)?;
-        }
-        writeln!(self.out, "return null;")?;
-        self.out.unindent();
-        writeln!(self.out, "}}")
-    }
-
-    fn output_variant_encoder(&mut self, abi: &ScriptABI) -> Result<()> {
-        let params = std::iter::empty()
-            .chain(abi.ty_args().iter().map(TypeArgumentABI::name))
-            .chain(abi.args().iter().map(ArgumentABI::name))
-            .map(|name| format!("obj.{}", name))
-            .collect::<Vec<_>>()
-            .join(", ");
-        writeln!(
-            self.out,
-            r#"if (call instanceof ScriptCall.{0}) {{
-    ScriptCall.{0} obj = (ScriptCall.{0})call;
-    return encode_{1}_script({2});
-}}"#,
-            abi.name().to_camel_case(),
-            abi.name(),
-            params
+public static Script encode_script(ScriptCall call) {{
+    EncodingHelper helper = SCRIPT_ENCODER_MAP.get(call.getClass());
+    return helper.encode(call);
+}}"#
         )
     }
 
@@ -189,7 +165,7 @@ public static Script encode(ScriptCall call) {{"#
 /**
  * Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
  */
-public static ScriptCall decode(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
+public static ScriptCall decode_script(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
     DecodingHelper helper = SCRIPT_DECODER_MAP.get(script.code);
     if (helper == null) {{
         throw new IllegalArgumentException("Unknown script bytecode");
@@ -218,8 +194,8 @@ public static ScriptCall decode(Script script) throws IllegalArgumentException, 
             self.out,
             r#"Script.Builder builder = new Script.Builder();
 builder.code = new Bytes({}_CODE);
-builder.ty_args = Arrays.asList({});
-builder.args = Arrays.asList({});
+builder.ty_args = java.util.Arrays.asList({});
+builder.args = java.util.Arrays.asList({});
 return builder.build();"#,
             abi.name().to_shouty_snake_case(),
             Self::quote_type_arguments(abi.ty_args()),
@@ -270,6 +246,46 @@ return builder.build();"#,
         Ok(())
     }
 
+    fn output_encoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+interface EncodingHelper {{
+    public Script encode(ScriptCall call);
+}}
+
+private static final java.util.Map<Class<?>, EncodingHelper> SCRIPT_ENCODER_MAP = initEncoderMap();
+
+private static java.util.Map<Class<?>, EncodingHelper> initEncoderMap() {{"#
+        )?;
+        self.out.indent();
+        writeln!(
+            self.out,
+            "java.util.HashMap<Class<?>, EncodingHelper> map = new java.util.HashMap<>();"
+        )?;
+        for abi in abis {
+            let params = std::iter::empty()
+                .chain(abi.ty_args().iter().map(TypeArgumentABI::name))
+                .chain(abi.args().iter().map(ArgumentABI::name))
+                .map(|name| format!("obj.{}", name))
+                .collect::<Vec<_>>()
+                .join(", ");
+            writeln!(
+                self.out,
+                "map.put(ScriptCall.{0}.class, (EncodingHelper)((call) -> {{
+    ScriptCall.{0} obj = (ScriptCall.{0})call;
+    return Helpers.encode_{1}_script({2});
+}}));",
+                abi.name().to_camel_case(),
+                abi.name(),
+                params,
+            )?;
+        }
+        writeln!(self.out, "return map;")?;
+        self.out.unindent();
+        writeln!(self.out, "}}")
+    }
+
     fn output_decoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
         writeln!(
             self.out,
@@ -285,7 +301,7 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
         self.out.indent();
         writeln!(
             self.out,
-            "HashMap<Bytes, DecodingHelper> map = new HashMap<>();"
+            "java.util.HashMap<Bytes, DecodingHelper> map = new java.util.HashMap<>();"
         )?;
         for abi in abis {
             writeln!(

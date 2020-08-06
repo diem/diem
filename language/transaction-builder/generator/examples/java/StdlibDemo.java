@@ -9,6 +9,7 @@ import com.facebook.serde.Serializer;
 import com.facebook.serde.Unsigned; // used as documentation.
 import com.facebook.lcs.LcsSerializer;
 import org.libra.stdlib.Helpers;
+import org.libra.stdlib.ScriptCall;;
 import org.libra.types.AccountAddress;
 import org.libra.types.Identifier;
 import org.libra.types.Script;
@@ -42,6 +43,10 @@ public class StdlibDemo {
         @Unsigned Long amount = Long.valueOf(1234567);
         Script script =
             Helpers.encode_peer_to_peer_with_metadata_script(token, payee, amount, new Bytes(new byte[]{}), new Bytes(new byte[]{}));
+
+        ScriptCall.PeerToPeerWithMetadata call = (ScriptCall.PeerToPeerWithMetadata)Helpers.decode_script(script);
+        assert(call.amount.equals(amount));
+        assert(call.payee.equals(payee));
 
         Serializer serializer = new LcsSerializer();
         script.serialize(serializer);
