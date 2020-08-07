@@ -114,7 +114,7 @@ fn write_script_call_files(
 struct JavaEmitter<'a, T> {
     /// Writer.
     out: IndentedWriter<T>,
-    ///  name of the package owning the generated definitions (e.g. "com.facebook.my_package")
+    /// Name of the package owning the generated definitions (e.g. "com.facebook.my_package")
     package_name: Option<&'a str>,
 }
 
@@ -408,7 +408,7 @@ private static Bytes decode_u8vector_argument(TransactionArgument arg) {{
 
     fn quote_arguments(args: &[ArgumentABI]) -> String {
         args.iter()
-            .map(|arg| Self::make_transaction_argument(arg.type_tag(), arg.name()))
+            .map(|arg| Self::quote_transaction_argument(arg.type_tag(), arg.name()))
             .collect::<Vec<_>>()
             .join(", ")
     }
@@ -430,7 +430,7 @@ private static Bytes decode_u8vector_argument(TransactionArgument arg) {{
         }
     }
 
-    fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+    fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
             Bool => format!("new TransactionArgument.Bool({})", name),
