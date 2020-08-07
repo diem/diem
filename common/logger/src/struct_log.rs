@@ -476,17 +476,13 @@ impl TCPStructLogThread {
             };
 
             // If we fail to write, exit out and create a new stream
-            if let Err(e) = stream.write(json_string.as_bytes()) {
+            if let Err(e) = stream.write_all(json_string.as_bytes()) {
                 STRUCT_LOG_SEND_ERROR_COUNT.inc();
-                println!(
+                log::error!(
                     "[Logging] Error while sending data to logstash({}): {}",
-                    self.address, e
+                    self.address,
+                    e
                 );
-
-                // Attempt to clear the buffer and send whatever we can
-                if let Err(e) = stream.flush() {
-                    println!("[Logging] Failed to flush rest of buffer: {}", e);
-                }
 
                 // Start over stream
                 return;
@@ -512,12 +508,12 @@ impl TCPStructLogThread {
         Err(last_error)
     }
 
-    pub fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<usize> {
+    pub fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<()> {
         let entry = StructuredLogEntry::new_named("logger", msg);
         let entry = entry
             .to_json_string()
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
-        stream.write(entry.as_bytes())
+        stream.write_all(entry.as_bytes())
     }
 
     pub fn run(mut self) {
@@ -534,14 +530,14 @@ impl TCPStructLogThread {
                         stream.set_write_timeout(Some(Duration::from_millis(WRITE_TIMEOUT_MS)))
                     {
                         STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        println!("[Logging] Failed to set write timeout: {}", err);
+                        log::error!("[Logging] Failed to set write timeout: {}", err);
                         continue;
                     }
 
                     // Write a log signifying that the logger connected, and test the stream
                     if let Err(err) = Self::write_control_msg(stream, "connected") {
                         STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        println!("[Logging] control message failed: {}", err);
+                        log::error!("[Logging] control message failed: {}", err);
                         continue;
                     }
 
@@ -549,9 +545,10 @@ impl TCPStructLogThread {
                 }
                 Err(err) => {
                     STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                    println!(
+                    log::error!(
                         "[Logging] Failed to connect to {}, cause {}",
-                        self.address, err
+                        self.address,
+                        err
                     )
                 }
             }
