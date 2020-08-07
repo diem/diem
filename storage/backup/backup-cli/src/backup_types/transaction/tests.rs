@@ -9,12 +9,10 @@ use crate::{
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
         backup_service_client::BackupServiceClient,
-        test_utils::{tmp_db_empty, tmp_db_with_random_content},
+        test_utils::{start_local_backup_service, tmp_db_empty, tmp_db_with_random_content},
         GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
-use backup_service::start_backup_service;
-use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
 use libradb::GetRestoreHandler;
@@ -30,8 +28,7 @@ fn end_to_end() {
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
-    let port = get_available_port();
-    let mut rt = start_backup_service(port, src_db);
+    let (mut rt, port) = start_local_backup_service(src_db);
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port

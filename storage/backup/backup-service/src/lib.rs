@@ -5,14 +5,10 @@ mod handlers;
 
 use crate::handlers::get_routes;
 use libradb::LibraDB;
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
-pub fn start_backup_service(port: u16, db: Arc<LibraDB>) -> Runtime {
-    let address = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port);
+pub fn start_backup_service(address: SocketAddr, db: Arc<LibraDB>) -> Runtime {
     let backup_handler = db.get_backup_handler();
     let routes = get_routes(backup_handler);
 
@@ -42,6 +38,7 @@ mod tests {
     use libra_crypto::hash::HashValue;
     use libra_temppath::TempPath;
     use reqwest::blocking::get;
+    use std::net::{IpAddr, Ipv4Addr};
 
     /// 404 - endpoint not found
     /// 400 - params not provided or failed parsing
@@ -53,7 +50,7 @@ mod tests {
         let tmpdir = TempPath::new();
         let db = Arc::new(LibraDB::new_for_test(&tmpdir));
         let port = get_available_port();
-        let _rt = start_backup_service(port, db);
+        let _rt = start_backup_service(SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port), db);
 
         // Endpoint doesn't exist.
         let resp = get(&format!("http://127.0.0.1:{}/", port)).unwrap();

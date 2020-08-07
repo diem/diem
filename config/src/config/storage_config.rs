@@ -3,13 +3,16 @@
 
 use crate::utils;
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct StorageConfig {
     pub address: SocketAddr,
-    pub backup_service_port: u16,
+    pub backup_service_address: SocketAddr,
     pub dir: PathBuf,
     pub grpc_max_receive_len: Option<i32>,
     /// None disables pruning. The windows is in number of versions, consider system tps
@@ -24,8 +27,8 @@ pub struct StorageConfig {
 impl Default for StorageConfig {
     fn default() -> StorageConfig {
         StorageConfig {
-            address: "127.0.0.1:6666".parse().unwrap(),
-            backup_service_port: 7777,
+            address: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 6666),
+            backup_service_address: SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 7777),
             dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
             // At 100 tps on avg, we keep 4~5 days of history.
@@ -53,6 +56,7 @@ impl StorageConfig {
 
     pub fn randomize_ports(&mut self) {
         self.address.set_port(utils::get_available_port());
-        self.backup_service_port = utils::get_available_port();
+        self.backup_service_address
+            .set_port(utils::get_available_port());
     }
 }

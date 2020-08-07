@@ -105,7 +105,7 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     let _simple_storage_service =
         start_storage_service_with_db(&node_config, Arc::clone(&libra_db));
     let backup_service = start_backup_service(
-        node_config.storage.backup_service_port,
+        node_config.storage.backup_service_address,
         Arc::clone(&libra_db),
     );
 

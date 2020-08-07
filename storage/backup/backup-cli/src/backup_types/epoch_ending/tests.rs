@@ -17,7 +17,11 @@ use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
 use libradb::GetRestoreHandler;
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+    sync::Arc,
+};
 use tokio::time::Duration;
 
 #[test]
@@ -29,7 +33,10 @@ fn end_to_end() {
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
 
     let port = get_available_port();
-    let mut rt = start_backup_service(port, src_db);
+    let mut rt = start_backup_service(
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), port),
+        src_db,
+    );
     let client = Arc::new(BackupServiceClient::new(format!(
         "http://localhost:{}",
         port
