@@ -13,7 +13,7 @@ A transaction on the blockchain.
 | version                   | unsigned int64                           | The on-chain version or unique identifier of this transaction                              |
 | events                    | List<[Event](type_event.md)>             | List of associated events. Empty for no events                                             |
 | transaction_data          | [TransactionData](#type-transactiondata) | Metadata for this transaction                                                              |
-| vm_status                 | [VMStatus|(#type-vmstatus)               | The returned status of the transaction after being processed by the VM                     |
+| vm_status                 | [VMStatus](#type-vmstatus)               | The returned status of the transaction after being processed by the VM                     |
 | gas_used                  | unsigned int64 | Amount of gas used by this transaction, to know how much you paid for the transaction, you need multiply it with your RawTransaction#gas_unit_price |
 
 Note: For the gas_used, internally within the VM we scale the gas units down by 1000 in order to allow granularity of costing for instruction, but without having to use floating point numbers, but we do round-up the gas used to the nearest "1" when we convert back out.
@@ -109,15 +109,14 @@ Transaction data is serialized into one JSON object with a "type" field to indic
 
 Transaction script for peer-to-peer transfer of resource
 
-| Name                      | Type           | Description                                                           |
-|---------------------------|----------------|-----------------------------------------------------------------------|
-| type                      | string         | constant of string "peer_to_peer_transaction"                         |
-| receiver                  | string         | Hex-encoded account address of the receiver                           |
-| auth_key_prefix           | string         | Hex-encoded auth_key prefix                                           |
-| signature                 | string         | Hex-encoded signature of this transaction                             |
-| public_key                | string         | Hex-encoded public key of the transaction sender                      |
-| sequence_number           | unsigned int64 | Sequence number of this transaction corresponding to sender's account |
-| metadata                  | string         | Metadata from RawTransaction#Script, LCS serialized hex-encoded string [server side data structure](https://github.com/libra/libra/blob/1edf9de5749b9ae54202ef07b2b666bfe4f125d2/types/src/transaction/metadata.rs#L13). TODO: update doc after |
+| Name                      | Type           | Description                                                                                             |
+|---------------------------|----------------|---------------------------------------------------------------------------------------------------------|
+| type                      | string         | constant of string "peer_to_peer_transaction"                                                           |
+| receiver                  | string         | Hex-encoded account address of the receiver                                                             |
+| amount                    | unsigned 64    | amount transfered in microlibras                                                                        |
+| currency                  | string         | Currency code                                                                                           |
+| metadata                  | string         | Metadata from RawTransaction#Script, LCS serialized hex-encoded string [server side data structure][1]. |
+| metadata_signature        | string         | Hex-encoded metadata signature, use this to validate metadata                                           |
 
 #### mint_transaction
 
@@ -182,3 +181,5 @@ Object representing execution failure while executing Move code, but not raised 
 | location       | string         | String of the form "address::moduleName" where the execution error occurred. "Script" if the execution error occurred while execution code that was part of the transaction script. |
 | function_index | unsigned int16 | The function index in the `location` where the error occurred |
 | code_offset    | unsigned int16 | The code offset in the function at `function_index` where the execution failure happened |
+
+[1]: https://libra.github.io/libra/libra_types/transaction/metadata/enum.Metadata.html "Transaction Metadata"
