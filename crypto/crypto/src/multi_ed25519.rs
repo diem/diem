@@ -19,6 +19,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
+use mirai_annotations::*;
 use rand::Rng;
 use serde::Serialize;
 use std::{convert::TryInto, fmt};
@@ -42,6 +43,11 @@ pub struct MultiEd25519PublicKey {
     public_keys: Vec<Ed25519PublicKey>,
     threshold: u8,
 }
+
+#[cfg(mirai)]
+use crate::tags::ValidatedPublicKeyTag;
+#[cfg(not(mirai))]
+struct ValidatedPublicKeyTag {}
 
 /// Vector of the multi-key signatures along with a 32bit [u8; 4] bitmap required to map signatures
 /// with their corresponding public keys.
@@ -299,9 +305,13 @@ impl TryFrom<&[u8]> for MultiEd25519PublicKey {
             .chunks_exact(ED25519_PUBLIC_KEY_LENGTH)
             .map(Ed25519PublicKey::try_from)
             .collect();
-        public_keys.map(|public_keys| MultiEd25519PublicKey {
-            public_keys,
-            threshold,
+        public_keys.map(|public_keys| {
+            let public_key = MultiEd25519PublicKey {
+                public_keys,
+                threshold,
+            };
+            add_tag!(&public_key, ValidatedPublicKeyTag);
+            public_key
         })
     }
 }
@@ -474,6 +484,8 @@ impl Signature for MultiEd25519Signature {
         message: &T,
         public_key: &MultiEd25519PublicKey,
     ) -> Result<()> {
+        // Public keys should be validated to be safe against small subgroup attacks, etc.
+        precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let mut bytes = <T as CryptoHash>::Hasher::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)?;
@@ -488,6 +500,8 @@ impl Signature for MultiEd25519Signature {
         message: &[u8],
         public_key: &MultiEd25519PublicKey,
     ) -> Result<()> {
+        // Public keys should be validated to be safe against small subgroup attacks, etc.
+        precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let last_bit = bitmap_last_set_bit(self.bitmap);
         if last_bit == None || last_bit.unwrap() as usize > public_key.length() {
             return Err(anyhow!(

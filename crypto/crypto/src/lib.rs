@@ -3,6 +3,8 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+//! This feature gets turned on only if libra-crypto is compiled via MIRAI in a nightly build.
+#![cfg_attr(mirai, allow(incomplete_features), feature(const_generics))]
 
 //! A library supplying various cryptographic primitives
 pub mod compat;
@@ -18,6 +20,9 @@ pub mod x25519;
 
 #[cfg(test)]
 mod unit_tests;
+
+#[cfg(mirai)]
+mod tags;
 
 pub use self::traits::*;
 pub use hash::HashValue;
@@ -49,3 +54,9 @@ compile_error!(
     "at most one dalek arithmetic backend cargo feature should be enabled! \
      please enable one of: fiat, vanilla"
 );
+
+// MIRAI's tag analysis makes use of the incomplete const_generics feature, so the module
+// containing the definitions of MIRAI tag types should not get compiled in a release build.
+// The code below fails a build of the crate if mirai is on but debug_assertions is not.
+#[cfg(all(mirai, not(debug_assertions)))]
+compile_error!("MIRAI can only be used to compile the crate in a debug build!");

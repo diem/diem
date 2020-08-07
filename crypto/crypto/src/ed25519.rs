@@ -41,6 +41,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
 use libra_crypto_derive::{DeserializeKey, SerializeKey, SilentDebug, SilentDisplay};
+use mirai_annotations::*;
 use serde::Serialize;
 use std::{cmp::Ordering, fmt};
 
@@ -75,6 +76,11 @@ impl Clone for Ed25519PrivateKey {
 /// An Ed25519 public key
 #[derive(DeserializeKey, Clone, SerializeKey)]
 pub struct Ed25519PublicKey(ed25519_dalek::PublicKey);
+
+#[cfg(mirai)]
+use crate::tags::ValidatedPublicKeyTag;
+#[cfg(not(mirai))]
+struct ValidatedPublicKeyTag {}
 
 /// An Ed25519 signature
 #[derive(DeserializeKey, Clone, SerializeKey)]
@@ -378,7 +384,9 @@ impl TryFrom<&[u8]> for Ed25519PublicKey {
         // Unfortunately, tuple struct `PublicKey` is private so we cannot
         // Ok(Ed25519PublicKey(ed25519_dalek::PublicKey(compressed, point)))
         // and we have to again invoke deserialization.
-        Ed25519PublicKey::from_bytes_unchecked(bytes)
+        let public_key = Ed25519PublicKey::from_bytes_unchecked(bytes)?;
+        add_tag!(&public_key, ValidatedPublicKeyTag); // This key has gone through validity checks.
+        Ok(public_key)
     }
 }
 
@@ -410,6 +418,8 @@ impl Signature for Ed25519Signature {
         message: &T,
         public_key: &Ed25519PublicKey,
     ) -> Result<()> {
+        // Public keys should be validated to be safe against small subgroup attacks, etc.
+        precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message)
             .map_err(|_| CryptoMaterialError::SerializationError)?;
@@ -420,6 +430,8 @@ impl Signature for Ed25519Signature {
     /// Outside of this crate, this particular function should only be used for native signature
     /// verification in move
     fn verify_arbitrary_msg(&self, message: &[u8], public_key: &Ed25519PublicKey) -> Result<()> {
+        // Public keys should be validated to be safe against small subgroup attacks, etc.
+        precondition!(has_tag!(public_key, ValidatedPublicKeyTag));
         Ed25519Signature::check_malleability(&self.to_bytes())?;
 
         public_key
