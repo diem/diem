@@ -8,27 +8,27 @@ orbs:
 executors:
   build-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: docker.io/libra/build_environment:latest
     resource_class: 2xlarge
   unittest-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: docker.io/libra/build_environment:latest
     resource_class: 2xlarge+
   test-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: docker.io/libra/build_environment:latest
     resource_class: xlarge
   premainnet-cluster-test-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: docker.io/libra/build_environment:latest
     resource_class: xlarge
   audit-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: docker.io/libra/build_environment:latest
     resource_class: medium
   terraform-executor:
     docker:
-      - image: hashicorp/terraform
+      - image: libra/build_environment:latest
     resource_class: small
   docker-executor:
     machine:
@@ -46,6 +46,9 @@ commands:
     description: Environment Setup
     steps:
       - run:
+          name: update tooling if needed.
+          command: scripts/dev_setup.sh -o -b -p
+      - run:
           name: Setup Env
           command: |
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
@@ -55,71 +58,18 @@ commands:
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
             export RUST_NIGHTLY=$(cat cargo-toolchain)
             echo 'export RUST_NIGHTLY='${RUST_NIGHTLY} >> $BASH_ENV
-  install_deps:
-    steps:
-      - run:
-          name: Install Dependencies
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
-            rustup default `cat rust-toolchain`
-            rustup component add clippy rustfmt
-            rustup toolchain install $RUST_NIGHTLY
-      - run:
-          name: Set cargo Environment
-          command: |
+
             # Turn on the experimental feature resolver in cargo. See:
             # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
-            export CARGOFLAGS=$(cat cargo-flags)
-            echo 'export CARGOFLAGS='${CARGOFLAGS} >> $BASH_ENV
+            echo 'export CARGOFLAGS='$(cat cargo-flags) >> $BASH_ENV
             # Use nightly version of cargo to access the new feature resolver
-            echo 'export CARGO="$(rustup which cargo --toolchain $RUST_NIGHTLY)"' >> $BASH_ENV
+            echo 'export CARGO='$(rustup which cargo --toolchain $RUST_NIGHTLY) >> $BASH_ENV
             # Pin the version of RUSTC used for all invocations of cargo
             echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
-  install_code_coverage_deps:
-    steps:
-      - run:
-          name: Install grcov and lcov
-          command: |
-            sudo apt-get update
-            sudo apt-get install lcov
-            ${CARGO} ${CARGOFLAGS} install --force grcov
-            grcov --version
-  install_docker_linter:
-    steps:
-      - run:
-          name: install dockerfile linter (hadolint)
-          command: |
-            export HADOLINT=${HOME}/hadolint
-            export HADOLINT_VER=v1.17.4
-            curl -sL -o ${HADOLINT} "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VER}/hadolint-$(uname -s)-$(uname -m)" && chmod 700 ${HADOLINT}
-  install_rust_nightly_toolchain:
-    steps:
-      - run:
-          name: Install nightly toolchain for features not in beta/stable
-          command: rustup install nightly
-  install_sccache:
-    steps:
-      - restore_cache:
-          name: Restore sccache binary
-          key: sccache-bin-{{ checksum "rust-toolchain" }}-{{ checksum "cargo-toolchain" }}
-      - run:
-          name: Install scccache
-          command: |
-            if ! [ -e /usr/local/cargo/bin/sccache ]; then
-              $CARGO $CARGOFLAGS install sccache --version=0.2.13
-            else
-              echo 'sccache binary is found. Skipping install.'
-            fi
             echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
-      - save_cache:
-          name: Save sccache binary
-          key: sccache-bin-{{ checksum "rust-toolchain" }}-{{ checksum "cargo-toolchain" }}
-          paths:
-            - "/usr/local/cargo/bin/sccache"
   save_sccache:
     description: Save shared compilation cache for future jobs
     steps:
@@ -206,23 +156,28 @@ commands:
     steps:
       - save_cache:
           name: Save cargo package cache
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          key: cargo-package-cache-new-{{ checksum "Cargo.lock" }}
           # paths are relative to /home/circleci/project/
           paths:
-            - "/usr/local/cargo/git"
-            - "/usr/local/cargo/registry"
-            - "/usr/local/cargo/.package-cache"
+            - "/home/circleci/.cargo/git"
+            - "/home/circleci/.cargo/registry"
+            - "/home/circleci/.cargo/.package-cache"
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
+      - run:
+          name: Deal with non-relative cache locations.
+          command: |
+            sudo mkdir -p /usr/local/cargo/
+            sudo chmod 777 /usr/local/cargo/
       - restore_cache:
           name: Restore cargo package cache
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          key: cargo-package-cache-new-{{ checksum "Cargo.lock" }}
       - run:
           name: Check cargo package cache
           command: |
-            ls -all /usr/local/cargo
-            du -ssh /usr/local/cargo
+            ls -all /home/circleci/.cargo
+            du -ssh /home/circleci/.cargo
   save_breaking_change_rev:
     description: Save the breaking change rev since last testnet update.
     steps:
@@ -293,7 +248,6 @@ commands:
       - checkout
       - print_versions
       - env_setup
-      - install_deps
   build_teardown:
     steps:
       - run:
@@ -302,10 +256,10 @@ commands:
   setup_docker_signing:
     steps:
       - run:
-          name: Setup docker setup_docker_signing
+          name: Setup docker login and signing
           command: |
             set -x
-            echo 'export DOCKER_CONTENT_TRUST=1' >> $BASH_ENV
+            # echo 'export DOCKER_CONTENT_TRUST=1' >> $BASH_ENV
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}
             echo 'export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}' >> $BASH_ENV
@@ -336,10 +290,11 @@ jobs:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
       - restore_cargo_package_cache
-      - install_sccache
       - run:
           name: Fetch workspace dependencies over network
-          command: $CARGO $CARGOFLAGS fetch
+          command: |
+            echo $CARGO $CARGOFLAGS fetch
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
   lint:
     executor: test-executor
@@ -347,7 +302,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           name: cargo lint
@@ -383,7 +337,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16
@@ -415,7 +368,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           name: Determine test targets for this container.
@@ -479,7 +431,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           name: Run all unit tests
@@ -505,7 +456,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           name: Build benchmark targets without running
@@ -564,13 +514,11 @@ jobs:
       - run:
           name: Check if the docker build job should run
           command: .circleci/should_build_docker.sh
-      - install_docker_linter
       - find_dockerfile_changes
       - run:
           name: Lint DockerFile changes
           command: |
-            export HADOLINT=${HOME}/hadolint
-            ${HADOLINT} -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
+            hadolint -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
   check-breaking-change:
     executor: audit-executor
     description: Detect breaking change in CLI
@@ -644,7 +592,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
       - restore_sccache
       - run:
           name: Generate documentation
@@ -679,6 +626,192 @@ jobs:
           name: Deploy to gh-pages branch
           command: |
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
+
+  ######################################################################################################
+  # Test building docker ci base image if relevnat files have changed                                  #
+  ######################################################################################################
+  docker-ci-build:
+    executor: docker-executor
+    description: publish docker images
+    steps:
+      - checkout
+      - run:
+          name: Test building the ci base image in cimg/base:2020.01 (ubuntu)
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed - exit
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+
+            #otherwise we'll build the docker image.
+            export DOCKER_CONTENT_TRUST=0
+            docker build -f docker/ci/Dockerfile .
+
+  ######################################################################################################
+  # Test centos dev_setup.sh if relevnat files have changed                                            #
+  ######################################################################################################
+  dev_setup-test-centos:
+    executor: docker-executor
+    description: Test the dev_setup.sh in centos
+    steps:
+      - checkout
+      - run:
+          name: Test running the dev_setup.sh in centos:latest
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/centos/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed - exit
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+
+            #otherwise we'll build the docker image.
+            export DOCKER_CONTENT_TRUST=0
+            docker build -f docker/ci/centos/Dockerfile .
+
+  ######################################################################################################
+  # Test archlinux dev_setup.sh if relevnat files have changed                                         #
+  ######################################################################################################
+  dev_setup-test-arch:
+    executor: docker-executor
+    description: Test the dev_setup.sh in archlinux
+    steps:
+      - checkout
+      - run:
+          name: Test running the dev_setup.sh in archlinux:latest
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/arch/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed - exit
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+
+            #otherwise we'll build the docker image.
+            export DOCKER_CONTENT_TRUST=0
+            docker build -f docker/ci/arch/Dockerfile .
+
+  ######################################################################################################
+  # Test alpine dev_setup.sh if relevnat files have changed                                            #
+  ######################################################################################################
+  dev_setup-test-alpine:
+    executor: docker-executor
+    description: Test dev_setup.sh in alpine
+    steps:
+      - checkout
+      - run:
+          name: Test running the dev_setup.sh in alpine:latest.
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/alpine/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed - exit
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+
+            #otherwise we'll build the docker image.
+            export DOCKER_CONTENT_TRUST=0
+            docker build -f docker/ci/alpine/Dockerfile .
+
+  dev-setup-changes:
+    executor: audit-executor
+    description: Determine if any of the docker builds targeting dev_setup.sh need built
+    steps:
+      - checkout
+      - run:
+          name: Determine if the dev_setup.sh testing jobs should run.
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/alpine/Dockerfile" >> /tmp/ci_docker_files
+            echo "docker/ci/arch/Dockerfile" >> /tmp/ci_docker_files
+            echo "docker/ci/centos/Dockerfile" >> /tmp/ci_docker_files
+            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed halt this build and mark it success, hopefully effects dependent jobs
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+
+  ######################################################################################################
+  # Publish docker ci base image to docker hub                                                         #
+  ######################################################################################################
+  docker-ci-publish:
+    executor: docker-executor
+    description: publish docker images
+    steps:
+      - checkout
+      - setup_docker_signing
+      - run:
+          name: Build the ci base image to prevent errors in the nightly build.
+          command: |
+
+            #detect if any relevant files have changed requiring base docker file rebuilding.
+            #this is specific for prs targeting master.   TODO: figure out target release branch.
+
+            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
+            echo ".circleci/config.yml" >> /tmp/ci_docker_files
+            echo "cargo-toolchain" >> /tmp/ci_docker_files
+            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
+            echo "rust-toolchain" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+
+            #if no relevant files have changed halt this build and mark it success, hopefully effects dependent jobs
+            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
+              echo no relevant files have changed - exit
+              circleci step halt
+            fi
+            set -x
+            #building with content trust tends to break in circleci
+            export DOCKER_CONTENT_TRUST=0
+            docker build -f docker/ci/Dockerfile -t libra/build_environment:latest .
+            #signs the pushed image
+            docker push --disable-content-trust=false libra/build_environment:latest
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
@@ -805,7 +938,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -813,7 +945,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -833,7 +964,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -843,7 +973,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -853,7 +982,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -863,7 +991,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -873,7 +1000,6 @@ workflows:
           filters:
             branches:
               ignore:
-                - gh-pages
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
@@ -911,7 +1037,63 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
-
+      #Todo: solid publishing mechanism.
+      #- docker-ci-publish:
+      #    context: docker
+      #    requires:
+      #      - dev-setup-changes
+      #    filters:
+      #      branches:
+      #        only:
+      #          - master
+      - dev-setup-changes:
+          filters:
+            branches:
+              ignore:
+                - auto
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+      # These builds test the dev_setup.sh
+      - docker-ci-build:
+          requires:
+            - dev-setup-changes
+          filters:
+            branches:
+              ignore:
+                - auto
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+                - master
+      - dev_setup-test-centos:
+          requires:
+            - dev-setup-changes
+          filters:
+            branches:
+              ignore:
+                - auto
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+                - master
+      - dev_setup-test-alpine:
+          requires:
+            - dev-setup-changes
+          filters:
+            branches:
+              ignore:
+                - auto
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+                - master
+      - dev_setup-test-arch:
+          requires:
+            - dev-setup-changes
+          filters:
+            branches:
+              ignore:
+                - auto
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+                - master
   scheduled-workflow:
     triggers:
       - schedule:
@@ -921,8 +1103,3 @@ workflows:
               only: master
     jobs:
       - audit
-      - code_coverage:
-          context: libra_ci
-          filters:
-            branches:
-              only: master
