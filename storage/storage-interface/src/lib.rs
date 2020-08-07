@@ -114,6 +114,22 @@ impl TreeState {
         self.num_transactions == 0
             && self.account_state_root_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH
     }
+
+    pub fn describe(&self) -> String {
+        if self.num_transactions != 0 {
+            format!(
+                "DB has {} transactions in it, state root hash is {}.",
+                self.num_transactions, self.account_state_root_hash
+            )
+        } else if self.account_state_root_hash != *SPARSE_MERKLE_PLACEHOLDER_HASH {
+            format!(
+                "DB has no transactions in it, but has pre-genesis state, state root hash is {}.",
+                self.account_state_root_hash
+            )
+        } else {
+            "DB is empty, has no transactions or state.".into()
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]

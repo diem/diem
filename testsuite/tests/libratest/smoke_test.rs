@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::anyhow;
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend, WaypointConfig};
@@ -28,6 +29,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
+use regex::Regex;
 use rust_decimal::Decimal;
 use std::{
     collections::BTreeMap,
@@ -1839,7 +1841,7 @@ fn test_genesis_transaction_flow() {
         .unwrap();
     let output = std::str::from_utf8(&waypoint_command.stdout).unwrap();
     println!("{:?}", output);
-    let waypoint_str = output.split('\n').collect::<Vec<_>>()[1];
+    let waypoint_str = &parse_waypoint(output);
     println!("{}", waypoint_str);
     let set_waypoint = |node_config: &NodeConfig| {
         let f = |backend: &SecureBackend| {
@@ -1910,4 +1912,13 @@ fn test_genesis_transaction_flow() {
     client_proxy_1
         .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
+}
+
+fn parse_waypoint(db_bootstrapper_output: &str) -> String {
+    Regex::new(r"Got waypoint: (\d+:\w+)")
+        .unwrap()
+        .captures(db_bootstrapper_output)
+        .ok_or_else(|| anyhow!("Failed to parse db-bootstrapper output."))
+        .unwrap()[1]
+        .into()
 }
