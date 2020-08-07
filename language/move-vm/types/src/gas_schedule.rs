@@ -74,6 +74,7 @@ impl<'a> CostStrategy<'a> {
         if !self.charge {
             return Ok(());
         }
+        debug_assert!(amount.get() > 0);
         if self
             .gas_left
             .app(&amount, |curr_gas, gas_amt| curr_gas >= gas_amt)
@@ -93,6 +94,9 @@ impl<'a> CostStrategy<'a> {
         opcode: Opcodes,
         size: AbstractMemorySize<GasCarrier>,
     ) -> PartialVMResult<()> {
+        // Make sure that the size is always non-zero
+        let size = size.map(|x| std::cmp::max(1, x));
+        debug_assert!(size.get() > 0);
         self.deduct_gas(
             self.cost_table
                 .instruction_cost(opcode as u8)
@@ -110,9 +114,9 @@ impl<'a> CostStrategy<'a> {
     /// gas units are left.
     pub fn charge_intrinsic_gas(
         &mut self,
-        instrinsic_cost: AbstractMemorySize<GasCarrier>,
+        intrinsic_cost: AbstractMemorySize<GasCarrier>,
     ) -> VMResult<()> {
-        let cost = calculate_intrinsic_gas(instrinsic_cost, &self.cost_table.gas_constants);
+        let cost = calculate_intrinsic_gas(intrinsic_cost, &self.cost_table.gas_constants);
         self.deduct_gas(cost)
             .map_err(|e| e.finish(Location::Undefined))
     }
@@ -280,7 +284,7 @@ pub fn calculate_intrinsic_gas(
 
     if transaction_size.get() > gas_constants.large_transaction_cutoff.get() {
         let excess = transaction_size.sub(gas_constants.large_transaction_cutoff);
-        min_transaction_fee.add(gas_constants.instrinsic_gas_per_byte.mul(excess))
+        min_transaction_fee.add(gas_constants.intrinsic_gas_per_byte.mul(excess))
     } else {
         min_transaction_fee.unitary_cast()
     }
@@ -307,4 +311,5 @@ pub enum NativeCostIndex {
     SIGNER_BORROW = 14,
     CREATE_SIGNER = 15,
     DESTROY_SIGNER = 16,
+    EMIT_EVENT = 17,
 }

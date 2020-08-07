@@ -118,32 +118,37 @@
 <code>min_transaction_gas_units: u64</code>
 </dt>
 <dd>
- We charge one unit of gas per-byte for the first 600 bytes
+ The flat minimum amount of gas required for any transaction.
+ Charged at the start of execution.
 </dd>
 <dt>
 
 <code>large_transaction_cutoff: u64</code>
 </dt>
 <dd>
- Any transaction over this size will be charged
-<code>INTRINSIC_GAS_PER_BYTE</code> per byte
+ Any transaction over this size will be charged an additional amount per byte.
 </dd>
 <dt>
 
-<code>instrinsic_gas_per_byte: u64</code>
+<code>intrinsic_gas_per_byte: u64</code>
 </dt>
 <dd>
- The units of gas that should be charged per byte for every transaction.
+ The units of gas that to be charged per byte over the
+<code>large_transaction_cutoff</code> in addition to
+ <code>min_transaction_gas_units</code> for transactions whose size exceeds
+<code>large_transaction_cutoff</code>.
 </dd>
 <dt>
 
 <code>maximum_number_of_gas_units: u64</code>
 </dt>
 <dd>
- 1 nanosecond should equal one unit of computational gas. We bound the maximum
- computational time of any given transaction at 10 milliseconds. We want this number and
+ ~5 microseconds should equal one unit of computational gas. We bound the maximum
+ computational time of any given transaction at roughly 20 seconds. We want this number and
  <code>MAX_PRICE_PER_GAS_UNIT</code> to always satisfy the inequality that
-         MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+ MAXIMUM_NUMBER_OF_GAS_UNITS * MAX_PRICE_PER_GAS_UNIT < min(u64::MAX, GasUnits<GasCarrier>::MAX)
+ NB: The bound is set quite high since custom scripts aren't allowed except from predefined
+ and vetted senders.
 </dd>
 <dt>
 
@@ -215,7 +220,7 @@
         global_memory_per_byte_write_cost: 9,
         min_transaction_gas_units: 600,
         large_transaction_cutoff: 600,
-        instrinsic_gas_per_byte: 8,
+        intrinsic_gas_per_byte: 8,
         maximum_number_of_gas_units: 4000000,
         min_price_per_gas_unit: 0,
         max_price_per_gas_unit: 10000,

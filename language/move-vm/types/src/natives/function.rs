@@ -87,7 +87,8 @@ impl NativeResult {
 /// The key is the specific native function index known to `CostTable`.
 pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUnits<GasCarrier> {
     let gas_amt = table.native_cost(key as u8);
-    let memory_size = AbstractMemorySize::new(size as GasCarrier);
+    let memory_size = AbstractMemorySize::new(std::cmp::max(1, size) as GasCarrier);
+    debug_assert!(memory_size.get() > 0);
     gas_amt.total().mul(memory_size)
 }
 

@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use move_core_types::gas_schedule::ZERO_GAS_UNITS;
+use move_core_types::gas_schedule::GasAlgebra;
 use move_vm_types::{
+    gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
-    natives::function::{NativeContext, NativeResult},
+    natives::function::{native_gas, NativeContext, NativeResult},
     values::Value,
 };
 use std::collections::VecDeque;
@@ -23,7 +24,13 @@ pub fn native_emit_event(
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
+    let cost = native_gas(
+        context.cost_table(),
+        NativeCostIndex::EMIT_EVENT,
+        msg.size().get() as usize,
+    );
+
     context.save_event(guid, seq_num, ty, msg);
 
-    Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
+    Ok(NativeResult::ok(cost, vec![]))
 }

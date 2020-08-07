@@ -6,8 +6,8 @@ use libra_types::vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{
-        words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
-        STRUCT_SIZE,
+        AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, MIN_EXISTS_DATA_SIZE,
+        REFERENCE_SIZE, STRUCT_SIZE,
     },
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
 };
@@ -2100,13 +2100,13 @@ impl Container {
 
 impl ContainerRef {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(REFERENCE_SIZE)
+        REFERENCE_SIZE
     }
 }
 
 impl IndexedRef {
     fn size(&self) -> AbstractMemorySize<GasCarrier> {
-        words_in(REFERENCE_SIZE)
+        REFERENCE_SIZE
     }
 }
 
@@ -2163,10 +2163,8 @@ impl GlobalValue {
         // REVIEW: this doesn't seem quite right. Consider changing it to
         // a constant positive size or better, something proportional to the size of the value.
         match &self.0 {
-            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => {
-                words_in(REFERENCE_SIZE)
-            }
-            GlobalValueImpl::Deleted | GlobalValueImpl::None => AbstractMemorySize::new(0),
+            GlobalValueImpl::Fresh { .. } | GlobalValueImpl::Cached { .. } => REFERENCE_SIZE,
+            GlobalValueImpl::Deleted | GlobalValueImpl::None => MIN_EXISTS_DATA_SIZE,
         }
     }
 }

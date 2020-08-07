@@ -155,6 +155,12 @@ impl Interpreter {
                         )
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_handle(fh_idx);
+                    cost_strategy
+                        .charge_instr_with_size(
+                            Opcodes::CALL,
+                            AbstractMemorySize::new(func.arg_count() as GasCarrier),
+                        )
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, vec![])?;
                         continue;
@@ -183,6 +189,12 @@ impl Interpreter {
                         .instantiate_generic_function(idx, current_frame.ty_args())
                         .map_err(|e| set_err_info!(current_frame, e))?;
                     let func = resolver.function_from_instantiation(idx);
+                    cost_strategy
+                        .charge_instr_with_size(
+                            Opcodes::CALL_GENERIC,
+                            AbstractMemorySize::new(func.arg_count() as GasCarrier),
+                        )
+                        .map_err(|e| set_err_info!(current_frame, e))?;
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
                         continue;
@@ -1078,6 +1090,7 @@ impl Frame {
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_GENERIC, size)?;
                     }
                     Bytecode::FreezeRef => {
+                        cost_strategy.charge_instr(Opcodes::FREEZE_REF)?;
                         // FreezeRef should just be a null op as we don't distinguish between mut
                         // and immut ref at runtime.
                     }
