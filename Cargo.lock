@@ -3569,6 +3569,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
+ "move-lang 0.0.1",
  "move-vm-natives 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

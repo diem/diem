@@ -32,6 +32,7 @@ proptest = "0.10.0"
 
 compiler = { path = "../../compiler", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+move-lang = { path = "../../move-lang", version = "0.0.1" }
 
 [features]
 default = []
