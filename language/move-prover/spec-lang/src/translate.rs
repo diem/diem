@@ -2377,6 +2377,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
 
         // Now process all conditions and invariants.
+        assert!(self.spec_block_lets.is_empty());
         for member in &block.value.members {
             let member_loc = self.parent.to_loc(&member.loc);
             match &member.value {
@@ -2384,6 +2385,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     is_global: false, ..
                 } => { /* handled during decl analysis */ }
                 EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
+                EA::SpecBlockMember_::Let {
+                    name: let_name,
+                    def,
+                } => {
+                    let context = SpecBlockContext::Schema(name.clone());
+                    self.def_ana_let(&context, &member_loc, let_name, def);
+                }
                 EA::SpecBlockMember_::Condition {
                     kind,
                     properties,
@@ -2410,6 +2418,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             };
         }
+        self.spec_block_lets.clear();
     }
 
     /// Extracts all schema inclusions from a list of spec block members.
@@ -2721,18 +2730,17 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     self.parent
                         .error(loc, &format!("`{}` cannot be included conditionally", kind));
                 } else {
-                    let path_cond_loc = self.loc_map.get(&cond.node_id()).unwrap_or(loc).clone();
-                    let node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &path_cond_loc);
                     // In case of AbortsIf, the path condition is combined with the predicate using
                     // &&, otherwise ==>.
-                    exp = Exp::Call(
-                        node_id,
+                    exp = self.make_path_expr(
                         if kind == &ConditionKind::AbortsIf {
                             Operation::And
                         } else {
                             Operation::Implies
                         },
-                        vec![cond.clone(), exp],
+                        cond.node_id(),
+                        cond.clone(),
+                        exp,
                     );
                 }
             }
@@ -2748,6 +2756,29 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         self.parent
             .spec_schema_table
             .insert(schema_name, schema_entry);
+    }
+
+    /// Make a path expression. This takes care of keeping virtual operators as top-level
+    /// expressions.
+    fn make_path_expr(&mut self, oper: Operation, node_id: NodeId, cond: Exp, exp: Exp) -> Exp {
+        let path_cond_loc = self.loc_map.get(&node_id).expect("loc defined").clone();
+        let new_node_id = self.new_node_id_with_type_loc(&BOOL_TYPE, &path_cond_loc);
+        match exp {
+            Exp::Call(outer_node_id, Operation::CondWithAbortCode, mut args) => {
+                let exp = args.remove(0);
+                let code = args.remove(0);
+                Exp::Call(
+                    outer_node_id,
+                    Operation::CondWithAbortCode,
+                    vec![Exp::Call(new_node_id, oper, vec![cond, exp]), code],
+                )
+            }
+            Exp::Call(_, Operation::AbortCodes, _) => {
+                self.parent.error(&path_cond_loc, "[implementation restriction] `aborts_with` cannot be included in schema expression context");
+                exp
+            }
+            _ => Exp::Call(new_node_id, oper, vec![cond, exp]),
+        }
     }
 
     /// Creates an expression translator for use in schema expression. This defines the context

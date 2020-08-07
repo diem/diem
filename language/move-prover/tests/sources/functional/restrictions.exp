@@ -30,19 +30,3 @@ error: [boogie translator] `|x|e` (lambda) currently only supported as argument 
  22 │             let f = |x| x + 1;
     │                     ^^^^^^^^^
     │
-
-error: [boogie translator] Shl not yet supported
-
-    ┌── tests/sources/functional/restrictions.move:33:13 ───
-    │
- 33 │             8 << 2
-    │             ^^^^^^
-    │
-
-error: [boogie translator] Shr not yet supported
-
-    ┌── tests/sources/functional/restrictions.move:38:13 ───
-    │
- 38 │             8 >> 2
-    │             ^^^^^^
-    │

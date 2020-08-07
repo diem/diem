@@ -371,10 +371,15 @@ impl<'env> BoogieWrapper<'env> {
                     diag.message =
                         "abort not covered by any of the `aborts_if` clauses".to_string();
                 }
+                let reason = if code == -1 {
+                    "with execution failure".to_string()
+                } else {
+                    format!("with code `0x{:X}`", code)
+                };
                 diag.secondary_labels = vec![Label::new(
                     abort_loc.file_id(),
                     abort_loc.span(),
-                    &format!("abort happened here with code `{}`", code),
+                    &format!("abort happened here {}", reason),
                 )];
             }
             diag = diag.with_notes(trace);

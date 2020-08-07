@@ -183,8 +183,10 @@ impl Loc {
         let mut start = loc.span.start();
         let mut end = loc.span.end();
         for l in locs.iter().skip(1) {
-            start = std::cmp::min(start, l.span().start());
-            end = std::cmp::max(end, l.span().end());
+            if l.file_id() == loc.file_id() {
+                start = std::cmp::min(start, l.span().start());
+                end = std::cmp::max(end, l.span().end());
+            }
         }
         Loc::new(loc.file_id(), Span::new(start, end))
     }

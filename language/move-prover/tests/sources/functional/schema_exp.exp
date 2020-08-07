@@ -9,7 +9,7 @@ error: abort not covered by any of the `aborts_if` clauses
     │ ╰─────^
     ·
  26 │         if (!c) abort(1);
-    │         ---------------- abort happened here with code `1`
+    │         ---------------- abort happened here with code `0x1`
     │
     =     at tests/sources/functional/schema_exp.move:25:5: bar_incorrect
     =         c = <redacted>

@@ -32,7 +32,7 @@ error: abort not covered by any of the `aborts_if` clauses
     │ ╰─────^
     ·
  57 │         if (x <= y) abort 1
-    │         ------------------- abort happened here with code `1`
+    │         ------------------- abort happened here with code `0x1`
     │
     =     at tests/sources/functional/aborts_if.move:56:5: abort5_incorrect
     =         x = <redacted>,
@@ -73,7 +73,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  155 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `1`
+     │                                      - abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:154:5: abort_at_2_or_3_strict_incorrect
      =         x = <redacted>,
@@ -90,7 +90,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  137 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `1`
+     │                                      - abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:136:5: abort_at_2_or_3_total_incorrect
      =         x = <redacted>,
@@ -119,7 +119,7 @@ error: abort not covered by any of the `aborts_if` clauses
     │ ╰─────^
     ·
  96 │         abort 1
-    │         ------- abort happened here with code `1`
+    │         ------- abort happened here with code `0x1`
     │
     =     at tests/sources/functional/aborts_if.move:95:5: multi_abort3_incorrect
     =         _x = <redacted>,
@@ -146,7 +146,7 @@ error: function does not succeed under this condition
      │         ^^^^^^^^^^^^^^^^^^^
      ·
  174 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `1`
+     │                                      - abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:173:5: succeed_incorrect
      =         x = <redacted>,

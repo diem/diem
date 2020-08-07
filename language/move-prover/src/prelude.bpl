@@ -849,11 +849,25 @@ procedure {:inline 1} $Sub(src1: $Value, src2: $Value) returns (dst: $Value)
 // Left them out for brevity
 function $power_of_2(power: $Value): int {
     (var p := i#$Integer(power);
-     if p == 32 then 4294967296
+     if p == 8 then 256
+     else if p == 16 then 65536
+     else if p == 32 then 4294967296
      else if p == 64 then 18446744073709551616
      // Value is undefined, otherwise.
      else -1
      )
+}
+
+function $shl(src1: $Value, src2: $Value): $Value {
+   (var po2 := $power_of_2(src2);
+    $Integer(i#$Integer(src1) * po2)
+   )
+}
+
+function $shr(src1: $Value, src2: $Value): $Value {
+   (var po2 := $power_of_2(src2);
+    $Integer(i#$Integer(src1) div po2)
+   )
 }
 
 procedure {:inline 1} $Shl(src1: $Value, src2: $Value) returns (dst: $Value)
@@ -861,8 +875,8 @@ requires is#$Integer(src1) && is#$Integer(src2);
 {
     var po2: int;
     po2 := $power_of_2(src2);
-    assert po2 >= 1;   // po2 < 0 if src2 not 32 or 63
-    dst := $Integer(i#$Integer(src2) * po2);
+    assert po2 >= 1;   // restriction: shift argument must be 8, 16, 32, or 64
+    dst := $Integer(i#$Integer(src1) * po2);
 }
 
 procedure {:inline 1} $Shr(src1: $Value, src2: $Value) returns (dst: $Value)
@@ -870,8 +884,8 @@ requires is#$Integer(src1) && is#$Integer(src2);
 {
     var po2: int;
     po2 := $power_of_2(src2);
-    assert po2 >= 1;   // po2 < 0 if src2 not 32 or 63
-    dst := $Integer(i#$Integer(src2) div po2);
+    assert po2 >= 1;   // restriction: shift argument must be 8, 16, 32, or 64
+    dst := $Integer(i#$Integer(src1) div po2);
 }
 
 procedure {:inline 1} $MulU8(src1: $Value, src2: $Value) returns (dst: $Value)

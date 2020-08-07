@@ -69,7 +69,7 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with checking errors"));
     }
-    if env.has_warnings() {
+    if options.prover.report_warnings && env.has_warnings() {
         env.report_warnings(error_writer);
     }
 
@@ -275,7 +275,7 @@ fn calculate_deps_recursively(
     deps: &mut Vec<String>,
 ) -> anyhow::Result<()> {
     static REX: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(?m)0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
+        Lazy::new(|| Regex::new(r"(?m)use\s*0x[0-9abcdefABCDEF]+::\s*(\w+)").unwrap());
     if !visited.insert(path.to_string_lossy().to_string()) {
         return Ok(());
     }

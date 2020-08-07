@@ -28,16 +28,6 @@ module M {
             S{f: 1}
         }
 
-        // Shl
-        define f6(): num {
-            8 << 2
-        }
-
-        // Shr
-        define f7(): num {
-            8 >> 2
-        }
-
         // Multiple variable bindings
         // Those aren't supported even in the checker, so commented out to see the other issues.
         // define f9(): (num, num) {

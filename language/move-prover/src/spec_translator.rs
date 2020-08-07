@@ -710,13 +710,12 @@ impl<'env> SpecTranslator<'env> {
                 .iter()
                 .any(|c| c.exp.extract_cond_and_aborts_code().1.is_some());
             if aborts_if_has_codes || !aborts_with.is_empty() {
-                let abort_code_loc = Loc::enclosing(
-                    &aborts_if
-                        .iter()
-                        .chain(aborts_with.iter())
-                        .map(|c| &c.loc)
-                        .collect_vec(),
-                );
+                // TODO(wrwg): we need a location for the spec block of this function.
+                //   The conditions don't give usa a good indication because via
+                //   schemas, they can come from anywhere. For now we use the
+                //   function start location to not clash with the full function location
+                //   used in the above ensures.
+                let abort_code_loc = func_target.get_loc().at_start();
                 if aborts_if_is_partial && aborts_with.is_empty() {
                     // If the aborts spec is partial but there are no aborts_with, the
                     // aborts code specification is meaningless, because the unspecified
@@ -1622,8 +1621,8 @@ impl<'env> SpecTranslator<'env> {
             Operation::BitOr => self.translate_arith_op("|", args),
             Operation::BitAnd => self.translate_arith_op("&", args),
             Operation::Xor => self.translate_arith_op("^", args),
-            Operation::Shl => self.error(&loc, "Shl not yet supported"),
-            Operation::Shr => self.error(&loc, "Shr not yet supported"),
+            Operation::Shl => self.translate_primitive_call("$shl", args),
+            Operation::Shr => self.translate_primitive_call("$shr", args),
             Operation::Implies => self.translate_logical_op("==>", args),
             Operation::And => self.translate_logical_op("&&", args),
             Operation::Or => self.translate_logical_op("||", args),

@@ -9,7 +9,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  126 │         x / y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:125:5: div_by_zero_u64_incorrect
      =         x = <redacted>,
@@ -26,7 +26,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  178 │         x + y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:177:5: overflow_u128_add_incorrect
      =         x = <redacted>,
@@ -43,7 +43,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  231 │         x * y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:230:5: overflow_u128_mul_incorrect
      =         x = <redacted>,
@@ -60,7 +60,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  162 │         x + y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:161:5: overflow_u64_add_incorrect
      =         x = <redacted>,
@@ -77,7 +77,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  215 │         x * y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:214:5: overflow_u64_mul_incorrect
      =         x = <redacted>,
@@ -94,7 +94,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  146 │         x + y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:145:5: overflow_u8_add_incorrect
      =         x = <redacted>,
@@ -111,7 +111,7 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  199 │         x * y
-     │           - abort happened here with code `-1`
+     │           - abort happened here with execution failure
      │
      =     at tests/sources/functional/arithm.move:198:5: overflow_u8_mul_incorrect
      =         x = <redacted>,

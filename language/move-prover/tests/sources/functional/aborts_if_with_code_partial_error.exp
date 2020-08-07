@@ -1,9 +1,8 @@
 Move prover returns: exiting with boogie generation errors
 error: `aborts_if_is_partial` is set but there are no abort codes specified with `aborts_with` to cover the codes of the unspecified abort cases
 
-    ┌── tests/sources/functional/aborts_if_with_code_partial_error.move:19:9 ───
-    │
- 19 │ ╭         aborts_if x == 1 with 2;
- 20 │ │         aborts_if y == 2;
-    │ ╰─────────────────────────^
-    │
+   ┌── tests/sources/functional/aborts_if_with_code_partial_error.move:8:5 ───
+   │
+ 8 │     fun aborts_with_codes_partial(x: u64, y: u64): u64 {
+   │     ^
+   │
