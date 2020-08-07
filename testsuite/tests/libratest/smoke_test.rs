@@ -1563,14 +1563,73 @@ fn test_consensus_key_rotation() {
         .consensus_public_key
         .clone();
     assert_eq!(new_consensus_key, info_consensus_key);
+}
 
-    // Rotate the consensus key in storage manually and perform another rotation using the op_tool.
+#[test]
+fn test_consensus_key_rotation_recovery() {
+    let mut swarm = TestEnvironment::new(2);
+    swarm.validator_swarm.launch();
+
+    // Load a node config
+    let node_config =
+        NodeConfig::load(swarm.validator_swarm.config.config_files.first().unwrap()).unwrap();
+
+    // Connect the operator tool to the first node's JSON RPC API
+    let op_tool = swarm.get_op_tool(0);
+
+    // Load validator's on disk storage
+    let backend = load_backend_storage(&&node_config);
+
+    // Rotate the consensus key in storage manually and perform a key rotation using the op_tool.
     // Here, we expected the op_tool to see that the consensus key in storage doesn't match the one
     // on-chain, and thus it should simply forward a transaction to the blockchain.
     let mut storage: Storage = (&backend).try_into().unwrap();
     let rotated_consensus_key = storage.rotate_key(CONSENSUS_KEY).unwrap();
-    let (_txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
-    assert_eq!(rotated_consensus_key, new_consensus_key);
+    let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+    assert_eq!(new_consensus_key, rotated_consensus_key);
+
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that the config has been updated correctly with the new consensus key
+    let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
+    let config_consensus_key = op_tool
+        .validator_config(validator_account, &backend)
+        .unwrap()
+        .consensus_public_key;
+    assert_eq!(new_consensus_key, config_consensus_key);
+
+    // Verify that the validator set info contains the new consensus key
+    let info_consensus_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
+        .consensus_public_key
+        .clone();
+    assert_eq!(new_consensus_key, info_consensus_key);
+
+    // Rotate the consensus key again using the tool
+    let (txn_ctx, new_consensus_key) = op_tool.rotate_consensus_key(&backend).unwrap();
+    let mut client = swarm.get_validator_client(0, None);
+    client
+        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
+        .unwrap();
+
+    // Verify that storage has been updated with the new consensus key
+    let storage_consensus_key = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
+    assert_eq!(new_consensus_key, storage_consensus_key);
+
+    // Verify that the config has been updated correctly with the new consensus key
+    let config_consensus_key = op_tool
+        .validator_config(validator_account, &backend)
+        .unwrap()
+        .consensus_public_key;
+    assert_eq!(new_consensus_key, config_consensus_key);
+
+    // Verify that the validator set info contains the new consensus key
+    let info_consensus_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
+        .consensus_public_key
+        .clone();
+    assert_eq!(new_consensus_key, info_consensus_key);
 }
 
 #[test]

@@ -17,12 +17,16 @@ use libra_temppath::TempPath;
 use libra_types::chain_id::ChainId;
 use std::path::{Path, PathBuf};
 
+// Namespace constants
 const LIBRA_ROOT_NS: &str = "libra_root";
 const LIBRA_ROOT_SHARED_NS: &str = "libra_root_shared";
 const OPERATOR_NS: &str = "_operator";
 const OPERATOR_SHARED_NS: &str = "_operator_shared";
 const OWNER_NS: &str = "_owner";
 const OWNER_SHARED_NS: &str = "_owner_shared";
+
+// Secure storage constants
+const SECURE_STORAGE_FILE_PREFIX: &str = "secure_storage";
 
 pub struct ValidatorBuilder<T: AsRef<Path>> {
     storage_helper: StorageHelper,
@@ -41,18 +45,27 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         }
     }
 
-    fn secure_backend(&self, ns: &str, usage: &str) -> SecureBackend {
-        let original = self.storage_helper.path();
-        let dst_base = self.swarm_path.as_ref();
-        let mut dst = dst_base.to_path_buf();
-        dst.push(format!("{}_{}", usage, ns));
-        std::fs::copy(original, &dst).unwrap();
+    /// Deploys the secure backend storage using the given namespace, ready to be used.
+    fn deploy_secure_backend_file(&self, ns: &str) {
+        let temp_backend_path = self.storage_helper.path();
+        let secure_backend_path = self.get_secure_backend_file_path(ns);
+        std::fs::copy(temp_backend_path, secure_backend_path).unwrap();
+    }
 
+    /// Returns a secure backend config using the given namespace.
+    fn get_secure_backend_config(&self, ns: &str) -> SecureBackend {
         let mut storage_config = OnDiskStorageConfig::default();
-        storage_config.path = dst;
+        storage_config.path = self.get_secure_backend_file_path(ns);
         storage_config.set_data_dir(PathBuf::from(""));
         storage_config.namespace = Some(ns.into());
         SecureBackend::OnDiskStorage(storage_config)
+    }
+
+    /// Returns the file path of the secure backend for the given namespace.
+    fn get_secure_backend_file_path(&self, ns: &str) -> PathBuf {
+        let mut backend_file_path = self.swarm_path.as_ref().to_path_buf();
+        backend_file_path.push(format!("{}_{}", SECURE_STORAGE_FILE_PREFIX, ns));
+        backend_file_path
     }
 
     /// Association uploads the validator layout to shared storage.
@@ -144,16 +157,16 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         validator_network.identity = Identity::from_storage(
             validator_identity.key_name,
             validator_identity.peer_id_name,
-            self.secure_backend(&local_ns, "validator"),
+            self.get_secure_backend_config(&local_ns),
         );
         validator_network.network_address_key_backend =
-            Some(self.secure_backend(&local_ns, "validator"));
+            Some(self.get_secure_backend_config(&local_ns));
 
         let fullnode_identity = fullnode_network.identity_from_storage();
         fullnode_network.identity = Identity::from_storage(
             fullnode_identity.key_name,
             fullnode_identity.peer_id_name,
-            self.secure_backend(&local_ns, "full_node"),
+            self.get_secure_backend_config(&local_ns),
         );
 
         config
@@ -182,13 +195,15 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         assert_eq!(output.split("match").count(), 5, "Failed to verify genesis");
 
         config.consensus.safety_rules.service = SafetyRulesService::Thread;
-        config.consensus.safety_rules.backend = self.secure_backend(&local_ns, "safety-rules");
-        config.execution.backend = self.secure_backend(&local_ns, "execution");
+        config.consensus.safety_rules.backend = self.get_secure_backend_config(&local_ns);
+        config.execution.backend = self.get_secure_backend_config(&local_ns);
 
-        let backend = self.secure_backend(&local_ns, "waypoint");
+        let backend = self.get_secure_backend_config(&local_ns);
         config.base.waypoint = WaypointConfig::FromStorage(backend);
         config.execution.genesis = Some(genesis);
         config.execution.genesis_file_location = PathBuf::from("");
+
+        self.deploy_secure_backend_file(&local_ns);
     }
 }
 
