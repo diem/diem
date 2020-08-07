@@ -109,11 +109,9 @@ impl LibraVMImpl {
         let gas_constants = &self.get_gas_schedule()?.gas_constants;
         let raw_bytes_len = txn_data.transaction_size;
 
-        /// This is only a hypothetical breaking change used for testing testnet.
-        if self.get_libra_version()?.major > 10 {
-            if txn.max_gas_amount() == 123456 {
-                return Err(VMStatus::new(StatusCode::BAD_MAGIC));
-            }
+        // This is only a hypothetical breaking change used for testing testnet.
+        if self.get_libra_version()?.major > 10 && txn_data.max_gas_amount().get() == 123456 {
+            return Err(VMStatus::Error(StatusCode::BAD_MAGIC));
         }
 
         // The transaction is too large.
