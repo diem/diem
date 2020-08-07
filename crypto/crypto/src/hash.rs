@@ -248,6 +248,7 @@ impl HashValue {
 
     /// Returns the `index`-th nibble.
     pub fn get_nibble(&self, index: usize) -> Nibble {
+        precondition!(index < HashValue::LENGTH);
         Nibble::from(if index % 2 == 0 {
             self[index / 2] >> 4
         } else {

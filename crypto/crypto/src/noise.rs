@@ -166,6 +166,10 @@ pub enum NoiseError {
     /// the response buffer passed as argument is too small
     #[error("noise: the response buffer passed as argument is too small")]
     ResponseBufferTooSmall,
+
+    /// the nonce exceeds the maximum u64 value (in practice this should not happen)
+    #[error("noise: the nonce exceeds the maximum u64 value")]
+    NonceOverflow,
 }
 
 //
@@ -656,7 +660,10 @@ impl NoiseSession {
             .map_err(|_| NoiseError::Encrypt)?;
 
         // increment nonce
-        self.write_nonce += 1;
+        self.write_nonce = self
+            .write_nonce
+            .checked_add(1)
+            .ok_or(NoiseError::NonceOverflow)?;
 
         // return a subslice without the authentication tag
         Ok(authentication_tag.to_vec())
@@ -697,7 +704,10 @@ impl NoiseSession {
             })?;
 
         // increment nonce
-        self.read_nonce += 1;
+        self.read_nonce = self
+            .read_nonce
+            .checked_add(1)
+            .ok_or(NoiseError::NonceOverflow)?;
 
         // return a subslice of the buffer representing the decrypted plaintext
         Ok(buffer)
