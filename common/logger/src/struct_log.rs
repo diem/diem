@@ -476,7 +476,7 @@ impl TCPStructLogThread {
             };
 
             // If we fail to write, exit out and create a new stream
-            if let Err(e) = stream.write_all(json_string.as_bytes()) {
+            if let Err(e) = Self::write_log_line(stream, json_string) {
                 STRUCT_LOG_SEND_ERROR_COUNT.inc();
                 log::error!(
                     "[Logging] Error while sending data to logstash({}): {}",
@@ -508,12 +508,18 @@ impl TCPStructLogThread {
         Err(last_error)
     }
 
-    pub fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<()> {
+    /// Writes a log line into json_lines logstash format, which has a newline at the end
+    fn write_log_line(stream: &mut TcpStream, message: String) -> io::Result<()> {
+        let message = message + "\n";
+        stream.write_all(message.as_bytes())
+    }
+
+    fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<()> {
         let entry = StructuredLogEntry::new_named("logger", msg);
         let entry = entry
             .to_json_string()
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
-        stream.write_all(entry.as_bytes())
+        Self::write_log_line(stream, entry)
     }
 
     pub fn run(mut self) {
