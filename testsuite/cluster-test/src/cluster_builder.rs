@@ -242,7 +242,7 @@ impl ClusterBuilder {
         }))
         .await?;
 
-        if !vault_nodes.is_empty() {
+        if false {
             info!("Generating genesis with management tool.");
             try_join_all(vault_nodes.iter().enumerate().map(|(i, node)| async move {
                 libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
