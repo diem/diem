@@ -275,6 +275,7 @@ pub struct TransactionView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum VMStatusView {
     Executed,

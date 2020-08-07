@@ -141,45 +141,96 @@ Currently unsupported transaction script
 
 ### Type VMStatus
 
-A `VMStatus` is string value for the followings:
-- `executed` indicating successful execution
-- `out_of_gas` indicating transaction execution runs out of gas.
-- `verification_error` Transaction verification error
-- `deserialization_error` deserializating transaction failed
+A `VMStatus` is an object of one of following type:
 
-The following 2 VMStatus will be serialized as object:
-- `move_abort` indicating an `abort` ocurred inside of a Move program
-- `execution_failure` indicating an transaction execution failure
+#### executed
+
+Successful execution.
+
+```
+{type: "executed"}
+```
+
+| Name                      | Type           | Description                                                           |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| type                      | string         | constant of string "executed"                              |
+
+#### out_of_gas
+Transaction execution runs out of gas, no effect.
+
+```
+{type: "out_of_gas"}
+```
+
+| Name                      | Type           | Description                                                           |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| type                      | string         | constant of string "out_of_gas"                              |
 
 #### move_abort
 
 Object representing the abort condition raised by Move code via `abort` or `assert` during execution of a transaction by the VM on the blockchain.
 
 ```
-{ "move_abort": {location: string, abort_code: unsigned int64} }
+{ type: "move_about", location: string, abort_code: unsigned int64 }
 ```
 
 
 | Name       | Type           | Description                                                                                                                                  |
 |------------|----------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| type       | string         | constant of string "move_abort"                              |
 | location   | string         | String of the form "address::moduleName" where the abort condition was triggered. "Script" if the abort was raised in the transaction script |
 | abort_code | unsigned int64 | Abort code raised by the Move module                                                                                                         |
-
 
 #### execution_failure
 
 Object representing execution failure while executing Move code, but not raised via a Move abort (e.g. division by zero) during execution of a transaction by the VM on the blockchain.
 
 ```
-{ "execution_failure": {location: string, function_index: unsigned int16, code_offset: unsigned int16} }
+{ type: "execution_failure", location: string, function_index: unsigned int16, code_offset: unsigned int16 }
 ```
 
-### Attributes
 
 | Name           | Type           | Description                                                                                                                                  |
 |----------------|----------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| type           | string         | constant of string "execution_failure" |
 | location       | string         | String of the form "address::moduleName" where the execution error occurred. "Script" if the execution error occurred while execution code that was part of the transaction script. |
 | function_index | unsigned int16 | The function index in the `location` where the error occurred |
 | code_offset    | unsigned int16 | The code offset in the function at `function_index` where the execution failure happened |
+
+#### verification_error
+Transaction verification error.
+
+```
+{type: "verification_error"}
+```
+
+| Name                      | Type           | Description                                                           |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| type                      | string         | constant of string "verification_error"                              |
+
+
+#### deserialization_error
+
+Fail to deserialize transaction.
+
+```
+{type: "deserialization_error"}
+```
+
+| Name                      | Type           | Description                                                           |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| type                      | string         | constant of string "deserialization_error"                              |
+
+#### publishing_failure
+
+Fail to publish transaction.
+
+```
+{type: "publishing_failure"}
+```
+
+| Name                      | Type           | Description                                                           |
+|---------------------------|----------------|-----------------------------------------------------------------------|
+| type                      | string         | constant of string "publishing_failure"                              |
 
 [1]: https://libra.github.io/libra/libra_types/transaction/metadata/enum.Metadata.html "Transaction Metadata"

@@ -685,7 +685,7 @@ fn test_json_rpc_protocol() {
                     "delegated_withdrawal_capability": false,
                     "is_frozen": false,
                     "received_events_key": "12000000000000000000000000000000000000000a550c18",
-                    "role": "unknown",
+                    "role": { "type": "unknown" },
                     "sent_events_key": "13000000000000000000000000000000000000000a550c18",
                     "sequence_number": 1
                 }
@@ -721,23 +721,22 @@ fn test_json_rpc_protocol() {
                     "is_frozen": false,
                     "received_events_key": "0100000000000000000000000000000000000000000000dd",
                     "role": {
-                        "designated_dealer": {
-                            "base_url": "https://libra.org",
-                            "compliance_key": "f66bf0ce5ceb582b93d6780820c2025b9967aedaa259bdbb9f3d0297eced0e18",
-                            "expiration_time": 18446744073709551615 as u64,
-                            "human_name": "moneybags",
-                            "preburn_balances": [
-                                {
-                                    "amount": 0,
-                                    "currency": "Coin1"
-                                },
-                                {
-                                    "amount": 0,
-                                    "currency": "Coin2"
-                                }
-                            ],
-                            "received_mint_events_key": "0000000000000000000000000000000000000000000000dd"
-                        }
+                        "type": "designated_dealer",
+                        "base_url": "https://libra.org",
+                        "compliance_key": "f66bf0ce5ceb582b93d6780820c2025b9967aedaa259bdbb9f3d0297eced0e18",
+                        "expiration_time": 18446744073709551615 as u64,
+                        "human_name": "moneybags",
+                        "preburn_balances": [
+                            {
+                                "amount": 0,
+                                "currency": "Coin1"
+                            },
+                            {
+                                "amount": 0,
+                                "currency": "Coin2"
+                            }
+                        ],
+                        "received_mint_events_key": "0000000000000000000000000000000000000000000000dd"
                     },
                     "sent_events_key": "0200000000000000000000000000000000000000000000dd",
                     "sequence_number": 0

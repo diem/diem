@@ -13,6 +13,14 @@ Please add the API change in the following format:
 
 ```
 
+```
+## [breaking] 2020-08-10 Adding missing "type" tag for AccounRole and VMstatus.
+
+- adding "type" tag for values in "vm_status" field returned in transction object in method get_transcations, get_account_transcation etc.
+- adding "type" tag for values in "role" field returned in account object in method get_account.
+
+```
+
 ## Before 2020-08-05
 
 Please refer to [JSON-RPC SPEC before 2020-08-05](https://github.com/libra/libra/blob/888e6cd688a8c9b5805978ab509acdc3c35025ab/json-rpc/json-rpc-spec.md) document for the API spec snapshot.

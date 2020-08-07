@@ -47,6 +47,7 @@ impl AmountView {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
+#[serde(tag = "type")]
 pub enum AccountRoleView {
     #[serde(rename = "unknown")]
     Unknown,
@@ -355,6 +356,7 @@ impl From<Vec<u8>> for BytesView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(tag = "type")]
 pub enum VMStatusView {
     #[serde(rename = "executed")]
     Executed,

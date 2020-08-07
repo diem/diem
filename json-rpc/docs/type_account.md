@@ -17,11 +17,11 @@ A Libra account.
 | sent_events_key                   | string                         | Unique key for the sent events stream of this account                                       |
 | received_events_key               | string                         | Unique key for the received events stream of this account                                   |
 | is_frozen                         | boolean                        | Whether this account is frozen or not                                                       |
-| role                              | string or object               | One of the following values:                                                                |
-|                                   |                                |   - "unknown"                                                                               |
-|                                   |                                |   - { "designated_dealer" => [DesignatedDealerRole](#type_designateddealerrole) }           |
-|                                   |                                |   - { "parent_vasp" => [ParentVASPRole](#type_parent_vasp) }                                |
-|                                   |                                |   - { "child_vasp" => [ChildVASPRole](#type_childvasprole) }                                |
+| role                              | object                         | One of the following type:                                                                |
+|                                   |                                |   - [UnknownRole](#type-unknownrole) |
+|                                   |                                |   - [ParentVASPRole](#type-parentvasprole) |
+|                                   |                                |   - [ChildVASPRole](#type-childvasprole) |
+|                                   |                                |   - [DesignatedDealerRole](#type-designateddealerrole) |
 
 ---
 
@@ -31,6 +31,7 @@ A Libra account.
 
 | Name                     | Type                           | Description                                                     |
 |--------------------------|--------------------------------|-----------------------------------------------------------------|
+| type                     | string                         | "designated_dealer"                                             |
 | human_name               | string                         | human-readable name of this designated dealer                   |
 | base_url                 | string                         | base URL for this designated dealer                             |
 | expiration_time          | unsigned int64                 | expiration time for this designated dealer                      |
@@ -47,6 +48,7 @@ A Libra account.
 
 | Name            | Type           | Description                                                       |
 |-----------------|----------------|-------------------------------------------------------------------|
+| type            | string         | "parent_vasp"                                                     |
 | human_name      | string         | human-readable name of this parent VASP                           |
 | base_url        | string         | base URL for this parent VASP                                     |
 | expiration_time | unsigned int64 | expiration time for this parent VASP                              |
@@ -65,4 +67,16 @@ A Libra account.
 
 | Name                | Type   | Description                                |
 |---------------------|--------|--------------------------------------------|
+| type                | string | "child_vasp"                               |
 | parent_vasp_address | string | address of this child VASP's parent VASP   |
+
+
+---
+
+## Type UnknownRole
+
+### Attributes
+
+| Name                | Type   | Description                                |
+|---------------------|--------|--------------------------------------------|
+| type                | string | "unknown"                                  |

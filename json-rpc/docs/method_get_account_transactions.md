@@ -57,7 +57,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
             "type":"user"
         },
         "version":4433485,
-        "vm_status": "executed"
+        "vm_status": { "type": "executed" }
     }]
 }
 ```

@@ -27,35 +27,34 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
 
 // Response
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "libra_chain_id": 2,
-  "libra_ledger_timestampusec": 1596694123535425,
-  "libra_ledger_version": 3307422,
-  "result": {
-    "authentication_key": "d939b0214b484bf4d71d08d0247b755a1668f6be25668c1a17cd8caf6b8d2f25",
-    "balances": [
-      {
-        "amount": 12070000000,
-        "currency": "LBR"
+   "libra_chain_id" : 2,
+   "jsonrpc" : "2.0",
+   "libra_ledger_timestampusec" : 1597084681499780,
+   "result" : {
+      "delegated_key_rotation_capability" : false,
+      "received_events_key" : "00000000000000001668f6be25668c1a17cd8caf6b8d2f25",
+      "authentication_key" : "d939b0214b484bf4d71d08d0247b755a1668f6be25668c1a17cd8caf6b8d2f25",
+      "balances" : [
+         {
+            "amount" : 2194000000,
+            "currency" : "LBR"
+         }
+      ],
+      "sequence_number" : 11,
+      "delegated_withdrawal_capability" : false,
+      "sent_events_key" : "01000000000000001668f6be25668c1a17cd8caf6b8d2f25",
+      "is_frozen" : false,
+      "role" : {
+        "type": parent_vasp",
+        "num_children" : 0,
+        "base_url" : "https://libra.org",
+        "human_name" : "testnet",
+        "compliance_key" : "b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
+        "expiration_time" : 18446744073709551615
       }
-    ],
-    "delegated_key_rotation_capability": false,
-    "delegated_withdrawal_capability": false,
-    "is_frozen": false,
-    "received_events_key": "00000000000000001668f6be25668c1a17cd8caf6b8d2f25",
-    "role": {
-      "parent_vasp": {
-        "base_url": "https://libra.org",
-        "compliance_key": "b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
-        "expiration_time": 18446744073709552000,
-        "human_name": "testnet",
-        "num_children": 0
-      }
-    },
-    "sent_events_key": "01000000000000001668f6be25668c1a17cd8caf6b8d2f25",
-    "sequence_number": 50
-  }
+   },
+   "id" : 1,
+   "libra_ledger_version" : 1303433
 }
 
 // Sample Response for non-existent account
