@@ -59,7 +59,7 @@ target/debug/generate-transaction-builders \
 ```
 Next, you may copy and execute the [Python demo file](examples/python3/stdlib_demo.py) with:
 ```
-cp language/transaction-builder-generator/examples/python3/stdlib_demo.py "$DEST"
+cp language/transaction-builder/generator/examples/python3/stdlib_demo.py "$DEST"
 PYTHONPATH="$PYTHONPATH:$DEST" python3 "$DEST/stdlib_demo.py"
 ```
 
@@ -76,27 +76,27 @@ target/debug/generate-transaction-builders \
 ```
 Next, you may copy and execute the [C++ demo file](examples/cpp/stdlib_demo.cpp) with:
 ```
-cp language/transaction-builder-generator/examples/cpp/stdlib_demo.cpp "$DEST"
+cp language/transaction-builder/generator/examples/cpp/stdlib_demo.cpp "$DEST"
 clang++ --std=c++17 -I "$DEST" "$DEST/libra_stdlib.cpp" "$DEST/stdlib_demo.cpp" -o "$DEST/stdlib_demo"
 "$DEST/stdlib_demo"
 ```
 
 ### Java
 
-To install Java source packages `com.facebook.serde`, `com.facebook.lcs`, `org.libra.types`, and a class `org.libra.stdlib.Stdlib` into a target directory `$DEST`, run:
+To install Java source packages `com.facebook.serde`, `com.facebook.lcs`, `org.libra.types`, and `org.libra.stdlib` into a target directory `$DEST`, run:
 ```bash
 target/debug/generate-transaction-builders \
     --language java \
-    --module-name org.libra.stdlib.Stdlib \
+    --module-name org.libra.stdlib \
     --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
     --target-source-dir "$DEST" \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.java) with:
 ```
-cp language/transaction-builder-generator/examples/java/StdlibDemo.java "$DEST"
+cp language/transaction-builder/generator/examples/java/StdlibDemo.java "$DEST"
 (find "$DEST" -name "*.java" | xargs javac -cp "$DEST")
-java -cp "$DEST" StdlibDemo
+java -enableassertions -cp "$DEST" StdlibDemo
 ```
 
 ### Rust (experimental)
