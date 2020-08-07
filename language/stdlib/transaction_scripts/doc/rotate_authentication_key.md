@@ -92,7 +92,7 @@ If the sending account doesn't exist this will abort
 <code>account</code> must not have delegated its rotation capability
 
 
-<pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_delegated_key_rotation_cap">LibraAccount::spec_delegated_key_rotation_cap</a>(account_addr);
+<pre><code><b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_delegated_key_rotation_capability">LibraAccount::delegated_key_rotation_capability</a>(account_addr);
 </code></pre>
 
 

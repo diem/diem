@@ -1,6 +1,7 @@
 module TestPureFun {
     use 0x1::CoreAddresses;
     use 0x1::Signer;
+    use 0x1::Vector;
 
     resource struct T {
         x: u64,
@@ -49,6 +50,14 @@ module TestPureFun {
 
     public fun pure_f_0(): u64 {
         0
+    }
+
+    public fun get_elem(v: &vector<T>): u64 {
+        Vector::borrow(v, 0).x
+    }
+
+    spec fun get_elem {
+        aborts_if Vector::is_empty(v);
     }
 
     spec module {

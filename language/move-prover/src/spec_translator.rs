@@ -316,6 +316,11 @@ impl<'env> SpecTranslator<'env> {
                 // This function is native and expected to be found in the prelude.
                 continue;
             }
+            if fun.is_move_fun && fun.is_native {
+                // This function is a native move function and its spec version is
+                // expected to be found in the prelude.
+                continue;
+            }
             if fun.is_move_fun && !self.module_env().spec_fun_is_used(*id) {
                 // This function is a pure move function but is never used,
                 // so we don't need to translate it.

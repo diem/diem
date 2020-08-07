@@ -123,7 +123,7 @@ module DualAttestation {
     }
     spec fun rotate_compliance_public_key {
         aborts_if !exists<Credential>(Signer::spec_address_of(account));
-        aborts_if !Signature::spec_ed25519_validate_pubkey(new_key);
+        aborts_if !Signature::ed25519_validate_pubkey(new_key);
         ensures global<Credential>(Signer::spec_address_of(account)).compliance_public_key
              == new_key;
     }
@@ -297,7 +297,7 @@ module DualAttestation {
             deposit_value: u64
         ): bool {
             len(metadata_signature) == 64
-                && Signature::spec_ed25519_verify(
+                && Signature::ed25519_verify(
                         metadata_signature,
                         spec_compliance_public_key(spec_credential_address(payee)),
                         spec_dual_attestation_message(payer, metadata, deposit_value)

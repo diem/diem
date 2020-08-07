@@ -1149,7 +1149,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Add $ to the name so the spec version does not name clash with the move version.
         let name = self.symbol_pool().make(&format!("${}", name.0.value));
-        let fun_decl = SpecFunDecl {
+        let mut fun_decl = SpecFunDecl {
             loc,
             name,
             type_params,
@@ -1160,8 +1160,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             used_memory: BTreeSet::new(),
             uninterpreted: false,
             is_move_fun: true,
+            is_native: false,
             body: None,
         };
+        if let EA::FunctionBody_::Native = def.body.value {
+            fun_decl.is_native = true;
+        }
         self.spec_funs.push(fun_decl);
     }
 
@@ -1234,6 +1238,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             used_memory: BTreeSet::new(),
             uninterpreted,
             is_move_fun: false,
+            is_native: false,
             body: None,
         };
         self.spec_funs.push(fun_decl);
@@ -1344,6 +1349,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         for (idx, (name, _)) in module_def.functions.iter().enumerate() {
             let is_pure = self.propagate_function_impurity(&mut visited, SpecFunId::new(idx));
             let full_name = self.qualified_by_module_from_name(&name.0);
+            if is_pure {
+                // Modify the types of parameters, return values and expressions
+                // of pure move functions so they no longer have references.
+                self.deref_move_fun_types(full_name.clone(), idx);
+            }
             self.parent
                 .fun_table
                 .entry(full_name)
@@ -1507,6 +1517,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             et.finalize_types();
             // If no errors were generated, then the function is considered pure.
             if !*et.errors_generated.borrow() {
+                // Rewrite all type annotations in expressions to skip references.
+                for node_id in translated.node_ids() {
+                    et.parent
+                        .type_map
+                        .entry(node_id)
+                        .and_modify(|ty| *ty = ty.skip_reference().clone());
+                }
                 et.called_spec_funs.iter().for_each(|(mid, fid)| {
                     self.parent.add_edge_to_move_fun_call_graph(
                         self.module_id,
@@ -1536,8 +1553,21 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let body = if self.spec_funs[spec_fun_idx].body.is_some() {
             std::mem::replace(&mut self.spec_funs[spec_fun_idx].body, None).unwrap()
         } else {
-            // No function body: the move function is already impure so no need to compute.
-            return false;
+            // If the function is native and contains no mutable references
+            // as parameters, consider it pure.
+            // Otherwise the function is non-native, its body cannot be parsed
+            // so we consider it impure.
+            // TODO(emmazzz) right now all the native move functions without
+            // parameters of type mutable references are considered pure.
+            // In the future we might want to only allow a certain subset of the
+            // native move functions, through something similar to an allow list or
+            // a pragma.
+            let no_mut_ref_param = self.spec_funs[spec_fun_idx]
+                .params
+                .iter()
+                .map(|(_, ty)| !ty.is_mutable_reference())
+                .all(|b| b); // `no_mut_ref_param` if none of the types are mut refs.
+            return self.spec_funs[spec_fun_idx].is_native && no_mut_ref_param;
         };
         let mut is_pure = true;
         body.visit(&mut |e: &Exp| {
@@ -1562,6 +1592,36 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
         visited.insert(spec_fun_id, is_pure);
         is_pure
+    }
+
+    fn deref_move_fun_types(&mut self, full_name: QualifiedSymbol, spec_fun_idx: usize) {
+        self.parent.spec_fun_table.entry(full_name).and_modify(|e| {
+            assert!(e.len() == 1);
+            e[0].arg_types = e[0]
+                .arg_types
+                .iter()
+                .map(|ty| ty.skip_reference().clone())
+                .collect_vec();
+            e[0].type_params = e[0]
+                .type_params
+                .iter()
+                .map(|ty| ty.skip_reference().clone())
+                .collect_vec();
+            e[0].result_type = e[0].result_type.skip_reference().clone();
+        });
+
+        let spec_fun_decl = &mut self.spec_funs[spec_fun_idx];
+        spec_fun_decl.params = spec_fun_decl
+            .params
+            .iter()
+            .map(|(s, ty)| (*s, ty.skip_reference().clone()))
+            .collect_vec();
+        spec_fun_decl.type_params = spec_fun_decl
+            .type_params
+            .iter()
+            .map(|(s, ty)| (*s, ty.skip_reference().clone()))
+            .collect_vec();
+        spec_fun_decl.result_type = spec_fun_decl.result_type.skip_reference().clone();
     }
 }
 /// ## Spec Block Definition Analysis
@@ -1699,6 +1759,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             used_memory: Default::default(),
             uninterpreted: false,
             is_move_fun: false,
+            is_native: false,
             body: Some(def),
         });
 

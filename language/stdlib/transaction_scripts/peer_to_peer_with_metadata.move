@@ -102,7 +102,7 @@ spec schema AbortsIfPayerInvalid<Currency> {
     aborts_if AccountFreezing::account_is_frozen(payer);
     aborts_if !exists<Balance<Currency>>(payer);
     /// Aborts if payer's withdrawal_capability has been delegated.
-    aborts_if LibraAccount::spec_delegated_withdraw_cap(payer);
+    aborts_if LibraAccount::delegated_withdraw_capability(payer);
 }
 
 spec schema AbortsIfPayeeInvalid<Currency> {

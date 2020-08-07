@@ -4,13 +4,6 @@ address 0x1 {
 module Signature {
     native public fun ed25519_validate_pubkey(public_key: vector<u8>): bool;
     native public fun ed25519_verify(signature: vector<u8>, public_key: vector<u8>, message: vector<u8>): bool;
-
-    /// The signature verification functions are treated as uninterpreted. The uninterpreted semantics of
-    /// the Move functions aligns with that of the specification functions below.
-    spec module {
-        native define spec_ed25519_validate_pubkey(public_key: vector<u8>): bool;
-        native define spec_ed25519_verify(signature: vector<u8>, public_key: vector<u8>, message: vector<u8>): bool;
-    }
 }
 
 }

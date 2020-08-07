@@ -43,6 +43,7 @@ pub struct SpecFunDecl {
     pub used_memory: BTreeSet<QualifiedId<StructId>>,
     pub uninterpreted: bool,
     pub is_move_fun: bool,
+    pub is_native: bool,
     pub body: Option<Exp>,
 }
 

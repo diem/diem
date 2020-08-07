@@ -188,7 +188,7 @@ module RecoveryAddress {
     spec fun publish {
         aborts_if !VASP::spec_is_vasp(Signer::spec_address_of(recovery_account));
         aborts_if spec_is_recovery_address(Signer::spec_address_of(recovery_account));
-        aborts_if LibraAccount::spec_key_rotation_capability_address(rotation_cap) != Signer::spec_address_of(recovery_account);
+        aborts_if LibraAccount::key_rotation_capability_address(rotation_cap) != Signer::spec_address_of(recovery_account);
         ensures spec_is_recovery_address(Signer::spec_address_of(recovery_account));
     }
 
@@ -204,7 +204,7 @@ module RecoveryAddress {
 
     spec fun add_rotation_capability {
         aborts_if !spec_is_recovery_address(recovery_address);
-        aborts_if VASP::spec_parent_address(recovery_address) != VASP::spec_parent_address(LibraAccount::spec_key_rotation_capability_address(to_recover));
+        aborts_if VASP::spec_parent_address(recovery_address) != VASP::spec_parent_address(LibraAccount::key_rotation_capability_address(to_recover));
         ensures spec_get_rotation_caps(recovery_address)[
             len(spec_get_rotation_caps(recovery_address)) - 1] == to_recover;
     }

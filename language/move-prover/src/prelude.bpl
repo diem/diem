@@ -1024,6 +1024,10 @@ procedure {:inline 1} $Vector_empty(ta: $TypeValue) returns (v: $Value) {
     v := $mk_vector();
 }
 
+function {:inline 1} $Vector_$empty(ta: $TypeValue): $Value {
+    $mk_vector()
+}
+
 procedure {:inline 1} $Vector_is_empty(ta: $TypeValue, v: $Value) returns (b: $Value) {
     assume is#$Vector(v);
     b := $Boolean($vlen(v) == 0);
@@ -1032,6 +1036,10 @@ procedure {:inline 1} $Vector_is_empty(ta: $TypeValue, v: $Value) returns (b: $V
 procedure {:inline 1} $Vector_push_back(ta: $TypeValue, v: $Value, val: $Value) returns (v': $Value) {
     assume is#$Vector(v);
     v' := $push_back_vector(v, val);
+}
+
+function {:inline 1} $Vector_$push_back(ta: $TypeValue, v: $Value, val: $Value): $Value {
+    $push_back_vector(v, val)
 }
 
 procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $Value, v': $Value) {
@@ -1044,6 +1052,10 @@ procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $V
     }
     e := $select_vector(v, len-1);
     v' := $pop_back_vector(v);
+}
+
+function {:inline 1} $Vector_$pop_back(ta: $TypeValue, v: $Value): $Value {
+    $select_vector(v, $vlen(v)-1)
 }
 
 procedure {:inline 1} $Vector_append(ta: $TypeValue, v: $Value, other: $Value) returns (v': $Value) {
@@ -1062,17 +1074,25 @@ procedure {:inline 1} $Vector_length(ta: $TypeValue, v: $Value) returns (l: $Val
     l := $Integer($vlen(v));
 }
 
-procedure {:inline 1} $Vector_borrow(ta: $TypeValue, src: $Value, i: $Value) returns (dst: $Value) {
+function {:inline 1} $Vector_$length(ta: $TypeValue, v: $Value): $Value {
+    $Integer($vlen(v))
+}
+
+procedure {:inline 1} $Vector_borrow(ta: $TypeValue, v: $Value, i: $Value) returns (dst: $Value) {
     var i_ind: int;
 
-    assume is#$Vector(src);
+    assume is#$Vector(v);
     assume is#$Integer(i);
     i_ind := i#$Integer(i);
-    if (i_ind < 0 || i_ind >= $vlen(src)) {
+    if (i_ind < 0 || i_ind >= $vlen(v)) {
         call $ExecFailureAbort();
         return;
     }
-    dst := $select_vector(src, i_ind);
+    dst := $select_vector(v, i_ind);
+}
+
+function {:inline 1} $Vector_$borrow(ta: $TypeValue, v: $Value, i: $Value): $Value {
+    $select_vector(v, i#$Integer(i))
 }
 
 procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Value) returns (dst: $Mutation, v': $Value)
@@ -1088,6 +1108,10 @@ procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Valu
     }
     dst := $Mutation($Local(0), $Path(p#$Path($EmptyPath)[0 := i_ind], 1), $select_vector(v, i_ind));
     v' := v;
+}
+
+function {:inline 1} $Vector_$borrow_mut(ta: $TypeValue, v: $Value, i: $Value): $Value {
+    $select_vector(v, i#$Integer(i))
 }
 
 procedure {:inline 1} $Vector_destroy_empty(ta: $TypeValue, v: $Value) {
@@ -1109,6 +1133,10 @@ procedure {:inline 1} $Vector_swap(ta: $TypeValue, v: $Value, i: $Value, j: $Val
         return;
     }
     v' := $swap_vector(v, i_ind, j_ind);
+}
+
+function {:inline 1} $Vector_$swap(ta: $TypeValue, v: $Value, i: $Value, j: $Value): $Value {
+    $swap_vector(v, i#$Integer(i), i#$Integer(j))
 }
 
 procedure {:inline 1} $Vector_remove(ta: $TypeValue, v: $Value, i: $Value) returns (e: $Value, v': $Value)
@@ -1219,6 +1247,11 @@ ensures res == $Hash_sha2_core(val);     // returns Hash_sha2 Value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
 
+// Spec version of move native function.
+function {:inline} $Hash_$sha2_256(val: $Value): $Value {
+    $Hash_sha2_core(val)
+}
+
 // similarly for Hash_sha3
 function {:inline} $Hash_sha3(val: $Value): $Value {
     $Hash_sha3_core(val)
@@ -1235,6 +1268,11 @@ procedure $Hash_sha3_256(val: $Value) returns (res: $Value);
 ensures res == $Hash_sha3_core(val);     // returns Hash_sha3 Value
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 ensures $vlen(res) == 32;               // result is 32 bytes.
+
+// Spec version of move native function.
+function {:inline} $Hash_$sha3_256(val: $Value): $Value {
+    $Hash_sha3_core(val)
+}
 
 // ==================================================================================
 // Native libra_account
@@ -1268,23 +1306,23 @@ procedure {:inline 1} $Signer_borrow_address(signer: $Value) returns (res: $Valu
 // currently because we verify every code path based on signature verification with
 // an arbitrary interpretation.
 
-function $Signature_spec_ed25519_validate_pubkey(public_key: $Value): $Value;
-function $Signature_spec_ed25519_verify(signature: $Value, public_key: $Value, message: $Value): $Value;
+function $Signature_$ed25519_validate_pubkey(public_key: $Value): $Value;
+function $Signature_$ed25519_verify(signature: $Value, public_key: $Value, message: $Value): $Value;
 
 axiom (forall public_key: $Value ::
-        is#$Boolean($Signature_spec_ed25519_validate_pubkey(public_key)));
+        is#$Boolean($Signature_$ed25519_validate_pubkey(public_key)));
 
 axiom (forall signature, public_key, message: $Value ::
-        is#$Boolean($Signature_spec_ed25519_verify(signature, public_key, message)));
+        is#$Boolean($Signature_$ed25519_verify(signature, public_key, message)));
 
 
 procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $Value) returns (res: $Value) {
-    res := $Signature_spec_ed25519_validate_pubkey(public_key);
+    res := $Signature_$ed25519_validate_pubkey(public_key);
 }
 
 procedure {:inline 1} $Signature_ed25519_verify(
         signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
-    res := $Signature_spec_ed25519_verify(signature, public_key, message);
+    res := $Signature_$ed25519_verify(signature, public_key, message);
 }
 
 // ==================================================================================
@@ -1322,10 +1360,20 @@ procedure $LCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: $Value);
 ensures res == $LCS_serialize(ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 
+function {:inline} $LCS_$to_bytes(ta: $TypeValue, v: $Value): $Value {
+    $LCS_serialize_core(v)
+}
+
 // ==================================================================================
 // Native Signer::spec_address_of
 
 function {:inline} $Signer_spec_address_of(signer: $Value): $Value
+{
+    // A signer is currently identical to an address.
+    signer
+}
+
+function {:inline} $Signer_$borrow_address(signer: $Value): $Value
 {
     // A signer is currently identical to an address.
     signer

@@ -695,7 +695,7 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedD
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_spec_ed25519_validate_pubkey">Signature::spec_ed25519_validate_pubkey</a>(new_key);
+<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(new_key);
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)).compliance_public_key
      == new_key;
 </code></pre>
@@ -908,7 +908,7 @@ Returns true if signature is valid.
     deposit_value: u64
 ): bool {
     len(metadata_signature) == 64
-        && <a href="Signature.md#0x1_Signature_spec_ed25519_verify">Signature::spec_ed25519_verify</a>(
+        && <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
                 metadata_signature,
                 <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)),
                 <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)

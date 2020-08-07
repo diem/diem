@@ -280,12 +280,12 @@ module LibraSystem {
     }
     spec fun get_validator_index_ {
         pragma opaque;
-        let res_index = Option::spec_get(result);
+        let res_index = Option::borrow(result);
         let size = len(validators);
         ensures (exists i in 0..size: validators[i].addr == addr)
-            == (Option::spec_is_some(result) && 0 <= res_index && res_index < size
+            == (Option::is_some(result) && 0 <= res_index && res_index < size
             && validators[res_index].addr == addr);
-        ensures (forall i in 0..size: validators[i].addr != addr) ==> result == Option::spec_none();
+        ensures (forall i in 0..size: validators[i].addr != addr) ==> Option::is_none(result);
     }
 
     // Updates ith validator info, if nothing changed, return false.

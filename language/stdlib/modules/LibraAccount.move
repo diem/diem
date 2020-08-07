@@ -508,8 +508,8 @@ module LibraAccount {
     }
     spec fun extract_key_rotation_capability {
         aborts_if !exists<LibraAccount>(Signer::spec_address_of(account));
-        aborts_if spec_delegated_key_rotation_cap(Signer::spec_address_of(account));
-        ensures spec_delegated_key_rotation_cap(Signer::spec_address_of(account));
+        aborts_if delegated_key_rotation_capability(Signer::spec_address_of(account));
+        ensures delegated_key_rotation_capability(Signer::spec_address_of(account));
     }
 
     /// Return the key rotation capability to the account it originally came from
@@ -520,7 +520,7 @@ module LibraAccount {
     }
     spec fun restore_key_rotation_capability {
         aborts_if !exists<LibraAccount>(cap.account_address);
-        aborts_if !spec_delegated_key_rotation_cap(cap.account_address);
+        aborts_if !delegated_key_rotation_capability(cap.account_address);
         ensures spec_holds_own_key_rotation_cap(cap.account_address);
     }
 
@@ -932,19 +932,9 @@ module LibraAccount {
         /// Returns true if the LibraAccount at `addr` holds
         /// `KeyRotationCapability` for itself.
         define spec_holds_own_key_rotation_cap(addr: address): bool {
-            Option::spec_is_some(spec_get_key_rotation_cap(addr))
-            && addr == Option::spec_get(
+            Option::is_some(spec_get_key_rotation_cap(addr))
+            && addr == Option::borrow(
                 spec_get_key_rotation_cap(addr)).account_address
-        }
-
-        define spec_key_rotation_capability_address(cap: KeyRotationCapability): address {
-            cap.account_address
-        }
-
-        /// Returns true if the LibraAccount at `addr` does not hold a
-        /// `KeyRotationCapability`.
-        define spec_delegated_key_rotation_cap(addr: address): bool {
-            Option::spec_is_none(spec_get_key_rotation_cap(addr))
         }
 
         /// Returns true if `AccountOperationsCapability` is published.
@@ -953,7 +943,7 @@ module LibraAccount {
         }
 
         define spec_has_key_rotation_cap(addr: address): bool {
-            Option::spec_is_some(global<LibraAccount>(addr).key_rotation_capability)
+            Option::is_some(global<LibraAccount>(addr).key_rotation_capability)
         }
 
         /// Returns field `withdrawal_capability` of LibraAccount under `addr`.
@@ -964,20 +954,14 @@ module LibraAccount {
         /// Returns true if the LibraAccount at `addr` holds a
         /// `WithdrawCapability`.
         define spec_has_withdraw_cap(addr: address): bool {
-            Option::spec_is_some(spec_get_withdraw_cap(addr))
-        }
-
-        /// Returns true if the LibraAccount at `addr` does not hold a
-        /// `WithdrawCapability`.
-        define spec_delegated_withdraw_cap(addr: address): bool {
-            Option::spec_is_none(spec_get_withdraw_cap(addr))
+            Option::is_some(spec_get_withdraw_cap(addr))
         }
 
         /// Returns true if the LibraAccount at `addr` holds
         /// `WithdrawCapability` for itself.
         define spec_holds_own_withdraw_cap(addr: address): bool {
             spec_has_withdraw_cap(addr)
-            && addr == Option::spec_get(spec_get_withdraw_cap(addr)).account_address
+            && addr == Option::borrow(spec_get_withdraw_cap(addr)).account_address
         }
     }
 
@@ -1003,12 +987,12 @@ module LibraAccount {
         /// The LibraAccount under addr holds either no withdraw capability
         /// (withdraw cap has been delegated) or the withdraw capability for addr itself.
         invariant [global] forall addr1: address where exists<LibraAccount>(addr1):
-            spec_delegated_withdraw_cap(addr1) || spec_holds_own_withdraw_cap(addr1);
+            delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
 
         /// The LibraAccount under addr holds either no key rotation capability
         /// (key rotation cap has been delegated) or the key rotation capability for addr itself.
         invariant [global] forall addr1: address where exists<LibraAccount>(addr1):
-            spec_delegated_key_rotation_cap(addr1) || spec_holds_own_key_rotation_cap(addr1);
+            delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
 }

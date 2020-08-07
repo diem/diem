@@ -83,14 +83,14 @@ module ValidatorConfig {
     spec module {
         /// Returns true if addr has an operator account.
         define spec_has_operator(addr: address): bool {
-            Option::spec_is_some(global<ValidatorConfig>(addr).operator_account)
+            Option::is_some(global<ValidatorConfig>(addr).operator_account)
         }
 
         /// Returns the operator account of a validator if it has one,
         /// and returns the addr itself otherwise.
         define spec_get_operator(addr: address): address {
             if (spec_has_operator(addr)) {
-                Option::spec_get(global<ValidatorConfig>(addr).operator_account)
+                Option::borrow(global<ValidatorConfig>(addr).operator_account)
             } else {
                 addr
             }
@@ -152,14 +152,14 @@ module ValidatorConfig {
     spec fun set_config {
         aborts_if Signer::spec_address_of(signer) != spec_get_operator(validator_account);
         aborts_if !spec_exists_config(validator_account);
-        aborts_if !Signature::spec_ed25519_validate_pubkey(consensus_pubkey);
+        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey);
         ensures spec_has_config(validator_account);
     }
 
     spec module {
         /// Returns true if there a config published under addr.
         define spec_has_config(addr: address): bool {
-            Option::spec_is_some(global<ValidatorConfig>(addr).config)
+            Option::is_some(global<ValidatorConfig>(addr).config)
         }
     }
 
@@ -217,7 +217,7 @@ module ValidatorConfig {
     spec module {
         /// Returns the config published under addr.
         define spec_get_config(addr: address): Config {
-            Option::spec_get(global<ValidatorConfig>(addr).config)
+            Option::borrow(global<ValidatorConfig>(addr).config)
         }
     }
 

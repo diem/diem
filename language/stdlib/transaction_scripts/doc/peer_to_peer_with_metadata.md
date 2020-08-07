@@ -255,7 +255,7 @@ Aborts if payer's withdrawal_capability has been delegated.
 
 
 <pre><code><b>schema</b> <a href="#SCRIPT_AbortsIfPayerInvalid">AbortsIfPayerInvalid</a>&lt;Currency&gt; {
-    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_delegated_withdraw_cap">LibraAccount::spec_delegated_withdraw_cap</a>(payer);
+    <b>aborts_if</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_delegated_withdraw_capability">LibraAccount::delegated_withdraw_capability</a>(payer);
 }
 </code></pre>
 

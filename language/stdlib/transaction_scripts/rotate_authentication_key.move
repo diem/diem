@@ -24,7 +24,7 @@ spec fun rotate_authentication_key {
     /// If the sending account doesn't exist this will abort
     aborts_if !exists<LibraAccount::LibraAccount>(account_addr);
     /// `account` must not have delegated its rotation capability
-    aborts_if LibraAccount::spec_delegated_key_rotation_cap(account_addr);
+    aborts_if LibraAccount::delegated_key_rotation_capability(account_addr);
     /// `new_key`'s length must be `32`.
     aborts_if len(new_key) != 32;
 }

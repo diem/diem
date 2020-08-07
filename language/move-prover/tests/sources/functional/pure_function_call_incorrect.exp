@@ -1,18 +1,27 @@
 Move prover returns: exiting with checking errors
 error: calling impure function `TestPureFun::init` is not allowed
 
-    ┌── tests/sources/functional/pure_function_call_incorrect.move:32:20 ───
+    ┌── tests/sources/functional/pure_function_call_incorrect.move:33:20 ───
     │
- 32 │         aborts_if !init(account);
+ 33 │         aborts_if !init(account);
     │                    ^^^^^^^^^^^^^
     │
     = impure function `TestPureFun::init(&signer): bool`
 
+error: calling impure function `Vector::pop_back` is not allowed
+
+    ┌── tests/sources/functional/pure_function_call_incorrect.move:57:27 ───
+    │
+ 57 │         ensures result == Vector::pop_back(old(v));
+    │                           ^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = impure function `Vector::pop_back(&mut vector<#0>): #0`
+
 error: calling impure function `TestPureFun::impure_f_2` is not allowed
 
-    ┌── tests/sources/functional/pure_function_call_incorrect.move:53:13 ───
+    ┌── tests/sources/functional/pure_function_call_incorrect.move:63:13 ───
     │
- 53 │             impure_f_2()
+ 63 │             impure_f_2()
     │             ^^^^^^^^^^^^
     │
     = impure function `TestPureFun::impure_f_2(): u64`

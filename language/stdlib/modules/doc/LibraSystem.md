@@ -830,13 +830,13 @@ Validators have unique addresses.
 
 <pre><code>pragma opaque;
 <a name="0x1_LibraSystem_res_index$16"></a>
-<b>let</b> res_index = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+<b>let</b> res_index = <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(result);
 <a name="0x1_LibraSystem_size$17"></a>
 <b>let</b> size = len(validators);
 <b>ensures</b> (exists i in 0..size: validators[i].addr == addr)
-    == (<a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(result) && 0 &lt;= res_index && res_index &lt; size
+    == (<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result) && 0 &lt;= res_index && res_index &lt; size
     && validators[res_index].addr == addr);
-<b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; result == <a href="Option.md#0x1_Option_spec_none">Option::spec_none</a>();
+<b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
 </code></pre>
 
 
