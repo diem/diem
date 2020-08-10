@@ -5,7 +5,9 @@
 //! meant to be triggered by other threads as they commit new data to the DB.
 
 use crate::{
-    metrics::LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION,
+    metrics::{
+        LIBRA_STORAGE_OTHER_TIMERS_SECONDS, LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION,
+    },
     schema::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
@@ -346,6 +348,9 @@ pub fn prune_state(
     if indices.is_empty() {
         Ok(least_readable_version)
     } else {
+        let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["pruner_commit"])
+            .start_timer();
         let new_least_readable_version = indices.last().expect("Should exist.").stale_since_version;
         let mut batch = SchemaBatch::new();
         indices
