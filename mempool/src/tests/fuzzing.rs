@@ -39,13 +39,17 @@ pub fn test_mempool_process_incoming_transactions_impl(
     let config = NodeConfig::default();
     let mock_db = MockDbReader;
     let vm_validator = Arc::new(RwLock::new(MockVMValidator));
+    let mempool_max_broadcasts_per_peer = config.mempool.max_broadcasts_per_peer;
     let smp = SharedMempool {
         mempool: Arc::new(Mutex::new(CoreMempool::new(&config))),
         config: config.mempool,
         network_senders: HashMap::new(),
         db: Arc::new(mock_db),
         validator: vm_validator,
-        peer_manager: Arc::new(PeerManager::new(config.upstream)),
+        peer_manager: Arc::new(PeerManager::new(
+            config.upstream,
+            mempool_max_broadcasts_per_peer,
+        )),
         subscribers: vec![],
     };
 

@@ -35,6 +35,10 @@ pub(crate) struct PeerManager {
     // the upstream peer to failover to if all peers in the primary upstream network are dead
     // the number of failover peers is limited to 1 to avoid network competition in the failover networks
     failover_peer: Mutex<Option<PeerNetworkId>>,
+    // The maximum number of broadcasts sent to a single peer that are pending an ACK at any point
+    // If the number of un-ACK'ed broadcasts reaches this threshold, we re-broadcast any
+    // un-ACK'ed broadcasts
+    max_broadcasts_per_peer: usize,
 }
 
 #[derive(Clone)]
@@ -66,11 +70,12 @@ pub struct BatchInfo {
 }
 
 impl PeerManager {
-    pub fn new(upstream_config: UpstreamConfig) -> Self {
+    pub fn new(upstream_config: UpstreamConfig, max_broadcasts_per_peer: usize) -> Self {
         Self {
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
             failover_peer: Mutex::new(None),
+            max_broadcasts_per_peer,
         }
     }
 
@@ -350,5 +355,17 @@ impl PeerManager {
             .map_or(false, |failover| {
                 failover.raw_network_id() == peer.raw_network_id()
             })
+    }
+
+    pub fn is_max_broadcast(&self, peer: &PeerNetworkId) -> bool {
+        self.peer_info
+            .lock()
+            .expect("failed to acquire peer info lock")
+            .get(peer)
+            .expect("missing peer sync state")
+            .broadcast_info
+            .sent_batches
+            .len()
+            >= self.max_broadcasts_per_peer
     }
 }

@@ -74,6 +74,12 @@ where
     let start_time = Instant::now();
     let peer_manager = &smp.peer_manager;
 
+    // check whether max broadcast for this peer is reached
+    // if it is, don't broadcast until any ACK is received
+    if peer_manager.is_max_broadcast(&peer) {
+        return false;
+    }
+
     let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
         let state = peer_manager.get_peer_state(&peer);
         let next_backoff = state.broadcast_info.backoff_mode;
