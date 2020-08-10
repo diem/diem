@@ -317,6 +317,15 @@ pub enum ScriptCall {
         operator_account: AccountAddress,
     },
 
+    /// Set validator operator as 'operator_account' of validator owner 'account' (via Admin Script).
+    /// `operator_name` should match expected from operator account. This script also
+    /// takes `sliding_nonce`, as a unique nonce for this operation. See `Sliding_nonce.move` for details.
+    SetValidatorOperatorWithNonceAdmin {
+        sliding_nonce: u64,
+        operator_name: Bytes,
+        operator_account: AccountAddress,
+    },
+
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
     /// Max valid tier index is 3 since there are max 4 tiers per DD.
     /// Sender should be treasury compliance account and receiver authorized DD.
@@ -569,6 +578,15 @@ impl ScriptCall {
                 operator_name,
                 operator_account,
             } => encode_set_validator_operator_script(operator_name, operator_account),
+            SetValidatorOperatorWithNonceAdmin {
+                sliding_nonce,
+                operator_name,
+                operator_account,
+            } => encode_set_validator_operator_with_nonce_admin_script(
+                sliding_nonce,
+                operator_name,
+                operator_account,
+            ),
             TieredMint {
                 coin_type,
                 sliding_nonce,
@@ -1161,6 +1179,25 @@ pub fn encode_set_validator_operator_script(
     )
 }
 
+/// Set validator operator as 'operator_account' of validator owner 'account' (via Admin Script).
+/// `operator_name` should match expected from operator account. This script also
+/// takes `sliding_nonce`, as a unique nonce for this operation. See `Sliding_nonce.move` for details.
+pub fn encode_set_validator_operator_with_nonce_admin_script(
+    sliding_nonce: u64,
+    operator_name: Vec<u8>,
+    operator_account: AccountAddress,
+) -> Script {
+    Script::new(
+        SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE.to_vec(),
+        vec![],
+        vec![
+            TransactionArgument::U64(sliding_nonce),
+            TransactionArgument::U8Vector(operator_name),
+            TransactionArgument::Address(operator_account),
+        ],
+    )
+}
+
 /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
 /// Max valid tier index is 3 since there are max 4 tiers per DD.
 /// Sender should be treasury compliance account and receiver authorized DD.
@@ -1496,6 +1533,14 @@ fn decode_set_validator_operator_script(script: &Script) -> Option<ScriptCall> {
     })
 }
 
+fn decode_set_validator_operator_with_nonce_admin_script(script: &Script) -> Option<ScriptCall> {
+    Some(ScriptCall::SetValidatorOperatorWithNonceAdmin {
+        sliding_nonce: decode_u64_argument(script.args().get(0)?.clone())?,
+        operator_name: decode_u8vector_argument(script.args().get(1)?.clone())?,
+        operator_account: decode_address_argument(script.args().get(2)?.clone())?,
+    })
+}
+
 fn decode_tiered_mint_script(script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::TieredMint {
         coin_type: script.ty_args().get(0)?.clone(),
@@ -1662,6 +1707,10 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     map.insert(
         SET_VALIDATOR_OPERATOR_CODE.to_vec(),
         Box::new(decode_set_validator_operator_script),
+    );
+    map.insert(
+        SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE.to_vec(),
+        Box::new(decode_set_validator_operator_with_nonce_admin_script),
     );
     map.insert(
         TIERED_MINT_CODE.to_vec(),
@@ -2051,6 +2100,19 @@ const SET_VALIDATOR_OPERATOR_CODE: &[u8] = &[
     111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 5,
     15, 10, 2, 17, 0, 11, 1, 33, 12, 3, 11, 3, 3, 11, 11, 0, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11,
     0, 10, 2, 17, 1, 2,
+];
+
+const SET_VALIDATOR_OPERATOR_WITH_NONCE_ADMIN_CODE: &[u8] = &[
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 6, 3, 6, 15, 5, 21, 26, 7, 47, 103, 8, 150, 1, 16, 0, 0,
+    0, 1, 0, 2, 0, 3, 0, 1, 0, 2, 4, 2, 3, 0, 1, 5, 4, 1, 0, 2, 6, 12, 3, 0, 1, 5, 1, 10, 2, 2, 6,
+    12, 5, 5, 6, 12, 6, 12, 3, 10, 2, 5, 2, 1, 3, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111,
+    110, 99, 101, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110, 102, 105, 103, 23,
+    86, 97, 108, 105, 100, 97, 116, 111, 114, 79, 112, 101, 114, 97, 116, 111, 114, 67, 111, 110,
+    102, 105, 103, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95,
+    97, 98, 111, 114, 116, 14, 103, 101, 116, 95, 104, 117, 109, 97, 110, 95, 110, 97, 109, 101,
+    12, 115, 101, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 0, 5, 6, 18, 11, 0, 10, 2, 17, 0, 10, 4, 17, 1, 11, 3, 33, 12, 5, 11, 5, 3, 14,
+    11, 1, 1, 6, 0, 0, 0, 0, 0, 0, 0, 0, 39, 11, 1, 10, 4, 17, 2, 2,
 ];
 
 const TIERED_MINT_CODE: &[u8] = &[

@@ -3,7 +3,9 @@
 
 use crate::{account::Account, executor::FakeExecutor};
 use libra_types::{
-    on_chain_config::new_epoch_event_key, transaction::TransactionStatus, vm_status::KeptVMStatus,
+    on_chain_config::new_epoch_event_key,
+    transaction::{TransactionStatus, WriteSetPayload},
+    vm_status::KeptVMStatus,
 };
 use transaction_builder::*;
 
@@ -171,15 +173,17 @@ fn validator_set_operator_set_key_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
     let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
-    let operator_account = Account::new();
+    let operator_account_0 = Account::new();
+    let operator_account_1 = Account::new();
 
+    // Create operator 0
     let output = executor.execute_and_apply(
         libra_root_account
             .transaction()
             .script(encode_create_validator_operator_account_script(
                 0,
-                *operator_account.address(),
-                operator_account.auth_key_prefix(),
+                *operator_account_0.address(),
+                operator_account_0.auth_key_prefix(),
                 b"operator_0".to_vec(),
             ))
             .sequence_number(1)
@@ -191,6 +195,26 @@ fn validator_set_operator_set_key_reconfigure() {
         &TransactionStatus::Keep(KeptVMStatus::Executed)
     );
 
+    // Create operator 1
+    let output = executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_operator_account_script(
+                0,
+                *operator_account_1.address(),
+                operator_account_1.auth_key_prefix(),
+                b"operator_1".to_vec(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
+
+    // Create validator 0
     let output = executor.execute_and_apply(
         libra_root_account
             .transaction()
@@ -200,7 +224,7 @@ fn validator_set_operator_set_key_reconfigure() {
                 validator_account.auth_key_prefix(),
                 b"validator_0".to_vec(),
             ))
-            .sequence_number(2)
+            .sequence_number(3)
             .sign(),
     );
     assert_eq!(
@@ -209,12 +233,35 @@ fn validator_set_operator_set_key_reconfigure() {
     );
     executor.new_block();
 
+    // LR sets operator 1 for validator 0
+    let admin_script = encode_set_validator_operator_with_nonce_admin_script(
+        0,
+        b"operator_1".to_vec(),
+        *operator_account_1.address(),
+    );
+    let txn = libra_root_account
+        .transaction()
+        .write_set(WriteSetPayload::Script {
+            script: admin_script,
+            execute_as: *validator_account.address(),
+        })
+        .sequence_number(4)
+        .sign();
+    executor.new_block();
+    let output = executor.execute_transaction(txn);
+
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
+
+    // Validator then sets operator 0
     let output = executor.execute_and_apply(
         validator_account
             .transaction()
             .script(encode_set_validator_operator_script(
                 b"operator_0".to_vec(),
-                *operator_account.address(),
+                *operator_account_0.address(),
             ))
             .sequence_number(0)
             .sign(),
@@ -225,7 +272,7 @@ fn validator_set_operator_set_key_reconfigure() {
     );
 
     let output = executor.execute_and_apply(
-        operator_account
+        operator_account_0
             .transaction()
             .script(encode_register_validator_config_script(
                 *validator_account.address(),
@@ -257,7 +304,7 @@ fn validator_set_operator_set_key_reconfigure() {
                 b"validator_0".to_vec(),
                 *validator_account.address(),
             ))
-            .sequence_number(3)
+            .sequence_number(4)
             .sign(),
     );
 
@@ -273,7 +320,7 @@ fn validator_set_operator_set_key_reconfigure() {
     executor.new_block();
 
     let output = executor.execute_and_apply(
-        operator_account
+        operator_account_0
             .transaction()
             .script(encode_set_validator_config_and_reconfigure_script(
                 *validator_account.address(),
