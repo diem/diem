@@ -15,7 +15,7 @@ use futures::{
     },
     StreamExt,
 };
-use libra_config::utils;
+use libra_config::{config::DEFAULT_CONTENT_LENGTH_LIMIT, utils};
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, PrivateKey, Uniform};
 use libra_json_rpc_client::{
     views::{
@@ -52,6 +52,7 @@ use move_core_types::{
 };
 use move_vm_types::values::{Struct, Value};
 use proptest::prelude::*;
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use std::{
     cmp::{max, min},
     collections::HashMap,
@@ -147,7 +148,7 @@ fn mock_db() -> MockLibraDB {
 }
 
 #[test]
-fn test_json_rpc_url() {
+fn test_json_rpc_http_errors() {
     let (_mock_db, _runtime, url, _) = create_db_and_runtime();
 
     let client = reqwest::blocking::Client::new();
@@ -172,6 +173,13 @@ fn test_json_rpc_url() {
 
     let resp = client.post(&url).body("non json").send().unwrap();
     assert_eq!(resp.status(), 400);
+
+    let resp = client
+        .post(&url)
+        .json(&json!({ "id": gen_string(DEFAULT_CONTENT_LENGTH_LIMIT) }))
+        .send()
+        .unwrap();
+    assert_eq!(resp.status(), 413); // 413 is Payload Too Large
 }
 
 #[test]
@@ -1316,4 +1324,12 @@ fn execute_batch_and_get_first_response(
         .unwrap()
         .remove(0)
         .unwrap()
+}
+
+fn gen_string(len: usize) -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat(())
+        .map(|()| rng.sample(Alphanumeric))
+        .take(len)
+        .collect()
 }

@@ -32,6 +32,7 @@ pub fn bootstrap(
     address: SocketAddr,
     batch_size_limit: u16,
     page_size_limit: u16,
+    content_len_limit: usize,
     libra_db: Arc<dyn DbReader>,
     mp_sender: MempoolClientSender,
     role: RoleType,
@@ -57,6 +58,7 @@ pub fn bootstrap(
     let base_route = warp::any()
         .and(warp::post())
         .and(warp::header::exact("content-type", "application/json"))
+        .and(warp::body::content_length_limit(content_len_limit as u64))
         .and(warp::body::json())
         .and(warp::any().map(move || service.clone()))
         .and(warp::any().map(move || Arc::clone(&registry)))
@@ -98,6 +100,7 @@ pub fn bootstrap_from_config(
         config.rpc.address,
         config.rpc.batch_size_limit,
         config.rpc.page_size_limit,
+        config.rpc.content_length_limit,
         libra_db,
         mp_sender,
         config.base.role,

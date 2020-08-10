@@ -41,6 +41,7 @@ storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 [dev-dependencies]
 proptest = { version = "0.10.0" }
 reqwest = { version = "0.10.7", features = ["blocking", "json"], default_features = false }
+rand = { version = "0.7.3" }
 
 libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 libra-json-rpc-client = { path = "../client/json-rpc", version = "0.1.0" }

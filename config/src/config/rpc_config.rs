@@ -11,11 +11,13 @@ pub struct RpcConfig {
     pub address: SocketAddr,
     pub batch_size_limit: u16,
     pub page_size_limit: u16,
+    pub content_length_limit: usize,
 }
 
 pub const DEFAULT_JSON_RPC_PORT: u16 = 8080;
 pub const DEFAULT_BATCH_SIZE_LIMIT: u16 = 20;
 pub const DEFAULT_PAGE_SIZE_LIMIT: u16 = 1000;
+pub const DEFAULT_CONTENT_LENGTH_LIMIT: usize = 32 * 1024; // 32kb
 
 impl Default for RpcConfig {
     fn default() -> RpcConfig {
@@ -25,6 +27,7 @@ impl Default for RpcConfig {
                 .unwrap(),
             batch_size_limit: DEFAULT_BATCH_SIZE_LIMIT,
             page_size_limit: DEFAULT_PAGE_SIZE_LIMIT,
+            content_length_limit: DEFAULT_CONTENT_LENGTH_LIMIT,
         }
     }
 }
