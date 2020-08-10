@@ -6,7 +6,7 @@ function usage {
   echo "Usage:"
   echo "build and properly tags images for deployment to docker hub"
   echo "update_or_build.sh [-p] -g <GITHASH> -b <TARGET_BRANCH> -n <image name> [-u]"
-  echo "-p indicates this a prebuild, where images are built and pushed to dockerhub with an infix of '_pre_', should be run on the 'auto' branch, trigger by bors."
+  echo "-p indicates this a prebuild, where images are built and pushed to dockerhub with an prefix of 'pre_', should be run on the 'auto' branch, trigger by bors."
   echo "-b the branch we're building on, or the branch we're targeting if a prebuild"
   echo "-n name, one of init, mint, validator, validator-dynamic, safety-rules, cluster-test"
   echo "-u 'upload', or 'push' the docker images will be pushed to dockerhub, otherwise only locally tag"

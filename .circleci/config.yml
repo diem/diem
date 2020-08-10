@@ -2,6 +2,8 @@ version: 2.1
 
 orbs:
   slack: circleci/slack@3.3.0
+  aws-ecr: circleci/aws-ecr@6.5.0
+  aws-cli: circleci/aws-cli@0.1.13
 
 executors:
   build-executor:
@@ -262,6 +264,19 @@ commands:
             echo ${DOCKERHUB_KEY_MATERIAL} | base64 -d > ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
             chmod 600 ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
             docker trust key load ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key --name "$DOCKERHUB_USERNAME"
+  setup_aws:
+    description: Set up access to AWS
+    steps:
+      - run:
+          name: Compose AWS Env Variables
+          command: |
+            echo 'export AWS_ECR_ACCOUNT_URL="${AWS_ECR_ACCOUNT_NUM}.dkr.ecr.${AWS_REGION}.amazonaws.com"' >> $BASH_ENV
+      - aws-cli/install
+      - aws-cli/configure:
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_REGION
+      - aws-ecr/ecr-login
 jobs:
   prefetch-crates:
     executor: audit-executor
@@ -618,20 +633,19 @@ jobs:
             curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
             export BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
 
-            export IS_RELEASE=$( if [[ "$BRANCH" =~ "^v[0-9|.]+-release$" ]]; then echo true; else echo false; fi )
-            export IS_TEST=$( if [[ "$BRANCH" =~ "^testflow[0-9|.]+$" ]]; then echo true; else echo false; fi )
-            export IS_PRE_RELEASE=$( if [[ "$BRANCH" =~ "^premainnet-[0-9|.]+$" ]]; then echo true; else echo false; fi )
+            export IS_RELEASE=$( if [[ "$BRANCH" =~ "^release-[0-9|.]+$" ]]; then echo true; else echo false; fi )
+            export IS_TEST=$( if [[ "$BRANCH" =~ "^test-[0-9|.]+$" ]]; then echo true; else echo false; fi )
 
-            if [[ $IS_RELEASE  == true ]] || [[ $IS_TEST == true ]] || [[ $IS_PRE_RELEASE == true ]] ; then
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n client
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n init
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n mint
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n tools
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n validator
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n validator-tcb
-              docker/update_or_build.sh -u -p -b ${BRANCH} -n cluster-test
+            if [[ $IS_RELEASE  == true ]] || [[ $IS_TEST == true ]] ; then
+              docker/build_push.sh -u -p -b ${BRANCH} -n client
+              docker/build_push.sh -u -p -b ${BRANCH} -n init
+              docker/build_push.sh -u -p -b ${BRANCH} -n mint
+              docker/build_push.sh -u -p -b ${BRANCH} -n tools
+              docker/build_push.sh -u -p -b ${BRANCH} -n validator
+              docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb
+              docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test
               #build but don't publish
-              docker/update_or_build.sh -p -b ${BRANCH} -n validator-dynamic
+              docker/build_push.sh -p -b ${BRANCH} -n validator-dynamic
             else
               echo Targeting branch $TARGET_BRANCH will not publish docker images.
             fi
@@ -645,19 +659,24 @@ jobs:
     steps:
       - checkout
       - setup_docker_signing
+      - setup_aws
       - run:
           name: pull pre images (or build if not pullable) and push release docker images
           command: |
             set -x
             export BRANCH=${CIRCLE_BRANCH}
-            docker/update_or_build.sh -u -b ${BRANCH} -n client
-            docker/update_or_build.sh -u -b ${BRANCH} -n init
-            docker/update_or_build.sh -u -b ${BRANCH} -n mint
-            docker/update_or_build.sh -u -b ${BRANCH} -n tools
-            docker/update_or_build.sh -u -b ${BRANCH} -n validator
-            docker/update_or_build.sh -u -b ${BRANCH} -n validator-tcb
-            docker/update_or_build.sh -u -b ${BRANCH} -n cluster-test
-
+            docker/build_push.sh -u -b ${BRANCH} -n client
+            docker/build_push.sh -u -b ${BRANCH} -n init
+            docker/build_push.sh -u -b ${BRANCH} -n mint
+            docker/build_push.sh -u -b ${BRANCH} -n tools
+            docker/build_push.sh -u -b ${BRANCH} -n validator
+            docker/build_push.sh -u -b ${BRANCH} -n validator-tcb
+            docker/build_push.sh -u -b ${BRANCH} -n cluster-test
+            #push to novi ecr with standard names, and older names.
+            GIT_REV=$(git rev-parse --short=8 HEAD)
+            aws ecr get-login-password --region ${AWS_REGION} | \
+            docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
+            docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
 workflows:
   commit-workflow:
     jobs:
@@ -667,18 +686,16 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - terraform:
           filters:
             branches:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - prefetch-crates
       - lint:
           requires:
@@ -687,9 +704,8 @@ workflows:
             branches:
               ignore:
                 - gh-pages
-                - /^testflow[\d|.]+$/
-                - /^premainnet-0.[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - build-dev:
           requires:
             - prefetch-crates
@@ -698,9 +714,8 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - run-e2e-test:
           requires:
             - prefetch-crates
@@ -709,9 +724,8 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - run-unit-test:
           requires:
             - prefetch-crates
@@ -720,9 +734,8 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
@@ -731,9 +744,8 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - build-benchmark:
           requires:
             - prefetch-crates
@@ -742,9 +754,8 @@ workflows:
               ignore:
                 - gh-pages
                 - master
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - build-docs:
           requires:
             - lint
@@ -752,9 +763,8 @@ workflows:
             branches:
               ignore:
                 - gh-pages
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
       - deploy-docs:
           requires:
             - build-docs
@@ -778,9 +788,8 @@ workflows:
           filters:
             branches:
               only:
-                - /^testflow[\d|.]+$/
-                - /^premainnet-[\d|.]+$/
-                - /^v[\d|.]+-release$/
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
 
   scheduled-workflow:
     triggers:
