@@ -4,7 +4,7 @@
 
 The Libra client API is based on the JSON-RPC protocol. This specification defines the client API endpoints and types, and provides usage examples.
 
-List of released stable methods:
+List of released stable methods (unless specifically mentioned, all parameters are required for the method.):
 
 * [submit](docs/method_submit.md)(data: string) -> void
 * [get_transactions](docs/method_get_transactions.md)(start_version: unsigned_int64, limit: unsigned_int64, include_events: boolean) -> List<[Transaction](docs/type_transaction.md)>
@@ -15,13 +15,15 @@ List of released stable methods:
 * [get_events](docs/method_get_events.md)(key: string, start: unsigned_int64, limit: unsigned_int64) -> List<[Event](docs/type_event.md)>
 * [get_currencies](docs/method_get_currencies.md)() -> List<[CurrencyInfo](docs/type_currency_info.md)>
 
-Note: unless specifically mentioned, all parameters are required for the method.
+
+> For implementing a client, please checkout our [Client Implementation Guide](docs/client_implementation_guide.md)
+
 
 ## JSON-RPC specification
 
 JSON-RPC is a stateless, light-weight remote procedure call (RPC) protocol. Refer to the [JSON-RPC Specification](https://www.jsonrpc.org/specification) for further details.
 
-### Libra extensions
+### Libra Extensions
 
 JSON-RPC response object is extended with the following fields:
 

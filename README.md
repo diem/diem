@@ -26,6 +26,7 @@ To begin contributing, [sign the CLA](https://libra.org/en-US/cla-sign/). You ca
 * [Welcome](https://developers.libra.org/docs/welcome-to-libra)
 * [Libra Protocol: Key Concepts](https://developers.libra.org/docs/libra-protocol)
 * [Life of a Transaction](https://developers.libra.org/docs/life-of-a-transaction)
+* [JSON-RPC SPEC](json-rpc/json-rpc-spec.md)
 
 ### Try Libra Core
 * [My First Transaction](https://developers.libra.org/docs/my-first-transaction)
