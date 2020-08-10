@@ -320,7 +320,6 @@ pub enum AccountRoleSpecifier {
     ValidatorOperator,
     ParentVASP,
     ChildVASP,
-    Unhosted,
 }
 
 impl AccountRoleSpecifier {
@@ -333,7 +332,6 @@ impl AccountRoleSpecifier {
             Self::ValidatorOperator => 4,
             Self::ParentVASP => 5,
             Self::ChildVASP => 6,
-            Self::Unhosted => 7,
         }
     }
 
@@ -360,9 +358,9 @@ impl FromStr for AccountRoleSpecifier {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "empty" => Ok(AccountRoleSpecifier::LibraRoot), // TODO: rename from empty
-            "unhosted" => Ok(AccountRoleSpecifier::Unhosted),
             "vasp" => Ok(AccountRoleSpecifier::ParentVASP), // TODO: rename from vasp
+            "validator" => Ok(AccountRoleSpecifier::Validator),
+            "validator_operator" => Ok(AccountRoleSpecifier::ValidatorOperator),
             other => Err(Error::msg(format!(
                 "Unrecognized account type specifier {} found.",
                 other
@@ -479,16 +477,6 @@ impl AccountData {
         )
     }
 
-    pub fn new_unhosted() -> Self {
-        Self::with_account(
-            Account::new(),
-            0,
-            lbr_currency_code(),
-            0,
-            AccountRoleSpecifier::Unhosted,
-        )
-    }
-
     /// Creates a new `AccountData` with the provided account.
     pub fn with_account(
         account: Account,
@@ -600,7 +588,7 @@ impl AccountData {
         ])
     }
 
-    /// Returns whether the underlying account is an an empty account type or not.
+    /// Returns the account role specifier
     pub fn account_role(&self) -> AccountRoleSpecifier {
         self.account_role.account_specifier()
     }

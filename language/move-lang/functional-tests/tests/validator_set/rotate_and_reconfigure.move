@@ -2,9 +2,16 @@
 // The libra root account may trigger bulk update to incorporate
 // bob's key key into the validator set.
 
-//! account: alice
-//! account: bob, 1000000, 0, validator
+//! account: alice, 0, 0, address
+//! account: bob, 0, 0, validator
 
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
+
+//! new-transaction
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;

@@ -40,6 +40,7 @@ module LibraSystem {
     const EALREADY_A_VALIDATOR: u64 = 4;
     const ENOT_AN_ACTIVE_VALIDATOR: u64 = 5;
     const EINVALID_TRANSACTION_SENDER: u64 = 6;
+    const ENO_VALIDATOR_OPERATOR_ROLE: u64 = 7;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods
@@ -160,8 +161,11 @@ module LibraSystem {
         operator_account: &signer,
         validator_address: address,
     ) acquires CapabilityHolder {
-        assert(ValidatorConfig::get_operator(validator_address) == Signer::address_of(operator_account),
-               EINVALID_TRANSACTION_SENDER);
+        assert(Roles::has_validator_operator_role(operator_account), ENO_VALIDATOR_OPERATOR_ROLE);
+        assert(
+            ValidatorConfig::get_operator(validator_address) == Signer::address_of(operator_account),
+            EINVALID_TRANSACTION_SENDER
+        );
         let validator_set = get_validator_set();
         let to_update_index_vec = get_validator_index_(&validator_set.validators, validator_address);
         assert(Option::is_some(&to_update_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
@@ -174,6 +178,7 @@ module LibraSystem {
     spec fun update_config_and_reconfigure {
         // TODO: reactivate after aborts_if soundness fix.
         pragma verify = false;
+        aborts_if !Roles::spec_has_validator_operator_role_addr(Signer::address_of(operator_account));
         aborts_if ValidatorConfig::spec_get_operator(validator_address)
             != Signer::spec_address_of(operator_account);
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();

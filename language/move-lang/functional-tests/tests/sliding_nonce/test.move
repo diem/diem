@@ -1,5 +1,5 @@
-//! account: bob, 100000000, 0, unhosted
-//! account: alice, 100000000, 0, unhosted
+//! account: bob, 100000000
+//! account: alice, 100000000
 
 // ****
 // Account setup - bob is account with nonce resource and alice is a regular account

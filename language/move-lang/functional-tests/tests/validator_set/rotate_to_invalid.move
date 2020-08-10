@@ -1,5 +1,11 @@
 //! account: bob, 1000000, 0, validator
-//! account: alice
+//! account: alice, 0, 0, address
+
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob

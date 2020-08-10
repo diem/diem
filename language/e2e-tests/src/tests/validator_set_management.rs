@@ -76,6 +76,7 @@ fn validator_rotate_key_and_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
     let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
+    let validator_operator = Account::new();
 
     executor.execute_and_apply(
         libra_root_account
@@ -89,6 +90,20 @@ fn validator_rotate_key_and_reconfigure() {
             .sequence_number(1)
             .sign(),
     );
+
+    executor.execute_and_apply(
+        libra_root_account
+            .transaction()
+            .script(encode_create_validator_operator_account_script(
+                0,
+                *validator_operator.address(),
+                validator_operator.auth_key_prefix(),
+                b"bobby".to_vec(),
+            ))
+            .sequence_number(2)
+            .sign(),
+    );
+
     executor.new_block();
 
     let output = executor.execute_and_apply(
@@ -123,7 +138,7 @@ fn validator_rotate_key_and_reconfigure() {
                 b"validator_0".to_vec(),
                 *validator_account.address(),
             ))
-            .sequence_number(2)
+            .sequence_number(3)
             .sign(),
     );
 
@@ -138,8 +153,19 @@ fn validator_rotate_key_and_reconfigure() {
 
     executor.new_block();
 
-    let output = executor.execute_and_apply(
+    executor.execute_and_apply(
         validator_account
+            .transaction()
+            .script(encode_set_validator_operator_script(
+                b"bobby".to_vec(),
+                *validator_operator.address(),
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
+
+    let output = executor.execute_and_apply(
+        validator_operator
             .transaction()
             .script(encode_set_validator_config_and_reconfigure_script(
                 *validator_account.address(),
@@ -154,7 +180,7 @@ fn validator_rotate_key_and_reconfigure() {
                 vec![253; 32],
                 vec![],
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 

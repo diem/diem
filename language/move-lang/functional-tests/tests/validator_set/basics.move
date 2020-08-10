@@ -1,6 +1,6 @@
 //! account: bob, 1000000, 0, validator
 //! account: vivian, 1000000, 0, validator
-//! account: alice
+//! account: alice, 0, 0, address
 
 //! new-transaction
 script {
@@ -9,10 +9,7 @@ fun main(account: &signer) {
     LibraSystem::initialize_validator_set(account);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 0,"
 
 //! new-transaction
 script {
@@ -21,10 +18,13 @@ script {
         LibraSystem::update_config_and_reconfigure(account, {{bob}});
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 7,"
+
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob
@@ -34,7 +34,7 @@ script {
         ValidatorConfig::set_operator(account, 0x0);
     }
 }
-// check: EXECUTED
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: bob
@@ -45,7 +45,7 @@ script {
         ValidatorConfig::set_operator(account, Signer::address_of(account))
     }
 }
-// check: EXECUTED
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: bob
@@ -69,10 +69,7 @@ script {
                                     x"", x"", x"", x"");
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: bob
@@ -82,10 +79,7 @@ script {
         ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 script {

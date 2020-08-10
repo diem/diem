@@ -5,6 +5,7 @@ module ValidatorConfig {
     use 0x1::Signature;
     use 0x1::Signer;
     use 0x1::Roles;
+    use 0x1::ValidatorOperatorConfig;
 
     resource struct UpdateValidatorConfig {}
 
@@ -33,6 +34,8 @@ module ValidatorConfig {
     const EINVALID_TRANSACTION_SENDER: u64 = 1;
     const EVALIDATOR_RESOURCE_DOES_NOT_EXIST: u64 = 2;
     const EINVALID_CONSENSUS_KEY: u64 = 3;
+    const ENO_VALIDATOR_ACCOUNT_ROLE: u64 = 4;
+    const ENOT_A_VALIDATOR_OPERATOR: u64 = 5;
 
     ///////////////////////////////////////////////////////////////////////////
     // Validator setup methods
@@ -44,6 +47,7 @@ module ValidatorConfig {
         human_name: vector<u8>,
         ) {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
@@ -53,6 +57,7 @@ module ValidatorConfig {
 
     spec fun publish {
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
+        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
         aborts_if spec_exists_config(Signer::spec_address_of(account));
         ensures spec_exists_config(Signer::spec_address_of(account));
     }
@@ -70,11 +75,19 @@ module ValidatorConfig {
 
     /// Sets a new operator account, preserving the old config.
     public fun set_operator(account: &signer, operator_account: address) acquires ValidatorConfig {
+        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
+        // Role check is not necessary since the role is checked when the config resource is published.
+        assert(
+            ValidatorOperatorConfig::has_validator_operator_config(operator_account),
+            ENOT_A_VALIDATOR_OPERATOR
+        );
         let sender = Signer::address_of(account);
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
 
     spec fun set_operator {
+        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
+        aborts_if !ValidatorOperatorConfig::spec_exists_config(operator_account);
         aborts_if !spec_exists_config(Signer::spec_address_of(account));
         ensures spec_has_operator(Signer::spec_address_of(account));
         ensures spec_get_operator(Signer::spec_address_of(account)) == operator_account;
@@ -105,12 +118,14 @@ module ValidatorConfig {
     /// Removes an operator account, setting a corresponding field to Option::none.
     /// The old config is preserved.
     public fun remove_operator(account: &signer) acquires ValidatorConfig {
+        assert(Roles::has_validator_role(account), ENO_VALIDATOR_ACCOUNT_ROLE);
         let sender = Signer::address_of(account);
         // Config field remains set
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::none();
     }
 
     spec fun remove_operator {
+        aborts_if !Roles::spec_has_validator_role_addr(Signer::spec_address_of(account));
         aborts_if !spec_exists_config(Signer::spec_address_of(account));
         ensures !spec_has_operator(Signer::spec_address_of(account));
         ensures spec_get_operator(Signer::spec_address_of(account))

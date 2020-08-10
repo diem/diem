@@ -1,10 +1,17 @@
 // Make bob a validator, set alice as bob's delegate.
 // Test that alice can rotate bob's key and invoke reconfiguration.
 
-//! account: alice
+//! account: alice, 0, 0, address
 //! account: bob, 1000000, 0, validator
 //! account: carrol, 1000000, 0, validator
 
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
+
+//! new-transaction
 //! sender: bob
 script {
     use 0x1::ValidatorConfig;

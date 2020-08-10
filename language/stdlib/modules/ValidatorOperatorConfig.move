@@ -11,6 +11,7 @@ module ValidatorOperatorConfig {
 
     const ENOT_LIBRA_ROOT: u64 = 0;
     const EVALIDATOR_OPERATOR_RESOURCE_DOES_NOT_EXIST: u64 = 1;
+    const ENO_VALIDATOR_OPERATOR_ROLE: u64 = 2;
 
     public fun publish(
         account: &signer,
@@ -18,6 +19,7 @@ module ValidatorOperatorConfig {
         human_name: vector<u8>,
         ) {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        assert(Roles::has_validator_operator_role(account), ENO_VALIDATOR_OPERATOR_ROLE);
         move_to(account, ValidatorOperatorConfig {
             human_name,
         });
@@ -25,6 +27,7 @@ module ValidatorOperatorConfig {
 
     spec fun publish {
         aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
+        aborts_if !Roles::spec_has_validator_operator_role_addr(Signer::spec_address_of(account));
         aborts_if spec_exists_config(Signer::spec_address_of(account));
         ensures spec_exists_config(Signer::spec_address_of(account));
     }
@@ -41,7 +44,6 @@ module ValidatorOperatorConfig {
         }
     }
 
-
     /// Get validator's account human name
     /// Aborts if there is no ValidatorOperatorConfig resource
     public fun get_human_name(addr: address): vector<u8> acquires ValidatorOperatorConfig {
@@ -54,6 +56,13 @@ module ValidatorOperatorConfig {
         pragma opaque = true;
         aborts_if !spec_exists_config(addr);
         ensures result == spec_get_human_name(addr);
+    }
+
+    public fun has_validator_operator_config(addr: address): bool {
+        exists<ValidatorOperatorConfig>(addr)
+    }
+    spec fun has_validator_operator_config {
+        ensures result == spec_exists_config(addr);
     }
 }
 }

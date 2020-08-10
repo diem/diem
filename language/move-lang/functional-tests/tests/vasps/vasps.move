@@ -1,5 +1,5 @@
 //! account: parent, 0, 0, address
-//! account: bob, 10000000, 0, unhosted
+//! account: bob, 10000000
 
 // create a parent VASP
 //! new-transaction

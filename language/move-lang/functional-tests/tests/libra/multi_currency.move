@@ -1,7 +1,7 @@
 //! account: alice, 0, 0, address
 //! account: bob, 0, 0, address
-//! account: richie, 10Coin1, unhosted
-//! account: sally, 10Coin2, unhosted
+//! account: richie, 10Coin1
+//! account: sally, 10Coin2
 
 // create parent VASP accounts for alice and bob
 //! new-transaction

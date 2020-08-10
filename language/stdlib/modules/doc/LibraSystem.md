@@ -305,8 +305,11 @@
     operator_account: &signer,
     validator_address: address,
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(validator_address) == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator_account),
-           EINVALID_TRANSACTION_SENDER);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_validator_operator_role">Roles::has_validator_operator_role</a>(operator_account), ENO_VALIDATOR_OPERATOR_ROLE);
+    <b>assert</b>(
+        <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(validator_address) == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator_account),
+        EINVALID_TRANSACTION_SENDER
+    );
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> to_update_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, validator_address);
     <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&to_update_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
@@ -697,6 +700,7 @@ Validators have unique addresses.
 
 
 <pre><code>pragma verify = <b>false</b>;
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator_account));
 <b>aborts_if</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">ValidatorConfig::spec_get_operator</a>(validator_address)
     != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(operator_account);
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();

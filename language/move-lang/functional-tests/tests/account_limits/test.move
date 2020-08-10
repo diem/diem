@@ -1,7 +1,7 @@
 //! account: validatorvivian, 10000000Coin1, 0, validator
-//! account: bob, 100000000Coin1, 0, unhosted
-//! account: alice, 100000000Coin1, 0, unhosted
-//! account: otherblessed, 0Coin1, 0, unhosted
+//! account: bob, 100000000Coin1, 0
+//! account: alice, 100000000Coin1, 0
+//! account: otherblessed, 0Coin1, 0
 //! account: otherbob, 0Coin1, 0, address
 
 //! account: moneybags, 1000000000000Coin1

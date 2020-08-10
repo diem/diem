@@ -1,13 +1,26 @@
 //! account: alice, 1000000, 0, validator
-//! account: bob
 //! account: vivian, 1000000, 0, validator
 //! account: viola, 1000000, 0, validator
-//! account: dave
+//! account: bob, 0, 0, address
+//! account: dave, 0, 0, address
 
 //! block-prologue
 //! proposer: vivian
 //! block-time: 2
 
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{bob}}, {{bob::auth_key}}, b"bob"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
+
+//! new-transaction
+//! sender: libraroot
+//! args: 0, {{dave}}, {{dave::auth_key}}, b"dave"
+stdlib_script::create_validator_operator_account
+// check: EXECUTED
+
+//! new-transaction
 //! sender: alice
 script {
     use 0x1::ValidatorConfig;
