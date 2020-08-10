@@ -64,6 +64,20 @@ fn test_remove_requests() {
     request_manager.add_request(10, vec![peers[0].clone()]);
     request_manager.add_request(12, vec![peers[1].clone()]);
 
+    // check is_sent_request
+    let random_peer = PeerNetworkId::random_validator();
+    assert!(request_manager.is_sent_request(1, &peers[0]));
+    assert!(request_manager.is_sent_request(5, &peers[0]));
+    assert!(request_manager.is_sent_request(12, &peers[1]));
+    assert!(!request_manager.is_sent_request(1, &peers[1]));
+    assert!(!request_manager.is_sent_request(1, &random_peer));
+    assert!(!request_manager.is_sent_request(2, &peers[0]));
+    assert!(!request_manager.is_sent_request(2, &peers[1]));
+    assert!(!request_manager.is_sent_request(2, &random_peer));
+    assert!(!request_manager.is_sent_request(13, &peers[0]));
+    assert!(!request_manager.is_sent_request(13, &peers[1]));
+    assert!(!request_manager.is_sent_request(13, &random_peer));
+
     request_manager.remove_requests(5);
 
     assert!(request_manager.get_last_request_time(1).is_none());
@@ -71,6 +85,12 @@ fn test_remove_requests() {
     assert!(request_manager.get_last_request_time(5).is_none());
     assert!(request_manager.get_last_request_time(10).is_some());
     assert!(request_manager.get_last_request_time(12).is_some());
+
+    assert!(!request_manager.is_sent_request(1, &peers[0]));
+    assert!(!request_manager.is_sent_request(3, &peers[1]));
+    assert!(!request_manager.is_sent_request(5, &peers[0]));
+    assert!(request_manager.is_sent_request(10, &peers[0]));
+    assert!(request_manager.is_sent_request(12, &peers[1]));
 }
 
 #[test]

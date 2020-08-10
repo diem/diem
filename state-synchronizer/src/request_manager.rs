@@ -294,6 +294,12 @@ impl RequestManager {
         }
     }
 
+    pub fn is_sent_request(&self, version: u64, peer: &PeerNetworkId) -> bool {
+        self.requests
+            .get(&version)
+            .map_or(false, |req| req.last_request_peers.contains(peer))
+    }
+
     pub fn process_success_response(&mut self, peer: &PeerNetworkId) {
         // update multicast
         let is_primary_upstream_peer = self

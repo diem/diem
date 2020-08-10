@@ -764,6 +764,17 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     format_err!("[state sync] Empty chunk from {:?}", peer)
                 })?;
 
+        // check whether this response corresponds to a sent request
+        // only accept/process responses for requests we sent
+        // this might be a response for a timed-out request, and penalization of such responses
+        // happens in the `RequestManager::check_timeout` calls in the periodic `check_progress` calls
+        if !self
+            .request_manager
+            .is_sent_request(chunk_start_version, peer)
+        {
+            bail!("[state sync] received chunk response for unknown request");
+        }
+
         if chunk_start_version != known_version + 1 {
             // Old / wrong chunk.
             self.request_manager.process_chunk_version_mismatch(
