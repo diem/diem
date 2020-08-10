@@ -100,7 +100,7 @@ fn quote_doc(doc: &str) -> String {
 
 {}    """"#,
             s[0],
-            textwrap::indent(&textwrap::fill(&textwrap::dedent(s[1]), 86), "    "),
+            textwrap::indent(s[1], "    "),
         )
     }
 }

@@ -136,8 +136,7 @@ fn output_builder_definition(out: &mut dyn Write, abi: &ScriptABI, inlined: bool
 
 fn quote_doc(doc: &str) -> String {
     let doc = crate::common::prepare_doc_string(doc);
-    let text = textwrap::fill(&doc, 86);
-    textwrap::indent(&text, "/// ")
+    textwrap::indent(&doc, "/// ")
 }
 
 fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
