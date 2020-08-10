@@ -98,7 +98,7 @@ impl Experiment for ClientCompatibilityTest {
         time::delay_for(Duration::from_secs(20)).await;
 
         // submit a mint request from the test node to the test host (faucet)
-        let run_cli_cmd = format!("/opt/libra/bin/cli --url {} --chain-id {} -f http://{}:{} --waypoint $(cat /opt/libra/etc/waypoint.txt)", self.test_node.json_rpc_url(), ChainId::test(), self.test_host.ip(), faucet_port);
+        let run_cli_cmd = format!("/opt/libra/bin/cli --url {} --chain-id {} -f http://{}:{} --waypoint $(cat /opt/libra/etc/waypoint.txt.fail)", self.test_node.json_rpc_url(), ChainId::test(), self.test_host.ip(), faucet_port);
         let mut cli_cmd = String::new();
         let cli_cmd_file = "/opt/libra/etc/cmds.txt";
         let cmds = include_str!("client_compatibility_cmds.txt");
