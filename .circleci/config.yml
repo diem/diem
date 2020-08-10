@@ -93,7 +93,7 @@ commands:
     steps:
       - restore_cache:
           name: Restore sccache binary
-          key: sccache-0.2.13
+          key: sccache-bin-{{ checksum "rust-toolchain" }}-{{ checksum "cargo-toolchain" }}
       - run:
           name: Install scccache
           command: |
@@ -108,7 +108,7 @@ commands:
             echo 'export CXX="sccache c++"' >> $BASH_ENV
       - save_cache:
           name: Save sccache binary
-          key: sccache-0.2.13
+          key: sccache-bin-{{ checksum "rust-toolchain" }}-{{ checksum "cargo-toolchain" }}
           paths:
             - "/usr/local/cargo/bin/sccache"
   save_sccache:
@@ -122,6 +122,7 @@ commands:
           # NOTE circle's built-in key does not support date
           command: |
             cat rust-toolchain > /tmp/cache-key
+            cat cargo-toolchain >> /tmp/cache-key
             date +%Y%m%d >> /tmp/cache-key
       - save_cache:
           name: Save sccache
@@ -135,6 +136,7 @@ commands:
           name: Generate date code for cache key
           command: |
             cat rust-toolchain > /tmp/cache-key
+            cat cargo-toolchain >> /tmp/cache-key
             date +%Y%m%d >> /tmp/cache-key
       - restore_cache:
           name: Restore sccache
