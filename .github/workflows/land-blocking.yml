@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - auto
+      - canary
 
 jobs:
   build-and-run-cluster-test:
