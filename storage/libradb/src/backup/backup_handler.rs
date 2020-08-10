@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ledger_store::{EpochEndingLedgerInfoIter, LedgerStore},
+    ledger_store::LedgerStore,
+    metrics::{
+        BACKUP_EPOCH_ENDING_EPOCH, BACKUP_STATE_SNAPSHOT_LEAF_IDX, BACKUP_STATE_SNAPSHOT_VERSION,
+        BACKUP_TXN_VERSION,
+    },
     state_store::StateStore,
     transaction_store::TransactionStore,
 };
@@ -52,8 +56,12 @@ impl BackupHandler {
         let txn_info_iter = self
             .ledger_store
             .get_transaction_info_iter(start_version, num_transactions)?;
-        let zipped = zip_eq(txn_iter, txn_info_iter)
-            .map(|(txn_res, txn_info_res)| Ok((txn_res?, txn_info_res?)));
+        let zipped = zip_eq(txn_iter, txn_info_iter).enumerate().map(
+            move |(idx, (txn_res, txn_info_res))| {
+                BACKUP_TXN_VERSION.set((start_version + idx as u64) as i64);
+                Ok((txn_res?, txn_info_res?))
+            },
+        );
         Ok(zipped)
     }
 
@@ -90,7 +98,13 @@ impl BackupHandler {
             Arc::clone(&self.state_store),
             version,
             HashValue::zero(),
-        )?;
+        )?
+        .enumerate()
+        .map(move |(idx, res)| {
+            BACKUP_STATE_SNAPSHOT_VERSION.set(version as i64);
+            BACKUP_STATE_SNAPSHOT_LEAF_IDX.set(idx as i64);
+            res
+        });
         Ok(Box::new(iterator))
     }
 
@@ -143,13 +157,19 @@ impl BackupHandler {
         Ok((txn_info, ledger_info))
     }
 
-    pub fn get_epoch_ending_ledger_info_iter(
-        &self,
+    pub fn get_epoch_ending_ledger_info_iter<'a>(
+        &'a self,
         start_epoch: u64,
         end_epoch: u64,
-    ) -> Result<EpochEndingLedgerInfoIter> {
-        self.ledger_store
-            .get_epoch_ending_ledger_info_iter(start_epoch, end_epoch)
+    ) -> Result<impl Iterator<Item = Result<LedgerInfoWithSignatures>> + 'a> {
+        Ok(self
+            .ledger_store
+            .get_epoch_ending_ledger_info_iter(start_epoch, end_epoch)?
+            .enumerate()
+            .map(move |(idx, li)| {
+                BACKUP_EPOCH_ENDING_EPOCH.set((start_epoch + idx as u64) as i64);
+                li
+            }))
     }
 }
 
