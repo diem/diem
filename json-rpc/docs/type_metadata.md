@@ -5,7 +5,7 @@
 |-----------|----------------|-----------------------------------------------|
 | version   | unsigned int64 | The latest block (ledger) version             |
 | timestamp | unsigned int64 | The latest block (ledger) timestamp           |
-
+| chain_id  | unsigned int8  | Chain ID of the Libra network                 |
 
 ### Example
 
@@ -23,7 +23,8 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
   "libra_ledger_version": 3253133,
   "result": {
     "timestamp": 1596680521771648,
-    "version": 3253133
+    "version": 3253133,
+    "chain_id": 4
   }
 }
 ```

@@ -659,7 +659,8 @@ fn test_json_rpc_protocol() {
               "libra_ledger_version": version,
               "result": {
                 "timestamp": timestamp,
-                "version": version
+                "version": version,
+                "chain_id": ChainId::test().id(),
               }
             }),
         ),
@@ -674,7 +675,8 @@ fn test_json_rpc_protocol() {
               "libra_ledger_version": version,
               "result": {
                 "timestamp": 0,
-                "version": 0
+                "version": 0,
+                "chain_id": ChainId::test().id(),
               }
             }),
         ),

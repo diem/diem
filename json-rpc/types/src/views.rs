@@ -326,6 +326,7 @@ impl From<(u64, ContractEvent)> for EventView {
 pub struct BlockMetadata {
     pub version: u64,
     pub timestamp: u64,
+    pub chain_id: u8,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]

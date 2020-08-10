@@ -13,13 +13,15 @@ Please add the API change in the following format:
 
 ```
 
-```
+## 2020-08-11 Added chain_id to get_metadata
+
+- added "chain_id" field to `get_metadata` response so it is available outside
+  of the root JSON-RPC Response object
+
 ## [breaking] 2020-08-10 Adding missing "type" tag for AccounRole and VMstatus.
 
 - adding "type" tag for values in "vm_status" field returned in transction object in method get_transcations, get_account_transcation etc.
 - adding "type" tag for values in "role" field returned in account object in method get_account.
-
-```
 
 ## Before 2020-08-05
 

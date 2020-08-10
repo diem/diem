@@ -243,14 +243,17 @@ async fn get_account(
 /// returning the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
+    let chain_id = service.chain_id().id();
     match serde_json::from_value::<u64>(request.get_param(0)) {
         Ok(version) => Ok(BlockMetadata {
             version,
             timestamp: service.db.get_block_timestamp(version)?,
+            chain_id,
         }),
         _ => Ok(BlockMetadata {
             version: request.version(),
             timestamp: request.ledger_info.ledger_info().timestamp_usecs(),
+            chain_id,
         }),
     }
 }
