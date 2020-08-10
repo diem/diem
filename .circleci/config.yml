@@ -272,7 +272,6 @@ jobs:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
       - restore_cargo_package_cache
-      - install_sccache
       - run:
           name: Fetch workspace dependencies over network
           command: $CARGO $CARGOFLAGS fetch
@@ -283,8 +282,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           name: cargo lint
           command: $CARGO $CARGOFLAGS x lint
@@ -312,15 +309,12 @@ jobs:
             if [[ "${failed}" == "true" ]] ; then
               exit 1
             fi
-      - save_sccache
   build-dev:
     executor: build-executor
     description: Development Build
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16
       - run:
@@ -337,7 +331,6 @@ jobs:
           command: |
             rustup target add powerpc-unknown-linux-gnu
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
-      - save_sccache
       - build_teardown
   run-e2e-test:
     executor: build-executor
@@ -351,8 +344,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           name: Determine test targets for this container.
           # NOTE Currently the tests are distributed by name order. Once test
@@ -403,7 +394,6 @@ jobs:
               echo -e "$num_fails test(s) failed:\n${failed_tests}"
             fi
             exit $num_fails
-      - save_sccache
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
@@ -415,13 +405,10 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           name: Run all unit tests
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS x test --jobs 12 --unit
-      - save_sccache
   run-crypto-unit-test:
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
@@ -441,14 +428,11 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           name: Build benchmark targets without running
           command: |
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x bench \
               --no-run
-      - save_sccache
   run-flaky-unit-test:
     executor: test-executor
     description: Run a list of known flaky tests.
@@ -580,8 +564,6 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - install_sccache
-      - restore_sccache
       - run:
           name: Generate documentation
           command: |
@@ -591,7 +573,6 @@ jobs:
       - persist_to_workspace:
           root: target
           paths: doc
-      - save_sccache
   deploy-docs:
     docker:
       - image: node:8.10.0
