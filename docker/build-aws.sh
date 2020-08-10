@@ -25,6 +25,9 @@ while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
     BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules)
     ;;
+    # NOTE: This is used in land-blocking workflow `.github/workflows/land-blocking.yml`
+    #       If you change the list of projects to be built for `--build-all-cti`, please
+    #       change the list in `.github/actions/land-blocking/find-lbt-images.sh` as well
   --build-all-cti )
     BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-safety-rules)
     ;;

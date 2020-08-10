@@ -21,7 +21,6 @@ jobs:
           echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
           echo "::set-env name=MASTER_GIT_REV::$(git rev-parse --short=8 origin/master)"
           echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
-          echo "::set-env name=PREV_TAG::land_$(git rev-parse --short=8 origin/master)"
       - name: Check kill switch
         id: check_ks
         run: |
@@ -68,6 +67,34 @@ jobs:
           else
             echo "Will run land_blocking_compat suite"
             echo "::set-env name=TEST_COMPAT::1"
+            echo "Finding a previous image tag to test against"
+            .github/actions/land-blocking/find-lbt-images.sh > lbt_images_output.txt
+            if [ $? -ne 0 ]; then
+              cat lbt_images_output.txt
+              jq -n \
+                --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. Could not find an image tag for Compat Test" \
+                --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+              '{
+                "attachments": [
+                  {
+                    "text": $msg,
+                    "actions": [
+                      {
+                        "type": "button",
+                        "text": "Visit Job",
+                        "url": $url
+                      }
+                    ]
+                  }
+                ]
+              }' > /tmp/payload
+              curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
+              exit 1
+            else
+              compat_prev_tag=$(tail -1 lbt_images_output.txt)
+              echo "Using previous image tag $compat_prev_tag"
+              echo "::set-env name=PREV_TAG::$compat_prev_tag"
+            fi
           fi
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
