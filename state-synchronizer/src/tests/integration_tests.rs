@@ -1032,6 +1032,7 @@ fn test_fn_failover() {
 }
 
 #[test]
+#[ignore]
 fn test_multicast_failover() {
     let mut env = SynchronizerEnv::new(4);
     env.start_next_synchronizer(
