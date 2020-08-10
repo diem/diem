@@ -238,11 +238,11 @@ impl RequestManager {
             bail!("No peers to send chunk request to");
         }
 
+        let req_info = self.add_request(req.known_version + 1, peers.clone());
         debug!(
-            "[state sync] request next chunk. peers: {:?}, chunk req: {}",
-            peers, req,
+            "[state sync] request next chunk - chunk req info: {:?}",
+            req_info
         );
-        self.add_request(req.known_version + 1, peers.clone());
 
         // actually execute network send
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
@@ -271,7 +271,7 @@ impl RequestManager {
         }
     }
 
-    pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) {
+    pub fn add_request(&mut self, version: u64, peers: Vec<PeerNetworkId>) -> ChunkRequestInfo {
         if let Some(prev_request) = self.requests.get_mut(&version) {
             let now = SystemTime::now();
             if self.multicast_level != prev_request.multicast_level {
@@ -281,11 +281,16 @@ impl RequestManager {
             }
             prev_request.last_request_peers = peers;
             prev_request.last_request_time = now;
+            prev_request.clone()
         } else {
             self.requests.insert(
                 version,
                 ChunkRequestInfo::new(version, peers, self.multicast_level),
             );
+            self.requests
+                .get(&version)
+                .expect("missing chunk request that was just added")
+                .clone()
         }
     }
 
@@ -297,6 +302,7 @@ impl RequestManager {
             == Some(0);
         if is_primary_upstream_peer {
             // if chunk from a primary upstream is successful, stop multicasting the request to failover networks
+            debug!("[state sync] exit multicast mode");
             self.multicast_level = MIN_UPSTREAM_NETWORK_CT;
         }
 
@@ -305,7 +311,7 @@ impl RequestManager {
     }
 
     // penalize peer's score for giving chunk with starting version that doesn't match local synced version
-    pub fn process_bad_chunk_start(
+    pub fn process_chunk_version_mismatch(
         &mut self,
         peer: &PeerNetworkId,
         chunk_version: u64,
@@ -398,10 +404,12 @@ impl RequestManager {
 
         // increment multicast level if this request is also multicast-timed-out
         if Self::is_timeout(last_request_time, self.multicast_timeout) {
+            let prev_multicast_level = self.multicast_level;
             self.multicast_level = std::cmp::min(
                 self.multicast_level + 1,
                 self.upstream_config.upstream_count(),
-            )
+            );
+            debug!("[state sync] multicast timeout occurred for version {}, update multicast level from {} to {}", version, prev_multicast_level, self.multicast_level);
         }
         is_timeout
     }

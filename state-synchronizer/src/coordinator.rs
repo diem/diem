@@ -766,7 +766,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         if chunk_start_version != known_version + 1 {
             // Old / wrong chunk.
-            self.request_manager.process_bad_chunk_start(
+            self.request_manager.process_chunk_version_mismatch(
                 peer,
                 chunk_start_version,
                 known_version,
