@@ -4,7 +4,7 @@
 use crate::{
     function_target::FunctionTargetData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{TempIndex, AttrId, Bytecode, AssignKind, Operation, Label, BorrowNode, TEMP_DEFAULT_VALUE_INDEX},
+    stackless_bytecode::{TempIndex, AttrId, Bytecode, AssignKind, Operation, Label, BorrowNode},
 };
 
 use std::collections::BTreeMap;
@@ -94,9 +94,8 @@ impl FunctionTargetProcessor for TestInstrumenter {
             self.instrument_const_fields(func_env, &mut data, targets);
         }
         if func_env.is_pragma_true(CONST_SUBEXP_TEST_PRAGMA, || false) {
-            let mut count = 0;
-            self.instrument_const_precond_subexp(func_env, &mut data, &mut count);
-            self.instrument_const_postcond_subexp(func_env, &mut data, &mut count);
+            self.instrument_const_precond_subexp(func_env, &mut data);
+            self.instrument_const_postcond_subexp(func_env, &mut data);
         }
         if func_env.is_pragma_true(WRITEREF_TEST_PRAGMA, || false) {
             self.instrument_writeref(func_env, &mut data);
@@ -125,7 +124,7 @@ impl TestInstrumenter {
         // Override specification with `aborts_if true`.
         let cond = self.make_condition(
             func_env.get_loc(),
-            ConditionKind::EnsuresSmokeTest,
+            ConditionKind::Ensures,
             self.make_abort_flag_bool_exp(&func_env.module_env),
         );
         let cond_loc = cond.loc.clone();
@@ -185,7 +184,7 @@ impl TestInstrumenter {
             // if the `const_sc_addr` pragma is declared
             let cond = self.make_condition(
                     struct_env.get_loc().clone(),
-                    ConditionKind::RequiresSmokeTest,
+                    ConditionKind::RequiresSpecCheck,
                     self.sc_addr_is_const(module_env, const_addr)
                 );
             conds.push(cond);
@@ -206,7 +205,7 @@ impl TestInstrumenter {
                 let field_unchanged_exp = self.field_unchanged_exp(func_env, &struct_env, &field_env);
                 let cond = self.make_condition(
                         field_loc.clone(),
-                        ConditionKind::EnsuresSmokeTest,
+                        ConditionKind::Ensures,
                         field_unchanged_exp,
                     );
                 conds_for_field.push(cond);
@@ -324,26 +323,31 @@ impl TestInstrumenter {
 // Constant expression checker
 
 impl TestInstrumenter {
-    /// Instrument the function to check for constant predicate subexpressions in
-    /// the requires specifications
-    fn instrument_const_precond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
+    /// Instrument the function to check for constant
+    /// predicate subexpressions in the requires specifications
+    fn instrument_const_precond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
         let preconds = self.get_smoke_test_preconditions(func_env);
         let mut conds = vec![];
         for precond in preconds {
-            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, &precond.loc, data, count, true, &conds, " in the precondition");
+            self.create_const_subexp_condition(&ConditionKind::RequiresSpecCheckAssert, func_env, &precond.exp, &precond.loc, data, true, &conds);
             conds.push(precond.clone());
         }
     }
 
-    /// Instrument the function to check for constant predicate subexpressions in
-    /// the ensures specifications
-    fn instrument_const_postcond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
+    /// Instrument the function to check for constant
+    /// predicate subexpressions in the ensures specifications
+    fn instrument_const_postcond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
         let preconds = self.get_smoke_test_preconditions(func_env);
         for cond in &func_env.get_spec().conditions {
-            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, &cond.loc, data, count, true, &preconds, " in the postcondition");
+            self.create_const_subexp_condition(&ConditionKind::Ensures, func_env, &cond.exp, &cond.loc, data, true, &preconds);
         }
     }
 
+    /// Intruments the function with the specification check that finds
+    /// constant predicate (only boolean valued) subexpressions.
+    /// Creates a new specification check, one for each polarity.
+    /// For example, in p ==> q, we add the checks p, !p, q, !q, and
+    /// recursively add checks for any subexpressions of p and q.
     fn create_const_subexp_condition(
         &self,
         kind: &ConditionKind,
@@ -351,12 +355,10 @@ impl TestInstrumenter {
         exp: &Exp,
         loc: &Loc,
         data: &mut FunctionTargetData,
-        count: &mut i64,
         first_level: bool,
-        preconds: &Vec<Condition>,
-        msg_suffix: &str) {
+        preconds: &Vec<Condition>) {
         let module_env = &func_env.module_env;
-        if func_env.module_env.get_node_type(exp.node_id()) == BOOL_TYPE && (!first_level || *kind == ConditionKind::RequiresSmokeTestAssert) {
+        if func_env.module_env.get_node_type(exp.node_id()) == BOOL_TYPE && (!first_level || *kind == ConditionKind::RequiresSpecCheckAssert) {
             let exp_is_true = exp.clone();
             let exp_is_false = Exp::make_call_not(&module_env, exp.clone());
             let exps = vec![exp_is_true, exp_is_false];
@@ -364,10 +366,16 @@ impl TestInstrumenter {
             // Create a specification check for each boolean polarity true and false
             for exp in exps {
                 let mut conds = preconds.clone();
-
-                *count = *count + 1;
-                let span = Span::new(loc.span().start() + ByteOffset(*count), loc.span().end());
-                let loc = Loc::new(func_env.get_loc().file_id(), span);
+                let error_annotation = format!("{}_{}",
+                            func_env.get_name().display(func_env.symbol_pool()),
+                            exp.node_id().as_usize(),
+                        );
+                let annotation_loc =
+                    Loc::annotated(
+                        func_env.get_loc().file_id(),
+                        loc.span(),
+                        error_annotation,
+                    );
 
                 let cond = self.make_condition(
                     loc.clone(),
@@ -376,30 +384,30 @@ impl TestInstrumenter {
                 );
                 conds.push(cond);
                 let info = ConditionInfo {
-                    message: format!("subexpression is constant: {:?}{}", &exp, msg_suffix),
+                    message: format!("subexpression is constant: {:?}.", &exp),
                     omit_trace: true,
                     negative_cond: true,
                 };
 
-                func_env.module_env.env.set_condition_info(loc.clone(), ConditionTag::NegativeTest, info);
+                func_env.module_env.env.set_condition_info(annotation_loc.clone(), ConditionTag::NegativeTest, info);
                 let spec = Spec::new(conds, Default::default(), Default::default());
-                data.add_spec_check(spec, None, loc.clone());
+                data.add_spec_check(spec, None, annotation_loc.clone());
             }
         }
         use Exp::*;
         match exp {
             Call(_, _, exps) => {
                 for exp in exps {
-                    self.create_const_subexp_condition(kind, func_env, &exp, loc, data, count, false, preconds, msg_suffix);
+                    self.create_const_subexp_condition(kind, func_env, &exp, loc, data, false, preconds);
                 }
             }
             Block(_, _, exp) => {
-                self.create_const_subexp_condition(kind, func_env, &exp, loc, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &exp, loc, data, false, preconds);
             }
             IfElse(_, cond, then_, else_) => {
-                self.create_const_subexp_condition(kind, func_env, &cond, loc, data, count, false, preconds, msg_suffix);
-                self.create_const_subexp_condition(kind, func_env, &then_, loc, data, count, false, preconds, msg_suffix);
-                self.create_const_subexp_condition(kind, func_env, &else_, loc, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &cond, loc, data, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &then_, loc, data, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &else_, loc, data, false, preconds);
             }
             _ => ()
         }
@@ -416,6 +424,10 @@ impl TestInstrumenter {
         let module_env = &func_env.module_env;
         let preconds = self.get_smoke_test_preconditions(func_env);
         let postconds = self.get_smoke_test_postconditions(func_env);
+
+        // Create dummy unconstrained value
+        data.local_types.push(Type::Tuple(vec![]));
+        let uncon_index = data.local_types.len()-1;
 
         // Stores the string representation of temporary variable paths.
         let mut path_strings: BTreeMap<usize, String> = BTreeMap::new();
@@ -493,7 +505,7 @@ impl TestInstrumenter {
 
                     let mut rw_code = data.code.clone();
                     let write_ref = &mut rw_code[i];
-                    let mutated_srcs = vec![srcs[0], TEMP_DEFAULT_VALUE_INDEX];
+                    let mutated_srcs = vec![srcs[0], uncon_index];
                     *write_ref = Bytecode::Call(id.clone(), dsts.clone(), Operation::WriteRef, mutated_srcs);
 
                     // Conjunction of all postconditions
@@ -523,7 +535,7 @@ impl TestInstrumenter {
 
                     let cond = self.make_condition(
                         annotation_loc.clone(),
-                        ConditionKind::EnsuresSmokeTest,
+                        ConditionKind::Ensures,
                         exp);
                     conds.push(cond);
 
@@ -706,6 +718,7 @@ impl TestInstrumenter {
         }
     }
 
+    /// Helper function to add the underspecified return value specification check.
     fn add_underspec_spec_check(
         &self,
         func_env: &FunctionEnv<'_>,
@@ -718,6 +731,8 @@ impl TestInstrumenter {
     {
         let module_env = &func_env.module_env;
 
+        // Create a new annotated location for specification
+        // check error reporting
         let annotation_loc = Loc::annotated(
             func_env.get_loc().file_id(),
             func_env.get_loc().span(),
@@ -746,7 +761,7 @@ impl TestInstrumenter {
         // Create the specification check conditions
         let post_cond = self.make_condition(
             annotation_loc.clone(),
-            ConditionKind::EnsuresSmokeTest,
+            ConditionKind::Ensures,
             exp);
         let mut conds = preconds.clone();
         conds.push(post_cond);
@@ -757,6 +772,7 @@ impl TestInstrumenter {
             annotation_loc.clone());
     }
 
+    /// Helper function for `BorrowLoc` bytecode instruction.
     fn make_borrow_loc(
         &self,
         dst: TempIndex,
@@ -770,6 +786,7 @@ impl TestInstrumenter {
         )
     }
 
+    /// Helper function for `BorrowField` bytecode instruction.
     fn make_borrow_field(
         &self,
         dst: TempIndex,
@@ -786,6 +803,7 @@ impl TestInstrumenter {
         )
     }
 
+    /// Helper function for `WriteRef` bytecode instruction.
     fn make_writeref(
         &self,
         dst: TempIndex,
@@ -799,6 +817,7 @@ impl TestInstrumenter {
         )
     }
 
+    /// Helper function for `WritebackToValue` bytecode instruction.
     fn make_writeback_to_value(
         &self,
         dst: TempIndex,
@@ -811,6 +830,7 @@ impl TestInstrumenter {
         )
     }
 
+    /// Helper function for `WritebackToReference` bytecode instruction.
     fn make_writeback_to_ref(
         &self,
         dst: TempIndex,
@@ -855,7 +875,7 @@ impl TestInstrumenter {
 
 impl TestInstrumenter {
     /// Helper to return the preconditions of the `func_env` as a list of
-    /// `RequiresSmokeTest` conditions.
+    /// `RequiresSpecCheck` conditions.
     /// These conditions are assumed at the top level `_smoke_test_` function only.
     fn get_smoke_test_preconditions(&self, func_env: &FunctionEnv<'_>) -> Vec<Condition> {
         let mut conds = vec![];
@@ -864,7 +884,7 @@ impl TestInstrumenter {
                 ConditionKind::Requires | ConditionKind::RequiresModule => {
                     let st_requires = Condition {
                         loc: cond.loc.clone(),
-                        kind: ConditionKind::RequiresSmokeTest,
+                        kind: ConditionKind::RequiresSpecCheck,
                         properties: Default::default(),
                         exp: cond.exp.clone(),
                     };

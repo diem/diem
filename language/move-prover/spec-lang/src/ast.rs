@@ -13,7 +13,6 @@ use crate::{
         BOOL_TYPE,
         NUM_TYPE,
         ADDRESS_TYPE,
-        RANGE_TYPE,
     },
 };
 use std::{
@@ -64,11 +63,10 @@ pub enum ConditionKind {
     AbortsWith,
     SucceedsIf,
     Ensures,
-    EnsuresSmokeTest,
     Requires,
     RequiresModule,
-    RequiresSmokeTest,
-    RequiresSmokeTestAssert,
+    RequiresSpecCheck,
+    RequiresSpecCheckAssert,
     Invariant,
     InvariantModule,
     InvariantUpdate,
@@ -142,11 +140,10 @@ impl std::fmt::Display for ConditionKind {
             AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
             Ensures => write!(f, "ensures"),
-            EnsuresSmokeTest => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),
-            RequiresSmokeTest => write!(f, "assume"),
-            RequiresSmokeTestAssert => write!(f, "assert"),
+            RequiresSpecCheck => write!(f, "assume"),
+            RequiresSpecCheckAssert => write!(f, "assert"),
             Invariant => write!(f, "invariant"),
             InvariantModule => write!(f, "invariant module"),
             InvariantUpdate => write!(f, "invariant update"),
@@ -710,20 +707,5 @@ impl Exp {
         let node_type = module_env.get_node_type(exp.node_id());
         let not_id = Self::new_node(module_env, node_type);
         Exp::Call(not_id, Operation::Not, vec![exp])
-    }
-    // Call (quantifiers)
-    pub fn make_call_all(module_env: &ModuleEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp) -> Exp {
-        let exists_id = Self::new_node(module_env, BOOL_TYPE.clone());
-        let bound_id = Self::new_node(module_env, RANGE_TYPE.clone());
-        let bound_exp = Exp::Value(bound_id, Value::Bool(true));    // dummy
-        let lambda_id = Self::new_node(module_env, BOOL_TYPE.clone());
-        Exp::Call(exists_id, Operation::All, vec![bound_exp, Exp::Lambda(lambda_id, vars, Box::new(body))])
-    }
-    pub fn make_call_any(module_env: &ModuleEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp) -> Exp {
-        let exists_id = Self::new_node(module_env, BOOL_TYPE.clone());
-        let bound_id = Self::new_node(module_env, RANGE_TYPE.clone());
-        let bound_exp = Exp::Value(bound_id, Value::Bool(true));    // dummy
-        let lambda_id = Self::new_node(module_env, BOOL_TYPE.clone());
-        Exp::Call(exists_id, Operation::Any, vec![bound_exp, Exp::Lambda(lambda_id, vars, Box::new(body))])
     }
 }

@@ -3,21 +3,18 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    rc::Rc,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
 
 use spec_lang::{
+    ast::ConditionKind,
     code_writer::CodeWriter,
     emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
     ty::{PrimitiveType, Type},
-    ast::ConditionKind,
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget,
@@ -27,10 +24,9 @@ use stackless_bytecode_generator::{
         AssignKind, BorrowNode,
         Bytecode::{self, *},
         Constant, Label, Operation, SpecBlockId,
-        TEMP_DEFAULT_VALUE_INDEX,
     },
-    test_instrumenter::SpecCheck,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    test_instrumenter::SpecCheck,
 };
 use vm::file_format::CodeOffset;
 
@@ -553,11 +549,14 @@ impl<'env> ModuleTranslator<'env> {
         // (or code), then generate the corresponding specification check functions
         if func_target.data.rewritten_spec.len() > 0 {
             // generate the _smoke_test version of the function which creates a new procedure
-            // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
+            // for the `Ensures` condition so that ALL the errors will be reported
             for spec_check in &func_target.data.rewritten_spec {
                 // generate the mutated program for this spec if one exists
                 if spec_check.code.is_some() {
-                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(spec_check.id));
+                    self.generate_function_sig(
+                        func_target,
+                        FunctionEntryPoint::Mutated(spec_check.id),
+                    );
                     self.generate_inline_function_body(func_target, &spec_check.code);
                 }
 
@@ -617,7 +616,11 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Return a string for a boogie procedure smoke test header.
-    fn generate_spec_check_function_sig(&self, func_target: &FunctionTarget<'_>, spec_check: &SpecCheck) {
+    fn generate_spec_check_function_sig(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        spec_check: &SpecCheck,
+    ) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
         emit!(
             self.writer,
@@ -814,19 +817,21 @@ impl<'env> ModuleTranslator<'env> {
         func_target: &FunctionTarget<'_>,
         spec_check: &SpecCheck,
     ) {
-        let SpecCheck { id, spec, code, loc:_ } = &spec_check;
+        let SpecCheck {
+            id,
+            spec,
+            code,
+            loc: _,
+        } = &spec_check;
         let conds = &spec.conditions;
 
         // Find the specification check assertion
         // Only one is allowed at a time because Boogie is not
         // gauranteed to return all errors in a procedure
-        let spec_check_opt = conds
-            .iter()
-            .find(|cond| match cond.kind {
-                ConditionKind::RequiresSmokeTestAssert
-                | ConditionKind::EnsuresSmokeTest => true,
-                _ => false,
-            });
+        let spec_check_opt = conds.iter().find(|cond| match cond.kind {
+            ConditionKind::RequiresSpecCheckAssert | ConditionKind::Ensures => true,
+            _ => false,
+        });
         let spec_check = spec_check_opt
             .expect("There should be at least one assertion for the specification check.");
 
@@ -846,7 +851,7 @@ impl<'env> ModuleTranslator<'env> {
         // (b) assume implicit preconditions.
         spec_translator.assume_preconditions();
 
-        if spec_check.kind != ConditionKind::RequiresSmokeTestAssert {
+        if spec_check.kind != ConditionKind::RequiresSpecCheckAssert {
             // (c) assume reference parameters to be based on the Param(i) Location, ensuring
             // they are disjoint from all other references. This prevents aliasing and is justified as
             // follows:
@@ -917,7 +922,11 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the `FunctionEntryPoint::Definition`
     /// version of the function.
-    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>, rewritten_bytecode: &Option<Vec<Bytecode>>) {
+    fn generate_inline_function_body(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        rewritten_bytecode: &Option<Vec<Bytecode>>,
+    ) {
         // Construct context for bytecode translation.
         let context = BytecodeContext::new(func_target);
 
@@ -1003,9 +1012,6 @@ impl<'env> ModuleTranslator<'env> {
 
         // Helper function to get an Rc<String> for a local.
         let str_local = |idx: usize| {
-            if idx == TEMP_DEFAULT_VALUE_INDEX {
-                return Rc::new("$DefaultValue()".to_string());
-            }
             func_target
                 .symbol_pool()
                 .string(func_target.get_local_name(idx))

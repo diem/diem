@@ -988,7 +988,7 @@ impl<'env> SpecTranslator<'env> {
             .filter(|c| match c.kind {
                 ConditionKind::Requires
                 | ConditionKind::RequiresModule
-                | ConditionKind::RequiresSmokeTest => true,
+                | ConditionKind::RequiresSpecCheck => true,
                 _ => false,
             })
             .collect_vec();
@@ -1003,13 +1003,13 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    pub fn assume_cond(&self, cond: &Condition) {
-        self.writer.set_location(&cond.loc);
-        emit!(self.writer, "assume b#$Boolean(");
-        self.translate_exp(&cond.exp);
-        emit!(self.writer, ");");
-        emitln!(self.writer);
-    }
+  //pub fn assume_cond(&self, cond: &Condition) {
+  //    self.writer.set_location(&cond.loc);
+  //    emit!(self.writer, "assume b#$Boolean(");
+  //    self.translate_exp(&cond.exp);
+  //    emit!(self.writer, ");");
+  //    emitln!(self.writer);
+  //}
 
     /// Assert the given postcondition. This is used for the top-level
     /// `_smoke_test` function.
@@ -1021,27 +1021,6 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, ");");
         emitln!(self.writer);
         *self.in_ensures.borrow_mut() = false;
-    }
-
-    /// Assume module requires of a function. This is used when the function is called from
-    /// outside of a module.
-    pub fn assume_module_preconditions(&self) {
-        let func_target = self.function_target();
-        if func_target.is_public() {
-            let requires = func_target
-                .get_spec()
-                .filter(|c| matches!(c.kind, ConditionKind::RequiresModule))
-                .collect_vec();
-            if !requires.is_empty() {
-                self.translate_seq(requires.iter(), "\n", |cond| {
-                    self.writer.set_location(&cond.loc);
-                    emit!(self.writer, "assume b#$Boolean(");
-                    self.translate_exp(&cond.exp);
-                    emit!(self.writer, ");")
-                });
-                emitln!(self.writer);
-            }
-        }
     }
 }
 
@@ -2022,7 +2001,7 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "$Boolean(i#$Integer(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ") {} i#$Integer(", boogie_op);
-        if args.len() == 1{
+        if args.len() == 1 {
             panic!("fialed at");
         }
         self.translate_exp(&args[1]);
