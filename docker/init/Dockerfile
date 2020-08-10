@@ -24,7 +24,7 @@ RUN ./docker/build-common.sh
 ### Production Image ###
 FROM debian:buster AS prod
 
-RUN apt-get update && apt-get -y install busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install wget busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 RUN cd /usr/local/bin && busybox wget "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
 RUN cd /usr/local/bin && busybox wget "https://releases.hashicorp.com/vault/1.5.0/vault_1.5.0_linux_amd64.zip" -O - | busybox unzip - && chmod +x vault
 
