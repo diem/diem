@@ -4,7 +4,10 @@
 use crate::common::{make_abi_enum_container, mangle_type, type_not_allowed};
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
-use serde_generate::indent::{IndentConfig, IndentedWriter};
+use serde_generate::{
+    indent::{IndentConfig, IndentedWriter},
+    java, CodeGeneratorConfig,
+};
 
 use heck::{CamelCase, ShoutySnakeCase};
 use std::{
@@ -18,7 +21,7 @@ use std::{
 /// package name (if any, otherwise `install_dir` it self).
 pub fn write_source_files(
     install_dir: std::path::PathBuf,
-    package_name: Option<&str>,
+    package_name: &str,
     abis: &[ScriptABI],
 ) -> Result<()> {
     write_script_call_files(install_dir.clone(), package_name, abis)?;
@@ -28,15 +31,13 @@ pub fn write_source_files(
 /// Output transaction helper functions for the given ABIs.
 fn write_helper_file(
     install_dir: std::path::PathBuf,
-    package_name: Option<&str>,
+    package_name: &str,
     abis: &[ScriptABI],
 ) -> Result<()> {
     let mut dir_path = install_dir;
-    if let Some(package) = package_name {
-        let parts = package.split('.').collect::<Vec<_>>();
-        for part in &parts {
-            dir_path = dir_path.join(part);
-        }
+    let parts = package_name.split('.').collect::<Vec<_>>();
+    for part in &parts {
+        dir_path = dir_path.join(part);
     }
     std::fs::create_dir_all(&dir_path)?;
 
@@ -74,7 +75,7 @@ fn write_helper_file(
 
 fn write_script_call_files(
     install_dir: std::path::PathBuf,
-    package_name: Option<&str>,
+    package_name: &str,
     abis: &[ScriptABI],
 ) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("org.libra.types");
@@ -85,10 +86,10 @@ fn write_script_call_files(
     let mut comments: BTreeMap<_, _> = abis
         .iter()
         .map(|abi| {
-            let mut paths = match package_name {
-                None => Vec::new(),
-                Some(name) => name.split('.').map(String::from).collect(),
-            };
+            let mut paths = package_name
+                .split('.')
+                .map(String::from)
+                .collect::<Vec<_>>();
             paths.push("ScriptCall".to_string());
             paths.push(abi.name().to_camel_case());
             (paths, crate::common::prepare_doc_string(abi.doc()))
@@ -98,15 +99,14 @@ fn write_script_call_files(
         vec!["ScriptCall".to_string()],
         "Structured representation of a call into a known Move script.".into(),
     );
-    serde_generate::java::write_source_files(
-        install_dir,
-        package_name,
-        /* with serialization */ false,
-        &script_registry,
-        &external_definitions,
-        &comments,
-    )
-    .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
+
+    let config = CodeGeneratorConfig::new(package_name.to_string())
+        .with_comments(comments)
+        .with_external_definitions(external_definitions)
+        .with_serialization(false);
+    java::CodeGenerator::new(&config)
+        .write_source_files(install_dir, &script_registry)
+        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
     Ok(())
 }
 
@@ -115,7 +115,7 @@ struct JavaEmitter<'a, T> {
     /// Writer.
     out: IndentedWriter<T>,
     /// Name of the package owning the generated definitions (e.g. "com.facebook.my_package")
-    package_name: Option<&'a str>,
+    package_name: &'a str,
 }
 
 impl<'a, T> JavaEmitter<'a, T>
@@ -123,9 +123,7 @@ where
     T: Write,
 {
     fn output_preamble(&mut self) -> Result<()> {
-        if let Some(name) = self.package_name {
-            writeln!(self.out, "package {};\n", name)?;
-        }
+        writeln!(self.out, "package {};\n", self.package_name)?;
         writeln!(
             self.out,
             r#"
@@ -466,7 +464,7 @@ impl crate::SourceInstaller for Installer {
         package_name: &str,
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
-        write_source_files(self.install_dir.clone(), Some(package_name), abis)?;
+        write_source_files(self.install_dir.clone(), package_name, abis)?;
         Ok(())
     }
 }

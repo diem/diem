@@ -3,7 +3,20 @@
 
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde_generate::{rust, CodeGeneratorConfig};
+use serde_reflection::Registry;
 use std::{collections::BTreeMap, io::BufRead};
+
+pub fn quote_container_definitions(
+    registry: &Registry,
+) -> std::result::Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let config = CodeGeneratorConfig::new("crate".to_string()).with_serialization(false);
+    // Do not add derive macros or visibility modifiers ("pub").
+    let generator = rust::CodeGenerator::new(&config)
+        .with_derive_macros(Vec::new())
+        .with_track_visibility(false);
+    generator.quote_container_definitions(&registry)
+}
 
 /// Replace the markdown content in `reader` and return a new string, where some of the Rust quotes
 /// have been updated to use the latest definitions.

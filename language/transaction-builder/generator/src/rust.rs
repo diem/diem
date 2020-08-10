@@ -6,7 +6,7 @@ use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
     indent::{IndentConfig, IndentedWriter},
-    rust::output_with_external_dependencies_and_comments,
+    rust, CodeGeneratorConfig,
 };
 
 use heck::{CamelCase, ShoutySnakeCase};
@@ -89,10 +89,7 @@ where
     }
 
     fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let mut external_definitions = Self::get_external_definitions(self.local_types);
-        if self.local_types {
-            external_definitions.insert("".to_string(), vec!["Bytes".to_string()]);
-        }
+        let external_definitions = Self::get_external_definitions(self.local_types);
         let script_registry: BTreeMap<_, _> =
             vec![("ScriptCall".to_string(), make_abi_enum_container(abis))]
                 .into_iter()
@@ -101,13 +98,17 @@ where
             .iter()
             .map(|abi| {
                 (
-                    vec!["ScriptCall".to_string(), abi.name().to_camel_case()],
+                    vec![
+                        "crate".to_string(),
+                        "ScriptCall".to_string(),
+                        abi.name().to_camel_case(),
+                    ],
                     crate::common::prepare_doc_string(abi.doc()),
                 )
             })
             .collect();
         comments.insert(
-            vec!["ScriptCall".to_string()],
+            vec!["crate".to_string(), "ScriptCall".to_string()],
             r#"Structured representation of a call into a known Move script.
 ```ignore
 impl ScriptCall {
@@ -118,20 +119,24 @@ impl ScriptCall {
 "#
             .into(),
         );
-        output_with_external_dependencies_and_comments(
-            &mut self.out,
-            /* derive macros */ true,
-            &script_registry,
-            &external_definitions,
-            &comments,
-        )
-        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
-        if self.local_types {
-            writeln!(
-                self.out,
-                "\n// Type alias used for code generation.\ntype Bytes = Vec<u8>;"
-            )?;
-        }
+        let custom_derive_block = if self.local_types {
+            Some(
+                r#"#[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]"#
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        // Deactivate serialization for local types to force `Bytes = Vec<u8>`.
+        let config = CodeGeneratorConfig::new("crate".to_string())
+            .with_comments(comments)
+            .with_external_definitions(external_definitions)
+            .with_serialization(!self.local_types);
+        rust::CodeGenerator::new(&config)
+            .with_custom_derive_block(custom_derive_block)
+            .output(&mut self.out, &script_registry)
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
         Ok(())
     }
 

@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_documentation_tool as libradoc;
+use libra_documentation_tool as libra_doc;
 use serde::Deserialize;
-use serde_generate::rust;
 use serde_reflection::{Samples, Tracer, TracerConfig};
 
 #[allow(dead_code)]
@@ -25,7 +24,7 @@ fn test_doctool() {
     let samples = Samples::new();
     tracer.trace_type::<MyEnum>(&samples).unwrap();
     let registry = tracer.registry().unwrap();
-    let definitions = rust::quote_container_definitions(&registry).unwrap();
+    let definitions = libra_doc::quote_container_definitions(&registry).unwrap();
 
     let input = r#"
 <!-- @begin-libradoc name=Unknown -->
@@ -68,7 +67,7 @@ enum MyEnum {
 
     let reader = std::io::BufReader::new(input.as_bytes());
     assert_eq!(
-        libradoc::update_rust_quotes(reader, &definitions).unwrap(),
+        libra_doc::update_rust_quotes(reader, &definitions).unwrap(),
         expected_output
     );
 }

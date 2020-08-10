@@ -16,8 +16,9 @@ use libra_types::{
     transaction::{Script, TransactionArgument},
 };
 use move_core_types::language_storage::TypeTag;
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap as Map;
+
+type Bytes = Vec<u8>;
 
 /// Structured representation of a call into a known Move script.
 /// ```ignore
@@ -26,7 +27,7 @@ use std::collections::BTreeMap as Map;
 ///     pub fn decode(&Script) -> Option<ScriptCall> { .. }
 /// }
 /// ```
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(proptest_derive::Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
 pub enum ScriptCall {
@@ -364,9 +365,6 @@ pub enum ScriptCall {
         allow_minting: bool,
     },
 }
-
-// Type alias used for code generation.
-type Bytes = Vec<u8>;
 
 impl ScriptCall {
     /// Build a Libra `Script` from a structured object `ScriptCall`.

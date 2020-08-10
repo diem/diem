@@ -7,8 +7,7 @@
 //! cargo run -p libra-documentation-tool -- --help
 //! '''
 
-use libra_documentation_tool::update_rust_quotes;
-use serde_generate::rust;
+use libra_documentation_tool as libra_doc;
 use serde_reflection::Registry;
 use std::{collections::BTreeMap, path::PathBuf};
 use structopt::StructOpt;
@@ -36,7 +35,7 @@ fn process_specs(dir: PathBuf, definitions: &BTreeMap<String, String>) -> std::i
             continue;
         }
         let file = std::io::BufReader::new(std::fs::File::open(path.clone())?);
-        let output = update_rust_quotes(file, definitions)?;
+        let output = libra_doc::update_rust_quotes(file, definitions)?;
         std::fs::write(path, &output)?;
     }
     Ok(())
@@ -48,7 +47,7 @@ fn main() {
     let registry = serde_yaml::from_str::<Registry>(content.as_str())
         .expect("input file should be correct YAML for a Serde registry");
 
-    let definitions = rust::quote_container_definitions(&registry)
+    let definitions = libra_doc::quote_container_definitions(&registry)
         .expect("generating definitions should not fail");
 
     match options.update_libra_specs_dir {

@@ -124,7 +124,8 @@ fn main() {
             Language::Java => "org.libra.types".to_string(),
             _ => "libra_types".to_string(),
         };
-        installer.install_module(&name, &registry).unwrap();
+        let config = serdegen::CodeGeneratorConfig::new(name);
+        installer.install_module(&config, &registry).unwrap();
     }
 
     // Transaction builders
