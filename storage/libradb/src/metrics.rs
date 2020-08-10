@@ -83,6 +83,18 @@ pub static LIBRA_STORAGE_API_LATENCY_SECONDS: Lazy<HistogramVec> = Lazy::new(|| 
     .unwrap()
 });
 
+pub static LIBRA_STORAGE_OTHER_TIMERS_SECONDS: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        // metric name
+        "libra_storage_other_timers_seconds",
+        // metric description
+        "Various timers below public API level.",
+        // metric labels (dimensions)
+        &["name"]
+    )
+    .unwrap()
+});
+
 // Backup progress gauges:
 
 pub(crate) static BACKUP_EPOCH_ENDING_EPOCH: Lazy<IntGauge> = Lazy::new(|| {

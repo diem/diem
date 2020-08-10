@@ -45,6 +45,7 @@ use crate::{
         LIBRA_STORAGE_API_LATENCY_SECONDS, LIBRA_STORAGE_CF_SIZE_BYTES,
         LIBRA_STORAGE_COMMITTED_TXNS, LIBRA_STORAGE_LATEST_TXN_VERSION,
         LIBRA_STORAGE_LEDGER_VERSION, LIBRA_STORAGE_NEXT_BLOCK_EPOCH,
+        LIBRA_STORAGE_OTHER_TIMERS_SECONDS,
     },
     pruner::Pruner,
     schema::*,
@@ -424,6 +425,9 @@ impl LibraDB {
     fn commit(&self, sealed_cs: SealedChangeSet) -> Result<()> {
         self.db.write_schemas(sealed_cs.batch)?;
 
+        let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+            .with_label_values(&["get_approximate_cf_sizes"])
+            .start_timer();
         match self.db.get_approximate_sizes_cf() {
             Ok(cf_sizes) => {
                 for (cf_name, size) in cf_sizes {
@@ -797,7 +801,13 @@ impl DbWriter for LibraDB {
 
         // Persist.
         let (sealed_cs, counters) = self.seal_change_set(first_version, num_txns, cs)?;
-        self.commit(sealed_cs)?;
+        {
+            let _timer = LIBRA_STORAGE_OTHER_TIMERS_SECONDS
+                .with_label_values(&["save_transactions_commit"])
+                .start_timer();
+            self.commit(sealed_cs)?;
+        }
+
         // Once everything is successfully persisted, update the latest in-memory ledger info.
         if let Some(x) = ledger_info_with_sigs {
             self.ledger_store.set_latest_ledger_info(x.clone());
