@@ -22,21 +22,21 @@ mod vm;
 static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy::new(|| {
     let targets: Vec<Box<dyn FuzzTargetImpl>> = vec![
         // List fuzz targets here in this format.
-        Box::new(vm::CompiledModuleTarget::default()),
         Box::new(consensus::ConsensusProposal::default()),
-        Box::new(network::RpcInboundRequest::default()),
-        Box::new(transaction::SignedTransactionTarget::default()),
+        Box::new(executor::ExecuteAndCommitChunk::default()),
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
         Box::new(mempool::MempoolIncomingTransactions::default()),
+        Box::new(move_vm::ValueTarget::default()),
+        Box::new(network::RpcInboundRequest::default()),
         Box::new(network_noise::NetworkNoiseInitiator::default()),
         Box::new(network_noise::NetworkNoiseResponder::default()),
         Box::new(network_noise::NetworkNoiseStream::default()),
         Box::new(state_sync::StateSyncMsg::default()),
-        Box::new(transaction::LanguageTransactionExecution::default()),
-        //        Box::new(storage_save_blocks::StorageSaveBlocks::default()),
+        //        Box::new(storage::StorageSaveBlocks::default()),
         Box::new(storage::StorageSchemaDecode::default()),
-        Box::new(move_vm::ValueTarget::default()),
-        Box::new(executor::ExecuteAndCommitChunk::default()),
+        Box::new(transaction::LanguageTransactionExecution::default()),
+        Box::new(transaction::SignedTransactionTarget::default()),
+        Box::new(vm::CompiledModuleTarget::default()),
     ];
     targets
         .into_iter()
