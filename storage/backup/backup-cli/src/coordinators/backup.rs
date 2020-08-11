@@ -191,6 +191,7 @@ impl BackupCoordinator {
     ) -> Result<Option<Version>> {
         let next_snapshot_version = get_next_snapshot(
             last_snapshot_version_in_backup,
+            db_state,
             self.state_snapshot_interval,
         );
 
@@ -294,16 +295,26 @@ fn get_batch_range(last_in_backup: Option<u64>, batch_size: usize) -> (u64, u64)
     (start, next_batch_start - 1)
 }
 
-fn get_next_snapshot(last_in_backup: Option<u64>, interval: usize) -> u64 {
-    match last_in_backup {
+fn get_next_snapshot(last_in_backup: Option<u64>, db_state: DbState, interval: usize) -> u64 {
+    // We don't try to guarantee snapshots are taken at each applicable interval: when the backup
+    // progress can't keep up with the ledger growth, we favor timeliness over completeness.
+    // For example, with interval 100, when we finished taking a snapshot at version 700, if we
+    // found the latest version is already 1250, the next snapshot we take will be at 1200, not 800.
+
+    let next_for_storage = match last_in_backup {
         Some(last) => (last / interval as u64 + 1) * interval as u64,
         None => 0,
-    }
+    };
+
+    let last_for_db: u64 = db_state.committed_version / interval as u64 * interval as u64;
+
+    std::cmp::max(next_for_storage, last_for_db)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::coordinators::backup::get_batch_range;
+    use crate::coordinators::backup::{get_batch_range, get_next_snapshot};
+    use libradb::backup::backup_handler::DbState;
 
     #[test]
     fn test_get_batch_range() {
@@ -311,5 +322,21 @@ mod tests {
         assert_eq!(get_batch_range(Some(99), 50), (100, 149));
         assert_eq!(get_batch_range(Some(149), 100), (150, 199));
         assert_eq!(get_batch_range(Some(199), 100), (200, 299));
+    }
+
+    #[test]
+    fn test_get_next_snapshot() {
+        let _state = |v| DbState {
+            epoch: 0,
+            committed_version: v,
+            synced_version: v,
+        };
+
+        assert_eq!(get_next_snapshot(None, _state(90), 100), 0);
+        assert_eq!(get_next_snapshot(Some(0), _state(90), 100), 100);
+        assert_eq!(get_next_snapshot(Some(0), _state(190), 100), 100);
+        assert_eq!(get_next_snapshot(Some(0), _state(200), 100), 200);
+        assert_eq!(get_next_snapshot(Some(0), _state(250), 100), 200);
+        assert_eq!(get_next_snapshot(Some(200), _state(250), 100), 300);
     }
 }

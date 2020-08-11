@@ -235,7 +235,7 @@ impl PerformanceBenchmark {
 
         const COMMAND: &str = "/opt/libra/bin/db-backup coordinator run \
             --transaction-batch-size 20000 \
-            --state-snapshot-interval 1000 \
+            --state-snapshot-interval 1 \
             local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX);";
 
         Ok(Some(tokio::spawn(async move {
