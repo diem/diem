@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration, mem};
 
 use anyhow::{ensure, format_err, Context, Result};
 use termion::color::*;
@@ -521,7 +521,7 @@ impl<T: Payload> EventProcessor<T> {
     /// position.
     async fn process_proposed_block(&mut self, proposal: Block<T>) {
         debug!("EventProcessor: process_proposed_block {}", proposal);
-
+        info!("daniel block size: {:?}", mem::size_of_val(&proposal));
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
         {
