@@ -8,7 +8,7 @@ use crate::{
     instance::Instance,
     stats::PrometheusRangeView,
     tx_emitter::{EmitJobRequest, TxStats},
-    util::unix_timestamp_now,
+    util::{human_readable_bytes_per_sec, unix_timestamp_now},
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -283,8 +283,9 @@ impl PerformanceBenchmark {
                 .report
                 .report_metric(&self, "avg_backup_bytes_per_second", bytes_per_sec);
             context.report.report_text(format!(
-                "{}: Average backup throughput: {:.0} Bps",
-                self, bytes_per_sec
+                "{}: Average backup throughput: {}",
+                self,
+                human_readable_bytes_per_sec(bytes_per_sec)
             ));
         }
 
