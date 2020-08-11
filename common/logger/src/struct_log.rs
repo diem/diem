@@ -8,7 +8,7 @@ use crate::{
     },
     LogLevel,
 };
-use chrono::Utc;
+use chrono::{SecondsFormat, Utc};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use serde_json::Value;
@@ -95,15 +95,14 @@ pub struct StructuredLogEntry {
 impl StructuredLogEntry {
     pub fn new_unnamed() -> Self {
         let mut ret = Self::default();
-        ret.timestamp = Some(Utc::now().format("%F %T").to_string());
+        ret.timestamp = Some(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true));
         ret
     }
 
     pub fn new_named(category: &'static str, name: &'static str) -> Self {
-        let mut ret = Self::default();
+        let mut ret = Self::new_unnamed();
         ret.category = Some(category);
         ret.name = Some(name);
-        ret.timestamp = Some(Utc::now().format("%F %T").to_string());
         ret
     }
 
