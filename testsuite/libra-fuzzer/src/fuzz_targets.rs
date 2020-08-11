@@ -14,6 +14,7 @@ mod mempool;
 mod move_vm;
 mod network;
 mod network_noise;
+mod secure_json_rpc_client;
 mod state_sync;
 mod storage;
 mod transaction;
@@ -31,6 +32,9 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network_noise::NetworkNoiseInitiator::default()),
         Box::new(network_noise::NetworkNoiseResponder::default()),
         Box::new(network_noise::NetworkNoiseStream::default()),
+        Box::new(secure_json_rpc_client::SecureJsonRpcSubmitTransaction::default()),
+        Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountState::default()),
+        Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountTransaction::default()),
         Box::new(state_sync::StateSyncMsg::default()),
         //        Box::new(storage::StorageSaveBlocks::default()),
         Box::new(storage::StorageSchemaDecode::default()),

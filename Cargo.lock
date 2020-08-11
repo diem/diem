@@ -2534,6 +2534,7 @@ dependencies = [
  "libra-json-rpc 0.1.0",
  "libra-mempool 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-secure-json-rpc 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",

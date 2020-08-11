@@ -83,21 +83,7 @@ impl JsonRpcClient {
         )?))];
         let response = self.execute_request(method, params);
 
-        match response.status() {
-            200 => {
-                let response = &response.into_string()?;
-                if let Ok(failure_response) =
-                    serde_json::from_str::<JSONRpcFailureResponse>(response)
-                {
-                    Err(Error::InternalRPCError(format!("{:?}", failure_response)))
-                } else {
-                    let _submit_response =
-                        serde_json::from_str::<SubmitTransactionResponse>(response)?;
-                    Ok(())
-                }
-            }
-            _ => Err(Error::RPCFailure(response.into_string()?)),
-        }
+        process_submit_transaction_response(response)
     }
 
     /// Returns the associated AccountState for a specific account at a given version height.
@@ -117,35 +103,7 @@ impl JsonRpcClient {
         ];
         let response = self.execute_request(method, params);
 
-        match response.status() {
-            200 => {
-                let response = &response.into_string()?;
-                if let Ok(failure_response) =
-                    serde_json::from_str::<JSONRpcFailureResponse>(response)
-                {
-                    Err(Error::InternalRPCError(format!("{:?}", failure_response)))
-                } else if let Some(blob_bytes) =
-                    serde_json::from_str::<AccountStateWithProofResponse>(response)?
-                        .result
-                        .blob
-                {
-                    let account_state_blob = AccountStateBlob::from(lcs::from_bytes::<Vec<u8>>(
-                        &*blob_bytes.into_bytes()?,
-                    )?);
-                    if let Ok(account_state) = AccountState::try_from(&account_state_blob) {
-                        Ok(account_state)
-                    } else {
-                        Err(Error::SerializationError(format!(
-                            "Unable to convert account_state_blob to AccountState: {:?}",
-                            account_state_blob
-                        )))
-                    }
-                } else {
-                    Err(Error::MissingData("AccountState".into()))
-                }
-            }
-            _ => Err(Error::RPCFailure(response.into_string()?)),
-        }
+        process_account_state_response(response)
     }
 
     /// Retrieves the status of a transaction on a given account.
@@ -162,18 +120,7 @@ impl JsonRpcClient {
         ];
         let response = self.execute_request(method, params);
 
-        match response.status() {
-            200 => {
-                let response = response.into_string()?;
-                if let Ok(response) = serde_json::from_str::<JSONRpcFailureResponse>(&response) {
-                    return Err(Error::InternalRPCError(format!("{:?}", response)));
-                }
-
-                let view = serde_json::from_str::<TransactionViewResponse>(&response)?;
-                Ok(view.result)
-            }
-            _ => Err(Error::RPCFailure(response.into_string()?)),
-        }
+        process_transaction_status_response(response)
     }
 
     // Executes the specified request method using the given parameters by contacting the JSON RPC
@@ -209,6 +156,73 @@ impl JsonRpcClient {
         request.send_json(
             json!({"jsonrpc": JSON_RPC_VERSION, "method": method, "params": params, "id": 0}),
         )
+    }
+}
+
+/// Processes the response from a submit_transaction() JSON RPC request.
+pub fn process_submit_transaction_response(response: Response) -> Result<(), Error> {
+    match response.status() {
+        200 => {
+            let response = response.into_string()?;
+            if let Ok(failure_response) = serde_json::from_str::<JSONRpcFailureResponse>(&response)
+            {
+                Err(Error::InternalRPCError(format!("{:?}", failure_response)))
+            } else {
+                let _submit_response =
+                    serde_json::from_str::<SubmitTransactionResponse>(&response)?;
+                Ok(())
+            }
+        }
+        _ => Err(Error::RPCFailure(response.into_string()?)),
+    }
+}
+
+/// Processes the response from a get_account_state_with_proof() JSON RPC request.
+pub fn process_account_state_response(response: Response) -> Result<AccountState, Error> {
+    match response.status() {
+        200 => {
+            let response = &response.into_string()?;
+            if let Ok(failure_response) = serde_json::from_str::<JSONRpcFailureResponse>(&response)
+            {
+                Err(Error::InternalRPCError(format!("{:?}", failure_response)))
+            } else if let Some(blob_bytes) =
+                serde_json::from_str::<AccountStateWithProofResponse>(&response)?
+                    .result
+                    .blob
+            {
+                let account_state_blob =
+                    AccountStateBlob::from(lcs::from_bytes::<Vec<u8>>(&*blob_bytes.into_bytes()?)?);
+                if let Ok(account_state) = AccountState::try_from(&account_state_blob) {
+                    Ok(account_state)
+                } else {
+                    Err(Error::SerializationError(format!(
+                        "Unable to convert account_state_blob to AccountState: {:?}",
+                        account_state_blob
+                    )))
+                }
+            } else {
+                Err(Error::MissingData("AccountState".into()))
+            }
+        }
+        _ => Err(Error::RPCFailure(response.into_string()?)),
+    }
+}
+
+/// Processes the response from a get_transaction_status() JSON RPC request.
+pub fn process_transaction_status_response(
+    response: Response,
+) -> Result<Option<TransactionView>, Error> {
+    match response.status() {
+        200 => {
+            let response = response.into_string()?;
+            if let Ok(response) = serde_json::from_str::<JSONRpcFailureResponse>(&response) {
+                return Err(Error::InternalRPCError(format!("{:?}", response)));
+            }
+
+            let view = serde_json::from_str::<TransactionViewResponse>(&response)?;
+            Ok(view.result)
+        }
+        _ => Err(Error::RPCFailure(response.into_string()?)),
     }
 }
 
@@ -373,32 +387,22 @@ mod test {
     use anyhow::Result;
     use futures::{channel::mpsc::channel, StreamExt};
     use libra_config::utils;
-    use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+    use libra_crypto::HashValue;
     use libra_json_rpc::test_bootstrap;
     use libra_types::{
         account_address::AccountAddress,
-        account_config::{AccountResource, BalanceResource},
-        account_state::AccountState,
         account_state_blob::{AccountStateBlob, AccountStateWithProof},
         block_info::BlockInfo,
         contract_event::ContractEvent,
         epoch_change::EpochChangeProof,
-        event::{EventHandle, EventKey},
+        event::EventKey,
         ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
         mempool_status::{MempoolStatus, MempoolStatusCode},
-        proof::{
-            AccountStateProof, AccumulatorConsistencyProof, AccumulatorProof, SparseMerkleProof,
-            TransactionInfoWithProof,
-        },
-        test_helpers::transaction_test_helpers::get_test_signed_txn,
-        transaction::{
-            SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionWithProof,
-            Version,
-        },
-        vm_status::KeptVMStatus,
+        proof::{AccumulatorConsistencyProof, SparseMerkleProof},
+        transaction::{TransactionListWithProof, TransactionWithProof, Version},
     };
     use libradb::errors::LibraDbError::NotFound;
-    use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};
+    use std::{collections::BTreeMap, sync::Arc};
     use storage_interface::{DbReader, Order, StartupInfo, TreeState};
     use tokio::runtime::Runtime;
     use vm_validator::{
@@ -409,7 +413,7 @@ mod test {
     fn test_submit_transaction() {
         let mock_db = create_empty_mock_db();
         let (client, _server) = create_client_and_server(mock_db, true);
-        let signed_transaction = generate_signed_transaction();
+        let signed_transaction = test_helpers::generate_signed_transaction();
 
         // Ensure transaction submitted and validated successfully
         let result = client.submit_transaction(signed_transaction);
@@ -423,7 +427,7 @@ mod test {
         // being passed to the server. This will cause any transaction submission requests to the JSON
         // RPC server to fail, thus causing the server to return an error.
         let (client, _server) = create_client_and_server(mock_db, false);
-        let signed_transaction = generate_signed_transaction();
+        let signed_transaction = test_helpers::generate_signed_transaction();
 
         // Ensure transaction submitted successfully
         let result = client.submit_transaction(signed_transaction);
@@ -434,9 +438,10 @@ mod test {
     fn test_get_account_state() {
         // Create test account state data
         let account = AccountAddress::random();
-        let account_state = create_test_account_state();
+        let account_state = test_helpers::create_test_account_state();
         let version_height = 0;
-        let account_state_with_proof = create_test_state_with_proof(&account_state, version_height);
+        let account_state_with_proof =
+            test_helpers::create_test_state_with_proof(&account_state, version_height);
 
         // Create an account to account_state_with_proof mapping
         let mut map = BTreeMap::new();
@@ -456,8 +461,9 @@ mod test {
     fn test_get_account_state_version_not_specified() {
         // Create test account state data
         let account = AccountAddress::random();
-        let account_state = create_test_account_state();
-        let account_state_with_proof = create_test_state_with_proof(&account_state, 0);
+        let account_state = test_helpers::create_test_account_state();
+        let account_state_with_proof =
+            test_helpers::create_test_state_with_proof(&account_state, 0);
 
         // Create an account to account_state_with_proof mapping
         let mut map = BTreeMap::new();
@@ -489,7 +495,7 @@ mod test {
         // Create test account state data
         let account = AccountAddress::random();
         let version_height = 0;
-        let account_state_proof = create_test_state_proof();
+        let account_state_proof = test_helpers::create_test_state_proof();
         let account_state_with_proof =
             AccountStateWithProof::new(version_height, None, account_state_proof);
 
@@ -536,66 +542,6 @@ mod test {
         }
 
         (client, server)
-    }
-
-    /// Generates an AccountStateProof for testing.
-    fn create_test_state_proof() -> AccountStateProof {
-        let transaction_info = TransactionInfo::new(
-            HashValue::zero(),
-            HashValue::zero(),
-            HashValue::zero(),
-            0,
-            KeptVMStatus::VerificationError,
-        );
-
-        AccountStateProof::new(
-            TransactionInfoWithProof::new(AccumulatorProof::new(vec![]), transaction_info),
-            SparseMerkleProof::new(None, vec![]),
-        )
-    }
-
-    /// Generates an AccountStateWithProof using the given AccountState and version height for
-    /// testing.
-    fn create_test_state_with_proof(
-        account_state: &AccountState,
-        version_height: u64,
-    ) -> AccountStateWithProof {
-        AccountStateWithProof::new(
-            version_height,
-            Some(AccountStateBlob::try_from(account_state).unwrap()),
-            create_test_state_proof(),
-        )
-    }
-
-    /// Generates an AccountState for testing.
-    fn create_test_account_state() -> AccountState {
-        let account_resource = create_test_account_resource();
-        let balance_resource = create_test_balance_resource();
-        AccountState::try_from((&account_resource, &balance_resource)).unwrap()
-    }
-
-    /// Generates an AccountResource for testing.
-    fn create_test_account_resource() -> AccountResource {
-        AccountResource::new(
-            10,
-            vec![],
-            None,
-            None,
-            EventHandle::random_handle(100),
-            EventHandle::random_handle(100),
-        )
-    }
-
-    /// Generates a BalanceResource for testing.
-    fn create_test_balance_resource() -> BalanceResource {
-        BalanceResource::new(100)
-    }
-
-    /// Generates and returns a (randomized) SignedTransaction for testing.
-    fn generate_signed_transaction() -> SignedTransaction {
-        let sender = AccountAddress::random();
-        let private_key = Ed25519PrivateKey::generate_for_testing();
-        get_test_signed_txn(sender, 0, &private_key, private_key.public_key(), None)
     }
 
     /// Returns an empty mock database for testing.
@@ -735,5 +681,184 @@ mod test {
         fn get_block_timestamp(&self, _: u64) -> Result<u64> {
             unimplemented!()
         }
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+/// This module provides all the functionality necessary to test the secure JSON RPC client using
+/// fuzzing.
+/// Note: the unit tests are to ensure that the various fuzzers are maintained (i.e., not broken
+/// at some time in the future and only discovered when a fuzz test fails).
+pub mod fuzzing {
+    use crate::{
+        process_account_state_response, process_submit_transaction_response,
+        process_transaction_status_response,
+        test_helpers::{create_test_account_state, create_test_state_with_proof},
+        AccountStateResponse, AccountStateWithProofResponse, Bytes, SubmitTransactionResponse,
+        TransactionView, TransactionViewResponse, VMStatusView,
+    };
+    use ureq::Response;
+
+    #[test]
+    fn test_submit_transaction_fuzzer() {
+        let response = generate_submit_transaction_corpus();
+        fuzz_submit_transaction_response(&response);
+    }
+
+    #[test]
+    fn test_get_account_state_fuzzer() {
+        let response = generate_account_state_corpus();
+        fuzz_account_state_response(&response);
+    }
+
+    #[test]
+    fn test_get_transaction_status_fuzzer() {
+        let response = generate_transaction_status_corpus();
+        fuzz_transaction_status_response(&response);
+    }
+
+    // This generates a genuine response for the submit_transaction() JSON RPC API call.
+    pub fn generate_submit_transaction_corpus() -> Vec<u8> {
+        let response = SubmitTransactionResponse {
+            id: 1,
+            jsonrpc: "2.0".to_string(),
+            result: None,
+        };
+        serde_json::to_vec::<SubmitTransactionResponse>(&response).unwrap()
+    }
+
+    // This generates a genuine response for the get_account_state_with_proof() JSON RPC API call.
+    pub fn generate_account_state_corpus() -> Vec<u8> {
+        // Create test account_state_with_proof
+        let account_state = create_test_account_state();
+        let version_height = 100;
+        let account_state_with_proof = create_test_state_with_proof(&account_state, version_height);
+
+        // Use the test account_state_with_proof to generate a template response
+        let account_state = account_state_with_proof.blob.unwrap();
+        let account_state_blob = Bytes::from(&lcs::to_bytes(&account_state).unwrap());
+        let response = AccountStateWithProofResponse {
+            id: 100,
+            jsonrpc: "2.0".to_string(),
+            result: AccountStateResponse {
+                version: account_state_with_proof.version,
+                blob: Some(account_state_blob),
+            },
+        };
+        serde_json::to_vec::<AccountStateWithProofResponse>(&response).unwrap()
+    }
+
+    // This generates a genuine response for the get_account_transaction() JSON RPC API call.
+    pub fn generate_transaction_status_corpus() -> Vec<u8> {
+        let response = TransactionViewResponse {
+            id: 0,
+            jsonrpc: "".to_string(),
+            result: Some(TransactionView {
+                vm_status: VMStatusView::Executed,
+            }),
+        };
+        serde_json::to_vec::<TransactionViewResponse>(&response).unwrap()
+    }
+
+    // This function fuzzes a submit_transaction() response.
+    pub fn fuzz_submit_transaction_response(data: &[u8]) {
+        if let Ok(submit_tx_response) = String::from_utf8(data.to_vec()) {
+            let ureq_response = Response::new(200, "Success", &submit_tx_response);
+            let _ = process_submit_transaction_response(ureq_response);
+        }
+    }
+
+    // This function fuzzes a get_account_state_with_proof() response.
+    pub fn fuzz_account_state_response(data: &[u8]) {
+        if let Ok(account_state_response) = String::from_utf8(data.to_vec()) {
+            let ureq_response = Response::new(200, "Success", &account_state_response);
+            let _ = process_account_state_response(ureq_response);
+        }
+    }
+
+    // This function fuzzes a get_account_transaction() response.
+    pub fn fuzz_transaction_status_response(data: &[u8]) {
+        if let Ok(transaction_status_response) = String::from_utf8(data.to_vec()) {
+            let ureq_response = Response::new(200, "Success", &transaction_status_response);
+            let _ = process_transaction_status_response(ureq_response);
+        }
+    }
+}
+
+#[cfg(any(test, feature = "fuzzing"))]
+mod test_helpers {
+    use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
+    use libra_types::{
+        account_address::AccountAddress,
+        account_config::{AccountResource, BalanceResource},
+        account_state::AccountState,
+        account_state_blob::{AccountStateBlob, AccountStateWithProof},
+        event::EventHandle,
+        proof::{AccountStateProof, AccumulatorProof, SparseMerkleProof, TransactionInfoWithProof},
+        test_helpers::transaction_test_helpers::get_test_signed_txn,
+        transaction::{SignedTransaction, TransactionInfo},
+        vm_status::KeptVMStatus,
+    };
+    use std::convert::TryFrom;
+
+    /// Generates an AccountStateWithProof using the given AccountState and version height for
+    /// testing.
+    pub(crate) fn create_test_state_with_proof(
+        account_state: &AccountState,
+        version_height: u64,
+    ) -> AccountStateWithProof {
+        AccountStateWithProof::new(
+            version_height,
+            Some(AccountStateBlob::try_from(account_state).unwrap()),
+            create_test_state_proof(),
+        )
+    }
+
+    /// Generates an AccountState for testing.
+    pub(crate) fn create_test_account_state() -> AccountState {
+        let account_resource = create_test_account_resource();
+        let balance_resource = create_test_balance_resource();
+        AccountState::try_from((&account_resource, &balance_resource)).unwrap()
+    }
+
+    /// Generates an AccountStateProof for testing.
+    pub(crate) fn create_test_state_proof() -> AccountStateProof {
+        let transaction_info = TransactionInfo::new(
+            HashValue::zero(),
+            HashValue::zero(),
+            HashValue::zero(),
+            0,
+            KeptVMStatus::VerificationError,
+        );
+
+        AccountStateProof::new(
+            TransactionInfoWithProof::new(AccumulatorProof::new(vec![]), transaction_info),
+            SparseMerkleProof::new(None, vec![]),
+        )
+    }
+
+    /// Generates and returns a (randomized) SignedTransaction for testing.
+    #[allow(dead_code)]
+    pub(crate) fn generate_signed_transaction() -> SignedTransaction {
+        let sender = AccountAddress::random();
+        let private_key = Ed25519PrivateKey::generate_for_testing();
+        get_test_signed_txn(sender, 0, &private_key, private_key.public_key(), None)
+    }
+
+    /// Generates an AccountResource for testing.
+    fn create_test_account_resource() -> AccountResource {
+        AccountResource::new(
+            10,
+            vec![],
+            None,
+            None,
+            EventHandle::random_handle(100),
+            EventHandle::random_handle(100),
+        )
+    }
+
+    /// Generates a BalanceResource for testing.
+    fn create_test_balance_resource() -> BalanceResource {
+        BalanceResource::new(100)
     }
 }
