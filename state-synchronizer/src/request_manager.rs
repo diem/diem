@@ -356,6 +356,12 @@ impl RequestManager {
             .map(|req_info| req_info.first_request_time)
     }
 
+    pub fn get_multicast_start_time(&self, version: u64) -> Option<SystemTime> {
+        self.requests
+            .get(&version)
+            .map(|req_info| req_info.multicast_start_time)
+    }
+
     /// Removes requests for all versions before `version` (inclusive) if they are older than
     /// now - `timeout`
     /// We keep the requests that have not timed out so we don't penalize
@@ -403,7 +409,8 @@ impl RequestManager {
         }
 
         // increment multicast level if this request is also multicast-timed-out
-        if Self::is_timeout(last_request_time, self.multicast_timeout) {
+        let multicast_start_time = self.get_multicast_start_time(version).unwrap_or(UNIX_EPOCH);
+        if Self::is_timeout(multicast_start_time, self.multicast_timeout) {
             let prev_multicast_level = self.multicast_level;
             self.multicast_level = std::cmp::min(
                 self.multicast_level + 1,

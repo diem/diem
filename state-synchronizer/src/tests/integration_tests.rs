@@ -805,10 +805,12 @@ fn test_fn_failover() {
         true,
         None,
     );
-    env.start_next_synchronizer(
+    env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Waypoint::default(),
+        1_000,
+        60_000,
         true,
         Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
     );
@@ -1032,7 +1034,6 @@ fn test_fn_failover() {
 }
 
 #[test]
-#[ignore]
 fn test_multicast_failover() {
     let mut env = SynchronizerEnv::new(4);
     env.start_next_synchronizer(
@@ -1045,7 +1046,7 @@ fn test_multicast_failover() {
 
     // set up node with more than 2 upstream networks, which is more than in standard prod setting
     // just to be safe
-    let multicast_timeout_ms = 3_000;
+    let multicast_timeout_ms = 5_000;
     env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
@@ -1224,12 +1225,6 @@ fn test_multicast_failover() {
     env.deliver_msg(validator);
     env.deliver_msg(fn_1);
     env.deliver_msg(fn_2);
-    num_commit += 1;
-    env.commit(0, num_commit * 5);
-    for fn_0_upstream in 2..=3 {
-        env.clone_storage(0, fn_0_upstream);
-        env.wait_for_version(fn_0_upstream, num_commit * 5, None);
-    }
 
     let primary = env.deliver_msg(fn_0_vfn);
     assert_eq!(primary, env.get_peer_network_id(validator));
