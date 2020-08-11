@@ -32,8 +32,8 @@ use spec_lang::{
         ConditionInfo, ConditionTag, GlobalEnv, GlobalId, QualifiedId, SpecVarId,
         ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABORT_ASSERT_PROP,
         CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
-        CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA,
-        REQUIRES_IF_ABORTS,
+        CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP, CONDITION_ON_UPDATE_PROP,
+        EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -915,6 +915,7 @@ impl<'env> SpecTranslator<'env> {
     }
 
     pub fn assume_invariants_for_verify(&self) {
+        let env = self.global_env();
         let func_target = self.function_target();
         let usage = TransitiveUsage::default();
         let used_mem = usage.get_used_memory(
@@ -928,11 +929,7 @@ impl<'env> SpecTranslator<'env> {
         let mut invariants: BTreeSet<GlobalId> = BTreeSet::new();
         for mem in used_mem {
             // Emit type well-formedness invariant.
-            let struct_env = self
-                .module_env()
-                .env
-                .get_module(mem.module_id)
-                .into_struct(mem.id);
+            let struct_env = env.get_module(mem.module_id).into_struct(mem.id);
             emit!(self.writer, "assume ");
             let memory_name = boogie_resource_memory_name(func_target.global_env(), mem);
             emit!(self.writer, "(forall $inv_addr: int");
@@ -958,17 +955,23 @@ impl<'env> SpecTranslator<'env> {
             emitln!(self.writer, ");");
 
             // Collect global invariants.
-            invariants.extend(
-                func_target
-                    .module_env()
-                    .env
-                    .get_global_invariants_for_memory(mem)
-                    .into_iter(),
-            );
+            invariants.extend(env.get_global_invariants_for_memory(mem).into_iter());
         }
 
-        // Now emit global invariants which touch the used memory.
-        self.emit_global_invariants(true, invariants.into_iter().collect_vec())
+        // Now emit assume of global invariants which touch the used memory.
+        self.emit_global_invariants(
+            true,
+            invariants
+                .into_iter()
+                .filter(|id| {
+                    !env.get_global_invariant(*id)
+                        .and_then(|inv| {
+                            env.is_property_true(&inv.properties, CONDITION_ON_UPDATE_PROP)
+                        })
+                        .unwrap_or(false)
+                })
+                .collect_vec(),
+        )
     }
 
     /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
@@ -1330,6 +1333,23 @@ impl<'env> SpecTranslator<'env> {
             let saved_name = boogie_saved_resource_memory_name(env, used_memory);
             emitln!(self.writer, "{} := {};", saved_name, name);
         }
+    }
+
+    pub fn emit_on_update_global_invariant_assumes(&self, memory: QualifiedId<StructId>) {
+        let env = self.global_env();
+        self.emit_global_invariants(
+            true,
+            env.get_global_invariants_for_memory(memory)
+                .into_iter()
+                .filter(|id| {
+                    env.get_global_invariant(*id)
+                        .and_then(|inv| {
+                            env.is_property_true(&inv.properties, CONDITION_ON_UPDATE_PROP)
+                        })
+                        .unwrap_or(false)
+                })
+                .collect_vec(),
+        );
     }
 
     pub fn emit_global_invariants_for_memory(&self, assume: bool, memory: QualifiedId<StructId>) {

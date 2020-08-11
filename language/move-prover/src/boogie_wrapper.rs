@@ -230,23 +230,27 @@ impl<'env> BoogieWrapper<'env> {
         let (show_trace, message, call_loc) = loc_opt
             .as_ref()
             .and_then(|loc| {
-                let requires_info = self.env.get_condition_info(&loc, ConditionTag::Requires);
-                let ensures_info = self.env.get_condition_info(&loc, ConditionTag::Ensures);
-                if let Some(info) = requires_info {
-                    // Check whether the Boogie error indicates a precondition, or if this is
-                    // the only info we have.
-                    if error.kind == BoogieErrorKind::Precondition || ensures_info.is_none() {
-                        // Extract the location of the call site.
-                        let call_loc = error
-                            .context_position
-                            .and_then(|p| self.to_proper_source_location(self.get_locations(p).1));
-                        return Some((!info.omit_trace, info.message, call_loc));
-                    }
-                }
-                if let Some(info) = ensures_info {
-                    Some((!info.omit_trace, info.message, None))
+                if error.kind == BoogieErrorKind::Inconclusive {
+                    Some((false, error.message.clone(), None))
                 } else {
-                    None
+                    let requires_info = self.env.get_condition_info(&loc, ConditionTag::Requires);
+                    let ensures_info = self.env.get_condition_info(&loc, ConditionTag::Ensures);
+                    if let Some(info) = requires_info {
+                        // Check whether the Boogie error indicates a precondition, or if this is
+                        // the only info we have.
+                        if error.kind == BoogieErrorKind::Precondition || ensures_info.is_none() {
+                            // Extract the location of the call site.
+                            let call_loc = error.context_position.and_then(|p| {
+                                self.to_proper_source_location(self.get_locations(p).1)
+                            });
+                            return Some((!info.omit_trace, info.message, call_loc));
+                        }
+                    }
+                    if let Some(info) = ensures_info {
+                        Some((!info.omit_trace, info.message, None))
+                    } else {
+                        None
+                    }
                 }
             })
             .unwrap_or_else(|| (true, error.message.clone(), None));

@@ -2398,9 +2398,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             .spec_schema_table
             .get(&name)
             .expect("schema defined");
-
-        // Process all schema includes. We need to do this before we type check expressions to have
-        // all variables from includes in the environment.
         let type_params = entry.type_params.clone();
         let mut all_vars: BTreeMap<Symbol, LocalVarEntry> = entry
             .vars
@@ -2417,6 +2414,36 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             })
             .collect();
         let mut included_spec = Spec::default();
+
+        // Store back all_vars computed so far (which does not include those coming from
+        // included schemas). This is needed so we can analyze lets.
+        {
+            let entry = self
+                .parent
+                .spec_schema_table
+                .get_mut(&name)
+                .expect("schema defined");
+            entry.all_vars = all_vars.clone();
+        }
+
+        // Process all lets. We need to do this before includes so we have them available
+        // in schema arguments of includes. This unfortunately means we can't refer in
+        // lets to variables included from schemas, but this seems to be a rare use case.
+        assert!(self.spec_block_lets.is_empty());
+        for member in &block.value.members {
+            let member_loc = self.parent.to_loc(&member.loc);
+            if let EA::SpecBlockMember_::Let {
+                name: let_name,
+                def,
+            } = &member.value
+            {
+                let context = SpecBlockContext::Schema(name.clone());
+                self.def_ana_let(&context, &member_loc, let_name, def);
+            }
+        }
+
+        // Process all schema includes. We need to do this before we type check expressions to have
+        // all variables from includes in the environment.
         for (_, included_exp) in self.iter_schema_includes(&block.value.members) {
             self.def_ana_schema_exp(
                 &type_params,
@@ -2438,7 +2465,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         }
 
         // Now process all conditions and invariants.
-        assert!(self.spec_block_lets.is_empty());
         for member in &block.value.members {
             let member_loc = self.parent.to_loc(&member.loc);
             match &member.value {
@@ -2446,13 +2472,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     is_global: false, ..
                 } => { /* handled during decl analysis */ }
                 EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
-                EA::SpecBlockMember_::Let {
-                    name: let_name,
-                    def,
-                } => {
-                    let context = SpecBlockContext::Schema(name.clone());
-                    self.def_ana_let(&context, &member_loc, let_name, def);
-                }
+                EA::SpecBlockMember_::Let { .. } => { /* handled above */ }
                 EA::SpecBlockMember_::Condition {
                     kind,
                     properties,
@@ -3194,6 +3214,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     mem_usage,
                     declaring_module: self.module_id,
                     cond: exp,
+                    properties: cond.properties.clone(),
                 });
             } else {
                 if cond.kind != ConditionKind::Invariant {

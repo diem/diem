@@ -1413,6 +1413,7 @@ impl<'env> ModuleTranslator<'env> {
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
                         let memory = mid.qualified(*sid);
                         let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.emit_on_update_global_invariant_assumes(memory);
                         spec_translator.save_memory_for_update_invariants(memory);
                         let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
                         emitln!(

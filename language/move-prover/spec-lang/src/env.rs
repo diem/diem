@@ -108,6 +108,9 @@ pub const CONDITION_EXPORT_PROP: &str = "export";
 /// Property which can be attached to a module invariant to make it global.
 pub const CONDITION_GLOBAL_PROP: &str = "global";
 
+/// Property which can be attached to a module invariant to mark it to be checked on update only.
+pub const CONDITION_ON_UPDATE_PROP: &str = "on_update";
+
 /// Abstract property which can be used together with an opaque specification. An abstract
 /// property is not verified against the implementation, but will be used for the
 /// function's behavior in the application context. This allows to "override" the specification

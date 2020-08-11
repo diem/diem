@@ -232,6 +232,7 @@ pub struct GlobalInvariant {
     pub mem_usage: BTreeSet<QualifiedId<StructId>>,
     pub spec_var_usage: BTreeSet<QualifiedId<SpecVarId>>,
     pub declaring_module: ModuleId,
+    pub properties: PropertyBag,
     pub cond: Exp,
 }
 

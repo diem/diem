@@ -390,60 +390,60 @@ module Roles {
 
         /// The LibraRoot role is globally unique [C2]. A `RoldId` with `LIBRA_ROOT_ROLE_ID()` can only exists in the
         /// `LIBRA_ROOT_ADDRESS()`. TODO: Verify that `LIBRA_ROOT_ADDRESS()` has a LibraRoot role after `Genesis::initialize`.
-        invariant [global] forall addr: address where spec_has_libra_root_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_libra_root_role_addr(addr):
           addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
 
         /// The TreasuryCompliance role is globally unique [C3]. A `RoldId` with `TREASURY_COMPLIANCE_ROLE_ID()` can only exists in the
         /// `TREASURY_COMPLIANCE_ADDRESS()`. TODO: Verify that `TREASURY_COMPLIANCE_ADDRESS()` has a TreasuryCompliance role after `Genesis::initialize`.
-        invariant [global] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
           addr == CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS();
 
         /// LibraRoot cannot have balances [E2].
-        invariant [global] forall addr: address where spec_has_libra_root_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_libra_root_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
         /// TreasuryCompliance cannot have balances [E3].
-        invariant [global] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
         /// Validator cannot have balances [E4].
-        invariant [global] forall addr: address where spec_has_validator_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_validator_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
         /// ValidatorOperator cannot have balances [E5].
-        invariant [global] forall addr: address where spec_has_validator_operator_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_validator_operator_role_addr(addr):
             !spec_can_hold_balance_addr(addr);
 
         /// DesignatedDealer have balances [E6].
-        invariant [global] forall addr: address where spec_has_designated_dealer_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_designated_dealer_role_addr(addr):
             spec_can_hold_balance_addr(addr);
 
         /// ParentVASP have balances [E7].
-        invariant [global] forall addr: address where spec_has_parent_VASP_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_parent_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
 
         /// ChildVASP have balances [E8].
-        invariant [global] forall addr: address where spec_has_child_VASP_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_child_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
 
         /// DesignatedDealer does not need account limits [F6].
-        invariant [global] forall addr: address where spec_has_designated_dealer_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_designated_dealer_role_addr(addr):
             !spec_needs_account_limits_addr(addr);
 
         /// ParentVASP needs account limits [F7].
-        invariant [global] forall addr: address where spec_has_parent_VASP_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_parent_VASP_role_addr(addr):
             spec_needs_account_limits_addr(addr);
 
         /// ChildVASP needs account limits [F8].
-        invariant [global] forall addr: address where spec_has_child_VASP_role_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_child_VASP_role_addr(addr):
             spec_needs_account_limits_addr(addr);
 
         /// update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
-        invariant [global] forall addr: address where spec_has_update_dual_attestation_limit_privilege_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_update_dual_attestation_limit_privilege_addr(addr):
             spec_has_treasury_compliance_role_addr(addr);
 
         /// register_new_currency_privilege is granted to LibraRoot [B18].
-        invariant [global] forall addr: address where spec_has_register_new_currency_privilege_addr(addr):
+        invariant [global, on_update] forall addr: address where spec_has_register_new_currency_privilege_addr(addr):
             spec_has_libra_root_role_addr(addr);
     }
 
