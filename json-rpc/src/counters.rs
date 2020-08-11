@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_metrics::{register_int_counter, register_int_counter_vec, IntCounter, IntCounterVec};
+use libra_metrics::{
+    register_histogram_vec, register_int_counter, register_int_counter_vec, HistogramVec,
+    IntCounter, IntCounterVec,
+};
 use once_cell::sync::Lazy;
 
 /// Cumulative number of valid requests that the JSON RPC client service receives
@@ -34,6 +37,27 @@ pub static INTERNAL_ERRORS: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
         "libra_client_service_internal_error_count",
         "Cumulative number of internal error"
+    )
+    .unwrap()
+});
+
+pub static METHOD_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_client_service_method_latency_seconds",
+        "Libra client service method latency histogram",
+        &[
+            "type",   // batch / single
+            "method"  // JSON-RPC methods: submit, get_account ...
+        ]
+    )
+    .unwrap()
+});
+
+pub static REQUEST_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_client_service_request_latency_seconds",
+        "Libra client service request latency histogram",
+        &["type"] // batch / single
     )
     .unwrap()
 });

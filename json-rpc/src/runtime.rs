@@ -25,6 +25,8 @@ use warp::{
 // Counter labels for runtime metrics
 const LABEL_FAIL: &str = "fail";
 const LABEL_SUCCESS: &str = "success";
+const LABEL_BATCH: &str = "batch";
+const LABEL_SINGLE: &str = "single";
 
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
 /// Returns handle to corresponding Tokio runtime
@@ -116,6 +118,23 @@ async fn rpc_endpoint(
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
 ) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    let label = match data {
+        Value::Array(_) => LABEL_BATCH,
+        _ => LABEL_SINGLE,
+    };
+    let timer = counters::REQUEST_LATENCY
+        .with_label_values(&[label])
+        .start_timer();
+    let ret = rpc_endpoint_without_metrics(data, service, registry).await;
+    timer.stop_and_record();
+    ret
+}
+
+async fn rpc_endpoint_without_metrics(
+    data: Value,
+    service: JsonRpcService,
+    registry: Arc<RpcRegistry>,
+) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
     // take snapshot of latest version of DB to be used across all requests, especially for batched requests
     let ledger_info = service
         .get_latest_ledger_info()
@@ -131,6 +150,7 @@ async fn rpc_endpoint(
                         service.clone(),
                         Arc::clone(&registry),
                         ledger_info.clone(),
+                        LABEL_BATCH,
                     )
                 });
                 let responses = join_all(futures).await;
@@ -145,7 +165,7 @@ async fn rpc_endpoint(
         }
     } else {
         // single API call
-        let resp = rpc_request_handler(data, service, registry, ledger_info).await;
+        let resp = rpc_request_handler(data, service, registry, ledger_info, LABEL_SINGLE).await;
         warp::reply::json(&resp)
     });
 
@@ -159,6 +179,7 @@ async fn rpc_request_handler(
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
     ledger_info: LedgerInfoWithSignatures,
+    request_type_label: &str,
 ) -> Value {
     let request: Map<String, Value>;
     let mut response = Map::new();
@@ -227,28 +248,34 @@ async fn rpc_request_handler(
     // get rpc handler
     match request.get("method") {
         Some(Value::String(name)) => match registry.get(name) {
-            Some(handler) => match handler(service, request_params).await {
-                Ok(result) => {
-                    response.insert("result".to_string(), result);
-                    counters::REQUESTS
-                        .with_label_values(&[name, LABEL_SUCCESS])
-                        .inc();
-                }
-                Err(err) => {
-                    // check for custom error
-                    if let Some(custom_error) = err.downcast_ref::<JsonRpcError>() {
-                        set_response_error(&mut response, custom_error.clone());
-                    } else {
-                        set_response_error(
-                            &mut response,
-                            JsonRpcError::internal_error(err.to_string()),
-                        );
+            Some(handler) => {
+                let timer = counters::METHOD_LATENCY
+                    .with_label_values(&[request_type_label, name])
+                    .start_timer();
+                match handler(service, request_params).await {
+                    Ok(result) => {
+                        response.insert("result".to_string(), result);
+                        counters::REQUESTS
+                            .with_label_values(&[name, LABEL_SUCCESS])
+                            .inc();
                     }
-                    counters::REQUESTS
-                        .with_label_values(&[name, LABEL_FAIL])
-                        .inc();
+                    Err(err) => {
+                        // check for custom error
+                        if let Some(custom_error) = err.downcast_ref::<JsonRpcError>() {
+                            set_response_error(&mut response, custom_error.clone());
+                        } else {
+                            set_response_error(
+                                &mut response,
+                                JsonRpcError::internal_error(err.to_string()),
+                            );
+                        }
+                        counters::REQUESTS
+                            .with_label_values(&[name, LABEL_FAIL])
+                            .inc();
+                    }
                 }
-            },
+                timer.stop_and_record();
+            }
             None => {
                 set_response_error(&mut response, JsonRpcError::method_not_found());
             }
