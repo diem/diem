@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{format_err, Result};
+use anyhow::{anyhow, format_err, Result};
 
 use futures::{future::FutureExt, join};
 use structopt::StructOpt;
@@ -66,7 +66,7 @@ impl Experiment for CpuFlamegraph {
             .tx_emitter
             .emit_txn_for(tx_emitter_duration, emit_job_request)
             .boxed();
-        let run_id = env::var("RUN_ID").expect("RUN_ID is not set");
+        let run_id = env::var("RUN_ID").map_err(|_| anyhow!("RUN_ID is not set"))?;
         let filename = "libra-node-perf.svg";
         let command = generate_perf_flamegraph_command(&filename, &run_id, self.duration_secs);
         let flame_graph = self.perf_instance.util_cmd(command, "generate-flamegraph");

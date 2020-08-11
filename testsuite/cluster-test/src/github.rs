@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{format_err, Result};
+use anyhow::{anyhow, format_err, Result};
 use reqwest::{header::USER_AGENT, Url};
 use serde::Deserialize;
 
@@ -40,7 +40,9 @@ impl GitHub {
     /// Paging is not implemented yet
     pub fn get_commits(&self, repo: &str, sha: &str) -> Result<Vec<CommitInfo>> {
         let url = format!("https://api.github.com/repos/{}/commits?sha={}", repo, sha);
-        let url: Url = url.parse().expect("Failed to parse github url");
+        let url: Url = url
+            .parse()
+            .map_err(|_| anyhow!("Failed to parse github url"))?;
         let request = self.client.get(url);
         let response = request
             .header(USER_AGENT, "libra-cluster-test")

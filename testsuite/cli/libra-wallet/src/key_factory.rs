@@ -16,7 +16,7 @@
 //! Private Keys adheres to [HKDF RFC 5869](https://tools.ietf.org/html/rfc5869).
 
 use crate::mnemonic::Mnemonic;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
 use libra_crypto::{
@@ -161,8 +161,7 @@ impl KeyFactory {
 
         let hkdf_expand = Hkdf::<Sha3_256>::expand(&self.main(), Some(&info), 32)?;
         let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice())
-            .expect("Unable to convert into private key");
-
+            .map_err(|_| anyhow!("Unable to convert into private key"))?;
         Ok(ExtendedPrivKey::new(child, sk))
     }
 }
