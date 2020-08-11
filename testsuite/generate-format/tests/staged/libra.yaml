@@ -164,6 +164,28 @@ TransactionArgument:
     5:
       Bool:
         NEWTYPE: BOOL
+    6:
+      U64Vector:
+        NEWTYPE:
+          SEQ: U64
+    7:
+      U128Vector:
+        NEWTYPE:
+          SEQ: U128
+    8:
+      BoolVector:
+        NEWTYPE:
+          SEQ: BOOL
+    9:
+      AddressVector:
+        NEWTYPE:
+          SEQ:
+            TYPENAME: AccountAddress
+    10:
+      Vector:
+        NEWTYPE:
+          SEQ:
+            TYPENAME: TransactionArgument
 TransactionAuthenticator:
   ENUM:
     0:

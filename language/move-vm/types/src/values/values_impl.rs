@@ -9,7 +9,9 @@ use move_core_types::{
         words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
         STRUCT_SIZE,
     },
+    transaction_argument::TransactionArgument,
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
+    vm_status::VMStatus,
 };
 use std::{
     cell::RefCell,
@@ -1207,7 +1209,6 @@ impl Value {
         }))
     }
 
-    // TODO: consider whether we want to replace these with fn vector(v: Vec<Value>).
     pub fn vector_u8(it: impl IntoIterator<Item = u8>) -> Self {
         Self(ValueImpl::Container(Container::VecU8(Rc::new(
             RefCell::new(it.into_iter().collect()),
@@ -1282,6 +1283,46 @@ impl Value {
         Self(ValueImpl::Container(Container::VecR(Rc::new(
             RefCell::new(it.into_iter().map(|v| v.0).collect()),
         ))))
+    }
+}
+
+impl std::convert::TryFrom<&TransactionArgument> for Value {
+    type Error = VMStatus;
+
+    fn try_from(arg: &TransactionArgument) -> Result<Value, VMStatus> {
+        use TransactionArgument::*;
+        match arg {
+            U8(i) => Ok(Value::u8(*i)),
+            U64(i) => Ok(Value::u64(*i)),
+            U128(i) => Ok(Value::u128(*i)),
+            Address(a) => Ok(Value::address(*a)),
+            Bool(b) => Ok(Value::bool(*b)),
+            U8Vector(v) => Ok(Value::vector_u8(v.clone())),
+            U64Vector(v) => Ok(Value::vector_u64(v.clone())),
+            U128Vector(v) => Ok(Value::vector_u128(v.clone())),
+            BoolVector(v) => Ok(Value::vector_bool(v.clone())),
+            AddressVector(v) => Ok(Value::vector_address(v.clone())),
+            Vector(v) => {
+                let values = v
+                    .iter()
+                    .map(|arg| Ok(Value::try_from(arg)?.0))
+                    .collect::<Result<Vec<_>, _>>()?;
+                for value in values.iter() {
+                    // This is just a quick check to fail early on badly formed data.
+                    // Proper type-checking is still required in function of the script requirements.
+                    use ValueImpl::*;
+                    match value {
+                        U8(_) | U64(_) | U128(_) | Bool(_) | Address(_) => {
+                            return Err(VMStatus::Error(StatusCode::INVALID_CONSTANT_TYPE));
+                        }
+                        _ => (),
+                    }
+                }
+                let value_impl =
+                    ValueImpl::Container(Container::VecC(Rc::new(RefCell::new(values))));
+                Ok(Value(value_impl))
+            }
+        }
     }
 }
 

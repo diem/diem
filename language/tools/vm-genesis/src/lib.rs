@@ -25,8 +25,7 @@ use libra_types::{
     contract_event::ContractEvent,
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
-        WriteSetPayload,
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, WriteSetPayload,
     },
 };
 use libra_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
@@ -167,20 +166,6 @@ pub fn encode_genesis_change_set(
     (ChangeSet::new(write_set, events), type_mapping)
 }
 
-/// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect()
-}
-
 fn exec_function(
     session: &mut Session<StateViewCache>,
     sender: AccountAddress,
@@ -210,7 +195,12 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
         .execute_script(
             script.code().to_vec(),
             script.ty_args().to_vec(),
-            convert_txn_args(script.args()),
+            script
+                .args()
+                .iter()
+                .map(Value::try_from)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap(),
             vec![sender],
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
         )

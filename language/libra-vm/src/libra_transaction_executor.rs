@@ -20,8 +20,8 @@ use libra_types::{
     account_config,
     block_metadata::BlockMetadata,
     transaction::{
-        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionArgument,
-        TransactionOutput, TransactionPayload, TransactionStatus, WriteSetPayload,
+        ChangeSet, Module, Script, SignatureCheckedTransaction, Transaction, TransactionOutput,
+        TransactionPayload, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
@@ -162,6 +162,11 @@ impl LibraVM {
 
         // Run the execution logic
         {
+            let args = script
+                .args()
+                .iter()
+                .map(Value::try_from)
+                .collect::<Result<Vec<_>, _>>()?;
             cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
@@ -170,7 +175,7 @@ impl LibraVM {
                 .execute_script(
                     script.code().to_vec(),
                     script.ty_args().to_vec(),
-                    convert_txn_args(script.args()),
+                    args,
                     vec![txn_data.sender()],
                     cost_strategy,
                 )
@@ -316,7 +321,12 @@ impl LibraVM {
             WriteSetPayload::Direct(change_set) => change_set.clone(),
             WriteSetPayload::Script { script, execute_as } => {
                 let mut tmp_session = self.0.new_session(remote_cache);
-                let args = convert_txn_args(script.args());
+                let args = script
+                    .args()
+                    .iter()
+                    .map(Value::try_from)
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(Err)?;
                 let senders = match txn_sender {
                     None => vec![*execute_as],
                     Some(sender) => vec![*execute_as, sender],
@@ -710,20 +720,6 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
         0,
         TransactionStatus::Discard(err),
     )
-}
-
-/// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
-    args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
-        })
-        .collect()
 }
 
 impl AsRef<LibraVMImpl> for LibraVM {
