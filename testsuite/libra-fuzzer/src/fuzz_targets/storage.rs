@@ -3,12 +3,15 @@
 
 use crate::FuzzTargetImpl;
 use libra_proptest_helpers::ValueGenerator;
-use libradb::{test_helper::arb_blocks_to_commit, test_save_blocks_impl};
+use libradb::{
+    schema::fuzzing::fuzz_decode, test_helper::arb_blocks_to_commit, test_save_blocks_impl,
+};
 use proptest::{
+    collection::vec,
+    prelude::*,
     strategy::{Strategy, ValueTree},
     test_runner::{self, TestRunner},
 };
-use rand::RngCore;
 
 #[derive(Clone, Debug, Default)]
 pub struct StorageSaveBlocks;
@@ -33,5 +36,25 @@ impl FuzzTargetImpl for StorageSaveBlocks {
         let data = strategy_tree.current();
 
         test_save_blocks_impl(data);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct StorageSchemaDecode;
+
+impl FuzzTargetImpl for StorageSchemaDecode {
+    fn description(&self) -> &'static str {
+        "Storage schemas do not panic on corrupted bytes."
+    }
+
+    fn generate(&self, _idx: usize, gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(gen.generate(prop_oneof![
+            100 => vec(any::<u8>(), 0..1024),
+            1 => vec(any::<u8>(), 1024..1024 * 10),
+        ]))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        fuzz_decode(data)
     }
 }
