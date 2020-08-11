@@ -5,9 +5,35 @@ use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_management::{error::Error, transaction::build_raw_transaction};
-use libra_types::transaction::{authenticator::AuthenticationKey, Transaction};
+use libra_types::{
+    account_address::AccountAddress,
+    account_config,
+    transaction::{authenticator::AuthenticationKey, Transaction},
+};
 use std::convert::TryFrom;
 use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+pub struct AccountResource {
+    #[structopt(long, help = "Account address to display the account resource")]
+    account_address: AccountAddress,
+    #[structopt(flatten)]
+    config: libra_management::config::ConfigPath,
+    /// JSON-RPC Endpoint (e.g. http://localhost:8080)
+    #[structopt(long, required_unless = "config")]
+    json_server: Option<String>,
+}
+
+impl AccountResource {
+    pub fn execute(self) -> Result<account_config::resources::AccountResource, Error> {
+        // Load the config and create a json rpc client
+        let config = self.config.load()?.override_json_server(&self.json_server);
+        let client = JsonRpcClientWrapper::new(config.json_server);
+
+        // Fetch the current account resource on-chain for the specified account address.
+        client.account_resource(self.account_address)
+    }
+}
 
 #[derive(Debug, StructOpt)]
 pub struct RotateOperatorKey {

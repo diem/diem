@@ -8,13 +8,15 @@ use crate::{
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, execute_command};
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, account_config::AccountResource};
 use serde::Serialize;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used for Operators")]
 pub enum Command {
+    #[structopt(about = "Displays the current account resource on the blockchain")]
+    AccountResource(crate::account_resource::AccountResource),
     #[structopt(about = "Remove a validator from ValidatorSet")]
     AddValidator(crate::governance::AddValidator),
     #[structopt(about = "Extract a private key from the validator storage")]
@@ -32,7 +34,7 @@ pub enum Command {
     #[structopt(about = "Rotates a full node network key")]
     RotateFullNodeNetworkKey(crate::validator_config::RotateFullNodeNetworkKey),
     #[structopt(about = "Rotates the operator key for the operator")]
-    RotateOperatorKey(crate::operator_key::RotateOperatorKey),
+    RotateOperatorKey(crate::account_resource::RotateOperatorKey),
     #[structopt(about = "Rotates a validator network key")]
     RotateValidatorNetworkKey(crate::validator_config::RotateValidatorNetworkKey),
     #[structopt(about = "Sets the validator config")]
@@ -47,6 +49,7 @@ pub enum Command {
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
+    AccountResource,
     AddValidator,
     ExtractPrivateKey,
     ExtractPublicKey,
@@ -66,6 +69,7 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
+            Command::AccountResource(_) => CommandName::AccountResource,
             Command::AddValidator(_) => CommandName::AddValidator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
@@ -87,6 +91,7 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
+            CommandName::AccountResource => "account-resource",
             CommandName::AddValidator => "add-validator",
             CommandName::ExtractPrivateKey => "extract-private-key",
             CommandName::ExtractPublicKey => "extract-public-key",
@@ -109,6 +114,7 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> String {
         match self {
+            Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
@@ -157,6 +163,10 @@ impl Command {
         };
 
         serde_json::to_string_pretty(&result).unwrap()
+    }
+
+    pub fn account_resource(self) -> Result<AccountResource, Error> {
+        execute_command!(self, Command::AccountResource, CommandName::AccountResource)
     }
 
     pub fn add_validator(self) -> Result<TransactionContext, Error> {
