@@ -304,7 +304,7 @@ impl LibraVMImpl {
             ],
             txn_data.sender,
             cost_strategy,
-            expect_only_successful_execution,
+            expect_only_successful_execution(FAILURE_EPILOGUE_NAME.as_str()),
         )
     }
 
@@ -356,7 +356,7 @@ impl LibraVMImpl {
             ],
             txn_data.sender,
             &mut cost_strategy,
-            expect_only_successful_execution,
+            expect_only_successful_execution(WRITESET_EPILOGUE_NAME.as_str()),
         )
     }
 

@@ -110,7 +110,7 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
         | VMStatus::MoveAbort(location, code @ EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
             if location != known_locations::write_set_manager_module_abort() {
                 crit!(
-                    "[libra_vm] Unexpected write set prologue move abort: {:?}::{:?}",
+                    "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?}",
                     location,
                     code
                 );
@@ -132,16 +132,21 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
 /// Checks for only successful execution
 /// Any errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn expect_only_successful_execution(status: VMStatus) -> VMStatus {
-    match status {
-        VMStatus::Executed => VMStatus::Executed,
+pub fn expect_only_successful_execution<'a>(
+    function_name: &'a str,
+) -> Box<dyn FnOnce(VMStatus) -> VMStatus + 'a> {
+    Box::new(move |status: VMStatus| -> VMStatus {
+        match status {
+            VMStatus::Executed => VMStatus::Executed,
 
-        status => {
-            crit!(
-                "[libra_vm] Unexpected error from known move function. Error: {:?}",
-                status
-            );
-            VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
+            status => {
+                crit!(
+                    "[libra_vm] Unexpected error from known move function, '{}'. Error: {:?}",
+                    function_name,
+                    status
+                );
+                VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
+            }
         }
-    }
+    })
 }

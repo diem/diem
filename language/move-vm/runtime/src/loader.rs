@@ -13,7 +13,7 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
-    vm_status::StatusCode,
+    vm_status::{StatusCode, StatusType},
 };
 use move_vm_types::{
     data_store::DataStore,
@@ -27,7 +27,7 @@ use std::{
 };
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMError, VMResult},
     file_format::{
         Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
@@ -737,12 +737,12 @@ impl Loader {
             Err(err) if verify_no_missing_modules => return Err(err),
             Err(err) => {
                 crit!("[VM] Error fetching module with id {:?}", id);
-                return Err(err.expect_no_verification_errors());
+                return Err(expect_no_verification_errors(err));
             }
         };
 
         let module = deserialize_and_verify_module(self, bytes, data_store)
-            .map_err(|e| e.expect_no_verification_errors())?;
+            .map_err(expect_no_verification_errors)?;
         self.module_cache.lock().unwrap().insert(id.clone(), module)
     }
 
@@ -1648,6 +1648,33 @@ fn module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
         ));
     }
     deps
+}
+
+fn expect_no_verification_errors(err: VMError) -> VMError {
+    match err.status_type() {
+        status_type @ StatusType::Deserialization | status_type @ StatusType::Verification => {
+            let message = format!(
+                "Unexpected verifier/deserialization error! This likely means there is code \
+                stored on chain that is unverifiable!\nError: {:?}",
+                &err
+            );
+            let (_old_status, _old_sub_status, _old_message, location, indices, offsets) =
+                err.all_data();
+            let major_status = match status_type {
+                StatusType::Deserialization => StatusCode::UNEXPECTED_DESERIALIZATION_ERROR,
+                StatusType::Verification => StatusCode::UNEXPECTED_VERIFIER_ERROR,
+                _ => unreachable!(),
+            };
+
+            crit!("[VM] {}", message);
+            PartialVMError::new(major_status)
+                .with_message(message)
+                .at_indices(indices)
+                .at_code_offsets(offsets)
+                .finish(location)
+        }
+        _ => err,
+    }
 }
 
 //

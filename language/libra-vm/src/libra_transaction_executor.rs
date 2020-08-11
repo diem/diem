@@ -407,7 +407,7 @@ impl LibraVM {
                 args,
                 txn_data.sender,
                 &mut cost_strategy,
-                expect_only_successful_execution,
+                expect_only_successful_execution(BLOCK_PROLOGUE.as_str()),
             )?
         } else {
             return Err(VMStatus::Error(StatusCode::MALFORMED));
@@ -452,7 +452,7 @@ impl LibraVM {
             )],
             txn_data.sender,
             &mut cost_strategy,
-            expect_only_successful_execution,
+            expect_only_successful_execution(BUMP_SEQUENCE_NUMBER_NAME.as_str()),
         )?;
 
         let change_set = match txn.payload() {
