@@ -14,7 +14,7 @@ use tokio_util::compat::FuturesAsyncReadCompatExt;
 pub struct BackupServiceClientOpt {
     #[structopt(
         long = "backup-service-address",
-        default_value = "http://localhost:7777",
+        default_value = "http://localhost:6186",
         help = "Backup service address."
     )]
     pub address: String,
