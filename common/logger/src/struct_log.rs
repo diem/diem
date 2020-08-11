@@ -77,8 +77,8 @@ pub struct StructuredLogEntry {
     /// git revision
     #[serde(skip_serializing_if = "Option::is_none")]
     git_rev: Option<&'static str>,
-    /// time of the log
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// time of the log, rename to @timestamp for Elasticsearch
+    #[serde(skip_serializing_if = "Option::is_none", rename(serialize = "@timestamp"))]
     timestamp: Option<String>,
     /// warning or critical TODO: Remove once alarms are migrated (https://github.com/libra/libra/issues/5484)
     #[serde(skip_serializing_if = "Option::is_none")]
