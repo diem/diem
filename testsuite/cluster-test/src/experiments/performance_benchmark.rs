@@ -278,7 +278,7 @@ impl PerformanceBenchmark {
 
         // Backup throughput
         if self.backup {
-            let bytes_per_sec = pv.avg_backup_bytes_per_second().unwrap_or(0.0);
+            let bytes_per_sec = pv.avg_backup_bytes_per_second().unwrap_or(-1.0);
             context
                 .report
                 .report_metric(&self, "avg_backup_bytes_per_second", bytes_per_sec);
