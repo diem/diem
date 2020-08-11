@@ -5,7 +5,7 @@
 
 use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
 use std::{
-    fmt, slice,
+    env, fmt, slice,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -37,6 +37,7 @@ use tokio::runtime::Handle;
 use futures::future::{try_join_all, FutureExt};
 use libra_json_rpc_client::JsonRpcAsyncClient;
 use libra_types::transaction::SignedTransaction;
+use once_cell::sync::Lazy;
 use std::{
     cmp::{max, min},
     ops::Sub,
@@ -106,6 +107,14 @@ pub struct EmitJobRequest {
     pub workers_per_ac: Option<usize>,
     pub thread_params: EmitThreadParams,
 }
+
+pub static GAS_UNIT_PRICE: Lazy<u64> = Lazy::new(|| {
+    if let Ok(v) = env::var("GAS_UNIT_PRICE") {
+        v.parse().expect("Failed to parse GAS_UNIT_PRICE")
+    } else {
+        0_u64
+    }
+});
 
 impl EmitJobRequest {
     pub fn for_instances(
@@ -303,10 +312,12 @@ impl TxEmitter {
         let mut libra_root_account = self
             .load_libra_root_account(self.pick_mint_instance(&req.instances))
             .await?;
-        let mint_txn = gen_mint_request(
-            &mut faucet_account,
-            LIBRA_PER_NEW_ACCOUNT * num_accounts as u64,
-        );
+        let coins_per_account = (SEND_AMOUNT + *GAS_UNIT_PRICE) * MAX_TXNS;
+        info!("Minting additional {} accounts", num_accounts);
+        let coins_per_seed_account =
+            (coins_per_account * num_accounts as u64) / req.instances.len() as u64;
+        let coins_total = coins_per_account * num_accounts as u64;
+        let mint_txn = gen_mint_request(&mut faucet_account, coins_total);
         execute_and_wait_transactions(
             &mut self.pick_mint_client(&req.instances),
             &mut faucet_account,
@@ -314,6 +325,7 @@ impl TxEmitter {
         )
         .await
         .map_err(|e| format_err!("Failed to mint into faucet account: {}", e))?;
+
         let seed_accounts = create_seed_accounts(
             &mut libra_root_account,
             req.instances.len(),
@@ -323,13 +335,11 @@ impl TxEmitter {
         .await
         .map_err(|e| format_err!("Failed to create seed accounts: {}", e))?;
         info!("Completed creating seed accounts");
-        let libra_per_seed =
-            (LIBRA_PER_NEW_ACCOUNT * num_accounts as u64) / req.instances.len() as u64;
         // Create seed accounts with which we can create actual accounts concurrently
         mint_to_new_accounts(
             &mut faucet_account,
             &seed_accounts,
-            libra_per_seed,
+            coins_per_seed_account,
             100,
             self.pick_mint_client(&req.instances),
         )
@@ -349,7 +359,7 @@ impl TxEmitter {
                 create_new_accounts(
                     seed_account,
                     num_new_accounts,
-                    LIBRA_PER_NEW_ACCOUNT,
+                    coins_per_account,
                     20,
                     client,
                 )
@@ -360,6 +370,7 @@ impl TxEmitter {
             .into_iter()
             .flatten()
             .collect();
+
         self.accounts.append(&mut minted_accounts);
         assert!(
             self.accounts.len() >= num_accounts,
@@ -511,7 +522,7 @@ impl SubmissionWorker {
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            let request = gen_transfer_txn_request(sender, receiver, 1);
+            let request = gen_transfer_txn_request(sender, receiver, SEND_AMOUNT);
             requests.push(request);
         }
         requests
@@ -586,15 +597,16 @@ async fn query_sequence_numbers(
 }
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
-const GAS_UNIT_PRICE: u64 = 0;
 const GAS_CURRENCY_CODE: &str = COIN1_NAME;
 const TXN_EXPIRATION_SECONDS: i64 = 50;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
-const LIBRA_PER_NEW_ACCOUNT: u64 = 1_000_000;
+const MAX_TXNS: u64 = 1_000_000;
+const SEND_AMOUNT: u64 = 1;
 
 fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
+    no_gas: bool,
 ) -> SignedTransaction {
     let transaction = create_user_txn(
         &sender_account.key_pair,
@@ -602,7 +614,7 @@ fn gen_submit_transaction_request(
         sender_account.address,
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
-        GAS_UNIT_PRICE,
+        if no_gas { 0 } else { *GAS_UNIT_PRICE },
         GAS_CURRENCY_CODE.to_owned(),
         TXN_EXPIRATION_SECONDS,
         ChainId::test(),
@@ -623,6 +635,7 @@ fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedT
             vec![],
         ),
         faucet_account,
+        true,
     )
 }
 
@@ -640,6 +653,7 @@ fn gen_transfer_txn_request(
             vec![],
         ),
         sender,
+        false,
     )
 }
 
@@ -659,6 +673,7 @@ fn gen_create_child_txn_request(
             num_coins,
         ),
         sender,
+        true,
     )
 }
 
@@ -675,6 +690,7 @@ fn gen_create_account_txn_request(
             false,
         ),
         sender,
+        true,
     )
 }
 
@@ -692,6 +708,7 @@ fn gen_mint_txn_request(
             vec![],
         ),
         sender,
+        true,
     )
 }
 
