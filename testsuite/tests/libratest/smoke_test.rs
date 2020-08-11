@@ -255,6 +255,20 @@ fn setup_swarm_and_client_proxy(
     (env, ac_client)
 }
 
+fn wait_for_transaction_on_all_nodes(
+    swarm: &TestEnvironment,
+    num_nodes: usize,
+    account: AccountAddress,
+    sequence_number: u64,
+) {
+    for i in 0..num_nodes {
+        let mut client = swarm.get_validator_client(i, None);
+        client
+            .wait_for_transaction(account, sequence_number)
+            .unwrap();
+    }
+}
+
 fn test_smoke_script(mut client_proxy: ClientProxy) {
     client_proxy.create_next_account(false).unwrap();
     client_proxy
@@ -1664,7 +1678,8 @@ fn test_operator_key_rotation_recovery() {
 
 #[test]
 fn test_network_key_rotation() {
-    let mut swarm = TestEnvironment::new(5);
+    let num_nodes = 5;
+    let mut swarm = TestEnvironment::new(num_nodes);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -1679,10 +1694,12 @@ fn test_network_key_rotation() {
 
     // Rotate the validator network key
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
-    let mut client = swarm.get_validator_client(0, None);
-    client
-        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
-        .unwrap();
+    wait_for_transaction_on_all_nodes(
+        &swarm,
+        num_nodes,
+        txn_ctx.address,
+        txn_ctx.sequence_number + 1,
+    );
 
     // Verify that config has been loaded correctly with new key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
@@ -1705,7 +1722,8 @@ fn test_network_key_rotation() {
 
 #[test]
 fn test_network_key_rotation_recovery() {
-    let mut swarm = TestEnvironment::new(5);
+    let num_nodes = 5;
+    let mut swarm = TestEnvironment::new(num_nodes);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -1726,10 +1744,13 @@ fn test_network_key_rotation_recovery() {
     let (txn_ctx, new_network_key) = op_tool.rotate_validator_network_key(&backend).unwrap();
     assert_eq!(new_network_key, to_x25519(rotated_network_key).unwrap());
 
-    let mut client = swarm.get_validator_client(0, None);
-    client
-        .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
-        .unwrap();
+    // Ensure all nodes have received the transaction
+    wait_for_transaction_on_all_nodes(
+        &swarm,
+        num_nodes,
+        txn_ctx.address,
+        txn_ctx.sequence_number + 1,
+    );
 
     // Verify that config has been loaded correctly with new key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
