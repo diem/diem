@@ -313,6 +313,7 @@ fn dual_attestation_payment() {
     let payment_receiver = Account::new();
     let payment_sender = Account::new();
     let sender_child = Account::new();
+    let payee_child = Account::new();
     let libra_root = Account::new_libra_root();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
@@ -391,6 +392,21 @@ fn dual_attestation_payment() {
             .sequence_number(0)
             .sign(),
     );
+
+    // create a child VASP for the payee too
+    executor.execute_and_apply(
+        payment_receiver
+            .transaction()
+            .script(encode_create_child_vasp_account_script(
+                account_config::coin1_tag(),
+                *payee_child.address(),
+                payee_child.auth_key_prefix(),
+                false,
+                0,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
     {
         // Transaction >= 1_000_000 threshold goes through signature verification with valid signature, passes
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
@@ -413,6 +429,28 @@ fn dual_attestation_payment() {
         assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed));
     }
     {
+        // Transaction >= 1_000_000 threshold goes through signature verification with valid signature, passes
+        // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
+        // in transaction from sender's account. Make sure credential resolution is working for
+        // children.
+        let ref_id = lcs::to_bytes(&7777u64).unwrap();
+        let output = executor.execute_and_apply(
+            payment_sender
+                .transaction()
+                .script(create_dual_attestation_payment(
+                    *payment_sender.address(),
+                    *payee_child.address(),
+                    payment_amount,
+                    account_config::coin1_tag(),
+                    ref_id,
+                    &receiver_vasp_compliance_private_key,
+                ))
+                .sequence_number(2)
+                .sign(),
+        );
+        assert_eq!(output.status().status(), Ok(KeptVMStatus::Executed));
+    }
+    {
         // transaction >= 1_000_000 (set in DualAttestation.move) threshold goes through signature verification but has an
         // structurally invalid signature. Fails.
         let ref_id = [0u8; 32].to_vec();
@@ -426,7 +464,7 @@ fn dual_attestation_payment() {
                     ref_id,
                     b"invalid signature".to_vec(),
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .sign(),
         );
 
@@ -451,7 +489,7 @@ fn dual_attestation_payment() {
                     // Sign with the wrong private key
                     &sender_vasp_compliance_private_key,
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .sign(),
         );
 
@@ -472,7 +510,7 @@ fn dual_attestation_payment() {
                     ref_id,
                     &sender_vasp_compliance_private_key,
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .sign(),
         );
         assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE);
@@ -491,7 +529,7 @@ fn dual_attestation_payment() {
                     vec![0],
                     vec![],
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .sign(),
         );
 
@@ -506,7 +544,7 @@ fn dual_attestation_payment() {
                     vec![0],
                     b"invalid signature".to_vec(),
                 ))
-                .sequence_number(3)
+                .sequence_number(4)
                 .sign(),
         );
         assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE)
@@ -529,6 +567,22 @@ fn dual_attestation_payment() {
         );
     }
     {
+        // Checking isn't performed on intra-vasp transfers (self payment)
+        executor.execute_and_apply(
+            sender_child
+                .transaction()
+                .script(encode_peer_to_peer_with_metadata_script(
+                    account_config::coin1_tag(),
+                    *sender_child.address(),
+                    payment_amount,
+                    vec![0],
+                    vec![],
+                ))
+                .sequence_number(1)
+                .sign(),
+        );
+    }
+    {
         // Rotate the parent VASP's compliance key and base URL
         let (_, new_compliance_public_key) = keygen.generate_keypair();
         executor.execute_and_apply(
@@ -538,7 +592,7 @@ fn dual_attestation_payment() {
                     b"any base_url works".to_vec(),
                     new_compliance_public_key.to_bytes().to_vec(),
                 ))
-                .sequence_number(1)
+                .sequence_number(2)
                 .sign(),
         );
     }
@@ -558,7 +612,7 @@ fn dual_attestation_payment() {
                     lcs::to_bytes(&9999u64).unwrap(),
                     &receiver_vasp_compliance_private_key,
                 ))
-                .sequence_number(3)
+                .sequence_number(4)
                 .sign(),
         );
         assert_aborted_with(output, MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
@@ -577,7 +631,7 @@ fn dual_attestation_payment() {
                     lcs::to_bytes(&9999u64).unwrap(),
                     &receiver_vasp_compliance_private_key,
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .sign(),
         );
         assert_aborted_with(output, PAYEE_COMPLIANCE_KEY_NOT_SET_ERROR_CODE)

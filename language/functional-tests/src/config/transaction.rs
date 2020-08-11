@@ -4,6 +4,7 @@
 use crate::{common::strip, config::global::Config as GlobalConfig, errors::*, evaluator::Stage};
 use language_e2e_tests::account::Account;
 use move_core_types::{
+    account_address::AccountAddress,
     language_storage::TypeTag,
     parser::{parse_transaction_arguments, parse_type_tags},
     transaction_argument::TransactionArgument,
@@ -28,6 +29,7 @@ pub enum Entry {
     GasCurrencyCode(String),
     SequenceNumber(u64),
     ExpirationTime(u64),
+    ExecuteAs(String),
 }
 
 impl FromStr for Entry {
@@ -80,6 +82,9 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "expiration-time:") {
             return Ok(Entry::ExpirationTime(s.parse::<u64>()?));
         }
+        if let Some(s) = strip(s, "execute-as:") {
+            return Ok(Entry::ExecuteAs(s.to_ascii_lowercase()));
+        }
 
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
@@ -121,6 +126,7 @@ pub struct Config<'a> {
     pub gas_currency_code: Option<String>,
     pub sequence_number: Option<u64>,
     pub expiration_timestamp_secs: Option<u64>,
+    pub execute_as: Option<AccountAddress>,
 }
 
 impl<'a> Config<'a> {
@@ -135,6 +141,7 @@ impl<'a> Config<'a> {
         let mut gas_currency_code = None;
         let mut sequence_number = None;
         let mut expiration_timestamp_secs = None;
+        let mut execute_as = None;
 
         for entry in entries {
             match entry {
@@ -216,6 +223,14 @@ impl<'a> Config<'a> {
                         )
                     }
                 },
+                Entry::ExecuteAs(account_name) => match execute_as {
+                    None => {
+                        execute_as = Some(*config.get_account_for_name(account_name)?.address())
+                    }
+                    Some(_) => {
+                        return Err(ErrorKind::Other("execute_as already set".to_string()).into())
+                    }
+                },
             }
         }
 
@@ -229,6 +244,7 @@ impl<'a> Config<'a> {
             gas_currency_code,
             sequence_number,
             expiration_timestamp_secs,
+            execute_as,
         })
     }
 

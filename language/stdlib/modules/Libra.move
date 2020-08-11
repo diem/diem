@@ -494,7 +494,7 @@ module Libra {
     /// Calls to this function will fail if the there is no `Preburn<CoinType>`
     /// resource under `preburn_address`, or, if the preburn to_burn area for
     /// `CoinType` is empty (error code 7).
-    public fun burn_with_resource_cap<CoinType>(
+    fun burn_with_resource_cap<CoinType>(
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
         _capability: &BurnCapability<CoinType>
@@ -1011,7 +1011,7 @@ module Libra {
         aborts_if !spec_is_currency<CoinType>() with Errors::NOT_PUBLISHED;
     }
 
-    fun assert_is_SCS_currency<CoinType>() acquires CurrencyInfo {
+    public fun assert_is_SCS_currency<CoinType>() acquires CurrencyInfo {
         assert_is_currency<CoinType>();
         assert(is_SCS_currency<CoinType>(), Errors::invalid_state(ECURRENCY_INFO));
     }

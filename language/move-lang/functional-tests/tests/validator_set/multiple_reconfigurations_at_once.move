@@ -113,8 +113,18 @@ script{
     }
 }
 
-// check: ABORTED
-// check: 6
+// check: "Keep(ABORTED { code: 1025,"
+
+//! new-transaction
+//! sender: bob
+script{
+    use 0x1::LibraSystem;
+    fun main(account: &signer) {
+        LibraSystem::update_config_and_reconfigure(account, {{viola}});
+    }
+}
+
+// check: "Keep(ABORTED { code: 1031,"
 
 //! new-transaction
 //! sender: blessed
@@ -129,3 +139,4 @@ script {
         assert(LibraSystem::is_validator({{alice}}) == true, 102);
     }
 }
+// check: EXECUTED

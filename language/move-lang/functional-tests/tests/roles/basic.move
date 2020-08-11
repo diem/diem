@@ -174,7 +174,7 @@ fun main(account: &signer) {
 script {
 use 0x1::Roles;
 fun main(account: &signer) {
-    assert(!Roles::needs_account_limits(account), 1);
+    assert(!Roles::can_hold_balance(account), 1);
 }
 }
 // check: EXECUTED
@@ -186,6 +186,17 @@ use 0x1::Roles;
 fun main(account: &signer) {
     assert(!Roles::has_validator_role(account), 1);
     assert(!Roles::has_validator_operator_role(account), 1);
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Roles;
+fun main(account: &signer) {
+    assert(Roles::has_treasury_compliance_role(account), 0);
+    assert(Roles::has_update_dual_attestation_limit_privilege(account), 1);
 }
 }
 // check: EXECUTED

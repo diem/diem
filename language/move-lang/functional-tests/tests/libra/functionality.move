@@ -241,3 +241,13 @@ fun main() {
 }
 }
 // check: EXECUTED
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::CoreAddresses;
+fun main(account: &signer) {
+    CoreAddresses::assert_currency_info(account)
+}
+}
+// check: "Keep(ABORTED { code: 1026,"

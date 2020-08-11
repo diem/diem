@@ -353,7 +353,7 @@ Root accounts for multi-account entities will hold this resource at
 their root/parent account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(to_limit: &signer, _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>, limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(lr: &signer, to_limit: &signer, limit_address: address)
 </code></pre>
 
 
@@ -363,10 +363,11 @@ their root/parent account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(
+    lr: &signer,
     to_limit: &signer,
-    _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
     limit_address: address,
 ) {
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr);
     <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIMITS_DEFINITION));
     <b>assert</b>(
         !exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_limit)),
@@ -968,13 +969,14 @@ Invariant that
 ### Function `publish_window`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(to_limit: &signer, _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>, limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(lr: &signer, to_limit: &signer, limit_address: address)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) with Errors::NOT_PUBLISHED;
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr};
+<b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) with Errors::ALREADY_PUBLISHED;
 </code></pre>
 

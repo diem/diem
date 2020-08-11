@@ -37,6 +37,37 @@ script {
 // check: "Keep(ABORTED { code: 775,"
 
 //! new-transaction
+//! sender: alice
+script {
+    use 0x1::Signer;
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_operator(account, Signer::address_of(account))
+    }
+}
+// check: "Keep(ABORTED { code: 1795,"
+
+//! new-transaction
+//! sender: alice
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::remove_operator(account)
+    }
+}
+// check: "Keep(ABORTED { code: 1795,"
+
+//! new-transaction
+//! sender: alice
+script {
+    use 0x1::ValidatorConfig;
+    fun main() {
+        ValidatorConfig::get_human_name({{alice}});
+    }
+}
+// check: "Keep(ABORTED { code: 5,"
+
+//! new-transaction
 //! sender: bob
 script {
     use 0x1::Signer;

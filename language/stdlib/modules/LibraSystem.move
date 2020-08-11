@@ -241,6 +241,8 @@ module LibraSystem {
         *&(Vector::borrow(&validator_set.validators, *Option::borrow(&validator_index_vec))).config
     }
     spec fun get_validator_config {
+        /// TODO(tzakian): takes a long time but verifies
+        pragma verify_duration_estimate = 80;
         pragma opaque;
         include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         aborts_if !spec_is_validator(addr) with Errors::INVALID_ARGUMENT;

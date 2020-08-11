@@ -14,6 +14,19 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
+//! sender: blessed
+script {
+use 0x1::DesignatedDealer;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    DesignatedDealer::publish_designated_dealer_credential<Coin1>(
+        account, account, false
+    );
+}
+}
+// check: "Keep(ABORTED { code: 1539,"
+
+//! new-transaction
 script {
 use 0x1::DesignatedDealer;
 use 0x1::Coin1::Coin1;

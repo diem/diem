@@ -83,6 +83,7 @@ module DesignatedDealer {
         add_all_currencies: bool,
     ) acquires TierInfo {
         Roles::assert_treasury_compliance(tc_account);
+        Roles::assert_designated_dealer(dd);
         assert(!exists<Dealer>(Signer::address_of(tc_account)), Errors::already_published(EDEALER));
         move_to(dd, Dealer { mint_event_handle: Event::new_event_handle<ReceivedMintEvent>(dd) });
         if (add_all_currencies) {

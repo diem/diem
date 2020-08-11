@@ -147,10 +147,11 @@ module AccountLimits {
     /// Root accounts for multi-account entities will hold this resource at
     /// their root/parent account.
     public fun publish_window<CoinType>(
+        lr: &signer,
         to_limit: &signer,
-        _: &AccountLimitMutationCapability,
         limit_address: address,
     ) {
+        Roles::assert_libra_root(lr);
         assert(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
         assert(
             !exists<Window<CoinType>>(Signer::address_of(to_limit)),
@@ -168,6 +169,7 @@ module AccountLimits {
         )
     }
     spec fun publish_window {
+        include Roles::AbortsIfNotLibraRoot{account: lr};
         // TODO(wrwg): put these conditions into a schema.
         aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
         aborts_if exists<Window<CoinType>>(Signer::spec_address_of(to_limit)) with Errors::ALREADY_PUBLISHED;

@@ -337,6 +337,7 @@ and default tiers for each known currency at launch.
     add_all_currencies: bool,
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <a href="Roles.md#0x1_Roles_assert_designated_dealer">Roles::assert_designated_dealer</a>(dd);
     <b>assert</b>(!exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EDEALER));
     move_to(dd, <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> { mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd) });
     <b>if</b> (add_all_currencies) {

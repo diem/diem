@@ -860,8 +860,11 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 
 
+TODO(tzakian): takes a long time but verifies
 
-<pre><code>pragma opaque;
+
+<pre><code>pragma verify_duration_estimate = 80;
+pragma opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr) with Errors::INVALID_ARGUMENT;
 <b>ensures</b>

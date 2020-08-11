@@ -345,16 +345,26 @@ fn make_script_transaction(
     let script = TransactionScript::new(blob, config.ty_args.clone(), config.args.clone());
 
     let params = get_transaction_parameters(exec, config);
-    Ok(RawTransaction::new_script(
-        params.sender_addr,
-        params.sequence_number,
-        script,
-        params.max_gas_amount,
-        params.gas_unit_price,
-        params.gas_currency_code,
-        params.expiration_timestamp_secs,
-        ChainId::test(),
-    )
+    Ok(if let Some(execute_as) = config.execute_as {
+        RawTransaction::new_writeset_script(
+            params.sender_addr,
+            params.sequence_number,
+            script,
+            execute_as,
+            ChainId::test(),
+        )
+    } else {
+        RawTransaction::new_script(
+            params.sender_addr,
+            params.sequence_number,
+            script,
+            params.max_gas_amount,
+            params.gas_unit_price,
+            params.gas_currency_code,
+            params.expiration_timestamp_secs,
+            ChainId::test(),
+        )
+    }
     .sign(params.privkey, params.pubkey.clone())?
     .into_inner())
 }

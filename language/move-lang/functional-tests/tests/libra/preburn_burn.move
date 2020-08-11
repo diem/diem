@@ -1,4 +1,5 @@
 //! account: dd, 0, 0, address
+//! account: baddd, 0, 0, address
 // Test the end-to-end preburn-burn flow
 
 // register blessed as a preburn entity
@@ -58,6 +59,7 @@ fun main(account: &signer)  {
     LibraAccount::cancel_burn<Coin1>(account, {{dd}})
 }
 }
+// check: CancelBurnEvent
 // check: EXECUTED
 
 // perform a preburn
@@ -138,3 +140,142 @@ script {
 
 // check: 10
 // check: ABORTED
+
+// Try to burn on an account that doesn't have a preburn resource
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
+fun main(account: &signer) {
+    Libra::burn<Coin1>(account, {{default}});
+}
+}
+// check: "Keep(ABORTED { code: 517,"
+
+// Try to burn on an account that doesn't have a burn capability
+//! new-transaction
+script {
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
+fun main(account: &signer) {
+    Libra::burn<Coin1>(account, {{default}});
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+// Try to cancel burn on an account that doesn't have a burn capability
+//! new-transaction
+script {
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
+fun main(account: &signer) {
+    Libra::destroy_zero(Libra::cancel_burn<Coin1>(account, {{dd}}));
+}
+}
+// check: "Keep(ABORTED { code: 5,"
+
+// Try to preburn to an account that doesn't have a preburn resource
+//! new-transaction
+script {
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
+fun main(account: &signer) {
+    let coin = Libra::zero<Coin1>();
+    Libra::preburn_to<Coin1>(account, coin)
+}
+}
+// check: "Keep(ABORTED { code: 517,"
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
+fun main(account: &signer) {
+    LibraAccount::create_designated_dealer<LBR>(
+        account,
+        {{baddd}},
+        {{baddd::auth_key}},
+        x"",
+        false,
+    );
+}
+}
+// check: "Keep(ABORTED { code: 1543,"
+
+//! new-transaction
+module Holder {
+    resource struct Holder<T> {
+        a: T,
+        b: T,
+    }
+
+    public fun hold<T>(account: &signer, a: T, b: T) {
+        move_to(account, Holder<T>{ a, b})
+    }
+
+    public fun get<T>(addr: address): (T, T)
+    acquires Holder {
+        let Holder { a, b} = move_from<Holder<T>>(addr);
+        (a, b)
+    }
+}
+
+// Limit exceeded on coin deposit
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use {{default}}::Holder;
+fun main(account: &signer) {
+    let u64_max = 18446744073709551615;
+    Holder::hold(
+        account,
+        Libra::mint<Coin1>(account, u64_max),
+        Libra::mint<Coin1>(account, u64_max)
+    );
+}
+}
+// check: "Keep(EXECUTED)"
+
+// Limit exceeded on coin deposit
+//! new-transaction
+//! sender: dd
+script {
+use 0x1::Libra::{Self, Libra};
+use 0x1::Coin1::Coin1;
+use {{default}}::Holder;
+fun main(account: &signer) {
+    let (coin1, coin2) = Holder::get<Libra<Coin1>>({{blessed}});
+    Libra::preburn_to(account, coin1);
+    Libra::preburn_to(account, coin2);
+}
+}
+// check: "Keep(ABORTED { code: 769,"
+
+// Limit exceeded on coin deposit
+//! new-transaction
+//! sender: dd
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    let coin = Libra::zero<Coin1>();
+    Libra::preburn_to(account, coin);
+}
+}
+// check: "Keep(EXECUTED)"
+
+// Limit exceeded on coin deposit
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    Libra::burn<Coin1>(account, {{dd}});
+}
+}
+// check: "Keep(ABORTED { code: 1025,"

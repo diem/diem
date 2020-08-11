@@ -256,14 +256,7 @@ module Roles {
         has_designated_dealer_role(account)
     }
 
-    /// Return true if `account` must have limits on sending/receiving/holding of funds
-    public fun needs_account_limits(account: &signer): bool acquires RoleId {
-        // All accounts that hold balances are subject to limits except designated dealers
-        can_hold_balance(account) && !has_designated_dealer_role(account)
-    }
-
     //  ## role assertions ##
-
     /// Assert that the account is libra root.
     ///
     /// TODO(wrwg): previously throughout the framework, we had functions which only check for the role, and
@@ -447,10 +440,6 @@ module Roles {
                 spec_has_child_VASP_role_addr(addr) ||
                 spec_has_designated_dealer_role_addr(addr)
         }
-
-        define spec_needs_account_limits_addr(addr: address): bool {
-            spec_can_hold_balance_addr(addr) && !spec_has_designated_dealer_role_addr(addr)
-        }
     }
 
     spec schema ThisRoleIsNotNewlyPublished {
@@ -608,18 +597,6 @@ module Roles {
         /// ChildVASP have balances [E8].
         invariant [global, on_update] forall addr: address where spec_has_child_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
-
-        /// DesignatedDealer does not need account limits [F6].
-        invariant [global, on_update] forall addr: address where spec_has_designated_dealer_role_addr(addr):
-            !spec_needs_account_limits_addr(addr);
-
-        /// ParentVASP needs account limits [F7].
-        invariant [global, on_update] forall addr: address where spec_has_parent_VASP_role_addr(addr):
-            spec_needs_account_limits_addr(addr);
-
-        /// ChildVASP needs account limits [F8].
-        invariant [global, on_update] forall addr: address where spec_has_child_VASP_role_addr(addr):
-            spec_needs_account_limits_addr(addr);
 
         /// update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
         invariant [global, on_update] forall addr: address where spec_has_update_dual_attestation_limit_privilege_addr(addr):

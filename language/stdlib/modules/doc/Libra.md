@@ -1339,7 +1339,7 @@ resource under
 <code>CoinType</code> is empty (error code 7).
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1348,7 +1348,7 @@ resource under
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(
     preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;,
     preburn_address: address,
     _capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
@@ -2330,7 +2330,7 @@ Asserts that
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;()
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;()
 </code></pre>
 
 
@@ -2339,7 +2339,7 @@ Asserts that
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;() <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_assert_is_SCS_currency">assert_is_SCS_currency</a>&lt;CoinType&gt;() <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>assert</b>(<a href="#0x1_Libra_is_SCS_currency">is_SCS_currency</a>&lt;CoinType&gt;(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ECURRENCY_INFO));
 }
@@ -2599,7 +2599,7 @@ exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ### Function `burn_with_resource_cap`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
