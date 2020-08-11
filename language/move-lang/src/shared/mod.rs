@@ -42,7 +42,8 @@ impl Address {
             hex_string.insert(0, '0');
         }
 
-        let mut result = hex::decode(hex_string.as_str()).unwrap();
+        let mut result = hex::decode(hex_string.as_str())
+            .map_err(|_| "hex string does not decode properly".to_owned())?;
         let len = result.len();
         if len < ADDRESS_LENGTH {
             result.reverse();

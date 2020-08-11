@@ -488,7 +488,10 @@ impl<'a> BorrowAnalysis<'a> {
         let livevar_annotation_at = self
             .livevar_annotation
             .get_live_var_info_at(code_offset)
-            .unwrap();
+            .ok_or_else(|| PackError {
+                code_offset,
+                indices,
+            })?;
         for idx in livevar_annotation_at
             .before
             .difference(&livevar_annotation_at.after)
