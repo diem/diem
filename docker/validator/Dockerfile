@@ -41,7 +41,7 @@ EXPOSE 6180
 # Metrics
 EXPOSE 9101
 # Backup
-EXPOSE 7777
+EXPOSE 6186
 
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
