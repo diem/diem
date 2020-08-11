@@ -15,7 +15,7 @@ Fetch the events for a given event stream.
 | limit          | unsigned int64 | The maximum number of events retrieved                        |
 
 Note:
-1. For `sentpayment` and `recevepayment` events, call [get_account](method_get_account.md) to get the event key of the event streams for a given user account.
+1. For `sentpayment` and `receivedpayment` events, call [get_account](method_get_account.md) to get the event key of the event streams for a given user account.
 2. For currency related events, call [get_currencies](method_get_currencies.md) to get the event keys (for example: to LBR exchange rate change event key).
 
 

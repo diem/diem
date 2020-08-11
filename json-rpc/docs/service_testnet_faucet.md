@@ -13,7 +13,7 @@ It's interface is very simple, fire a HTTP POST request to `http://faucet.testne
 | auth_key      | string | your account authentication key |
 | currency_code | string | the currency code, e.g. LBR     |
 
-Server will start a sub-process to sbumit a mint coins transaction to Testnet, and return next new account sequence for account `000000000000000000000000000000DD`.
+Server will start a sub-process to submit a mint coin transaction to Testnet, and return the next new account sequence for account `000000000000000000000000000000DD`.
 
 For example, you can have something like the followings:
 
@@ -58,8 +58,8 @@ private static void waitAWhile() {
 
 As the server side code is simple and can only handle 1 request per second, you may face some errors, hence above Java code has simple retry logic.
 
-It is an async process, hence when client received response, the coins are not in the account yet, client need to wait for the transaction executed.
-The next new account sequence is provided for you to use call [get_account](method_get_account.md) and wait for the new sequence shows up.
+It is an async process, hence when the client receives a response, the coins are not in the account yet, client needs to wait for the transaction to be executed.
+The next new account sequence is provided for you to use call [get_account](method_get_account.md) and wait for the new sequence to show up.
 If you tried to call [get_account_transaction](method_get_account_transaction.md) to get the mint transaction, you should wait for the `respond account sequence - 1`.
 
 For example, the following code calls to [get_account_transaction](method_get_account_transaction.md) to wait for minting coins transaction executed.
