@@ -11,8 +11,10 @@ A transaction on the blockchain.
 | Name                      | Type                                     | Description                                                                                |
 |---------------------------|------------------------------------------|--------------------------------------------------------------------------------------------|
 | version                   | unsigned int64                           | The on-chain version or unique identifier of this transaction                              |
+| transaction               | [TransactionData](#type-transactiondata) | Transaction payload |
+| hash                      | string                                   | hex encoded string of hash of this transaction, hex encoded |
+| bytes                     | string                                   | hex encoded string of raw bytes of the transaction, hex encoded |
 | events                    | List<[Event](type_event.md)>             | List of associated events. Empty for no events                                             |
-| transaction_data          | [TransactionData](#type-transactiondata) | Metadata for this transaction                                                              |
 | vm_status                 | [VMStatus](#type-vmstatus)               | The returned status of the transaction after being processed by the VM                     |
 | gas_used                  | unsigned int64 | Amount of gas used by this transaction, to know how much you paid for the transaction, you need multiply it with your RawTransaction#gas_unit_price |
 
@@ -42,7 +44,7 @@ Transaction data is serialized into one JSON object with a "type" field to indic
 
 | Name                | Type           | Description                                                    |
 |---------------------|----------------|----------------------------------------------------------------|
-| type                | string         | Type name of EventData                                         |
+| type                | string         | Type of TransactionData                                         |
 
 #### blockmetadata
 
@@ -78,6 +80,7 @@ User submitted transaction.
 | gas_unit_price            | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
 | expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
 | script_hash               | string                 | Hex-encoded hash of the script used in this transaction               |
+| script_bytes              | string                 | Hex-encoded string of the bytes of the script                         |
 | script                    | [Script](#type-script) | The transaction script and arguments of this transaction              |
 
 TODO: how the script_hash is created?
