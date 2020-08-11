@@ -218,20 +218,20 @@ impl BackupCoordinator {
         last_transaction_version_in_backup: Option<Version>,
         db_state: DbState,
     ) -> Result<Option<u64>> {
-        let (start_version, end_version) = get_batch_range(
+        let (first, last) = get_batch_range(
             last_transaction_version_in_backup,
             self.transaction_batch_size,
         );
 
-        if db_state.committed_version < end_version {
+        if db_state.committed_version < last {
             // wait for the next db_state update
             return Ok(last_transaction_version_in_backup);
         }
 
         TransactionBackupController::new(
             TransactionBackupOpt {
-                start_version,
-                num_transactions: (end_version + 1 - start_version) as usize,
+                start_version: first,
+                num_transactions: (last + 1 - first) as usize,
             },
             self.global_opt.clone(),
             Arc::clone(&self.client),
@@ -240,7 +240,7 @@ impl BackupCoordinator {
         .run()
         .await?;
 
-        Ok(Some(end_version))
+        Ok(Some(last))
     }
 
     fn backup_work_stream<'a, S, W, Fut>(
@@ -285,9 +285,9 @@ where
 }
 
 fn get_batch_range(last_in_backup: Option<u64>, batch_size: usize) -> (u64, u64) {
-    // say, 5 is already in backup, and we target batches of size 10, we will return (6, 4) in this
+    // say, 5 is already in backup, and we target batches of size 10, we will return (6, 9) in this
     // case, so 6, 7, 8, 9 will be in this batch, and next time the backup worker will pass in 9,
-    // and we will return (10, 10)
+    // and we will return (10, 19)
     let start = last_in_backup.map_or(0, |n| n + 1);
     let next_batch_start = (start / batch_size as u64 + 1) * batch_size as u64;
 
@@ -298,5 +298,18 @@ fn get_next_snapshot(last_in_backup: Option<u64>, interval: usize) -> u64 {
     match last_in_backup {
         Some(last) => (last / interval as u64 + 1) * interval as u64,
         None => 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::coordinators::backup::get_batch_range;
+
+    #[test]
+    fn test_get_batch_range() {
+        assert_eq!(get_batch_range(None, 100), (0, 99));
+        assert_eq!(get_batch_range(Some(99), 50), (100, 149));
+        assert_eq!(get_batch_range(Some(149), 100), (150, 199));
+        assert_eq!(get_batch_range(Some(199), 100), (200, 299));
     }
 }
