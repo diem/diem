@@ -1663,7 +1663,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     map
 });
 
-#[allow(dead_code)]
 fn decode_bool_argument(arg: TransactionArgument) -> Option<bool> {
     match arg {
         TransactionArgument::Bool(value) => Some(value),
@@ -1671,15 +1670,6 @@ fn decode_bool_argument(arg: TransactionArgument) -> Option<bool> {
     }
 }
 
-#[allow(dead_code)]
-fn decode_u8_argument(arg: TransactionArgument) -> Option<u8> {
-    match arg {
-        TransactionArgument::U8(value) => Some(value),
-        _ => None,
-    }
-}
-
-#[allow(dead_code)]
 fn decode_u64_argument(arg: TransactionArgument) -> Option<u64> {
     match arg {
         TransactionArgument::U64(value) => Some(value),
@@ -1687,15 +1677,6 @@ fn decode_u64_argument(arg: TransactionArgument) -> Option<u64> {
     }
 }
 
-#[allow(dead_code)]
-fn decode_u128_argument(arg: TransactionArgument) -> Option<u128> {
-    match arg {
-        TransactionArgument::U128(value) => Some(value),
-        _ => None,
-    }
-}
-
-#[allow(dead_code)]
 fn decode_address_argument(arg: TransactionArgument) -> Option<AccountAddress> {
     match arg {
         TransactionArgument::Address(value) => Some(value),
@@ -1703,8 +1684,7 @@ fn decode_address_argument(arg: TransactionArgument) -> Option<AccountAddress> {
     }
 }
 
-#[allow(dead_code)]
-fn decode_u8vector_argument(arg: TransactionArgument) -> Option<Bytes> {
+fn decode_u8vector_argument(arg: TransactionArgument) -> Option<Vec<u8>> {
     match arg {
         TransactionArgument::U8Vector(value) => Some(value),
         _ => None,

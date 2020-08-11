@@ -11,7 +11,7 @@ use serde_generate::{
 
 use heck::{CamelCase, ShoutySnakeCase};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     io::{Result, Write},
     path::PathBuf,
 };
@@ -44,7 +44,7 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Res
     }
 
     emitter.output_decoder_map(abis)?;
-    emitter.output_decoding_helpers()?;
+    emitter.output_decoding_helpers(abis)?;
 
     for abi in abis {
         emitter.output_code_constant(abi)?;
@@ -344,58 +344,48 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         writeln!(self.out, "}});")
     }
 
-    fn output_decoding_helpers(&mut self) -> Result<()> {
+    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        let mut required_types = BTreeSet::new();
+        for abi in abis {
+            for arg in abi.args() {
+                let type_tag = arg.type_tag();
+                required_types.insert(type_tag);
+            }
+        }
+        for required_type in required_types {
+            self.output_decoding_helper(required_type)?;
+        }
+        Ok(())
+    }
+
+    fn output_decoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
+        use TypeTag::*;
+        let (constructor, expr) = match type_tag {
+            Bool => ("Bool", "Some(value)".to_string()),
+            U8 => ("U8", "Some(value)".to_string()),
+            U64 => ("U64", "Some(value)".to_string()),
+            U128 => ("U128", "Some(value)".to_string()),
+            Address => ("Address", "Some(value)".to_string()),
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => ("U8Vector", "Some(value)".to_string()),
+                _ => type_not_allowed(type_tag),
+            },
+            Struct(_) | Signer => type_not_allowed(type_tag),
+        };
         writeln!(
             self.out,
             r#"
-#[allow(dead_code)]
-fn decode_bool_argument(arg: TransactionArgument) -> Option<bool> {{
+fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
     match arg {{
-        TransactionArgument::Bool(value) => Some(value),
+        TransactionArgument::{}(value) => {},
         _ => None,
     }}
 }}
-
-#[allow(dead_code)]
-fn decode_u8_argument(arg: TransactionArgument) -> Option<u8> {{
-    match arg {{
-        TransactionArgument::U8(value) => Some(value),
-        _ => None,
-    }}
-}}
-
-#[allow(dead_code)]
-fn decode_u64_argument(arg: TransactionArgument) -> Option<u64> {{
-    match arg {{
-        TransactionArgument::U64(value) => Some(value),
-        _ => None,
-    }}
-}}
-
-#[allow(dead_code)]
-fn decode_u128_argument(arg: TransactionArgument) -> Option<u128> {{
-    match arg {{
-        TransactionArgument::U128(value) => Some(value),
-        _ => None,
-    }}
-}}
-
-#[allow(dead_code)]
-fn decode_address_argument(arg: TransactionArgument) -> Option<AccountAddress> {{
-    match arg {{
-        TransactionArgument::Address(value) => Some(value),
-        _ => None,
-    }}
-}}
-
-#[allow(dead_code)]
-fn decode_u8vector_argument(arg: TransactionArgument) -> Option<Bytes> {{
-    match arg {{
-        TransactionArgument::U8Vector(value) => Some(value),
-        _ => None,
-    }}
-}}
-"#
+"#,
+            mangle_type(type_tag),
+            Self::quote_type(type_tag, self.local_types),
+            constructor,
+            expr,
         )
     }
 

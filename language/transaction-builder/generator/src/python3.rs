@@ -138,7 +138,7 @@ fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {
 
 fn quote_arguments(args: &[ArgumentABI]) -> String {
     args.iter()
-        .map(|arg| make_transaction_argument(arg.type_tag(), arg.name()))
+        .map(|arg| quote_transaction_argument(arg.type_tag(), arg.name()))
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -160,7 +160,7 @@ fn quote_type(type_tag: &TypeTag) -> String {
     }
 }
 
-fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
+fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
     use TypeTag::*;
     match type_tag {
         Bool => format!("TransactionArgument__Bool({})", name),

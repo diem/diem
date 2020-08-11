@@ -11,7 +11,7 @@ use serde_generate::{
 
 use heck::{CamelCase, ShoutySnakeCase};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     io::{Result, Write},
     path::PathBuf,
 };
@@ -67,7 +67,7 @@ fn write_helper_file(
     // Must be defined after the constants.
     emitter.output_decoder_map(abis)?;
 
-    emitter.output_decoding_helpers()?;
+    emitter.output_decoding_helpers(abis)?;
 
     emitter.out.unindent();
     writeln!(emitter.out, "\n}}\n")
@@ -314,52 +314,50 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
         writeln!(self.out, "}}")
     }
 
-    fn output_decoding_helpers(&mut self) -> Result<()> {
+    fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
+        let mut required_types = BTreeSet::new();
+        for abi in abis {
+            for arg in abi.args() {
+                let type_tag = arg.type_tag();
+                required_types.insert(type_tag);
+            }
+        }
+        for required_type in required_types {
+            self.output_decoding_helper(required_type)?;
+        }
+        Ok(())
+    }
+
+    fn output_decoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
+        use TypeTag::*;
+        let (constructor, expr) = match type_tag {
+            Bool => ("Bool", String::new()),
+            U8 => ("U8", String::new()),
+            U64 => ("U64", String::new()),
+            U128 => ("U128", String::new()),
+            Address => ("Address", String::new()),
+            Vector(type_tag) => match type_tag.as_ref() {
+                U8 => ("U8Vector", String::new()),
+                _ => type_not_allowed(type_tag),
+            },
+            Struct(_) | Signer => type_not_allowed(type_tag),
+        };
         writeln!(
             self.out,
             r#"
-private static Boolean decode_bool_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.Bool)) {{
-        throw new IllegalArgumentException("Was expecting a Bool argument");
+private static {} decode_{}_argument(TransactionArgument arg) {{
+    if (!(arg instanceof TransactionArgument.{})) {{
+        throw new IllegalArgumentException("Was expecting a {} argument");
     }}
-    return ((TransactionArgument.Bool) arg).value;
+    return ((TransactionArgument.{}) arg).value{};
 }}
-
-private static @com.facebook.serde.Unsigned Byte decode_u8_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.U8)) {{
-        throw new IllegalArgumentException("Was expecting a U8 argument");
-    }}
-    return ((TransactionArgument.U8) arg).value;
-}}
-
-private static @com.facebook.serde.Unsigned Long decode_u64_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.U64)) {{
-        throw new IllegalArgumentException("Was expecting a U64 argument");
-    }}
-    return ((TransactionArgument.U64) arg).value;
-}}
-
-private static @com.facebook.serde.Unsigned @com.facebook.serde.Int128 BigInteger decode_u128_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.U128)) {{
-        throw new IllegalArgumentException("Was expecting a U128 argument");
-    }}
-    return ((TransactionArgument.U128) arg).value;
-}}
-
-private static AccountAddress decode_address_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.Address)) {{
-        throw new IllegalArgumentException("Was expecting an Address argument");
-    }}
-    return ((TransactionArgument.Address) arg).value;
-}}
-
-private static Bytes decode_u8vector_argument(TransactionArgument arg) {{
-    if (!(arg instanceof TransactionArgument.U8Vector)) {{
-        throw new IllegalArgumentException("Was expecting a U8Vector argument");
-    }}
-    return ((TransactionArgument.U8Vector) arg).value;
-}}
-"#
+"#,
+            Self::quote_type(type_tag),
+            mangle_type(type_tag),
+            constructor,
+            constructor,
+            constructor,
+            expr,
         )
     }
 
