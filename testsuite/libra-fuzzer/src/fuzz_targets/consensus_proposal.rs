@@ -9,10 +9,6 @@ use libra_proptest_helpers::ValueGenerator;
 pub struct ConsensusProposal;
 
 impl FuzzTargetImpl for ConsensusProposal {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Consensus proposal messages"
     }

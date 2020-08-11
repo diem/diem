@@ -14,10 +14,6 @@ use rand::RngCore;
 pub struct StorageSaveBlocks;
 
 impl FuzzTargetImpl for StorageSaveBlocks {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Storage save blocks"
     }

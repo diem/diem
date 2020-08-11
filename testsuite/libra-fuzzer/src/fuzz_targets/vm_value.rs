@@ -13,10 +13,6 @@ use std::io::Cursor;
 pub struct ValueTarget;
 
 impl FuzzTargetImpl for ValueTarget {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "VM values + types (custom deserializer)"
     }

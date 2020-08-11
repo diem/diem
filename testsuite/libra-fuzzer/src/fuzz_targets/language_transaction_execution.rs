@@ -12,10 +12,6 @@ use proptest::{collection::vec, test_runner};
 pub struct LanguageTransactionExecution;
 
 impl FuzzTargetImpl for LanguageTransactionExecution {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Language execute randomly generated transactions"
     }

@@ -9,10 +9,6 @@ use libra_proptest_helpers::ValueGenerator;
 pub struct JsonRpcSubmitTransactionRequest;
 
 impl FuzzTargetImpl for JsonRpcSubmitTransactionRequest {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "JSON RPC submit transaction request"
     }

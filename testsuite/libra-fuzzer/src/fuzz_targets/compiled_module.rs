@@ -10,10 +10,6 @@ use vm::file_format::{CompiledModule, CompiledModuleMut};
 pub struct CompiledModuleTarget;
 
 impl FuzzTargetImpl for CompiledModuleTarget {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "VM CompiledModule (custom deserializer)"
     }

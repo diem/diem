@@ -10,10 +10,6 @@ use proptest::{collection::vec, prelude::*};
 pub struct StorageSchemaDecode;
 
 impl FuzzTargetImpl for StorageSchemaDecode {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Storage schemas do not panic on corrupted bytes."
     }

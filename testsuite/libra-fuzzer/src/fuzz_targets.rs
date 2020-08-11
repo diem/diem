@@ -6,16 +6,6 @@ use anyhow::{format_err, Result};
 use once_cell::sync::Lazy;
 use std::{collections::BTreeMap, env};
 
-/// Convenience macro to return the module name.
-macro_rules! module_name {
-    () => {
-        module_path!()
-            .rsplit("::")
-            .next()
-            .expect("module path must have at least one component")
-    };
-}
-
 // List fuzz target modules here.
 mod compiled_module;
 mod consensus_proposal;

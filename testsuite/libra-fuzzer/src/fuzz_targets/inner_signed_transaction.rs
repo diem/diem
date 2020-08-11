@@ -10,10 +10,6 @@ use proptest::prelude::*;
 pub struct SignedTransactionTarget;
 
 impl FuzzTargetImpl for SignedTransactionTarget {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "SignedTransaction (LCS deserializer)"
     }

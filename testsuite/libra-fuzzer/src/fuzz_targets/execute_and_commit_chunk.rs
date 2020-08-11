@@ -10,10 +10,6 @@ use rand::RngCore;
 pub struct ExecuteAndCommitChunk;
 
 impl FuzzTargetImpl for ExecuteAndCommitChunk {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "state-sync > executor::execute_and_commit_chunk"
     }

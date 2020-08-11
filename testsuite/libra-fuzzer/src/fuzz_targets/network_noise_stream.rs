@@ -9,10 +9,6 @@ use network::noise::fuzzing::{fuzz_post_handshake, generate_corpus};
 pub struct NetworkNoiseStream;
 
 impl FuzzTargetImpl for NetworkNoiseStream {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Network Noise crate stream"
     }

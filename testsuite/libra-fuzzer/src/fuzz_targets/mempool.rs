@@ -14,10 +14,6 @@ use proptest::{
 pub struct MempoolIncomingTransactions;
 
 impl FuzzTargetImpl for MempoolIncomingTransactions {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "Transactions submitted to mempool"
     }

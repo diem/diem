@@ -9,10 +9,6 @@ use network::protocols::rpc;
 pub struct RpcInboundRequest;
 
 impl FuzzTargetImpl for RpcInboundRequest {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "P2P Network Inbound RPC Request"
     }

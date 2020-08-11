@@ -12,10 +12,6 @@ use state_synchronizer::fuzzing::{state_sync_msg_strategy, test_state_sync_msg_f
 pub struct StateSyncMsg;
 
 impl FuzzTargetImpl for StateSyncMsg {
-    fn name(&self) -> &'static str {
-        module_name!()
-    }
-
     fn description(&self) -> &'static str {
         "State sync network message"
     }
