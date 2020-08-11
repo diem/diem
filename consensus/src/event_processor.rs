@@ -301,7 +301,9 @@ impl<T: Payload> EventProcessor<T> {
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
     /// proposal, process_proposed_block would execute and decide whether to vote for it.
     pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
+        info!("zhuolun proposal size: {:?}", mem::size_of_val(&proposal_msg));
         if let Some(block) = self.pre_process_proposal(proposal_msg).await {
+            info!("zhuolun block size: {:?}", mem::size_of_val(&block));
             self.process_proposed_block(block).await
         }
     }
@@ -521,7 +523,6 @@ impl<T: Payload> EventProcessor<T> {
     /// position.
     async fn process_proposed_block(&mut self, proposal: Block<T>) {
         debug!("EventProcessor: process_proposed_block {}", proposal);
-        info!("daniel block size: {:?}", mem::size_of_val(&proposal));
         if let Some(time_to_receival) =
             duration_since_epoch().checked_sub(Duration::from_micros(proposal.timestamp_usecs()))
         {
