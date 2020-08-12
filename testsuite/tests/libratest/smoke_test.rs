@@ -7,7 +7,9 @@ use debug_interface::NodeDebugClient;
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig, SecureBackend, WaypointConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform};
 use libra_genesis_tool::config_builder::FullnodeType;
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY};
+use libra_global_constants::{
+    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
+};
 use libra_json_rpc::views::{ScriptView, TransactionDataView, VMStatusView as JsonVMStatusView};
 use libra_key_manager::{
     self,
@@ -34,7 +36,7 @@ use regex::Regex;
 use rust_decimal::Decimal;
 use std::{
     collections::BTreeMap,
-    convert::TryInto,
+    convert::{TryFrom, TryInto},
     fs,
     fs::File,
     io::{self, Write},
@@ -1645,7 +1647,8 @@ fn test_operator_key_rotation_recovery() {
     // Load validator's on disk storage
     let backend = load_backend_storage(&&node_config);
 
-    let (txn_ctx, _) = op_tool.rotate_operator_key(&backend).unwrap();
+    // Rotate the operator key
+    let (txn_ctx, new_operator_key) = op_tool.rotate_operator_key(&backend).unwrap();
     let mut client = swarm.get_validator_client(0, None);
     client
         .wait_for_transaction(txn_ctx.address, txn_ctx.sequence_number + 1)
@@ -1658,10 +1661,24 @@ fn test_operator_key_rotation_recovery() {
     let vm_status = result.unwrap();
     assert_eq!(VMStatusView::Executed, vm_status);
 
+    // Verify that the operator key was updated on-chain
+    let mut storage: Storage = (&backend).try_into().unwrap();
+    let operator_account_string = storage
+        .get(OPERATOR_ACCOUNT)
+        .unwrap()
+        .value
+        .string()
+        .unwrap();
+    let operator_account = AccountAddress::from_str(&operator_account_string).unwrap();
+    let account_resource = op_tool.account_resource(operator_account).unwrap();
+    assert_eq!(
+        AuthenticationKey::ed25519(&new_operator_key),
+        AuthenticationKey::try_from(account_resource.authentication_key()).unwrap()
+    );
+
     // Rotate the operator key in storage manually and perform another rotation using the op tool.
     // Here, we expected the op_tool to see that the operator key in storage doesn't match the one
     // on-chain, and thus it should simply forward a transaction to the blockchain.
-    let mut storage: Storage = (&backend).try_into().unwrap();
     let rotated_operator_key = storage.rotate_key(OPERATOR_KEY).unwrap();
     let (txn_ctx, new_operator_key) = op_tool.rotate_operator_key(&backend).unwrap();
     assert_eq!(rotated_operator_key, new_operator_key);
@@ -1675,6 +1692,13 @@ fn test_operator_key_rotation_recovery() {
         .unwrap();
     let vm_status = result.unwrap();
     assert_eq!(VMStatusView::Executed, vm_status);
+
+    // Verify that the operator key was updated on-chain
+    let account_resource = op_tool.account_resource(operator_account).unwrap();
+    assert_eq!(
+        AuthenticationKey::ed25519(&new_operator_key),
+        AuthenticationKey::try_from(account_resource.authentication_key()).unwrap()
+    );
 }
 
 #[test]

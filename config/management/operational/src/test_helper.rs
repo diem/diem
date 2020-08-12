@@ -12,7 +12,9 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{account_address::AccountAddress, chain_id::ChainId};
+use libra_types::{
+    account_address::AccountAddress, account_config::AccountResource, chain_id::ChainId,
+};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "libra-operational-tool";
@@ -26,6 +28,25 @@ pub struct OperationalTool {
 impl OperationalTool {
     pub fn new(host: String, chain_id: ChainId) -> OperationalTool {
         OperationalTool { host, chain_id }
+    }
+
+    pub fn account_resource(
+        &self,
+        account_address: AccountAddress,
+    ) -> Result<AccountResource, Error> {
+        let args = format!(
+            "
+                {command}
+                --json-server {json_server}
+                --account-address {account_address}
+            ",
+            command = command(TOOL_NAME, CommandName::AccountResource),
+            json_server = self.host,
+            account_address = account_address,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.account_resource()
     }
 
     pub fn set_validator_config(
