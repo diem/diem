@@ -744,7 +744,8 @@ Spec version of
 
 
 
-<pre><code><b>aborts_if</b> <b>false</b>;
+<pre><code>pragma verify = <b>false</b>;
+<b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(addr);
 </code></pre>
 
@@ -776,7 +777,8 @@ Spec version of
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque = <b>true</b>;
 <b>include</b> <a href="#0x1_DualAttestation_DualAttestationRequiredAbortsIf">DualAttestationRequiredAbortsIf</a>&lt;Token&gt;;
 <b>ensures</b> result == <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
 </code></pre>
@@ -871,7 +873,8 @@ Uninterpreted function for
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque = <b>true</b>;
 <b>include</b> <a href="#0x1_DualAttestation_AssertSignatureValidAbortsIf">AssertSignatureValidAbortsIf</a>;
 </code></pre>
 
@@ -929,7 +932,8 @@ Returns true if signature is valid.
 
 
 
-<pre><code>pragma opaque;
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque;
 <b>include</b> <a href="#0x1_DualAttestation_AssertPaymentOkAbortsIf">AssertPaymentOkAbortsIf</a>&lt;Currency&gt;;
 </code></pre>
 

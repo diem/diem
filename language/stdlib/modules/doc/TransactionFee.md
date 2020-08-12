@@ -370,6 +370,11 @@ Returns the transaction fee balance for CoinType.
 
 
 
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
 > TODO(emmazzz): We are not able to specify formally the conditions
 involving FixedPoint32. Here are some informal specifications:
 (1) aborts if CoinType is LBR and the reserve does not have enough

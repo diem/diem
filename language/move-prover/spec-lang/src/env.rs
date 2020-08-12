@@ -1896,6 +1896,11 @@ impl<'env> FunctionEnv<'env> {
         view.is_native() || self.is_pragma_true(INTRINSIC_PRAGMA, || false)
     }
 
+    /// Returns true if this function is opaque.
+    pub fn is_opaque(&self) -> bool {
+        self.is_pragma_true(OPAQUE_PRAGMA, || false)
+    }
+
     /// Returns true if this function is public.
     pub fn is_public(&self) -> bool {
         let view = self.definition_view();

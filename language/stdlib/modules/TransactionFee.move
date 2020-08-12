@@ -145,6 +145,8 @@ module TransactionFee {
     }
 
     spec fun burn_fees {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
         /// > TODO(emmazzz): We are not able to specify formally the conditions
         /// involving FixedPoint32. Here are some informal specifications:
         /// (1) aborts if CoinType is LBR and the reserve does not have enough

@@ -43,6 +43,10 @@ module RecoveryAddress {
             RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
         )
     }
+    spec fun publish {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
+    }
 
     /// Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either
     /// `recovery_address` or `to_recover`.
@@ -108,6 +112,10 @@ module RecoveryAddress {
             &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps,
             to_recover
         );
+    }
+    spec fun add_rotation_capability {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
     }
 
     // ****************** SPECIFICATIONS *******************

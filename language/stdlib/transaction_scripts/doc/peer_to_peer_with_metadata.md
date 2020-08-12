@@ -167,10 +167,9 @@ withdrawal limits.
 
 
 
+<pre><code>pragma verify = <b>false</b>;
 <a name="SCRIPT_payer_addr$2"></a>
-
-
-<pre><code><b>let</b> payer_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer);
+<b>let</b> payer_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(payer);
 </code></pre>
 
 

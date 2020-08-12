@@ -531,7 +531,7 @@ impl<'env> ModuleTranslator<'env> {
         for entry_point in entries {
             self.generate_function_sig(func_target, entry_point);
             if opaque {
-                emit!(self.writer, ";");
+                emitln!(self.writer, ";\nmodifies $abort_flag, $abort_code;");
             }
             let st = self.new_spec_translator(func_target.clone(), true);
             let distribution = self.generate_function_spec(&st, entry_point);
@@ -909,10 +909,14 @@ impl<'env> ModuleTranslator<'env> {
                 loc.span().start(),
             )
         };
-        let propagate_abort_from_call = || {
-            // In case of a call, we do not track the abortion point, as we want to see the
-            // abort on the instruction which caused it.
-            "if ($abort_flag) {\n  goto Abort;\n}".to_string()
+        let propagate_abort_from_call = |callee_target: &FunctionTarget<'_>| {
+            if callee_target.is_native() || callee_target.is_opaque() {
+                propagate_abort()
+            } else {
+                // In case of a call to an inlined function, we do not track the abortion point,
+                // as we want to see the abort on the primitive which caused it.
+                "if ($abort_flag) {\n  goto Abort;\n}".to_string()
+            }
         };
 
         // Translate the bytecode instruction.
@@ -1190,7 +1194,7 @@ impl<'env> ModuleTranslator<'env> {
                             // Assume that calls to this function do not abort
                             emitln!(self.writer, "assume $abort_flag == false;");
                         } else {
-                            emitln!(self.writer, &propagate_abort_from_call());
+                            emitln!(self.writer, &propagate_abort_from_call(&callee_target));
                         }
                         for s in &dest_type_assumptions {
                             emitln!(self.writer, s);

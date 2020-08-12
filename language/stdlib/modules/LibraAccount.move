@@ -287,6 +287,8 @@ module LibraAccount {
         );
     }
     spec fun deposit {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
         include DepositAbortsIf<Token>{amount: to_deposit.value};
         include DepositEnsures<Token>{amount: to_deposit.value};
     }
@@ -350,6 +352,10 @@ module LibraAccount {
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
     }
+    spec fun cancel_burn {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
+    }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
     fun withdraw_from_balance<Token>(
@@ -375,6 +381,8 @@ module LibraAccount {
         Libra::withdraw(coin, amount)
     }
     spec fun withdraw_from_balance {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
         include WithdrawFromBalanceAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>;
     }
@@ -668,6 +676,10 @@ module LibraAccount {
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
+    spec fun create_parent_vasp_account {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
+    }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `Token`. If
@@ -688,6 +700,10 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
+    }
+    spec fun create_child_vasp_account {
+        // TODO: reactivate after aborts_if soundness fix.
+        pragma verify = false;
     }
 
     ///////////////////////////////////////////////////////////////////////////

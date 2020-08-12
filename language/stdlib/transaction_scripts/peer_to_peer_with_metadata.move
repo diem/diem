@@ -58,6 +58,8 @@ fun peer_to_peer_with_metadata<Currency>(
 }
 
 spec fun peer_to_peer_with_metadata {
+    // TODO: reactivate after aborts_if soundness fix.
+    pragma verify = false;
     let payer_addr = Signer::spec_address_of(payer);
 
     /// ## Post conditions
