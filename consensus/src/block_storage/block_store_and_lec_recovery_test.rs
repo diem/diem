@@ -13,10 +13,7 @@ use execution_correctness::{ExecutionCorrectness, ExecutionCorrectnessManager};
 use executor_test_helpers::start_storage_service;
 use executor_types::ExecutedTrees;
 use futures::channel::mpsc;
-use libra_config::{
-    config::{NodeConfig, PersistableConfig},
-    utils,
-};
+use libra_config::config::{NodeConfig, PersistableConfig};
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::validator_signer::ValidatorSigner;
