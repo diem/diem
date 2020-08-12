@@ -6,6 +6,11 @@
 ### Table of Contents
 
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
+-  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
+-  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
+-  [Const `ENOT_LIBRA_ROOT`](#0x1_SlidingNonce_ENOT_LIBRA_ROOT)
+-  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
@@ -53,6 +58,66 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 
 </details>
+
+<a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
+
+## Const `ENONCE_TOO_OLD`
+
+The nonce is too old and impossible to ensure whether it's duplicated or not
+
+
+<pre><code><b>const</b> ENONCE_TOO_OLD: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENONCE_TOO_NEW"></a>
+
+## Const `ENONCE_TOO_NEW`
+
+The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
+
+
+<pre><code><b>const</b> ENONCE_TOO_NEW: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENONCE_ALREADY_RECORDED"></a>
+
+## Const `ENONCE_ALREADY_RECORDED`
+
+The nonce was already recorded previously
+
+
+<pre><code><b>const</b> ENONCE_ALREADY_RECORDED: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENOT_LIBRA_ROOT"></a>
+
+## Const `ENOT_LIBRA_ROOT`
+
+Calling account doesn't have sufficient privileges to create a sliding nonce resource
+
+
+<pre><code><b>const</b> ENOT_LIBRA_ROOT: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_NONCE_MASK_SIZE"></a>
+
+## Const `NONCE_MASK_SIZE`
+
+Size of SlidingNonce::nonce_mask in bits.
+
+
+<pre><code><b>const</b> NONCE_MASK_SIZE: u64 = 128;
+</code></pre>
+
+
 
 <a name="0x1_SlidingNonce_record_nonce_or_abort"></a>
 

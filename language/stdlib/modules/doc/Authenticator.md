@@ -6,6 +6,9 @@
 ### Table of Contents
 
 -  [Struct `MultiEd25519PublicKey`](#0x1_Authenticator_MultiEd25519PublicKey)
+-  [Const `EZERO_THRESHOLD`](#0x1_Authenticator_EZERO_THRESHOLD)
+-  [Const `ENOT_ENOUGH_KEYS_FOR_THRESHOLD`](#0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD)
+-  [Const `ENUM_KEYS_ABOVE_MAX_THRESHOLD`](#0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD)
 -  [Function `create_multi_ed25519`](#0x1_Authenticator_create_multi_ed25519)
 -  [Function `ed25519_authentication_key`](#0x1_Authenticator_ed25519_authentication_key)
 -  [Function `multi_ed25519_authentication_key`](#0x1_Authenticator_multi_ed25519_authentication_key)
@@ -48,6 +51,39 @@
 
 
 </details>
+
+<a name="0x1_Authenticator_EZERO_THRESHOLD"></a>
+
+## Const `EZERO_THRESHOLD`
+
+
+
+<pre><code><b>const</b> EZERO_THRESHOLD: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_ENOT_ENOUGH_KEYS_FOR_THRESHOLD"></a>
+
+## Const `ENOT_ENOUGH_KEYS_FOR_THRESHOLD`
+
+
+
+<pre><code><b>const</b> ENOT_ENOUGH_KEYS_FOR_THRESHOLD: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_ENUM_KEYS_ABOVE_MAX_THRESHOLD"></a>
+
+## Const `ENUM_KEYS_ABOVE_MAX_THRESHOLD`
+
+
+
+<pre><code><b>const</b> ENUM_KEYS_ABOVE_MAX_THRESHOLD: u64 = 2;
+</code></pre>
+
+
 
 <a name="0x1_Authenticator_create_multi_ed25519"></a>
 

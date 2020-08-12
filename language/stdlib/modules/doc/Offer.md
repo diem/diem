@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `Offer`](#0x1_Offer_Offer)
+-  [Const `EOFFER_DNE_FOR_ACCOUNT`](#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT)
 -  [Function `create`](#0x1_Offer_create)
 -  [Function `redeem`](#0x1_Offer_redeem)
 -  [Function `exists_at`](#0x1_Offer_exists_at)
@@ -55,6 +56,17 @@
 
 
 </details>
+
+<a name="0x1_Offer_EOFFER_DNE_FOR_ACCOUNT"></a>
+
+## Const `EOFFER_DNE_FOR_ACCOUNT`
+
+
+
+<pre><code><b>const</b> EOFFER_DNE_FOR_ACCOUNT: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_Offer_create"></a>
 

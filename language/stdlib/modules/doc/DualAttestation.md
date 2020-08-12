@@ -7,6 +7,17 @@
 
 -  [Resource `Credential`](#0x1_DualAttestation_Credential)
 -  [Resource `Limit`](#0x1_DualAttestation_Limit)
+-  [Const `MAX_U64`](#0x1_DualAttestation_MAX_U64)
+-  [Const `ECREDENTIAL`](#0x1_DualAttestation_ECREDENTIAL)
+-  [Const `ELIMIT`](#0x1_DualAttestation_ELIMIT)
+-  [Const `EINVALID_PUBLIC_KEY`](#0x1_DualAttestation_EINVALID_PUBLIC_KEY)
+-  [Const `EMALFORMED_METADATA_SIGNATURE`](#0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE)
+-  [Const `EINVALID_METADATA_SIGNATURE`](#0x1_DualAttestation_EINVALID_METADATA_SIGNATURE)
+-  [Const `EPAYEE_COMPLIANCE_KEY_NOT_SET`](#0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET)
+-  [Const `INITIAL_DUAL_ATTESTATION_LIMIT`](#0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT)
+-  [Const `DOMAIN_SEPARATOR`](#0x1_DualAttestation_DOMAIN_SEPARATOR)
+-  [Const `ONE_YEAR`](#0x1_DualAttestation_ONE_YEAR)
+-  [Const `U64_MAX`](#0x1_DualAttestation_U64_MAX)
 -  [Function `publish_credential`](#0x1_DualAttestation_publish_credential)
 -  [Function `rotate_base_url`](#0x1_DualAttestation_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_rotate_compliance_public_key)
@@ -129,6 +140,136 @@ Struct to store the limit on-chain
 
 
 </details>
+
+<a name="0x1_DualAttestation_MAX_U64"></a>
+
+## Const `MAX_U64`
+
+
+
+<pre><code><b>const</b> MAX_U64: u128 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_ECREDENTIAL"></a>
+
+## Const `ECREDENTIAL`
+
+A credential is not or already published.
+
+
+<pre><code><b>const</b> ECREDENTIAL: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_ELIMIT"></a>
+
+## Const `ELIMIT`
+
+A limit is not or already published.
+
+
+<pre><code><b>const</b> ELIMIT: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EINVALID_PUBLIC_KEY"></a>
+
+## Const `EINVALID_PUBLIC_KEY`
+
+Cannot parse this as an ed25519 public key
+
+
+<pre><code><b>const</b> EINVALID_PUBLIC_KEY: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EMALFORMED_METADATA_SIGNATURE"></a>
+
+## Const `EMALFORMED_METADATA_SIGNATURE`
+
+Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
+
+
+<pre><code><b>const</b> EMALFORMED_METADATA_SIGNATURE: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EINVALID_METADATA_SIGNATURE"></a>
+
+## Const `EINVALID_METADATA_SIGNATURE`
+
+Signature does not match message and public key
+
+
+<pre><code><b>const</b> EINVALID_METADATA_SIGNATURE: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_EPAYEE_COMPLIANCE_KEY_NOT_SET"></a>
+
+## Const `EPAYEE_COMPLIANCE_KEY_NOT_SET`
+
+The recipient of a dual attestation payment needs to set a compliance public key
+
+
+<pre><code><b>const</b> EPAYEE_COMPLIANCE_KEY_NOT_SET: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_INITIAL_DUAL_ATTESTATION_LIMIT"></a>
+
+## Const `INITIAL_DUAL_ATTESTATION_LIMIT`
+
+Value of the dual attestation limit at genesis
+
+
+<pre><code><b>const</b> INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_DOMAIN_SEPARATOR"></a>
+
+## Const `DOMAIN_SEPARATOR`
+
+Suffix of every signed dual attestation message
+
+
+<pre><code><b>const</b> DOMAIN_SEPARATOR: vector&lt;u8&gt; = [64, 64, 36, 36, 76, 73, 66, 82, 65, 95, 65, 84, 84, 69, 83, 84, 36, 36, 64, 64];
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_ONE_YEAR"></a>
+
+## Const `ONE_YEAR`
+
+A year in microseconds
+
+
+<pre><code><b>const</b> ONE_YEAR: u64 = 31540000000000;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_U64_MAX"></a>
+
+## Const `U64_MAX`
+
+
+
+<pre><code><b>const</b> U64_MAX: u64 = 18446744073709551615;
+</code></pre>
+
+
 
 <a name="0x1_DualAttestation_publish_credential"></a>
 

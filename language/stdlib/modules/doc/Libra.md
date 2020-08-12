@@ -16,6 +16,20 @@
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
 -  [Resource `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_Libra_Preburn)
+-  [Const `MAX_U64`](#0x1_Libra_MAX_U64)
+-  [Const `MAX_U128`](#0x1_Libra_MAX_U128)
+-  [Const `EBURN_CAPABILITY`](#0x1_Libra_EBURN_CAPABILITY)
+-  [Const `ECURRENCY_INFO`](#0x1_Libra_ECURRENCY_INFO)
+-  [Const `EPREBURN`](#0x1_Libra_EPREBURN)
+-  [Const `EPREBURN_OCCUPIED`](#0x1_Libra_EPREBURN_OCCUPIED)
+-  [Const `EPREBURN_EMPTY`](#0x1_Libra_EPREBURN_EMPTY)
+-  [Const `EMINTING_NOT_ALLOWED`](#0x1_Libra_EMINTING_NOT_ALLOWED)
+-  [Const `EIS_SYNTHETIC_CURRENCY`](#0x1_Libra_EIS_SYNTHETIC_CURRENCY)
+-  [Const `ECOIN`](#0x1_Libra_ECOIN)
+-  [Const `EDESTRUCTION_OF_NONZERO_COIN`](#0x1_Libra_EDESTRUCTION_OF_NONZERO_COIN)
+-  [Const `EREGISTRATION_PRIVILEGE`](#0x1_Libra_EREGISTRATION_PRIVILEGE)
+-  [Const `EMINT_CAPABILITY`](#0x1_Libra_EMINT_CAPABILITY)
+-  [Const `EAMOUNT_EXCEEDS_COIN_VALUE`](#0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE)
 -  [Function `initialize`](#0x1_Libra_initialize)
 -  [Function `publish_burn_capability`](#0x1_Libra_publish_burn_capability)
 -  [Function `mint`](#0x1_Libra_mint)
@@ -672,6 +686,161 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 
 </details>
+
+<a name="0x1_Libra_MAX_U64"></a>
+
+## Const `MAX_U64`
+
+TODO(wrwg): This should be provided somewhere centrally in the framework.
+
+
+<pre><code><b>const</b> MAX_U64: u64 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_Libra_MAX_U128"></a>
+
+## Const `MAX_U128`
+
+
+
+<pre><code><b>const</b> MAX_U128: u128 = 340282366920938463463374607431768211455;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EBURN_CAPABILITY"></a>
+
+## Const `EBURN_CAPABILITY`
+
+
+
+<pre><code><b>const</b> EBURN_CAPABILITY: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Libra_ECURRENCY_INFO"></a>
+
+## Const `ECURRENCY_INFO`
+
+
+
+<pre><code><b>const</b> ECURRENCY_INFO: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EPREBURN"></a>
+
+## Const `EPREBURN`
+
+
+
+<pre><code><b>const</b> EPREBURN: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EPREBURN_OCCUPIED"></a>
+
+## Const `EPREBURN_OCCUPIED`
+
+
+
+<pre><code><b>const</b> EPREBURN_OCCUPIED: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EPREBURN_EMPTY"></a>
+
+## Const `EPREBURN_EMPTY`
+
+
+
+<pre><code><b>const</b> EPREBURN_EMPTY: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EMINTING_NOT_ALLOWED"></a>
+
+## Const `EMINTING_NOT_ALLOWED`
+
+
+
+<pre><code><b>const</b> EMINTING_NOT_ALLOWED: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EIS_SYNTHETIC_CURRENCY"></a>
+
+## Const `EIS_SYNTHETIC_CURRENCY`
+
+
+
+<pre><code><b>const</b> EIS_SYNTHETIC_CURRENCY: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Libra_ECOIN"></a>
+
+## Const `ECOIN`
+
+
+
+<pre><code><b>const</b> ECOIN: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EDESTRUCTION_OF_NONZERO_COIN"></a>
+
+## Const `EDESTRUCTION_OF_NONZERO_COIN`
+
+
+
+<pre><code><b>const</b> EDESTRUCTION_OF_NONZERO_COIN: u64 = 8;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EREGISTRATION_PRIVILEGE"></a>
+
+## Const `EREGISTRATION_PRIVILEGE`
+
+
+
+<pre><code><b>const</b> EREGISTRATION_PRIVILEGE: u64 = 9;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EMINT_CAPABILITY"></a>
+
+## Const `EMINT_CAPABILITY`
+
+
+
+<pre><code><b>const</b> EMINT_CAPABILITY: u64 = 10;
+</code></pre>
+
+
+
+<a name="0x1_Libra_EAMOUNT_EXCEEDS_COIN_VALUE"></a>
+
+## Const `EAMOUNT_EXCEEDS_COIN_VALUE`
+
+
+
+<pre><code><b>const</b> EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 11;
+</code></pre>
+
+
 
 <a name="0x1_Libra_initialize"></a>
 

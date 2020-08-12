@@ -7,6 +7,11 @@
 
 -  [Resource `LibraWriteSetManager`](#0x1_LibraWriteSetManager_LibraWriteSetManager)
 -  [Struct `UpgradeEvent`](#0x1_LibraWriteSetManager_UpgradeEvent)
+-  [Const `ELIBRA_WRITE_SET_MANAGER`](#0x1_LibraWriteSetManager_ELIBRA_WRITE_SET_MANAGER)
+-  [Const `EPROLOGUE_INVALID_WRITESET_SENDER`](#0x1_LibraWriteSetManager_EPROLOGUE_INVALID_WRITESET_SENDER)
+-  [Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraWriteSetManager_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY)
+-  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD)
+-  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
 -  [Function `initialize`](#0x1_LibraWriteSetManager_initialize)
 -  [Function `prologue`](#0x1_LibraWriteSetManager_prologue)
 -  [Function `epilogue`](#0x1_LibraWriteSetManager_epilogue)
@@ -70,6 +75,61 @@
 
 
 </details>
+
+<a name="0x1_LibraWriteSetManager_ELIBRA_WRITE_SET_MANAGER"></a>
+
+## Const `ELIBRA_WRITE_SET_MANAGER`
+
+
+
+<pre><code><b>const</b> ELIBRA_WRITE_SET_MANAGER: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraWriteSetManager_EPROLOGUE_INVALID_WRITESET_SENDER"></a>
+
+## Const `EPROLOGUE_INVALID_WRITESET_SENDER`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_INVALID_WRITESET_SENDER: u64 = 33;
+</code></pre>
+
+
+
+<a name="0x1_LibraWriteSetManager_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY"></a>
+
+## Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD"></a>
+
+## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW"></a>
+
+## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+</code></pre>
+
+
 
 <a name="0x1_LibraWriteSetManager_initialize"></a>
 

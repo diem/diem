@@ -6,6 +6,12 @@
 ### Table of Contents
 
 -  [Resource `RecoveryAddress`](#0x1_RecoveryAddress_RecoveryAddress)
+-  [Const `ENOT_A_VASP`](#0x1_RecoveryAddress_ENOT_A_VASP)
+-  [Const `EKEY_ROTATION_DEPENDENCY_CYCLE`](#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE)
+-  [Const `ECANNOT_ROTATE_KEY`](#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY)
+-  [Const `EINVALID_KEY_ROTATION_DELEGATION`](#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION)
+-  [Const `EACCOUNT_NOT_RECOVERABLE`](#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE)
+-  [Const `ERECOVERY_ADDRESS`](#0x1_RecoveryAddress_ERECOVERY_ADDRESS)
 -  [Function `publish`](#0x1_RecoveryAddress_publish)
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
@@ -62,6 +68,72 @@ recover one of accounts in
 
 
 </details>
+
+<a name="0x1_RecoveryAddress_ENOT_A_VASP"></a>
+
+## Const `ENOT_A_VASP`
+
+
+
+<pre><code><b>const</b> ENOT_A_VASP: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE"></a>
+
+## Const `EKEY_ROTATION_DEPENDENCY_CYCLE`
+
+
+
+<pre><code><b>const</b> EKEY_ROTATION_DEPENDENCY_CYCLE: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_ECANNOT_ROTATE_KEY"></a>
+
+## Const `ECANNOT_ROTATE_KEY`
+
+
+
+<pre><code><b>const</b> ECANNOT_ROTATE_KEY: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION"></a>
+
+## Const `EINVALID_KEY_ROTATION_DELEGATION`
+
+
+
+<pre><code><b>const</b> EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE"></a>
+
+## Const `EACCOUNT_NOT_RECOVERABLE`
+
+
+
+<pre><code><b>const</b> EACCOUNT_NOT_RECOVERABLE: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_ERECOVERY_ADDRESS"></a>
+
+## Const `ERECOVERY_ADDRESS`
+
+
+
+<pre><code><b>const</b> ERECOVERY_ADDRESS: u64 = 5;
+</code></pre>
+
+
 
 <a name="0x1_RecoveryAddress_publish"></a>
 

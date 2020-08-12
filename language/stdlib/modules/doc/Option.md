@@ -6,6 +6,8 @@
 ### Table of Contents
 
 -  [Struct `Option`](#0x1_Option_Option)
+-  [Const `EOPTION_IS_SET`](#0x1_Option_EOPTION_IS_SET)
+-  [Const `EOPTION_NOT_SET`](#0x1_Option_EOPTION_NOT_SET)
 -  [Function `none`](#0x1_Option_none)
 -  [Function `some`](#0x1_Option_some)
 -  [Function `is_none`](#0x1_Option_is_none)
@@ -72,6 +74,28 @@ zero or one because Move bytecode does not have ADTs.
 
 
 </details>
+
+<a name="0x1_Option_EOPTION_IS_SET"></a>
+
+## Const `EOPTION_IS_SET`
+
+
+
+<pre><code><b>const</b> EOPTION_IS_SET: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Option_EOPTION_NOT_SET"></a>
+
+## Const `EOPTION_NOT_SET`
+
+
+
+<pre><code><b>const</b> EOPTION_NOT_SET: u64 = 1;
+</code></pre>
+
+
 
 <a name="0x1_Option_none"></a>
 

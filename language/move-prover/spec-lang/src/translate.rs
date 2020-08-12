@@ -44,9 +44,10 @@ use crate::{
         SpecVarDecl, Value,
     },
     env::{
-        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc, NodeId,
-        QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
-        TypeParameter, CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
+        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc,
+        NamedConstantData, NamedConstantId, NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId,
+        StructData, StructId, TypeConstraint, TypeParameter, CONDITION_GLOBAL_PROP,
+        CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -3415,10 +3416,26 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             })
             .collect();
+        let named_constants: BTreeMap<NamedConstantId, NamedConstantData> = self
+            .parent
+            .const_table
+            .iter()
+            .filter(|(name, _)| name.module_name == self.module_name)
+            .map(|(name, const_entry)| {
+                let ConstEntry { loc, value, ty } = const_entry.clone();
+                (
+                    NamedConstantId::new(name.symbol),
+                    self.parent
+                        .env
+                        .create_named_constant_data(name.symbol, loc, ty, value),
+                )
+            })
+            .collect();
         self.parent.env.add(
             loc,
             module,
             source_map,
+            named_constants,
             struct_data,
             function_data,
             std::mem::take(&mut self.spec_vars),

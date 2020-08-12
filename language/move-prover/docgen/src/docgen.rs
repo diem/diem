@@ -15,8 +15,8 @@ use spec_lang::{
     code_writer::CodeWriter,
     emit, emitln,
     env::{
-        FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, Parameter, StructEnv, TypeConstraint,
-        TypeParameter,
+        FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter, StructEnv,
+        TypeConstraint, TypeParameter,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -33,6 +33,7 @@ const KEYWORDS: &[&str] = &[
     "acquires",
     "as",
     "break",
+    "const",
     "continue",
     "copy",
     "copyable",
@@ -336,6 +337,13 @@ impl<'env> Docgen<'env> {
             }
         }
 
+        for c in module_env
+            .get_named_constants()
+            .sorted_by(|a, b| Ord::cmp(&a.get_loc(), &b.get_loc()))
+        {
+            self.gen_named_constant(&c);
+        }
+
         let funs = module_env
             .get_functions()
             .filter(|f| self.options.include_private_fun || f.is_public())
@@ -389,6 +397,22 @@ impl<'env> Docgen<'env> {
         writer.process_result(|s| self.output.insert(module_env.get_id(), s.to_owned()));
     }
 
+    /// Generates documentation for a named constant
+    fn gen_named_constant(&self, const_env: &NamedConstantEnv<'_>) {
+        let name = const_env.get_name();
+        self.section_header(
+            &self.named_constant_title(const_env),
+            &self.label_for_module_item(&const_env.module_env, name),
+        );
+        self.increment_section_nest();
+        self.doc_text(&const_env.module_env, const_env.get_doc());
+        self.code_block(
+            &const_env.module_env,
+            &self.named_constant_display(const_env),
+        );
+        self.decrement_section_nest();
+    }
+
     /// Generates documentation for a struct.
     fn gen_struct(&self, spec_block_map: &SpecBlockMap<'_>, struct_env: &StructEnv<'_>) {
         let name = struct_env.get_name();
@@ -422,6 +446,11 @@ impl<'env> Docgen<'env> {
         self.decrement_section_nest();
     }
 
+    /// Returns "Const `N`"
+    fn named_constant_title(&self, const_env: &NamedConstantEnv<'_>) -> String {
+        format!("Const `{}`", self.name_string(const_env.get_name()))
+    }
+
     /// Returns "Struct `N`" or "Resource `N`".
     fn struct_title(&self, struct_env: &StructEnv<'_>) -> String {
         format!(
@@ -432,6 +461,20 @@ impl<'env> Docgen<'env> {
                 "Struct"
             },
             self.name_string(struct_env.get_name())
+        )
+    }
+
+    /// Generates declaration for named constant
+    fn named_constant_display(&self, const_env: &NamedConstantEnv<'_>) -> String {
+        let name = self.name_string(const_env.get_name());
+        format!(
+            "const {}: {} = {};",
+            name,
+            const_env.get_type().display(&TypeDisplayContext::WithEnv {
+                env: self.env,
+                type_param_names: None,
+            }),
+            const_env.get_value(),
         )
     }
 

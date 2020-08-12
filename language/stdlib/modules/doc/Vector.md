@@ -5,6 +5,7 @@
 
 ### Table of Contents
 
+-  [Const `EINDEX_OUT_OF_BOUNDS`](#0x1_Vector_EINDEX_OUT_OF_BOUNDS)
 -  [Function `empty`](#0x1_Vector_empty)
 -  [Function `length`](#0x1_Vector_length)
 -  [Function `borrow`](#0x1_Vector_borrow)
@@ -33,6 +34,17 @@
     -  [Function `swap_remove`](#0x1_Vector_Specification_swap_remove)
 
 A variable-sized container that can hold both unrestricted types and resources.
+
+
+<a name="0x1_Vector_EINDEX_OUT_OF_BOUNDS"></a>
+
+## Const `EINDEX_OUT_OF_BOUNDS`
+
+
+
+<pre><code><b>const</b> EINDEX_OUT_OF_BOUNDS: u64 = 0;
+</code></pre>
+
 
 
 <a name="0x1_Vector_empty"></a>

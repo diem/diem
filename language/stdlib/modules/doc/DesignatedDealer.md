@@ -8,6 +8,19 @@
 -  [Resource `Dealer`](#0x1_DesignatedDealer_Dealer)
 -  [Resource `TierInfo`](#0x1_DesignatedDealer_TierInfo)
 -  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
+-  [Const `EDEALER`](#0x1_DesignatedDealer_EDEALER)
+-  [Const `ELIMIT`](#0x1_DesignatedDealer_ELIMIT)
+-  [Const `EINVALID_TIER_ADDITION`](#0x1_DesignatedDealer_EINVALID_TIER_ADDITION)
+-  [Const `EINVALID_TIER_START`](#0x1_DesignatedDealer_EINVALID_TIER_START)
+-  [Const `EINVALID_TIER_INDEX`](#0x1_DesignatedDealer_EINVALID_TIER_INDEX)
+-  [Const `EINVALID_MINT_AMOUNT`](#0x1_DesignatedDealer_EINVALID_MINT_AMOUNT)
+-  [Const `EINVALID_AMOUNT_FOR_TIER`](#0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER)
+-  [Const `ONE_DAY`](#0x1_DesignatedDealer_ONE_DAY)
+-  [Const `MAX_NUM_TIERS`](#0x1_DesignatedDealer_MAX_NUM_TIERS)
+-  [Const `TIER_0_DEFAULT`](#0x1_DesignatedDealer_TIER_0_DEFAULT)
+-  [Const `TIER_1_DEFAULT`](#0x1_DesignatedDealer_TIER_1_DEFAULT)
+-  [Const `TIER_2_DEFAULT`](#0x1_DesignatedDealer_TIER_2_DEFAULT)
+-  [Const `TIER_3_DEFAULT`](#0x1_DesignatedDealer_TIER_3_DEFAULT)
 -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
 -  [Function `add_currency`](#0x1_DesignatedDealer_add_currency)
 -  [Function `add_tier`](#0x1_DesignatedDealer_add_tier)
@@ -149,6 +162,154 @@ Message for mint events
 
 
 </details>
+
+<a name="0x1_DesignatedDealer_EDEALER"></a>
+
+## Const `EDEALER`
+
+Error codes
+
+
+<pre><code><b>const</b> EDEALER: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_ELIMIT"></a>
+
+## Const `ELIMIT`
+
+
+
+<pre><code><b>const</b> ELIMIT: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_ADDITION"></a>
+
+## Const `EINVALID_TIER_ADDITION`
+
+
+
+<pre><code><b>const</b> EINVALID_TIER_ADDITION: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_START"></a>
+
+## Const `EINVALID_TIER_START`
+
+
+
+<pre><code><b>const</b> EINVALID_TIER_START: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_TIER_INDEX"></a>
+
+## Const `EINVALID_TIER_INDEX`
+
+
+
+<pre><code><b>const</b> EINVALID_TIER_INDEX: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_MINT_AMOUNT"></a>
+
+## Const `EINVALID_MINT_AMOUNT`
+
+
+
+<pre><code><b>const</b> EINVALID_MINT_AMOUNT: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_EINVALID_AMOUNT_FOR_TIER"></a>
+
+## Const `EINVALID_AMOUNT_FOR_TIER`
+
+
+
+<pre><code><b>const</b> EINVALID_AMOUNT_FOR_TIER: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_ONE_DAY"></a>
+
+## Const `ONE_DAY`
+
+Number of microseconds in a day
+
+
+<pre><code><b>const</b> ONE_DAY: u64 = 86400000000;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_MAX_NUM_TIERS"></a>
+
+## Const `MAX_NUM_TIERS`
+
+The maximum number of tiers allowed
+
+
+<pre><code><b>const</b> MAX_NUM_TIERS: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_TIER_0_DEFAULT"></a>
+
+## Const `TIER_0_DEFAULT`
+
+Default FIAT amounts for tiers when a DD is created
+These get scaled by coin specific scaling factor on tier setting
+
+
+<pre><code><b>const</b> TIER_0_DEFAULT: u64 = 500000;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_TIER_1_DEFAULT"></a>
+
+## Const `TIER_1_DEFAULT`
+
+
+
+<pre><code><b>const</b> TIER_1_DEFAULT: u64 = 5000000;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_TIER_2_DEFAULT"></a>
+
+## Const `TIER_2_DEFAULT`
+
+
+
+<pre><code><b>const</b> TIER_2_DEFAULT: u64 = 50000000;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_TIER_3_DEFAULT"></a>
+
+## Const `TIER_3_DEFAULT`
+
+
+
+<pre><code><b>const</b> TIER_3_DEFAULT: u64 = 500000000;
+</code></pre>
+
+
 
 <a name="0x1_DesignatedDealer_publish_designated_dealer_credential"></a>
 

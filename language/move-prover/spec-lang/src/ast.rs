@@ -427,6 +427,18 @@ pub enum Value {
     ByteArray(Vec<u8>),
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        match self {
+            Value::Address(address) => write!(f, "{:x}", address),
+            Value::Number(int) => write!(f, "{}", int),
+            Value::Bool(b) => write!(f, "{}", b),
+            // TODO(tzakian): Figure out a better story for byte array displays
+            Value::ByteArray(bytes) => write!(f, "{:?}", bytes),
+        }
+    }
+}
+
 // =================================================================================================
 /// # Purity of Expressions
 

@@ -5,6 +5,11 @@
 
 ### Table of Contents
 
+-  [Const `ELIBRA_ROOT`](#0x1_CoreAddresses_ELIBRA_ROOT)
+-  [Const `ETREASURY_COMPLIANCE`](#0x1_CoreAddresses_ETREASURY_COMPLIANCE)
+-  [Const `EVM`](#0x1_CoreAddresses_EVM)
+-  [Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`](#0x1_CoreAddresses_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
+-  [Const `ECURRENCY_INFO`](#0x1_CoreAddresses_ECURRENCY_INFO)
 -  [Function `LIBRA_ROOT_ADDRESS`](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
@@ -20,6 +25,61 @@
     -  [Function `assert_vm`](#0x1_CoreAddresses_Specification_assert_vm)
     -  [Function `assert_currency_info`](#0x1_CoreAddresses_Specification_assert_currency_info)
     -  [Function `assert_libra_root_or_treasury_compliance`](#0x1_CoreAddresses_Specification_assert_libra_root_or_treasury_compliance)
+
+
+
+<a name="0x1_CoreAddresses_ELIBRA_ROOT"></a>
+
+## Const `ELIBRA_ROOT`
+
+
+
+<pre><code><b>const</b> ELIBRA_ROOT: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_ETREASURY_COMPLIANCE"></a>
+
+## Const `ETREASURY_COMPLIANCE`
+
+
+
+<pre><code><b>const</b> ETREASURY_COMPLIANCE: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_EVM"></a>
+
+## Const `EVM`
+
+
+
+<pre><code><b>const</b> EVM: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE"></a>
+
+## Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`
+
+
+
+<pre><code><b>const</b> ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_CoreAddresses_ECURRENCY_INFO"></a>
+
+## Const `ECURRENCY_INFO`
+
+
+
+<pre><code><b>const</b> ECURRENCY_INFO: u64 = 4;
+</code></pre>
 
 
 

@@ -8,6 +8,10 @@
 -  [Resource `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
 -  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
 -  [Resource `Window`](#0x1_AccountLimits_Window)
+-  [Const `ELIMITS_DEFINITION`](#0x1_AccountLimits_ELIMITS_DEFINITION)
+-  [Const `EWINDOW`](#0x1_AccountLimits_EWINDOW)
+-  [Const `ONE_DAY`](#0x1_AccountLimits_ONE_DAY)
+-  [Const `U64_MAX`](#0x1_AccountLimits_U64_MAX)
 -  [Function `grant_mutation_capability`](#0x1_AccountLimits_grant_mutation_capability)
 -  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
@@ -184,6 +188,51 @@ in the limits definition at
 
 
 </details>
+
+<a name="0x1_AccountLimits_ELIMITS_DEFINITION"></a>
+
+## Const `ELIMITS_DEFINITION`
+
+
+
+<pre><code><b>const</b> ELIMITS_DEFINITION: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_EWINDOW"></a>
+
+## Const `EWINDOW`
+
+
+
+<pre><code><b>const</b> EWINDOW: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_ONE_DAY"></a>
+
+## Const `ONE_DAY`
+
+24 hours in microseconds
+
+
+<pre><code><b>const</b> ONE_DAY: u64 = 86400000000;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_U64_MAX"></a>
+
+## Const `U64_MAX`
+
+
+
+<pre><code><b>const</b> U64_MAX: u64 = 18446744073709551615;
+</code></pre>
+
+
 
 <a name="0x1_AccountLimits_grant_mutation_capability"></a>
 

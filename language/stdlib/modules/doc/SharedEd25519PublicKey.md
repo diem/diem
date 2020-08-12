@@ -6,6 +6,8 @@
 ### Table of Contents
 
 -  [Resource `SharedEd25519PublicKey`](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
+-  [Const `EMALFORMED_PUBLIC_KEY`](#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY)
+-  [Const `ESHARED_KEY`](#0x1_SharedEd25519PublicKey_ESHARED_KEY)
 -  [Function `publish`](#0x1_SharedEd25519PublicKey_publish)
 -  [Function `rotate_key_`](#0x1_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_rotate_key)
@@ -48,6 +50,28 @@
 
 
 </details>
+
+<a name="0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY"></a>
+
+## Const `EMALFORMED_PUBLIC_KEY`
+
+
+
+<pre><code><b>const</b> EMALFORMED_PUBLIC_KEY: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_SharedEd25519PublicKey_ESHARED_KEY"></a>
+
+## Const `ESHARED_KEY`
+
+
+
+<pre><code><b>const</b> ESHARED_KEY: u64 = 1;
+</code></pre>
+
+
 
 <a name="0x1_SharedEd25519PublicKey_publish"></a>
 

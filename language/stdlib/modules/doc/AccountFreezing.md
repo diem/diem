@@ -9,6 +9,12 @@
 -  [Resource `FreezeEventsHolder`](#0x1_AccountFreezing_FreezeEventsHolder)
 -  [Struct `FreezeAccountEvent`](#0x1_AccountFreezing_FreezeAccountEvent)
 -  [Struct `UnfreezeAccountEvent`](#0x1_AccountFreezing_UnfreezeAccountEvent)
+-  [Const `EFREEZE_EVENTS_HOLDER`](#0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER)
+-  [Const `EFREEZING_BIT`](#0x1_AccountFreezing_EFREEZING_BIT)
+-  [Const `ECANNOT_FREEZE_LIBRA_ROOT`](#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT)
+-  [Const `ECANNOT_FREEZE_TC`](#0x1_AccountFreezing_ECANNOT_FREEZE_TC)
+-  [Const `ENOT_ABLE_TO_UNFREEZE`](#0x1_AccountFreezing_ENOT_ABLE_TO_UNFREEZE)
+-  [Const `EACCOUNT_FROZEN`](#0x1_AccountFreezing_EACCOUNT_FROZEN)
 -  [Function `initialize`](#0x1_AccountFreezing_initialize)
 -  [Function `create`](#0x1_AccountFreezing_create)
 -  [Function `freeze_account`](#0x1_AccountFreezing_freeze_account)
@@ -160,6 +166,72 @@ Message for unfreeze account events
 
 
 </details>
+
+<a name="0x1_AccountFreezing_EFREEZE_EVENTS_HOLDER"></a>
+
+## Const `EFREEZE_EVENTS_HOLDER`
+
+
+
+<pre><code><b>const</b> EFREEZE_EVENTS_HOLDER: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_EFREEZING_BIT"></a>
+
+## Const `EFREEZING_BIT`
+
+
+
+<pre><code><b>const</b> EFREEZING_BIT: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT"></a>
+
+## Const `ECANNOT_FREEZE_LIBRA_ROOT`
+
+
+
+<pre><code><b>const</b> ECANNOT_FREEZE_LIBRA_ROOT: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_ECANNOT_FREEZE_TC"></a>
+
+## Const `ECANNOT_FREEZE_TC`
+
+
+
+<pre><code><b>const</b> ECANNOT_FREEZE_TC: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_ENOT_ABLE_TO_UNFREEZE"></a>
+
+## Const `ENOT_ABLE_TO_UNFREEZE`
+
+
+
+<pre><code><b>const</b> ENOT_ABLE_TO_UNFREEZE: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_AccountFreezing_EACCOUNT_FROZEN"></a>
+
+## Const `EACCOUNT_FROZEN`
+
+
+
+<pre><code><b>const</b> EACCOUNT_FROZEN: u64 = 6;
+</code></pre>
+
+
 
 <a name="0x1_AccountFreezing_initialize"></a>
 

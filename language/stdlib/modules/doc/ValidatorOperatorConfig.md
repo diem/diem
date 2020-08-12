@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `ValidatorOperatorConfig`](#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig)
+-  [Const `EVALIDATOR_OPERATOR_CONFIG`](#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG)
 -  [Function `publish`](#0x1_ValidatorOperatorConfig_publish)
 -  [Function `get_human_name`](#0x1_ValidatorOperatorConfig_get_human_name)
 -  [Function `has_validator_operator_config`](#0x1_ValidatorOperatorConfig_has_validator_operator_config)
@@ -43,6 +44,17 @@
 
 
 </details>
+
+<a name="0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG"></a>
+
+## Const `EVALIDATOR_OPERATOR_CONFIG`
+
+
+
+<pre><code><b>const</b> EVALIDATOR_OPERATOR_CONFIG: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_ValidatorOperatorConfig_publish"></a>
 

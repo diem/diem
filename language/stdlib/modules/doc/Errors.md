@@ -5,6 +5,16 @@
 
 ### Table of Contents
 
+-  [Const `INVALID_STATE`](#0x1_Errors_INVALID_STATE)
+-  [Const `REQUIRES_ADDRESS`](#0x1_Errors_REQUIRES_ADDRESS)
+-  [Const `REQUIRES_ROLE`](#0x1_Errors_REQUIRES_ROLE)
+-  [Const `REQUIRES_PRIVILEGE`](#0x1_Errors_REQUIRES_PRIVILEGE)
+-  [Const `NOT_PUBLISHED`](#0x1_Errors_NOT_PUBLISHED)
+-  [Const `ALREADY_PUBLISHED`](#0x1_Errors_ALREADY_PUBLISHED)
+-  [Const `INVALID_ARGUMENT`](#0x1_Errors_INVALID_ARGUMENT)
+-  [Const `LIMIT_EXCEEDED`](#0x1_Errors_LIMIT_EXCEEDED)
+-  [Const `INTERNAL`](#0x1_Errors_INTERNAL)
+-  [Const `CUSTOM`](#0x1_Errors_CUSTOM)
 -  [Function `make`](#0x1_Errors_make)
 -  [Function `invalid_state`](#0x1_Errors_invalid_state)
 -  [Function `requires_address`](#0x1_Errors_requires_address)
@@ -31,6 +41,131 @@ number relative to the module which raised the error and can be used to obtain m
 the error at hand. It is mostly used for diagnosis purposes. Error reasons may change over time as the
 framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/
 associated module.
+
+
+<a name="0x1_Errors_INVALID_STATE"></a>
+
+## Const `INVALID_STATE`
+
+The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
+in genesis.
+
+
+<pre><code><b>const</b> INVALID_STATE: u8 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Errors_REQUIRES_ADDRESS"></a>
+
+## Const `REQUIRES_ADDRESS`
+
+The signer of a transaction does not have the expected address for this operation. Example: a call to a function
+which publishes a resource under a particular address.
+
+
+<pre><code><b>const</b> REQUIRES_ADDRESS: u8 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Errors_REQUIRES_ROLE"></a>
+
+## Const `REQUIRES_ROLE`
+
+The signer of a transaction does not have the expected  role for this operation. Example: a call to a function
+which requires the signer to have the role of treasury compliance.
+
+
+<pre><code><b>const</b> REQUIRES_ROLE: u8 = 3;
+</code></pre>
+
+
+
+<a name="0x1_Errors_REQUIRES_PRIVILEGE"></a>
+
+## Const `REQUIRES_PRIVILEGE`
+
+The signer of a transaction does not have a required capability.
+
+
+<pre><code><b>const</b> REQUIRES_PRIVILEGE: u8 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Errors_NOT_PUBLISHED"></a>
+
+## Const `NOT_PUBLISHED`
+
+A resource is required but not published. Example: access to non-existing AccountLimits resource.
+
+
+<pre><code><b>const</b> NOT_PUBLISHED: u8 = 5;
+</code></pre>
+
+
+
+<a name="0x1_Errors_ALREADY_PUBLISHED"></a>
+
+## Const `ALREADY_PUBLISHED`
+
+Attempting to publish a resource that is already published. Example: calling an initialization function
+twice.
+
+
+<pre><code><b>const</b> ALREADY_PUBLISHED: u8 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Errors_INVALID_ARGUMENT"></a>
+
+## Const `INVALID_ARGUMENT`
+
+An argument provided to an operation is invalid. Example: a signing key has the wrong format.
+
+
+<pre><code><b>const</b> INVALID_ARGUMENT: u8 = 7;
+</code></pre>
+
+
+
+<a name="0x1_Errors_LIMIT_EXCEEDED"></a>
+
+## Const `LIMIT_EXCEEDED`
+
+A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money after account limits window
+is exhausted.
+
+
+<pre><code><b>const</b> LIMIT_EXCEEDED: u8 = 8;
+</code></pre>
+
+
+
+<a name="0x1_Errors_INTERNAL"></a>
+
+## Const `INTERNAL`
+
+An internal error (bug) has occurred.
+
+
+<pre><code><b>const</b> INTERNAL: u8 = 10;
+</code></pre>
+
+
+
+<a name="0x1_Errors_CUSTOM"></a>
+
+## Const `CUSTOM`
+
+A custom error category for extension points.
+
+
+<pre><code><b>const</b> CUSTOM: u8 = 255;
+</code></pre>
+
 
 
 <a name="0x1_Errors_make"></a>

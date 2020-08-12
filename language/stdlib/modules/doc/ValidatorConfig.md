@@ -8,6 +8,10 @@
 -  [Resource `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
 -  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
+-  [Const `EVALIDATOR_CONFIG`](#0x1_ValidatorConfig_EVALIDATOR_CONFIG)
+-  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER)
+-  [Const `EINVALID_CONSENSUS_KEY`](#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY)
+-  [Const `ENOT_A_VALIDATOR_OPERATOR`](#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
 -  [Function `exists_config`](#0x1_ValidatorConfig_exists_config)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
@@ -160,6 +164,51 @@
 
 
 </details>
+
+<a name="0x1_ValidatorConfig_EVALIDATOR_CONFIG"></a>
+
+## Const `EVALIDATOR_CONFIG`
+
+TODO(valerini): add events here
+
+
+<pre><code><b>const</b> EVALIDATOR_CONFIG: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_EINVALID_TRANSACTION_SENDER"></a>
+
+## Const `EINVALID_TRANSACTION_SENDER`
+
+
+
+<pre><code><b>const</b> EINVALID_TRANSACTION_SENDER: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY"></a>
+
+## Const `EINVALID_CONSENSUS_KEY`
+
+
+
+<pre><code><b>const</b> EINVALID_CONSENSUS_KEY: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR"></a>
+
+## Const `ENOT_A_VALIDATOR_OPERATOR`
+
+
+
+<pre><code><b>const</b> ENOT_A_VALIDATOR_OPERATOR: u64 = 3;
+</code></pre>
+
+
 
 <a name="0x1_ValidatorConfig_publish"></a>
 

@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `TransactionFee`](#0x1_TransactionFee_TransactionFee)
+-  [Const `ETRANSACTION_FEE`](#0x1_TransactionFee_ETRANSACTION_FEE)
 -  [Function `initialize`](#0x1_TransactionFee_initialize)
 -  [Function `is_coin_initialized`](#0x1_TransactionFee_is_coin_initialized)
 -  [Function `is_initialized`](#0x1_TransactionFee_is_initialized)
@@ -57,6 +58,17 @@ fiat
 
 
 </details>
+
+<a name="0x1_TransactionFee_ETRANSACTION_FEE"></a>
+
+## Const `ETRANSACTION_FEE`
+
+
+
+<pre><code><b>const</b> ETRANSACTION_FEE: u64 = 1;
+</code></pre>
+
+
 
 <a name="0x1_TransactionFee_initialize"></a>
 

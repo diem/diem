@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `ChainId`](#0x1_ChainId_ChainId)
+-  [Const `ECHAIN_ID`](#0x1_ChainId_ECHAIN_ID)
 -  [Function `initialize`](#0x1_ChainId_initialize)
 -  [Function `get`](#0x1_ChainId_get)
 -  [Specification](#0x1_ChainId_Specification)
@@ -39,6 +40,17 @@
 
 
 </details>
+
+<a name="0x1_ChainId_ECHAIN_ID"></a>
+
+## Const `ECHAIN_ID`
+
+
+
+<pre><code><b>const</b> ECHAIN_ID: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_ChainId_initialize"></a>
 

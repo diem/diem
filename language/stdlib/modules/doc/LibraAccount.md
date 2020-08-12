@@ -12,6 +12,38 @@
 -  [Resource `AccountOperationsCapability`](#0x1_LibraAccount_AccountOperationsCapability)
 -  [Struct `SentPaymentEvent`](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
+-  [Const `MAX_U64`](#0x1_LibraAccount_MAX_U64)
+-  [Const `EACCOUNT`](#0x1_LibraAccount_EACCOUNT)
+-  [Const `ESEQUENCE_NUMBER`](#0x1_LibraAccount_ESEQUENCE_NUMBER)
+-  [Const `ECOIN_DEPOSIT_IS_ZERO`](#0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO)
+-  [Const `EDEPOSIT_EXCEEDS_LIMITS`](#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS)
+-  [Const `EROLE_CANT_STORE_BALANCE`](#0x1_LibraAccount_EROLE_CANT_STORE_BALANCE)
+-  [Const `EINSUFFICIENT_BALANCE`](#0x1_LibraAccount_EINSUFFICIENT_BALANCE)
+-  [Const `EWITHDRAWAL_EXCEEDS_LIMITS`](#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS)
+-  [Const `EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`](#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED)
+-  [Const `EMALFORMED_AUTHENTICATION_KEY`](#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY)
+-  [Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`](#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
+-  [Const `ECANNOT_CREATE_AT_VM_RESERVED`](#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED)
+-  [Const `EADD_EXISTING_CURRENCY`](#0x1_LibraAccount_EADD_EXISTING_CURRENCY)
+-  [Const `EPAYEE_DOES_NOT_EXIST`](#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST)
+-  [Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`](#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
+-  [Const `EPAYER_DOESNT_HOLD_CURRENCY`](#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY)
+-  [Const `EGAS`](#0x1_LibraAccount_EGAS)
+-  [Const `EACCOUNT_OPERATIONS_CAPABILITY`](#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY)
+-  [Const `EPROLOGUE_ACCOUNT_FROZEN`](#0x1_LibraAccount_EPROLOGUE_ACCOUNT_FROZEN)
+-  [Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraAccount_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY)
+-  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD)
+-  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
+-  [Const `EPROLOGUE_ACCOUNT_DNE`](#0x1_LibraAccount_EPROLOGUE_ACCOUNT_DNE)
+-  [Const `EPROLOGUE_CANT_PAY_GAS_DEPOSIT`](#0x1_LibraAccount_EPROLOGUE_CANT_PAY_GAS_DEPOSIT)
+-  [Const `EPROLOGUE_TRANSACTION_EXPIRED`](#0x1_LibraAccount_EPROLOGUE_TRANSACTION_EXPIRED)
+-  [Const `EPROLOGUE_BAD_CHAIN_ID`](#0x1_LibraAccount_EPROLOGUE_BAD_CHAIN_ID)
+-  [Const `EPROLOGUE_SCRIPT_NOT_ALLOWED`](#0x1_LibraAccount_EPROLOGUE_SCRIPT_NOT_ALLOWED)
+-  [Const `EPROLOGUE_MODULE_NOT_ALLOWED`](#0x1_LibraAccount_EPROLOGUE_MODULE_NOT_ALLOWED)
+-  [Const `EPROLOGUE_UNEXPECTED_WRITESET`](#0x1_LibraAccount_EPROLOGUE_UNEXPECTED_WRITESET)
+-  [Const `WRITESET_TRANSACTION_TAG`](#0x1_LibraAccount_WRITESET_TRANSACTION_TAG)
+-  [Const `SCRIPT_TRANSACTION_TAG`](#0x1_LibraAccount_SCRIPT_TRANSACTION_TAG)
+-  [Const `MODULE_TRANSACTION_TAG`](#0x1_LibraAccount_MODULE_TRANSACTION_TAG)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `has_published_account_limits`](#0x1_LibraAccount_has_published_account_limits)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
@@ -375,6 +407,368 @@ Message for received events
 
 
 </details>
+
+<a name="0x1_LibraAccount_MAX_U64"></a>
+
+## Const `MAX_U64`
+
+
+
+<pre><code><b>const</b> MAX_U64: u128 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EACCOUNT"></a>
+
+## Const `EACCOUNT`
+
+
+
+<pre><code><b>const</b> EACCOUNT: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_ESEQUENCE_NUMBER"></a>
+
+## Const `ESEQUENCE_NUMBER`
+
+
+
+<pre><code><b>const</b> ESEQUENCE_NUMBER: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_ECOIN_DEPOSIT_IS_ZERO"></a>
+
+## Const `ECOIN_DEPOSIT_IS_ZERO`
+
+
+
+<pre><code><b>const</b> ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS"></a>
+
+## Const `EDEPOSIT_EXCEEDS_LIMITS`
+
+
+
+<pre><code><b>const</b> EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EROLE_CANT_STORE_BALANCE"></a>
+
+## Const `EROLE_CANT_STORE_BALANCE`
+
+
+
+<pre><code><b>const</b> EROLE_CANT_STORE_BALANCE: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EINSUFFICIENT_BALANCE"></a>
+
+## Const `EINSUFFICIENT_BALANCE`
+
+
+
+<pre><code><b>const</b> EINSUFFICIENT_BALANCE: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS"></a>
+
+## Const `EWITHDRAWAL_EXCEEDS_LIMITS`
+
+
+
+<pre><code><b>const</b> EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED"></a>
+
+## Const `EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
+
+
+
+<pre><code><b>const</b> EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY"></a>
+
+## Const `EMALFORMED_AUTHENTICATION_KEY`
+
+
+
+<pre><code><b>const</b> EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED"></a>
+
+## Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`
+
+
+
+<pre><code><b>const</b> EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED: u64 = 9;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED"></a>
+
+## Const `ECANNOT_CREATE_AT_VM_RESERVED`
+
+
+
+<pre><code><b>const</b> ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EADD_EXISTING_CURRENCY"></a>
+
+## Const `EADD_EXISTING_CURRENCY`
+
+
+
+<pre><code><b>const</b> EADD_EXISTING_CURRENCY: u64 = 15;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST"></a>
+
+## Const `EPAYEE_DOES_NOT_EXIST`
+
+Attempting to send funds to an account that does not exist
+
+
+<pre><code><b>const</b> EPAYEE_DOES_NOT_EXIST: u64 = 17;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE"></a>
+
+## Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`
+
+Attempting to send funds in (e.g.) LBR to an account that exists, but does not have a
+Balance<LBR> resource
+
+
+<pre><code><b>const</b> EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY"></a>
+
+## Const `EPAYER_DOESNT_HOLD_CURRENCY`
+
+
+
+<pre><code><b>const</b> EPAYER_DOESNT_HOLD_CURRENCY: u64 = 19;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EGAS"></a>
+
+## Const `EGAS`
+
+
+
+<pre><code><b>const</b> EGAS: u64 = 20;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY"></a>
+
+## Const `EACCOUNT_OPERATIONS_CAPABILITY`
+
+
+
+<pre><code><b>const</b> EACCOUNT_OPERATIONS_CAPABILITY: u64 = 22;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_ACCOUNT_FROZEN"></a>
+
+## Const `EPROLOGUE_ACCOUNT_FROZEN`
+
+Prologue errors. These are separated out from the other errors in this
+module since they are mapped separately to major VM statuses, and are
+important to the semantics of the system. Those codes also need to be
+directly used in aborts instead of augmenting them with a category
+via the
+<code><a href="Errors.md#0x1_Errors">Errors</a></code> module.
+
+
+<pre><code><b>const</b> EPROLOGUE_ACCOUNT_FROZEN: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY"></a>
+
+## Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD"></a>
+
+## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW"></a>
+
+## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_ACCOUNT_DNE"></a>
+
+## Const `EPROLOGUE_ACCOUNT_DNE`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_ACCOUNT_DNE: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_CANT_PAY_GAS_DEPOSIT"></a>
+
+## Const `EPROLOGUE_CANT_PAY_GAS_DEPOSIT`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_TRANSACTION_EXPIRED"></a>
+
+## Const `EPROLOGUE_TRANSACTION_EXPIRED`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_BAD_CHAIN_ID"></a>
+
+## Const `EPROLOGUE_BAD_CHAIN_ID`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_BAD_CHAIN_ID: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_SCRIPT_NOT_ALLOWED"></a>
+
+## Const `EPROLOGUE_SCRIPT_NOT_ALLOWED`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_SCRIPT_NOT_ALLOWED: u64 = 8;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_MODULE_NOT_ALLOWED"></a>
+
+## Const `EPROLOGUE_MODULE_NOT_ALLOWED`
+
+
+
+<pre><code><b>const</b> EPROLOGUE_MODULE_NOT_ALLOWED: u64 = 9;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EPROLOGUE_UNEXPECTED_WRITESET"></a>
+
+## Const `EPROLOGUE_UNEXPECTED_WRITESET`
+
+This error will not be translated it should be an invariant violation.
+
+
+<pre><code><b>const</b> EPROLOGUE_UNEXPECTED_WRITESET: u64 = 10;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_WRITESET_TRANSACTION_TAG"></a>
+
+## Const `WRITESET_TRANSACTION_TAG`
+
+
+
+<pre><code><b>const</b> WRITESET_TRANSACTION_TAG: u8 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_SCRIPT_TRANSACTION_TAG"></a>
+
+## Const `SCRIPT_TRANSACTION_TAG`
+
+
+
+<pre><code><b>const</b> SCRIPT_TRANSACTION_TAG: u8 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_MODULE_TRANSACTION_TAG"></a>
+
+## Const `MODULE_TRANSACTION_TAG`
+
+
+
+<pre><code><b>const</b> MODULE_TRANSACTION_TAG: u8 = 2;
+</code></pre>
+
+
 
 <a name="0x1_LibraAccount_initialize"></a>
 

@@ -8,6 +8,12 @@
 -  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
 -  [Resource `VASPOperationsResource`](#0x1_VASP_VASPOperationsResource)
+-  [Const `EVASP_OPERATIONS_RESOURCE`](#0x1_VASP_EVASP_OPERATIONS_RESOURCE)
+-  [Const `EPARENT_OR_CHILD_VASP`](#0x1_VASP_EPARENT_OR_CHILD_VASP)
+-  [Const `ETOO_MANY_CHILDREN`](#0x1_VASP_ETOO_MANY_CHILDREN)
+-  [Const `ENOT_A_VASP`](#0x1_VASP_ENOT_A_VASP)
+-  [Const `ENOT_A_PARENT_VASP`](#0x1_VASP_ENOT_A_PARENT_VASP)
+-  [Const `MAX_CHILD_ACCOUNTS`](#0x1_VASP_MAX_CHILD_ACCOUNTS)
 -  [Function `initialize`](#0x1_VASP_initialize)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
@@ -127,6 +133,73 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 
 </details>
+
+<a name="0x1_VASP_EVASP_OPERATIONS_RESOURCE"></a>
+
+## Const `EVASP_OPERATIONS_RESOURCE`
+
+
+
+<pre><code><b>const</b> EVASP_OPERATIONS_RESOURCE: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_VASP_EPARENT_OR_CHILD_VASP"></a>
+
+## Const `EPARENT_OR_CHILD_VASP`
+
+
+
+<pre><code><b>const</b> EPARENT_OR_CHILD_VASP: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_VASP_ETOO_MANY_CHILDREN"></a>
+
+## Const `ETOO_MANY_CHILDREN`
+
+
+
+<pre><code><b>const</b> ETOO_MANY_CHILDREN: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_VASP_ENOT_A_VASP"></a>
+
+## Const `ENOT_A_VASP`
+
+
+
+<pre><code><b>const</b> ENOT_A_VASP: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_VASP_ENOT_A_PARENT_VASP"></a>
+
+## Const `ENOT_A_PARENT_VASP`
+
+
+
+<pre><code><b>const</b> ENOT_A_PARENT_VASP: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_VASP_MAX_CHILD_ACCOUNTS"></a>
+
+## Const `MAX_CHILD_ACCOUNTS`
+
+Maximum number of child accounts that can be created by a single ParentVASP
+
+
+<pre><code><b>const</b> MAX_CHILD_ACCOUNTS: u64 = 256;
+</code></pre>
+
+
 
 <a name="0x1_VASP_initialize"></a>
 

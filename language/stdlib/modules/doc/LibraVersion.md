@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Struct `LibraVersion`](#0x1_LibraVersion_LibraVersion)
+-  [Const `EINVALID_MAJOR_VERSION_NUMBER`](#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER)
 -  [Function `initialize`](#0x1_LibraVersion_initialize)
 -  [Function `set`](#0x1_LibraVersion_set)
 -  [Specification](#0x1_LibraVersion_Specification)
@@ -39,6 +40,17 @@
 
 
 </details>
+
+<a name="0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER"></a>
+
+## Const `EINVALID_MAJOR_VERSION_NUMBER`
+
+
+
+<pre><code><b>const</b> EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_LibraVersion_initialize"></a>
 

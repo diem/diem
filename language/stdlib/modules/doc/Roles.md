@@ -6,6 +6,22 @@
 ### Table of Contents
 
 -  [Resource `RoleId`](#0x1_Roles_RoleId)
+-  [Const `EROLE_ID`](#0x1_Roles_EROLE_ID)
+-  [Const `ELIBRA_ROOT`](#0x1_Roles_ELIBRA_ROOT)
+-  [Const `ETREASURY_COMPLIANCE`](#0x1_Roles_ETREASURY_COMPLIANCE)
+-  [Const `EPARENT_VASP`](#0x1_Roles_EPARENT_VASP)
+-  [Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`](#0x1_Roles_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
+-  [Const `EPARENT_VASP_OR_DESIGNATED_DEALER`](#0x1_Roles_EPARENT_VASP_OR_DESIGNATED_DEALER)
+-  [Const `EDESIGNATED_DEALER`](#0x1_Roles_EDESIGNATED_DEALER)
+-  [Const `EVALIDATOR`](#0x1_Roles_EVALIDATOR)
+-  [Const `EVALIDATOR_OPERATOR`](#0x1_Roles_EVALIDATOR_OPERATOR)
+-  [Const `LIBRA_ROOT_ROLE_ID`](#0x1_Roles_LIBRA_ROOT_ROLE_ID)
+-  [Const `TREASURY_COMPLIANCE_ROLE_ID`](#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID)
+-  [Const `DESIGNATED_DEALER_ROLE_ID`](#0x1_Roles_DESIGNATED_DEALER_ROLE_ID)
+-  [Const `VALIDATOR_ROLE_ID`](#0x1_Roles_VALIDATOR_ROLE_ID)
+-  [Const `VALIDATOR_OPERATOR_ROLE_ID`](#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID)
+-  [Const `PARENT_VASP_ROLE_ID`](#0x1_Roles_PARENT_VASP_ROLE_ID)
+-  [Const `CHILD_VASP_ROLE_ID`](#0x1_Roles_CHILD_VASP_ROLE_ID)
 -  [Function `grant_libra_root_role`](#0x1_Roles_grant_libra_root_role)
 -  [Function `grant_treasury_compliance_role`](#0x1_Roles_grant_treasury_compliance_role)
 -  [Function `new_designated_dealer_role`](#0x1_Roles_new_designated_dealer_role)
@@ -96,6 +112,182 @@ to an account as a top-level resource, and is otherwise immovable.
 
 
 </details>
+
+<a name="0x1_Roles_EROLE_ID"></a>
+
+## Const `EROLE_ID`
+
+
+
+<pre><code><b>const</b> EROLE_ID: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Roles_ELIBRA_ROOT"></a>
+
+## Const `ELIBRA_ROOT`
+
+
+
+<pre><code><b>const</b> ELIBRA_ROOT: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Roles_ETREASURY_COMPLIANCE"></a>
+
+## Const `ETREASURY_COMPLIANCE`
+
+
+
+<pre><code><b>const</b> ETREASURY_COMPLIANCE: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EPARENT_VASP"></a>
+
+## Const `EPARENT_VASP`
+
+
+
+<pre><code><b>const</b> EPARENT_VASP: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_Roles_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE"></a>
+
+## Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`
+
+
+
+<pre><code><b>const</b> ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EPARENT_VASP_OR_DESIGNATED_DEALER"></a>
+
+## Const `EPARENT_VASP_OR_DESIGNATED_DEALER`
+
+
+
+<pre><code><b>const</b> EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EDESIGNATED_DEALER"></a>
+
+## Const `EDESIGNATED_DEALER`
+
+
+
+<pre><code><b>const</b> EDESIGNATED_DEALER: u64 = 6;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EVALIDATOR"></a>
+
+## Const `EVALIDATOR`
+
+
+
+<pre><code><b>const</b> EVALIDATOR: u64 = 7;
+</code></pre>
+
+
+
+<a name="0x1_Roles_EVALIDATOR_OPERATOR"></a>
+
+## Const `EVALIDATOR_OPERATOR`
+
+
+
+<pre><code><b>const</b> EVALIDATOR_OPERATOR: u64 = 8;
+</code></pre>
+
+
+
+<a name="0x1_Roles_LIBRA_ROOT_ROLE_ID"></a>
+
+## Const `LIBRA_ROOT_ROLE_ID`
+
+
+
+<pre><code><b>const</b> LIBRA_ROOT_ROLE_ID: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID"></a>
+
+## Const `TREASURY_COMPLIANCE_ROLE_ID`
+
+
+
+<pre><code><b>const</b> TREASURY_COMPLIANCE_ROLE_ID: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_Roles_DESIGNATED_DEALER_ROLE_ID"></a>
+
+## Const `DESIGNATED_DEALER_ROLE_ID`
+
+
+
+<pre><code><b>const</b> DESIGNATED_DEALER_ROLE_ID: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_Roles_VALIDATOR_ROLE_ID"></a>
+
+## Const `VALIDATOR_ROLE_ID`
+
+
+
+<pre><code><b>const</b> VALIDATOR_ROLE_ID: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID"></a>
+
+## Const `VALIDATOR_OPERATOR_ROLE_ID`
+
+
+
+<pre><code><b>const</b> VALIDATOR_OPERATOR_ROLE_ID: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_Roles_PARENT_VASP_ROLE_ID"></a>
+
+## Const `PARENT_VASP_ROLE_ID`
+
+
+
+<pre><code><b>const</b> PARENT_VASP_ROLE_ID: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_Roles_CHILD_VASP_ROLE_ID"></a>
+
+## Const `CHILD_VASP_ROLE_ID`
+
+
+
+<pre><code><b>const</b> CHILD_VASP_ROLE_ID: u64 = 6;
+</code></pre>
+
+
 
 <a name="0x1_Roles_grant_libra_root_role"></a>
 

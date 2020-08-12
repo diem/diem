@@ -6,6 +6,10 @@
 ### Table of Contents
 
 -  [Resource `TTL`](#0x1_LibraTransactionTimeout_TTL)
+-  [Const `MAX_TIMESTAMP`](#0x1_LibraTransactionTimeout_MAX_TIMESTAMP)
+-  [Const `MICROS_MULTIPLIER`](#0x1_LibraTransactionTimeout_MICROS_MULTIPLIER)
+-  [Const `ONE_DAY_MICROS`](#0x1_LibraTransactionTimeout_ONE_DAY_MICROS)
+-  [Const `ETTL`](#0x1_LibraTransactionTimeout_ETTL)
 -  [Function `initialize`](#0x1_LibraTransactionTimeout_initialize)
 -  [Function `is_initialized`](#0x1_LibraTransactionTimeout_is_initialized)
 -  [Function `set_timeout`](#0x1_LibraTransactionTimeout_set_timeout)
@@ -41,6 +45,50 @@
 
 
 </details>
+
+<a name="0x1_LibraTransactionTimeout_MAX_TIMESTAMP"></a>
+
+## Const `MAX_TIMESTAMP`
+
+
+
+<pre><code><b>const</b> MAX_TIMESTAMP: u64 = 18446744073709;
+</code></pre>
+
+
+
+<a name="0x1_LibraTransactionTimeout_MICROS_MULTIPLIER"></a>
+
+## Const `MICROS_MULTIPLIER`
+
+
+
+<pre><code><b>const</b> MICROS_MULTIPLIER: u64 = 1000000;
+</code></pre>
+
+
+
+<a name="0x1_LibraTransactionTimeout_ONE_DAY_MICROS"></a>
+
+## Const `ONE_DAY_MICROS`
+
+
+
+<pre><code><b>const</b> ONE_DAY_MICROS: u64 = 86400000000;
+</code></pre>
+
+
+
+<a name="0x1_LibraTransactionTimeout_ETTL"></a>
+
+## Const `ETTL`
+
+
+
+<pre><code><b>const</b> ETTL: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_LibraTransactionTimeout_initialize"></a>
 

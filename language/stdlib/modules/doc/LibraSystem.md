@@ -8,6 +8,13 @@
 -  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
 -  [Resource `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
 -  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
+-  [Const `ECAPABILITY_HOLDER`](#0x1_LibraSystem_ECAPABILITY_HOLDER)
+-  [Const `EINVALID_PROSPECTIVE_VALIDATOR`](#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR)
+-  [Const `EALREADY_A_VALIDATOR`](#0x1_LibraSystem_EALREADY_A_VALIDATOR)
+-  [Const `ENOT_AN_ACTIVE_VALIDATOR`](#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR)
+-  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
+-  [Const `EVALIDATOR_INDEX`](#0x1_LibraSystem_EVALIDATOR_INDEX)
+-  [Const `ENO_VALIDATOR_OPERATOR_ROLE`](#0x1_LibraSystem_ENO_VALIDATOR_OPERATOR_ROLE)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
 -  [Function `set_validator_set`](#0x1_LibraSystem_set_validator_set)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
@@ -143,6 +150,83 @@
 
 
 </details>
+
+<a name="0x1_LibraSystem_ECAPABILITY_HOLDER"></a>
+
+## Const `ECAPABILITY_HOLDER`
+
+
+
+<pre><code><b>const</b> ECAPABILITY_HOLDER: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR"></a>
+
+## Const `EINVALID_PROSPECTIVE_VALIDATOR`
+
+
+
+<pre><code><b>const</b> EINVALID_PROSPECTIVE_VALIDATOR: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_EALREADY_A_VALIDATOR"></a>
+
+## Const `EALREADY_A_VALIDATOR`
+
+
+
+<pre><code><b>const</b> EALREADY_A_VALIDATOR: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR"></a>
+
+## Const `ENOT_AN_ACTIVE_VALIDATOR`
+
+
+
+<pre><code><b>const</b> ENOT_AN_ACTIVE_VALIDATOR: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_EINVALID_TRANSACTION_SENDER"></a>
+
+## Const `EINVALID_TRANSACTION_SENDER`
+
+
+
+<pre><code><b>const</b> EINVALID_TRANSACTION_SENDER: u64 = 4;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_EVALIDATOR_INDEX"></a>
+
+## Const `EVALIDATOR_INDEX`
+
+
+
+<pre><code><b>const</b> EVALIDATOR_INDEX: u64 = 5;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_ENO_VALIDATOR_OPERATOR_ROLE"></a>
+
+## Const `ENO_VALIDATOR_OPERATOR_ROLE`
+
+
+
+<pre><code><b>const</b> ENO_VALIDATOR_OPERATOR_ROLE: u64 = 6;
+</code></pre>
+
+
 
 <a name="0x1_LibraSystem_initialize_validator_set"></a>
 

@@ -6,6 +6,12 @@
 ### Table of Contents
 
 -  [Struct `FixedPoint32`](#0x1_FixedPoint32_FixedPoint32)
+-  [Const `MAX_U64`](#0x1_FixedPoint32_MAX_U64)
+-  [Const `EDENOMINATOR`](#0x1_FixedPoint32_EDENOMINATOR)
+-  [Const `EDIVISION`](#0x1_FixedPoint32_EDIVISION)
+-  [Const `EMULTIPLICATION`](#0x1_FixedPoint32_EMULTIPLICATION)
+-  [Const `EDIVISION_BY_ZERO`](#0x1_FixedPoint32_EDIVISION_BY_ZERO)
+-  [Const `ERATIO_OUT_OF_RANGE`](#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE)
 -  [Function `multiply_u64`](#0x1_FixedPoint32_multiply_u64)
 -  [Function `divide_u64`](#0x1_FixedPoint32_divide_u64)
 -  [Function `create_from_rational`](#0x1_FixedPoint32_create_from_rational)
@@ -49,6 +55,73 @@ make a unique type.
 
 
 </details>
+
+<a name="0x1_FixedPoint32_MAX_U64"></a>
+
+## Const `MAX_U64`
+
+TODO(wrwg): This should be provided somewhere centrally in the framework.
+
+
+<pre><code><b>const</b> MAX_U64: u128 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_EDENOMINATOR"></a>
+
+## Const `EDENOMINATOR`
+
+
+
+<pre><code><b>const</b> EDENOMINATOR: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_EDIVISION"></a>
+
+## Const `EDIVISION`
+
+
+
+<pre><code><b>const</b> EDIVISION: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_EMULTIPLICATION"></a>
+
+## Const `EMULTIPLICATION`
+
+
+
+<pre><code><b>const</b> EMULTIPLICATION: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_EDIVISION_BY_ZERO"></a>
+
+## Const `EDIVISION_BY_ZERO`
+
+
+
+<pre><code><b>const</b> EDIVISION_BY_ZERO: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_FixedPoint32_ERATIO_OUT_OF_RANGE"></a>
+
+## Const `ERATIO_OUT_OF_RANGE`
+
+
+
+<pre><code><b>const</b> ERATIO_OUT_OF_RANGE: u64 = 4;
+</code></pre>
+
+
 
 <a name="0x1_FixedPoint32_multiply_u64"></a>
 

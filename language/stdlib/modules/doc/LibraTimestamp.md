@@ -7,6 +7,10 @@
 
 -  [Resource `CurrentTimeMicroseconds`](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
 -  [Resource `TimeHasStarted`](#0x1_LibraTimestamp_TimeHasStarted)
+-  [Const `ENOT_GENESIS`](#0x1_LibraTimestamp_ENOT_GENESIS)
+-  [Const `ENOT_OPERATING`](#0x1_LibraTimestamp_ENOT_OPERATING)
+-  [Const `ETIMER_RESOURCE`](#0x1_LibraTimestamp_ETIMER_RESOURCE)
+-  [Const `ETIMESTAMP`](#0x1_LibraTimestamp_ETIMESTAMP)
 -  [Function `initialize`](#0x1_LibraTimestamp_initialize)
 -  [Function `set_time_has_started`](#0x1_LibraTimestamp_set_time_has_started)
 -  [Function `reset_time_has_started_for_test`](#0x1_LibraTimestamp_reset_time_has_started_for_test)
@@ -94,6 +98,50 @@ is called at the end of genesis.
 
 
 </details>
+
+<a name="0x1_LibraTimestamp_ENOT_GENESIS"></a>
+
+## Const `ENOT_GENESIS`
+
+
+
+<pre><code><b>const</b> ENOT_GENESIS: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_ENOT_OPERATING"></a>
+
+## Const `ENOT_OPERATING`
+
+
+
+<pre><code><b>const</b> ENOT_OPERATING: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_ETIMER_RESOURCE"></a>
+
+## Const `ETIMER_RESOURCE`
+
+
+
+<pre><code><b>const</b> ETIMER_RESOURCE: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_ETIMESTAMP"></a>
+
+## Const `ETIMESTAMP`
+
+
+
+<pre><code><b>const</b> ETIMESTAMP: u64 = 3;
+</code></pre>
+
+
 
 <a name="0x1_LibraTimestamp_initialize"></a>
 

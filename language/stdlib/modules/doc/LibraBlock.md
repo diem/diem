@@ -7,6 +7,9 @@
 
 -  [Resource `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
 -  [Struct `NewBlockEvent`](#0x1_LibraBlock_NewBlockEvent)
+-  [Const `EBLOCK_METADATA`](#0x1_LibraBlock_EBLOCK_METADATA)
+-  [Const `ESENDER_NOT_VM`](#0x1_LibraBlock_ESENDER_NOT_VM)
+-  [Const `EVM_OR_VALIDATOR`](#0x1_LibraBlock_EVM_OR_VALIDATOR)
 -  [Function `initialize_block_metadata`](#0x1_LibraBlock_initialize_block_metadata)
 -  [Function `is_initialized`](#0x1_LibraBlock_is_initialized)
 -  [Function `block_prologue`](#0x1_LibraBlock_block_prologue)
@@ -101,6 +104,39 @@
 
 
 </details>
+
+<a name="0x1_LibraBlock_EBLOCK_METADATA"></a>
+
+## Const `EBLOCK_METADATA`
+
+
+
+<pre><code><b>const</b> EBLOCK_METADATA: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraBlock_ESENDER_NOT_VM"></a>
+
+## Const `ESENDER_NOT_VM`
+
+
+
+<pre><code><b>const</b> ESENDER_NOT_VM: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LibraBlock_EVM_OR_VALIDATOR"></a>
+
+## Const `EVM_OR_VALIDATOR`
+
+
+
+<pre><code><b>const</b> EVM_OR_VALIDATOR: u64 = 3;
+</code></pre>
+
+
 
 <a name="0x1_LibraBlock_initialize_block_metadata"></a>
 

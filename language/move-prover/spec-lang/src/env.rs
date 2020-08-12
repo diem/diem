@@ -219,6 +219,10 @@ type RawIndex = u16;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct ModuleId(RawIndex);
 
+/// Identifier for a named constant, relative to module.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct NamedConstantId(Symbol);
+
 /// Identifier for a structure/resource, relative to module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct StructId(Symbol);
@@ -257,6 +261,16 @@ pub struct GlobalId(usize);
 pub struct QualifiedId<Id> {
     pub module_id: ModuleId,
     pub id: Id,
+}
+
+impl NamedConstantId {
+    pub fn new(sym: Symbol) -> Self {
+        Self(sym)
+    }
+
+    pub fn symbol(self) -> Symbol {
+        self.0
+    }
 }
 
 impl FunId {
@@ -709,11 +723,13 @@ impl GlobalEnv {
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
     /// in definition index order. See `create_function_data` and `create_struct_data` for how
     /// to create them.
+    #[allow(clippy::too_many_arguments)]
     pub fn add(
         &mut self,
         loc: Loc,
         module: CompiledModule,
         source_map: SourceMap<MoveIrLoc>,
+        named_constants: BTreeMap<NamedConstantId, NamedConstantData>,
         struct_data: BTreeMap<StructId, StructData>,
         function_data: BTreeMap<FunId, FunctionData>,
         spec_vars: Vec<SpecVarDecl>,
@@ -760,6 +776,7 @@ impl GlobalEnv {
             name,
             id: ModuleId(idx as RawIndex),
             module,
+            named_constants,
             struct_data,
             struct_idx_to_id,
             function_data,
@@ -775,6 +792,22 @@ impl GlobalEnv {
             instantiation_map,
             spec_block_infos,
         });
+    }
+
+    /// Creates data for a named constant.
+    pub fn create_named_constant_data(
+        &self,
+        name: Symbol,
+        loc: Loc,
+        typ: Type,
+        value: Value,
+    ) -> NamedConstantData {
+        NamedConstantData {
+            name,
+            loc,
+            typ,
+            value,
+        }
     }
 
     /// Creates data for a function, adding any information not contained in bytecode. This is
@@ -1037,6 +1070,9 @@ pub struct ModuleData {
     /// Module byte code.
     pub module: CompiledModule,
 
+    /// Named constant data
+    pub named_constants: BTreeMap<NamedConstantId, NamedConstantData>,
+
     /// Struct data.
     pub struct_data: BTreeMap<StructId, StructData>,
 
@@ -1136,6 +1172,57 @@ impl<'env> ModuleEnv<'env> {
     /// Gets the underlying bytecode module.
     pub fn get_verified_module(&'env self) -> &'env CompiledModule {
         &self.data.module
+    }
+
+    /// Gets a `NamedConstantEnv` in this module by name
+    pub fn find_named_constant(&'env self, name: Symbol) -> Option<NamedConstantEnv<'env>> {
+        let id = NamedConstantId(name);
+        self.data
+            .named_constants
+            .get(&id)
+            .map(|data| NamedConstantEnv {
+                module_env: self.clone(),
+                data,
+            })
+    }
+
+    /// Gets a `NamedConstantEnv` in this module by the constant's id
+    pub fn get_named_constant(&'env self, id: NamedConstantId) -> NamedConstantEnv<'env> {
+        self.clone().into_named_constant(id)
+    }
+
+    /// Gets a `NamedConstantEnv` by id
+    pub fn into_named_constant(self, id: NamedConstantId) -> NamedConstantEnv<'env> {
+        let data = self
+            .data
+            .named_constants
+            .get(&id)
+            .expect("NamedConstantId undefined");
+        NamedConstantEnv {
+            module_env: self,
+            data,
+        }
+    }
+
+    /// Gets the number of named constants in this module.
+    pub fn get_named_constant_count(&self) -> usize {
+        self.data.named_constants.len()
+    }
+
+    /// Returns iterator over `NamedConstantEnv`s in this module.
+    pub fn get_named_constants(&'env self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
+        self.clone().into_named_constants()
+    }
+
+    /// Returns an iterator over `NamedConstantEnv`s in this module.
+    pub fn into_named_constants(self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
+        self.data
+            .named_constants
+            .iter()
+            .map(move |(_, data)| NamedConstantEnv {
+                module_env: self.clone(),
+                data,
+            })
     }
 
     /// Gets a FunctionEnv in this module by name.
@@ -1731,6 +1818,64 @@ impl<'env> FieldEnv<'env> {
     /// Get field offset.
     pub fn get_offset(&self) -> usize {
         self.data.offset
+    }
+}
+
+// =================================================================================================
+/// # Named Constant Environment
+
+#[derive(Debug)]
+pub struct NamedConstantData {
+    /// The name of this constant
+    name: Symbol,
+
+    /// The location of this constant
+    loc: Loc,
+
+    /// The type of this constant
+    typ: Type,
+
+    /// The value of this constant
+    value: Value,
+}
+
+#[derive(Debug)]
+pub struct NamedConstantEnv<'env> {
+    /// Reference to enclosing module.
+    pub module_env: ModuleEnv<'env>,
+
+    data: &'env NamedConstantData,
+}
+
+impl<'env> NamedConstantEnv<'env> {
+    /// Returns the name of this constant
+    pub fn get_name(&self) -> Symbol {
+        self.data.name
+    }
+
+    /// Returns the id of this constant
+    pub fn get_id(&self) -> NamedConstantId {
+        NamedConstantId(self.data.name)
+    }
+
+    /// Returns documentation associated with this constant
+    pub fn get_doc(&self) -> &str {
+        self.module_env.env.get_doc(&self.data.loc)
+    }
+
+    /// Returns the location of this constant
+    pub fn get_loc(&self) -> Loc {
+        self.data.loc.clone()
+    }
+
+    /// Returns the type of the constant
+    pub fn get_type(&self) -> Type {
+        self.data.typ.clone()
+    }
+
+    /// Returns the value of this constant
+    pub fn get_value(&self) -> Value {
+        self.data.value.clone()
     }
 }
 

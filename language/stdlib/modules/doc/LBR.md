@@ -8,6 +8,11 @@
 -  [Resource `LBR`](#0x1_LBR_LBR)
 -  [Resource `ReserveComponent`](#0x1_LBR_ReserveComponent)
 -  [Resource `Reserve`](#0x1_LBR_Reserve)
+-  [Const `MAX_U64`](#0x1_LBR_MAX_U64)
+-  [Const `ERESERVE`](#0x1_LBR_ERESERVE)
+-  [Const `ECOIN1`](#0x1_LBR_ECOIN1)
+-  [Const `ECOIN2`](#0x1_LBR_ECOIN2)
+-  [Const `EZERO_LBR_MINT_NOT_ALLOWED`](#0x1_LBR_EZERO_LBR_MINT_NOT_ALLOWED)
 -  [Function `initialize`](#0x1_LBR_initialize)
 -  [Function `is_lbr`](#0x1_LBR_is_lbr)
 -  [Function `calculate_component_amounts_for_lbr`](#0x1_LBR_calculate_component_amounts_for_lbr)
@@ -201,6 +206,62 @@ e.g., if
 
 
 </details>
+
+<a name="0x1_LBR_MAX_U64"></a>
+
+## Const `MAX_U64`
+
+TODO(wrwg): This should be provided somewhere centrally in the framework.
+
+
+<pre><code><b>const</b> MAX_U64: u64 = 18446744073709551615;
+</code></pre>
+
+
+
+<a name="0x1_LBR_ERESERVE"></a>
+
+## Const `ERESERVE`
+
+
+
+<pre><code><b>const</b> ERESERVE: u64 = 0;
+</code></pre>
+
+
+
+<a name="0x1_LBR_ECOIN1"></a>
+
+## Const `ECOIN1`
+
+
+
+<pre><code><b>const</b> ECOIN1: u64 = 1;
+</code></pre>
+
+
+
+<a name="0x1_LBR_ECOIN2"></a>
+
+## Const `ECOIN2`
+
+
+
+<pre><code><b>const</b> ECOIN2: u64 = 2;
+</code></pre>
+
+
+
+<a name="0x1_LBR_EZERO_LBR_MINT_NOT_ALLOWED"></a>
+
+## Const `EZERO_LBR_MINT_NOT_ALLOWED`
+
+
+
+<pre><code><b>const</b> EZERO_LBR_MINT_NOT_ALLOWED: u64 = 3;
+</code></pre>
+
+
 
 <a name="0x1_LBR_initialize"></a>
 
