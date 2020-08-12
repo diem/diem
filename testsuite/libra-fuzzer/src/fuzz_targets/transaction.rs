@@ -22,7 +22,7 @@ impl FuzzTargetImpl for LanguageTransactionExecution {
             test_runner::TestRng::from_seed(test_runner::RngAlgorithm::PassThrough, &data);
 
         let mut generator = ValueGenerator::new_with_rng(passthrough_rng);
-        let txn_strategy = vec(all_transactions_strategy(0, 1_000_000), 1..40);
+        let txn_strategy = vec(all_transactions_strategy(1, 1_000_000), 1..40);
 
         let txns = generator.generate(txn_strategy);
 
