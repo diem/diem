@@ -98,6 +98,9 @@ fn skip_whitespace_checks<'l>(file: &FileContext<'l>) -> RunStatus<'l> {
         Some("exp") => {
             return RunStatus::Skipped(SkipReason::UnsupportedExtension(file.extension()))
         }
+        Some("errmap") => {
+            return RunStatus::Skipped(SkipReason::UnsupportedExtension(file.extension()))
+        }
         _ => (),
     }
 
