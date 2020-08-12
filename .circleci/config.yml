@@ -76,6 +76,15 @@ commands:
             echo 'export CARGO="$(rustup which cargo --toolchain $RUST_NIGHTLY)"' >> $BASH_ENV
             # Pin the version of RUSTC used for all invocations of cargo
             echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
+  install_code_coverage_deps:
+    steps:
+      - run:
+          name: Install grcov and lcov
+          command: |
+            sudo apt-get update
+            sudo apt-get install lcov
+            ${CARGO} ${CARGOFLAGS} install --force grcov
+            grcov --version
   install_docker_linter:
     steps:
       - run:
@@ -736,6 +745,59 @@ jobs:
             aws ecr get-login-password --region ${AWS_REGION} | \
             docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
             docker/dockerhub_to_novi_ecr.sh -t ${BRANCH}_${GIT_REV} -r ${AWS_ECR_ACCOUNT_URL}
+
+  ######################################################################################################################
+  #  Code Coverage for unit tests (targets S3 html upload, codecov.io output, and slack with failed tests/compilations)
+  ######################################################################################################################
+
+  code_coverage:
+    description: Run code coverage
+    executor: unittest-executor
+    environment:
+      MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
+    steps:
+      - build_setup
+      - install_code_coverage_deps
+      - run:
+          name: Sanity check
+          command: |
+            echo AWS_ACCESS_KEY_ID = ${AWS_ACCESS_KEY_ID: -3}
+            echo AWS_SECRET_ACCESS_KEY = ${AWS_SECRET_ACCESS_KEY: -3}
+            echo AWS_DEFAULT_REGION = ${AWS_DEFAULT_REGION: -3}
+      - aws-cli/install
+      - aws-cli/configure:
+          aws-access-key-id: AWS_ACCESS_KEY_ID
+          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
+          aws-region: AWS_DEFAULT_REGION
+      - run:
+          name: Setup code coverage output
+          command: |
+            echo "export CODECOV_OUTPUT=codecov" >> $BASH_ENV
+      - run:
+          name: Run code coverage
+          command: |
+            scripts/coverage_report.sh . ${CODECOV_OUTPUT} --batch --failed_crate_file ${MESSAGE_PAYLOAD_FILE}
+      - run:
+          name: Upload result to codecov.io
+          command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info -F unittest;
+      - run:
+          name: Grcov html report to S3
+          command: |
+            set -x
+            export AWS_REGION=$AWS_DEFAULT_REGION
+            export GIT_SHORT_REV=$(git rev-parse --short=8 HEAD)
+            export reportdir=${CODECOV_OUTPUT}/grcovhtml;
+            _bucket="ci-artifacts.libra.org/coverage/unit-coverage/$(date +"%Y-%m-%d")-${GIT_SHORT_REV}";
+            aws s3 cp --recursive $reportdir "s3://$_bucket";
+            echo "have to reupload as aws user doesn't have read access";
+            aws s3 cp --recursive $reportdir "s3://ci-artifacts.libra.org/coverage/unit-coverage/latest";
+            _s3_url="https://ci-artifacts.libra.org/coverage/unit-coverage/latest/index.html";
+            echo "Grcov available in s3 ${_s3_url}" >> ${MESSAGE_PAYLOAD_FILE}
+      - send_message:
+          payload_file: "${MESSAGE_PAYLOAD_FILE}"
+          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
+          webhook: "${WEBHOOK_COVERAGE_INFO}"
+
 workflows:
   commit-workflow:
     jobs:
@@ -859,3 +921,8 @@ workflows:
               only: master
     jobs:
       - audit
+      - code_coverage:
+          context: libra_ci
+          filters:
+            branches:
+              only: master
