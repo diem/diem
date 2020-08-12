@@ -1406,7 +1406,6 @@ dependencies = [
  "storage-client 0.1.0",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
- "workspace-builder 0.1.0",
 ]
 
 [[package]]

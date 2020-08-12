@@ -13,17 +13,12 @@ mod local;
 mod process;
 mod remote_service;
 mod serializer;
-mod spawned_process;
 mod thread;
 
 pub use crate::{
     execution_correctness::ExecutionCorrectness,
     execution_correctness_manager::ExecutionCorrectnessManager, process::Process,
 };
-
-#[cfg(test)]
-#[path = "process_client_wrapper.rs"]
-pub mod process_client_wrapper;
 
 #[cfg(test)]
 mod tests;

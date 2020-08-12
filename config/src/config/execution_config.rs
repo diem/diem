@@ -108,9 +108,6 @@ pub enum ExecutionCorrectnessService {
     /// This runs safety rules in the same thread as event processor but data is passed through the
     /// light weight RPC (serializer)
     Serializer,
-    /// This instructs Consensus that this is an test model, where Consensus should take the
-    /// existing config, create a new process, and pass to it the config
-    SpawnedProcess(RemoteExecutionService),
     /// This creates a separate thread to run execution correctness, it is similar to a fork / exec style
     Thread,
 }

@@ -7,7 +7,6 @@ use crate::{
     process::ProcessService,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
-    spawned_process::SpawnedProcess,
     thread::ThreadService,
 };
 use executor::Executor;
@@ -52,7 +51,6 @@ enum ExecutionCorrectnessWrapper {
     Local(Arc<Mutex<LocalService>>),
     Process(ProcessService),
     Serializer(Arc<Mutex<SerializerService>>),
-    SpawnedProcess(SpawnedProcess),
     Thread(ThreadService),
 }
 
@@ -62,18 +60,12 @@ pub struct ExecutionCorrectnessManager {
 
 impl ExecutionCorrectnessManager {
     pub fn new(config: &NodeConfig) -> Self {
-        match &config.execution.service {
-            ExecutionCorrectnessService::Process(remote_service) => {
-                return Self::new_process(
-                    remote_service.server_address,
-                    config.execution.network_timeout_ms,
-                )
-            }
-            ExecutionCorrectnessService::SpawnedProcess(_) => {
-                return Self::new_spawned_process(config)
-            }
-            _ => (),
-        };
+        if let ExecutionCorrectnessService::Process(remote_service) = &config.execution.service {
+            return Self::new_process(
+                remote_service.server_address,
+                config.execution.network_timeout_ms,
+            );
+        }
 
         let execution_prikey = extract_execution_prikey(config);
         let storage_address = config.storage.address;
@@ -133,13 +125,6 @@ impl ExecutionCorrectnessManager {
         }
     }
 
-    pub fn new_spawned_process(config: &NodeConfig) -> Self {
-        let process = SpawnedProcess::new(config);
-        Self {
-            internal_execution_correctness: ExecutionCorrectnessWrapper::SpawnedProcess(process),
-        }
-    }
-
     pub fn new_thread(
         storage_address: SocketAddr,
         execution_prikey: Option<Ed25519PrivateKey>,
@@ -160,7 +145,6 @@ impl ExecutionCorrectnessManager {
             ExecutionCorrectnessWrapper::Serializer(serializer_service) => {
                 Box::new(SerializerClient::new(serializer_service.clone()))
             }
-            ExecutionCorrectnessWrapper::SpawnedProcess(process) => Box::new(process.client()),
             ExecutionCorrectnessWrapper::Thread(thread) => Box::new(thread.client()),
         }
     }

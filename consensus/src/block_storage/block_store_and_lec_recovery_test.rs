@@ -14,17 +14,14 @@ use executor_test_helpers::start_storage_service;
 use executor_types::ExecutedTrees;
 use futures::channel::mpsc;
 use libra_config::{
-    config::{ExecutionCorrectnessService, NodeConfig, PersistableConfig, RemoteExecutionService},
+    config::{NodeConfig, PersistableConfig},
     utils,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::validator_signer::ValidatorSigner;
 use state_synchronizer::StateSyncClient;
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::sync::Arc;
 use storage_interface::DbReader;
 
 fn get_initial_data_and_qc(db: &dyn DbReader) -> (RecoveryData, QuorumCert) {
@@ -97,13 +94,6 @@ fn test_executor_restart() {
     // Start storage service
     let (mut config, _handle, db) = start_storage_service();
 
-    let server_port = utils::get_available_port();
-    let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-
-    // Start LEC service as a process.
-    config.execution.service =
-        ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
-
     // Store the config
     let config_path = TempPath::new();
     config_path.create_as_file().unwrap();
@@ -151,13 +141,6 @@ fn test_executor_restart() {
 fn test_block_store_restart() {
     // Start storage service
     let (mut config, _handle, db) = start_storage_service();
-
-    let server_port = utils::get_available_port();
-    let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
-
-    // Start LEC service as a process.
-    config.execution.service =
-        ExecutionCorrectnessService::SpawnedProcess(RemoteExecutionService { server_address });
 
     // Store the config
     let config_path = TempPath::new();

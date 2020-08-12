@@ -59,7 +59,6 @@ proptest = "0.10.0"
 tempfile = "3.1.0"
 
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false, features = ["fuzzing"] }
-execution-correctness = { path = "../execution/execution-correctness", version = "0.1.0", features = ["testing"] }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
 libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
 libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
@@ -70,5 +69,4 @@ vm-validator = { path = "../vm-validator", version = "0.1.0" }
 [features]
 default = []
 fuzzing = ["proptest", "consensus-types/fuzzing", "libra-config/fuzzing", "libra-crypto/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "safety-rules/testing"]
-testing = ["execution-correctness/testing"]
 enable-inject-error = []

@@ -32,9 +32,6 @@ impl Process {
         let service = &self.config.execution.service;
         let server_addr = match &service {
             ExecutionCorrectnessService::Process(remote_service) => remote_service.server_address,
-            ExecutionCorrectnessService::SpawnedProcess(remote_service) => {
-                remote_service.server_address
-            }
             _ => panic!("Unexpected ExecutionCorrectness service: {:?}", service),
         };
         remote_service::execute(
