@@ -301,9 +301,9 @@ impl<T: Payload> EventProcessor<T> {
     /// Process a ProposalMsg, pre_process would bring all the dependencies and filter out invalid
     /// proposal, process_proposed_block would execute and decide whether to vote for it.
     pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg<T>) {
-        info!("zhuolun proposal size: {:?}", mem::size_of_val(&proposal_msg));
+        info!("zhuolun proposal size: {:?}", lcs::to_bytes(&proposal_msg).unwrap().len());
         if let Some(block) = self.pre_process_proposal(proposal_msg).await {
-            info!("zhuolun block size: {:?}", mem::size_of_val(&block));
+            info!("zhuolun block size: {:?}", lcs::to_bytes(&block).unwrap().len());
             self.process_proposed_block(block).await
         }
     }
