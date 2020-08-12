@@ -60,9 +60,6 @@ pub enum SafetyRulesService {
     /// This runs safety rules in the same thread as event processor but data is passed through the
     /// light weight RPC (serializer)
     Serializer,
-    /// This instructs Consensus that this is an test model, where Consensus should take the
-    /// existing config, create a new process, and pass it the config
-    SpawnedProcess(RemoteService),
     /// This creates a separate thread to run safety rules, it is similar to a fork / exec style
     Thread,
 }

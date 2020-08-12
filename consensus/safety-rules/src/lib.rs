@@ -14,7 +14,6 @@ mod remote_service;
 mod safety_rules;
 mod safety_rules_manager;
 mod serializer;
-mod spawned_process;
 mod t_safety_rules;
 mod thread;
 
@@ -24,10 +23,6 @@ pub use crate::{
     safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
     t_safety_rules::TSafetyRules,
 };
-
-#[cfg(any(test, feature = "testing"))]
-#[path = "process_client_wrapper.rs"]
-pub mod process_client_wrapper;
 
 #[cfg(any(test, feature = "testing"))]
 #[path = "test_utils.rs"]

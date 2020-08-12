@@ -21,7 +21,6 @@ impl Process {
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
         let service = match &config.service {
             SafetyRulesService::Process(service) => service,
-            SafetyRulesService::SpawnedProcess(service) => service,
             _ => panic!("Unexpected SafetyRules service: {:?}", config.service),
         };
         let server_addr = service.server_address();

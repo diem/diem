@@ -7,7 +7,6 @@ use crate::{
     process::ProcessService,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
-    spawned_process::SpawnedProcess,
     thread::ThreadService,
     SafetyRules, TSafetyRules,
 };
@@ -56,7 +55,6 @@ enum SafetyRulesWrapper {
     Local(Arc<RwLock<SafetyRules>>),
     Process(ProcessService),
     Serializer(Arc<RwLock<SerializerService>>),
-    SpawnedProcess(SpawnedProcess),
     Thread(ThreadService),
 }
 
@@ -66,13 +64,9 @@ pub struct SafetyRulesManager {
 
 impl SafetyRulesManager {
     pub fn new(config: &SafetyRulesConfig) -> Self {
-        match &config.service {
-            SafetyRulesService::Process(conf) => {
-                return Self::new_process(conf.server_address(), config.network_timeout_ms)
-            }
-            SafetyRulesService::SpawnedProcess(_) => return Self::new_spawned_process(config),
-            _ => (),
-        };
+        if let SafetyRulesService::Process(conf) = &config.service {
+            return Self::new_process(conf.server_address(), config.network_timeout_ms);
+        }
 
         let storage = storage(config);
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
@@ -120,13 +114,6 @@ impl SafetyRulesManager {
         }
     }
 
-    pub fn new_spawned_process(config: &SafetyRulesConfig) -> Self {
-        let process = SpawnedProcess::new(config);
-        Self {
-            internal_safety_rules: SafetyRulesWrapper::SpawnedProcess(process),
-        }
-    }
-
     pub fn new_thread(
         storage: PersistentSafetyStorage,
         verify_vote_proposal_signature: bool,
@@ -147,7 +134,6 @@ impl SafetyRulesManager {
             SafetyRulesWrapper::Serializer(serializer_service) => {
                 Box::new(SerializerClient::new(serializer_service.clone()))
             }
-            SafetyRulesWrapper::SpawnedProcess(process) => Box::new(process.client()),
             SafetyRulesWrapper::Thread(thread) => Box::new(thread.client()),
         }
     }
