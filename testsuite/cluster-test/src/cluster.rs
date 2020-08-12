@@ -280,4 +280,8 @@ impl Cluster {
             })
             .collect()
     }
+
+    pub fn get_waypoint(&self) -> Option<Waypoint> {
+        self.waypoint
+    }
 }

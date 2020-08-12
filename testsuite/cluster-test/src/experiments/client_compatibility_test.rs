@@ -5,7 +5,6 @@
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::cluster_swarm_kube::CFG_SEED,
     experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
 };
@@ -26,21 +25,44 @@ pub struct ClientCompatibilityTest {
     old_image_tag: String,
     faucet_node: Instance,
     cli_node: Instance,
+    py_node: Instance,
 }
 
 impl ExperimentParam for ClientCompatiblityTestParams {
     type E = ClientCompatibilityTest;
     fn build(self, cluster: &Cluster) -> Self::E {
-        let (test_nodes, _) = cluster.split_n_fullnodes_random(2);
+        let (test_nodes, _) = cluster.split_n_fullnodes_random(3);
         let mut test_nodes = test_nodes.into_fullnode_instances();
         let faucet_node = test_nodes.pop().expect("Requires at least one faucet node");
-        let cli_node = test_nodes.pop().expect("Requires at least one test node");
+        let cli_node = test_nodes
+            .pop()
+            .expect("Requires at least one CLI test node");
+        let py_node = test_nodes
+            .pop()
+            .expect("Requires at least one python test node");
         Self::E {
             old_image_tag: self.old_image_tag,
             faucet_node,
             cli_node,
+            py_node,
         }
     }
+}
+
+/// Given a local file, build a shell command that will reconstruct the file at some remote destination
+pub fn get_file_build_cmd(src_contents: &str, dst_file_name: &str) -> String {
+    let mut build_cmd = String::new();
+    let cmd_file = dst_file_name;
+    let cmds = src_contents;
+    for cmd in cmds.split('\n') {
+        // NOTE: some ugly string replacement might be necessary to play nicely when it gets stuffed in k8s job command
+        build_cmd.push_str(&format!(
+            "echo '{cmd}' >> {cmd_file};",
+            cmd = cmd.clone(),
+            cmd_file = cmd_file
+        ));
+    }
+    build_cmd
 }
 
 #[async_trait]
@@ -61,11 +83,10 @@ impl Experiment for ClientCompatibilityTest {
         // run faucet on the test host
         let faucet_port: &str = "9999";
         let num_validators = context.cluster.validator_instances().len();
+        let waypoint = context.cluster.get_waypoint().expect("Missing waypoint");
         let config_cmd = format!(
-            "/opt/libra/bin/config-builder faucet -o /opt/libra/etc --chain-id {chain_id} -s {seed} -n {num_validators}; echo $?; cat /opt/libra/etc/waypoint.txt",
-            chain_id=ChainId::test(),
-            seed=CFG_SEED,
-            num_validators=num_validators
+            "echo {waypoint} > /opt/libra/etc/waypoint.txt",
+            waypoint = waypoint
         );
         let env_cmd = format!(
             "CFG_CHAIN_ID={chain_id} AC_HOST={ac_host} AC_PORT={ac_port}",
@@ -109,20 +130,13 @@ impl Experiment for ClientCompatibilityTest {
             faucet_host = self.faucet_node.ip(),
             faucet_port = faucet_port
         );
-        let mut build_cli_cmd = String::new();
         let cli_cmd_file = "/opt/libra/etc/cmds.txt";
-        let cmds = include_str!("client_compatibility_cmds.txt");
-        for cmd in cmds.split('\n') {
-            build_cli_cmd.push_str(&format!(
-                "echo {cmd} >> {cmd_file};",
-                cmd = cmd,
-                cmd_file = cli_cmd_file
-            ));
-        }
-        // config builder, build cli cmd on a single line to file, pipe the file input to cli
+        let build_cli_cmd =
+            get_file_build_cmd(include_str!("client_compatibility_cmds.txt"), cli_cmd_file);
+
+        // build cli cmd on a single line to file, pipe the file input to cli
         let full_cli_cmd = format!(
-            "{config_cmd}; {build_cli_cmd} {run_cli_cmd} < {cli_cmd_file} && echo SUCCESS",
-            config_cmd = config_cmd,
+            "{build_cli_cmd} {run_cli_cmd} < {cli_cmd_file} && echo SUCCESS",
             build_cli_cmd = build_cli_cmd,
             run_cli_cmd = run_cli_cmd,
             cli_cmd_file = cli_cmd_file
@@ -147,6 +161,45 @@ impl Experiment for ClientCompatibilityTest {
         info!("{}", msg);
         context.report.report_text(msg);
 
+        // construct pylibra commands
+        let py_cmd_file = "/opt/libra/etc/cmds.py";
+        let build_py_cmd =
+            get_file_build_cmd(include_str!("client_compatibility_cmds.py"), py_cmd_file);
+
+        let py_env_cmd = format!(
+            "JSON_RPC_URL={fn_url} FAUCET_URL='http://{faucet_host}:{faucet_port}'",
+            fn_url = self.py_node.json_rpc_url(),
+            faucet_host = self.faucet_node.ip(),
+            faucet_port = faucet_port
+        );
+
+        // build py cmd on a single line to file, pipe the file input to python
+        let full_py_cmd = format!(
+            "{build_py_cmd} cat /opt/libra/etc/cmds.py; {py_env_cmd} /usr/bin/python3 < {py_cmd_file} && echo SUCCESS",
+            build_py_cmd = build_py_cmd,
+            py_env_cmd = py_env_cmd,
+            py_cmd_file = py_cmd_file
+        );
+        let msg = format!("4. Running CLI mint from node {}", self.py_node);
+        info!("{}", msg);
+        context.report.report_text(msg);
+        info!(
+            "Job starting for node {}:{} Py command: {}",
+            self.py_node,
+            self.py_node.peer_name(),
+            full_py_cmd
+        );
+        // run python commands as blocking
+        self.py_node
+            .cmd(&test_image, &full_py_cmd, "run-py-commands")
+            .await
+            .map_err(|err| anyhow::format_err!("Failed to run python: {}", err))?;
+
+        // verify that python actually ran
+        let msg = format!("5. Pylibra success from node {}", self.py_node);
+        info!("{}", msg);
+        context.report.report_text(msg);
+
         // kill faucet if it is still running
         context
             .cluster_builder
@@ -167,8 +220,8 @@ impl fmt::Display for ClientCompatibilityTest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Client compatibility test {}, faucet {}, CLI on {}",
-            self.old_image_tag, self.faucet_node, self.cli_node
+            "Client compatibility test {}, faucet {}, CLI {}, pylibra {}",
+            self.old_image_tag, self.faucet_node, self.cli_node, self.py_node
         )
     }
 }
