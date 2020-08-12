@@ -102,7 +102,7 @@ commands:
             else
               echo 'sccache binary is found. Skipping install.'
             fi
-            echo 'export SCCACHE_CACHE_SIZE=4G' >> $BASH_ENV
+            echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
@@ -124,11 +124,40 @@ commands:
             cat rust-toolchain > /tmp/cache-key
             cat cargo-toolchain >> /tmp/cache-key
             date +%Y%m%d >> /tmp/cache-key
+      # NOTE circle supports cache corruption check upto 500MB. For
+      # SCCACHE_CACHE_SIZE=2G, split them into 4 chunks.
       - save_cache:
-          name: Save sccache
-          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+          name: Save sccache chunk 1/4
+          key: sccache-asset-chunk1-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
           paths:
-            - "/home/circleci/.cache/sccache"
+            - "/home/circleci/.cache/sccache/0"
+            - "/home/circleci/.cache/sccache/1"
+            - "/home/circleci/.cache/sccache/2"
+            - "/home/circleci/.cache/sccache/3"
+      - save_cache:
+          name: Save sccache chunk 2/4
+          key: sccache-asset-chunk2-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+          paths:
+            - "/home/circleci/.cache/sccache/4"
+            - "/home/circleci/.cache/sccache/5"
+            - "/home/circleci/.cache/sccache/6"
+            - "/home/circleci/.cache/sccache/7"
+      - save_cache:
+          name: Save sccache chunk 3/4
+          key: sccache-asset-chunk3-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+          paths:
+            - "/home/circleci/.cache/sccache/8"
+            - "/home/circleci/.cache/sccache/9"
+            - "/home/circleci/.cache/sccache/a"
+            - "/home/circleci/.cache/sccache/b"
+      - save_cache:
+          name: Save sccache chunk 4/4
+          key: sccache-asset-chunk4-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+          paths:
+            - "/home/circleci/.cache/sccache/c"
+            - "/home/circleci/.cache/sccache/d"
+            - "/home/circleci/.cache/sccache/e"
+            - "/home/circleci/.cache/sccache/f"
   restore_sccache:
     description: Restore shared compilation cache from prior jobs
     steps:
@@ -139,8 +168,17 @@ commands:
             cat cargo-toolchain >> /tmp/cache-key
             date +%Y%m%d >> /tmp/cache-key
       - restore_cache:
-          name: Restore sccache
-          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+          name: Restore sccache chunk 1/4
+          key: sccache-asset-chunk1-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+      - restore_cache:
+          name: Restore sccache chunk 2/4
+          key: sccache-asset-chunk2-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+      - restore_cache:
+          name: Restore sccache chunk 3/4
+          key: sccache-asset-chunk3-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
+      - restore_cache:
+          name: Restore sccache chunk 4/4
+          key: sccache-asset-chunk4-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
       - run:
           name: Show sccache
           command: sccache -s
