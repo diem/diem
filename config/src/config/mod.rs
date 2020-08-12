@@ -102,7 +102,7 @@ pub struct BaseConfig {
 impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
-            data_dir: PathBuf::from("/opt/libra/data/common"),
+            data_dir: PathBuf::from("/opt/libra/data"),
             chain_id: ChainId::test(),
             role: RoleType::Validator,
             waypoint: WaypointConfig::None,

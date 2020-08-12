@@ -38,7 +38,7 @@ fi
 
 
 /opt/libra/bin/config-builder full-node create \
-	--data-dir /opt/libra/data/common \
+	--data-dir /opt/libra/data \
 	--output-dir /opt/libra/etc/ \
 	${params[@]}
 

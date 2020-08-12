@@ -26,7 +26,7 @@ FROM debian:buster AS prod
 
 RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
 
-RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data/common
+RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data
 
 COPY docker/safety-rules/key-manager.sh /
 COPY docker/safety-rules/safety-rules.sh /

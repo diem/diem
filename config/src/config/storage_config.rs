@@ -34,7 +34,7 @@ impl Default for StorageConfig {
             // At 100 tps on avg, we keep 4~5 days of history.
             // n.b. Validators have more aggressive override in the config builder.
             prune_window: Some(40_000_000),
-            data_dir: PathBuf::from("/opt/libra/data/common"),
+            data_dir: PathBuf::from("/opt/libra/data"),
             // Default read/write/connection timeout, in milliseconds
             timeout_ms: 30_000,
         }

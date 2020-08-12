@@ -1,6 +1,6 @@
 base:
     chain_id: "TESTING"
-    data_dir: "/opt/libra/data/common"
+    data_dir: "/opt/libra/data"
     role: "validator"
     waypoint:
         from_storage:

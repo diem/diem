@@ -38,7 +38,7 @@ if [ -n "${CFG_SAFETY_RULES_NAMESPACE}" ]; then
 fi
 
 /opt/libra/bin/config-builder safety-rules \
-    --data-dir /opt/libra/data/common \
+    --data-dir /opt/libra/data \
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 

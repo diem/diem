@@ -35,7 +35,7 @@ if [ -n "${CFG_VAULT_TOKEN}" ]; then
 fi
 
 /opt/libra/bin/config-builder key-manager \
-    --data-dir /opt/libra/data/common \
+    --data-dir /opt/libra/data \
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 

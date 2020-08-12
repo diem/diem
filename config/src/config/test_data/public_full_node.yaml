@@ -1,6 +1,6 @@
 base:
     chain_id: "TESTING"
-    data_dir: "/opt/libra/data/common"
+    data_dir: "/opt/libra/data"
     role: "full_node"
     waypoint:
         from_config: "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210"
