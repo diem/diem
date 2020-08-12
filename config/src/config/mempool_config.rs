@@ -23,7 +23,7 @@ impl Default for MempoolConfig {
             shared_mempool_tick_interval_ms: 50,
             shared_mempool_backoff_interval_ms: 30_000,
             shared_mempool_batch_size: 100,
-            shared_mempool_max_concurrent_inbound_syncs: 100,
+            shared_mempool_max_concurrent_inbound_syncs: 2,
             max_broadcasts_per_peer: 100,
             capacity: 1_000_000,
             capacity_per_user: 1_000_000,

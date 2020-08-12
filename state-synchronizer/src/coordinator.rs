@@ -472,7 +472,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             );
             msg = "state sync failed to send commit notif to shared mempool";
         }
-        if let Err(e) = timeout(Duration::from_secs(5), callback_rcv).await {
+        if let Err(e) = timeout(Duration::from_secs(10), callback_rcv).await {
             error!(
                 "[state sync] did not receive ACK for commit notification sent to mempool: {:?}",
                 e

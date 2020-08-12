@@ -11,6 +11,7 @@ use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
 use libra_metrics::monitor;
+use libra_logger::prelude::*;
 use libra_trace::prelude::*;
 use libra_types::transaction::TransactionStatus;
 use std::time::Duration;
@@ -49,7 +50,7 @@ impl TxnManager for MempoolProxy {
         // wait for response
         match monitor!(
             "pull_txn",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(Duration::from_secs(10), callback_rcv).await
         ) {
             Err(_) => Err(format_err!(
                 "[consensus] did not receive GetBlockResponse on time"
@@ -75,7 +76,8 @@ impl TxnManager for MempoolProxy {
             .iter()
             .zip_eq(compute_results.compute_status().iter().skip(1))
         {
-            if let TransactionStatus::Discard(_) = status {
+            if let TransactionStatus::Discard(vm_failure) = status {
+                debug!("[consensus] txn failed with vm error {:?} {}:{}", vm_failure, txn.sender(), txn.sequence_number());
                 rejected_txns.push(CommittedTransaction {
                     sender: txn.sender(),
                     sequence_number: txn.sequence_number(),
@@ -95,7 +97,7 @@ impl TxnManager for MempoolProxy {
 
         if let Err(e) = monitor!(
             "notify_mempool",
-            timeout(Duration::from_secs(1), callback_rcv).await
+            timeout(Duration::from_secs(10), callback_rcv).await
         ) {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
         } else {

@@ -185,7 +185,7 @@ impl StateSyncClient {
                 ))
                 .await?;
 
-            match timeout(Duration::from_secs(5), callback_rcv).await {
+            match timeout(Duration::from_secs(10), callback_rcv).await {
                 Err(_) => {
                     counters::COMMIT_TIMEOUT
                         .with_label_values(&["consensus"])
