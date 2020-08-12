@@ -174,7 +174,8 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
         let (mempool_sender, mempool_events) =
             network_builder.add_protocol_handler(libra_mempool::network::network_endpoint_config(
                 // TODO:  Make this configuration option more clear.
-                node_config.mempool.max_broadcasts_per_peer,
+//                node_config.mempool.max_broadcasts_per_peer,
+                1_024,
             ));
         mempool_network_handles.push((
             NodeNetworkId::new(network_id, idx),
