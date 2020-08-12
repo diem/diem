@@ -90,6 +90,7 @@ impl PendingLedgerInfos {
         }
     }
 
+    /// Adds `new_li` to the queue of pending LI's
     fn add_li(&mut self, new_li: LedgerInfoWithSignatures) {
         // update pending_ledgers if new LI is ahead of target LI (in terms of version)
         let target_version = self
@@ -616,12 +617,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
-        let target_li =
-            self.choose_response_li(request.known_version, request.current_epoch, target_li)?;
-        let highest_li = self.local_state.highest_local_li.clone();
         // If there is nothing a node can help with, and the request supports long polling,
         // add it to the subscriptions.
-        if highest_li.ledger_info().version() <= request.known_version && timeout > 0 {
+        let local_version = self.local_state.highest_local_li.ledger_info().version();
+        if local_version <= request.known_version && timeout > 0 {
             let expiration_time = SystemTime::now().checked_add(Duration::from_millis(timeout));
             if let Some(time) = expiration_time {
                 let request_info = PendingRequestInfo {
@@ -634,6 +633,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             }
             return Ok(());
         }
+
+        // If the request's epoch is in the past, `target_li` will be set to the end-of-epoch LI for that epoch
+        let target_li =
+            self.choose_response_li(request.known_version, request.current_epoch, target_li)?;
+        // Only populate highest_li field if it is different from target_li
+        let highest_li = if target_li.ledger_info().version() < local_version
+            && target_li.ledger_info().epoch() == self.local_state.epoch()
+        {
+            Some(self.local_state.highest_local_li.clone())
+        } else {
+            None
+        };
 
         self.deliver_chunk(
             peer,
@@ -777,20 +788,24 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let new_version = known_version + chunk_size;
         match response.response_li {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                self.process_response_with_verifiable_li(txn_list_with_proof, li)
+                self.process_response_with_verifiable_li(txn_list_with_proof, li, None)
             }
             ResponseLedgerInfo::ProgressiveLedgerInfo {
                 target_li,
                 highest_li,
             } => {
+                let highest_li = highest_li.unwrap_or_else(|| target_li.clone());
                 ensure!(
                     target_li.ledger_info().version() <= highest_li.ledger_info().version(),
                     "Progressive ledger info received target LI {} higher than highest LI {}",
                     target_li,
                     highest_li
                 );
-                self.pending_ledger_infos.add_li(highest_li);
-                self.process_response_with_verifiable_li(txn_list_with_proof, target_li)
+                self.process_response_with_verifiable_li(
+                    txn_list_with_proof,
+                    target_li,
+                    Some(highest_li),
+                )
             }
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
@@ -840,6 +855,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         &mut self,
         txn_list_with_proof: TransactionListWithProof,
         response_li: LedgerInfoWithSignatures,
+        // LI to verify and add to pending_ledger_infos
+        // may be the same as response_li
+        pending_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
         ensure!(
             self.is_initialized(),
@@ -870,6 +888,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             self.local_state.epoch()
         };
         self.local_state.trusted_epoch.verify(&response_li)?;
+        if let Some(li) = pending_li {
+            if li != response_li {
+                self.local_state.trusted_epoch.verify(&li)?;
+            }
+            self.pending_ledger_infos.add_li(li);
+        }
         self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
 
         // need to sync with local storage to see whether response LI was actually committed

@@ -179,7 +179,7 @@ impl Arbitrary for ResponseLedgerInfo {
 fn progressive_li_strategy() -> impl Strategy<Value = ResponseLedgerInfo> {
     (
         any::<LedgerInfoWithSignatures>(),
-        any::<LedgerInfoWithSignatures>(),
+        option::of(any::<LedgerInfoWithSignatures>()),
     )
         .prop_map(
             |(target_li, highest_li)| ResponseLedgerInfo::ProgressiveLedgerInfo {
