@@ -385,7 +385,7 @@ where
     /// Start listening on the set address and return a future which runs PeerManager
     pub async fn start(mut self) {
         // Start listening for connections.
-        send_struct_log!(
+        sl_info!(
             network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                 .data(network_events::TYPE, network_events::START)
         );
@@ -393,21 +393,21 @@ where
         loop {
             ::futures::select! {
                 connection_event = self.transport_notifs_rx.select_next_some() => {
-                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connection_event")
                         .data(network_events::EVENT, &connection_event)
                     );
                     self.handle_connection_event(connection_event);
                 }
                 request = self.requests_rx.select_next_some() => {
-                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "request")
                         .field(network_events::PEER_MANAGER_REQUEST, &request)
                     );
                     self.handle_request(request).await;
                 }
                 connection_request = self.connection_reqs_rx.select_next_some() => {
-                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connection_request")
                         .field(network_events::CONNECTION_REQUEST, &connection_request)
                     );
@@ -415,9 +415,8 @@ where
                 }
                 complete => {
                     // TODO: This should be ok when running in client mode.
-                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    sl_error!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, network_events::TERMINATION)
-                        .critical()
                     );
                     crit!("{} Peer manager actor terminated", self.network_context);
                     break;

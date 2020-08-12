@@ -1,12 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::{
-    counters::{
-        PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
-        STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
-        STRUCT_LOG_TCP_CONNECT_COUNT,
-    },
-    LogLevel,
+use crate::counters::{
+    PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
+    STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
+    STRUCT_LOG_TCP_CONNECT_COUNT,
 };
 use chrono::{SecondsFormat, Utc};
 use once_cell::sync::Lazy;
@@ -80,12 +77,9 @@ pub struct StructuredLogEntry {
     /// time of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp: Option<String>,
-    /// warning or critical TODO: Remove once alarms are migrated (https://github.com/libra/libra/issues/5484)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    severity: Option<LogLevel>,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]
-    level: Option<LogLevel>,
+    level: Option<log::Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -93,12 +87,21 @@ pub struct StructuredLogEntry {
 
 #[must_use = "use send_struct_log! macro to send structured log"]
 impl StructuredLogEntry {
-    pub fn new_unnamed() -> Self {
+    /// Base implementation for creating a log
+    fn new_unnamed() -> Self {
         let mut ret = Self::default();
         ret.timestamp = Some(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true));
         ret
     }
 
+    /// Specifically for text based conversion logs
+    pub fn new_text() -> Self {
+        let mut ret = Self::new_unnamed();
+        ret.category = Some("text");
+        ret
+    }
+
+    /// Creates a log with a category and a name.  This should be preferred
     pub fn new_named(category: &'static str, name: &'static str) -> Self {
         let mut ret = Self::new_unnamed();
         ret.category = Some(category);
@@ -116,7 +119,6 @@ impl StructuredLogEntry {
             location: self.location,
             git_rev: self.git_rev,
             timestamp: self.timestamp.clone(),
-            severity: self.severity,
             level: self.level,
             data: HashMap::new(),
         }
@@ -169,19 +171,14 @@ impl StructuredLogEntry {
     }
 
     /// Sets the log level of the log
-    pub fn level(mut self, level: LogLevel) -> Self {
-        self.severity = Some(level);
+    pub fn level(mut self, level: log::Level) -> Self {
         self.level = Some(level);
         self
     }
 
     // TODO: Remove in favor of level (https://github.com/libra/libra/issues/5484)
     pub fn critical(self) -> Self {
-        self.level(crate::LogLevel::Critical)
-    }
-
-    pub fn warning(self) -> Self {
-        self.level(crate::LogLevel::Warning)
+        self.level(log::Level::Error)
     }
 
     pub fn json_data(mut self, key: &'static str, value: Value) -> Self {

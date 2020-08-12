@@ -8,7 +8,7 @@
 //! ```
 //! use libra_logger::prelude::*;
 //!
-//! send_struct_log!(
+//! sl_error!(
 //!   security_log(security_events::INVALID_RETRIEVED_BLOCK)
 //!     .data("some_data", "the data")
 //! );
@@ -20,9 +20,8 @@ use crate::StructuredLogEntry;
 /// helper function to create a security log
 pub fn security_log(name: &'static str) -> StructuredLogEntry {
     StructuredLogEntry::new_named("security", &name)
-        // set the level to critical
-        .critical()
-    // set the error description
+        // set the level to Error TODO: Remove once using sl_error! everywhere
+        .level(log::Level::Error)
 }
 
 /// Security events that are possible

@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use libra_config::config::NodeConfig;
-use libra_logger::{prelude::*, LogLevel};
+use libra_logger::prelude::*;
 use libra_types::PeerId;
 use std::{
     path::PathBuf,
@@ -45,9 +45,7 @@ fn main() {
         libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
         // Let's now log some important information, since the logger is set up
-        send_struct_log!(StructuredLogEntry::new_named("config", "startup")
-            .level(LogLevel::Info)
-            .data("config", &config));
+        sl_info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
     }
 
     if config.metrics.enabled {
