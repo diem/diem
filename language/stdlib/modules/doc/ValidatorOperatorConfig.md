@@ -49,6 +49,8 @@
 
 ## Const `EVALIDATOR_OPERATOR_CONFIG`
 
+The
+<code><a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></code> was not in the required state
 
 
 <pre><code><b>const</b> EVALIDATOR_OPERATOR_CONFIG: u64 = 0;

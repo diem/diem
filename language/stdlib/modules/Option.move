@@ -22,7 +22,9 @@ module Option {
         invariant len(vec) <= 1;
     }
 
+    /// The `Option` is in an invalid state for the operation attempted.
     const EOPTION_IS_SET: u64 = 0;
+    /// The `Option` is in an invalid state for the operation attempted.
     const EOPTION_NOT_SET: u64 = 1;
 
     /// Return an empty `Option`

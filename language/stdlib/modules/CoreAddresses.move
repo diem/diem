@@ -34,10 +34,15 @@ module CoreAddresses {
         0x0
     }
 
+    /// The operation can only be performed by the account at 0xA550C18 (Libra Root)
     const ELIBRA_ROOT: u64 = 0;
+    /// The operation can only be performed by the account at 0xB1E55ED (Treasury & Compliance)
     const ETREASURY_COMPLIANCE: u64 = 1;
+    /// The operation can only be performed by the VM
     const EVM: u64 = 2;
+    /// The operation can only be performed by the account at 0xA550C18 (Libra Root) or 0xB1E55ED (Treasury & Compliance)
     const ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
+    /// The operation can only be performed by the account where currencies are registered
     const ECURRENCY_INFO: u64 = 4;
 
     /// Assert that the account is the libra root address.

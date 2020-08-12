@@ -44,14 +44,18 @@ module DesignatedDealer {
         amount: u64,
     }
 
-    /// Error codes
+    /// The `DesignatedDealer` resource is in an invalid state
     const EDEALER: u64 = 0;
-    const ELIMIT: u64 = 1;
-    const EINVALID_TIER_ADDITION: u64 = 2;
-    const EINVALID_TIER_START: u64 = 3;
-    const EINVALID_TIER_INDEX: u64 = 4;
-    const EINVALID_MINT_AMOUNT: u64 = 5;
-    const EINVALID_AMOUNT_FOR_TIER: u64 = 6;
+    /// The maximum number of tiers (4) has already been reached
+    const EINVALID_TIER_ADDITION: u64 = 1;
+    /// The starting value for the tier overlaps with the tier below or above it
+    const EINVALID_TIER_START: u64 = 2;
+    /// The tier index is out-of-bounds
+    const EINVALID_TIER_INDEX: u64 = 3;
+    /// A zero mint amount was provided
+    const EINVALID_MINT_AMOUNT: u64 = 4;
+    /// The maximum amount of money that can be minted for the tier has been reached
+    const EINVALID_AMOUNT_FOR_TIER: u64 = 5;
 
     /// Number of microseconds in a day
     const ONE_DAY: u64 = 86400000000;

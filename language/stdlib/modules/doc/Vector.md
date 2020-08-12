@@ -40,6 +40,7 @@ A variable-sized container that can hold both unrestricted types and resources.
 
 ## Const `EINDEX_OUT_OF_BOUNDS`
 
+The index into the vector is out of bounds
 
 
 <pre><code><b>const</b> EINDEX_OUT_OF_BOUNDS: u64 = 0;

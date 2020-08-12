@@ -169,7 +169,8 @@
 
 ## Const `EVALIDATOR_CONFIG`
 
-TODO(valerini): add events here
+The
+<code><a href="#0x1_ValidatorConfig">ValidatorConfig</a></code> resource was not in the required state
 
 
 <pre><code><b>const</b> EVALIDATOR_CONFIG: u64 = 0;
@@ -181,6 +182,7 @@ TODO(valerini): add events here
 
 ## Const `EINVALID_TRANSACTION_SENDER`
 
+The sender is not the operator for the specified validator
 
 
 <pre><code><b>const</b> EINVALID_TRANSACTION_SENDER: u64 = 1;
@@ -192,6 +194,7 @@ TODO(valerini): add events here
 
 ## Const `EINVALID_CONSENSUS_KEY`
 
+The provided consensus public key is malformed
 
 
 <pre><code><b>const</b> EINVALID_CONSENSUS_KEY: u64 = 2;
@@ -203,6 +206,7 @@ TODO(valerini): add events here
 
 ## Const `ENOT_A_VALIDATOR_OPERATOR`
 
+Tried to set an account without the correct operator role as a Validator Operator
 
 
 <pre><code><b>const</b> ENOT_A_VALIDATOR_OPERATOR: u64 = 3;

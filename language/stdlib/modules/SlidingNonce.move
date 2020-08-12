@@ -2,6 +2,7 @@ address 0x1 {
 module SlidingNonce {
     use 0x1::Signer;
     use 0x1::Roles;
+    use 0x1::Errors;
 
     /// This struct keep last 128 nonce values in a bit map nonce_mask
     /// We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
@@ -20,8 +21,6 @@ module SlidingNonce {
     const ENONCE_TOO_NEW: u64 = 2;
     /// The nonce was already recorded previously
     const ENONCE_ALREADY_RECORDED: u64 = 3;
-    /// Calling account doesn't have sufficient privileges to create a sliding nonce resource
-    const ENOT_LIBRA_ROOT: u64 = 4;
 
     /// Size of SlidingNonce::nonce_mask in bits.
     const NONCE_MASK_SIZE: u64 = 128;
@@ -29,7 +28,7 @@ module SlidingNonce {
     /// Calls try_record_nonce and aborts transaction if returned code is non-0
     public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires SlidingNonce {
         let code = try_record_nonce(account, seq_nonce);
-        assert(code == 0, code);
+        assert(code == 0, Errors::invalid_argument(code));
     }
 
     /// Tries to record this nonce in the account.
@@ -78,7 +77,7 @@ module SlidingNonce {
         lr_account: &signer,
         account: &signer
     ) {
-        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        Roles::assert_libra_root(lr_account);
         let new_resource = SlidingNonce {
             min_nonce: 0,
             nonce_mask: 0,

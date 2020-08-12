@@ -13,6 +13,7 @@ use abigen::Abigen;
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::Docgen;
+use errmapgen::ErrmapGen;
 use handlebars::Handlebars;
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -81,6 +82,10 @@ pub fn run_move_prover<W: WriteColor>(
     // Same for ABI generator.
     if options.run_abigen {
         return run_abigen(&env, &options, now);
+    }
+    // Same for the error map generator
+    if options.run_errmapgen {
+        return run_errmapgen(&env, &options, now);
     }
     let targets = create_and_process_bytecode(&options, &env);
     if env.has_errors() {
@@ -177,6 +182,21 @@ fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Resul
         fs::create_dir_all(path.parent().unwrap())?;
         fs::write(path.as_path(), content)?;
     }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    Ok(())
+}
+
+fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
+    let mut generator = ErrmapGen::new(env, &options.errmapgen);
+    let checking_elapsed = now.elapsed();
+    info!("generating error map");
+    generator.gen();
+    generator.save_result();
     let generating_elapsed = now.elapsed();
     info!(
         "{:.3}s checking, {:.3}s generating",

@@ -56,6 +56,8 @@
 
 ## Const `EZERO_THRESHOLD`
 
+Threshold provided was 0 which can't be used to create a
+<code>MultiEd25519</code> key
 
 
 <pre><code><b>const</b> EZERO_THRESHOLD: u64 = 0;
@@ -67,6 +69,8 @@
 
 ## Const `ENOT_ENOUGH_KEYS_FOR_THRESHOLD`
 
+Not enough keys were provided for the specified threshold when creating an
+<code>MultiEd25519</code> key
 
 
 <pre><code><b>const</b> ENOT_ENOUGH_KEYS_FOR_THRESHOLD: u64 = 1;
@@ -78,6 +82,8 @@
 
 ## Const `ENUM_KEYS_ABOVE_MAX_THRESHOLD`
 
+Too many keys were provided for the specified threshold when creating an
+<code>MultiEd25519</code> key
 
 
 <pre><code><b>const</b> ENUM_KEYS_ABOVE_MAX_THRESHOLD: u64 = 2;

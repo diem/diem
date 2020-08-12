@@ -261,7 +261,7 @@ script {
         Holder::hold(account, cap);
     }
 }
-// check: "Keep(ABORTED { code: 1537,"
+// check: "Keep(ABORTED { code: 1281,"
 
 //! new-transaction
 //! sender: alice
@@ -274,7 +274,7 @@ script {
         LibraAccount::restore_withdraw_capability(cap);
     }
 }
-// check: "Keep(ABORTED { code: 1537,"
+// check: "Keep(ABORTED { code: 1281,"
 
 //! new-transaction
 //! sender: alice
@@ -287,4 +287,4 @@ script {
         LibraAccount::restore_withdraw_capability(cap);
     }
 }
-// check: "Keep(ABORTED { code: 1537,"
+// check: "Keep(ABORTED { code: 1281,"

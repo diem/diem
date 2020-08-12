@@ -17,8 +17,11 @@ module Authenticator {
         threshold: u8,
     }
 
+    /// Threshold provided was 0 which can't be used to create a `MultiEd25519` key
     const EZERO_THRESHOLD: u64 = 0;
+    /// Not enough keys were provided for the specified threshold when creating an `MultiEd25519` key
     const ENOT_ENOUGH_KEYS_FOR_THRESHOLD: u64 = 1;
+    /// Too many keys were provided for the specified threshold when creating an `MultiEd25519` key
     const ENUM_KEYS_ABOVE_MAX_THRESHOLD: u64 = 2;
 
     // Create a a multisig policy from a vector of ed25519 public keys and a threshold.

@@ -20,6 +20,7 @@ module LibraTransactionTimeout {
     const MICROS_MULTIPLIER: u64 = 1000000;
     const ONE_DAY_MICROS: u64 = 86400000000;
 
+    /// The `TTL` resource was not in the required state
     const ETTL: u64 = 0;
 
     public fun initialize(lr_account: &signer) {

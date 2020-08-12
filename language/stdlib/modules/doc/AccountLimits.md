@@ -193,6 +193,8 @@ in the limits definition at
 
 ## Const `ELIMITS_DEFINITION`
 
+The
+<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> ELIMITS_DEFINITION: u64 = 0;
@@ -204,6 +206,8 @@ in the limits definition at
 
 ## Const `EWINDOW`
 
+The
+<code><a href="#0x1_AccountLimits_Window">Window</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> EWINDOW: u64 = 1;

@@ -11,11 +11,11 @@ use std::{
     time::Instant,
 };
 use stdlib::{
-    build_stdlib, build_stdlib_doc, build_transaction_script_abi, build_transaction_script_doc,
-    compile_script, filter_move_files, generate_rust_transaction_builders, save_binary,
-    COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_DIR,
-    COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR, STD_LIB_DOC_DIR,
-    TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
+    build_stdlib, build_stdlib_doc, build_stdlib_error_code_map, build_transaction_script_abi,
+    build_transaction_script_doc, compile_script, filter_move_files,
+    generate_rust_transaction_builders, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH,
+    COMPILED_STDLIB_DIR, COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR,
+    STD_LIB_DOC_DIR, TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
 };
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -140,6 +140,10 @@ fn main() {
             generate_rust_transaction_builders();
         });
     }
+
+    time_it("Generating error explanations", || {
+        build_stdlib_error_code_map()
+    });
 }
 
 fn time_it<F>(msg: &str, f: F)

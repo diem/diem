@@ -42,13 +42,18 @@ module LibraSystem {
             exists<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
 
+    /// The `CapabilityHolder` resource was not in the required state
     const ECAPABILITY_HOLDER: u64 = 0;
+    /// Tried to add a validator with an invalid state to the validator set
     const EINVALID_PROSPECTIVE_VALIDATOR: u64 = 1;
+    /// Tried to add an existing validator to the validator set
     const EALREADY_A_VALIDATOR: u64 = 2;
+    /// An operation was attempted on a non-active validator
     const ENOT_AN_ACTIVE_VALIDATOR: u64 = 3;
+    /// The validator operator is not the operator for the specified validator
     const EINVALID_TRANSACTION_SENDER: u64 = 4;
+    /// An out of bounds index for the validator set was encountered
     const EVALIDATOR_INDEX: u64 = 5;
-    const ENO_VALIDATOR_OPERATOR_ROLE: u64 = 6;
 
     ///////////////////////////////////////////////////////////////////////////
     // Setup methods

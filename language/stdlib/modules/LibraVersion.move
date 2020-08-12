@@ -13,6 +13,7 @@ module LibraVersion {
     spec module {
     }
 
+    /// Tried to set an invalid major version for the VM. Major versions must be strictly increasing
     const EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
 
     public fun initialize(

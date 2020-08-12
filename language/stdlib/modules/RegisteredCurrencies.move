@@ -15,8 +15,8 @@ module RegisteredCurrencies {
         currency_codes: vector<vector<u8>>,
     }
 
-    const EINVALID_SINGLETON_ADDRESS: u64 = 0;
-    const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 1;
+    /// Attempted to add a currency code that is already in use
+    const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 0;
 
     /// Initializes this module. Can only be called from genesis.
     public fun initialize(config_account: &signer) {

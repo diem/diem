@@ -13,7 +13,6 @@
 -  [Const `EFREEZING_BIT`](#0x1_AccountFreezing_EFREEZING_BIT)
 -  [Const `ECANNOT_FREEZE_LIBRA_ROOT`](#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT)
 -  [Const `ECANNOT_FREEZE_TC`](#0x1_AccountFreezing_ECANNOT_FREEZE_TC)
--  [Const `ENOT_ABLE_TO_UNFREEZE`](#0x1_AccountFreezing_ENOT_ABLE_TO_UNFREEZE)
 -  [Const `EACCOUNT_FROZEN`](#0x1_AccountFreezing_EACCOUNT_FROZEN)
 -  [Function `initialize`](#0x1_AccountFreezing_initialize)
 -  [Function `create`](#0x1_AccountFreezing_create)
@@ -171,6 +170,8 @@ Message for unfreeze account events
 
 ## Const `EFREEZE_EVENTS_HOLDER`
 
+A property expected of the
+<code><a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a></code> resource didn't hold
 
 
 <pre><code><b>const</b> EFREEZE_EVENTS_HOLDER: u64 = 1;
@@ -182,6 +183,8 @@ Message for unfreeze account events
 
 ## Const `EFREEZING_BIT`
 
+The
+<code><a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> EFREEZING_BIT: u64 = 2;
@@ -193,6 +196,7 @@ Message for unfreeze account events
 
 ## Const `ECANNOT_FREEZE_LIBRA_ROOT`
 
+An attempt to freeze the Libra Root account was attempted
 
 
 <pre><code><b>const</b> ECANNOT_FREEZE_LIBRA_ROOT: u64 = 3;
@@ -204,20 +208,10 @@ Message for unfreeze account events
 
 ## Const `ECANNOT_FREEZE_TC`
 
+An attempt to freeze the Treasury & Compliance account was attempted
 
 
 <pre><code><b>const</b> ECANNOT_FREEZE_TC: u64 = 4;
-</code></pre>
-
-
-
-<a name="0x1_AccountFreezing_ENOT_ABLE_TO_UNFREEZE"></a>
-
-## Const `ENOT_ABLE_TO_UNFREEZE`
-
-
-
-<pre><code><b>const</b> ENOT_ABLE_TO_UNFREEZE: u64 = 5;
 </code></pre>
 
 
@@ -226,9 +220,10 @@ Message for unfreeze account events
 
 ## Const `EACCOUNT_FROZEN`
 
+The account is frozen
 
 
-<pre><code><b>const</b> EACCOUNT_FROZEN: u64 = 6;
+<pre><code><b>const</b> EACCOUNT_FROZEN: u64 = 5;
 </code></pre>
 
 

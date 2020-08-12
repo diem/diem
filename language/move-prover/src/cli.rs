@@ -9,6 +9,7 @@ use abigen::AbigenOptions;
 use anyhow::anyhow;
 use clap::{App, Arg};
 use docgen::DocgenOptions;
+use errmapgen::ErrmapOptions;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use simplelog::{
@@ -53,6 +54,8 @@ pub struct Options {
     pub run_docgen: bool,
     /// Whether to run the ABI generator instead of the prover.
     pub run_abigen: bool,
+    /// Whether to run the error map generator instead of the prover.
+    pub run_errmapgen: bool,
     /// An account address to use if none is specified in the source.
     pub account_address: String,
     /// The paths to the Move sources.
@@ -68,6 +71,8 @@ pub struct Options {
     pub docgen: DocgenOptions,
     /// Options for the ABI generator.
     pub abigen: AbigenOptions,
+    /// Options for the error map generator.
+    pub errmapgen: ErrmapOptions,
 }
 
 impl Default for Options {
@@ -77,6 +82,7 @@ impl Default for Options {
             output_path: "output.bpl".to_string(),
             run_docgen: false,
             run_abigen: false,
+            run_errmapgen: false,
             account_address: "0x234567".to_string(),
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
@@ -85,6 +91,7 @@ impl Default for Options {
             backend: BackendOptions::default(),
             docgen: DocgenOptions::default(),
             abigen: AbigenOptions::default(),
+            errmapgen: ErrmapOptions::default(),
         }
     }
 }
@@ -345,6 +352,12 @@ impl Options {
                     Generated ABIs will be written into the directory `./abi` unless configured otherwise via toml"),
             )
             .arg(
+                Arg::with_name("errmapgen")
+                    .long("errmapgen")
+                    .help("run the error map generator instead of the prover. \
+                    The generated error map will be written to `errmap` unless configured otherwise"),
+            )
+            .arg(
                 Arg::with_name("verify")
                     .long("verify")
                     .takes_value(true)
@@ -464,6 +477,9 @@ impl Options {
         }
         if matches.is_present("abigen") {
             options.run_abigen = true;
+        }
+        if matches.is_present("errmapgen") {
+            options.run_errmapgen = true;
         }
         if matches.is_present("warn") {
             options.prover.report_warnings = true;

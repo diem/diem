@@ -18,11 +18,17 @@ module RecoveryAddress {
         rotation_caps: vector<KeyRotationCapability>
     }
 
+    /// Only VASPs can create a recovery address
     const ENOT_A_VASP: u64 = 0;
+    /// A cycle would have been created would be created
     const EKEY_ROTATION_DEPENDENCY_CYCLE: u64 = 1;
+    /// The signer doesn't have the appropriate privileges to rotate the account's key
     const ECANNOT_ROTATE_KEY: u64 = 2;
+    /// Only accounts belonging to the same VASP can delegate their key rotation capability
     const EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
+    /// The account address couldn't be found in the account recovery resource
     const EACCOUNT_NOT_RECOVERABLE: u64 = 4;
+    /// A `RecoveryAddress` resource was in an unexpected state
     const ERECOVERY_ADDRESS: u64 = 5;
 
     /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a

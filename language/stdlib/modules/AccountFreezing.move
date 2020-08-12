@@ -33,12 +33,16 @@ module AccountFreezing {
         unfrozen_address: address,
     }
 
+    /// A property expected of the `FreezeEventsHolder` resource didn't hold
     const EFREEZE_EVENTS_HOLDER: u64 = 1;
+    /// The `FreezingBit` resource is in an invalid state
     const EFREEZING_BIT: u64 = 2;
+    /// An attempt to freeze the Libra Root account was attempted
     const ECANNOT_FREEZE_LIBRA_ROOT: u64 = 3;
+    /// An attempt to freeze the Treasury & Compliance account was attempted
     const ECANNOT_FREEZE_TC: u64 = 4;
-    const ENOT_ABLE_TO_UNFREEZE: u64 = 5;
-    const EACCOUNT_FROZEN: u64 = 6;
+    /// The account is frozen
+    const EACCOUNT_FROZEN: u64 = 5;
 
     public fun initialize(lr_account: &signer) {
         LibraTimestamp::assert_genesis();

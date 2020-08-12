@@ -73,6 +73,7 @@ recover one of accounts in
 
 ## Const `ENOT_A_VASP`
 
+Only VASPs can create a recovery address
 
 
 <pre><code><b>const</b> ENOT_A_VASP: u64 = 0;
@@ -84,6 +85,7 @@ recover one of accounts in
 
 ## Const `EKEY_ROTATION_DEPENDENCY_CYCLE`
 
+A cycle would have been created would be created
 
 
 <pre><code><b>const</b> EKEY_ROTATION_DEPENDENCY_CYCLE: u64 = 1;
@@ -95,6 +97,7 @@ recover one of accounts in
 
 ## Const `ECANNOT_ROTATE_KEY`
 
+The signer doesn't have the appropriate privileges to rotate the account's key
 
 
 <pre><code><b>const</b> ECANNOT_ROTATE_KEY: u64 = 2;
@@ -106,6 +109,7 @@ recover one of accounts in
 
 ## Const `EINVALID_KEY_ROTATION_DELEGATION`
 
+Only accounts belonging to the same VASP can delegate their key rotation capability
 
 
 <pre><code><b>const</b> EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
@@ -117,6 +121,7 @@ recover one of accounts in
 
 ## Const `EACCOUNT_NOT_RECOVERABLE`
 
+The account address couldn't be found in the account recovery resource
 
 
 <pre><code><b>const</b> EACCOUNT_NOT_RECOVERABLE: u64 = 4;
@@ -128,6 +133,8 @@ recover one of accounts in
 
 ## Const `ERECOVERY_ADDRESS`
 
+A
+<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource was in an unexpected state
 
 
 <pre><code><b>const</b> ERECOVERY_ADDRESS: u64 = 5;

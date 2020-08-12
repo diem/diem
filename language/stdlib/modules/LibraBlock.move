@@ -28,9 +28,10 @@ module LibraBlock {
         time_microseconds: u64,
     }
 
+    /// The `BlockMetadata` resource is in an invalid state
     const EBLOCK_METADATA: u64 = 0;
-    const ESENDER_NOT_VM: u64 = 2;
-    const EVM_OR_VALIDATOR: u64 = 3;
+    /// An invalid signer was provided. Expected the signer to be the VM or a Validator.
+    const EVM_OR_VALIDATOR: u64 = 1;
 
     /// This can only be invoked by the Association address, and only a single time.
     /// Currently, it is invoked in the genesis transaction

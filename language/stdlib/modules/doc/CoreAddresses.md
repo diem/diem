@@ -32,6 +32,7 @@
 
 ## Const `ELIBRA_ROOT`
 
+The operation can only be performed by the account at 0xA550C18 (Libra Root)
 
 
 <pre><code><b>const</b> ELIBRA_ROOT: u64 = 0;
@@ -43,6 +44,7 @@
 
 ## Const `ETREASURY_COMPLIANCE`
 
+The operation can only be performed by the account at 0xB1E55ED (Treasury & Compliance)
 
 
 <pre><code><b>const</b> ETREASURY_COMPLIANCE: u64 = 1;
@@ -54,6 +56,7 @@
 
 ## Const `EVM`
 
+The operation can only be performed by the VM
 
 
 <pre><code><b>const</b> EVM: u64 = 2;
@@ -65,6 +68,7 @@
 
 ## Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`
 
+The operation can only be performed by the account at 0xA550C18 (Libra Root) or 0xB1E55ED (Treasury & Compliance)
 
 
 <pre><code><b>const</b> ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
@@ -76,6 +80,7 @@
 
 ## Const `ECURRENCY_INFO`
 
+The operation can only be performed by the account where currencies are registered
 
 
 <pre><code><b>const</b> ECURRENCY_INFO: u64 = 4;

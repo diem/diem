@@ -12,10 +12,15 @@ module FixedPoint32 {
     /// TODO(wrwg): This should be provided somewhere centrally in the framework.
     const MAX_U64: u128 = 18446744073709551615;
 
+    /// The denominator provided was zero
     const EDENOMINATOR: u64 = 0;
+    /// The quotient value would be too large to be held in a `u64`
     const EDIVISION: u64 = 1;
+    /// The multiplied value would be too large to be held in a `u64`
     const EMULTIPLICATION: u64 = 2;
+    /// A division by zero was encountered
     const EDIVISION_BY_ZERO: u64 = 3;
+    /// The computed ratio when converting to a `FixedPoint32` would be unrepresentable
     const ERATIO_OUT_OF_RANGE: u64 = 4;
 
     /// Multiply a u64 integer by a fixed-point number, truncating any

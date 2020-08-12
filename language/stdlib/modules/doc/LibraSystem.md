@@ -14,7 +14,6 @@
 -  [Const `ENOT_AN_ACTIVE_VALIDATOR`](#0x1_LibraSystem_ENOT_AN_ACTIVE_VALIDATOR)
 -  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
 -  [Const `EVALIDATOR_INDEX`](#0x1_LibraSystem_EVALIDATOR_INDEX)
--  [Const `ENO_VALIDATOR_OPERATOR_ROLE`](#0x1_LibraSystem_ENO_VALIDATOR_OPERATOR_ROLE)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
 -  [Function `set_validator_set`](#0x1_LibraSystem_set_validator_set)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
@@ -155,6 +154,8 @@
 
 ## Const `ECAPABILITY_HOLDER`
 
+The
+<code><a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a></code> resource was not in the required state
 
 
 <pre><code><b>const</b> ECAPABILITY_HOLDER: u64 = 0;
@@ -166,6 +167,7 @@
 
 ## Const `EINVALID_PROSPECTIVE_VALIDATOR`
 
+Tried to add a validator with an invalid state to the validator set
 
 
 <pre><code><b>const</b> EINVALID_PROSPECTIVE_VALIDATOR: u64 = 1;
@@ -177,6 +179,7 @@
 
 ## Const `EALREADY_A_VALIDATOR`
 
+Tried to add an existing validator to the validator set
 
 
 <pre><code><b>const</b> EALREADY_A_VALIDATOR: u64 = 2;
@@ -188,6 +191,7 @@
 
 ## Const `ENOT_AN_ACTIVE_VALIDATOR`
 
+An operation was attempted on a non-active validator
 
 
 <pre><code><b>const</b> ENOT_AN_ACTIVE_VALIDATOR: u64 = 3;
@@ -199,6 +203,7 @@
 
 ## Const `EINVALID_TRANSACTION_SENDER`
 
+The validator operator is not the operator for the specified validator
 
 
 <pre><code><b>const</b> EINVALID_TRANSACTION_SENDER: u64 = 4;
@@ -210,20 +215,10 @@
 
 ## Const `EVALIDATOR_INDEX`
 
+An out of bounds index for the validator set was encountered
 
 
 <pre><code><b>const</b> EVALIDATOR_INDEX: u64 = 5;
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_ENO_VALIDATOR_OPERATOR_ROLE"></a>
-
-## Const `ENO_VALIDATOR_OPERATOR_ROLE`
-
-
-
-<pre><code><b>const</b> ENO_VALIDATOR_OPERATOR_ROLE: u64 = 6;
 </code></pre>
 
 

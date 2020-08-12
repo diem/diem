@@ -8,10 +8,10 @@
 -  [Resource `LibraWriteSetManager`](#0x1_LibraWriteSetManager_LibraWriteSetManager)
 -  [Struct `UpgradeEvent`](#0x1_LibraWriteSetManager_UpgradeEvent)
 -  [Const `ELIBRA_WRITE_SET_MANAGER`](#0x1_LibraWriteSetManager_ELIBRA_WRITE_SET_MANAGER)
--  [Const `EPROLOGUE_INVALID_WRITESET_SENDER`](#0x1_LibraWriteSetManager_EPROLOGUE_INVALID_WRITESET_SENDER)
--  [Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraWriteSetManager_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY)
--  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD)
--  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
+-  [Const `PROLOGUE_EINVALID_WRITESET_SENDER`](#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_WRITESET_SENDER)
+-  [Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY)
+-  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
+-  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
 -  [Function `initialize`](#0x1_LibraWriteSetManager_initialize)
 -  [Function `prologue`](#0x1_LibraWriteSetManager_prologue)
 -  [Function `epilogue`](#0x1_LibraWriteSetManager_epilogue)
@@ -80,6 +80,8 @@
 
 ## Const `ELIBRA_WRITE_SET_MANAGER`
 
+The
+<code><a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a></code> was not in the required state
 
 
 <pre><code><b>const</b> ELIBRA_WRITE_SET_MANAGER: u64 = 0;
@@ -87,46 +89,46 @@
 
 
 
-<a name="0x1_LibraWriteSetManager_EPROLOGUE_INVALID_WRITESET_SENDER"></a>
+<a name="0x1_LibraWriteSetManager_PROLOGUE_EINVALID_WRITESET_SENDER"></a>
 
-## Const `EPROLOGUE_INVALID_WRITESET_SENDER`
+## Const `PROLOGUE_EINVALID_WRITESET_SENDER`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_INVALID_WRITESET_SENDER: u64 = 33;
+<pre><code><b>const</b> PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 33;
 </code></pre>
 
 
 
-<a name="0x1_LibraWriteSetManager_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY"></a>
+<a name="0x1_LibraWriteSetManager_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY"></a>
 
-## Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`
+## Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
 </code></pre>
 
 
 
-<a name="0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD"></a>
+<a name="0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD"></a>
 
-## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`
+## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
 </code></pre>
 
 
 
-<a name="0x1_LibraWriteSetManager_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW"></a>
+<a name="0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW"></a>
 
-## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`
+## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 11;
 </code></pre>
 
 
@@ -190,17 +192,17 @@
 ) {
     // The below code uses direct <b>abort</b> codes <b>as</b> per contract with VM.
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EPROLOGUE_INVALID_WRITESET_SENDER);
+    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), PROLOGUE_EINVALID_WRITESET_SENDER);
 
     <b>let</b> lr_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
-    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
+    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD);
 
-    <b>assert</b>(writeset_sequence_number == sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
+    <b>assert</b>(writeset_sequence_number == sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW);
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == lr_auth_key,
-        EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
+        PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
     );
 }
 </code></pre>

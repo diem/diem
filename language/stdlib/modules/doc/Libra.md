@@ -714,6 +714,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EBURN_CAPABILITY`
 
+A
+<code><a href="#0x1_Libra_BurnCapability">BurnCapability</a></code> resource is in an unexpected state.
 
 
 <pre><code><b>const</b> EBURN_CAPABILITY: u64 = 0;
@@ -725,6 +727,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ECURRENCY_INFO`
 
+A property expected of a
+<code><a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a></code> resource didn't hold
 
 
 <pre><code><b>const</b> ECURRENCY_INFO: u64 = 1;
@@ -736,6 +740,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EPREBURN`
 
+A property expected of a
+<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource didn't hold
 
 
 <pre><code><b>const</b> EPREBURN: u64 = 2;
@@ -747,6 +753,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EPREBURN_OCCUPIED`
 
+The preburn slot is already occupied with coins to be burned.
 
 
 <pre><code><b>const</b> EPREBURN_OCCUPIED: u64 = 3;
@@ -758,6 +765,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EPREBURN_EMPTY`
 
+A burn was attempted on
+<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource that cointained no coins
 
 
 <pre><code><b>const</b> EPREBURN_EMPTY: u64 = 4;
@@ -769,6 +778,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EMINTING_NOT_ALLOWED`
 
+Minting is not allowed for the specified currency
 
 
 <pre><code><b>const</b> EMINTING_NOT_ALLOWED: u64 = 5;
@@ -780,6 +790,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EIS_SYNTHETIC_CURRENCY`
 
+The currency specified is a synthetic (non-fiat) currency
 
 
 <pre><code><b>const</b> EIS_SYNTHETIC_CURRENCY: u64 = 6;
@@ -791,6 +802,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ECOIN`
 
+A property expected of the coin provided didn't hold
 
 
 <pre><code><b>const</b> ECOIN: u64 = 7;
@@ -802,6 +814,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EDESTRUCTION_OF_NONZERO_COIN`
 
+The destruction of a non-zero coin was attempted. Non-zero coins must be burned.
 
 
 <pre><code><b>const</b> EDESTRUCTION_OF_NONZERO_COIN: u64 = 8;
@@ -813,6 +826,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EREGISTRATION_PRIVILEGE`
 
+The account cannot register new currencies
 
 
 <pre><code><b>const</b> EREGISTRATION_PRIVILEGE: u64 = 9;
@@ -824,6 +838,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EMINT_CAPABILITY`
 
+A property expected of
+<code><a href="#0x1_Libra_MintCapability">MintCapability</a></code> didn't hold
 
 
 <pre><code><b>const</b> EMINT_CAPABILITY: u64 = 10;
@@ -835,6 +851,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EAMOUNT_EXCEEDS_COIN_VALUE`
 
+A withdrawal greater than the value of the coin was attempted.
 
 
 <pre><code><b>const</b> EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 11;

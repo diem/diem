@@ -26,7 +26,7 @@ script {
         SlidingNonce::record_nonce_or_abort(account, 1);
     }
 }
-// check: "Keep(ABORTED { code: 1,"
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: bob
@@ -37,4 +37,4 @@ script {
         SlidingNonce::publish_nonce_resource(account, account);
     }
 }
-// check: "Keep(ABORTED { code: 4,"
+// check: "Keep(ABORTED { code: 2,"

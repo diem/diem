@@ -22,10 +22,15 @@ module VASP {
     /// A singleton resource allowing this module to publish limits definitions and accounting windows
     resource struct VASPOperationsResource { limits_cap: AccountLimitMutationCapability }
 
+    /// The `VASPOperationsResource` was not in the required state
     const EVASP_OPERATIONS_RESOURCE: u64 = 0;
+    /// The `ParentVASP` or `ChildVASP` resources are not in the required state
     const EPARENT_OR_CHILD_VASP: u64 = 1;
+    /// The creation of a new Child VASP account would exceed the number of children permitted for a VASP
     const ETOO_MANY_CHILDREN: u64 = 2;
+    /// The account must be a Parent or Child VASP account
     const ENOT_A_VASP: u64 = 3;
+    /// The creating account must be a Parent VASP account
     const ENOT_A_PARENT_VASP: u64 = 4;
 
 

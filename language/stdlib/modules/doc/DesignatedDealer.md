@@ -9,7 +9,6 @@
 -  [Resource `TierInfo`](#0x1_DesignatedDealer_TierInfo)
 -  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
 -  [Const `EDEALER`](#0x1_DesignatedDealer_EDEALER)
--  [Const `ELIMIT`](#0x1_DesignatedDealer_ELIMIT)
 -  [Const `EINVALID_TIER_ADDITION`](#0x1_DesignatedDealer_EINVALID_TIER_ADDITION)
 -  [Const `EINVALID_TIER_START`](#0x1_DesignatedDealer_EINVALID_TIER_START)
 -  [Const `EINVALID_TIER_INDEX`](#0x1_DesignatedDealer_EINVALID_TIER_INDEX)
@@ -167,21 +166,11 @@ Message for mint events
 
 ## Const `EDEALER`
 
-Error codes
+The
+<code><a href="#0x1_DesignatedDealer">DesignatedDealer</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> EDEALER: u64 = 0;
-</code></pre>
-
-
-
-<a name="0x1_DesignatedDealer_ELIMIT"></a>
-
-## Const `ELIMIT`
-
-
-
-<pre><code><b>const</b> ELIMIT: u64 = 1;
 </code></pre>
 
 
@@ -190,9 +179,10 @@ Error codes
 
 ## Const `EINVALID_TIER_ADDITION`
 
+The maximum number of tiers (4) has already been reached
 
 
-<pre><code><b>const</b> EINVALID_TIER_ADDITION: u64 = 2;
+<pre><code><b>const</b> EINVALID_TIER_ADDITION: u64 = 1;
 </code></pre>
 
 
@@ -201,9 +191,10 @@ Error codes
 
 ## Const `EINVALID_TIER_START`
 
+The starting value for the tier overlaps with the tier below or above it
 
 
-<pre><code><b>const</b> EINVALID_TIER_START: u64 = 3;
+<pre><code><b>const</b> EINVALID_TIER_START: u64 = 2;
 </code></pre>
 
 
@@ -212,9 +203,10 @@ Error codes
 
 ## Const `EINVALID_TIER_INDEX`
 
+The tier index is out-of-bounds
 
 
-<pre><code><b>const</b> EINVALID_TIER_INDEX: u64 = 4;
+<pre><code><b>const</b> EINVALID_TIER_INDEX: u64 = 3;
 </code></pre>
 
 
@@ -223,9 +215,10 @@ Error codes
 
 ## Const `EINVALID_MINT_AMOUNT`
 
+A zero mint amount was provided
 
 
-<pre><code><b>const</b> EINVALID_MINT_AMOUNT: u64 = 5;
+<pre><code><b>const</b> EINVALID_MINT_AMOUNT: u64 = 4;
 </code></pre>
 
 
@@ -234,9 +227,10 @@ Error codes
 
 ## Const `EINVALID_AMOUNT_FOR_TIER`
 
+The maximum amount of money that can be minted for the tier has been reached
 
 
-<pre><code><b>const</b> EINVALID_AMOUNT_FOR_TIER: u64 = 6;
+<pre><code><b>const</b> EINVALID_AMOUNT_FOR_TIER: u64 = 5;
 </code></pre>
 
 

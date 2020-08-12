@@ -103,6 +103,7 @@ is called at the end of genesis.
 
 ## Const `ENOT_GENESIS`
 
+The blockchain is not in the genesis state anymore
 
 
 <pre><code><b>const</b> ENOT_GENESIS: u64 = 0;
@@ -114,6 +115,7 @@ is called at the end of genesis.
 
 ## Const `ENOT_OPERATING`
 
+The blockchain is not in an operating state yet
 
 
 <pre><code><b>const</b> ENOT_OPERATING: u64 = 1;
@@ -125,6 +127,8 @@ is called at the end of genesis.
 
 ## Const `ETIMER_RESOURCE`
 
+The
+<code><a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a></code> resource was not in the required state
 
 
 <pre><code><b>const</b> ETIMER_RESOURCE: u64 = 2;
@@ -136,6 +140,7 @@ is called at the end of genesis.
 
 ## Const `ETIMESTAMP`
 
+An invalid timestamp was provided
 
 
 <pre><code><b>const</b> ETIMESTAMP: u64 = 3;

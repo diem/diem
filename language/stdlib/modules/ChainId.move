@@ -9,6 +9,7 @@ module ChainId {
         id: u8
     }
 
+    /// The `ChainId` resource was not in the required state
     const ECHAIN_ID: u64 = 0;
 
     /// Publish the chain ID `id` of this Libra instance under the LibraRoot account

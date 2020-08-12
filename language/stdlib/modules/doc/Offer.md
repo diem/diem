@@ -61,6 +61,7 @@
 
 ## Const `EOFFER_DNE_FOR_ACCOUNT`
 
+An offer of the specified type for the account does not exist
 
 
 <pre><code><b>const</b> EOFFER_DNE_FOR_ACCOUNT: u64 = 0;
@@ -110,7 +111,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x1_Offer">Offer</a> {
   <b>let</b> <a href="#0x1_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-  <b>assert</b>(sender == for || sender == offer_address, EOFFER_DNE_FOR_ACCOUNT);
+  <b>assert</b>(sender == for || sender == offer_address, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EOFFER_DNE_FOR_ACCOUNT));
   offered
 }
 </code></pre>

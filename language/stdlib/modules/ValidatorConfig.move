@@ -30,11 +30,15 @@ module ValidatorConfig {
         human_name: vector<u8>,
     }
 
-    /// TODO(valerini): add events here
+    // TODO(valerini): add events here
 
+    /// The `ValidatorConfig` resource was not in the required state
     const EVALIDATOR_CONFIG: u64 = 0;
+    /// The sender is not the operator for the specified validator
     const EINVALID_TRANSACTION_SENDER: u64 = 1;
+    /// The provided consensus public key is malformed
     const EINVALID_CONSENSUS_KEY: u64 = 2;
+    /// Tried to set an account without the correct operator role as a Validator Operator
     const ENOT_A_VALIDATOR_OPERATOR: u64 = 3;
 
     ///////////////////////////////////////////////////////////////////////////

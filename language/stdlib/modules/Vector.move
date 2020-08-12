@@ -3,6 +3,7 @@ address 0x1 {
 /// A variable-sized container that can hold both unrestricted types and resources.
 module Vector {
 
+    /// The index into the vector is out of bounds
     const EINDEX_OUT_OF_BOUNDS: u64 = 0;
 
     /// Create an empty vector.

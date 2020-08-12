@@ -45,6 +45,7 @@
 
 ## Const `EINVALID_MAJOR_VERSION_NUMBER`
 
+Tried to set an invalid major version for the VM. Major versions must be strictly increasing
 
 
 <pre><code><b>const</b> EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;

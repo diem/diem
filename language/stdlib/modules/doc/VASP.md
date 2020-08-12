@@ -138,6 +138,8 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 ## Const `EVASP_OPERATIONS_RESOURCE`
 
+The
+<code><a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a></code> was not in the required state
 
 
 <pre><code><b>const</b> EVASP_OPERATIONS_RESOURCE: u64 = 0;
@@ -149,6 +151,9 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 ## Const `EPARENT_OR_CHILD_VASP`
 
+The
+<code><a href="#0x1_VASP_ParentVASP">ParentVASP</a></code> or
+<code><a href="#0x1_VASP_ChildVASP">ChildVASP</a></code> resources are not in the required state
 
 
 <pre><code><b>const</b> EPARENT_OR_CHILD_VASP: u64 = 1;
@@ -160,6 +165,7 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 ## Const `ETOO_MANY_CHILDREN`
 
+The creation of a new Child VASP account would exceed the number of children permitted for a VASP
 
 
 <pre><code><b>const</b> ETOO_MANY_CHILDREN: u64 = 2;
@@ -171,6 +177,7 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 ## Const `ENOT_A_VASP`
 
+The account must be a Parent or Child VASP account
 
 
 <pre><code><b>const</b> ENOT_A_VASP: u64 = 3;
@@ -182,6 +189,7 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 ## Const `ENOT_A_PARENT_VASP`
 
+The creating account must be a Parent VASP account
 
 
 <pre><code><b>const</b> ENOT_A_PARENT_VASP: u64 = 4;

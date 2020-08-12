@@ -19,7 +19,9 @@ module SharedEd25519PublicKey {
         rotation_cap: LibraAccount::KeyRotationCapability,
     }
 
+    /// The shared ed25519 public key is not valid ed25519 public key
     const EMALFORMED_PUBLIC_KEY: u64 = 0;
+    /// A shared ed25519 public key resource was not in the required state
     const ESHARED_KEY: u64 = 1;
 
     // (1) Rotate the authentication key of the sender to `key`

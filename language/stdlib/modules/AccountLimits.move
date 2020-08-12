@@ -61,7 +61,9 @@ module AccountLimits {
         //        exists<LimitsDefinition<coin_type>>(global<Window<coin_type>>(window_addr).limit_address);
     }
 
+    /// The `LimitsDefinition` resource is in an invalid state
     const ELIMITS_DEFINITION: u64 = 0;
+    /// The `Window` resource is in an invalid state
     const EWINDOW: u64 = 1;
 
     /// 24 hours in microseconds

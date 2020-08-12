@@ -25,4 +25,4 @@ script {
         RegisteredCurrencies::add_currency_code(account, b"LBR");
     }
 }
-// check: "Keep(ABORTED { code: 263,"
+// check: "Keep(ABORTED { code: 7,"

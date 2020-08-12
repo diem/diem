@@ -9,7 +9,7 @@ use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
-    fs::File,
+    fs::{self, File},
     io::{Read, Write},
     path::{Path, PathBuf},
 };
@@ -17,14 +17,15 @@ use vm::CompiledModule;
 
 pub const STD_LIB_DIR: &str = "modules";
 pub const MOVE_EXTENSION: &str = "move";
+pub const ERROR_DESC_EXTENSION: &str = "errmap";
+/// The extension for compiled files
+pub const COMPILED_EXTENSION: &str = "mv";
 
 pub const TRANSACTION_SCRIPTS: &str = "transaction_scripts";
 /// The output path under which compiled files will be put
 pub const COMPILED_OUTPUT_PATH: &str = "compiled";
 /// The file name for the compiled stdlib
 pub const COMPILED_STDLIB_DIR: &str = "stdlib";
-/// The extension for compiled files
-pub const COMPILED_EXTENSION: &str = "mv";
 /// The file name of the debug module
 pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 
@@ -32,6 +33,9 @@ pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 pub const STD_LIB_DOC_DIR: &str = "modules/doc";
 /// The output path for transaction script documentation.
 pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
+
+pub const ERROR_DESC_DIR: &str = "error_descriptions";
+pub const ERROR_DESC_FILENAME: &str = "error_descriptions";
 
 /// The output path under which compiled script files can be found
 pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
@@ -132,6 +136,15 @@ pub fn build_transaction_script_abi(script_file_str: String) {
     )
 }
 
+pub fn build_stdlib_error_code_map() {
+    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
+    path.push(ERROR_DESC_DIR);
+    fs::create_dir_all(&path).unwrap();
+    path.push(ERROR_DESC_FILENAME);
+    path.set_extension(ERROR_DESC_EXTENSION);
+    build_error_code_map(path.to_str().unwrap(), stdlib_files().as_slice(), "")
+}
+
 fn build_doc(output_path: &str, doc_path: &str, sources: &[String], dep_path: &str) {
     let mut options = move_prover::cli::Options::default();
     options.move_sources = sources.to_vec();
@@ -161,6 +174,19 @@ fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_scr
     options.run_abigen = true;
     options.abigen.output_directory = output_path.to_string();
     options.abigen.compiled_script_directory = compiled_script_path.to_string();
+    options.setup_logging_for_test();
+    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
+}
+
+fn build_error_code_map(output_path: &str, sources: &[String], dep_path: &str) {
+    let mut options = move_prover::cli::Options::default();
+    options.move_sources = sources.to_vec();
+    if !dep_path.is_empty() {
+        options.move_deps = vec![dep_path.to_string()]
+    }
+    options.verbosity_level = LevelFilter::Warn;
+    options.run_errmapgen = true;
+    options.errmapgen.output_file = output_path.to_string();
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }

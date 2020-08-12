@@ -63,9 +63,11 @@ fiat
 
 ## Const `ETRANSACTION_FEE`
 
+A
+<code><a href="#0x1_TransactionFee">TransactionFee</a></code> resource is not in the required state
 
 
-<pre><code><b>const</b> ETRANSACTION_FEE: u64 = 1;
+<pre><code><b>const</b> ETRANSACTION_FEE: u64 = 0;
 </code></pre>
 
 

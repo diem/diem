@@ -23,6 +23,9 @@ static FRESH_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> =
 /// This is why we include it here.
 pub const COMPILED_STDLIB_DIR: Dir = include_dir!("stdlib");
 
+pub const ERROR_DESCRIPTIONS: &[u8] =
+    std::include_bytes!("../error_descriptions/error_descriptions.errmap");
+
 // The compiled version of the Move standard library.
 // Similarly to genesis, we keep a compiled version of the standard library and scripts around, and
 // only periodically update these. This has the effect of decoupling the current leading edge of

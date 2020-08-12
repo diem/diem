@@ -6,7 +6,6 @@
 ### Table of Contents
 
 -  [Struct `RegisteredCurrencies`](#0x1_RegisteredCurrencies_RegisteredCurrencies)
--  [Const `EINVALID_SINGLETON_ADDRESS`](#0x1_RegisteredCurrencies_EINVALID_SINGLETON_ADDRESS)
 -  [Const `ECURRENCY_CODE_ALREADY_TAKEN`](#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN)
 -  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
 -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
@@ -48,24 +47,14 @@ currency names.
 
 </details>
 
-<a name="0x1_RegisteredCurrencies_EINVALID_SINGLETON_ADDRESS"></a>
-
-## Const `EINVALID_SINGLETON_ADDRESS`
-
-
-
-<pre><code><b>const</b> EINVALID_SINGLETON_ADDRESS: u64 = 0;
-</code></pre>
-
-
-
 <a name="0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN"></a>
 
 ## Const `ECURRENCY_CODE_ALREADY_TAKEN`
 
+Attempted to add a currency code that is already in use
 
 
-<pre><code><b>const</b> ECURRENCY_CODE_ALREADY_TAKEN: u64 = 1;
+<pre><code><b>const</b> ECURRENCY_CODE_ALREADY_TAKEN: u64 = 0;
 </code></pre>
 
 

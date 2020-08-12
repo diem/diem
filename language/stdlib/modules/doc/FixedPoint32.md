@@ -72,6 +72,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EDENOMINATOR`
 
+The denominator provided was zero
 
 
 <pre><code><b>const</b> EDENOMINATOR: u64 = 0;
@@ -83,6 +84,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EDIVISION`
 
+The quotient value would be too large to be held in a
+<code>u64</code>
 
 
 <pre><code><b>const</b> EDIVISION: u64 = 1;
@@ -94,6 +97,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EMULTIPLICATION`
 
+The multiplied value would be too large to be held in a
+<code>u64</code>
 
 
 <pre><code><b>const</b> EMULTIPLICATION: u64 = 2;
@@ -105,6 +110,7 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EDIVISION_BY_ZERO`
 
+A division by zero was encountered
 
 
 <pre><code><b>const</b> EDIVISION_BY_ZERO: u64 = 3;
@@ -116,6 +122,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ERATIO_OUT_OF_RANGE`
 
+The computed ratio when converting to a
+<code><a href="#0x1_FixedPoint32">FixedPoint32</a></code> would be unrepresentable
 
 
 <pre><code><b>const</b> ERATIO_OUT_OF_RANGE: u64 = 4;

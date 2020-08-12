@@ -223,6 +223,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ERESERVE`
 
+The
+<code><a href="#0x1_LBR_Reserve">Reserve</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> ERESERVE: u64 = 0;
@@ -234,6 +236,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ECOIN1`
 
+The amount of
+<code><a href="Coin1.md#0x1_Coin1">Coin1</a></code> does not match what was expected
 
 
 <pre><code><b>const</b> ECOIN1: u64 = 1;
@@ -245,6 +249,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `ECOIN2`
 
+The amount of
+<code><a href="Coin2.md#0x1_Coin2">Coin2</a></code> does not match what was expected
 
 
 <pre><code><b>const</b> ECOIN2: u64 = 2;
@@ -256,6 +262,8 @@ TODO(wrwg): This should be provided somewhere centrally in the framework.
 
 ## Const `EZERO_LBR_MINT_NOT_ALLOWED`
 
+Minting zero
+<code><a href="#0x1_LBR">LBR</a></code> is not permitted.
 
 
 <pre><code><b>const</b> EZERO_LBR_MINT_NOT_ALLOWED: u64 = 3;

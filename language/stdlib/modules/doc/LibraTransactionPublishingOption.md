@@ -7,7 +7,6 @@
 
 -  [Struct `LibraTransactionPublishingOption`](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
 -  [Const `SCRIPT_HASH_LENGTH`](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
--  [Const `ENOT_GENESIS`](#0x1_LibraTransactionPublishingOption_ENOT_GENESIS)
 -  [Const `EINVALID_SCRIPT_HASH`](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
 -  [Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
 -  [Function `initialize`](#0x1_LibraTransactionPublishingOption_initialize)
@@ -70,24 +69,14 @@ We represent these as the following resource.
 
 
 
-<a name="0x1_LibraTransactionPublishingOption_ENOT_GENESIS"></a>
-
-## Const `ENOT_GENESIS`
-
-
-
-<pre><code><b>const</b> ENOT_GENESIS: u64 = 0;
-</code></pre>
-
-
-
 <a name="0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH"></a>
 
 ## Const `EINVALID_SCRIPT_HASH`
 
+The script hash has an invalid length
 
 
-<pre><code><b>const</b> EINVALID_SCRIPT_HASH: u64 = 1;
+<pre><code><b>const</b> EINVALID_SCRIPT_HASH: u64 = 0;
 </code></pre>
 
 
@@ -96,9 +85,10 @@ We represent these as the following resource.
 
 ## Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`
 
+The script hash already exists in the allowlist
 
 
-<pre><code><b>const</b> EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 2;
+<pre><code><b>const</b> EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 1;
 </code></pre>
 
 

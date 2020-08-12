@@ -117,6 +117,8 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EROLE_ID`
 
+A
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> resource was in an unexpected state
 
 
 <pre><code><b>const</b> EROLE_ID: u64 = 0;
@@ -128,6 +130,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `ELIBRA_ROOT`
 
+The signer didn't have the required Libra Root role
 
 
 <pre><code><b>const</b> ELIBRA_ROOT: u64 = 1;
@@ -139,6 +142,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `ETREASURY_COMPLIANCE`
 
+The signer didn't have the required Treasury & Compliance role
 
 
 <pre><code><b>const</b> ETREASURY_COMPLIANCE: u64 = 2;
@@ -150,6 +154,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EPARENT_VASP`
 
+The signer didn't have the required Parent VASP role
 
 
 <pre><code><b>const</b> EPARENT_VASP: u64 = 3;
@@ -161,6 +166,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`
 
+The signer didn't have the required Libra Root or Treasury & Compliance role
 
 
 <pre><code><b>const</b> ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 4;
@@ -172,6 +178,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EPARENT_VASP_OR_DESIGNATED_DEALER`
 
+The signer didn't have the required Parent VASP or Designated Dealer role
 
 
 <pre><code><b>const</b> EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5;
@@ -183,6 +190,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EDESIGNATED_DEALER`
 
+The signer didn't have the required Designated Dealer role
 
 
 <pre><code><b>const</b> EDESIGNATED_DEALER: u64 = 6;
@@ -194,6 +202,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EVALIDATOR`
 
+The signer didn't have the required Validator role
 
 
 <pre><code><b>const</b> EVALIDATOR: u64 = 7;
@@ -205,6 +214,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 ## Const `EVALIDATOR_OPERATOR`
 
+The signer didn't have the required Validator Operator role
 
 
 <pre><code><b>const</b> EVALIDATOR_OPERATOR: u64 = 8;

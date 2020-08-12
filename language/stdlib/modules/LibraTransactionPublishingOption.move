@@ -9,9 +9,10 @@ module LibraTransactionPublishingOption {
 
     const SCRIPT_HASH_LENGTH: u64 = 32;
 
-    const ENOT_GENESIS: u64 = 0;
-    const EINVALID_SCRIPT_HASH: u64 = 1;
-    const EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 2;
+    /// The script hash has an invalid length
+    const EINVALID_SCRIPT_HASH: u64 = 0;
+    /// The script hash already exists in the allowlist
+    const EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 1;
 
     /// Defines and holds the publishing policies for the VM. There are three possible configurations:
     /// 1. No module publishing, only allowlisted scripts are allowed.

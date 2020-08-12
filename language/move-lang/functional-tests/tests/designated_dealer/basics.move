@@ -61,7 +61,7 @@ fun main(account: &signer) {
     DesignatedDealer::add_tier<Coin1>(account, {{bob}}, 1000000000000);
 }
 }
-// check: "Keep(ABORTED { code: 519,"
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 script {
@@ -95,7 +95,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 0, 5000000 * Libra::scaling_factor<Coin1>());
 }
 }
-// check: "Keep(ABORTED { code: 775,"
+// check: "Keep(ABORTED { code: 519,"
 
 //! new-transaction
 //! sender: blessed
@@ -107,7 +107,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 2, 5000000 * Libra::scaling_factor<Coin1>());
 }
 }
-// check: "Keep(ABORTED { code: 775,"
+// check: "Keep(ABORTED { code: 519,"
 
 //! new-transaction
 //! sender: blessed
@@ -121,7 +121,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 1287,"
+// check: "Keep(ABORTED { code: 1031,"
 
 //! new-transaction
 //! sender: blessed
@@ -150,7 +150,7 @@ script {
         );
     }
 }
-// check: "Keep(ABORTED { code: 1543,"
+// check: "Keep(ABORTED { code: 1287,"
 
 //! block-prologue
 //! proposer: validatorvivian

@@ -12,7 +12,6 @@
 -  [Const `ECONFIGURATION`](#0x1_LibraConfig_ECONFIGURATION)
 -  [Const `ELIBRA_CONFIG`](#0x1_LibraConfig_ELIBRA_CONFIG)
 -  [Const `EMODIFY_CAPABILITY`](#0x1_LibraConfig_EMODIFY_CAPABILITY)
--  [Const `ECONFIG_DOES_NOT_EXIST`](#0x1_LibraConfig_ECONFIG_DOES_NOT_EXIST)
 -  [Const `EINVALID_BLOCK_TIME`](#0x1_LibraConfig_EINVALID_BLOCK_TIME)
 -  [Function `initialize`](#0x1_LibraConfig_initialize)
 -  [Function `get`](#0x1_LibraConfig_get)
@@ -161,6 +160,8 @@
 
 ## Const `ECONFIGURATION`
 
+The
+<code><a href="#0x1_LibraConfig_Configuration">Configuration</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> ECONFIGURATION: u64 = 0;
@@ -172,6 +173,8 @@
 
 ## Const `ELIBRA_CONFIG`
 
+A
+<code><a href="#0x1_LibraConfig">LibraConfig</a></code> resource is in an invalid state
 
 
 <pre><code><b>const</b> ELIBRA_CONFIG: u64 = 1;
@@ -183,20 +186,11 @@
 
 ## Const `EMODIFY_CAPABILITY`
 
+A
+<code><a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a></code> is in a different state than was expected
 
 
 <pre><code><b>const</b> EMODIFY_CAPABILITY: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_LibraConfig_ECONFIG_DOES_NOT_EXIST"></a>
-
-## Const `ECONFIG_DOES_NOT_EXIST`
-
-
-
-<pre><code><b>const</b> ECONFIG_DOES_NOT_EXIST: u64 = 3;
 </code></pre>
 
 
@@ -205,6 +199,7 @@
 
 ## Const `EINVALID_BLOCK_TIME`
 
+An invalid block time was encountered.
 
 
 <pre><code><b>const</b> EINVALID_BLOCK_TIME: u64 = 4;

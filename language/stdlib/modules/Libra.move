@@ -176,17 +176,29 @@ module Libra {
     const MAX_U64: u64 = 18446744073709551615;
     const MAX_U128: u128 = 340282366920938463463374607431768211455;
 
+    /// A `BurnCapability` resource is in an unexpected state.
     const EBURN_CAPABILITY: u64 = 0;
+    /// A property expected of a `CurrencyInfo` resource didn't hold
     const ECURRENCY_INFO: u64 = 1;
+    /// A property expected of a `Preburn` resource didn't hold
     const EPREBURN: u64 = 2;
+    /// The preburn slot is already occupied with coins to be burned.
     const EPREBURN_OCCUPIED: u64 = 3;
+    /// A burn was attempted on `Preburn` resource that cointained no coins
     const EPREBURN_EMPTY: u64 = 4;
+    /// Minting is not allowed for the specified currency
     const EMINTING_NOT_ALLOWED: u64 = 5;
+    /// The currency specified is a synthetic (non-fiat) currency
     const EIS_SYNTHETIC_CURRENCY: u64 = 6;
+    /// A property expected of the coin provided didn't hold
     const ECOIN: u64 = 7;
+    /// The destruction of a non-zero coin was attempted. Non-zero coins must be burned.
     const EDESTRUCTION_OF_NONZERO_COIN: u64 = 8;
+    /// The account cannot register new currencies
     const EREGISTRATION_PRIVILEGE: u64 = 9;
+    /// A property expected of `MintCapability` didn't hold
     const EMINT_CAPABILITY: u64 = 10;
+    /// A withdrawal greater than the value of the coin was attempted.
     const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 11;
 
     ///////////////////////////////////////////////////////////////////////////

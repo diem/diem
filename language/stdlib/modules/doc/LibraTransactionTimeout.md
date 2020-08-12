@@ -83,6 +83,8 @@
 
 ## Const `ETTL`
 
+The
+<code><a href="#0x1_LibraTransactionTimeout_TTL">TTL</a></code> resource was not in the required state
 
 
 <pre><code><b>const</b> ETTL: u64 = 0;

@@ -30,17 +30,17 @@
 -  [Const `EPAYER_DOESNT_HOLD_CURRENCY`](#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY)
 -  [Const `EGAS`](#0x1_LibraAccount_EGAS)
 -  [Const `EACCOUNT_OPERATIONS_CAPABILITY`](#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY)
--  [Const `EPROLOGUE_ACCOUNT_FROZEN`](#0x1_LibraAccount_EPROLOGUE_ACCOUNT_FROZEN)
--  [Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraAccount_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY)
--  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD)
--  [Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
--  [Const `EPROLOGUE_ACCOUNT_DNE`](#0x1_LibraAccount_EPROLOGUE_ACCOUNT_DNE)
--  [Const `EPROLOGUE_CANT_PAY_GAS_DEPOSIT`](#0x1_LibraAccount_EPROLOGUE_CANT_PAY_GAS_DEPOSIT)
--  [Const `EPROLOGUE_TRANSACTION_EXPIRED`](#0x1_LibraAccount_EPROLOGUE_TRANSACTION_EXPIRED)
--  [Const `EPROLOGUE_BAD_CHAIN_ID`](#0x1_LibraAccount_EPROLOGUE_BAD_CHAIN_ID)
--  [Const `EPROLOGUE_SCRIPT_NOT_ALLOWED`](#0x1_LibraAccount_EPROLOGUE_SCRIPT_NOT_ALLOWED)
--  [Const `EPROLOGUE_MODULE_NOT_ALLOWED`](#0x1_LibraAccount_EPROLOGUE_MODULE_NOT_ALLOWED)
--  [Const `EPROLOGUE_UNEXPECTED_WRITESET`](#0x1_LibraAccount_EPROLOGUE_UNEXPECTED_WRITESET)
+-  [Const `PROLOGUE_EACCOUNT_FROZEN`](#0x1_LibraAccount_PROLOGUE_EACCOUNT_FROZEN)
+-  [Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`](#0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY)
+-  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`](#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
+-  [Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`](#0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
+-  [Const `PROLOGUE_EACCOUNT_DNE`](#0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE)
+-  [Const `PROLOGUE_ECANT_PAY_GAS_DEPOSIT`](#0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+-  [Const `PROLOGUE_ETRANSACTION_EXPIRED`](#0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED)
+-  [Const `PROLOGUE_EBAD_CHAIN_ID`](#0x1_LibraAccount_PROLOGUE_EBAD_CHAIN_ID)
+-  [Const `PROLOGUE_ESCRIPT_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED)
+-  [Const `PROLOGUE_EMODULE_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_EMODULE_NOT_ALLOWED)
+-  [Const `PROLOGUE_EUNEXPECTED_WRITESET`](#0x1_LibraAccount_PROLOGUE_EUNEXPECTED_WRITESET)
 -  [Const `WRITESET_TRANSACTION_TAG`](#0x1_LibraAccount_WRITESET_TRANSACTION_TAG)
 -  [Const `SCRIPT_TRANSACTION_TAG`](#0x1_LibraAccount_SCRIPT_TRANSACTION_TAG)
 -  [Const `MODULE_TRANSACTION_TAG`](#0x1_LibraAccount_MODULE_TRANSACTION_TAG)
@@ -423,6 +423,8 @@ Message for received events
 
 ## Const `EACCOUNT`
 
+The
+<code><a href="#0x1_LibraAccount">LibraAccount</a></code> resource is not in the required state
 
 
 <pre><code><b>const</b> EACCOUNT: u64 = 0;
@@ -434,6 +436,7 @@ Message for received events
 
 ## Const `ESEQUENCE_NUMBER`
 
+The account's sequence number has exceeded the maximum representable value
 
 
 <pre><code><b>const</b> ESEQUENCE_NUMBER: u64 = 1;
@@ -445,6 +448,7 @@ Message for received events
 
 ## Const `ECOIN_DEPOSIT_IS_ZERO`
 
+Tried to deposit a coin whose value was zero
 
 
 <pre><code><b>const</b> ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
@@ -456,6 +460,7 @@ Message for received events
 
 ## Const `EDEPOSIT_EXCEEDS_LIMITS`
 
+Tried to deposit funds that would have surpassed the account's limits
 
 
 <pre><code><b>const</b> EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
@@ -467,6 +472,7 @@ Message for received events
 
 ## Const `EROLE_CANT_STORE_BALANCE`
 
+Tried to create a balance for an account whose role does not allow holding balances
 
 
 <pre><code><b>const</b> EROLE_CANT_STORE_BALANCE: u64 = 4;
@@ -478,6 +484,7 @@ Message for received events
 
 ## Const `EINSUFFICIENT_BALANCE`
 
+The account does not hold a large enough balance in the specified currency
 
 
 <pre><code><b>const</b> EINSUFFICIENT_BALANCE: u64 = 5;
@@ -489,6 +496,7 @@ Message for received events
 
 ## Const `EWITHDRAWAL_EXCEEDS_LIMITS`
 
+The withdrawal of funds would have exceeded the the account's limits
 
 
 <pre><code><b>const</b> EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
@@ -500,6 +508,8 @@ Message for received events
 
 ## Const `EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED`
 
+The
+<code><a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account has already been extracted
 
 
 <pre><code><b>const</b> EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
@@ -511,6 +521,7 @@ Message for received events
 
 ## Const `EMALFORMED_AUTHENTICATION_KEY`
 
+The provided authentication had an invalid length
 
 
 <pre><code><b>const</b> EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
@@ -522,6 +533,8 @@ Message for received events
 
 ## Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`
 
+The
+<code><a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a></code> for this account has already been extracted
 
 
 <pre><code><b>const</b> EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED: u64 = 9;
@@ -533,6 +546,7 @@ Message for received events
 
 ## Const `ECANNOT_CREATE_AT_VM_RESERVED`
 
+An account cannot be created at the reserved VM address of 0x0
 
 
 <pre><code><b>const</b> ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
@@ -544,6 +558,7 @@ Message for received events
 
 ## Const `EADD_EXISTING_CURRENCY`
 
+Tried to add a balance in a currency that this account already has
 
 
 <pre><code><b>const</b> EADD_EXISTING_CURRENCY: u64 = 15;
@@ -555,7 +570,7 @@ Message for received events
 
 ## Const `EPAYEE_DOES_NOT_EXIST`
 
-Attempting to send funds to an account that does not exist
+Attempted to send funds to an account that does not exist
 
 
 <pre><code><b>const</b> EPAYEE_DOES_NOT_EXIST: u64 = 17;
@@ -567,8 +582,9 @@ Attempting to send funds to an account that does not exist
 
 ## Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`
 
-Attempting to send funds in (e.g.) LBR to an account that exists, but does not have a
-Balance<LBR> resource
+Attempted to send funds in a currency that the receiving account does not hold.
+e.g.,
+<code><a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt; <b>to</b> an account that exists, but does not have a </code>Balance<LBR>` resource
 
 
 <pre><code><b>const</b> EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
@@ -580,6 +596,7 @@ Balance<LBR> resource
 
 ## Const `EPAYER_DOESNT_HOLD_CURRENCY`
 
+Tried to withdraw funds in a currency that the account does hold
 
 
 <pre><code><b>const</b> EPAYER_DOESNT_HOLD_CURRENCY: u64 = 19;
@@ -591,6 +608,7 @@ Balance<LBR> resource
 
 ## Const `EGAS`
 
+An invalid amount of gas units was provided for execution of the transaction
 
 
 <pre><code><b>const</b> EGAS: u64 = 20;
@@ -602,6 +620,8 @@ Balance<LBR> resource
 
 ## Const `EACCOUNT_OPERATIONS_CAPABILITY`
 
+The
+<code><a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a></code> was not in the required state
 
 
 <pre><code><b>const</b> EACCOUNT_OPERATIONS_CAPABILITY: u64 = 22;
@@ -609,9 +629,9 @@ Balance<LBR> resource
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_ACCOUNT_FROZEN"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_FROZEN"></a>
 
-## Const `EPROLOGUE_ACCOUNT_FROZEN`
+## Const `PROLOGUE_EACCOUNT_FROZEN`
 
 Prologue errors. These are separated out from the other errors in this
 module since they are mapped separately to major VM statuses, and are
@@ -621,118 +641,118 @@ via the
 <code><a href="Errors.md#0x1_Errors">Errors</a></code> module.
 
 
-<pre><code><b>const</b> EPROLOGUE_ACCOUNT_FROZEN: u64 = 0;
+<pre><code><b>const</b> PROLOGUE_EACCOUNT_FROZEN: u64 = 0;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY"></a>
 
-## Const `EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY`
+## Const `PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD"></a>
 
-## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD`
+## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW"></a>
 
-## Const `EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW`
+## Const `PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 3;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 3;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_ACCOUNT_DNE"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EACCOUNT_DNE"></a>
 
-## Const `EPROLOGUE_ACCOUNT_DNE`
+## Const `PROLOGUE_EACCOUNT_DNE`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_ACCOUNT_DNE: u64 = 4;
+<pre><code><b>const</b> PROLOGUE_EACCOUNT_DNE: u64 = 4;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_CANT_PAY_GAS_DEPOSIT"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ECANT_PAY_GAS_DEPOSIT"></a>
 
-## Const `EPROLOGUE_CANT_PAY_GAS_DEPOSIT`
+## Const `PROLOGUE_ECANT_PAY_GAS_DEPOSIT`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
+<pre><code><b>const</b> PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 5;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_TRANSACTION_EXPIRED"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ETRANSACTION_EXPIRED"></a>
 
-## Const `EPROLOGUE_TRANSACTION_EXPIRED`
+## Const `PROLOGUE_ETRANSACTION_EXPIRED`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
+<pre><code><b>const</b> PROLOGUE_ETRANSACTION_EXPIRED: u64 = 6;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_BAD_CHAIN_ID"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EBAD_CHAIN_ID"></a>
 
-## Const `EPROLOGUE_BAD_CHAIN_ID`
+## Const `PROLOGUE_EBAD_CHAIN_ID`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_BAD_CHAIN_ID: u64 = 7;
+<pre><code><b>const</b> PROLOGUE_EBAD_CHAIN_ID: u64 = 7;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_SCRIPT_NOT_ALLOWED"></a>
+<a name="0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED"></a>
 
-## Const `EPROLOGUE_SCRIPT_NOT_ALLOWED`
+## Const `PROLOGUE_ESCRIPT_NOT_ALLOWED`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_SCRIPT_NOT_ALLOWED: u64 = 8;
+<pre><code><b>const</b> PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 8;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_MODULE_NOT_ALLOWED"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EMODULE_NOT_ALLOWED"></a>
 
-## Const `EPROLOGUE_MODULE_NOT_ALLOWED`
+## Const `PROLOGUE_EMODULE_NOT_ALLOWED`
 
 
 
-<pre><code><b>const</b> EPROLOGUE_MODULE_NOT_ALLOWED: u64 = 9;
+<pre><code><b>const</b> PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 9;
 </code></pre>
 
 
 
-<a name="0x1_LibraAccount_EPROLOGUE_UNEXPECTED_WRITESET"></a>
+<a name="0x1_LibraAccount_PROLOGUE_EUNEXPECTED_WRITESET"></a>
 
-## Const `EPROLOGUE_UNEXPECTED_WRITESET`
+## Const `PROLOGUE_EUNEXPECTED_WRITESET`
 
 This error will not be translated it should be an invariant violation.
 
 
-<pre><code><b>const</b> EPROLOGUE_UNEXPECTED_WRITESET: u64 = 10;
+<pre><code><b>const</b> PROLOGUE_EUNEXPECTED_WRITESET: u64 = 10;
 </code></pre>
 
 
@@ -2150,7 +2170,7 @@ The prologue for module transaction
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>assert</b>(
         <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">LibraTransactionPublishingOption::is_module_allowed</a>(sender),
-        EPROLOGUE_MODULE_NOT_ALLOWED
+        PROLOGUE_EMODULE_NOT_ALLOWED
     );
 
     <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
@@ -2197,7 +2217,7 @@ The prologue for script transaction
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>assert</b>(
         <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">LibraTransactionPublishingOption::is_script_allowed</a>(sender, &script_hash),
-        EPROLOGUE_SCRIPT_NOT_ALLOWED
+        PROLOGUE_ESCRIPT_NOT_ALLOWED
     );
 
     <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
@@ -2248,15 +2268,15 @@ It verifies:
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
 
     // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
-    <b>assert</b>(<a href="ChainId.md#0x1_ChainId_get">ChainId::get</a>() == chain_id, EPROLOGUE_BAD_CHAIN_ID);
+    <b>assert</b>(<a href="ChainId.md#0x1_ChainId_get">ChainId::get</a>() == chain_id, PROLOGUE_EBAD_CHAIN_ID);
 
     // Verify that the transaction sender's account exists
-    <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
+    <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), PROLOGUE_EACCOUNT_DNE);
 
     // We check whether this account is frozen, <b>if</b> it is no transaction can be sent from it.
     <b>assert</b>(
         !<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(transaction_sender),
-        EPROLOGUE_ACCOUNT_FROZEN
+        PROLOGUE_EACCOUNT_FROZEN
     );
 
     // Load the transaction sender's account
@@ -2265,34 +2285,34 @@ It verifies:
     // Check that the hash of the transaction's <b>public</b> key matches the account's auth key
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(txn_public_key) == *&sender_account.authentication_key,
-        EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
+        PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
     );
 
     // Check that the account has enough balance for all of the gas
     <b>assert</b>(
         (txn_gas_price <b>as</b> u128) * (txn_max_gas_units <b>as</b> u128) &lt;= MAX_U64,
-         EPROLOGUE_CANT_PAY_GAS_DEPOSIT
+         PROLOGUE_ECANT_PAY_GAS_DEPOSIT
     );
     <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
     // Don't grab the balance <b>if</b> the transaction fee is zero
     <b>if</b> (max_transaction_fee &gt; 0) {
         <b>let</b> balance_amount = <a href="#0x1_LibraAccount_balance">balance</a>&lt;Token&gt;(transaction_sender);
-        <b>assert</b>(balance_amount &gt;= max_transaction_fee, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
+        <b>assert</b>(balance_amount &gt;= max_transaction_fee, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
     };
 
     // Check that the transaction sequence number matches the sequence number of the account
     // TODO: the below assertions overlap, fix this.
     <b>assert</b>(
         txn_sequence_number &gt;= sender_account.sequence_number,
-        EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD
+        PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD
     );
     <b>assert</b>(
         txn_sequence_number == sender_account.sequence_number,
-        EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW
+        PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
     );
     <b>assert</b>(
         <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_is_valid_transaction_timestamp">LibraTransactionTimeout::is_valid_transaction_timestamp</a>(txn_expiration_time),
-        EPROLOGUE_TRANSACTION_EXPIRED
+        PROLOGUE_ETRANSACTION_EXPIRED
     );
 }
 </code></pre>
@@ -2381,7 +2401,7 @@ The success_epilogue is invoked at the end of successfully executed transactions
 
     // Load the transaction sender's balance <b>resource</b> only <b>if</b> it exists. If it doesn't we default the value <b>to</b> 0
     <b>let</b> sender_balance = <b>if</b> (exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender)) <a href="#0x1_LibraAccount_balance">balance</a>&lt;Token&gt;(sender) <b>else</b> 0;
-    <b>assert</b>(sender_balance &gt;= transaction_fee_amount, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
+    <b>assert</b>(sender_balance &gt;= transaction_fee_amount, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
     <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender, transaction_fee_amount, txn_sequence_number);
 }
 </code></pre>

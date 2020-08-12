@@ -24,10 +24,13 @@ module LibraConfig {
     // Currently, the capability is only published on Libra root.
     resource struct ModifyConfigCapability<TypeName> {}
 
+    /// The `Configuration` resource is in an invalid state
     const ECONFIGURATION: u64 = 0;
+    /// A `LibraConfig` resource is in an invalid state
     const ELIBRA_CONFIG: u64 = 1;
+    /// A `ModifyConfigCapability` is in a different state than was expected
     const EMODIFY_CAPABILITY: u64 = 2;
-    const ECONFIG_DOES_NOT_EXIST: u64 = 3;
+    /// An invalid block time was encountered.
     const EINVALID_BLOCK_TIME: u64 = 4;
 
     // This can only be invoked by the config address, and only a single time.

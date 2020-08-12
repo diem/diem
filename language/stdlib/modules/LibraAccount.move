@@ -112,25 +112,40 @@ module LibraAccount {
 
     const MAX_U64: u128 = 18446744073709551615;
 
+    /// The `LibraAccount` resource is not in the required state
     const EACCOUNT: u64 = 0;
+    /// The account's sequence number has exceeded the maximum representable value
     const ESEQUENCE_NUMBER: u64 = 1;
+    /// Tried to deposit a coin whose value was zero
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
+    /// Tried to deposit funds that would have surpassed the account's limits
     const EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
+    /// Tried to create a balance for an account whose role does not allow holding balances
     const EROLE_CANT_STORE_BALANCE: u64 = 4;
+    /// The account does not hold a large enough balance in the specified currency
     const EINSUFFICIENT_BALANCE: u64 = 5;
+    /// The withdrawal of funds would have exceeded the the account's limits
     const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
+    /// The `WithdrawCapability` for this account has already been extracted
     const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
+    /// The provided authentication had an invalid length
     const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
+    /// The `KeyRotationCapability` for this account has already been extracted
     const EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED: u64 = 9;
+    /// An account cannot be created at the reserved VM address of 0x0
     const ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
+    /// Tried to add a balance in a currency that this account already has
     const EADD_EXISTING_CURRENCY: u64 = 15;
-    /// Attempting to send funds to an account that does not exist
+    /// Attempted to send funds to an account that does not exist
     const EPAYEE_DOES_NOT_EXIST: u64 = 17;
-    /// Attempting to send funds in (e.g.) LBR to an account that exists, but does not have a
-    /// Balance<LBR> resource
+    /// Attempted to send funds in a currency that the receiving account does not hold.
+    /// e.g., `Libra<LBR> to an account that exists, but does not have a `Balance<LBR>` resource
     const EPAYEE_CANT_ACCEPT_CURRENCY_TYPE: u64 = 18;
+    /// Tried to withdraw funds in a currency that the account does hold
     const EPAYER_DOESNT_HOLD_CURRENCY: u64 = 19;
+    /// An invalid amount of gas units was provided for execution of the transaction
     const EGAS: u64 = 20;
+    /// The `AccountOperationsCapability` was not in the required state
     const EACCOUNT_OPERATIONS_CAPABILITY: u64 = 22;
 
     /// Prologue errors. These are separated out from the other errors in this
@@ -138,24 +153,23 @@ module LibraAccount {
     /// important to the semantics of the system. Those codes also need to be
     /// directly used in aborts instead of augmenting them with a category
     /// via the `Errors` module.
-    const EPROLOGUE_ACCOUNT_FROZEN: u64 = 0;
-    const EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
-    const EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
-    const EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 3;
-    const EPROLOGUE_ACCOUNT_DNE: u64 = 4;
-    const EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
-    const EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
-    const EPROLOGUE_BAD_CHAIN_ID: u64 = 7;
-    const EPROLOGUE_SCRIPT_NOT_ALLOWED: u64 = 8;
-    const EPROLOGUE_MODULE_NOT_ALLOWED: u64 = 9;
+    const PROLOGUE_EACCOUNT_FROZEN: u64 = 0;
+    const PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 3;
+    const PROLOGUE_EACCOUNT_DNE: u64 = 4;
+    const PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 5;
+    const PROLOGUE_ETRANSACTION_EXPIRED: u64 = 6;
+    const PROLOGUE_EBAD_CHAIN_ID: u64 = 7;
+    const PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 8;
+    const PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 9;
 
     /// This error will not be translated it should be an invariant violation.
-    const EPROLOGUE_UNEXPECTED_WRITESET: u64 = 10;
+    const PROLOGUE_EUNEXPECTED_WRITESET: u64 = 10;
 
     const WRITESET_TRANSACTION_TAG: u8 = 0;
     const SCRIPT_TRANSACTION_TAG: u8 = 1;
     const MODULE_TRANSACTION_TAG: u8 = 2;
-
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -859,7 +873,7 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         assert(
             LibraTransactionPublishingOption::is_module_allowed(sender),
-            EPROLOGUE_MODULE_NOT_ALLOWED
+            PROLOGUE_EMODULE_NOT_ALLOWED
         );
 
         prologue_common<Token>(
@@ -885,7 +899,7 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         assert(
             LibraTransactionPublishingOption::is_script_allowed(sender, &script_hash),
-            EPROLOGUE_SCRIPT_NOT_ALLOWED
+            PROLOGUE_ESCRIPT_NOT_ALLOWED
         );
 
         prologue_common<Token>(
@@ -916,15 +930,15 @@ module LibraAccount {
         let transaction_sender = Signer::address_of(sender);
 
         // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
-        assert(ChainId::get() == chain_id, EPROLOGUE_BAD_CHAIN_ID);
+        assert(ChainId::get() == chain_id, PROLOGUE_EBAD_CHAIN_ID);
 
         // Verify that the transaction sender's account exists
-        assert(exists_at(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
+        assert(exists_at(transaction_sender), PROLOGUE_EACCOUNT_DNE);
 
         // We check whether this account is frozen, if it is no transaction can be sent from it.
         assert(
             !AccountFreezing::account_is_frozen(transaction_sender),
-            EPROLOGUE_ACCOUNT_FROZEN
+            PROLOGUE_EACCOUNT_FROZEN
         );
 
         // Load the transaction sender's account
@@ -933,34 +947,34 @@ module LibraAccount {
         // Check that the hash of the transaction's public key matches the account's auth key
         assert(
             Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
-            EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
+            PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
         );
 
         // Check that the account has enough balance for all of the gas
         assert(
             (txn_gas_price as u128) * (txn_max_gas_units as u128) <= MAX_U64,
-             EPROLOGUE_CANT_PAY_GAS_DEPOSIT
+             PROLOGUE_ECANT_PAY_GAS_DEPOSIT
         );
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
         // Don't grab the balance if the transaction fee is zero
         if (max_transaction_fee > 0) {
             let balance_amount = balance<Token>(transaction_sender);
-            assert(balance_amount >= max_transaction_fee, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
+            assert(balance_amount >= max_transaction_fee, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
         };
 
         // Check that the transaction sequence number matches the sequence number of the account
         // TODO: the below assertions overlap, fix this.
         assert(
             txn_sequence_number >= sender_account.sequence_number,
-            EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD
+            PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD
         );
         assert(
             txn_sequence_number == sender_account.sequence_number,
-            EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW
+            PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
         );
         assert(
             LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time),
-            EPROLOGUE_TRANSACTION_EXPIRED
+            PROLOGUE_ETRANSACTION_EXPIRED
         );
     }
 
@@ -1009,7 +1023,7 @@ module LibraAccount {
 
         // Load the transaction sender's balance resource only if it exists. If it doesn't we default the value to 0
         let sender_balance = if (exists<Balance<Token>>(sender)) balance<Token>(sender) else 0;
-        assert(sender_balance >= transaction_fee_amount, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
+        assert(sender_balance >= transaction_fee_amount, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
         epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
 

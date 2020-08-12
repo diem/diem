@@ -9,7 +9,6 @@
 -  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
 -  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
 -  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
--  [Const `ENOT_LIBRA_ROOT`](#0x1_SlidingNonce_ENOT_LIBRA_ROOT)
 -  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
@@ -95,18 +94,6 @@ The nonce was already recorded previously
 
 
 
-<a name="0x1_SlidingNonce_ENOT_LIBRA_ROOT"></a>
-
-## Const `ENOT_LIBRA_ROOT`
-
-Calling account doesn't have sufficient privileges to create a sliding nonce resource
-
-
-<pre><code><b>const</b> ENOT_LIBRA_ROOT: u64 = 4;
-</code></pre>
-
-
-
 <a name="0x1_SlidingNonce_NONCE_MASK_SIZE"></a>
 
 ## Const `NONCE_MASK_SIZE`
@@ -137,7 +124,7 @@ Calls try_record_nonce and aborts transaction if returned code is non-0
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
     <b>let</b> code = <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
-    <b>assert</b>(code == 0, code);
+    <b>assert</b>(code == 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(code));
 }
 </code></pre>
 
@@ -247,7 +234,7 @@ Only the libra root account can create this resource for different accounts
     lr_account: &signer,
     account: &signer
 ) {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     <b>let</b> new_resource = <a href="#0x1_SlidingNonce">SlidingNonce</a> {
         min_nonce: 0,
         nonce_mask: 0,

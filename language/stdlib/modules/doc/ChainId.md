@@ -45,6 +45,8 @@
 
 ## Const `ECHAIN_ID`
 
+The
+<code><a href="#0x1_ChainId">ChainId</a></code> resource was not in the required state
 
 
 <pre><code><b>const</b> ECHAIN_ID: u64 = 0;

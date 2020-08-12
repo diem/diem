@@ -81,9 +81,13 @@ module LBR {
     /// TODO(wrwg): This should be provided somewhere centrally in the framework.
     const MAX_U64: u64 = 18446744073709551615;
 
+    /// The `Reserve` resource is in an invalid state
     const ERESERVE: u64 = 0;
+    /// The amount of `Coin1` does not match what was expected
     const ECOIN1: u64 = 1;
+    /// The amount of `Coin2` does not match what was expected
     const ECOIN2: u64 = 2;
+    /// Minting zero `LBR` is not permitted.
     const EZERO_LBR_MINT_NOT_ALLOWED: u64 = 3;
 
     /// Initializes the `LBR` module. This sets up the initial `LBR` ratios and

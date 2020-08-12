@@ -23,13 +23,14 @@ module LibraWriteSetManager {
         writeset_payload: vector<u8>,
     }
 
+    /// The `LibraWriteSetManager` was not in the required state
     const ELIBRA_WRITE_SET_MANAGER: u64 = 0;
 
     // The following codes need to be directly used in aborts as the VM expects them.
-    const EPROLOGUE_INVALID_WRITESET_SENDER: u64 = 33;
-    const EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
-    const EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
-    const EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+    const PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 33;
+    const PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 11;
 
     public fun initialize(account: &signer) {
         LibraTimestamp::assert_genesis();
@@ -61,17 +62,17 @@ module LibraWriteSetManager {
     ) {
         // The below code uses direct abort codes as per contract with VM.
         let sender = Signer::address_of(account);
-        assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), EPROLOGUE_INVALID_WRITESET_SENDER);
+        assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), PROLOGUE_EINVALID_WRITESET_SENDER);
 
         let lr_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
 
-        assert(writeset_sequence_number >= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
+        assert(writeset_sequence_number >= sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD);
 
-        assert(writeset_sequence_number == sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
+        assert(writeset_sequence_number == sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW);
         assert(
             Hash::sha3_256(writeset_public_key) == lr_auth_key,
-            EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
+            PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
         );
     }
 

@@ -10,6 +10,7 @@ module ValidatorOperatorConfig {
         human_name: vector<u8>,
     }
 
+    /// The `ValidatorOperatorConfig` was not in the required state
     const EVALIDATOR_OPERATOR_CONFIG: u64 = 0;
 
     public fun publish(

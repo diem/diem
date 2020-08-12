@@ -17,14 +17,23 @@ module Roles {
     use 0x1::Errors;
     use 0x1::LibraTimestamp;
 
+    /// A `RoleId` resource was in an unexpected state
     const EROLE_ID: u64 = 0;
+    /// The signer didn't have the required Libra Root role
     const ELIBRA_ROOT: u64 = 1;
+    /// The signer didn't have the required Treasury & Compliance role
     const ETREASURY_COMPLIANCE: u64 = 2;
+    /// The signer didn't have the required Parent VASP role
     const EPARENT_VASP: u64 = 3;
+    /// The signer didn't have the required Libra Root or Treasury & Compliance role
     const ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 4;
+    /// The signer didn't have the required Parent VASP or Designated Dealer role
     const EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5;
+    /// The signer didn't have the required Designated Dealer role
     const EDESIGNATED_DEALER: u64 = 6;
+    /// The signer didn't have the required Validator role
     const EVALIDATOR: u64 = 7;
+    /// The signer didn't have the required Validator Operator role
     const EVALIDATOR_OPERATOR: u64 = 8;
 
     ///////////////////////////////////////////////////////////////////////////

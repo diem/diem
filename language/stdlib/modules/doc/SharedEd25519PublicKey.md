@@ -55,6 +55,7 @@
 
 ## Const `EMALFORMED_PUBLIC_KEY`
 
+The shared ed25519 public key is not valid ed25519 public key
 
 
 <pre><code><b>const</b> EMALFORMED_PUBLIC_KEY: u64 = 0;
@@ -66,6 +67,7 @@
 
 ## Const `ESHARED_KEY`
 
+A shared ed25519 public key resource was not in the required state
 
 
 <pre><code><b>const</b> ESHARED_KEY: u64 = 1;

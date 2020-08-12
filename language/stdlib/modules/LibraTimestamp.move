@@ -23,9 +23,13 @@ module LibraTimestamp {
     /// is called at the end of genesis.
     resource struct TimeHasStarted {}
 
+    /// The blockchain is not in the genesis state anymore
     const ENOT_GENESIS: u64 = 0;
+    /// The blockchain is not in an operating state yet
     const ENOT_OPERATING: u64 = 1;
+    /// The `CurrentTimeMicroseconds` resource was not in the required state
     const ETIMER_RESOURCE: u64 = 2;
+    /// An invalid timestamp was provided
     const ETIMESTAMP: u64 = 3;
 
     spec module {

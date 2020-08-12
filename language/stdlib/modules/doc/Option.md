@@ -79,6 +79,8 @@ zero or one because Move bytecode does not have ADTs.
 
 ## Const `EOPTION_IS_SET`
 
+The
+<code><a href="#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
 
 
 <pre><code><b>const</b> EOPTION_IS_SET: u64 = 0;
@@ -90,6 +92,8 @@ zero or one because Move bytecode does not have ADTs.
 
 ## Const `EOPTION_NOT_SET`
 
+The
+<code><a href="#0x1_Option">Option</a></code> is in an invalid state for the operation attempted.
 
 
 <pre><code><b>const</b> EOPTION_NOT_SET: u64 = 1;

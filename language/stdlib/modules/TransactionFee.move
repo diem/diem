@@ -21,7 +21,8 @@ module TransactionFee {
         invariant [global] LibraTimestamp::is_operating() ==> is_initialized();
     }
 
-    const ETRANSACTION_FEE: u64 = 1;
+    /// A `TransactionFee` resource is not in the required state
+    const ETRANSACTION_FEE: u64 = 0;
 
     /// Called in genesis. Sets up the needed resources to collect transaction fees from the
     /// `TransactionFee` resource with the TreasuryCompliance account.
