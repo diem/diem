@@ -329,7 +329,7 @@ pub enum ScriptCall {
     },
 
     /// Unmints `amount_lbr` LBR from the sending account into the constituent coins and deposits
-    /// the resulting coins into the sending account."
+    /// the resulting coins into the sending account.
     UnmintLbr { amount_lbr: u64 },
 
     /// Update the dual attesation limit to `new_micro_lbr_limit`.
@@ -1177,7 +1177,7 @@ pub fn encode_unfreeze_account_script(
 }
 
 /// Unmints `amount_lbr` LBR from the sending account into the constituent coins and deposits
-/// the resulting coins into the sending account."
+/// the resulting coins into the sending account.
 pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
     Script::new(
         UNMINT_LBR_CODE.to_vec(),
