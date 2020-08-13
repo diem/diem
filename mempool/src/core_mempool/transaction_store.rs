@@ -164,7 +164,7 @@ impl TransactionStore {
             && self.check_txn_ready(txn, curr_sequence_number)
         {
             // try to free some space in Mempool from ParkingLot
-            if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
+            if let Some((address, sequence_number)) = self.parking_lot_index.get_poppable() {
                 if let Some(txn) = self
                     .transactions
                     .get_mut(&address)
