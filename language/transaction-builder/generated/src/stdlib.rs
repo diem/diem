@@ -115,8 +115,6 @@ pub enum ScriptCall {
         addr: AccountAddress,
         auth_key_prefix: Bytes,
         human_name: Bytes,
-        base_url: Bytes,
-        compliance_public_key: Bytes,
         add_all_currencies: bool,
     },
 
@@ -131,8 +129,6 @@ pub enum ScriptCall {
         new_account_address: AccountAddress,
         auth_key_prefix: Bytes,
         human_name: Bytes,
-        base_url: Bytes,
-        compliance_public_key: Bytes,
         add_all_currencies: bool,
     },
 
@@ -142,19 +138,6 @@ pub enum ScriptCall {
     /// * Aborts with `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` if `account` has already delegated its `KeyRotationCapability`.
     /// * Aborts with `RecoveryAddress::ENOT_A_VASP` if `account` is not a ParentVASP or ChildVASP
     CreateRecoveryAddress {},
-
-    /// Create an account with the ParentVASP role at `address` with authentication key
-    /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If
-    /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
-    /// also be added. This can only be invoked by an Association account.
-    /// The `human_name`, `base_url`, and compliance_public_key` fields of the
-    /// ParentVASP are filled in with dummy information.
-    CreateTestingAccount {
-        coin_type: TypeTag,
-        new_account_address: AccountAddress,
-        auth_key_prefix: Bytes,
-        add_all_currencies: bool,
-    },
 
     /// Create a validator account at `new_validator_address` with `auth_key_prefix`and human_name.
     CreateValidatorAccount {
@@ -426,8 +409,6 @@ impl ScriptCall {
                 addr,
                 auth_key_prefix,
                 human_name,
-                base_url,
-                compliance_public_key,
                 add_all_currencies,
             } => encode_create_designated_dealer_script(
                 currency,
@@ -435,8 +416,6 @@ impl ScriptCall {
                 addr,
                 auth_key_prefix,
                 human_name,
-                base_url,
-                compliance_public_key,
                 add_all_currencies,
             ),
             CreateParentVaspAccount {
@@ -445,8 +424,6 @@ impl ScriptCall {
                 new_account_address,
                 auth_key_prefix,
                 human_name,
-                base_url,
-                compliance_public_key,
                 add_all_currencies,
             } => encode_create_parent_vasp_account_script(
                 coin_type,
@@ -454,22 +431,9 @@ impl ScriptCall {
                 new_account_address,
                 auth_key_prefix,
                 human_name,
-                base_url,
-                compliance_public_key,
                 add_all_currencies,
             ),
             CreateRecoveryAddress {} => encode_create_recovery_address_script(),
-            CreateTestingAccount {
-                coin_type,
-                new_account_address,
-                auth_key_prefix,
-                add_all_currencies,
-            } => encode_create_testing_account_script(
-                coin_type,
-                new_account_address,
-                auth_key_prefix,
-                add_all_currencies,
-            ),
             CreateValidatorAccount {
                 sliding_nonce,
                 new_account_address,
@@ -783,8 +747,6 @@ pub fn encode_create_designated_dealer_script(
     addr: AccountAddress,
     auth_key_prefix: Vec<u8>,
     human_name: Vec<u8>,
-    base_url: Vec<u8>,
-    compliance_public_key: Vec<u8>,
     add_all_currencies: bool,
 ) -> Script {
     Script::new(
@@ -795,8 +757,6 @@ pub fn encode_create_designated_dealer_script(
             TransactionArgument::Address(addr),
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U8Vector(human_name),
-            TransactionArgument::U8Vector(base_url),
-            TransactionArgument::U8Vector(compliance_public_key),
             TransactionArgument::Bool(add_all_currencies),
         ],
     )
@@ -813,8 +773,6 @@ pub fn encode_create_parent_vasp_account_script(
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
     human_name: Vec<u8>,
-    base_url: Vec<u8>,
-    compliance_public_key: Vec<u8>,
     add_all_currencies: bool,
 ) -> Script {
     Script::new(
@@ -825,8 +783,6 @@ pub fn encode_create_parent_vasp_account_script(
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
             TransactionArgument::U8Vector(human_name),
-            TransactionArgument::U8Vector(base_url),
-            TransactionArgument::U8Vector(compliance_public_key),
             TransactionArgument::Bool(add_all_currencies),
         ],
     )
@@ -839,29 +795,6 @@ pub fn encode_create_parent_vasp_account_script(
 /// * Aborts with `RecoveryAddress::ENOT_A_VASP` if `account` is not a ParentVASP or ChildVASP
 pub fn encode_create_recovery_address_script() -> Script {
     Script::new(CREATE_RECOVERY_ADDRESS_CODE.to_vec(), vec![], vec![])
-}
-
-/// Create an account with the ParentVASP role at `address` with authentication key
-/// `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If
-/// `add_all_currencies` is true, 0 balances for all available currencies in the system will
-/// also be added. This can only be invoked by an Association account.
-/// The `human_name`, `base_url`, and compliance_public_key` fields of the
-/// ParentVASP are filled in with dummy information.
-pub fn encode_create_testing_account_script(
-    coin_type: TypeTag,
-    new_account_address: AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    add_all_currencies: bool,
-) -> Script {
-    Script::new(
-        CREATE_TESTING_ACCOUNT_CODE.to_vec(),
-        vec![coin_type],
-        vec![
-            TransactionArgument::Address(new_account_address),
-            TransactionArgument::U8Vector(auth_key_prefix),
-            TransactionArgument::Bool(add_all_currencies),
-        ],
-    )
 }
 
 /// Create a validator account at `new_validator_address` with `auth_key_prefix`and human_name.
@@ -1374,9 +1307,7 @@ fn decode_create_designated_dealer_script(script: &Script) -> Option<ScriptCall>
         addr: decode_address_argument(script.args().get(1)?.clone())?,
         auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
         human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
-        base_url: decode_u8vector_argument(script.args().get(4)?.clone())?,
-        compliance_public_key: decode_u8vector_argument(script.args().get(5)?.clone())?,
-        add_all_currencies: decode_bool_argument(script.args().get(6)?.clone())?,
+        add_all_currencies: decode_bool_argument(script.args().get(4)?.clone())?,
     })
 }
 
@@ -1387,23 +1318,12 @@ fn decode_create_parent_vasp_account_script(script: &Script) -> Option<ScriptCal
         new_account_address: decode_address_argument(script.args().get(1)?.clone())?,
         auth_key_prefix: decode_u8vector_argument(script.args().get(2)?.clone())?,
         human_name: decode_u8vector_argument(script.args().get(3)?.clone())?,
-        base_url: decode_u8vector_argument(script.args().get(4)?.clone())?,
-        compliance_public_key: decode_u8vector_argument(script.args().get(5)?.clone())?,
-        add_all_currencies: decode_bool_argument(script.args().get(6)?.clone())?,
+        add_all_currencies: decode_bool_argument(script.args().get(4)?.clone())?,
     })
 }
 
 fn decode_create_recovery_address_script(_script: &Script) -> Option<ScriptCall> {
     Some(ScriptCall::CreateRecoveryAddress {})
-}
-
-fn decode_create_testing_account_script(script: &Script) -> Option<ScriptCall> {
-    Some(ScriptCall::CreateTestingAccount {
-        coin_type: script.ty_args().get(0)?.clone(),
-        new_account_address: decode_address_argument(script.args().get(0)?.clone())?,
-        auth_key_prefix: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        add_all_currencies: decode_bool_argument(script.args().get(2)?.clone())?,
-    })
 }
 
 fn decode_create_validator_account_script(script: &Script) -> Option<ScriptCall> {
@@ -1650,10 +1570,6 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
         Box::new(decode_create_recovery_address_script),
     );
     map.insert(
-        CREATE_TESTING_ACCOUNT_CODE.to_vec(),
-        Box::new(decode_create_testing_account_script),
-    );
-    map.insert(
         CREATE_VALIDATOR_ACCOUNT_CODE.to_vec(),
         Box::new(decode_create_validator_account_script),
     );
@@ -1878,25 +1794,25 @@ const CREATE_CHILD_VASP_ACCOUNT_CODE: &[u8] = &[
 ];
 
 const CREATE_DESIGNATED_DEALER_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 35, 7, 52, 73, 8, 125, 16,
-    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 7, 6, 12, 5, 10, 2, 10, 2,
-    10, 2, 10, 2, 1, 8, 6, 12, 3, 5, 10, 2, 10, 2, 10, 2, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114,
-    97, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
-    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
-    111, 114, 116, 24, 99, 114, 101, 97, 116, 101, 95, 100, 101, 115, 105, 103, 110, 97, 116, 101,
-    100, 95, 100, 101, 97, 108, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3,
-    1, 12, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 11, 5, 11, 6, 10, 7, 56, 0, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 73, 8, 117, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 5, 6, 12, 5, 10, 2, 10, 2,
+    1, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117,
+    110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111,
+    114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 24, 99, 114,
+    101, 97, 116, 101, 95, 100, 101, 115, 105, 103, 110, 97, 116, 101, 100, 95, 100, 101, 97, 108,
+    101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 10, 10, 0, 10, 1, 17, 0,
+    11, 0, 10, 2, 11, 3, 11, 4, 10, 5, 56, 0, 2,
 ];
 
 const CREATE_PARENT_VASP_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 35, 7, 52, 75, 8, 127, 16,
-    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 7, 6, 12, 5, 10, 2, 10, 2,
-    10, 2, 10, 2, 1, 8, 6, 12, 3, 5, 10, 2, 10, 2, 10, 2, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114,
-    97, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
-    101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98,
-    111, 114, 116, 26, 99, 114, 101, 97, 116, 101, 95, 112, 97, 114, 101, 110, 116, 95, 118, 97,
-    115, 112, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 1, 3, 1, 12, 10, 0, 10, 1, 17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 11, 5, 11, 6, 10, 7, 56, 0, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 27, 7, 44, 75, 8, 119, 16,
+    0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 1, 1, 1, 4, 2, 6, 12, 3, 0, 5, 6, 12, 5, 10, 2, 10, 2,
+    1, 6, 6, 12, 3, 5, 10, 2, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117,
+    110, 116, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101, 21, 114, 101, 99, 111,
+    114, 100, 95, 110, 111, 110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 26, 99, 114,
+    101, 97, 116, 101, 95, 112, 97, 114, 101, 110, 116, 95, 118, 97, 115, 112, 95, 97, 99, 99, 111,
+    117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 3, 1, 10, 10, 0, 10, 1,
+    17, 0, 11, 0, 10, 2, 11, 3, 11, 4, 10, 5, 56, 0, 2,
 ];
 
 const CREATE_RECOVERY_ADDRESS_CODE: &[u8] = &[
@@ -1908,18 +1824,6 @@ const CREATE_RECOVERY_ADDRESS_CODE: &[u8] = &[
     121, 95, 114, 111, 116, 97, 116, 105, 111, 110, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116,
     121, 7, 112, 117, 98, 108, 105, 115, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
     3, 5, 10, 0, 11, 0, 17, 0, 17, 1, 2,
-];
-
-const CREATE_TESTING_ACCOUNT_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 7, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 24, 7, 34, 40, 8, 74, 16, 6,
-    90, 68, 0, 0, 0, 1, 0, 1, 1, 1, 0, 3, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 1, 0, 4, 6, 12,
-    5, 10, 2, 1, 1, 9, 0, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 26, 99, 114,
-    101, 97, 116, 101, 95, 112, 97, 114, 101, 110, 116, 95, 118, 97, 115, 112, 95, 97, 99, 99, 111,
-    117, 110, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10, 2, 8, 7, 116, 101, 115, 116,
-    110, 101, 116, 10, 2, 18, 17, 104, 116, 116, 112, 115, 58, 47, 47, 108, 105, 98, 114, 97, 46,
-    111, 114, 103, 10, 2, 33, 32, 183, 163, 193, 45, 192, 200, 199, 72, 171, 7, 82, 91, 112, 17,
-    34, 184, 139, 215, 143, 96, 12, 118, 52, 45, 39, 242, 94, 95, 146, 68, 76, 222, 1, 1, 2, 1, 9,
-    11, 0, 10, 1, 11, 2, 7, 0, 7, 1, 7, 2, 10, 3, 56, 0, 2,
 ];
 
 const CREATE_VALIDATOR_ACCOUNT_CODE: &[u8] = &[

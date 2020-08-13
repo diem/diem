@@ -683,10 +683,12 @@ fn gen_create_account_txn_request(
     auth_key_prefix: Vec<u8>,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_create_testing_account_script(
+        transaction_builder::encode_create_parent_vasp_account_script(
             account_config::coin1_tag(),
+            0,
             *receiver,
             auth_key_prefix,
+            vec![],
             false,
         ),
         sender,

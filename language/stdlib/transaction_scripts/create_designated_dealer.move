@@ -12,8 +12,6 @@ fun create_designated_dealer<Currency>(
     addr: address,
     auth_key_prefix: vector<u8>,
     human_name: vector<u8>,
-    base_url: vector<u8>,
-    compliance_public_key: vector<u8>,
     add_all_currencies: bool,
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
@@ -22,8 +20,6 @@ fun create_designated_dealer<Currency>(
         addr,
         auth_key_prefix,
         human_name,
-        base_url,
-        compliance_public_key,
         add_all_currencies
     );
 }

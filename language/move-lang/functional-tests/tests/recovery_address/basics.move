@@ -16,7 +16,6 @@ script {
 use 0x1::LBR::LBR;
 use 0x1::LibraAccount;
 fun main(lr_account: &signer) {
-    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<LBR>(
@@ -24,8 +23,6 @@ fun main(lr_account: &signer) {
         {{parent1}},
         {{parent1::auth_key}},
         x"A1",
-        x"A2",
-        copy pubkey,
         add_all_currencies,
     );
 
@@ -34,8 +31,6 @@ fun main(lr_account: &signer) {
         {{parent2}},
         {{parent2::auth_key}},
         x"B1",
-        x"B2",
-        pubkey,
         add_all_currencies,
     );
 
@@ -181,14 +176,14 @@ module Holder {
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
-//! args: 0, {{vasp1}}, {{vasp1::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+//! args: 0, {{vasp1}}, {{vasp1::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
 // check: EXECUTED
 
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
-//! args: 0, {{vasp2}}, {{vasp2::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+//! args: 0, {{vasp2}}, {{vasp2::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
 // check: EXECUTED
 

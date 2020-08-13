@@ -244,6 +244,6 @@ script {
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
-//! args: 0, {{otherbob}}, {{otherbob::auth_key}}, b"bob", b"boburl", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", true
+//! args: 0, {{otherbob}}, {{otherbob::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
 //! check: EXECUTED

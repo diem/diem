@@ -466,10 +466,12 @@ impl ClientProxy {
         );
 
         if self.libra_root_account.is_some() {
-            let script = transaction_builder::encode_create_testing_account_script(
+            let script = transaction_builder::encode_create_parent_vasp_account_script(
                 type_tag_for_currency_code(currency_code.clone()),
+                0,
                 receiver,
                 receiver_auth_key.prefix().to_vec(),
+                b"testnet".to_vec(),
                 false, /* add all currencies */
             );
             // If the receiver is local, create it now.

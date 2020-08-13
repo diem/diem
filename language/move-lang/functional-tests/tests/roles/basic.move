@@ -53,8 +53,6 @@ fun main(account: &signer) {
         {{bob}},
         {{bob::auth_key}},
         b"bob",
-        b"boburl",
-        x"",
         false
     );
 }
@@ -122,8 +120,6 @@ fun main(account: &signer) {
         {{bob}},
         {{bob::auth_key}},
         b"bob",
-        b"boburl",
-        x"",
         false
     );
 }
@@ -159,8 +155,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: libraroot
 //! type-args: 0x1::Coin1::Coin1
-//! args: {{vasp}}, {{vasp::auth_key}}, true
-stdlib_script::create_testing_account
+//! args: 0, {{vasp}}, {{vasp::auth_key}}, b"vasp", true
+stdlib_script::create_parent_vasp_account
 // check: EXECUTED
 
 //! new-transaction

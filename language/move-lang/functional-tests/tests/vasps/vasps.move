@@ -11,7 +11,6 @@ use 0x1::LibraAccount;
 use 0x1::LibraTimestamp;
 use 0x1::VASP;
 fun main(lr_account: &signer) {
-    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<LBR>(
@@ -19,8 +18,6 @@ fun main(lr_account: &signer) {
         {{parent}},
         {{parent::auth_key}},
         x"A1",
-        x"A2",
-        copy pubkey,
         add_all_currencies,
     );
 
@@ -29,9 +26,9 @@ fun main(lr_account: &signer) {
     assert(!VASP::is_child({{parent}}), 2003);
 
     assert(VASP::parent_address({{parent}}) == {{parent}}, 2005);
-    assert(DualAttestation::compliance_public_key({{parent}}) == copy pubkey, 2006);
+    assert(DualAttestation::compliance_public_key({{parent}}) == x"", 2006);
     assert(DualAttestation::human_name({{parent}}) == x"A1", 2007);
-    assert(DualAttestation::base_url({{parent}}) == x"A2", 2008);
+    assert(DualAttestation::base_url({{parent}}) == x"", 2008);
     assert(
         DualAttestation::expiration_date({{parent}}) > LibraTimestamp::now_microseconds(),
         2009

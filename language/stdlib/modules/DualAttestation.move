@@ -52,6 +52,8 @@ module DualAttestation {
     const EMALFORMED_METADATA_SIGNATURE: u64 = 3;
     /// Signature does not match message and public key
     const EINVALID_METADATA_SIGNATURE: u64 = 4;
+    /// The recipient of a dual attestation payment needs to set a compliance public key
+    const EPAYEE_COMPLIANCE_KEY_NOT_SET: u64 = 5;
 
     /// Value of the dual attestation limit at genesis
     const INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
@@ -61,24 +63,25 @@ module DualAttestation {
     const ONE_YEAR: u64 = 31540000000000;
     const U64_MAX: u64 = 18446744073709551615;
 
+    /// Publish a `Credential` resource with name `human_name` under `created` with an empty
+    /// `base_url` and `compliance_public_key`. Before receiving any dual attestation payments,
+    /// the `created` account must send a transaction that invokes `rotate_base_url` and
+    /// `rotate_compliance_public_key` to set these fields to a valid URL/public key.
     public fun publish_credential(
         created: &signer,
         creator: &signer,
         human_name: vector<u8>,
-        base_url: vector<u8>,
-        compliance_public_key: vector<u8>,
     ) {
         Roles::assert_parent_vasp_or_designated_dealer(created);
         Roles::assert_libra_root_or_treasury_compliance(creator);
         assert(
-            Signature::ed25519_validate_pubkey(copy compliance_public_key),
-            Errors::invalid_argument(EINVALID_PUBLIC_KEY)
+            !exists<Credential>(Signer::address_of(created)),
+            Errors::already_published(ECREDENTIAL)
         );
-        assert(!exists<Credential>(Signer::address_of(created)), Errors::already_published(ECREDENTIAL));
         move_to(created, Credential {
             human_name,
-            base_url,
-            compliance_public_key,
+            base_url: Vector::empty(),
+            compliance_public_key: Vector::empty(),
             // For testnet and V1, so it should never expire. So set to u64::MAX
             expiration_date: U64_MAX,
         })
@@ -88,7 +91,6 @@ module DualAttestation {
         include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
         include Roles::AbortsIfNotLibraRootOrTreasuryCompliance{account: creator};
         aborts_if exists<Credential>(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
-        aborts_if !Signature::ed25519_validate_pubkey(compliance_public_key) with Errors::INVALID_ARGUMENT;
     }
 
     /// Rotate the base URL for `account` to `new_url`
@@ -275,16 +277,21 @@ module DualAttestation {
         deposit_value: u64
     ) acquires Credential {
         // sanity check of signature validity
-        assert(Vector::length(&metadata_signature) == 64, Errors::invalid_argument(EMALFORMED_METADATA_SIGNATURE));
+        assert(
+            Vector::length(&metadata_signature) == 64,
+            Errors::invalid_argument(EMALFORMED_METADATA_SIGNATURE)
+        );
+        // sanity check of payee compliance key validity
+        let payee_compliance_key = compliance_public_key(credential_address(payee));
+        assert(
+            !Vector::is_empty(&payee_compliance_key),
+            Errors::invalid_state(EPAYEE_COMPLIANCE_KEY_NOT_SET)
+        );
         // cryptographic check of signature validity
         let message = dual_attestation_message(payer, metadata, deposit_value);
         assert(
-            Signature::ed25519_verify(
-                metadata_signature,
-                compliance_public_key(credential_address(payee)),
-                message
-            ),
-            Errors::invalid_argument(EINVALID_METADATA_SIGNATURE)
+            Signature::ed25519_verify(metadata_signature, payee_compliance_key, message),
+            Errors::invalid_argument(EINVALID_METADATA_SIGNATURE),
         );
     }
     spec fun assert_signature_is_valid {
@@ -298,9 +305,11 @@ module DualAttestation {
         metadata: vector<u8>;
         deposit_value: u64;
         aborts_if !exists<Credential>(spec_credential_address(payee)) with Errors::NOT_PUBLISHED;
+        aborts_if Vector::is_empty(spec_compliance_public_key(spec_credential_address(payee))) with Errors::INVALID_STATE;
         aborts_if !spec_signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value)
             with Errors::INVALID_ARGUMENT;
     }
+
     /// Returns true if signature is valid.
     spec define spec_signature_is_valid(
         payer: address,
@@ -309,12 +318,14 @@ module DualAttestation {
         metadata: vector<u8>,
         deposit_value: u64
     ): bool {
-        len(metadata_signature) == 64
-            && Signature::ed25519_verify(
-                    metadata_signature,
-                    spec_compliance_public_key(spec_credential_address(payee)),
-                    spec_dual_attestation_message(payer, metadata, deposit_value)
-               )
+        let payee_compliance_key = spec_compliance_public_key(spec_credential_address(payee));
+        len(metadata_signature) == 64 &&
+            !Vector::is_empty(payee_compliance_key) &&
+            Signature::ed25519_verify(
+                metadata_signature,
+                payee_compliance_key,
+                spec_dual_attestation_message(payer, metadata, deposit_value)
+            )
     }
 
     /// Public API for checking whether a payment of `value` coins of type `Currency`

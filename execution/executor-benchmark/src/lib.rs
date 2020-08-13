@@ -38,7 +38,7 @@ use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use transaction_builder::{
-    encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
+    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
 };
 
 struct AccountData {
@@ -120,10 +120,12 @@ impl TransactionGenerator {
                     1 + (i * block_size + j) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_create_testing_account_script(
+                    encode_create_parent_vasp_account_script(
                         coin1_tag(),
+                        0,
                         account.address,
                         account.auth_key_prefix(),
+                        vec![],
                         false, /* add all currencies */
                     ),
                 );

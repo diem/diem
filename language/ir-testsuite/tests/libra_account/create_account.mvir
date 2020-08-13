@@ -6,12 +6,10 @@ import 0x1.Roles;
 //! sender: libraroot
 main(account: &signer) {
     let addr: address;
-    let pubkey: vector<u8>;
-    pubkey = h"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
 
     addr = 0x111101;
     assert(!LibraAccount.exists_at(copy(addr)), 83);
-    LibraAccount.create_parent_vasp_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr), h"aa", h"bb", move(pubkey), false);
+    LibraAccount.create_parent_vasp_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr), h"aa", false);
     return;
 }
 

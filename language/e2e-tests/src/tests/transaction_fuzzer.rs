@@ -4,7 +4,6 @@
 use crate::{
     account::{self, Account},
     executor::FakeExecutor,
-    keygen::KeyGen,
 };
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::account_config;
@@ -43,14 +42,12 @@ proptest! {
         txns in vec(any::<ScriptCall>(), 0..100),
     ) {
         let mut executor = FakeExecutor::from_genesis_file();
-        let mut keygen = KeyGen::from_seed([9u8; 32]);
         let mut accounts = vec![];
         let libra_root = Account::new_libra_root();
         let coins = vec![account::lbr_currency_code(), account::coin1_currency_code(), account::coin2_currency_code()];
         // Create a number of accounts
         for i in 0..10 {
             let account = Account::new();
-            let (_, cpubkey) = keygen.generate_keypair();
             executor.execute_and_apply(
                 libra_root
                 .transaction()
@@ -60,8 +57,6 @@ proptest! {
                         *account.address(),
                         account.auth_key_prefix(),
                         vec![],
-                        vec![],
-                        cpubkey.to_bytes().to_vec(),
                         i % 2 == 0,
                 ))
                 .sequence_number(i as u64 + 1)

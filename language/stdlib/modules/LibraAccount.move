@@ -697,8 +697,6 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
-        base_url: vector<u8>,
-        compliance_public_key: vector<u8>,
         add_all_currencies: bool,
     ) {
         let new_dd_account = create_signer(new_account_address);
@@ -706,9 +704,7 @@ module LibraAccount {
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
         DesignatedDealer::publish_designated_dealer_credential<CoinType>(&new_dd_account, creator_account, add_all_currencies);
         add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies);
-        DualAttestation::publish_credential(
-            &new_dd_account, creator_account, human_name, base_url, compliance_public_key
-        );
+        DualAttestation::publish_credential(&new_dd_account, creator_account, human_name);
         make_account(new_dd_account, auth_key_prefix)
     }
     spec fun create_designated_dealer {
@@ -728,17 +724,13 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
-        base_url: vector<u8>,
-        compliance_public_key: vector<u8>,
         add_all_currencies: bool
     ) {
         // TODO: restrictions on creator_account?
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
-        DualAttestation::publish_credential(
-            &new_account, creator_account, human_name, base_url, compliance_public_key
-        );
+        DualAttestation::publish_credential(&new_account, creator_account, human_name);
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)

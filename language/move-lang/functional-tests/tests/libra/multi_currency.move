@@ -11,7 +11,6 @@ use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
 use 0x1::LibraAccount;
 fun main(lr_account: &signer) {
-    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<Coin1>(
@@ -19,8 +18,6 @@ fun main(lr_account: &signer) {
         {{alice}},
         {{alice::auth_key}},
         x"A1",
-        x"A2",
-        copy pubkey,
         add_all_currencies,
     );
 
@@ -29,8 +26,6 @@ fun main(lr_account: &signer) {
         {{bob}},
         {{bob::auth_key}},
         x"B1",
-        x"B2",
-        pubkey,
         add_all_currencies,
     );
 }

@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{account::Account, executor::FakeExecutor, keygen::KeyGen};
+use crate::{account::Account, executor::FakeExecutor};
 use libra_types::{account_config, vm_status::KeptVMStatus};
 use move_core_types::vm_status::VMStatus;
 use move_vm_types::values::Value;
@@ -14,9 +14,6 @@ fn valid_creator_already_vasp() {
     let mut executor = FakeExecutor::from_genesis_file();
 
     let account = Account::new();
-
-    let mut keygen = KeyGen::from_seed([9u8; 32]);
-    let (_, cpubkey) = keygen.generate_keypair();
 
     let libra_root = Account::new_libra_root();
 
@@ -29,8 +26,6 @@ fn valid_creator_already_vasp() {
                 *account.address(),
                 account.auth_key_prefix(),
                 vec![],
-                vec![],
-                cpubkey.to_bytes().to_vec(),
                 true,
             ))
             .sequence_number(1)
@@ -64,9 +59,6 @@ fn max_child_accounts_for_vasp() {
 
     let account = Account::new();
 
-    let mut keygen = KeyGen::from_seed([9u8; 32]);
-    let (_, cpubkey) = keygen.generate_keypair();
-
     let libra_root = Account::new_libra_root();
 
     executor.execute_and_apply(
@@ -78,8 +70,6 @@ fn max_child_accounts_for_vasp() {
                 *account.address(),
                 account.auth_key_prefix(),
                 vec![],
-                vec![],
-                cpubkey.to_bytes().to_vec(),
                 true,
             ))
             .sequence_number(1)

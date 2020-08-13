@@ -134,9 +134,19 @@ Struct to store the limit on-chain
 
 ## Function `publish_credential`
 
+Publish a
+<code><a href="#0x1_DualAttestation_Credential">Credential</a></code> resource with name
+<code>human_name</code> under
+<code>created</code> with an empty
+<code>base_url</code> and
+<code>compliance_public_key</code>. Before receiving any dual attestation payments,
+the
+<code>created</code> account must send a transaction that invokes
+<code>rotate_base_url</code> and
+<code>rotate_compliance_public_key</code> to set these fields to a valid URL/public key.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_publish_credential">publish_credential</a>(created: &signer, creator: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_publish_credential">publish_credential</a>(created: &signer, creator: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -149,20 +159,17 @@ Struct to store the limit on-chain
     created: &signer,
     creator: &signer,
     human_name: vector&lt;u8&gt;,
-    base_url: vector&lt;u8&gt;,
-    compliance_public_key: vector&lt;u8&gt;,
 ) {
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_or_designated_dealer">Roles::assert_parent_vasp_or_designated_dealer</a>(created);
     <a href="Roles.md#0x1_Roles_assert_libra_root_or_treasury_compliance">Roles::assert_libra_root_or_treasury_compliance</a>(creator);
     <b>assert</b>(
-        <a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_PUBLIC_KEY)
+        !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(created)),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECREDENTIAL)
     );
-    <b>assert</b>(!exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(created)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECREDENTIAL));
     move_to(created, <a href="#0x1_DualAttestation_Credential">Credential</a> {
         human_name,
-        base_url,
-        compliance_public_key,
+        base_url: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>(),
+        compliance_public_key: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>(),
         // For testnet and V1, so it should never expire. So set <b>to</b> u64::MAX
         expiration_date: U64_MAX,
     })
@@ -480,16 +487,21 @@ Helper function to check validity of a signature when dual attestion is required
     deposit_value: u64
 ) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
     // sanity check of signature validity
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&metadata_signature) == 64, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_METADATA_SIGNATURE));
+    <b>assert</b>(
+        <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&metadata_signature) == 64,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_METADATA_SIGNATURE)
+    );
+    // sanity check of payee compliance key validity
+    <b>let</b> payee_compliance_key = <a href="#0x1_DualAttestation_compliance_public_key">compliance_public_key</a>(<a href="#0x1_DualAttestation_credential_address">credential_address</a>(payee));
+    <b>assert</b>(
+        !<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&payee_compliance_key),
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EPAYEE_COMPLIANCE_KEY_NOT_SET)
+    );
     // cryptographic check of signature validity
     <b>let</b> message = <a href="#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(payer, metadata, deposit_value);
     <b>assert</b>(
-        <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
-            metadata_signature,
-            <a href="#0x1_DualAttestation_compliance_public_key">compliance_public_key</a>(<a href="#0x1_DualAttestation_credential_address">credential_address</a>(payee)),
-            message
-        ),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_METADATA_SIGNATURE)
+        <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(metadata_signature, payee_compliance_key, message),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_METADATA_SIGNATURE),
     );
 }
 </code></pre>
@@ -663,7 +675,7 @@ Uninterpreted function for
 ### Function `publish_credential`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_publish_credential">publish_credential</a>(created: &signer, creator: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_publish_credential">publish_credential</a>(created: &signer, creator: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -674,7 +686,6 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedD
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRootOrTreasuryCompliance">Roles::AbortsIfNotLibraRootOrTreasuryCompliance</a>{account: creator};
 <b>aborts_if</b> exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) with Errors::ALREADY_PUBLISHED;
-<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(compliance_public_key) with Errors::INVALID_ARGUMENT;
 </code></pre>
 
 
@@ -959,6 +970,7 @@ messages which fail verification and which do not.
     metadata: vector&lt;u8&gt;;
     deposit_value: u64;
     <b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(<a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee))) with Errors::INVALID_STATE;
     <b>aborts_if</b> !<a href="#0x1_DualAttestation_spec_signature_is_valid">spec_signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value)
         with Errors::INVALID_ARGUMENT;
 }
@@ -978,12 +990,14 @@ metadata_signature: vector&lt;u8&gt;,
 metadata: vector&lt;u8&gt;,
 deposit_value: u64
 ): bool {
-len(metadata_signature) == 64
-   && <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
-           metadata_signature,
-           <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee)),
-           <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
-      )
+<b>let</b> payee_compliance_key = <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee));
+len(metadata_signature) == 64 &&
+   !<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(payee_compliance_key) &&
+   <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
+       metadata_signature,
+       payee_compliance_key,
+       <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
+   )
 }
 </code></pre>
 

@@ -27,10 +27,12 @@ fn burn_txn_fees() {
     executor.execute_and_apply(
         libra_root
             .transaction()
-            .script(encode_create_testing_account_script(
+            .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
+                0,
                 *sender.address(),
                 sender.auth_key_prefix(),
+                vec![],
                 false,
             ))
             .sequence_number(1)

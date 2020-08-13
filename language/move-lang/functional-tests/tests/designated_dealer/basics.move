@@ -47,7 +47,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
-//! args: 0, {{bob}}, {{bob::auth_key}}, x"", x"", x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d", false
+//! args: 0, {{bob}}, {{bob::auth_key}}, x"", false
 
 stdlib_script::create_designated_dealer
 // check: EXECUTED

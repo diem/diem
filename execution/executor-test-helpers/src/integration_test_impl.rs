@@ -30,7 +30,7 @@ use rand::SeedableRng;
 use std::{convert::TryFrom, sync::Arc};
 use storage_interface::{DbReaderWriter, Order};
 use transaction_builder::{
-    encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
+    encode_create_parent_vasp_account_script, encode_peer_to_peer_with_metadata_script,
 };
 
 pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
@@ -71,10 +71,12 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_testing_account_script(
+        Some(encode_create_parent_vasp_account_script(
             coin1_tag(),
+            0,
             account1,
             account1_auth_key.prefix().to_vec(),
+            vec![],
             false, /* add all currencies */
         )),
     );
@@ -84,10 +86,12 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_testing_account_script(
+        Some(encode_create_parent_vasp_account_script(
             coin1_tag(),
+            0,
             account2,
             account2_auth_key.prefix().to_vec(),
+            vec![],
             false, /* add all currencies */
         )),
     );
@@ -97,10 +101,12 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
         /* sequence_number = */ 3,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_create_testing_account_script(
+        Some(encode_create_parent_vasp_account_script(
             coin1_tag(),
+            0,
             account3,
             account3_auth_key.prefix().to_vec(),
+            vec![],
             false, /* add all currencies */
         )),
     );

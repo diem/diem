@@ -733,8 +733,8 @@ fn test_json_rpc_protocol() {
                     "received_events_key": "0100000000000000000000000000000000000000000000dd",
                     "role": {
                         "type": "designated_dealer",
-                        "base_url": "https://libra.org",
-                        "compliance_key": "f66bf0ce5ceb582b93d6780820c2025b9967aedaa259bdbb9f3d0297eced0e18",
+                        "base_url": "",
+                        "compliance_key": "",
                         "expiration_time": 18446744073709551615 as u64,
                         "human_name": "moneybags",
                         "preburn_balances": [

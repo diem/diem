@@ -8,14 +8,11 @@ use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 
 fun main(account: &signer) {
-    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     LibraAccount::create_designated_dealer<Coin1>(
         account,
         {{dd}},
         {{dd::auth_key}},
         x"",
-        x"",
-        pubkey,
         false,
     );
     LibraAccount::tiered_mint<Coin1>(
