@@ -410,15 +410,28 @@ impl TransactionStore {
         };
         OP_COUNTERS.inc(index_name);
 
-        for key in index.gc(now) {
+        let mut gc_txns = index.gc(now);
+        // sort the expired txns by order of sequence number per account
+        gc_txns.sort_by_key(|key| (key.address, key.sequence_number));
+        let mut gc_iter = gc_txns.iter().peekable();
+
+        while let Some(key) = gc_iter.next() {
             if let Some(txns) = self.transactions.get_mut(&key.address) {
-                // mark all following transactions as non-ready
-                for (_, t) in txns.range((Bound::Excluded(key.sequence_number), Bound::Unbounded)) {
+                let park_range_start = Bound::Excluded(key.sequence_number);
+                let park_range_end = gc_iter
+                    .peek()
+                    .filter(|next_key| key.address == next_key.address)
+                    .map_or(Bound::Unbounded, |next_key| {
+                        Bound::Excluded(next_key.sequence_number)
+                    });
+                // mark all following txns as non-ready, i.e. park them
+                for (_, t) in txns.range((park_range_start, park_range_end)) {
                     self.parking_lot_index.insert(&t);
                     self.priority_index.remove(&t);
                     self.timeline_index.remove(&t);
                 }
                 if let Some(txn) = txns.remove(&key.sequence_number) {
+                    // log the txn to be removed
                     let is_active = self.priority_index.contains(&txn);
                     let status = if is_active {
                         counters::GC_ACTIVE_TXN_LABEL
@@ -435,6 +448,8 @@ impl TransactionStore {
                                 .observe(time_delta.as_secs_f64());
                         }
                     }
+
+                    // remove txn
                     self.index_remove(&txn);
                 }
             }
