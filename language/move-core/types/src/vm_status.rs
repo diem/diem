@@ -485,29 +485,20 @@ pub enum StatusCode {
     // Verification Errors: 1000-1999
     UNKNOWN_VERIFICATION_ERROR = 1000,
     INDEX_OUT_OF_BOUNDS = 1001,
-    RANGE_OUT_OF_BOUNDS = 1002,
     INVALID_SIGNATURE_TOKEN = 1003,
-    INVALID_FIELD_DEF = 1004,
     RECURSIVE_STRUCT_DEFINITION = 1005,
     INVALID_RESOURCE_FIELD = 1006,
     INVALID_FALL_THROUGH = 1007,
-    JOIN_FAILURE = 1008,
     NEGATIVE_STACK_SIZE_WITHIN_BLOCK = 1009,
-    UNBALANCED_STACK = 1010,
     INVALID_MAIN_FUNCTION_SIGNATURE = 1011,
     DUPLICATE_ELEMENT = 1012,
     INVALID_MODULE_HANDLE = 1013,
     UNIMPLEMENTED_HANDLE = 1014,
-    INCONSISTENT_FIELDS = 1015,
-    UNUSED_FIELD = 1016,
     LOOKUP_FAILED = 1017,
-    VISIBILITY_MISMATCH = 1018,
     TYPE_RESOLUTION_FAILURE = 1019,
     TYPE_MISMATCH = 1020,
     MISSING_DEPENDENCY = 1021,
-    POP_REFERENCE_ERROR = 1022,
     POP_RESOURCE_ERROR = 1023,
-    RELEASEREF_TYPE_MISMATCH_ERROR = 1024,
     BR_TYPE_MISMATCH_ERROR = 1025,
     ABORT_TYPE_MISMATCH_ERROR = 1026,
     STLOC_TYPE_MISMATCH_ERROR = 1027,
@@ -549,7 +540,6 @@ pub enum StatusCode {
     MOVEFROM_NO_RESOURCE_ERROR = 1063,
     MOVETO_TYPE_MISMATCH_ERROR = 1064,
     MOVETO_NO_RESOURCE_ERROR = 1065,
-    CREATEACCOUNT_TYPE_MISMATCH_ERROR = 1066,
     // The self address of a module the transaction is publishing is not the sender address
     MODULE_ADDRESS_DOES_NOT_MATCH_SENDER = 1067,
     // The module does not have any module handles. Each module or script must have at least one
@@ -564,8 +554,6 @@ pub enum StatusCode {
     CONSTRAINT_KIND_MISMATCH = 1075,
     NUMBER_OF_TYPE_ARGUMENTS_MISMATCH = 1076,
     LOOP_IN_INSTANTIATION_GRAPH = 1077,
-    UNUSED_LOCALS_SIGNATURE = 1078,
-    UNUSED_TYPE_SIGNATURE = 1079,
     // Reported when a struct has zero fields
     ZERO_SIZED_STRUCT = 1080,
     LINKER_ERROR = 1081,
@@ -589,19 +577,14 @@ pub enum StatusCode {
     // Invariant Violation Errors: 2000-2999
     UNKNOWN_INVARIANT_VIOLATION_ERROR = 2000,
     OUT_OF_BOUNDS_INDEX = 2001,
-    OUT_OF_BOUNDS_RANGE = 2002,
     EMPTY_VALUE_STACK = 2003,
-    EMPTY_CALL_STACK = 2004,
     PC_OVERFLOW = 2005,
     VERIFICATION_ERROR = 2006,
-    LOCAL_REFERENCE_ERROR = 2007,
     STORAGE_ERROR = 2008,
     INTERNAL_TYPE_ERROR = 2009,
     EVENT_KEY_MISMATCH = 2010,
     UNREACHABLE = 2011,
     VM_STARTUP_FAILURE = 2012,
-    NATIVE_FUNCTION_INTERNAL_INCONSISTENCY = 2013,
-    INVALID_CODE_CACHE = 2014,
     UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION = 2015,
     VERIFIER_INVARIANT_VIOLATION = 2016,
     UNEXPECTED_VERIFIER_ERROR = 2017,
@@ -623,13 +606,8 @@ pub enum StatusCode {
     UNKNOWN_NOMINAL_RESOURCE = 3012,
     UNKNOWN_KIND = 3013,
     UNKNOWN_NATIVE_STRUCT_FLAG = 3014,
-    BAD_ULEB_U16 = 3015,
-    BAD_ULEB_U32 = 3016,
-    BAD_U16 = 3017,
-    BAD_U32 = 3018,
     BAD_U64 = 3019,
     BAD_U128 = 3020,
-    BAD_ULEB_U8 = 3021,
     VALUE_SERIALIZATION_ERROR = 3022,
     VALUE_DESERIALIZATION_ERROR = 3023,
     CODE_DESERIALIZATION_ERROR = 3024,
@@ -644,21 +622,13 @@ pub enum StatusCode {
     // We tried to create a resource under an account where that resource
     // already exists.
     RESOURCE_ALREADY_EXISTS = 4004,
-    // We accessed an account that is evicted.
-    EVICTED_ACCOUNT_ACCESS = 4005,
-    // We tried to create an account at an address where an account already exists.
-    ACCOUNT_ADDRESS_ALREADY_EXISTS = 4006,
-    TYPE_ERROR = 4007,
     MISSING_DATA = 4008,
     DATA_FORMAT_ERROR = 4009,
     INVALID_DATA = 4010,
-    REMOTE_DATA_ERROR = 4011,
     ABORTED = 4016,
     ARITHMETIC_ERROR = 4017,
-    DYNAMIC_REFERENCE_ERROR = 4018,
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
-    GAS_SCHEDULE_ERROR = 4023,
     VM_MAX_TYPE_DEPTH_REACHED = 4024,
     VM_MAX_VALUE_DEPTH_REACHED = 4025,
 
@@ -760,30 +730,10 @@ impl From<StatusCode> for u64 {
 }
 
 pub mod sub_status {
-    // Arithmetic sub status sub-codes
-    pub const AEU_UNKNOWN_ARITHMETIC_ERROR: u64 = 0;
-    pub const AEU_UNDERFLOW: u64 = 1;
-    pub const AEO_OVERFLOW: u64 = 2;
-    pub const AED_DIVISION_BY_ZERO: u64 = 3;
-
-    pub const VSF_GAS_SCHEDULE_NOT_FOUND: u64 = 0;
-    pub const VSF_LIBRA_VERSION_NOT_FOUND: u64 = 1;
-
-    // Dynamic Reference status sub-codes
-    pub const DRE_UNKNOWN_DYNAMIC_REFERENCE_ERROR: u64 = 0;
-    pub const DRE_MOVE_OF_BORROWED_RESOURCE: u64 = 1;
-    pub const DRE_GLOBAL_REF_ALREADY_RELEASED: u64 = 2;
-    pub const DRE_MISSING_RELEASEREF: u64 = 3;
-    pub const DRE_GLOBAL_ALREADY_BORROWED: u64 = 4;
-
     // Native Function Error sub-codes
     pub const NFE_VECTOR_ERROR_BASE: u64 = 0;
     // Failure in LCS deserialization
     pub const NFE_LCS_SERIALIZATION_FAILURE: u64 = 0x1C5;
-
-    pub const GSE_UNABLE_TO_LOAD_MODULE: u64 = 0;
-    pub const GSE_UNABLE_TO_LOAD_RESOURCE: u64 = 1;
-    pub const GSE_UNABLE_TO_DESERIALIZE: u64 = 2;
 }
 
 /// The `Arbitrary` impl only generates validation statuses since the full enum is too large.
