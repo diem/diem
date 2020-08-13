@@ -43,7 +43,7 @@ spec:
               break
             fi
           done
-          until [ $(kubectl get pods -l app=libra-vault | grep ^vault | grep Running | grep '2/2' | wc -l) = "{num_validators}" ]; do
+          until [ $(kubectl get pods -l app=libra-vault | grep ^vault | grep Running | grep '2/2' | wc -l | sed -e 's/^[[:space:]]*//') = "{num_validators}" ]; do
             sleep 3;
             echo "Waiting for all vaults to be healthy";
           done
