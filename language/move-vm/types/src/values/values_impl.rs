@@ -2240,9 +2240,7 @@ impl GlobalValueImpl {
     fn move_to(&mut self, val: ValueImpl) -> PartialVMResult<()> {
         match self {
             Self::Fresh { .. } | Self::Cached { .. } => {
-                return Err(PartialVMError::new(
-                    StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,
-                ))
+                return Err(PartialVMError::new(StatusCode::RESOURCE_ALREADY_EXISTS))
             }
             Self::None => *self = Self::fresh(val)?,
             Self::Deleted => *self = Self::cached(val, GlobalDataStatus::Dirty)?,

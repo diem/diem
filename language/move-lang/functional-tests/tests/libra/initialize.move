@@ -8,7 +8,7 @@ fun main(account: &signer) {
     Libra::initialize(account);
 }
 }
-// check: CANNOT_WRITE_EXISTING_RESOURCE
+// check: RESOURCE_ALREADY_EXISTS
 
 //! new-transaction
 //! sender: libraroot

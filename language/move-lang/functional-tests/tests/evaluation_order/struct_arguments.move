@@ -106,7 +106,7 @@ fun main(account: &signer) {
 }
 
 //! new-transaction
-// check: CANNOT_WRITE_EXISTING_RESOURCE
+// check: RESOURCE_ALREADY_EXISTS
 script {
 use {{default}}::M;
 fun main(account: &signer) {
