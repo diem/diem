@@ -17,7 +17,6 @@ pub mod instruction_consistency;
 pub mod resources;
 pub mod signature;
 pub mod struct_defs;
-pub mod unused_entries;
 pub mod verifier;
 
 pub use check_duplication::DuplicationChecker;
