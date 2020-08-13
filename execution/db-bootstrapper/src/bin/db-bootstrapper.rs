@@ -41,8 +41,8 @@ fn main() -> Result<()> {
     let db = DbReaderWriter::new(
         LibraDB::open(
             &opt.db_dir,
-            false, /* readonly */
-            None,  /* pruner */
+            !opt.commit, /* readonly */
+            None,        /* pruner */
         )
         .with_context(|| format_err!("Failed to open DB."))?,
     );
