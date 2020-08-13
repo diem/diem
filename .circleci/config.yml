@@ -464,18 +464,41 @@ jobs:
           build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
           webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
-    executor: unittest-executor
     description: Run all unit tests, excluding E2E and flaky tests that are
       explicitly ignored.
+    executor: unittest-executor
+    parallelism: 4
+    environment:
+      TESTS_TO_RUN: "/tmp/tests_to_run"
+      TESTS_FOUND: "/tmp/tests_found"
     steps:
       - build_setup
       - restore_cargo_package_cache
       - install_sccache
       - restore_sccache
       - run:
-          name: Run all unit tests
+          # NOTE The tests are distributed by name order. Once test metadata is
+          # enabled, the tests can be distributed based on run time. Hence
+          # further speed up this job.
+          name: Determine test targets for this container.
+          # Cargo directs the test target binaries stderr. So we pipe cargo's
+          # stderr to another pipe, within which we extract the test binaries.
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS x test --jobs 12 --unit
+            export RUST_BACKTRACE=1
+            $CARGO $CARGOFLAGS x test --jobs 12 --unit --no-run
+            $CARGO $CARGOFLAGS x test --jobs 12 --unit -- --list 2> >(grep "Running" | egrep -v "\`|testsuite-" | awk '{print $2}' > $TESTS_FOUND)
+            cat $TESTS_FOUND
+            echo -e "Found $(wc -l $TESTS_FOUND) tests."
+            cat $TESTS_FOUND | circleci tests split > $TESTS_TO_RUN
+            echo -e "This runner will run these tests\n$(cat $TESTS_TO_RUN)"
+      - run:
+          name: Run unit tests
+          command: |
+            set -ex
+            export RUST_BACKTRACE=1
+            for target in $(cat $TESTS_TO_RUN) ; do
+              $target
+            done
       - save_sccache
   run-crypto-unit-test:
     executor: audit-executor
@@ -739,52 +762,52 @@ jobs:
 workflows:
   commit-workflow:
     jobs:
-      - lint-docker:
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - terraform:
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
+##      - lint-docker:
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - master
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - terraform:
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - master
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
       - prefetch-crates
-      - lint:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-dev:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
+##      - lint:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - build-dev:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - master
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - run-e2e-test:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##             ignore:
+##               - gh-pages
+##               - master
+##               - /^test-[\d|.]+$/
+##               - /^release-[\d|.]+$/
       - run-unit-test:
           requires:
             - prefetch-crates
@@ -795,60 +818,60 @@ workflows:
                 - master
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-benchmark:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-docs:
-          requires:
-            - lint
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - deploy-docs:
-          requires:
-            - build-docs
-          filters:
-            branches:
-              only: master
-      - check-breaking-change:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              only: master
-      - docker-pre-publish:
-          context: docker
-          filters:
-            branches:
-              only:
-                - auto
-      - docker-publish:
-          context: docker
-          filters:
-            branches:
-              only:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
+##      - run-crypto-unit-test:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - master
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - build-benchmark:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - master
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - build-docs:
+##          requires:
+##            - lint
+##          filters:
+##            branches:
+##              ignore:
+##                - gh-pages
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
+##      - deploy-docs:
+##          requires:
+##            - build-docs
+##          filters:
+##            branches:
+##              only: master
+##      - check-breaking-change:
+##          requires:
+##            - prefetch-crates
+##          filters:
+##            branches:
+##              only: master
+##      - docker-pre-publish:
+##          context: docker
+##          filters:
+##            branches:
+##              only:
+##                - auto
+##      - docker-publish:
+##          context: docker
+##          filters:
+##            branches:
+##              only:
+##                - /^test-[\d|.]+$/
+##                - /^release-[\d|.]+$/
 
   scheduled-workflow:
     triggers:
