@@ -444,7 +444,10 @@ fn sync_info_carried_on_timeout_vote() {
             .insert_single_quorum_cert(block_0_quorum_cert.clone())
             .unwrap();
 
-        node.round_manager.process_local_timeout(1).await.unwrap();
+        node.round_manager
+            .process_local_timeout(1)
+            .await
+            .unwrap_err();
         let vote_msg_on_timeout = node.next_vote().await;
         assert!(vote_msg_on_timeout.vote().is_timeout());
         assert_eq!(
@@ -686,7 +689,10 @@ fn nil_vote_on_timeout() {
         node.next_proposal().await;
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote extends genesis.
-        node.round_manager.process_local_timeout(1).await.unwrap();
+        node.round_manager
+            .process_local_timeout(1)
+            .await
+            .unwrap_err();
         let vote_msg = node.next_vote().await;
 
         let vote = vote_msg.vote();
@@ -722,7 +728,10 @@ fn vote_resent_on_timeout() {
         assert_eq!(vote.vote_data().proposed().id(), id);
         // Process the outgoing vote message and verify that it contains a round signature
         // and that the vote is the same as above.
-        node.round_manager.process_local_timeout(1).await.unwrap();
+        node.round_manager
+            .process_local_timeout(1)
+            .await
+            .unwrap_err();
         let timeout_vote_msg = node.next_vote().await;
         let timeout_vote = timeout_vote_msg.vote();
 
@@ -771,7 +780,7 @@ fn sync_info_sent_on_stale_sync_info() {
             .round_manager
             .process_local_timeout(1)
             .await
-            .unwrap();
+            .unwrap_err();
         let timeout_vote_msg = behind_node.next_vote().await;
         assert!(timeout_vote_msg.vote().is_timeout());
 
@@ -888,7 +897,7 @@ fn safety_rules_crash() {
             node.round_manager
                 .process_local_timeout(round)
                 .await
-                .unwrap();
+                .unwrap_err();
             let vote_msg = node.next_vote().await;
 
             // sign proposal

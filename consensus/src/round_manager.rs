@@ -399,19 +399,20 @@ impl RoundManager {
     /// 1) In case a validator has previously voted in this round, it repeats the same vote and sign
     /// a timeout.
     /// 2) Otherwise vote for a NIL block and sign a timeout.
+    /// Note this function returns Err even if messages are broadcasted successfully because timeout
+    /// is considered as error. It only returns Ok(()) when the timeout is stale.
     pub async fn process_local_timeout(&mut self, round: Round) -> anyhow::Result<()> {
         if !self.round_state.process_local_timeout(round) {
             return Ok(());
         }
 
         if self.sync_only {
-            debug!("[RoundManager] sync_only flag is set, broadcasting SyncInfo");
             self.network
                 .broadcast(ConsensusMsg::SyncInfo(Box::new(
                     self.block_store.sync_info(),
                 )))
                 .await;
-            return Ok(());
+            bail!("[RoundManager] sync_only flag is set, broadcasting SyncInfo");
         }
 
         let (use_last_vote, mut timeout_vote) = match self.round_state.vote_sent() {
@@ -425,13 +426,6 @@ impl RoundManager {
                 (false, nil_vote)
             }
         };
-
-        warn!(
-            "Round {} timed out: {}, expected round proposer was {:?}, broadcasting the vote to all replicas",
-            round,
-            if use_last_vote { "already executed and voted at this round" } else { "will try to generate a backup vote" },
-            self.proposer_election.get_valid_proposer(round),
-        );
 
         if !timeout_vote.is_timeout() {
             let timeout = timeout_vote.timeout();
@@ -448,7 +442,12 @@ impl RoundManager {
             self.block_store.sync_info(),
         )));
         self.network.broadcast(timeout_vote_msg).await;
-        Ok(())
+        bail!(
+            "Round {} timed out: {}, expected round proposer was {:?}, broadcasted the vote to all replicas",
+            round,
+            if use_last_vote { "already executed and voted at this round" } else { "generate a backup vote" },
+            self.proposer_election.get_valid_proposer(round),
+        );
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.

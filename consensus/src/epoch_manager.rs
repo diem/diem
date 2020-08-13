@@ -502,7 +502,7 @@ impl EpochManager {
             self.start_processor(payload).await;
         }
         loop {
-            if let Err(e) = monitor!(
+            let result = monitor!(
                 "main_loop",
                 select! {
                     payload = reconfig_events.select_next_some() => {
@@ -519,12 +519,18 @@ impl EpochManager {
                         monitor!("process_local_timeout", self.process_local_timeout(round).await)
                     }
                 }
-            ) {
-                counters::ERROR_COUNT.inc();
-                error!("{:?}", e);
-            }
-            if let RoundProcessor::Normal(p) = self.processor_mut() {
-                debug!("{}", p.round_state());
+            );
+            let round_state = if let RoundProcessor::Normal(p) = self.processor_mut() {
+                p.round_state().to_string()
+            } else {
+                "RoundState: None".into()
+            };
+            match result {
+                Ok(_) => trace!("{}", round_state),
+                Err(e) => {
+                    counters::ERROR_COUNT.inc();
+                    error!("{:?}, {}", e, round_state);
+                }
             }
         }
     }
