@@ -24,7 +24,13 @@ RUN ./docker/build-common.sh
 ### Production Image ###
 FROM debian:buster-slim AS prod
 
-RUN apt-get update && apt-get -y install socat awscli && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list && \
+    echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
+
+RUN apt-get update && \
+    apt-get -y install socat awscli/bullseye && \
+    apt-get clean && \
+    rm -r /var/lib/apt/lists/*
 
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
