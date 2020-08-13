@@ -32,6 +32,6 @@ pub fn native_destroy_signer(
     debug_assert!(ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
-    let cost = native_gas(context.cost_table(), NativeCostIndex::CREATE_SIGNER, 0);
+    let cost = native_gas(context.cost_table(), NativeCostIndex::DESTROY_SIGNER, 0);
     Ok(NativeResult::ok(cost, vec![]))
 }
