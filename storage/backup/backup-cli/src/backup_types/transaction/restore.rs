@@ -3,6 +3,7 @@
 
 use crate::{
     backup_types::transaction::manifest::{TransactionBackup, TransactionChunk},
+    metrics::restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
@@ -179,6 +180,7 @@ impl TransactionRestoreController {
                 )?;
                 chunk.txns.drain(0..num_txns_to_save);
                 chunk.txn_infos.drain(0..num_txns_to_save);
+                TRANSACTION_SAVE_VERSION.set(last_to_save as i64);
             }
             // Those to replay:
             if first_to_replay <= last {
@@ -207,6 +209,7 @@ impl TransactionRestoreController {
                     )?;
                     current_version += this_batch_size as u64;
                 }
+                TRANSACTION_REPLAY_VERSION.set(last as i64);
             }
         }
 

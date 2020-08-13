@@ -4,5 +4,6 @@
 pub mod backup_types;
 pub mod coordinators;
 pub mod metadata;
+pub mod metrics;
 pub mod storage;
 pub mod utils;

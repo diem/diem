@@ -3,6 +3,7 @@
 
 use crate::{
     backup_types::epoch_ending::manifest::EpochEndingBackup,
+    metrics::restore::{EPOCH_ENDING_EPOCH, EPOCH_ENDING_VERSION},
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
@@ -112,6 +113,8 @@ impl EpochEndingRestoreController {
             // write to db
             if end != 0 {
                 self.restore_handler.save_ledger_infos(&lis[..end])?;
+                EPOCH_ENDING_EPOCH.set(lis[end - 1].ledger_info().epoch() as i64);
+                EPOCH_ENDING_VERSION.set(lis[end - 1].ledger_info().version() as i64);
             }
 
             // skip remaining chunks if beyond target_version

@@ -3,6 +3,9 @@
 
 use crate::{
     backup_types::state_snapshot::manifest::StateSnapshotBackup,
+    metrics::restore::{
+        STATE_SNAPSHOT_LEAF_INDEX, STATE_SNAPSHOT_TOTAL_LEAVES, STATE_SNAPSHOT_VERSION,
+    },
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
@@ -79,11 +82,15 @@ impl StateSnapshotRestoreController {
             .restore_handler
             .get_state_restore_receiver(self.version, manifest.root_hash)?;
 
+        STATE_SNAPSHOT_VERSION.set(self.version as i64);
+        STATE_SNAPSHOT_TOTAL_LEAVES
+            .set(manifest.chunks.last().map_or(0, |c| c.last_idx as i64 + 1));
         for chunk in manifest.chunks {
             let blobs = self.read_account_state_chunk(chunk.blobs).await?;
             let proof = self.storage.load_lcs_file(&chunk.proof).await?;
 
             receiver.add_chunk(blobs, proof)?;
+            STATE_SNAPSHOT_LEAF_INDEX.set(chunk.last_idx as i64);
         }
 
         receiver.finish()?;

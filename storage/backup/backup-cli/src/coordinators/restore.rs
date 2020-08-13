@@ -9,6 +9,7 @@ use crate::{
     },
     metadata,
     metadata::{cache::MetadataCacheOpt, TransactionBackupMeta},
+    metrics::restore::COORDINATOR_TARGET_VERSION,
     storage::BackupStorage,
     utils::GlobalRestoreOpt,
 };
@@ -59,6 +60,7 @@ impl RestoreCoordinator {
             Some(b) => b.version + 1,
             None => 0,
         };
+        COORDINATOR_TARGET_VERSION.set(actual_target_version as i64);
         println!("Planned to restore to version {}.", actual_target_version);
 
         for backup in epoch_endings {
