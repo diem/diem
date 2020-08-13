@@ -176,12 +176,14 @@ mod tests {
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
+                renew_ttl_secs: None,
             }),
             validator_backend: SecureBackend::Vault(VaultConfig {
                 namespace: None,
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
+                renew_ttl_secs: None,
             }),
         };
 

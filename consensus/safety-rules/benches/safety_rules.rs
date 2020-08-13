@@ -124,8 +124,13 @@ fn vault(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
 
-    let mut storage =
-        VaultStorage::new(VAULT_HOST.to_string(), VAULT_TOKEN.to_string(), None, None);
+    let mut storage = VaultStorage::new(
+        VAULT_HOST.to_string(),
+        VAULT_TOKEN.to_string(),
+        None,
+        None,
+        None,
+    );
     storage.reset_and_clear().unwrap();
 
     let storage = PersistentSafetyStorage::initialize(
@@ -147,7 +152,13 @@ pub fn benchmark(c: &mut Criterion) {
     let duration_secs = 5;
     let samples = 10;
 
-    let storage = VaultStorage::new(VAULT_HOST.to_string(), VAULT_TOKEN.to_string(), None, None);
+    let storage = VaultStorage::new(
+        VAULT_HOST.to_string(),
+        VAULT_TOKEN.to_string(),
+        None,
+        None,
+        None,
+    );
 
     let enable_vault = if storage.available().is_err() {
         println!(

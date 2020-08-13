@@ -195,6 +195,25 @@ impl Client {
         }
     }
 
+    pub fn renew_token_self(&self, increment: Option<u32>) -> Result<u32, Error> {
+        let request = self
+            .agent
+            .post(&format!("{}/v1/auth/token/renew-self", self.host));
+        let mut request = self.upgrade_request(request);
+        let resp = if let Some(increment) = increment {
+            request.send_json(json!({ "increment": increment }))
+        } else {
+            request.call()
+        };
+
+        if resp.ok() {
+            let resp: RenewTokenResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(resp.auth.lease_duration)
+        } else {
+            Err(resp.into())
+        }
+    }
+
     /// List all stored secrets
     pub fn list_secrets(&self, secret: &str) -> Result<Vec<String>, Error> {
         let request = self.agent.request(
@@ -818,6 +837,27 @@ struct ReadSecretData {
 struct ReadSecretMetadata {
     created_time: String,
     version: u32,
+}
+
+/// {
+///   "auth": {
+///     "client_token": "ABCD",
+///     "policies": ["web", "stage"],
+///     "metadata": {
+///       "user": "armon"
+///     },
+///     "lease_duration": 3600,
+///     "renewable": true
+///   }
+/// }
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct RenewTokenResponse {
+    auth: RenewTokenAuth,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct RenewTokenAuth {
+    lease_duration: u32,
 }
 
 /// This data structure is used to represent both policies read from Vault and written to Vault.

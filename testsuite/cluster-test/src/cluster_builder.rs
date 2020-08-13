@@ -393,6 +393,7 @@ impl ClusterBuilder {
                 VAULT_TOKEN.to_string(),
                 Some(pod_name.clone()),
                 None,
+                None,
             ));
             if validator_index == 0 {
                 vault_storage.create_key(LIBRA_ROOT_KEY).map_err(|e| {

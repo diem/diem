@@ -220,6 +220,7 @@ impl ValidatorConfig {
                             .ok_or_else(|| Error::MissingSafetyRulesToken)?
                             .clone(),
                     ),
+                    renew_ttl_secs: None,
                 }),
                 _ => return Err(Error::InvalidSafetyRulesBackend(backend.to_string()).into()),
             };

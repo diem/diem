@@ -51,6 +51,7 @@ impl KeyManagerConfig {
             namespace: self.vault_namespace.clone(),
             server: self.vault_host.clone(),
             token: Token::FromConfig(self.vault_token.clone()),
+            renew_ttl_secs: None,
         });
 
         if let Some(rotation_period_secs) = &self.rotation_period_secs {

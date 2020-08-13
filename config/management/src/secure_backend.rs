@@ -112,6 +112,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     server,
                     ca_certificate: certificate,
                     token: Token::FromDisk(PathBuf::from(token)),
+                    renew_ttl_secs: None,
                 })
             }
             _ => panic!("Invalid backend: {}", self.backend),

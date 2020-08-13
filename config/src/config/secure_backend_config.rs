@@ -41,6 +41,10 @@ pub struct VaultConfig {
     /// a secret, S, without a namespace would be available in secret/data/S, with a namespace, N, it
     /// would be in secret/data/N/S.
     pub namespace: Option<String>,
+    /// Vault leverages leases on many tokens, specify this to automatically have your lease
+    /// renewed up to that many seconds more. If this is not specified, the lease will not
+    /// automatically be renewed.
+    pub renew_ttl_secs: Option<u32>,
     /// Vault's URL, note: only HTTP is currently supported.
     pub server: String,
     /// The authorization token for accessing secrets
@@ -165,6 +169,7 @@ impl From<&SecureBackend> for Storage {
                     .ca_certificate
                     .as_ref()
                     .map(|_| config.ca_certificate().unwrap()),
+                config.renew_ttl_secs,
             )),
         }
     }
@@ -187,6 +192,7 @@ mod tests {
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
+                renew_ttl_secs: None,
             },
         };
 
@@ -211,6 +217,7 @@ vault:
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
                 token: Token::FromDisk(PathBuf::from("/token")),
+                renew_ttl_secs: None,
             },
         };
 

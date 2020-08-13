@@ -21,7 +21,7 @@ fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
         let signer = ValidatorSigner::from_int(0);
         let host = "http://localhost:8200".to_string();
         let token = "root_token".to_string();
-        let mut storage = Storage::from(VaultStorage::new(host, token, None, None));
+        let mut storage = Storage::from(VaultStorage::new(host, token, None, None, None));
         storage.reset_and_clear().unwrap();
 
         let waypoint = crate::test_utils::validator_signers_to_waypoint(&[&signer]);
