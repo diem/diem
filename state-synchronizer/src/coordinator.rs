@@ -502,12 +502,21 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         if let Some(mut req) = self.sync_request.as_mut() {
             req.last_progress_tst = SystemTime::now();
         }
-        let sync_request_complete = self.sync_request.as_ref().map_or(false, |sync_req| {
-            // Each `ChunkResponse` is verified to make sure it never goes beyond the requested
-            // target version, hence, the local version should never go beyond sync req target.
-            assert!(synced_version <= sync_req.target.ledger_info().version());
-            sync_req.target.ledger_info().version() == synced_version
-        });
+        let sync_request_complete = match self.sync_request.as_ref() {
+            Some(sync_req) => {
+                // Each `ChunkResponse` is verified to make sure it never goes beyond the requested
+                // target version, hence, the local version should never go beyond sync req target.
+                let sync_target_version = sync_req.target.ledger_info().version();
+                ensure!(
+                    synced_version <= sync_target_version,
+                    "local version {} is beyond sync req target {}",
+                    synced_version,
+                    sync_target_version
+                );
+                sync_target_version == synced_version
+            }
+            None => false,
+        };
 
         if sync_request_complete {
             debug!(
