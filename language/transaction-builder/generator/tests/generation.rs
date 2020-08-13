@@ -62,6 +62,7 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
         .arg(dir.path().join("src/stdlib_demo.py"))
         .output()
         .unwrap();
+    eprintln!("{}", std::str::from_utf8(&output.stderr).unwrap());
     assert!(output.status.success());
     assert_eq!(
         std::str::from_utf8(&output.stdout).unwrap(),

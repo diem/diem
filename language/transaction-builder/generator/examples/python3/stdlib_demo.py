@@ -12,12 +12,12 @@ import libra_stdlib as stdlib
 def make_address(content: bytes) -> libra.AccountAddress:
     assert len(content) == 16
     # pyre-fixme
-    return libra.AccountAddress(tuple(st.uint8(x) for x in content))
+    return libra.AccountAddress(value=tuple(st.uint8(x) for x in content))
 
 
 def main() -> None:
     token = libra.TypeTag__Struct(
-        libra.StructTag(
+        value=libra.StructTag(
             address=make_address(b"\x00" * 15 + b"\x01"),
             module=libra.Identifier("LBR"),
             name=libra.Identifier("LBR"),
@@ -27,6 +27,11 @@ def main() -> None:
     payee = make_address(b"\x22" * 16)
     amount = st.uint64(1_234_567)
     script = stdlib.encode_peer_to_peer_with_metadata_script(token, payee, amount, b"", b"")
+
+    call = stdlib.decode_script(script)
+    assert isinstance(call, stdlib.ScriptCall__PeerToPeerWithMetadata)
+    assert call.amount == amount;
+    assert call.payee == payee;
 
     for b in lcs.serialize(script, libra.Script):
         print("%d " % b, end='')
