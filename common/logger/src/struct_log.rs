@@ -7,6 +7,7 @@ use crate::counters::{
 };
 use chrono::{SecondsFormat, Utc};
 use once_cell::sync::Lazy;
+use rand::RngCore;
 use serde::Serialize;
 use serde_json::Value;
 use std::{
@@ -53,6 +54,8 @@ static FIELDS_TO_KEEP: &[&str] = &["error"];
 
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
+    /// Unique Id representing this message in Elasticsearch
+    id: String,
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
     log: Option<String>,
@@ -72,8 +75,7 @@ pub struct StructuredLogEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     location: Option<&'static str>,
     /// time of the log
-    #[serde(skip_serializing_if = "Option::is_none")]
-    timestamp: Option<String>,
+    timestamp: String,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]
     level: Option<log::Level>,
@@ -87,7 +89,13 @@ impl StructuredLogEntry {
     /// Base implementation for creating a log
     fn new_unnamed() -> Self {
         let mut ret = Self::default();
-        ret.timestamp = Some(Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true));
+
+        // Generate a 16 byte random like UUIDv4
+        let mut rng = rand::thread_rng();
+        let mut bytes = [0; 16];
+        rng.fill_bytes(&mut bytes);
+        ret.id = hex::encode(bytes);
+        ret.timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
         ret
     }
 
@@ -108,6 +116,7 @@ impl StructuredLogEntry {
 
     fn clone_without_data(&self) -> Self {
         Self {
+            id: self.id.clone(),
             log: self.log.clone(),
             pattern: self.pattern,
             category: self.category,
