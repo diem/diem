@@ -5,13 +5,17 @@ use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager};
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_secure_storage::{KVStorage, Storage, VaultStorage};
 use libra_types::validator_signer::ValidatorSigner;
+use libra_vault_client::dev::{self, ROOT_TOKEN};
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
 /// depends on running Vault, which can be done by using the provided docker run script in
 /// `docker/vault/run.sh`
-#[ignore]
 #[test]
 fn test() {
+    if dev::test_host_safe().is_none() {
+        return;
+    }
+
     suite::run_test_suite(&safety_rules(false));
     suite::run_test_suite(&safety_rules(true));
 }
@@ -19,9 +23,13 @@ fn test() {
 fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
     Box::new(move || {
         let signer = ValidatorSigner::from_int(0);
-        let host = "http://localhost:8200".to_string();
-        let token = "root_token".to_string();
-        let mut storage = Storage::from(VaultStorage::new(host, token, None, None, None));
+        let mut storage = Storage::from(VaultStorage::new(
+            dev::test_host(),
+            ROOT_TOKEN.to_string(),
+            None,
+            None,
+            None,
+        ));
         storage.reset_and_clear().unwrap();
 
         let waypoint = crate::test_utils::validator_signers_to_waypoint(&[&signer]);

@@ -3,6 +3,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod dev;
+
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     PrivateKey,
