@@ -418,7 +418,6 @@ where
                     sl_error!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, network_events::TERMINATION)
                     );
-                    crit!("{} Peer manager actor terminated", self.network_context);
                     break;
                 }
             }

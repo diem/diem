@@ -210,7 +210,7 @@ where
                     self.handle_tick();
                 }
                 complete => {
-                    crit!("{} Discovery actor terminated", self.network_context);
+                    error!("{} Discovery actor terminated", self.network_context);
                     break;
                 }
             }

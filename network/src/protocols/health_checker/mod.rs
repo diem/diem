@@ -222,12 +222,10 @@ where
                 }
                 _ = self.ticker.select_next_some() => {
                     self.round += 1;
-                    debug!("{} Tick: Round number: {}", self.network_context, self.round);
                     match self.sample_random_peer() {
                         Some(peer_id) => {
-                            debug!("{} Will ping: {}", self.network_context, peer_id.short_str());
-
                             let nonce = self.sample_nonce();
+                            debug!("{} Will ping: {} for round: {} nonce: {}", self.network_context, peer_id.short_str(), self.round, nonce);
 
                             tick_handlers.push(
                                 Self::ping_peer(
@@ -239,7 +237,7 @@ where
                                     self.ping_timeout.clone()));
                         }
                         None => {
-                            debug!("{} No connected peer to ping", self.network_context);
+                            debug!("{} No connected peer to ping round: {}", self.network_context, self.round);
                         }
                     }
                 }
@@ -252,7 +250,7 @@ where
                 }
             }
         }
-        crit!("{} Health checker actor terminated", self.network_context,);
+        error!("{} Health checker actor terminated", self.network_context);
     }
 
     fn handle_ping_request(
@@ -287,17 +285,14 @@ where
         req_nonce: u32,
         ping_result: Result<Pong, RpcError>,
     ) {
-        debug!(
-            "{} Got result for ping round: {}",
-            self.network_context, round
-        );
         match ping_result {
             Ok(pong) => {
                 if pong.0 == req_nonce {
                     debug!(
-                        "{} Ping successful for peer: {}",
+                        "{} Ping successful for peer: {} round: {}",
                         self.network_context,
-                        peer_id.short_str()
+                        peer_id.short_str(),
+                        round
                     );
                     // Update last successful ping to current round.
                     self.connected
@@ -313,15 +308,17 @@ where
                         .data("error", "Pong nonce doesn't match our challenge Ping nonce")
                         .data("req_nonce", &req_nonce)
                         .data("peer_id", &peer_id)
-                        .data("pong", pong.0));
+                        .data("pong", pong.0)
+                        .data("round", round));
                     debug_assert!(false, "Pong nonce doesn't match our challenge Ping nonce");
                 }
             }
             Err(err) => {
                 warn!(
-                    "{} Ping failed for peer: {} with error: {:?}",
+                    "{} Ping failed for peer: {} round: {} with error: {:?}",
                     self.network_context,
                     peer_id.short_str(),
+                    round,
                     err
                 );
                 match self.connected.get_mut(&peer_id) {
@@ -369,9 +366,10 @@ where
         ping_timeout: Duration,
     ) -> (PeerId, u64, u32, Result<Pong, RpcError>) {
         debug!(
-            "{} Sending Ping request to peer: {} with nonce: {}",
+            "{} Sending Ping request to peer: {} for round: {} nonce: {}",
             network_context,
             peer_id.short_str(),
+            round,
             nonce
         );
         let res_pong_msg = network_tx
