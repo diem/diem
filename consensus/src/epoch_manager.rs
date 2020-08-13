@@ -189,6 +189,11 @@ impl EpochManager {
         request: EpochRetrievalRequest,
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
+        debug!(
+            "[EpochManager] receive {} from {}",
+            request,
+            peer_id.short_str()
+        );
         let proof = self
             .storage
             .libra_db()
@@ -206,6 +211,12 @@ impl EpochManager {
         different_epoch: u64,
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
+        debug!(
+            "[EpochManager] receive message from epoch {} from {}, local epoch: {}",
+            different_epoch,
+            peer_id,
+            self.epoch()
+        );
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
             Ordering::Less => {
@@ -262,7 +273,7 @@ impl EpochManager {
         counters::EPOCH.set(epoch_state.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_state.verifier.len() as i64);
         info!(
-            "Starting {} with genesis {}",
+            "Starting {} with root {}",
             epoch_state,
             recovery_data.root_block(),
         );
@@ -411,7 +422,10 @@ impl EpochManager {
                 if event.epoch() == self.epoch() {
                     return Ok(Some(event));
                 } else {
-                    self.process_different_epoch(event.epoch(), peer_id).await?;
+                    monitor!(
+                        "process_different_epoch_consensus_msg",
+                        self.process_different_epoch(event.epoch(), peer_id).await?
+                    );
                 }
             }
             ConsensusMsg::EpochChangeProof(proof) => {
@@ -419,7 +433,10 @@ impl EpochManager {
                 if msg_epoch == self.epoch() {
                     self.start_new_epoch(*proof).await?;
                 } else {
-                    self.process_different_epoch(msg_epoch, peer_id).await?;
+                    monitor!(
+                        "process_epoch_change_proof",
+                        self.process_different_epoch(msg_epoch, peer_id).await?
+                    );
                 }
             }
             ConsensusMsg::EpochRetrievalRequest(request) => {
@@ -427,7 +444,10 @@ impl EpochManager {
                     request.end_epoch <= self.epoch(),
                     "[EpochManager] Received EpochRetrievalRequest beyond what we have locally"
                 );
-                self.process_epoch_retrieval(*request, peer_id).await?;
+                monitor!(
+                    "process_epoch_retrieval",
+                    self.process_epoch_retrieval(*request, peer_id).await?
+                );
             }
             _ => {
                 bail!("[EpochManager] Unexpected messages: {:?}", msg);
