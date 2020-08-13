@@ -625,7 +625,7 @@ impl ContractEventGen {
 }
 
 #[derive(Arbitrary, Debug)]
-struct AccountResourceGen {
+pub struct AccountResourceGen {
     withdrawal_capability: Option<WithdrawCapabilityResource>,
     key_rotation_capability: Option<KeyRotationCapabilityResource>,
 }
@@ -650,7 +650,7 @@ impl AccountResourceGen {
 }
 
 #[derive(Arbitrary, Debug)]
-struct BalanceResourceGen {
+pub struct BalanceResourceGen {
     coin: u64,
 }
 
@@ -661,7 +661,7 @@ impl BalanceResourceGen {
 }
 
 #[derive(Arbitrary, Debug)]
-struct AccountStateBlobGen {
+pub struct AccountStateBlobGen {
     account_resource_gen: AccountResourceGen,
     balance_resource_gen: BalanceResourceGen,
 }

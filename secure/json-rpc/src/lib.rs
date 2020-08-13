@@ -687,105 +687,165 @@ mod test {
 #[cfg(any(test, feature = "fuzzing"))]
 /// This module provides all the functionality necessary to test the secure JSON RPC client using
 /// fuzzing.
-/// Note: the unit tests are to ensure that the various fuzzers are maintained (i.e., not broken
-/// at some time in the future and only discovered when a fuzz test fails).
 pub mod fuzzing {
     use crate::{
-        process_account_state_response, process_submit_transaction_response,
-        process_transaction_status_response,
-        test_helpers::{create_test_account_state, create_test_state_with_proof},
         AccountStateResponse, AccountStateWithProofResponse, Bytes, SubmitTransactionResponse,
         TransactionView, TransactionViewResponse, VMStatusView,
     };
+    use libra_proptest_helpers::Index;
+    use libra_types::proptest_types::{AccountInfoUniverse, AccountStateBlobGen};
+    use proptest::prelude::*;
+    use serde_json::Value;
     use ureq::Response;
 
-    #[test]
-    fn test_submit_transaction_fuzzer() {
-        let response = generate_submit_transaction_corpus();
-        fuzz_submit_transaction_response(&response);
+    // Note: these tests ensure that the various fuzzers are maintained (i.e., not broken
+    // at some time in the future and only discovered when a fuzz test fails).
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(10))]
+
+        #[test]
+        fn test_get_account_state_proptest(input in arb_account_state_response()) {
+            let _ = crate::process_account_state_response(input);
+        }
+
+        #[test]
+        fn test_submit_transaction_proptest(input in arb_submit_transaction_response()) {
+            let _ = crate::process_submit_transaction_response(input);
+        }
+
+        #[test]
+        fn test_transaction_status_proptest(input in arb_transaction_status_response()) {
+            let _ = crate::process_transaction_status_response(input);
+        }
     }
 
-    #[test]
-    fn test_get_account_state_fuzzer() {
-        let response = generate_account_state_corpus();
-        fuzz_account_state_response(&response);
+    // This generates an arbitrary response for the get_account_state_with_proof() JSON RPC API
+    // call.
+    prop_compose! {
+        pub fn arb_account_state_response(
+        )(
+            status in any::<u16>(),
+            status_text in any::<String>(),
+            id in any::<u64>(),
+            jsonrpc in any::<String>(),
+            version_height in any::<u64>(),
+            universe in any_with::<AccountInfoUniverse>(1).no_shrink(),
+            index in any::<Index>(),
+            account_state_blob_gen in any::<AccountStateBlobGen>(),
+        ) -> Response {
+            let account_state_blob = account_state_blob_gen.materialize(index, &universe);
+            let encoded_blob = Bytes::from(&lcs::to_bytes(&account_state_blob).unwrap());
+
+            let response_body = AccountStateWithProofResponse {
+                id,
+                jsonrpc,
+                result: AccountStateResponse {
+                    version: version_height,
+                    blob: Some(encoded_blob),
+                },
+            };
+            let response_body =
+                serde_json::to_string::<AccountStateWithProofResponse>(&response_body).unwrap();
+            Response::new(status, &status_text, &response_body)
+        }
     }
 
-    #[test]
-    fn test_get_transaction_status_fuzzer() {
-        let response = generate_transaction_status_corpus();
-        fuzz_transaction_status_response(&response);
+    // This generates an arbitrary response for the submit_transaction() JSON RPC API call.
+    prop_compose! {
+        pub fn arb_submit_transaction_response(
+        )(
+            status in any::<u16>(),
+            status_text in any::<String>(),
+            id in any::<u64>(),
+            jsonrpc in any::<String>(),
+            result in arb_json_value(),
+        ) -> Response {
+            let response_body = SubmitTransactionResponse {
+                id,
+                jsonrpc,
+                result: Some(result),
+            };
+            let response_body =
+                serde_json::to_string::<SubmitTransactionResponse>(&response_body).unwrap();
+            Response::new(status, &status_text, &response_body)
+        }
     }
 
-    // This generates a genuine response for the submit_transaction() JSON RPC API call.
-    pub fn generate_submit_transaction_corpus() -> Vec<u8> {
-        let response = SubmitTransactionResponse {
-            id: 1,
-            jsonrpc: "2.0".to_string(),
-            result: None,
-        };
-        serde_json::to_vec::<SubmitTransactionResponse>(&response).unwrap()
+    // This generates an arbitrary response for the get_account_transaction() JSON RPC API call.
+    prop_compose! {
+        pub fn arb_transaction_status_response(
+        )(
+            status in any::<u16>(),
+            status_text in any::<String>(),
+            id in any::<u64>(),
+            jsonrpc in any::<String>(),
+            vm_status in arb_vm_status_view(),
+        ) -> Response {
+            let transaction_view = TransactionView {
+                vm_status
+            };
+            let response_body = TransactionViewResponse {
+                id,
+                jsonrpc,
+                result: Some(transaction_view),
+            };
+            let response_body =
+                serde_json::to_string::<TransactionViewResponse>(&response_body).unwrap();
+            Response::new(status, &status_text, &response_body)
+        }
     }
 
-    // This generates a genuine response for the get_account_state_with_proof() JSON RPC API call.
-    pub fn generate_account_state_corpus() -> Vec<u8> {
-        // Create test account_state_with_proof
-        let account_state = create_test_account_state();
-        let version_height = 100;
-        let account_state_with_proof = create_test_state_with_proof(&account_state, version_height);
+    // This function generates an arbitrary serde_json::Value.
+    fn arb_json_value() -> impl Strategy<Value = Value> {
+        let leaf = prop_oneof![
+            Just(Value::Null),
+            any::<bool>().prop_map(Value::Bool),
+            any::<f64>().prop_map(|n| serde_json::json!(n)),
+            any::<String>().prop_map(Value::String),
+        ];
 
-        // Use the test account_state_with_proof to generate a template response
-        let account_state = account_state_with_proof.blob.unwrap();
-        let account_state_blob = Bytes::from(&lcs::to_bytes(&account_state).unwrap());
-        let response = AccountStateWithProofResponse {
-            id: 100,
-            jsonrpc: "2.0".to_string(),
-            result: AccountStateResponse {
-                version: account_state_with_proof.version,
-                blob: Some(account_state_blob),
+        leaf.prop_recursive(
+            10,  // 10 levels deep
+            256, // Maximum size of 256 nodes
+            10,  // Up to 10 items per collection
+            |inner| {
+                prop_oneof![
+                    prop::collection::vec(inner.clone(), 0..10).prop_map(Value::Array),
+                    prop::collection::hash_map(any::<String>(), inner, 0..10)
+                        .prop_map(|map| serde_json::json!(map)),
+                ]
             },
-        };
-        serde_json::to_vec::<AccountStateWithProofResponse>(&response).unwrap()
+        )
     }
 
-    // This generates a genuine response for the get_account_transaction() JSON RPC API call.
-    pub fn generate_transaction_status_corpus() -> Vec<u8> {
-        let response = TransactionViewResponse {
-            id: 0,
-            jsonrpc: "".to_string(),
-            result: Some(TransactionView {
-                vm_status: VMStatusView::Executed,
+    // This function generates an arbitrary VMStatusView.
+    fn arb_vm_status_view() -> impl Strategy<Value = VMStatusView> {
+        prop_oneof![
+            Just(VMStatusView::Executed),
+            Just(VMStatusView::OutOfGas),
+            (any::<String>(), any::<u64>()).prop_map(|(location, abort_code)| {
+                VMStatusView::MoveAbort {
+                    location,
+                    abort_code,
+                }
             }),
-        };
-        serde_json::to_vec::<TransactionViewResponse>(&response).unwrap()
-    }
-
-    // This function fuzzes a submit_transaction() response.
-    pub fn fuzz_submit_transaction_response(data: &[u8]) {
-        if let Ok(submit_tx_response) = String::from_utf8(data.to_vec()) {
-            let ureq_response = Response::new(200, "Success", &submit_tx_response);
-            let _ = process_submit_transaction_response(ureq_response);
-        }
-    }
-
-    // This function fuzzes a get_account_state_with_proof() response.
-    pub fn fuzz_account_state_response(data: &[u8]) {
-        if let Ok(account_state_response) = String::from_utf8(data.to_vec()) {
-            let ureq_response = Response::new(200, "Success", &account_state_response);
-            let _ = process_account_state_response(ureq_response);
-        }
-    }
-
-    // This function fuzzes a get_account_transaction() response.
-    pub fn fuzz_transaction_status_response(data: &[u8]) {
-        if let Ok(transaction_status_response) = String::from_utf8(data.to_vec()) {
-            let ureq_response = Response::new(200, "Success", &transaction_status_response);
-            let _ = process_transaction_status_response(ureq_response);
-        }
+            (any::<String>(), any::<u16>(), any::<u16>()).prop_map(
+                |(location, function_index, code_offset)| {
+                    VMStatusView::ExecutionFailure {
+                        location,
+                        function_index,
+                        code_offset,
+                    }
+                }
+            ),
+            Just(VMStatusView::VerificationError),
+            Just(VMStatusView::DeserializationError),
+            Just(VMStatusView::PublishingFailure),
+        ]
     }
 }
 
-#[cfg(any(test, feature = "fuzzing"))]
+#[cfg(test)]
 mod test_helpers {
     use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
     use libra_types::{
@@ -838,7 +898,6 @@ mod test_helpers {
     }
 
     /// Generates and returns a (randomized) SignedTransaction for testing.
-    #[allow(dead_code)]
     pub(crate) fn generate_signed_transaction() -> SignedTransaction {
         let sender = AccountAddress::random();
         let private_key = Ed25519PrivateKey::generate_for_testing();
