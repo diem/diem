@@ -1,83 +1,33 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_secure_push_metrics::{define_counters, Counter, Gauge};
+use libra_secure_push_metrics::{
+    register_int_counter_vec, register_int_gauge_vec, IntCounterVec, IntGaugeVec,
+};
 use once_cell::sync::Lazy;
-use std::sync::Arc;
 
-// @TODO This is still Work in Progress and not ready for production
-// Use the libra_safety_rules prefix for all counters
-define_counters![
-    "libra_safety_rules",
-    (
-        consensus_state_error: Counter,
-        "The number of unsuccessful requests to consensus_state"
-    ),
-    (
-        consensus_state_request: Counter,
-        "The number of requests to consensus_state"
-    ),
-    (
-        consensus_state_success: Counter,
-        "The number of successful requests to consensus_state"
-    ),
-    (
-        construct_and_sign_vote_error: Counter,
-        "The number of unsuccessful requests to construct_and_sign_vote"
-    ),
-    (
-        construct_and_sign_vote_request: Counter,
-        "The number of requests to construct_and_sign_vote"
-    ),
-    (
-        construct_and_sign_vote_success: Counter,
-        "The number of successful requests to construct_and_sign_vote"
-    ),
-    (epoch: Gauge, "The current epoch"),
-    (
-        initialize_error: Counter,
-        "The number of unsuccessful requests to sign_proposal"
-    ),
-    (
-        initialize_request: Counter,
-        "The number of requests to sign_proposal"
-    ),
-    (
-        initialize_success: Counter,
-        "The number of successful requests to sign_proposal"
-    ),
-    (
-        last_voted_round: Gauge,
-        "The round of the highest voted block"
-    ),
-    (
-        preferred_round: Gauge,
-        "The round of the highest 2-chain head"
-    ),
-    (
-        sign_proposal_error: Counter,
-        "The number of unsuccessful requests to sign_proposal"
-    ),
-    (
-        sign_proposal_request: Counter,
-        "The number of requests to sign_proposal"
-    ),
-    (
-        sign_proposal_success: Counter,
-        "The number of successful requests to sign_proposal"
-    ),
-    (
-        sign_timeout_error: Counter,
-        "The number of unsuccessful requests to sign_timeout"
-    ),
-    (
-        sign_timeout_request: Counter,
-        "The number of requests to sign_timeout"
-    ),
-    (
-        sign_timeout_success: Counter,
-        "The number of successful requests to sign_timeout"
-    ),
-];
+static QUERY_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_safety_rules_queries",
+        "Outcome of calling into LSR",
+        &["method", "result"]
+    )
+    .unwrap()
+});
 
-pub static COUNTERS: Lazy<Arc<Counters>> = Lazy::new(|| Arc::new(Counters::new()));
+static STATE_GAUGE: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_safety_rules_state",
+        "Current internal state of LSR",
+        &["field"]
+    )
+    .unwrap()
+});
+
+pub fn increment_query(method: &str, result: &str) {
+    QUERY_COUNTER.with_label_values(&[method, result]).inc();
+}
+
+pub fn set_state(field: &str, value: i64) {
+    STATE_GAUGE.with_label_values(&[field]).set(value);
+}

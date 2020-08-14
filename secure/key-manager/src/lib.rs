@@ -20,7 +20,6 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    counters::COUNTERS,
     libra_interface::LibraInterface,
     logging::{LogEntry, LogEvent, LogField},
 };
@@ -168,7 +167,6 @@ where
             Some(LogEvent::Pending),
             Some((LogField::SleepDuration, self.sleep_period_secs.to_string())),
         );
-        COUNTERS.sleeps.inc();
         self.time_service.sleep(self.sleep_period_secs);
 
         self.log(LogEntry::Sleep, Some(LogEvent::Success), None);
@@ -224,7 +222,7 @@ where
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
         let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        COUNTERS.consensus_rotation_tx_resubmissions.inc();
+        counters::increment_state("consensus_key", "submit_tx");
         self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
@@ -236,7 +234,7 @@ where
             Some(LogEvent::Success),
             Some((LogField::ConsensusKey, consensus_key.to_string())),
         );
-        COUNTERS.completed_consensus_key_rotations.inc();
+        counters::increment_state("consensus_key", "complete");
         self.submit_key_rotation_transaction(consensus_key)
     }
 
@@ -312,7 +310,7 @@ where
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
             self.log(LogEntry::WaitForReconfiguration, None, None);
-            COUNTERS.waiting_on_consensus_reconfiguration.inc();
+            counters::increment_state("consensus_key", "waiting_on_reconfiguration");
             return Ok(Action::NoAction);
         }
 
@@ -350,7 +348,7 @@ where
             }
             Action::NoAction => {
                 self.log(LogEntry::NoAction, None, None);
-                COUNTERS.no_actions_required.inc();
+                counters::increment_state("consensus_key", "no_action");
                 Ok(())
             }
         }

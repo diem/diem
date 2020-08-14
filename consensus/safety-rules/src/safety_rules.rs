@@ -3,11 +3,11 @@
 
 use crate::{
     consensus_state::ConsensusState,
+    counters,
     error::Error,
     logging::{self, LogEntry, LogEvent, LogField},
     persistent_safety_storage::PersistentSafetyStorage,
     t_safety_rules::TSafetyRules,
-    COUNTERS,
 };
 use consensus_types::{
     block::Block,
@@ -378,27 +378,13 @@ impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_consensus_state();
-        run_and_log(
-            cb,
-            &COUNTERS.consensus_state_request,
-            &COUNTERS.consensus_state_success,
-            &COUNTERS.consensus_state_error,
-            log_cb,
-            LogEntry::ConsensusState,
-        )
+        run_and_log(cb, log_cb, LogEntry::ConsensusState)
     }
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_initialize(proof);
-        run_and_log(
-            cb,
-            &COUNTERS.initialize_request,
-            &COUNTERS.initialize_success,
-            &COUNTERS.initialize_error,
-            log_cb,
-            LogEntry::Initialize,
-        )
+        run_and_log(cb, log_cb, LogEntry::Initialize)
     }
 
     fn construct_and_sign_vote(
@@ -408,68 +394,40 @@ impl TSafetyRules for SafetyRules {
         let round = maybe_signed_vote_proposal.vote_proposal.block().round();
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_construct_and_sign_vote(maybe_signed_vote_proposal);
-        run_and_log(
-            cb,
-            &COUNTERS.construct_and_sign_vote_request,
-            &COUNTERS.construct_and_sign_vote_success,
-            &COUNTERS.construct_and_sign_vote_error,
-            log_cb,
-            LogEntry::ConstructAndSignVote,
-        )
+        run_and_log(cb, log_cb, LogEntry::ConstructAndSignVote)
     }
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         let round = block_data.round();
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_sign_proposal(block_data);
-        run_and_log(
-            cb,
-            &COUNTERS.sign_proposal_request,
-            &COUNTERS.sign_proposal_success,
-            &COUNTERS.sign_proposal_error,
-            log_cb,
-            LogEntry::SignProposal,
-        )
+        run_and_log(cb, log_cb, LogEntry::SignProposal)
     }
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), timeout.round());
         let cb = || self.guarded_sign_timeout(timeout);
-        run_and_log(
-            cb,
-            &COUNTERS.sign_timeout_request,
-            &COUNTERS.sign_timeout_success,
-            &COUNTERS.sign_timeout_error,
-            log_cb,
-            LogEntry::SignTimeout,
-        )
+        run_and_log(cb, log_cb, LogEntry::SignTimeout)
     }
 }
 
-fn run_and_log<F, L, R>(
-    callback: F,
-    entry_counter: &libra_secure_push_metrics::Counter,
-    success_counter: &libra_secure_push_metrics::Counter,
-    error_counter: &libra_secure_push_metrics::Counter,
-    log_cb: L,
-    log_entry: LogEntry,
-) -> Result<R, Error>
+fn run_and_log<F, L, R>(callback: F, log_cb: L, log_entry: LogEntry) -> Result<R, Error>
 where
     F: FnOnce() -> Result<R, Error>,
     L: Fn(StructuredLogEntry) -> StructuredLogEntry,
 {
     send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
-    entry_counter.inc();
+    counters::increment_query(log_entry.as_str(), "request");
     callback()
         .map(|v| {
             send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
-            success_counter.inc();
+            counters::increment_query(log_entry.as_str(), "success");
             v
         })
         .map_err(|err| {
             send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Error))
                 .data(LogField::Message.as_str(), &err));
-            error_counter.inc();
+            counters::increment_query(log_entry.as_str(), "error");
             err
         })
 }

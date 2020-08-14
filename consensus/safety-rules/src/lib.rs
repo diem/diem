@@ -18,7 +18,7 @@ mod t_safety_rules;
 mod thread;
 
 pub use crate::{
-    consensus_state::ConsensusState, counters::COUNTERS, error::Error,
+    consensus_state::ConsensusState, error::Error,
     persistent_safety_storage::PersistentSafetyStorage, process::Process,
     safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
     t_safety_rules::TSafetyRules,

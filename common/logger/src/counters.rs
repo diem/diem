@@ -73,7 +73,7 @@ pub static STRUCT_LOG_CONNECT_ERROR_COUNT: Lazy<IntCounter> = Lazy::new(|| {
 
 pub static STRUCT_LOG_PARSE_ERROR_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
-        "libra_struct_log_parse_erro_count",
+        "libra_struct_log_parse_error_count",
         "Count of all parse errors during struct logs."
     )
     .unwrap()

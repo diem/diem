@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    counters,
     logging::{self, LogEntry, LogEvent, LogField},
-    COUNTERS,
 };
 use anyhow::Result;
 use consensus_types::{
@@ -144,7 +144,7 @@ impl PersistentSafetyStorage {
 
     pub fn set_epoch(&mut self, epoch: u64) -> Result<()> {
         self.internal_store.set(EPOCH, Value::U64(epoch))?;
-        COUNTERS.preferred_round.set(epoch as i64);
+        counters::set_state("epoch", epoch as i64);
         send_struct_log!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
             .data(LogField::Message.as_str(), epoch));
         Ok(())
@@ -176,7 +176,7 @@ impl PersistentSafetyStorage {
     pub fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
         self.internal_store
             .set(LAST_VOTED_ROUND, Value::U64(last_voted_round))?;
-        COUNTERS.preferred_round.set(last_voted_round as i64);
+        counters::set_state("last_voted_round", last_voted_round as i64);
         send_struct_log!(
             logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
                 .data(LogField::Message.as_str(), last_voted_round)
@@ -194,7 +194,7 @@ impl PersistentSafetyStorage {
     pub fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {
         self.internal_store
             .set(PREFERRED_ROUND, Value::U64(preferred_round))?;
-        COUNTERS.preferred_round.set(preferred_round as i64);
+        counters::set_state("preferred_round", preferred_round as i64);
         send_struct_log!(
             logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
                 .data(LogField::Message.as_str(), preferred_round)

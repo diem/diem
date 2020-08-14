@@ -7,7 +7,7 @@
 
 use libra_config::config::{PersistableConfig, SafetyRulesConfig};
 use libra_secure_push_metrics::MetricsPusher;
-use safety_rules::{Process, COUNTERS};
+use safety_rules::Process;
 use std::{env, process};
 
 fn main() {
@@ -30,7 +30,7 @@ fn main() {
         .init();
     libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
-    MetricsPusher::new(COUNTERS.clone()).start();
+    MetricsPusher.start();
 
     let mut service = Process::new(config);
     service.start();

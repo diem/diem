@@ -7,7 +7,6 @@
 
 use libra_config::config::KeyManagerConfig;
 use libra_key_manager::{
-    counters::COUNTERS,
     libra_interface::JsonRpcLibraInterface,
     logging::{LogEntry, LogEvent, LogField},
     Error, KeyManager,
@@ -40,7 +39,7 @@ fn main() {
         .init();
     libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
-    MetricsPusher::new(COUNTERS.clone()).start();
+    MetricsPusher.start();
 
     create_and_execute_key_manager(key_manager_config).unwrap_or_else(|e| {
         eprintln!("Error! The Key Manager has failed during execution: {}", e);
