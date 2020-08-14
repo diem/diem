@@ -87,6 +87,11 @@ fn open_db_read_only(dir: &libra_temppath::TempPath) -> DB {
     DB::open_readonly(&dir.path(), "test", get_column_families()).expect("Failed to open DB.")
 }
 
+fn open_db_as_secondary(dir: &libra_temppath::TempPath, dir_sec: &libra_temppath::TempPath) -> DB {
+    DB::open_as_secondary(&dir.path(), &dir_sec.path(), "test", get_column_families())
+        .expect("Failed to open DB.")
+}
+
 struct TestDB {
     _tmpdir: libra_temppath::TempPath,
     db: DB,
@@ -314,6 +319,21 @@ fn test_open_read_only() {
         );
         assert!(db.put::<TestSchema1>(&TestField(1), &TestField(1)).is_err());
     }
+}
+
+#[test]
+fn test_open_as_secondary() {
+    let tmpdir = libra_temppath::TempPath::new();
+    let tmpdir_sec = libra_temppath::TempPath::new();
+
+    let db = open_db(&tmpdir);
+    db.put::<TestSchema1>(&TestField(0), &TestField(0)).unwrap();
+
+    let db_sec = open_db_as_secondary(&tmpdir, &tmpdir_sec);
+    assert_eq!(
+        db_sec.get::<TestSchema1>(&TestField(0)).unwrap(),
+        Some(TestField(0)),
+    );
 }
 
 #[test]

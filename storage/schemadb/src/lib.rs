@@ -235,6 +235,8 @@ impl DB {
     }
 
     /// Open db in readonly mode
+    /// Note that this still assumes there's only one process that opens the same DB.
+    /// See `open_as_secondary`
     pub fn open_readonly(
         path: impl AsRef<Path>,
         name: &'static str,
@@ -242,6 +244,26 @@ impl DB {
     ) -> Result<Self> {
         let db_opts = rocksdb::Options::default();
         DB::open_cf_readonly(&db_opts, path, name, column_families)
+    }
+
+    /// Open db as secondary.
+    /// This allows to read the DB in another process while it's already opened for read / write in
+    /// one (e.g. a Libra Node)
+    /// https://github.com/facebook/rocksdb/blob/493f425e77043cc35ea2d89ee3c4ec0274c700cb/include/rocksdb/db.h#L176-L222
+    pub fn open_as_secondary<P: AsRef<Path>>(
+        primary_path: P,
+        secondary_path: P,
+        name: &'static str,
+        column_families: Vec<ColumnFamilyName>,
+    ) -> Result<Self> {
+        let db_opts = rocksdb::Options::default();
+        DB::open_cf_as_secondary(
+            &db_opts,
+            primary_path,
+            secondary_path,
+            name,
+            column_families,
+        )
     }
 
     fn open_cf(
@@ -278,6 +300,27 @@ impl DB {
             path,
             &column_families,
             error_if_log_file_exists,
+        )?;
+
+        Ok(DB {
+            name,
+            inner,
+            column_families,
+        })
+    }
+
+    fn open_cf_as_secondary<P: AsRef<Path>>(
+        opts: &rocksdb::Options,
+        primary_path: P,
+        secondary_path: P,
+        name: &'static str,
+        column_families: Vec<ColumnFamilyName>,
+    ) -> Result<DB> {
+        let inner = rocksdb::DB::open_cf_as_secondary(
+            opts,
+            primary_path,
+            secondary_path,
+            &column_families,
         )?;
 
         Ok(DB {
