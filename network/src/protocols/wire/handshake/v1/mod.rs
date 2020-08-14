@@ -19,7 +19,6 @@ use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 mod test;
 
 /// Unique identifier associated with each application protocol.
-/// New application protocols can be added without bumping up the MessagingProtocolVersion.
 #[repr(u8)]
 #[derive(Clone, Copy, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub enum ProtocolId {

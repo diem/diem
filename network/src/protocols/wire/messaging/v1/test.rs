@@ -13,8 +13,11 @@ fn protocol_id_serialization() -> lcs::Result<()> {
 
 #[test]
 fn error_code() -> lcs::Result<()> {
-    let error_code = ErrorCode::TimedOut;
-    assert_eq!(lcs::to_bytes(&error_code)?, vec![0x00]);
+    let error_code = ErrorCode::ParsingError(ParsingErrorType {
+        message: 9,
+        protocol: 5,
+    });
+    assert_eq!(lcs::to_bytes(&error_code)?, vec![0, 9, 5]);
     Ok(())
 }
 
@@ -28,12 +31,12 @@ fn rpc_request() -> lcs::Result<()> {
     };
     assert_eq!(
         lcs::to_bytes(&rpc_request)?,
-        // [25, 0, 0, 0] -> request_id
         // [0] -> protocol_idx
+        // [25, 0, 0, 0] -> request_id
         // [0] -> priority
         // [4] -> length of raw_request
         // [0, 1, 2, 3] -> raw_request bytes
-        vec![25, 0, 0, 0, 0, 0, 4, 0, 1, 2, 3]
+        vec![0, 25, 0, 0, 0, 0, 4, 0, 1, 2, 3]
     );
     Ok(())
 }

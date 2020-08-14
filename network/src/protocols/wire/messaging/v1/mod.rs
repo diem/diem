@@ -2,16 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the structs transported during the network messaging protocol v1.
-//! These should serialize as per [link](TODO: Add ref).
+//! These should serialize as per the [specification](https://github.com/libra/libra/blob/master/specifications/network/messaging-v1.md)
 
-use crate::protocols::wire::handshake::v1::{MessagingProtocolVersion, ProtocolId};
+use crate::protocols::wire::handshake::v1::ProtocolId;
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod test;
 
-/// Message variants that are sent on the wire.
-/// New variants cannot be added without bumping up the MessagingProtocolVersion.
+/// Most primitive message type set on the network.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum NetworkMessage {
     Error(ErrorCode),
@@ -22,16 +21,34 @@ pub enum NetworkMessage {
     DirectSendMsg(DirectSendMsg),
 }
 
-/// Enum representing various error codes that can be embedded in NetworkMessage.
-/// New variants cannot be added without bumping up the MessagingProtocolVersion.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum ErrorCode {
-    /// Ping timed out.
-    TimedOut,
     /// Failed to parse NetworkMessage when interpreting according to provided protocol version.
-    ParsingError(MessagingProtocolVersion, Box<NetworkMessage>),
+    ParsingError(ParsingErrorType),
     /// A message was received for a protocol that is not supported over this connection.
-    NotSupported(ProtocolId),
+    NotSupported(NotSupportedType),
+}
+
+impl ErrorCode {
+    pub fn parsing_error(message: u8, protocol: u8) -> Self {
+        ErrorCode::ParsingError(ParsingErrorType { message, protocol })
+    }
+}
+
+/// Flags an invalid network message with as much header information as possible. This is a message
+/// that this peer cannot even parse its header information.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct ParsingErrorType {
+    message: u8,
+    protocol: u8,
+}
+
+/// Flags an unsupported network message.  This is a message that a peer can parse its header
+/// information but does not have a handler.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub enum NotSupportedType {
+    RpcRequest(ProtocolId),
+    DirectSendMsg(ProtocolId),
 }
 
 /// Nonces used by Ping and Pong message types.
@@ -46,10 +63,10 @@ pub type Priority = u8;
 
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct RpcRequest {
-    /// RequestId for the RPC Request.
-    pub request_id: RequestId,
     /// `protocol_id` is a variant of the ProtocolId enum.
     pub protocol_id: ProtocolId,
+    /// RequestId for the RPC Request.
+    pub request_id: RequestId,
     /// Request priority in the range 0..=255.
     pub priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.

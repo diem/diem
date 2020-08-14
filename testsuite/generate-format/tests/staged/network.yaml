@@ -17,16 +17,13 @@ EncNetworkAddress:
 ErrorCode:
   ENUM:
     0:
-      TimedOut: UNIT
-    1:
       ParsingError:
-        TUPLE:
-          - TYPENAME: MessagingProtocolVersion
-          - TYPENAME: NetworkMessage
-    2:
+        NEWTYPE:
+          TYPENAME: ParsingErrorType
+    1:
       NotSupported:
         NEWTYPE:
-          TYPENAME: ProtocolId
+          TYPENAME: NotSupportedType
 HandshakeMsg:
   STRUCT:
     - supported_protocols:
@@ -84,6 +81,20 @@ NetworkMessage:
           TYPENAME: DirectSendMsg
 Nonce:
   NEWTYPESTRUCT: U32
+NotSupportedType:
+  ENUM:
+    0:
+      RpcRequest:
+        NEWTYPE:
+          TYPENAME: ProtocolId
+    1:
+      DirectSendMsg:
+        NEWTYPE:
+          TYPENAME: ProtocolId
+ParsingErrorType:
+  STRUCT:
+    - message: U8
+    - protocol: U8
 Protocol:
   ENUM:
     0:
@@ -145,9 +156,9 @@ RawNetworkAddress:
   NEWTYPESTRUCT: BYTES
 RpcRequest:
   STRUCT:
-    - request_id: U32
     - protocol_id:
         TYPENAME: ProtocolId
+    - request_id: U32
     - priority: U8
     - raw_request: BYTES
 RpcResponse:

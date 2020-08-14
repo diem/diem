@@ -8,11 +8,11 @@ The messaging protocol is versioned using the [`MessagingProtocolVersion`](hands
 
 ## Messages
 
-LibraNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [lcs].
+LibraNet messages are defined below in the form of Rust structs. On the wire, they are encoded using [lcs]. All LibraNet endpoints must be able to handle receiving all of these messages.
 
 ```rust
-/// Message variants that are sent on the wire.
-/// New variants cannot be added without bumping up the MessagingProtocolVersion.
+/// Most primitive message type set on the network. Note this can only support up to 127 message
+/// types. The first byte in any message is the message type itself starting from 0.
 enum NetworkMessage {
     Error(ErrorCode),
     Ping(Nonce),
@@ -23,7 +23,6 @@ enum NetworkMessage {
 }
 
 /// Unique identifier associated with each application protocol.
-/// New application protocols can be added without bumping up the MessagingProtocolVersion.
 #[repr(u8)]
 enum ProtocolId {
     ConsensusRpc = 0,
@@ -37,15 +36,13 @@ enum ProtocolId {
 }
 
 /// Enum representing various error codes that can be embedded in NetworkMessage.
-/// New variants cannot be added without bumping up the MessagingProtocolVersion.
 enum ErrorCode {
-    /// Ping timed out.
-    TimedOut,
-    /// Failed to parse NetworkMessage when interpreting according to provided
-    /// protocol version.
-    ParsingError(MessagingProtocolVersion, NetworkMessage),
-    /// A message was received for a protocol that is not supported over this connection.
-    NotSupported(ProtocolId),
+    /// Failed to parse NetworkMessage, the entries are the first two bytes of the message:
+    /// NetworkMessage type and possibly the ProtocolId
+    ParsingError(u8, u8),
+    /// A message was received for a message / protocol that is not supported over this connection:
+    /// The NetworkMessage type is encoded as a u8.
+    NotSupported(u8, ProtocolId),
 }
 
 /// Nonces used by Ping and Pong message types.
@@ -58,10 +55,10 @@ type RequestId = u32;
 type Priority = u8;
 
 struct RpcRequest {
-    /// RequestId for the RPC Request.
-    request_id: RequestId,
     /// `protocol_id` is a variant of the ProtocolId enum.
     protocol_id: ProtocolId,
+    /// RequestId for the RPC Request.
+    request_id: RequestId,
     /// Request priority in the range 0..=255.
     priority: Priority,
     /// Request payload. This will be parsed by the application-level handler.
@@ -112,7 +109,9 @@ Pending inbound and outbound messages MAY be reordered and dropped according to 
 
 ## Errors
 
-Errors are sent as messages of type `NetworkMessage::Error`, with the `ErrorCode` indicating the type of error. For example, if an `RpcRequest` is received for a `ProtocolId` that was not advertised to a node, we send an error message with the code `ErrorCode::NotSupported(ProtocolId)`.
+Errors are sent as messages of type `NetworkMessage::Error`, with the `ErrorCode` indicating the type of error. For example, if an `RpcRequest` is received for a `ProtocolId` that was not advertised to a node, we send an error message with the code `ErrorCode::NotSupported(3, ProtocolId)`, where 3 represents the index for RpcRequest's in NetworkMessage.
+
+Responding to errors is not required. A message must be of at least length 2 in order to trigger an error response, otherwise an error would have insufficient data to be meaningful.
 
 ### Flow control
 
