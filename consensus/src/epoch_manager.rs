@@ -396,14 +396,13 @@ impl EpochManager {
                 .clone()
                 .verify(&self.epoch_state().verifier)
                 .context("[EpochManager] Verify event")
-                .map_err(|err|
-                        // security log + return the error
-                        {send_struct_log!(security_log(security_events::CONSENSUS_INVALID_MESSAGE)
-                            .data("from_peer", &peer_id)
-                            .data_display("error", &err)
-                            .data("event", &unverified_event)
-                        );
-                    err})?;
+                .map_err(|err| {
+                    sl_error!(security_log(security_events::CONSENSUS_INVALID_MESSAGE)
+                        .data("from_peer", &peer_id)
+                        .data_display("error", &err)
+                        .data("event", &unverified_event));
+                    err
+                })?;
 
             // process the verified event
             self.process_event(peer_id, verified_event).await?;

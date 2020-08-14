@@ -270,7 +270,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .filter(|(maybe_vm_status, _)| maybe_vm_status.is_some());
 
     for (maybe_vm_status, failed_transaction) in failed_transactions {
-        send_struct_log!(security_log(security_events::INVALID_TRANSACTION_MP)
+        sl_error!(security_log(security_events::INVALID_TRANSACTION_MP)
             .data("failed_transaction", &failed_transaction)
             .data("vm_status", &maybe_vm_status)
             .data("from_peer", &peer));

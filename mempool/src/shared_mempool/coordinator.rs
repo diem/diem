@@ -158,7 +158,7 @@ pub(crate) async fn coordinator<V>(
                                 };
                             }
                             Event::RpcRequest((peer_id, msg, res_tx)) => {
-                                send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
+                                sl_error!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
                                     .data("message", &msg)
                                     .data("peer_id", &peer_id)
                                 );
@@ -167,7 +167,7 @@ pub(crate) async fn coordinator<V>(
                         }
                     },
                     Err(e) => {
-                        send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
+                        sl_error!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
                             .data_display("error", &e)
                     );
                     }
