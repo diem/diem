@@ -10,7 +10,7 @@ use crate::{
     },
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
-        messaging::v1::{NetworkMessage, Nonce},
+        messaging::v1::{ErrorCode, NetworkMessage},
     },
     transport,
     transport::{Connection, ConnectionId, ConnectionMetadata},
@@ -123,15 +123,16 @@ fn build_test_peer_manager(
 
 async fn ping_pong(connection: &mut MemorySocket) -> Result<(), PeerManagerError> {
     let mut connection = Framed::new(IoCompat::new(connection), LengthDelimitedCodec::new());
-    let ping = NetworkMessage::Ping(Nonce(42));
-    connection
-        .send(lcs::to_bytes(&ping).unwrap().into())
-        .await?;
-    let raw_pong = connection.next().await.ok_or_else(|| {
+    let bad_message = vec![255, 111];
+    connection.send(bad_message.into()).await?;
+    let raw_error = connection.next().await.ok_or_else(|| {
         PeerManagerError::TransportError(anyhow::anyhow!("Failed to read pong msg"))
     })??;
-    let pong: NetworkMessage = lcs::from_bytes(&raw_pong)?;
-    assert_eq!(pong, NetworkMessage::Pong(Nonce(42)));
+    let error: NetworkMessage = lcs::from_bytes(&raw_error)?;
+    assert_eq!(
+        error,
+        NetworkMessage::Error(ErrorCode::parsing_error(255, 111))
+    );
     Ok(())
 }
 
