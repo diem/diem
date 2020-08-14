@@ -16,7 +16,7 @@ anyhow = "1.0.32"
 tempfile = "3.1.0"
 
 datatest-stable = { path = "../../../common/datatest-stable", version = "0.1.0" }
-functional-tests = { path = "../../functional-tests", version = "0.1.0" }
+functional-tests = { path = "../../testing-infra/functional-tests", version = "0.1.0" }
 libra-types = { path = "../../../types" }
 move-lang = { path = "..", version = "0.0.1" }
 

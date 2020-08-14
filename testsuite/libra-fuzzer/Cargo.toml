@@ -41,7 +41,7 @@ network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
 state-synchronizer = { path = "../../state-synchronizer", version = "0.1.0", features = ["fuzzing", "libradb"]  }
 libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
-language-e2e-tests = { path = "../../language/e2e-tests", version = "0.1.0" }
+language-e2e-tests = { path = "../../language/testing-infra/e2e-tests", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 
 [dev-dependencies]

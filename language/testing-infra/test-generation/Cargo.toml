@@ -1,0 +1,36 @@
+[package]
+name = "test-generation"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra test generation"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+rand = "0.7.3"
+num_cpus = "1.13.0"
+mirai-annotations = "1.9.1"
+structopt = "0.3.15"
+itertools = "0.9.0"
+hex = "0.4.2"
+getrandom = "0.1.14"
+crossbeam-channel = "0.4.3"
+
+bytecode-verifier = { path = "../../bytecode-verifier", version = "0.1.0" }
+libra-config = { path = "../../../config", version = "0.1.0" }
+libra-logger = { path = "../../../common/logger", version = "0.1.0" }
+libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
+module-generation = { path = "../module-generation", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+libra-vm = { path = "../../libra-vm", version = "0.1.0" }
+language-e2e-tests = { path = "../e2e-tests", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+
+[features]
+mirai-contracts = []

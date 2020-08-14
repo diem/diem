@@ -31,7 +31,7 @@ These tests use the Move functional testing framework, which we will briefly exp
 
 A functional test is a sequence of Move transaction scripts that are executed against the genesis state of the blockchain. Tests typically call functions of the module under test and then use `assert`s to check that the call had the expected effect. The framework includes directives for checking that a transaction executed successfully (`// check: EXECUTED`) or aborted (e.g., `// check: ABORTED`). In addition, there are configuration macros (written `//!`) for creating accounts with human-readable names (`//! account: alice`), begining a new transaction (`//! new-transaction`), and setting the sender of a transaction (`//! sender: alice`).
 
-The functional testing framework is very convenient, but can't express all of the tests we need to write. More heavyweight tests that create/execute transactions from Rust code live [here](../e2e-tests/src/tests) and can be run with `cargo test`.
+The functional testing framework is very convenient, but can't express all of the tests we need to write. More heavyweight tests that create/execute transactions from Rust code live [here](../testing-infra/e2e-tests/src/tests) and can be run with `cargo test`.
 
 ## Changing the standard library
 
@@ -48,7 +48,7 @@ The functional testing framework is very convenient, but can't express all of th
 - [Build](#building) your changes and address compiler errors as needed
 - If you have added a new script, extend the `StdlibScript` enum and script allowlist (`all()` function) [here](src/stdlib.rs). Don't forget to `git add` the compiled binary for the new script (`your_script.mv` [here](staged/transaction_scripts)).
 - In addition, add a Rust wrapper for your script [here](../transaction-builder/src/lib.rs) to allow client code and tests to create the script.
-- Add or modify tests for the script under the end-to-end [tests](../e2e-tests/src/tests/transaction_builder.rs)
+- Add or modify tests for the script under the end-to-end [tests](../testing-infra/e2e-tests/src/tests/transaction_builder.rs)
 - If you have added a new script, don't forget to `git add` the new script binary
 
 ## Coding conventions

@@ -12,7 +12,7 @@ edition = "2018"
 anyhow = "1.0.32"
 bytecode-verifier = { path = "../bytecode-verifier", version = "0.1.0" }
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
-functional-tests = { path = "../functional-tests", version = "0.1.0" }
+functional-tests = { path = "../testing-infra/functional-tests", version = "0.1.0" }
 ir-to-bytecode = { path = "../compiler/ir-to-bytecode", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
