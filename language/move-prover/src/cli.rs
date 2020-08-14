@@ -177,6 +177,10 @@ pub struct BackendOptions {
     pub vc_timeout: usize,
     /// Whether Boogie output and log should be saved.
     pub keep_artifacts: bool,
+    /// Eager threshold for quantifier instantiation.
+    pub eager_threshold: usize,
+    /// Lazy threshold for quantifier instantiation.
+    pub lazy_threshold: usize,
 }
 
 impl Default for BackendOptions {
@@ -202,6 +206,8 @@ impl Default for BackendOptions {
             proc_cores: 1,
             vc_timeout: 40,
             keep_artifacts: false,
+            eager_threshold: 100,
+            lazy_threshold: 100,
         }
     }
 }
@@ -375,6 +381,22 @@ impl Options {
                     .min_values(1)
                     .help("the source files to verify"),
             )
+            .arg(
+                Arg::with_name("eager-threshold")
+                    .long("eager-threshold")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets the eager threshold for quantifier instantiation (default 100)")
+            )
+            .arg(
+                Arg::with_name("lazy-threshold")
+                    .long("lazy-threshold")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets the lazy threshold for quantifier instantiation (default 100)")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -461,6 +483,18 @@ impl Options {
         if matches.is_present("cores") {
             options.backend.proc_cores = matches.value_of("cores").unwrap().parse::<usize>()?;
         }
+        if matches.is_present("eager-threshold") {
+            options.backend.eager_threshold = matches
+                .value_of("eager-threshold")
+                .unwrap()
+                .parse::<usize>()?;
+        }
+        if matches.is_present("lazy-threshold") {
+            options.backend.lazy_threshold = matches
+                .value_of("lazy-threshold")
+                .unwrap()
+                .parse::<usize>()?;
+        }
         if matches.is_present("print-config") {
             println!("{}", toml::to_string(&options).unwrap());
             Err(anyhow!("exiting"))
@@ -519,8 +553,14 @@ impl Options {
                 self.backend.proc_cores
             }
         )]);
-        add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
-        add(&["-proverOpt:O:smt.QI.LAZY_THRESHOLD=100"]);
+        add(&[&format!(
+            "-proverOpt:O:smt.QI.EAGER_THRESHOLD={}",
+            self.backend.eager_threshold
+        )]);
+        add(&[&format!(
+            "-proverOpt:O:smt.QI.LAZY_THRESHOLD={}",
+            self.backend.lazy_threshold
+        )]);
         // TODO: see what we can make out of these flags.
         //add(&["-proverOpt:O:smt.QI.PROFILE=true"]);
         //add(&["-proverOpt:O:trace=true"]);
