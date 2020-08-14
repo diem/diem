@@ -71,9 +71,6 @@ pub struct StructuredLogEntry {
     /// filename + line (e.g. consensus/src/round_manager.rs:678)
     #[serde(skip_serializing_if = "Option::is_none")]
     location: Option<&'static str>,
-    /// git revision
-    #[serde(skip_serializing_if = "Option::is_none")]
-    git_rev: Option<&'static str>,
     /// time of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp: Option<String>,
@@ -117,7 +114,6 @@ impl StructuredLogEntry {
             name: self.name,
             module: self.module,
             location: self.location,
-            git_rev: self.git_rev,
             timestamp: self.timestamp.clone(),
             level: self.level,
             data: HashMap::new(),
@@ -176,22 +172,17 @@ impl StructuredLogEntry {
         self
     }
 
-    // TODO: Remove in favor of level (https://github.com/libra/libra/issues/5484)
-    pub fn critical(self) -> Self {
-        self.level(log::Level::Error)
-    }
-
-    pub fn json_data(mut self, key: &'static str, value: Value) -> Self {
+    pub(crate) fn json_data(mut self, key: &'static str, value: Value) -> Self {
         self.data.insert(key, value);
         self
     }
 
-    pub fn data<D: Serialize>(mut self, key: &'static str, value: D) -> Self {
-        self.data.insert(
+    /// Add a data field, with a given value, will serialize into JSON and be indexed accordingly
+    pub fn data<D: Serialize>(self, key: &'static str, value: D) -> Self {
+        self.json_data(
             key,
             serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),
-        );
-        self
+        )
     }
 
     /// Used for errors and other types that don't serialize well
@@ -199,42 +190,43 @@ impl StructuredLogEntry {
         self.data(key, value.to_string())
     }
 
+    /// Add a typed data field to serialize, to ensure type and name consistency
     pub fn field<D: Serialize>(self, field: &LoggingField<D>, value: D) -> Self {
         self.data(field.0, value)
     }
 
-    #[doc(hidden)] // set from macro
-    pub fn log(&mut self, log: String) -> &mut Self {
+    /// Sets the context log line used for text logs.  This is useful for migration of text logs
+    pub fn log(mut self, log: String) -> Self {
         self.log = Some(log);
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn pattern(&mut self, pattern: &'static str) -> &mut Self {
+    pub fn add_log(&mut self, log: String) -> &mut Self {
+        self.log = Some(log);
+        self
+    }
+
+    #[doc(hidden)] // set from macro
+    pub fn add_pattern(&mut self, pattern: &'static str) -> &mut Self {
         self.pattern = Some(pattern);
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn module(&mut self, module: &'static str) -> &mut Self {
+    pub fn add_module(&mut self, module: &'static str) -> &mut Self {
         self.module = Some(module);
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn location(&mut self, location: &'static str) -> &mut Self {
+    pub fn add_location(&mut self, location: &'static str) -> &mut Self {
         self.location = Some(location);
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn git_rev(&mut self, git_rev: Option<&'static str>) -> &mut Self {
-        self.git_rev = git_rev;
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn data_mutref<D: Serialize>(&mut self, key: &'static str, value: D) -> &mut Self {
+    pub fn add_data<D: Serialize>(&mut self, key: &'static str, value: D) -> &mut Self {
         self.data.insert(
             key,
             serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),

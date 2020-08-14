@@ -54,6 +54,7 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
+use crate::logging::network_events::{CONNECTION_METADATA, TRANSPORT_EVENT, TYPE};
 use serde::export::Formatter;
 
 /// Request received by PeerManager from upstream actors.
@@ -432,10 +433,13 @@ where
         );
         match event {
             TransportNotification::NewConnection(conn) => {
-                info!(
-                    "{} New connection established: {:?}",
-                    self.network_context, conn,
-                );
+                sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
+                    .log(format!(
+                        "{} New connection established: {}",
+                        self.network_context, conn.metadata
+                    ))
+                    .field(CONNECTION_METADATA, &conn.metadata)
+                    .data(TYPE, "connected"));
                 // Update libra_network_peer counter.
                 self.add_peer(conn);
                 self.update_connected_peers_metrics();
@@ -443,10 +447,14 @@ where
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
-                info!(
-                    "{} Connection {} closed due to {}",
-                    self.network_context, lost_conn_metadata, reason,
-                );
+                sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
+                    .log(format!(
+                        "{} Connection {} closed due to {}",
+                        self.network_context, lost_conn_metadata, reason
+                    ))
+                    .field(CONNECTION_METADATA, &lost_conn_metadata)
+                    .data("reason", reason)
+                    .data(TYPE, "disconnected"));
                 let peer_id = lost_conn_metadata.peer_id();
                 // If the active connection with the peer is lost, remove it from `active_peers`.
                 if let Entry::Occupied(entry) = self.active_peers.entry(peer_id) {

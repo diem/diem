@@ -31,6 +31,7 @@ pub mod network_events {
     use crate::{
         connectivity_manager::DiscoverySource,
         peer_manager::{ConnectionNotification, ConnectionRequest, PeerManagerRequest},
+        transport::ConnectionMetadata,
         ConnectivityRequest,
     };
     use libra_config::network_id::NetworkContext;
@@ -41,6 +42,7 @@ pub mod network_events {
     /// Labels
     pub const CONNECTIVITY_MANAGER_LOOP: &str = "connectivity_manager_loop";
     pub const PEER_MANAGER_LOOP: &str = "peer_manager_loop";
+    pub const TRANSPORT_EVENT: &str = "transport_event";
 
     /// Common terms
     pub const TYPE: &str = "type";
@@ -65,4 +67,6 @@ pub mod network_events {
         &LoggingField::new("network_address");
     pub const DISCOVERY_SOURCE: &LoggingField<&DiscoverySource> =
         &LoggingField::new("discovery_source");
+    pub const CONNECTION_METADATA: &LoggingField<&ConnectionMetadata> =
+        &LoggingField::new("connection_metadata");
 }
