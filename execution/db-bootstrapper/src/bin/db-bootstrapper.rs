@@ -3,6 +3,7 @@
 
 use anyhow::{ensure, format_err, Context, Result};
 use executor::db_bootstrapper::calculate_genesis;
+use libra_temppath::TempPath;
 use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -38,14 +39,18 @@ fn main() -> Result<()> {
         matches!(genesis_txn, Transaction::GenesisTransaction(_)),
         "Not a GenesisTransaction"
     );
-    let db = DbReaderWriter::new(
-        LibraDB::open(
-            &opt.db_dir,
-            !opt.commit, /* readonly */
-            None,        /* pruner */
-        )
-        .with_context(|| format_err!("Failed to open DB."))?,
-    );
+
+    let tmpdir;
+    let db = if opt.commit {
+        LibraDB::open(&opt.db_dir, false, None /* pruner */)
+    } else {
+        // When not committing, we open the DB as secondary so the tool is usable along side a
+        // running node on the same DB. Using a TempPath since it won't run for long.
+        tmpdir = TempPath::new();
+        LibraDB::open_as_secondary(opt.db_dir.as_path(), tmpdir.path())
+    }
+    .with_context(|| format_err!("Failed to open DB."))?;
+    let db = DbReaderWriter::new(db);
 
     let tree_state = db
         .reader
