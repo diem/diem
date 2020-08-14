@@ -206,7 +206,9 @@ where
 
         // 2. Verify that skipped transactions match what's already persisted (no fork):
         let num_txns_to_skip = num_committed_txns - first_txn_version;
-        info!("Skipping the first {} transactions.", num_txns_to_skip);
+        if num_txns_to_skip > 0 {
+            info!("Skipping the first {} transactions.", num_txns_to_skip);
+        }
 
         // If the proof is verified, then the length of txn_infos and txns must be the same.
         let skipped_transaction_infos =
