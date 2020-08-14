@@ -1664,9 +1664,10 @@ fn test_operator_key_rotation_recovery() {
         .unwrap();
     let operator_account = AccountAddress::from_str(&operator_account_string).unwrap();
     let account_resource = op_tool.account_resource(operator_account).unwrap();
+    let on_chain_operator_key = hex::decode(account_resource.authentication_key).unwrap();
     assert_eq!(
         AuthenticationKey::ed25519(&new_operator_key),
-        AuthenticationKey::try_from(account_resource.authentication_key()).unwrap()
+        AuthenticationKey::try_from(on_chain_operator_key).unwrap()
     );
 
     // Rotate the operator key in storage manually and perform another rotation using the op tool.
@@ -1688,9 +1689,10 @@ fn test_operator_key_rotation_recovery() {
 
     // Verify that the operator key was updated on-chain
     let account_resource = op_tool.account_resource(operator_account).unwrap();
+    let on_chain_operator_key = hex::decode(account_resource.authentication_key).unwrap();
     assert_eq!(
         AuthenticationKey::ed25519(&new_operator_key),
-        AuthenticationKey::try_from(account_resource.authentication_key()).unwrap()
+        AuthenticationKey::try_from(on_chain_operator_key).unwrap()
     );
 }
 

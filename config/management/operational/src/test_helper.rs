@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    account_resource::SimplifiedAccountResource,
     command::{Command, CommandName},
     validator_config::DecryptedValidatorConfig,
     validator_set::DecryptedValidatorInfo,
@@ -12,9 +13,7 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{
-    account_address::AccountAddress, account_config::AccountResource, chain_id::ChainId,
-};
+use libra_types::{account_address::AccountAddress, chain_id::ChainId};
 use structopt::StructOpt;
 
 const TOOL_NAME: &str = "libra-operational-tool";
@@ -33,7 +32,7 @@ impl OperationalTool {
     pub fn account_resource(
         &self,
         account_address: AccountAddress,
-    ) -> Result<AccountResource, Error> {
+    ) -> Result<SimplifiedAccountResource, Error> {
         let args = format!(
             "
                 {command}

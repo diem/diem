@@ -7,9 +7,9 @@ use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_management::{error::Error, transaction::build_raw_transaction};
 use libra_types::{
     account_address::AccountAddress,
-    account_config,
     transaction::{authenticator::AuthenticationKey, Transaction},
 };
+use serde::Serialize;
 use std::convert::TryFrom;
 use structopt::StructOpt;
 
@@ -25,14 +25,29 @@ pub struct AccountResource {
 }
 
 impl AccountResource {
-    pub fn execute(self) -> Result<account_config::resources::AccountResource, Error> {
+    pub fn execute(self) -> Result<SimplifiedAccountResource, Error> {
         // Load the config and create a json rpc client
         let config = self.config.load()?.override_json_server(&self.json_server);
         let client = JsonRpcClientWrapper::new(config.json_server);
 
         // Fetch the current account resource on-chain for the specified account address.
-        client.account_resource(self.account_address)
+        let account_resource = client.account_resource(self.account_address)?;
+        Ok(SimplifiedAccountResource {
+            account: self.account_address,
+            authentication_key: hex::encode(account_resource.authentication_key()),
+            sequence_number: account_resource.sequence_number(),
+        })
     }
+}
+
+/// Used to display a subset version of information from an account resource fetched for a
+/// specific account.
+/// Note: the authentication is hex encoded.
+#[derive(Serialize)]
+pub struct SimplifiedAccountResource {
+    pub account: AccountAddress,
+    pub authentication_key: String,
+    pub sequence_number: u64,
 }
 
 #[derive(Debug, StructOpt)]

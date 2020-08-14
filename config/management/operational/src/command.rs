@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    validator_config::DecryptedValidatorConfig, validator_set::DecryptedValidatorInfo,
-    TransactionContext,
+    account_resource::SimplifiedAccountResource, validator_config::DecryptedValidatorConfig,
+    validator_set::DecryptedValidatorInfo, TransactionContext,
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_management::{error::Error, execute_command};
 use libra_secure_json_rpc::VMStatusView;
-use libra_types::{account_address::AccountAddress, account_config::AccountResource};
+use libra_types::account_address::AccountAddress;
 use serde::Serialize;
 use structopt::StructOpt;
 
@@ -165,7 +165,7 @@ impl Command {
         serde_json::to_string_pretty(&result).unwrap()
     }
 
-    pub fn account_resource(self) -> Result<AccountResource, Error> {
+    pub fn account_resource(self) -> Result<SimplifiedAccountResource, Error> {
         execute_command!(self, Command::AccountResource, CommandName::AccountResource)
     }
 
