@@ -60,27 +60,17 @@ NetworkMessage:
         NEWTYPE:
           TYPENAME: ErrorCode
     1:
-      Ping:
-        NEWTYPE:
-          TYPENAME: Nonce
-    2:
-      Pong:
-        NEWTYPE:
-          TYPENAME: Nonce
-    3:
       RpcRequest:
         NEWTYPE:
           TYPENAME: RpcRequest
-    4:
+    2:
       RpcResponse:
         NEWTYPE:
           TYPENAME: RpcResponse
-    5:
+    3:
       DirectSendMsg:
         NEWTYPE:
           TYPENAME: DirectSendMsg
-Nonce:
-  NEWTYPESTRUCT: U32
 NotSupportedType:
   ENUM:
     0:

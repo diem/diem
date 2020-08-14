@@ -15,8 +15,6 @@ LibraNet messages are defined below in the form of Rust structs. On the wire, th
 /// types. The first byte in any message is the message type itself starting from 0.
 enum NetworkMessage {
     Error(ErrorCode),
-    Ping(Nonce),
-    Pong(Nonce),
     RpcRequest(RpcRequest),
     RpcResponse(RpcResponse),
     DirectSendMsg(DirectSendMsg),
@@ -44,9 +42,6 @@ enum ErrorCode {
     /// The NetworkMessage type is encoded as a u8.
     NotSupported(u8, ProtocolId),
 }
-
-/// Nonces used by Ping and Pong message types.
-struct Nonce(u32);
 
 /// Create alias RequestId for u32.
 type RequestId = u32;
@@ -97,10 +92,6 @@ Any application errors in handling should be wrapped in the `RpcResponse` messag
 
 The DirectSend protocol provides one-way fire-and-forget-style message delivery. The sender sends the message payload inside a `NetworkMessage::DirectSendMsg`. The `protocol_id` field in `DirectSendMsg` indicates the application protocol identifier.
 
-## Protocol: Ping-Pong
-
-The Ping-Pong protocol is used for checking liveness and measuring latency between two connected end-points. The only content of the `Ping` and `Pong` message is a nonce that is sent by the side sending the `Ping` and should be echo-ed in the `Pong` sent by the other end. These are sent on the wire as messages of type `NetworkMessage::Ping` and `NetworkMessage::Pong`.
-
 ## Message Priority
 
 The `RpcRequest` , `RpcResponse` and `DirectSendMsg` structs also have a `priority` field. The message priority is a best-effort signal on how to prioritize (higher means more urgent) the message on both the sending and receiving ends. In case of RPC, the receiver could respect the request priority and attach the same priority value to the outbound response.
@@ -109,7 +100,7 @@ Pending inbound and outbound messages MAY be reordered and dropped according to 
 
 ## Errors
 
-Errors are sent as messages of type `NetworkMessage::Error`, with the `ErrorCode` indicating the type of error. For example, if an `RpcRequest` is received for a `ProtocolId` that was not advertised to a node, we send an error message with the code `ErrorCode::NotSupported(3, ProtocolId)`, where 3 represents the index for RpcRequest's in NetworkMessage.
+Errors are sent as messages of type `NetworkMessage::Error`, with the `ErrorCode` indicating the type of error. For example, if an `RpcRequest` is received for a `ProtocolId` that was not advertised to a node, we send an error message with the code `ErrorCode::NotSupported(1, ProtocolId)`, where 1 represents the index for RpcRequest's in NetworkMessage.
 
 Responding to errors is not required. A message must be of at least length 2 in order to trigger an error response, otherwise an error would have insufficient data to be meaningful.
 
@@ -128,4 +119,3 @@ The serialized `NetworkMsg`s over-the-wire then look like a sequence of length-p
 ```
 
 (TODO(philiphayes): add streaming RPC protocol when supported)
-(TODO(philiphayes): currently we can't send or handle `Error`, `Ping`, or `Pong` messages...)

@@ -355,15 +355,6 @@ where
                     error,
                 );
             }
-            NetworkMessage::Ping(nonce) => {
-                let pong = NetworkMessage::Pong(nonce);
-                let (ack_tx, _) = oneshot::channel();
-                // Resond to a ping right away.
-                write_reqs_tx.send((pong, ack_tx)).await?;
-            }
-            NetworkMessage::Pong(_nonce) => {
-                // TODO(davidiw) forward to a pong pub/sub and move HealthChecker to leverage this
-            }
             NetworkMessage::RpcRequest(_) | NetworkMessage::RpcResponse(_) => {
                 let notif = PeerNotification::NewMessage(message);
                 self.rpc_notifs_tx.send(notif).await.map_err(|err| {

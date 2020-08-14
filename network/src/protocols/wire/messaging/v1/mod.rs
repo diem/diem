@@ -14,8 +14,6 @@ mod test;
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum NetworkMessage {
     Error(ErrorCode),
-    Ping(Nonce),
-    Pong(Nonce),
     RpcRequest(RpcRequest),
     RpcResponse(RpcResponse),
     DirectSendMsg(DirectSendMsg),
@@ -50,10 +48,6 @@ pub enum NotSupportedType {
     RpcRequest(ProtocolId),
     DirectSendMsg(ProtocolId),
 }
-
-/// Nonces used by Ping and Pong message types.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct Nonce(pub u32);
 
 /// Create alias RequestId for u32.
 pub type RequestId = u32;
