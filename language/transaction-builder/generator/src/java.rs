@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::{make_abi_enum_container, mangle_type, type_not_allowed};
+use crate::common;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
@@ -11,7 +11,7 @@ use serde_generate::{
 
 use heck::{CamelCase, ShoutySnakeCase};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     io::{Result, Write},
     path::PathBuf,
 };
@@ -79,10 +79,12 @@ fn write_script_call_files(
     abis: &[ScriptABI],
 ) -> Result<()> {
     let external_definitions = crate::common::get_external_definitions("org.libra.types");
-    let script_registry: BTreeMap<_, _> =
-        vec![("ScriptCall".to_string(), make_abi_enum_container(abis))]
-            .into_iter()
-            .collect();
+    let script_registry: BTreeMap<_, _> = vec![(
+        "ScriptCall".to_string(),
+        common::make_abi_enum_container(abis),
+    )]
+    .into_iter()
+    .collect();
     let mut comments: BTreeMap<_, _> = abis
         .iter()
         .map(|abi| {
@@ -234,7 +236,7 @@ return builder.build();"#,
                 self.out,
                 "builder.{} = Helpers.decode_{}_argument(script.args.get({}));",
                 arg.name(),
-                mangle_type(arg.type_tag()),
+                common::mangle_type(arg.type_tag()),
                 index,
             )?;
         }
@@ -315,13 +317,7 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
     }
 
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let mut required_types = BTreeSet::new();
-        for abi in abis {
-            for arg in abi.args() {
-                let type_tag = arg.type_tag();
-                required_types.insert(type_tag);
-            }
-        }
+        let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -338,9 +334,9 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
             Address => ("Address", String::new()),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => ("U8Vector", String::new()),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         };
         writeln!(
             self.out,
@@ -353,7 +349,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
 }}
 "#,
             Self::quote_type(type_tag),
-            mangle_type(type_tag),
+            common::mangle_type(type_tag),
             constructor,
             constructor,
             constructor,
@@ -419,10 +415,10 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "Bytes".into(),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
 
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 
@@ -436,10 +432,10 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             Address => format!("new TransactionArgument.Address({})", name),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => format!("new TransactionArgument.U8Vector({})", name),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
 
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 }

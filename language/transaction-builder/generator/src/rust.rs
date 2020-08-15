@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::{make_abi_enum_container, mangle_type, type_not_allowed};
+use crate::common;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::{
@@ -11,7 +11,7 @@ use serde_generate::{
 
 use heck::{CamelCase, ShoutySnakeCase};
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     io::{Result, Write},
     path::PathBuf,
 };
@@ -90,10 +90,12 @@ where
 
     fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
         let external_definitions = Self::get_external_definitions(self.local_types);
-        let script_registry: BTreeMap<_, _> =
-            vec![("ScriptCall".to_string(), make_abi_enum_container(abis))]
-                .into_iter()
-                .collect();
+        let script_registry: BTreeMap<_, _> = vec![(
+            "ScriptCall".to_string(),
+            common::make_abi_enum_container(abis),
+        )]
+        .into_iter()
+        .collect();
         let mut comments: BTreeMap<_, _> = abis
             .iter()
             .map(|abi| {
@@ -103,7 +105,7 @@ where
                         "ScriptCall".to_string(),
                         abi.name().to_camel_case(),
                     ],
-                    crate::common::prepare_doc_string(abi.doc()),
+                    common::prepare_doc_string(abi.doc()),
                 )
             })
             .collect();
@@ -228,7 +230,7 @@ pub fn decode(script: &Script) -> Option<ScriptCall> {{
     }
 
     fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
-        self.output_comment(0, &crate::common::prepare_doc_string(abi.doc()))?;
+        self.output_comment(0, &common::prepare_doc_string(abi.doc()))?;
         write!(
             self.out,
             "pub fn encode_{}_script({}) -> Script {{",
@@ -306,7 +308,7 @@ Script {{
                 self.out,
                 "{} : decode_{}_argument(script.args{}.get({})?.clone())?,",
                 arg.name(),
-                mangle_type(arg.type_tag()),
+                common::mangle_type(arg.type_tag()),
                 if self.local_types { "()" } else { "" },
                 index,
             )?;
@@ -345,13 +347,7 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
     }
 
     fn output_decoding_helpers(&mut self, abis: &[ScriptABI]) -> Result<()> {
-        let mut required_types = BTreeSet::new();
-        for abi in abis {
-            for arg in abi.args() {
-                let type_tag = arg.type_tag();
-                required_types.insert(type_tag);
-            }
-        }
+        let required_types = common::get_required_decoding_helper_types(abis);
         for required_type in required_types {
             self.output_decoding_helper(required_type)?;
         }
@@ -368,9 +364,9 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
             Address => ("Address", "Some(value)".to_string()),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => ("U8Vector", "Some(value)".to_string()),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         };
         writeln!(
             self.out,
@@ -382,7 +378,7 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
     }}
 }}
 "#,
-            mangle_type(type_tag),
+            common::mangle_type(type_tag),
             Self::quote_type(type_tag, self.local_types),
             constructor,
             expr,
@@ -453,10 +449,10 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
                         "Bytes".into()
                     }
                 }
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
 
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 
@@ -470,10 +466,10 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
             Address => format!("TransactionArgument::Address({})", name),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => format!("TransactionArgument::U8Vector({})", name),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
 
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 }

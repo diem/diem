@@ -5,7 +5,7 @@ use heck::CamelCase;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_reflection::{ContainerFormat, Format, Named, VariantFormat};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Useful error message.
 pub(crate) fn type_not_allowed(type_tag: &TypeTag) -> ! {
@@ -104,4 +104,15 @@ pub(crate) fn get_external_definitions(libra_types: &str) -> serde_generate::Ext
             )
         })
         .collect()
+}
+
+pub(crate) fn get_required_decoding_helper_types(abis: &[ScriptABI]) -> BTreeSet<&TypeTag> {
+    let mut required_types = BTreeSet::new();
+    for abi in abis {
+        for arg in abi.args() {
+            let type_tag = arg.type_tag();
+            required_types.insert(type_tag);
+        }
+    }
+    required_types
 }

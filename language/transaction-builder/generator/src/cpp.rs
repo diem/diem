@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::common::type_not_allowed;
+use crate::common;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde_generate::indent::{IndentConfig, IndentedWriter};
@@ -221,9 +221,9 @@ using namespace libra_types;
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "std::vector<uint8_t>".into(),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 
@@ -238,10 +238,10 @@ using namespace libra_types;
             Address => format!("{{TransactionArgument::Address {{std::move({})}}}}", name),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => format!("{{TransactionArgument::U8Vector {{std::move({})}}}}", name),
-                _ => type_not_allowed(type_tag),
+                _ => common::type_not_allowed(type_tag),
             },
 
-            Struct(_) | Signer => type_not_allowed(type_tag),
+            Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
 }
