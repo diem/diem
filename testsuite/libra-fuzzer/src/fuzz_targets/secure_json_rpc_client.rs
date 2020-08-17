@@ -4,8 +4,9 @@
 use crate::FuzzTargetImpl;
 use libra_proptest_helpers::ValueGenerator;
 use libra_secure_json_rpc::fuzzing::{
-    fuzz_account_state_response, fuzz_submit_transaction_response, generate_account_state_corpus,
-    generate_submit_transaction_corpus,
+    fuzz_account_state_response, fuzz_submit_transaction_response,
+    fuzz_transaction_status_response, generate_account_state_corpus,
+    generate_submit_transaction_corpus, generate_transaction_status_corpus,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -57,10 +58,10 @@ impl FuzzTargetImpl for SecureJsonRpcGetAccountTransaction {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(generate_submit_transaction_corpus())
+        Some(generate_transaction_status_corpus())
     }
 
     fn fuzz(&self, data: &[u8]) {
-        fuzz_submit_transaction_response(data);
+        fuzz_transaction_status_response(data);
     }
 }
