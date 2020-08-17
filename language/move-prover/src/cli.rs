@@ -541,7 +541,19 @@ impl Options {
             add(&[&format!("-proverOpt:PROVER_PATH={}", &self.backend.z3_exe)]);
         }
         if self.backend.use_array_theory {
-            add(&["-useArrayTheory"]);
+            add(&[
+                "-useArrayTheory",
+                "/proverOpt:O:smt.array.extensional=false",
+            ]);
+        } else {
+            add(&[&format!(
+                "-proverOpt:O:smt.QI.EAGER_THRESHOLD={}",
+                self.backend.eager_threshold
+            )]);
+            add(&[&format!(
+                "-proverOpt:O:smt.QI.LAZY_THRESHOLD={}",
+                self.backend.lazy_threshold
+            )]);
         }
         add(&[&format!(
             "-vcsCores:{}",
@@ -552,14 +564,6 @@ impl Options {
             } else {
                 self.backend.proc_cores
             }
-        )]);
-        add(&[&format!(
-            "-proverOpt:O:smt.QI.EAGER_THRESHOLD={}",
-            self.backend.eager_threshold
-        )]);
-        add(&[&format!(
-            "-proverOpt:O:smt.QI.LAZY_THRESHOLD={}",
-            self.backend.lazy_threshold
         )]);
         // TODO: see what we can make out of these flags.
         //add(&["-proverOpt:O:smt.QI.PROFILE=true"]);
