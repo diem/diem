@@ -106,7 +106,7 @@ jobs:
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           cmd=""
           if [ $TEST_COMPAT -eq 1 ]; then
-            cmd="./scripts/cti --tag ${PREV_TAG} --cluster-test-tag ${TEST_TAG} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${TEST_TAG} -E DISABLE_FN_UPGRADE=1 --report report.json --suite land_blocking_compat"
+            cmd="./scripts/cti --tag ${PREV_TAG} --cluster-test-tag ${TEST_TAG} -E RUST_LOG=debug -E BATCH_SIZE=15 -E UPDATE_TO_TAG=${TEST_TAG} --report report.json --suite land_blocking_compat"
           else
             cmd="./scripts/cti --tag ${TEST_TAG} -E RUST_LOG=debug --report report.json --suite land_blocking"
           fi
