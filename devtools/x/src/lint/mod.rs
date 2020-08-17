@@ -30,6 +30,7 @@ pub fn run(args: Args, xctx: XContext) -> crate::Result<()> {
         &guppy::EnforcedAttributes::new(&workspace_config.enforced_attributes),
         &guppy::CrateNamesPaths,
         &guppy::IrrelevantBuildDeps,
+        &guppy::OverlayFeatures::new(&workspace_config.overlay),
         &guppy::WorkspaceHack,
         &workspace_classify::DefaultOrTestOnly::new(&workspace_config.test_only),
     ];

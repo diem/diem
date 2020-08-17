@@ -52,6 +52,9 @@ lazy_static = "use once_cell::sync::Lazy instead"
 criterion = "criterion is only for benchmarks"
 proptest = "proptest is only for testing and fuzzing"
 
+[workspace.overlay]
+features = ["fuzzing"]
+
 # This is a list of test-only members. These are workspace members that do not form part of the main
 # Libra production codebase, and are only used to verify correctness and/or performance.
 #
