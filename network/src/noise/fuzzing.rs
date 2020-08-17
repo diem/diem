@@ -172,7 +172,7 @@ pub fn fuzz_post_handshake(data: &[u8]) {
     fake_socket.set_trailing();
 
     // setup a NoiseStream with a dummy state
-    let noise_session = NoiseSession::new_for_fuzzing();
+    let noise_session = NoiseSession::new_for_testing();
     let mut peer = NoiseStream::new(fake_socket, noise_session);
 
     // read fuzz data

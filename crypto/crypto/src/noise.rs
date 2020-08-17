@@ -622,7 +622,7 @@ impl NoiseSession {
 
     /// create a dummy session with 0 keys
     #[cfg(any(test, feature = "fuzzing"))]
-    pub fn new_for_fuzzing() -> Self {
+    pub fn new_for_testing() -> Self {
         Self::new(
             vec![0u8; 32],
             vec![0u8; 32],
