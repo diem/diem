@@ -312,8 +312,6 @@ impl SafetyRules {
         self.verify_last_vote_round(proposed_block.block_data())?;
 
         let vote_data = self.extension_check(vote_proposal)?;
-        self.persistent_storage
-            .set_last_voted_round(proposed_block.round())?;
 
         let validator_signer = self.signer()?;
         let vote = Vote::new(
