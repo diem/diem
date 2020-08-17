@@ -28,7 +28,7 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
 
 RUN apt-get update && \
-    apt-get -y install socat awscli/bullseye && \
+    apt-get -y install socat python3-botocore/bullseye awscli/bullseye && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/*
 
