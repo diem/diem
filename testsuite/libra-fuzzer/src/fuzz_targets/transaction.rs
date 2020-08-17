@@ -1,13 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::FuzzTargetImpl;
+use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use language_e2e_tests::account_universe::{
-    all_transactions_strategy, log_balance_strategy, run_and_assert_universe, AccountUniverseGen,
+    all_transactions_strategy, log_balance_strategy, run_and_assert_universe, AUTransactionGen,
+    AccountUniverseGen,
 };
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::transaction::SignedTransaction;
-use proptest::{collection::vec, prelude::*, test_runner};
+use proptest::{collection::vec, prelude::*};
 
 #[derive(Clone, Debug, Default)]
 pub struct LanguageTransactionExecution;
@@ -17,21 +18,22 @@ impl FuzzTargetImpl for LanguageTransactionExecution {
         "Language execute randomly generated transactions"
     }
 
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(run_and_assert_universe_input()))
+    }
+
     fn fuzz(&self, data: &[u8]) {
-        let passthrough_rng =
-            test_runner::TestRng::from_seed(test_runner::RngAlgorithm::PassThrough, &data);
-
-        let mut generator = ValueGenerator::new_with_rng(passthrough_rng);
-        let txn_strategy = vec(all_transactions_strategy(1, 1_000_000), 1..40);
-
-        let txns = generator.generate(txn_strategy);
-
-        let universe_strategy =
-            AccountUniverseGen::strategy(2..20, log_balance_strategy(10_000_000));
-
-        let universe = generator.generate(universe_strategy);
-
+        let (universe, txns) = fuzz_data_to_value(data, run_and_assert_universe_input());
         run_and_assert_universe(universe, txns).unwrap();
+    }
+}
+
+prop_compose! {
+    fn run_and_assert_universe_input()(
+        universe in AccountUniverseGen::strategy(2..20, log_balance_strategy(10_000_000)),
+        txns in vec(all_transactions_strategy(1, 1_000_000), 1..40)
+    ) -> (AccountUniverseGen, Vec<impl AUTransactionGen + Clone>) {
+        (universe, txns)
     }
 }
 

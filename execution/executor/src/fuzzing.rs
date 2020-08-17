@@ -21,40 +21,16 @@ use libra_types::{
     vm_status::VMStatus,
 };
 use libra_vm::VMExecutor;
-use proptest::{
-    arbitrary::Arbitrary,
-    strategy::{Strategy, ValueTree},
-    test_runner::{self, TestRunner},
-};
 use storage_interface::{DbReader, DbReaderWriter, DbWriter, Order, StartupInfo, TreeState};
 
-pub fn fuzz(data: &[u8]) {
+pub fn fuzz(
+    txn_list_with_proof: TransactionListWithProof,
+    verified_target_li: LedgerInfoWithSignatures,
+) {
     // setup fake db
     let fake_db = FakeDb {};
     let db_reader_writer = DbReaderWriter::new(fake_db);
     let mut executor = Executor::<FakeVM>::new(db_reader_writer);
-
-    // construct arguments
-    let passthrough_rng =
-        test_runner::TestRng::from_seed(test_runner::RngAlgorithm::PassThrough, data);
-    let config = test_runner::Config::default();
-    let mut runner = TestRunner::new_with_rng(config, passthrough_rng);
-
-    // txn_list_with_proof
-    let strategy = TransactionListWithProof::arbitrary();
-    let strategy_tree = match strategy.new_tree(&mut runner) {
-        Ok(x) => x,
-        Err(_) => return,
-    };
-    let txn_list_with_proof = strategy_tree.current();
-
-    // verified_target_li
-    let strategy = LedgerInfoWithSignatures::arbitrary();
-    let strategy_tree = match strategy.new_tree(&mut runner) {
-        Ok(x) => x,
-        Err(_) => return,
-    };
-    let verified_target_li = strategy_tree.current();
 
     //
     let _events = executor.execute_and_commit_chunk(txn_list_with_proof, verified_target_li, None);

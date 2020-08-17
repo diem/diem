@@ -33,7 +33,8 @@ pub fn mempool_incoming_transactions_strategy(
 
 /// Test that takes in fuzzer-generated inputs to mempool's `process_incoming_transactions_impl` endpoint
 pub fn test_mempool_process_incoming_transactions_impl(
-    (txns, timeline_state): (Vec<SignedTransaction>, TimelineState),
+    txns: Vec<SignedTransaction>,
+    timeline_state: TimelineState,
 ) {
     // set up mock Shared Mempool
     let config = NodeConfig::default();
@@ -56,7 +57,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_mempool_process_incoming_transactions(input in mempool_incoming_transactions_strategy()) {
-        test_mempool_process_incoming_transactions_impl(input);
+    fn test_mempool_process_incoming_transactions((txns, timeline_state) in mempool_incoming_transactions_strategy()) {
+        test_mempool_process_incoming_transactions_impl(txns, timeline_state);
     }
 }
