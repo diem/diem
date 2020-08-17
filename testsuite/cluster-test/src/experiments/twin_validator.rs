@@ -67,6 +67,7 @@ impl Experiment for TwinValidators {
         let buffer = Duration::from_secs(60);
         let window = Duration::from_secs(240);
         let mut new_instances = vec![];
+        let mut origin_instances = vec![];
         for inst in self.twin_validators.iter() {
             info!("Stopping origin validator {}", inst);
             inst.stop().await?;
@@ -97,6 +98,7 @@ impl Experiment for TwinValidators {
             info!("Twin node {} is up", new_inst);
             info!("Restarting origin validator {}", inst);
             inst.start().await?;
+            origin_instances.push(inst.clone());
             new_instances.push(new_inst.clone());
         }
         let instances = self.instances.clone();
@@ -113,9 +115,26 @@ impl Experiment for TwinValidators {
             "Link to dashboard : {}",
             context.prometheus.link_to_dashboard(start, end)
         );
+        info!("Stopping origin validators");
+        let futures: Vec<_> = origin_instances.iter().map(|ic| ic.stop()).collect();
+        try_join_all(futures).await?;
+        time::delay_for(Duration::from_secs(10)).await;
+        info!("Stopping twin validators");
         let futures: Vec<_> = new_instances.iter().map(|ic| ic.stop()).collect();
         try_join_all(futures).await?;
         time::delay_for(Duration::from_secs(10)).await;
+        info!("Restarting origin validators");
+        let futures: Vec<_> = origin_instances.iter().map(|ic| ic.start()).collect();
+        try_join_all(futures).await?;
+        time::delay_for(Duration::from_secs(10)).await;
+
+        for inst in origin_instances.iter() {
+            info!("Waiting for origin node to be up: {}", inst);
+            inst.wait_json_rpc(Instant::now() + Duration::from_secs(120))
+                .await?;
+            info!("Origin node {} is up", inst);
+        }
+
         context
             .report
             .report_txn_stats(self.to_string(), stats, window);

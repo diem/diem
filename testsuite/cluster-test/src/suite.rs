@@ -63,6 +63,15 @@ impl ExperimentSuite {
         Self { experiments }
     }
 
+    fn new_twin_suite(cluster: &Cluster) -> Self {
+        let mut experiments: Vec<Box<dyn Experiment>> = vec![];
+        experiments.push(Box::new(TwinValidatorsParams { pair: 1 }.build(cluster)));
+        experiments.push(Box::new(
+            CpuFlamegraphParams { duration_secs: 60 }.build(cluster),
+        ));
+        Self { experiments }
+    }
+
     fn new_perf_suite(cluster: &Cluster) -> Self {
         let mut experiments: Vec<Box<dyn Experiment>> = vec![];
         experiments.push(Box::new(
@@ -113,6 +122,7 @@ impl ExperimentSuite {
         match name {
             "perf" => Ok(Self::new_perf_suite(cluster)),
             "pre_release" => Ok(Self::new_pre_release(cluster)),
+            "twin" => Ok(Self::new_twin_suite(cluster)),
             "land_blocking" => Ok(Self::new_land_blocking_suite(cluster)),
             "land_blocking_compat" => Self::new_land_blocking_compat_suite(cluster),
             other => Err(format_err!("Unknown suite: {}", other)),
