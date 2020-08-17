@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.32"
 chrono = "0.4.13"
 hex = "0.4.2"
-proptest = { version = "0.10.0", optional = true }
+proptest = { version = "0.10.1", optional = true }
 rustyline = "6.2.0"
 rust_decimal = "1.7.0"
 num-traits = "0.2.12"
@@ -41,7 +41,7 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 compiler = { path = "../../language/compiler",  version = "0.1.0" }
 
 [dev-dependencies]
-proptest = "0.10.0"
+proptest = "0.10.1"
 
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 

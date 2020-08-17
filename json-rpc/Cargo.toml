@@ -19,7 +19,7 @@ serde = { version = "1.0.114", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.4"
 reqwest = { version = "0.10.7", features = ["blocking", "json"], default_features = false, optional = true }
-proptest = { version = "0.10.0", optional = true }
+proptest = { version = "0.10.1", optional = true }
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libradb = { path = "../storage/libradb", version = "0.1.0", optional = true }
@@ -39,7 +39,7 @@ network = { path = "../network", version = "0.1.0" }
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 
 [dev-dependencies]
-proptest = { version = "0.10.0" }
+proptest = { version = "0.10.1" }
 reqwest = { version = "0.10.7", features = ["blocking", "json"], default_features = false }
 rand = { version = "0.7.3" }
 

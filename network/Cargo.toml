@@ -17,7 +17,7 @@ futures-util = "0.3.5"
 hex = "0.4.2"
 once_cell = "1.4.0"
 pin-project = "0.4.23"
-proptest = { version = "0.10.0", default-features = true, optional = true }
+proptest = { version = "0.10.1", default-features = true, optional = true }
 rand = { version = "0.7.3", features = ["small_rng"] }
 rand_core = { version = "0.5.1", optional = true }
 serde = { version = "1.0.114", default-features = false }
@@ -50,7 +50,7 @@ libra-network-address = { path = "../network/network-address", version = "0.1.0"
 libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 memsocket = { path = "../network/memsocket", version = "0.1.0" }
 network-builder = {path = "../network/builder", version = "0.1.0"}
-proptest = { version = "0.10.0", default-features = true }
+proptest = { version = "0.10.1", default-features = true }
 rand_core = { version = "0.5.1" }
 serial_test = "0.4.0"
 socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.0" }
