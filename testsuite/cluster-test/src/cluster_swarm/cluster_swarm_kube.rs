@@ -8,7 +8,7 @@ use std::{collections::HashMap, env, sync::Arc};
 use anyhow::{bail, format_err, Result};
 use async_trait::async_trait;
 
-use futures::{future::try_join_all, lock::Mutex};
+use futures::{future::try_join_all, lock::Mutex, Future, TryFuture};
 use k8s_openapi::api::core::v1::{ConfigMap, Node, Pod, Service};
 use kube::{
     api::{Api, DeleteParams, PostParams},
@@ -35,6 +35,7 @@ use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use rusoto_sts::WebIdentityProvider;
 use std::{collections::HashSet, convert::TryFrom, process::Command};
+use tokio::sync::Semaphore;
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -323,7 +324,7 @@ impl ClusterSwarmKube {
         let pp = PostParams::default();
         let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let create_jobs_futures = jobs.iter().map(|job| job_api.create(&pp, job));
-        let job_names: Vec<String> = try_join_all(create_jobs_futures)
+        let job_names: Vec<String> = try_join_all_limit(create_jobs_futures.collect())
             .await?
             .iter()
             .map(|job| -> Result<String, anyhow::Error> {
@@ -343,7 +344,7 @@ impl ClusterSwarmKube {
         let wait_jobs_futures = job_names
             .iter()
             .map(|job_name| self.wait_job_completion(job_name, back_off_limit, false));
-        let wait_jobs_results = try_join_all(wait_jobs_futures).await?;
+        let wait_jobs_results = try_join_all_limit(wait_jobs_futures.collect()).await?;
         if wait_jobs_results.iter().any(|r| !r) {
             bail!("one of the jobs failed")
         }
@@ -696,7 +697,7 @@ impl ClusterSwarmKube {
         let delete_futures = pod_names
             .iter()
             .map(|pod_name| self.delete_resource::<Pod>(pod_name));
-        try_join_all(delete_futures).await?;
+        try_join_all_limit(delete_futures.collect()).await?;
         let service_api: Api<Service> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let service_names: Vec<String> = service_api
             .list(&ListParams {
@@ -717,7 +718,7 @@ impl ClusterSwarmKube {
         let delete_futures = service_names
             .iter()
             .map(|service_name| self.delete_resource::<Service>(service_name));
-        try_join_all(delete_futures).await?;
+        try_join_all_limit(delete_futures.collect()).await?;
         let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         let job_names: Vec<String> = job_api
             .list(&ListParams {
@@ -738,7 +739,7 @@ impl ClusterSwarmKube {
         let delete_futures = job_names
             .iter()
             .map(|job_name| self.delete_resource::<Job>(job_name));
-        try_join_all(delete_futures).await?;
+        try_join_all_limit(delete_futures.collect()).await?;
         Ok(())
     }
 
@@ -966,4 +967,19 @@ impl TryFrom<Node> for KubeNode {
             internal_ip,
         })
     }
+}
+
+async fn try_join_all_limit<O, E, F: Future<Output = std::result::Result<O, E>>>(
+    futures: Vec<F>,
+) -> std::result::Result<Vec<O>, E> {
+    let semaphore = Semaphore::new(32);
+    let futures = futures
+        .into_iter()
+        .map(|f| acquire_and_execute(&semaphore, f));
+    try_join_all(futures).await
+}
+
+async fn acquire_and_execute<F: TryFuture>(semaphore: &Semaphore, f: F) -> F::Output {
+    let _permit = semaphore.acquire().await;
+    f.await
 }
