@@ -130,7 +130,7 @@ impl VMStatus {
         }
     }
 
-    /// Returns the move abort code if the status is `MoveAbort`, and `None` otherwise
+    /// Returns the Move abort code if the status is `MoveAbort`, and `None` otherwise
     pub fn move_abort_code(&self) -> Option<u64> {
         match self {
             Self::MoveAbort(_, code) => Some(*code),

@@ -15,13 +15,13 @@ humans, not for the automated test infrastructure).
 
 `cargo test` will automatically detect all `.move` files under this directory and its sub-directories and let the Prover
 attempt to prove each function in the file. Unlike `cargo run`, `cargo test` can detect various directives
-in comments in the move source:
+in comments in the Move source:
 
 - The line `// flag: <flag>` provides a flag to the Prover (see `cargo run -- --help` for  available flags). For
   example, use  `// flag: --verify=public` to restrict verification to public functions (by default, tests use
   `--verify=all`, or `// flag: --boogie=-noVerify` to turn off Boogie verification.
 - You can also pass flags to test using the env variable `MVP_TEST_FLAGS`. This is a string like provided on
-  the command line to the move prover which can contain multiple flgs.
+  the command line to the Move prover which can contain multiple flgs.
 - The line `// no-boogie-test` instructs the test driver to not attempt to run boogie at all. This is to support
   negative tests where translation to boogie actually fails.
 

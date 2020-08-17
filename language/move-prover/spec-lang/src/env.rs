@@ -2149,7 +2149,7 @@ impl<'env> FunctionEnv<'env> {
             .get_function_source_map(self.data.def_idx)
         {
             if let Some((ident, _)) = fmap.get_parameter_or_local_name(idx as u64) {
-                // The move compiler produces temporay names of the form `<foo>%#<num>`.
+                // The Move compiler produces temporay names of the form `<foo>%#<num>`.
                 // Ignore those names and use the idx-based repr instead.
                 if !ident.contains("%#") {
                     return self.module_env.env.symbol_pool.make(ident.as_str());

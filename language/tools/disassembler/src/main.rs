@@ -87,7 +87,7 @@ fn main() {
     disassembler_options.print_basic_blocks = !args.skip_basic_blocks;
     disassembler_options.print_locals = !args.skip_locals;
 
-    // TODO: make source mapping work with the move source language
+    // TODO: make source mapping work with the Move source language
     let no_loc = Spanned::unsafe_no_loc(()).loc;
     let mut source_mapping = if args.is_script {
         let compiled_script = CompiledScript::deserialize(&bytecode_bytes)

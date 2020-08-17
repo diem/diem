@@ -1452,7 +1452,7 @@ fn unbound_names_spec_block_member(unbound: &mut BTreeSet<Name>, sp!(_, m_): &E:
                 .for_each(|e| unbound_names_exp(unbound, e));
         }
         // No unbound names
-        // And will error in the move prover
+        // And will error in the Move prover
         M::Function { .. }
         | M::Variable { .. }
         | M::Let { .. }

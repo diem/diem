@@ -54,7 +54,7 @@ pub fn run_spec_lang_compiler(
     let mut all_sources = targets;
     all_sources.extend(deps.clone());
     let mut env = GlobalEnv::new();
-    // First pass: compile move code.
+    // First pass: compile Move code.
     let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
     // Enter sources into env, remember file ids as
     for fname in files.keys().sorted() {
@@ -77,7 +77,7 @@ pub fn run_spec_lang_compiler(
                 let (_, eprog_or_errors) =
                     move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
                 let (eprog, comment_map) = eprog_or_errors.expect("no compilation errors");
-                // Add any documentation comments found by the move compiler to the env.
+                // Add any documentation comments found by the Move compiler to the env.
                 for (fname, documentation) in comment_map {
                     let file_id = env.get_file_id(fname).expect("file name defined");
                     env.add_documentation(file_id, documentation);

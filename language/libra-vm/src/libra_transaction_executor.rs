@@ -712,7 +712,7 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
     )
 }
 
-/// Convert the transaction arguments into move values.
+/// Convert the transaction arguments into Move values.
 fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
     args.iter()
         .map(|arg| match arg {

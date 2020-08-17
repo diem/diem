@@ -18,7 +18,7 @@ The generator is called from within the libra tree as such:
 
 ... where most commonly used flags are:
 
--  `-d=<path>`: search path for move dependencies. For move compilation.
+-  `-d=<path>`: search path for Move dependencies. For Move compilation.
 -  `--doc-path=<path>`: search path for already generated documentation of Move code; for cross-references.
 -  `--doc-spec-inline=true|false`: whether specs should be included together with function declarations or in
     a separate section at the end of the document. Default is true.

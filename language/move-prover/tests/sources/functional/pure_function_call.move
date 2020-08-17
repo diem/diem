@@ -21,7 +21,7 @@ module TestPureFun {
 
     public fun get_x(addr: address): u64 acquires T {
         assert(exists<T>(addr), 10);
-        assert(true, 0); // assertions are ignored when translating move funs to spec funs.
+        assert(true, 0); // assertions are ignored when translating Move funs to spec funs.
         *&borrow_global<T>(addr).x
     }
 

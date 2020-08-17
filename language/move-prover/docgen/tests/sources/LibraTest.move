@@ -366,7 +366,7 @@ module LibraTest {
         aborts_if !spec_is_currency<CoinType>();
         aborts_if spec_currency_info<CoinType>().preburn_value + coin.value > max_u64();
     }
-    // TODO change - move prover
+    // TODO change - Move prover
     spec schema PreburnEnsures<CoinType> {
         coin: Libra<CoinType>;
         preburn: Preburn<CoinType>;

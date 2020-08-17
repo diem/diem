@@ -20,7 +20,7 @@ use std::{
 //**************************************************************************************************
 
 #[derive(Debug, Clone)]
-/// A set of move modules and a Move transaction script
+/// A set of Move modules and a Move transaction script
 pub struct Program {
     /// The modules to publish
     pub modules: Vec<ModuleDefinition>,
@@ -46,7 +46,7 @@ pub enum ScriptOrModule {
 //**************************************************************************************************
 
 #[derive(Debug, Clone)]
-/// The move transaction script to be executed
+/// The Move transaction script to be executed
 pub struct Script {
     /// The dependencies of `main`, i.e. of the transaction script
     pub imports: Vec<ImportDefinition>,

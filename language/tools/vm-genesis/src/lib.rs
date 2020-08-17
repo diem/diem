@@ -167,7 +167,7 @@ pub fn encode_genesis_change_set(
     (ChangeSet::new(write_set, events), type_mapping)
 }
 
-/// Convert the transaction arguments into move values.
+/// Convert the transaction arguments into Move values.
 fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
     args.iter()
         .map(|arg| match arg {

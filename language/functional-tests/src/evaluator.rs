@@ -75,7 +75,7 @@ pub enum Command<'a> {
     BlockMetadata(BlockMetadata),
 }
 
-/// Indicates one step in the pipeline the given move module/program goes through.
+/// Indicates one step in the pipeline the given Move module/program goes through.
 //  Ord is derived as we need to be able to determine if one stage is before another.
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Stage {

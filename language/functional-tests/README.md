@@ -13,7 +13,7 @@ the tests with `foo` in the name.
 ## Adding a new test
 
 To add a new test, simply create a new .mvir file in `tests/testsuite`.
-The test harness will recursively search for all move ir sources in
+The test harness will recursively search for all Move IR sources in
 the directory and register each of them as a test case.
 
 ## Checking the test output using directives

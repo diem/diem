@@ -2,7 +2,7 @@ module ApprovalGroup {
     import 0x1.Signature;
 
     resource T {
-        // we do not have collection support in move now, so illustrate
+        // we do not have collection support in Move now, so illustrate
         // using 2 out-of 3
 
         // for simplicity just use the plain public key here. We could
@@ -190,7 +190,7 @@ module ColdWallet {
         let transaction_bytes: vector<u8>;
 
         // TODO: consider moving into resource
-        // TODO: move doesn't support string now. As a workaround,
+        // TODO: Move doesn't support string now. As a workaround,
         // TODO: the prefix is the hex encoding of "coldwallet.transaction"
         constant = h"636F6C6477616C6C65742E7472616E73616374696F6E";
         payer_bytes = LCS.to_bytes<address>(&payer);

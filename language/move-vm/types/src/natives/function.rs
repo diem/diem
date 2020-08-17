@@ -3,7 +3,7 @@
 
 //! Native Function Support
 //!
-//! All move native functions have the following signature:
+//! All Move native functions have the following signature:
 //!
 //! `pub fn native_function(
 //!     context: &mut impl NativeContext,

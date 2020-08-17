@@ -282,7 +282,7 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     res
 }
 
-/// Calculates transitive dependencies of the given move sources.
+/// Calculates transitive dependencies of the given Move sources.
 fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<Vec<String>> {
     let file_map = calculate_file_map(input_deps)?;
     let mut deps = vec![];

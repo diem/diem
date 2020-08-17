@@ -34,7 +34,7 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
         VMStatus::MoveAbort(location, code) => {
             if location != known_locations::account_module_abort() {
                 crit!(
-                    "[libra_vm] Unexpected prologue move abort: {:?}::{:?}",
+                    "[libra_vm] Unexpected prologue Move abort: {:?}::{:?}",
                     location,
                     code
                 );
@@ -59,7 +59,7 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
                 EMODULE_NOT_ALLOWED => StatusCode::INVALID_MODULE_PUBLISHER,
                 code => {
                     crit!(
-                        "[libra_vm] Unexpected prologue move abort: {:?}::{:?}",
+                        "[libra_vm] Unexpected prologue Move abort: {:?}::{:?}",
                         location,
                         code
                     );
@@ -75,7 +75,7 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
     }
 }
 
-/// Checks for only move aborts or successful execution.
+/// Checks for only Move aborts or successful execution.
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
 pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
@@ -84,7 +84,7 @@ pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
         | VMStatus::MoveAbort(location, code @ EINSUFFICIENT_BALANCE) => {
             if location != known_locations::account_module_abort() {
                 crit!(
-                    "[libra_vm] Unexpected success epilogue move abort: {:?}::{:?}",
+                    "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?}",
                     location,
                     code
                 );
@@ -102,7 +102,7 @@ pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
     }
 }
 
-/// Converts move aborts or execution failures to `REJECTED_WRITE_SET`
+/// Converts Move aborts or execution failures to `REJECTED_WRITE_SET`
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
 pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
@@ -145,7 +145,7 @@ pub fn expect_only_successful_execution<'a>(
 
             status => {
                 crit!(
-                    "[libra_vm] Unexpected error from known move function, '{}'. Error: {:?}",
+                    "[libra_vm] Unexpected error from known Move function, '{}'. Error: {:?}",
                     function_name,
                     status
                 );

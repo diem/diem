@@ -38,7 +38,7 @@
 //! For each group, we find the earliest place in the current entry where any of the
 //! directives matches.
 //!     - If the matched directive is negative, abort and report error.
-//!     - If the matched direcrive is positive, move on to the next group and start a
+//!     - If the matched directive is positive, move on to the next group and start a
 //!       new match right after the last matched location.
 //!     - If no match is found, retry the current group with the next entry in the log.
 //!
