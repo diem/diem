@@ -2606,9 +2606,8 @@ impl Value {
         blob: &[u8],
         kind_info: &MoveKindInfo,
         layout: &MoveTypeLayout,
-    ) -> PartialVMResult<Value> {
-        lcs::from_bytes_seed(SeedWrapper { kind_info, layout }, blob)
-            .map_err(|e| PartialVMError::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+    ) -> Option<Value> {
+        lcs::from_bytes_seed(SeedWrapper { kind_info, layout }, blob).ok()
     }
 
     pub fn simple_serialize(&self, layout: &MoveTypeLayout) -> Option<Vec<u8>> {
@@ -2626,7 +2625,7 @@ impl Struct {
         is_resource: bool,
         field_kinds: &[MoveKindInfo],
         layout: &MoveStructLayout,
-    ) -> PartialVMResult<Struct> {
+    ) -> Option<Struct> {
         lcs::from_bytes_seed(
             SeedWrapper {
                 kind_info: (MoveKind::from_bool(is_resource), field_kinds),
@@ -2634,7 +2633,7 @@ impl Struct {
             },
             blob,
         )
-        .map_err(|e| PartialVMError::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+        .ok()
     }
 
     pub fn simple_serialize(&self, layout: &MoveStructLayout) -> Option<Vec<u8>> {
@@ -2957,7 +2956,7 @@ impl Value {
 
     pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
         let (kind_info, layout) = Self::constant_sig_token_to_layout(&constant.type_)?;
-        Value::simple_deserialize(&constant.data, &kind_info, &layout).ok()
+        Value::simple_deserialize(&constant.data, &kind_info, &layout)
     }
 }
 

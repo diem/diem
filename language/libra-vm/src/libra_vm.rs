@@ -357,8 +357,8 @@ impl LibraVMImpl {
         change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
     ) -> Result<(), VMStatus> {
-        let change_set_bytes =
-            lcs::to_bytes(change_set).map_err(|_| VMStatus::Error(StatusCode::INVALID_DATA))?;
+        let change_set_bytes = lcs::to_bytes(change_set)
+            .map_err(|_| VMStatus::Error(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         session.execute_function(
