@@ -430,11 +430,12 @@ impl EpochManager {
             ConsensusMsg::EpochChangeProof(proof) => {
                 let msg_epoch = proof.epoch()?;
                 if msg_epoch == self.epoch() {
-                    self.start_new_epoch(*proof).await?;
+                    monitor!("process_epoch_proof", self.start_new_epoch(*proof).await?);
                 } else {
-                    monitor!(
-                        "process_epoch_change_proof",
-                        self.process_different_epoch(msg_epoch, peer_id).await?
+                    bail!(
+                        "[EpochManager] Unexpected epoch proof from epoch {}, local epoch {}",
+                        msg_epoch,
+                        self.epoch()
                     );
                 }
             }
