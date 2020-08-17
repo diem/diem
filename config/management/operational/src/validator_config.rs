@@ -24,9 +24,17 @@ pub struct SetValidatorConfig {
     json_server: Option<String>,
     #[structopt(flatten)]
     validator_config: libra_management::validator_config::ValidatorConfig,
-    #[structopt(long, help = "Validator Network Address")]
+    #[structopt(
+        long,
+        required_unless = "fullnode-address",
+        help = "Validator Network Address"
+    )]
     validator_address: Option<NetworkAddress>,
-    #[structopt(long, help = "Full Node Network Address")]
+    #[structopt(
+        long,
+        required_unless = "validator-address",
+        help = "Full Node Network Address"
+    )]
     fullnode_address: Option<NetworkAddress>,
 }
 
