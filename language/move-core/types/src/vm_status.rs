@@ -576,7 +576,6 @@ pub enum StatusCode {
     // invariants takes place.
     // Invariant Violation Errors: 2000-2999
     UNKNOWN_INVARIANT_VIOLATION_ERROR = 2000,
-    OUT_OF_BOUNDS_INDEX = 2001,
     EMPTY_VALUE_STACK = 2003,
     PC_OVERFLOW = 2005,
     VERIFICATION_ERROR = 2006,

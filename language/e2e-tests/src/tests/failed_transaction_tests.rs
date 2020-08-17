@@ -46,9 +46,9 @@ fn failed_transaction_cleanup_test() {
         Ok(KeptVMStatus::VerificationError)
     );
 
-    // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
+    // Invariant violations should be discarded and not charged.
     let out2 = libra_vm.failed_transaction_cleanup(
-        VMStatus::Error(StatusCode::OUT_OF_BOUNDS_INDEX),
+        VMStatus::Error(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR),
         &gas_schedule,
         gas_left,
         &txn_data,
@@ -58,7 +58,10 @@ fn failed_transaction_cleanup_test() {
     assert!(out2.write_set().is_empty());
     assert!(out2.gas_used() == 0);
     assert!(out2.status().is_discarded());
-    assert_eq!(out2.status().status(), Err(StatusCode::OUT_OF_BOUNDS_INDEX));
+    assert_eq!(
+        out2.status().status(),
+        Err(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+    );
 }
 
 #[test]
