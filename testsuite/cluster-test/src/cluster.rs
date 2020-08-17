@@ -9,7 +9,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
 };
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use rand::prelude::*;
 use reqwest::Client;
 use std::convert::TryInto;
@@ -23,10 +23,15 @@ pub struct Cluster {
     vault_instances: Vec<Instance>,
     mint_key_pair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey>,
     waypoint: Option<Waypoint>,
+    pub chain_id: ChainId,
 }
 
 impl Cluster {
-    pub fn from_host_port(peers: Vec<(String, u32, Option<u32>)>, mint_file: &str) -> Self {
+    pub fn from_host_port(
+        peers: Vec<(String, u32, Option<u32>)>,
+        mint_file: &str,
+        chain_id: ChainId,
+    ) -> Self {
         let http_client = Client::new();
         let instances: Vec<Instance> = peers
             .into_iter()
@@ -49,6 +54,7 @@ impl Cluster {
             vault_instances: vec![],
             mint_key_pair,
             waypoint: None,
+            chain_id,
         }
     }
 
@@ -88,6 +94,7 @@ impl Cluster {
             vault_instances,
             mint_key_pair,
             waypoint,
+            chain_id: ChainId::test(),
         }
     }
 
@@ -208,6 +215,7 @@ impl Cluster {
             vault_instances: vec![],
             mint_key_pair: self.mint_key_pair.clone(),
             waypoint: self.waypoint,
+            chain_id: ChainId::test(),
         }
     }
 
@@ -219,6 +227,7 @@ impl Cluster {
             vault_instances: vec![],
             mint_key_pair: self.mint_key_pair.clone(),
             waypoint: self.waypoint,
+            chain_id: ChainId::test(),
         }
     }
 

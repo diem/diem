@@ -8,6 +8,7 @@ use std::{
 };
 
 use libra_logger::{info, warn};
+use libra_types::chain_id::ChainId;
 use reqwest::Url;
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
@@ -83,6 +84,8 @@ struct Args {
     burst: bool,
     #[structopt(long, default_value = "mint.key")]
     mint_file: String,
+    #[structopt(long, default_value = "TESTING")]
+    chain_id: ChainId,
     #[structopt(
         long,
         help = "Time to run --emit-tx for in seconds",
@@ -356,7 +359,7 @@ impl BasicSwarmUtil {
             .map(|peer| parse_host_port(peer).expect("Failed to parse host_port"))
             .collect();
 
-        let cluster = Cluster::from_host_port(parsed_peers, &args.mint_file);
+        let cluster = Cluster::from_host_port(parsed_peers, &args.mint_file, args.chain_id);
         Self { cluster }
     }
 
