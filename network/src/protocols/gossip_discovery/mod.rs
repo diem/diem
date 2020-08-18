@@ -61,7 +61,6 @@ use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
     sync::Arc,
-    time::SystemTime,
 };
 
 pub mod builder;
@@ -454,8 +453,5 @@ fn get_unix_epoch() -> u64 {
     // TODO: Currently, SystemTime::now() in Rust is not guaranteed to use a monotonic clock.
     // At the moment, it's unclear how to do this in a platform-agnostic way. For Linux, we
     // could use something like the [timerfd trait](https://docs.rs/crate/timerfd/1.0.0).
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .expect("System clock reset to before unix epoch")
-        .as_millis() as u64
+    libra_time::duration_since_epoch().as_millis() as u64
 }

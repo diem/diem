@@ -375,9 +375,7 @@ fn create_transaction(
     public_key: Ed25519PublicKey,
     program: Script,
 ) -> Transaction {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap();
+    let now = libra_time::duration_since_epoch();
     let expiration_time = now.as_secs() + 3600;
 
     let raw_txn = RawTransaction::new_script(

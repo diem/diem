@@ -9,11 +9,11 @@ use crate::{
     instance,
     instance::Instance,
     tx_emitter::EmitJobRequest,
-    util::unix_timestamp_now,
 };
 use async_trait::async_trait;
 use futures::future::try_join_all;
 use libra_logger::info;
+use libra_time::duration_since_epoch;
 use rand::Rng;
 use std::{
     collections::HashSet,
@@ -109,7 +109,7 @@ impl Experiment for TwinValidators {
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
             .await?;
-        let end = unix_timestamp_now() - buffer;
+        let end = duration_since_epoch() - buffer;
         let start = end - window + 2 * buffer;
         info!(
             "Link to dashboard : {}",

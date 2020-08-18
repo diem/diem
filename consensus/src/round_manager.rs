@@ -15,7 +15,6 @@ use crate::{
     pending_votes::VoteReceptionResult,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
-    util::time_service::duration_since_epoch,
 };
 use anyhow::{bail, ensure, Context, Result};
 use consensus_types::{
@@ -31,6 +30,7 @@ use consensus_types::{
 };
 use inject_error::inject_error;
 use libra_logger::prelude::*;
+use libra_time::duration_since_epoch;
 use libra_trace::prelude::*;
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]

@@ -699,6 +699,7 @@ dependencies = [
  "libra-operational-tool 0.1.0",
  "libra-retrier 0.1.0",
  "libra-secure-storage 0.1.0",
+ "libra-time 0.1.0",
  "libra-trace 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -847,6 +848,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-temppath 0.1.0",
+ "libra-time 0.1.0",
  "libra-trace 0.1.0",
  "libra-types 0.1.0",
  "libra-vm 0.1.0",
@@ -882,6 +884,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-crypto-derive 0.1.0",
+ "libra-time 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1476,6 +1479,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
+ "libra-time 0.1.0",
  "libra-types 0.1.0",
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -2778,6 +2782,7 @@ dependencies = [
  "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-time 0.1.0",
  "libra-workspace-hack 0.1.0",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2834,6 +2839,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-time 0.1.0",
  "libra-trace 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -3057,6 +3063,10 @@ dependencies = [
 [[package]]
 name = "libra-secure-time"
 version = "0.1.0"
+dependencies = [
+ "libra-time 0.1.0",
+ "libra-workspace-hack 0.1.0",
+]
 
 [[package]]
 name = "libra-state-view"
@@ -3117,6 +3127,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-time"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack 0.1.0",
+]
+
+[[package]]
 name = "libra-trace"
 version = "0.1.0"
 dependencies = [
@@ -3166,6 +3183,7 @@ dependencies = [
  "libra-crypto-derive 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-time 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
@@ -3764,6 +3782,7 @@ dependencies = [
  "libra-metrics 0.1.0",
  "libra-network-address 0.1.0",
  "libra-proptest-helpers 0.1.0",
+ "libra-time 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "memsocket 0.1.0",
@@ -5020,6 +5039,7 @@ dependencies = [
  "libra-secure-push-metrics 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-temppath 0.1.0",
+ "libra-time 0.1.0",
  "libra-types 0.1.0",
  "libra-vault-client 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -5924,6 +5944,7 @@ dependencies = [
  "libra-secure-time 0.1.0",
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
+ "libra-time 0.1.0",
  "libra-trace 0.1.0",
  "libra-transaction-replay 0.1.0",
  "libra-types 0.1.0",

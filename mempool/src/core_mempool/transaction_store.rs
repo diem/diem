@@ -23,7 +23,7 @@ use libra_types::{
 use std::{
     collections::HashMap,
     ops::Bound,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime},
 };
 
 /// TransactionStore is in-memory storage for all transactions in mempool
@@ -373,9 +373,7 @@ impl TransactionStore {
         &mut self,
         metrics_cache: &TtlCache<(AccountAddress, u64), SystemTime>,
     ) {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("init timestamp failure");
+        let now = libra_time::duration_since_epoch();
 
         self.gc(now, true, metrics_cache);
     }

@@ -3,8 +3,9 @@
 
 #![forbid(unsafe_code)]
 
-use crate::{health::ValidatorEvent, util::unix_timestamp_now};
+use crate::health::ValidatorEvent;
 use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
+use libra_time::duration_since_epoch;
 use std::{
     sync::{
         atomic::{AtomicBool, AtomicI64, Ordering},
@@ -38,7 +39,7 @@ impl LogTail {
             .pending_messages
             .fetch_sub(events_count, Ordering::Relaxed);
         let pending = prev - events_count;
-        let now = unix_timestamp_now();
+        let now = duration_since_epoch();
         if let Some(last) = events.last() {
             let delay = now - last.received_timestamp;
             if delay > Duration::from_secs(1) {

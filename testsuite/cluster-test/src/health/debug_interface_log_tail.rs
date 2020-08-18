@@ -7,10 +7,10 @@ use crate::{
     cluster::Cluster,
     health::{log_tail::TraceTail, Commit, Event, LogTail, ValidatorEvent},
     instance::Instance,
-    util::unix_timestamp_now,
 };
 use debug_interface::AsyncNodeDebugClient;
 use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
+use libra_time::duration_since_epoch;
 use serde_json::{self, value as json};
 use std::{
     env,
@@ -118,7 +118,7 @@ impl DebugPortLogWorker {
         Some(ValidatorEvent {
             validator: self.instance.peer_name().clone(),
             timestamp: Duration::from_millis(event.timestamp as u64),
-            received_timestamp: unix_timestamp_now(),
+            received_timestamp: duration_since_epoch(),
             event: e,
         })
     }

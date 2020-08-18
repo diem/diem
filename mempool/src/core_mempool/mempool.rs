@@ -23,7 +23,7 @@ use libra_types::{
 use std::{
     cmp::max,
     collections::HashSet,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime},
 };
 
 pub struct Mempool {
@@ -140,10 +140,7 @@ impl Mempool {
             ));
         }
 
-        let expiration_time = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("init timestamp failure")
-            + self.system_transaction_timeout;
+        let expiration_time = libra_time::duration_since_epoch() + self.system_transaction_timeout;
         if timeline_state != TimelineState::NonQualified {
             self.metrics_cache
                 .insert((txn.sender(), txn.sequence_number()), SystemTime::now());

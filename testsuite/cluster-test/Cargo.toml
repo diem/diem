@@ -47,6 +47,7 @@ libra-management = { path = "../../config/management", version = "0.1.0", featur
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+libra-time = {path = "../../common/time", version = "0.1.0"}
 libra-trace = {path = "../../common/trace", version = "0.1.0"}
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

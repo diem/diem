@@ -1,10 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_time::duration_since_epoch;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value as json};
-use std::{collections::VecDeque, convert::TryInto, sync::Mutex, time::SystemTime};
+use std::{collections::VecDeque, convert::TryInto, sync::Mutex};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct JsonLogEntry {
@@ -36,9 +37,7 @@ static JSON_LOG_ENTRY_QUEUE: Lazy<Mutex<VecDeque<JsonLogEntry>>> =
 
 impl JsonLogEntry {
     pub fn new(name: &'static str, json: json::Value) -> Self {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("now > UNIX_EPOCH")
+        let timestamp = duration_since_epoch()
             .as_millis()
             .try_into()
             .expect("Unable to convert u128 into u64");

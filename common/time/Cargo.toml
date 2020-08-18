@@ -1,15 +1,13 @@
 [package]
-name = "libra-secure-time"
+name = "libra-time"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra libra-time"
 repository = "https://github.com/libra/libra"
-description = "A lightweight wrapper around time"
 homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-
-libra-time = { path = "../../common/time", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

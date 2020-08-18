@@ -160,6 +160,13 @@ status = 'workspace'
 features = []
 
 [[target-package]]
+name = 'libra-time'
+version = '0.1.0'
+workspace-path = 'common/time'
+status = 'workspace'
+features = []
+
+[[target-package]]
 name = 'libra-trace'
 version = '0.1.0'
 workspace-path = 'common/trace'

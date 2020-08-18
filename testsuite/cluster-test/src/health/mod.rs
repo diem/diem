@@ -9,7 +9,7 @@ mod fullnode_check;
 mod liveness_check;
 mod log_tail;
 
-use crate::{cluster::Cluster, util::unix_timestamp_now};
+use crate::cluster::Cluster;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 pub use commit_check::CommitHistoryHealthCheck;
@@ -22,7 +22,7 @@ use std::{
     collections::{HashMap, HashSet},
     env, fmt,
     iter::FromIterator,
-    time::{Duration, Instant, SystemTime},
+    time::{Duration, Instant},
 };
 use termion::color::*;
 
@@ -133,7 +133,7 @@ impl HealthCheckRunner {
             if self.debug {
                 messages.push(format!(
                     "{} {}, on_event time: {}ms, verify time: {}ms, events: {}",
-                    unix_timestamp_now().as_millis(),
+                    libra_time::duration_since_epoch().as_millis(),
                     health_check.name(),
                     (events_processed - start).as_millis(),
                     (verified - events_processed).as_millis(),
@@ -143,7 +143,11 @@ impl HealthCheckRunner {
         }
         for err in context.err_acc {
             node_health.insert(err.validator.clone(), false);
-            messages.push(format!("{} {:?}", unix_timestamp_now().as_millis(), err));
+            messages.push(format!(
+                "{} {:?}",
+                libra_time::duration_since_epoch().as_millis(),
+                err
+            ));
         }
 
         let mut failed = vec![];
@@ -222,9 +226,7 @@ pub struct HealthCheckError {
 
 impl HealthCheckContext {
     pub fn new() -> Self {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .expect("Now is behind UNIX_EPOCH");
+        let now = libra_time::duration_since_epoch();
         Self {
             now,
             err_acc: vec![],

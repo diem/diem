@@ -9,7 +9,7 @@ use std::{
         Arc,
     },
     thread::sleep,
-    time::{Duration, SystemTime},
+    time::Duration,
 };
 
 /// A generic service for providing time related operations (e.g., returning the current time and
@@ -35,10 +35,7 @@ impl RealTimeService {
 
 impl TimeService for RealTimeService {
     fn now(&self) -> u64 {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
+        libra_time::duration_since_epoch().as_secs()
     }
 
     fn sleep(&self, seconds: u64) {

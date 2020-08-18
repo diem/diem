@@ -8,7 +8,7 @@ use crate::{
         PersistentLivenessStorage, RecoveryData, RootInfo, RootMetadata,
     },
     state_replication::StateComputer,
-    util::time_service::{duration_since_epoch, TimeService},
+    util::time_service::TimeService,
 };
 use anyhow::{bail, ensure, format_err, Context};
 use consensus_types::{
@@ -18,6 +18,7 @@ use consensus_types::{
 use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_time::duration_since_epoch;
 use libra_trace::prelude::*;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use std::{

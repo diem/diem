@@ -18,6 +18,7 @@ use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
 use libra_logger::sl_debug;
+use libra_time::duration_since_epoch;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{
@@ -26,7 +27,6 @@ use std::{
     fmt::Debug,
     io,
     sync::{Arc, RwLock},
-    time,
 };
 
 /// In a mutually authenticated network, a client message is accompanied with a timestamp.
@@ -50,10 +50,7 @@ impl AntiReplayTimestamps {
 
     /// obtain the current timestamp
     pub fn now() -> [u8; Self::TIMESTAMP_SIZE] {
-        let now: u64 = time::SystemTime::now()
-            .duration_since(time::UNIX_EPOCH)
-            .expect("system clock should work")
-            .as_millis() as u64; // (TIMESTAMP_SIZE)
+        let now: u64 = duration_since_epoch().as_millis() as u64; // (TIMESTAMP_SIZE)
 
         // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
         now.to_le_bytes()

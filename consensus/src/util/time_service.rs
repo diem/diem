@@ -3,11 +3,7 @@
 
 use futures::{Future, FutureExt, SinkExt};
 use libra_logger::prelude::*;
-use std::{
-    pin::Pin,
-    thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{pin::Pin, thread, time::Duration};
 
 use crate::counters;
 use tokio::{runtime::Handle, time::delay_for};
@@ -119,17 +115,10 @@ impl TimeService for ClockTimeService {
     }
 
     fn get_current_timestamp(&self) -> Duration {
-        duration_since_epoch()
+        libra_time::duration_since_epoch()
     }
 
     fn sleep(&self, t: Duration) {
         thread::sleep(t)
     }
-}
-
-/// Return the duration since the UNIX_EPOCH
-pub fn duration_since_epoch() -> Duration {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Timestamp generated is before the UNIX_EPOCH!")
 }

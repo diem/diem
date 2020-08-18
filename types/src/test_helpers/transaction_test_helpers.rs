@@ -9,7 +9,6 @@ use crate::{
     write_set::WriteSet,
 };
 use libra_crypto::{ed25519::*, traits::*};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const TEST_GAS_PRICE: u64 = 0;
@@ -24,11 +23,7 @@ pub fn get_test_signed_module_publishing_transaction(
     public_key: Ed25519PublicKey,
     module: Module,
 ) -> SignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10;
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10;
     let raw_txn = RawTransaction::new_module(
         sender,
         sequence_number,
@@ -137,11 +132,7 @@ pub fn get_test_signed_txn(
     public_key: Ed25519PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10; // 10 seconds from now.
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
     get_test_signed_transaction(
         sender,
         sequence_number,
@@ -162,11 +153,7 @@ pub fn get_test_unchecked_txn(
     public_key: Ed25519PublicKey,
     script: Option<Script>,
 ) -> SignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10; // 10 seconds from now.
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
     get_test_unchecked_transaction(
         sender,
         sequence_number,
@@ -187,11 +174,7 @@ pub fn get_test_txn_with_chain_id(
     public_key: Ed25519PublicKey,
     chain_id: ChainId,
 ) -> SignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10; // 10 seconds from now.
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
     get_test_unchecked_transaction_(
         sender,
         sequence_number,

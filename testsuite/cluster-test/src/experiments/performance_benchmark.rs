@@ -8,12 +8,13 @@ use crate::{
     instance::Instance,
     stats::PrometheusRangeView,
     tx_emitter::{EmitJobRequest, TxStats},
-    util::{human_readable_bytes_per_sec, unix_timestamp_now},
+    util::human_readable_bytes_per_sec,
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
+use libra_time::duration_since_epoch;
 use libra_trace::{
     trace::{random_node, trace_node},
     LibraTraceClient,
@@ -257,7 +258,7 @@ impl PerformanceBenchmark {
         window: Duration,
         stats: TxStats,
     ) -> Result<()> {
-        let end = unix_timestamp_now() - buffer;
+        let end = duration_since_epoch() - buffer;
         let start = end - window + 2 * buffer;
         info!(
             "Link to dashboard : {}",

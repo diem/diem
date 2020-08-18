@@ -18,6 +18,7 @@ use libra_crypto::{
     Uniform,
 };
 use libra_secure_storage::{InMemoryStorage, Storage};
+use libra_time::duration_since_epoch;
 use libra_types::{
     block_info::BlockInfo,
     epoch_change::EpochChangeProof,
@@ -29,10 +30,7 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
-use std::{
-    collections::BTreeMap,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::collections::BTreeMap;
 
 pub type Proof = AccumulatorExtensionProof<TransactionAccumulatorHasher>;
 
@@ -65,10 +63,7 @@ pub fn make_proposal_with_qc_and_proof(
         Block::new_proposal(
             payload,
             round,
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
+            duration_since_epoch().as_secs(),
             qc,
             validator_signer,
         ),

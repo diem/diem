@@ -23,6 +23,7 @@ members = [
     "common/stream-ratelimiter",
     "common/subscription-service",
     "common/temppath",
+    "common/time",
     "common/trace",
     "common/workspace-builder",
     "common/workspace-hack",
