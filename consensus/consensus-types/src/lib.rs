@@ -11,6 +11,7 @@ pub mod epoch_retrieval;
 pub mod executed_block;
 pub mod proposal_msg;
 pub mod quorum_cert;
+pub mod safety_data;
 pub mod sync_info;
 pub mod timeout;
 pub mod timeout_certificate;

@@ -54,7 +54,7 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
-use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
+use safety_rules::{PersistentSafetyStorage, SafetyRulesManager};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -332,11 +332,10 @@ fn vote_on_successful_proposal() {
         assert_eq!(vote_msg.vote().author(), node.signer.author());
         assert_eq!(vote_msg.vote().vote_data().proposed().id(), proposal_id);
         let consensus_state = node.round_manager.consensus_state();
-        let waypoint = consensus_state.waypoint();
-        assert_eq!(
-            consensus_state,
-            ConsensusState::new(1, 1, 0, waypoint, true)
-        );
+        assert_eq!(consensus_state.epoch(), 1);
+        assert_eq!(consensus_state.last_voted_round(), 1);
+        assert_eq!(consensus_state.preferred_round(), 0);
+        assert_eq!(consensus_state.in_validator_set(), true);
     });
 }
 
@@ -667,11 +666,10 @@ fn recover_on_restart() {
     // verify after restart we recover the data
     node = node.restart(&mut playground, runtime.handle().clone());
     let consensus_state = node.round_manager.consensus_state();
-    let waypoint = consensus_state.waypoint();
-    assert_eq!(
-        consensus_state,
-        ConsensusState::new(1, num_proposals, 0, waypoint, true)
-    );
+    assert_eq!(consensus_state.epoch(), 1);
+    assert_eq!(consensus_state.last_voted_round(), num_proposals);
+    assert_eq!(consensus_state.preferred_round(), 0);
+    assert_eq!(consensus_state.in_validator_set(), true);
     for (block, _) in data {
         assert_eq!(node.block_store.block_exists(block.id()), true);
     }

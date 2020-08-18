@@ -14,6 +14,7 @@ use consensus_types::{
     block_data::BlockData,
     common::Author,
     quorum_cert::QuorumCert,
+    safety_data::SafetyData,
     timeout::Timeout,
     vote::Vote,
     vote_data::VoteData,
@@ -203,9 +204,12 @@ impl SafetyRules {
 
     fn guarded_consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
-            self.persistent_storage.epoch()?,
-            self.persistent_storage.last_voted_round()?,
-            self.persistent_storage.preferred_round()?,
+            SafetyData::new(
+                self.persistent_storage.epoch()?,
+                self.persistent_storage.last_voted_round()?,
+                self.persistent_storage.preferred_round()?,
+                self.persistent_storage.last_vote()?,
+            ),
             self.persistent_storage.waypoint()?,
             self.signer().is_ok(),
         ))
