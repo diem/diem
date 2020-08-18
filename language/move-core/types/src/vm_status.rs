@@ -495,7 +495,6 @@ pub enum StatusCode {
     INVALID_MODULE_HANDLE = 1013,
     UNIMPLEMENTED_HANDLE = 1014,
     LOOKUP_FAILED = 1017,
-    TYPE_RESOLUTION_FAILURE = 1019,
     TYPE_MISMATCH = 1020,
     MISSING_DEPENDENCY = 1021,
     POP_RESOURCE_ERROR = 1023,
@@ -590,6 +589,8 @@ pub enum StatusCode {
     UNEXPECTED_DESERIALIZATION_ERROR = 2018,
     FAILED_TO_SERIALIZE_WRITE_SET_CHANGES = 2019,
     FAILED_TO_DESERIALIZE_RESOURCE = 2020,
+    // Failed to resolve type due to linking being broken after verification
+    TYPE_RESOLUTION_FAILURE = 2021,
 
     // Errors that can arise from binary decoding (deserialization)
     // Deserializtion Errors: 3000-3999
