@@ -19,7 +19,7 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-RUN ./docker/build-common.sh
+RUN ./docker/build-common.sh test
 
 ### Production Image ###
 FROM debian:buster AS pre-test

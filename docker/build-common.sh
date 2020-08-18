@@ -14,6 +14,9 @@ export CARGO=$(rustup which --toolchain $RUST_NIGHTLY cargo)
 export CARGOFLAGS=$(cat cargo-flags)
 export CARGO_PROFILE_RELEASE_LTO=thin # override lto setting to turn on thin-LTO for release builds
 
+# skip building non-release binaries to shave off time
+BUILD_TEST=$1
+
 # Build release binaries
 ${CARGO} ${CARGOFLAGS} build --release \
          -p libra-genesis-tool \
@@ -26,11 +29,13 @@ ${CARGO} ${CARGOFLAGS} build --release \
          -p backup-cli \
          "$@"
 
-# These non-release binaries are built separately to avoid feature unification issues
-${CARGO} ${CARGOFLAGS} build --release \
-         -p cluster-test \
-         -p cli \
-         "$@"
+if [ "$1" = "test" ]; then
+    # These non-release binaries are built separately to avoid feature unification issues
+    ${CARGO} ${CARGOFLAGS} build --release \
+            -p cluster-test \
+            -p cli \
+            "$@"
+fi
 
 rm -rf target/release/{build,deps,incremental}
 
