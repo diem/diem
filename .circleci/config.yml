@@ -35,6 +35,11 @@ executors:
       docker_layer_caching: true
       image: ubuntu-1604:202004-01
     resource_class: 2xlarge
+  docker-large-executor:
+    machine:
+      docker_layer_caching: false
+      image: ubuntu-1604:202004-01
+    resource_class: large
 commands:
   print_versions:
     description: Version Info
@@ -628,23 +633,25 @@ jobs:
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
 
   ######################################################################################################
-  # Test building docker ci base image if relevnat files have changed                                  #
+  # Building docker ci base image if relevant files have changed                                       #
   ######################################################################################################
   docker-ci-build:
-    executor: docker-executor
-    description: publish docker images
+    executor: docker-large-executor
+    parameters:
+      base-image:
+        type: string
+    description: build cimg/base (ubuntu) CI docker image.
     steps:
       - checkout
       - run:
-          name: Test building the ci base image in cimg/base:2020.01 (ubuntu)
+          name: Should build/test << parameters.base-image >> docker image file
           command: |
-
             #detect if any relevant files have changed requiring base docker file rebuilding.
             #this is specific for prs targeting master.   TODO: figure out target release branch.
             git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
             echo ".circleci/config.yml" >> /tmp/ci_docker_files
             echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
+            echo "docker/ci/<< parameters.base-image >>/Dockerfile" >> /tmp/ci_docker_files
             echo "rust-toolchain" >> /tmp/ci_docker_files
             echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
 
@@ -653,165 +660,20 @@ jobs:
               echo no relevant files have changed - exit
               circleci step halt
             fi
-
+      - run:
+          name: Build/test << parameters.base-image >> docker image file
+          command: |
             #otherwise we'll build the docker image.
-            export DOCKER_CONTENT_TRUST=0
-            docker build -f docker/ci/Dockerfile .
-
-  ######################################################################################################
-  # Test centos dev_setup.sh if relevnat files have changed                                            #
-  ######################################################################################################
-  dev_setup-test-centos:
-    executor: docker-executor
-    description: Test the dev_setup.sh in centos
-    steps:
-      - checkout
-      - run:
-          name: Test running the dev_setup.sh in centos:latest
-          command: |
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/centos/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed - exit
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
+            docker build -f docker/ci/<< parameters.base-image >>/Dockerfile -t libra/build_environment:<< parameters.base-image >>-latest .
+            if [[ -z "$DOCKERHUB_PASSWORD" ]]; then
+              echo "Do not attempt to push the image, lacks circleci context - exit"
               circleci step halt
             fi
-
-            #otherwise we'll build the docker image.
-            export DOCKER_CONTENT_TRUST=0
-            docker build -f docker/ci/centos/Dockerfile .
-
-  ######################################################################################################
-  # Test archlinux dev_setup.sh if relevnat files have changed                                         #
-  ######################################################################################################
-  dev_setup-test-arch:
-    executor: docker-executor
-    description: Test the dev_setup.sh in archlinux
-    steps:
-      - checkout
       - run:
-          name: Test running the dev_setup.sh in archlinux:latest
+          name: push libra/build_environment:<< parameters.base-image >>-latest image
           command: |
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/arch/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed - exit
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
-              circleci step halt
-            fi
-
-            #otherwise we'll build the docker image.
-            export DOCKER_CONTENT_TRUST=0
-            docker build -f docker/ci/arch/Dockerfile .
-
-  ######################################################################################################
-  # Test alpine dev_setup.sh if relevnat files have changed                                            #
-  ######################################################################################################
-  dev_setup-test-alpine:
-    executor: docker-executor
-    description: Test dev_setup.sh in alpine
-    steps:
-      - checkout
-      - run:
-          name: Test running the dev_setup.sh in alpine:latest.
-          command: |
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/alpine/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed - exit
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
-              circleci step halt
-            fi
-
-            #otherwise we'll build the docker image.
-            export DOCKER_CONTENT_TRUST=0
-            docker build -f docker/ci/alpine/Dockerfile .
-
-  dev-setup-changes:
-    executor: audit-executor
-    description: Determine if any of the docker builds targeting dev_setup.sh need built
-    steps:
-      - checkout
-      - run:
-          name: Determine if the dev_setup.sh testing jobs should run.
-          command: |
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/alpine/Dockerfile" >> /tmp/ci_docker_files
-            echo "docker/ci/arch/Dockerfile" >> /tmp/ci_docker_files
-            echo "docker/ci/centos/Dockerfile" >> /tmp/ci_docker_files
-            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed halt this build and mark it success, hopefully effects dependent jobs
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
-              circleci step halt
-            fi
-
-  ######################################################################################################
-  # Publish docker ci base image to docker hub                                                         #
-  ######################################################################################################
-  docker-ci-publish:
-    executor: docker-executor
-    description: publish docker images
-    steps:
-      - checkout
-      - setup_docker_signing
-      - run:
-          name: Build the ci base image to prevent errors in the nightly build.
-          command: |
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
-
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
-            echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/Dockerfile" >> /tmp/ci_docker_files
-            echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed halt this build and mark it success, hopefully effects dependent jobs
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
-              circleci step halt
-            fi
-            set -x
-            #building with content trust tends to break in circleci
-            export DOCKER_CONTENT_TRUST=0
-            docker build -f docker/ci/Dockerfile -t libra/build_environment:latest .
             #signs the pushed image
-            docker push --disable-content-trust=false libra/build_environment:latest
+            docker push --disable-content-trust=false libra/build_environment:<< parameters.base-image >>-latest
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
@@ -891,12 +753,6 @@ jobs:
     steps:
       - build_setup
       - install_code_coverage_deps
-      - run:
-          name: Sanity check
-          command: |
-            echo AWS_ACCESS_KEY_ID = ${AWS_ACCESS_KEY_ID: -3}
-            echo AWS_SECRET_ACCESS_KEY = ${AWS_SECRET_ACCESS_KEY: -3}
-            echo AWS_DEFAULT_REGION = ${AWS_DEFAULT_REGION: -3}
       - aws-cli/install
       - aws-cli/configure:
           aws-access-key-id: AWS_ACCESS_KEY_ID
@@ -1037,60 +893,43 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
-      #Todo: solid publishing mechanism.
-      #- docker-ci-publish:
-      #    context: docker
-      #    requires:
-      #      - dev-setup-changes
-      #    filters:
-      #      branches:
-      #        only:
-      #          - master
-      - dev-setup-changes:
-          filters:
-            branches:
-              ignore:
-                - auto
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      # These builds test the dev_setup.sh
       - docker-ci-build:
-          requires:
-            - dev-setup-changes
+          context: docker
+          base-image: circleci
+          filters:
+            branches:
+              only:
+                - master
+      - docker-ci-build:
+          base-image: circleci
           filters:
             branches:
               ignore:
-                - auto
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
-      - dev_setup-test-centos:
-          requires:
-            - dev-setup-changes
+      - docker-ci-build:
+          base-image: centos
           filters:
             branches:
               ignore:
-                - auto
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
-      - dev_setup-test-alpine:
-          requires:
-            - dev-setup-changes
+      - docker-ci-build:
+          #sccache fails to execute in alpine.
+          base-image: alpine
           filters:
             branches:
               ignore:
-                - auto
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
-      - dev_setup-test-arch:
-          requires:
-            - dev-setup-changes
+      - docker-ci-build:
+          base-image: arch
           filters:
             branches:
               ignore:
-                - auto
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master

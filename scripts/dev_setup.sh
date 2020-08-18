@@ -407,6 +407,7 @@ rustup component add clippy
 
 install_sccache
 install_grcov
+install_pkg lcov $PACKAGE_MANAGER
 
 if [[ $OPERATIONS == "true" ]]; then
   install_pkg yamllint $PACKAGE_MANAGER
