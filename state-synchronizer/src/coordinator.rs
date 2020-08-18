@@ -78,20 +78,31 @@ struct PendingLedgerInfos {
     // In-memory store of ledger infos that are pending commits
     // (k, v) - (LI version, LI)
     pending_li_queue: BTreeMap<Version, LedgerInfoWithSignatures>,
+    // max size limit on `pending_li_queue`, to prevent OOM
+    max_pending_li_limit: usize,
     // target li
     target_li: Option<LedgerInfoWithSignatures>,
 }
 
 impl PendingLedgerInfos {
-    fn new() -> Self {
+    fn new(max_pending_li_limit: usize) -> Self {
         Self {
             pending_li_queue: BTreeMap::new(),
+            max_pending_li_limit,
             target_li: None,
         }
     }
 
     /// Adds `new_li` to the queue of pending LI's
     fn add_li(&mut self, new_li: LedgerInfoWithSignatures) {
+        if self.pending_li_queue.len() >= self.max_pending_li_limit {
+            debug!(
+                "[state sync] pending LI store reached max capacity, failed to add LI {}",
+                new_li
+            );
+            return;
+        }
+
         // update pending_ledgers if new LI is ahead of target LI (in terms of version)
         let target_version = self
             .target_li
@@ -195,7 +206,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             client_events,
             state_sync_to_mempool_sender,
             local_state: initial_state,
-            pending_ledger_infos: PendingLedgerInfos::new(),
+            pending_ledger_infos: PendingLedgerInfos::new(config.max_pending_li_limit),
             config,
             role,
             waypoint,
