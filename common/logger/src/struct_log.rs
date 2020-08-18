@@ -95,7 +95,7 @@ impl StructuredLogEntry {
         let mut bytes = [0; 16];
         rng.fill_bytes(&mut bytes);
         ret.id = hex::encode(bytes);
-        ret.timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
+        ret.timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true);
         ret
     }
 
