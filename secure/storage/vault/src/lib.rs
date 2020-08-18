@@ -124,7 +124,7 @@ impl Client {
             .delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
         let resp = self.upgrade_request(request).call();
 
-        process_policy_delete_response(resp)
+        process_generic_response(resp)
     }
 
     pub fn list_policies(&self) -> Result<Vec<String>, Error> {
@@ -153,7 +153,7 @@ impl Client {
             .post(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
         let resp = self.upgrade_request(request).send_json(policy.try_into()?);
 
-        process_policy_set_response(resp)
+        process_generic_response(resp)
     }
 
     /// Creates a new token or identity for accessing Vault. The token will have access to anything
@@ -201,7 +201,7 @@ impl Client {
             .delete(&format!("{}/v1/secret/metadata/{}", self.host, secret));
         let resp = self.upgrade_request(request).call();
 
-        process_secret_delete_response(resp)
+        process_generic_response(resp)
     }
 
     /// Read a key/value pair from a given secret store.
@@ -233,18 +233,14 @@ impl Client {
             .upgrade_request(request)
             .send_json(json!({ "deletion_allowed": true }));
 
-        if !resp.ok() {
-            return Err(resp.into());
-        }
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
+        process_generic_response(resp)?;
 
         let request = self
             .agent
             .delete(&format!("{}/v1/transit/keys/{}", self.host, name));
         let resp = self.upgrade_request(request).call();
 
-        process_transit_delete_response(resp)
+        process_generic_response(resp)
     }
 
     pub fn export_ed25519_key(
@@ -300,7 +296,7 @@ impl Client {
             .post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name));
         let resp = self.upgrade_request(request).call();
 
-        process_transit_rotate_response(resp)
+        process_generic_response(resp)
     }
 
     pub fn sign_ed25519(
@@ -332,7 +328,7 @@ impl Client {
             .upgrade_request(request)
             .send_json(json!({ "data": { key: value } }));
 
-        process_secret_write_response(resp)
+        process_generic_response(resp)
     }
 
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
@@ -359,8 +355,9 @@ impl Client {
     }
 }
 
-/// Processes the response returned by a policy delete vault request.
-pub fn process_policy_delete_response(resp: Response) -> Result<(), Error> {
+/// Processes a generic response returned by a vault request. This function simply just checks
+/// that the response was not an error and calls response.into_string() to clear the ureq stream.
+pub fn process_generic_response(resp: Response) -> Result<(), Error> {
     if resp.ok() {
         // Explicitly clear buffer so the stream can be re-used.
         resp.into_string()?;
@@ -392,28 +389,6 @@ pub fn process_policy_read_response(resp: Response) -> Result<Policy, Error> {
     match resp.status() {
         200 => Ok(Policy::try_from(resp.into_json()?)?),
         _ => Err(resp.into()),
-    }
-}
-
-/// Processes the response returned by a policy set vault request.
-pub fn process_policy_set_response(resp: Response) -> Result<(), Error> {
-    if resp.ok() {
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
-        Ok(())
-    } else {
-        Err(resp.into())
-    }
-}
-
-/// Processes the response returned by a secret delete vault request.
-pub fn process_secret_delete_response(resp: Response) -> Result<(), Error> {
-    if resp.ok() {
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
-        Ok(())
-    } else {
-        Err(resp.into())
     }
 }
 
@@ -461,17 +436,6 @@ pub fn process_secret_read_response(
     }
 }
 
-/// Processes the response returned by a secret write vault request.
-pub fn process_secret_write_response(resp: Response) -> Result<(), Error> {
-    if resp.ok() {
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
-        Ok(())
-    } else {
-        Err(resp.into())
-    }
-}
-
 /// Processes the response returned by a token create vault request.
 pub fn process_token_create_response(resp: Response) -> Result<String, Error> {
     if resp.ok() {
@@ -506,17 +470,6 @@ pub fn process_transit_create_response(name: &str, resp: Response) -> Result<(),
             Err(Error::NotFound("transit/".into(), name.into()))
         }
         _ => Err(resp.into()),
-    }
-}
-
-/// Processes the response returned by a transit key delete vault request.
-pub fn process_transit_delete_response(resp: Response) -> Result<(), Error> {
-    if resp.ok() {
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
-        Ok(())
-    } else {
-        Err(resp.into())
     }
 }
 
@@ -596,17 +549,6 @@ pub fn process_transit_restore_response(resp: Response) -> Result<(), Error> {
             Ok(())
         }
         _ => Err(resp.into()),
-    }
-}
-
-/// Processes the response returned by a transit key rotate vault request.
-pub fn process_transit_rotate_response(resp: Response) -> Result<(), Error> {
-    if resp.ok() {
-        // Explicitly clear buffer so the stream can be re-used.
-        resp.into_string()?;
-        Ok(())
-    } else {
-        Err(resp.into())
     }
 }
 
