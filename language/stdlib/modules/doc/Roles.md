@@ -1707,7 +1707,7 @@ The LibraRoot role is globally unique [C2]. A
 <code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code>.
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
   addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
 </code></pre>
 
@@ -1720,7 +1720,7 @@ The TreasuryCompliance role is globally unique [C3]. A
 <code><a href="Genesis.md#0x1_Genesis_initialize">Genesis::initialize</a></code>.
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
   addr == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
 </code></pre>
 
@@ -1728,7 +1728,7 @@ The TreasuryCompliance role is globally unique [C3]. A
 LibraRoot cannot have balances [E2].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr):
     !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1736,7 +1736,7 @@ LibraRoot cannot have balances [E2].
 TreasuryCompliance cannot have balances [E3].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr):
     !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1744,7 +1744,7 @@ TreasuryCompliance cannot have balances [E3].
 Validator cannot have balances [E4].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_validator_role_addr">spec_has_validator_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_validator_role_addr">spec_has_validator_role_addr</a>(addr):
     !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1752,7 +1752,7 @@ Validator cannot have balances [E4].
 ValidatorOperator cannot have balances [E5].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_validator_operator_role_addr">spec_has_validator_operator_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_validator_operator_role_addr">spec_has_validator_operator_role_addr</a>(addr):
     !<a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1760,7 +1760,7 @@ ValidatorOperator cannot have balances [E5].
 DesignatedDealer have balances [E6].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_designated_dealer_role_addr">spec_has_designated_dealer_role_addr</a>(addr):
     <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1768,7 +1768,7 @@ DesignatedDealer have balances [E6].
 ParentVASP have balances [E7].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_parent_VASP_role_addr">spec_has_parent_VASP_role_addr</a>(addr):
     <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1776,7 +1776,7 @@ ParentVASP have balances [E7].
 ChildVASP have balances [E8].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_child_VASP_role_addr">spec_has_child_VASP_role_addr</a>(addr):
     <a href="#0x1_Roles_spec_can_hold_balance_addr">spec_can_hold_balance_addr</a>(addr);
 </code></pre>
 
@@ -1784,7 +1784,7 @@ ChildVASP have balances [E8].
 update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_update_dual_attestation_limit_privilege_addr">spec_has_update_dual_attestation_limit_privilege_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_update_dual_attestation_limit_privilege_addr">spec_has_update_dual_attestation_limit_privilege_addr</a>(addr):
     <a href="#0x1_Roles_spec_has_treasury_compliance_role_addr">spec_has_treasury_compliance_role_addr</a>(addr);
 </code></pre>
 
@@ -1792,6 +1792,6 @@ update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
 register_new_currency_privilege is granted to LibraRoot [B18].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where <a href="#0x1_Roles_spec_has_register_new_currency_privilege_addr">spec_has_register_new_currency_privilege_addr</a>(addr):
     <a href="#0x1_Roles_spec_has_libra_root_role_addr">spec_has_libra_root_role_addr</a>(addr);
 </code></pre>

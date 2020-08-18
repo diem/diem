@@ -3114,6 +3114,40 @@ SCS coins
 For an SCS coin, the mint capability cannot move or disappear.
 TODO: Specify that they're published at the one true treasurycompliance address?
 
+If an address has a mint capability, it is an SCS currency.
+
+
+<pre><code><b>invariant</b> [<b>global</b>]
+    forall coin_type: type, addr3: address where <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3):
+        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;();
+</code></pre>
+
+
+If there is a pending offer for a mint capability, the coin_type is an SCS currency and
+there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
+> TODO: this invariant seems to be broken, as it has no premise regarding pending offers.
+
+
+<pre><code><b>invariant</b> [<b>global</b>, deactivated]
+    forall coin_type: type :
+        <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;()
+        && (forall addr3: address : !<a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;coin_type&gt;(addr3));
+<b>invariant</b> [<b>global</b>, isolated]
+    forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
+        forall addr1: address, addr2: address
+             where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1) && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr2):
+                  addr1 == addr2;
+<b>invariant</b> <b>update</b> [<b>global</b>]
+    forall coin_type: type:
+        forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)):
+            exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
+<b>invariant</b> [<b>global</b>]
+    forall coin_type: type:
+        forall addr1: address where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1):
+             <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr1);
+</code></pre>
+
+
 
 <a name="0x1_Libra_@Conservation_of_currency"></a>
 

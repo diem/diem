@@ -2943,7 +2943,7 @@ The LibraAccount under addr holds either no withdraw capability
 (withdraw cap has been delegated) or the withdraw capability for addr itself.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr1);
 </code></pre>
 
@@ -2952,6 +2952,6 @@ The LibraAccount under addr holds either no key rotation capability
 (key rotation cap has been delegated) or the key rotation capability for addr itself.
 
 
-<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
 </code></pre>

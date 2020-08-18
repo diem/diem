@@ -121,8 +121,8 @@ module DesignatedDealer {
         add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
     }
     spec fun add_currency {
-        /// TODO(shaz): Add specifications
-        pragma opaque = true;
+        /// >TODO: times out without any specification, perhaps it won't if fully specified.
+        pragma verify_duration_estimate = 100;
     }
 
     public fun add_tier<CoinType>(

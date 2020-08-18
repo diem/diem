@@ -227,7 +227,7 @@ module VASP {
 
     spec module {
         /// `VASPOperationsResource` is published under the LibraRoot address after genesis.
-        invariant [global]
+        invariant [global, isolated]
             LibraTimestamp::is_operating() ==>
                 exists<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
@@ -286,7 +286,7 @@ module VASP {
     /// ## Parent does not change
 
     spec module {
-        invariant update [global, on_update]
+        invariant update [global]
             forall a: address where is_child(a): spec_parent_address(a) == old(spec_parent_address(a));
     }
 

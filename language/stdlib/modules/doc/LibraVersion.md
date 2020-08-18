@@ -139,6 +139,6 @@ After genesis, version is published.
 The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B20].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, on_update] forall addr: address where exists&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;(addr):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr: address where exists&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;(addr):
     addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
 </code></pre>

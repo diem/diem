@@ -877,6 +877,7 @@ function $shr(src1: $Value, src2: $Value): $Value {
    )
 }
 
+// TODO: fix this and $Shr to drop bits on overflow. Requires $Shl8, $Shl64, and $Shl128
 procedure {:inline 1} $Shl(src1: $Value, src2: $Value) returns (dst: $Value)
 requires is#$Integer(src1) && is#$Integer(src2);
 {

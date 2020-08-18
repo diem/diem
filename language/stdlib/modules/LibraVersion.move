@@ -51,7 +51,7 @@ module LibraVersion {
         invariant [global] LibraTimestamp::is_operating() ==> LibraConfig::spec_is_published<LibraVersion>();
 
         /// The permission "UpdateLibraProtocolVersion" is granted to LibraRoot [B20].
-        invariant [global, on_update] forall addr: address where exists<LibraVersion>(addr):
+        invariant [global, isolated] forall addr: address where exists<LibraVersion>(addr):
             addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
     }
 }

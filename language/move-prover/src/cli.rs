@@ -114,8 +114,13 @@ pub struct ProverOptions {
     pub verify_scope: VerificationScope,
     /// [deprecated] Whether to emit global axiom that resources are well-formed.
     pub resource_wellformed_axiom: bool,
-    /// Whether to assume wellformedness when elements are read from memory.
+    /// Whether to assume wellformedness when elements are read from memory, instead of on
+    /// function entry.
     pub assume_wellformed_on_access: bool,
+    /// Whether to assume a global invariant when the related memory
+    /// is accessed, instead of on function entry. This is currently known to be slower
+    /// if one than off, so off by default.
+    pub assume_invariant_on_access: bool,
     /// Whether to automatically debug trace values of specification expression leafs.
     pub debug_trace: bool,
     /// Report warnings. This is not on by default. We may turn it on if the warnings
@@ -136,6 +141,7 @@ impl Default for ProverOptions {
             assume_wellformed_on_access: false,
             debug_trace: false,
             report_warnings: false,
+            assume_invariant_on_access: false,
         }
     }
 }
@@ -209,7 +215,7 @@ impl Default for BackendOptions {
             func_inline: "{:inline}".to_owned(),
             serialize_bound: 4,
             vector_using_sequences: false,
-            random_seed: 0,
+            random_seed: 1,
             proc_cores: 1,
             vc_timeout: 40,
             keep_artifacts: false,

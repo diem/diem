@@ -992,6 +992,7 @@ impl<'env> ModuleTranslator<'env> {
                     GlobalRoot(struct_decl) => {
                         let memory = struct_decl.module_id.qualified(struct_decl.struct_id);
                         let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.emit_on_update_global_invariant_assumes(memory);
                         spec_translator.save_memory_for_update_invariants(memory);
                         let memory_name =
                             boogie_resource_memory_name(func_target.global_env(), memory);
@@ -1002,10 +1003,7 @@ impl<'env> ModuleTranslator<'env> {
                             memory_name,
                             str_local(*src),
                         );
-                        spec_translator.emit_global_invariants_for_memory(
-                            false, // assert
-                            memory,
-                        );
+                        spec_translator.emit_on_update_global_invariant_asserts(memory);
                     }
                     LocalRoot(idx) => {
                         emitln!(
@@ -1434,6 +1432,8 @@ impl<'env> ModuleTranslator<'env> {
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
                         let addr_name = str_local(addr);
                         let memory = mid.qualified(*sid);
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.emit_on_access_global_invariant_assumes(memory);
                         let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
                         emit_modifies_check(memory, &type_args, &addr_name);
                         emitln!(
@@ -1462,12 +1462,14 @@ impl<'env> ModuleTranslator<'env> {
                         let addr = srcs[0];
                         let dest = dests[0];
                         let type_args = boogie_type_value_array(self.module_env.env, type_actuals);
-                        let memory =
-                            boogie_resource_memory_name(self.module_env.env, mid.qualified(*sid));
+                        let memory = mid.qualified(*sid);
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.emit_on_access_global_invariant_assumes(memory);
+                        let memory_name = boogie_resource_memory_name(self.module_env.env, memory);
                         emitln!(
                             self.writer,
                             "call $tmp := $GetGlobal({}, {}, {});",
-                            memory,
+                            memory_name,
                             str_local(addr),
                             type_args,
                         );
@@ -1511,10 +1513,7 @@ impl<'env> ModuleTranslator<'env> {
                             signer_name,
                         );
                         emitln!(self.writer, &propagate_abort());
-                        spec_translator.emit_global_invariants_for_memory(
-                            false, // assert
-                            memory,
-                        );
+                        spec_translator.emit_on_update_global_invariant_asserts(memory);
                     }
                     MoveFrom(mid, sid, type_actuals) => {
                         let src = srcs[0];
@@ -1547,10 +1546,7 @@ impl<'env> ModuleTranslator<'env> {
                                 )
                             );
                         }
-                        spec_translator.emit_global_invariants_for_memory(
-                            false, // assert
-                            memory,
-                        );
+                        spec_translator.emit_on_update_global_invariant_asserts(memory);
                     }
                     CastU8 => {
                         let src = srcs[0];

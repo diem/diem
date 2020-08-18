@@ -680,10 +680,10 @@ that amount that can be minted according to the bounds for the
 
 
 
-TODO(shaz): Add specifications
+>TODO: times out without any specification, perhaps it won't if fully specified.
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma verify_duration_estimate = 100;
 </code></pre>
 
 

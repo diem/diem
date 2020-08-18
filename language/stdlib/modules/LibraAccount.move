@@ -744,7 +744,6 @@ module LibraAccount {
         make_account(new_account, auth_key_prefix)
     }
 
-
     ///////////////////////////////////////////////////////////////////////////
     // General purpose methods
     ///////////////////////////////////////////////////////////////////////////
@@ -1124,12 +1123,12 @@ module LibraAccount {
     spec module {
         /// The LibraAccount under addr holds either no withdraw capability
         /// (withdraw cap has been delegated) or the withdraw capability for addr itself.
-        invariant [global] forall addr1: address where exists_at(addr1):
+        invariant [global, isolated] forall addr1: address where exists_at(addr1):
             delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
 
         /// The LibraAccount under addr holds either no key rotation capability
         /// (key rotation cap has been delegated) or the key rotation capability for addr itself.
-        invariant [global] forall addr1: address where exists_at(addr1):
+        invariant [global, isolated] forall addr1: address where exists_at(addr1):
             delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 

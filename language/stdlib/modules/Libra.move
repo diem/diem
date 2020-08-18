@@ -1069,12 +1069,6 @@ module Libra {
 
     spec module {
 
-        /*
-        TODO: the below invariants cause various termination problems. Marking them as on_update only
-          does not help to resolve this. Need to find a away to impose those invariants only as module
-          invariants but optimized for actual relevance as global invariants are. (Making them module
-          invariants also does not help termination right now.)
-
         /// If an address has a mint capability, it is an SCS currency.
         invariant [global]
             forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
@@ -1082,13 +1076,14 @@ module Libra {
 
         /// If there is a pending offer for a mint capability, the coin_type is an SCS currency and
         /// there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
-        invariant [global]
+        /// > TODO: this invariant seems to be broken, as it has no premise regarding pending offers.
+        invariant [global, deactivated]
             forall coin_type: type :
                 spec_is_SCS_currency<coin_type>()
                 && (forall addr3: address : !spec_has_mint_capability<coin_type>(addr3));
 
         // At most one address has a mint capability for SCS CoinType
-        invariant [global]
+        invariant [global, isolated]
             forall coin_type: type where spec_is_SCS_currency<coin_type>():
                 forall addr1: address, addr2: address
                      where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
@@ -1105,8 +1100,6 @@ module Libra {
             forall coin_type: type:
                 forall addr1: address where exists<MintCapability<coin_type>>(addr1):
                      Roles::spec_has_treasury_compliance_role_addr(addr1);
-
-        */
 
     }
 

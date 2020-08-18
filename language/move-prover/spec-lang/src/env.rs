@@ -108,8 +108,12 @@ pub const CONDITION_EXPORT_PROP: &str = "export";
 /// Property which can be attached to a module invariant to make it global.
 pub const CONDITION_GLOBAL_PROP: &str = "global";
 
-/// Property which can be attached to a module invariant to mark it to be checked on update only.
-pub const CONDITION_ON_UPDATE_PROP: &str = "on_update";
+/// Property which can be attached to a global invariant to mark it as not to be used as
+/// an assumption in other verification steps. This can be used for invariants which are
+/// nonoperational constraints on system behavior, i.e. the systems "works" whether the
+/// invariant holds or not. Invariant marked as such are not assumed when
+/// memory is accessed, but only in the pre-state of a memory update.
+pub const CONDITION_ISOLATED: &str = "isolated";
 
 /// Abstract property which can be used together with an opaque specification. An abstract
 /// property is not verified against the implementation, but will be used for the
@@ -134,6 +138,10 @@ pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
 /// Pragma which indicates that the functions aborts and ensure conditions shall be exported
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
+
+/// A property which can be attached to any condition to exclude it from verification. The
+/// condition will still be type checked.
+pub const CONDITION_DEACTIVATED: &str = "deactivated";
 
 // =================================================================================================
 /// # Locations

@@ -46,8 +46,8 @@ use crate::{
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc,
         NamedConstantData, NamedConstantId, NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId,
-        StructData, StructId, TypeConstraint, TypeParameter, CONDITION_GLOBAL_PROP,
-        CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
+        StructData, StructId, TypeConstraint, TypeParameter, CONDITION_DEACTIVATED,
+        CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -2111,7 +2111,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 }
             };
             for derived_cond in derived_conds {
-                if self.check_condition_is_valid(context, loc, &derived_cond.kind, error_msg) {
+                if self.check_condition_is_valid(context, loc, &derived_cond.kind, error_msg)
+                    && !self
+                        .parent
+                        .env
+                        .is_property_true(&derived_cond.properties, CONDITION_DEACTIVATED)
+                        .unwrap_or(false)
+                {
                     self.update_spec(context, |spec| spec.conditions.push(derived_cond));
                 }
             }

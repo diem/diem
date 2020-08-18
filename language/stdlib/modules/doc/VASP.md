@@ -756,7 +756,7 @@ condition.
 <code><a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a></code> is published under the LibraRoot address after genesis.
 
 
-<pre><code><b>invariant</b> [<b>global</b>]
+<pre><code><b>invariant</b> [<b>global</b>, isolated]
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
         exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
@@ -853,6 +853,6 @@ Returns the number of children under
 
 
 
-<pre><code><b>invariant</b> <b>update</b> [<b>global</b>, on_update]
+<pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
     forall a: address where <a href="#0x1_VASP_is_child">is_child</a>(a): <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>
