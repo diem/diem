@@ -62,7 +62,6 @@ pub struct ValidatorConfig {
     pub safety_rules_addr: Option<String>,
     pub vault_addr: Option<String>,
     pub vault_namespace: Option<String>,
-    pub enable_mgmt_tool: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -75,7 +74,6 @@ pub struct FullnodeConfig {
     pub seed_peer_ip: String,
     pub vault_addr: Option<String>,
     pub vault_namespace: Option<String>,
-    pub enable_mgmt_tool: bool,
 }
 
 #[derive(Clone)]
@@ -114,6 +112,24 @@ impl ValidatorGroup {
             None => self.index,
             _ => panic!("Only validator has twin index"),
         }
+    }
+}
+
+impl ApplicationConfig {
+    pub fn needs_genesis(&self) -> bool {
+        matches!(self, Self::Validator(_)) || matches!(self, Self::Fullnode(_))
+    }
+
+    pub fn needs_config(&self) -> bool {
+        matches!(self, Self::Validator(_))
+            || matches!(self, Self::Fullnode(_))
+            || matches!(self, Self::LSR(_))
+    }
+
+    pub fn needs_fluentbit(&self) -> bool {
+        matches!(self, Self::Validator(_))
+            || matches!(self, Self::Fullnode(_))
+            || matches!(self, Self::LSR(_))
     }
 }
 

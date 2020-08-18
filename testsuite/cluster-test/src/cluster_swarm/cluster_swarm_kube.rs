@@ -24,7 +24,6 @@ use crate::instance::{
     ApplicationConfig::{Fullnode, Validator, Vault, LSR},
     InstanceConfig,
 };
-use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::{
@@ -40,7 +39,6 @@ use tokio::sync::Semaphore;
 const DEFAULT_NAMESPACE: &str = "default";
 
 pub const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337133713371337";
-const CFG_FULLNODE_SEED: &str = "2674267426742674267426742674267426742674267426742674267426742674";
 
 const ERROR_NOT_FOUND: u16 = 404;
 
@@ -153,70 +151,19 @@ impl ClusterSwarmKube {
         Ok((pod_spec, service_spec))
     }
 
-    fn validator_spec(
+    fn libra_node_spec(
         &self,
-        index: u32,
+        pod_app: &str,
         pod_name: &str,
-        num_validators: u32,
-        num_fullnodes: u32,
-        enable_lsr: bool,
-        enable_mgmt_tool: bool,
         node_name: &str,
         image_tag: &str,
-        seed_peer_ip: &str,
-        safety_rules_addr: &str,
-        cfg_overrides: &str,
     ) -> Result<Pod> {
-        let cfg_fullnode_seed = if num_fullnodes > 0 {
-            CFG_FULLNODE_SEED
-        } else {
-            ""
-        };
         let pod_yaml = format!(
-            include_str!("validator_spec_template.yaml"),
-            index = index,
+            include_str!("libra_node_spec_template.yaml"),
+            pod_app = pod_app,
             pod_name = pod_name,
-            num_validators = num_validators,
-            num_fullnodes = num_fullnodes,
-            enable_lsr = enable_lsr,
             image_tag = image_tag,
             node_name = node_name,
-            cfg_overrides = cfg_overrides,
-            cfg_seed = CFG_SEED,
-            cfg_seed_peer_ip = seed_peer_ip,
-            cfg_safety_rules_addr = safety_rules_addr,
-            cfg_fullnode_seed = cfg_fullnode_seed,
-            cfg_enable_mgmt_tool = enable_mgmt_tool,
-        );
-        let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
-        let pod_spec = serde_json::value::to_value(pod_spec)?;
-        serde_json::from_value(pod_spec)
-            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))
-    }
-
-    fn fullnode_spec(
-        &self,
-        fullnode_index: u32,
-        num_fullnodes: u32,
-        validator_index: u32,
-        num_validators: u32,
-        node_name: &str,
-        image_tag: &str,
-        seed_peer_ip: &str,
-        cfg_overrides: &str,
-    ) -> Result<Pod> {
-        let pod_yaml = format!(
-            include_str!("fullnode_spec_template.yaml"),
-            fullnode_index = fullnode_index,
-            num_fullnodes = num_fullnodes,
-            validator_index = validator_index,
-            num_validators = num_validators,
-            node_name = node_name,
-            image_tag = image_tag,
-            cfg_overrides = cfg_overrides,
-            cfg_seed = CFG_SEED,
-            cfg_seed_peer_ip = seed_peer_ip,
-            cfg_fullnode_seed = CFG_FULLNODE_SEED,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         let pod_spec = serde_json::value::to_value(pod_spec)?;
@@ -535,64 +482,34 @@ impl ClusterSwarmKube {
             "Configuring fluent-bit, genesis and config for pod {} on {}",
             pod_name, node.name
         );
-        match &instance_config.application_config {
-            Validator(validator_config) => {
-                self.config_fluentbit("validator-events", &pod_name, &node.name)
-                    .await?;
-                if validator_config.enable_mgmt_tool {
-                    self.put_genesis_file(&pod_name, &node.name).await?;
-                    self.generate_config(&instance_config, &pod_name, &node.name)
-                        .await?;
-                }
-            }
-            Fullnode(fullnode_config) => {
-                self.config_fluentbit("validator-events", &pod_name, &node.name)
-                    .await?;
-                if fullnode_config.enable_mgmt_tool {
-                    self.put_genesis_file(&pod_name, &node.name).await?;
-                    self.generate_config(&instance_config, &pod_name, &node.name)
-                        .await?;
-                }
-            }
-            LSR(_) => {
-                self.config_fluentbit("safety-rules-events", &pod_name, &node.name)
-                    .await?;
-                self.generate_config(&instance_config, &pod_name, &node.name)
-                    .await?;
-            }
-            _ => {}
+        if instance_config.application_config.needs_fluentbit() {
+            self.config_fluentbit("events", &pod_name, &node.name)
+                .await?;
+        }
+        if instance_config.application_config.needs_genesis() {
+            self.put_genesis_file(&pod_name, &node.name).await?;
+        }
+        if instance_config.application_config.needs_config() {
+            self.generate_config(&instance_config, &pod_name, &node.name)
+                .await?;
         }
         debug!("Creating pod {} on {:?}", pod_name, node);
         let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
-                self.validator_spec(
-                    instance_config.validator_group.index,
+                self.libra_node_spec(
+                    "libra-validator",
                     pod_name.as_str(),
-                    validator_config.num_validators,
-                    validator_config.num_fullnodes,
-                    validator_config.enable_lsr,
-                    validator_config.enable_mgmt_tool,
                     &node.name,
                     &validator_config.image_tag,
-                    &validator_config.seed_peer_ip,
-                    validator_config
-                        .safety_rules_addr
-                        .as_ref()
-                        .unwrap_or(&"".to_string()),
-                    &validator_config.config_overrides.iter().join(","),
                 )?,
                 self.service_spec(pod_name.clone()),
             ),
             Fullnode(fullnode_config) => (
-                self.fullnode_spec(
-                    fullnode_config.fullnode_index,
-                    fullnode_config.num_fullnodes_per_validator,
-                    instance_config.validator_group.index_only(),
-                    fullnode_config.num_validators,
+                self.libra_node_spec(
+                    "libra-fullnode",
+                    pod_name.as_str(),
                     &node.name,
                     &fullnode_config.image_tag,
-                    &fullnode_config.seed_peer_ip,
-                    &fullnode_config.config_overrides.iter().join(","),
                 )?,
                 self.service_spec(pod_name.clone()),
             ),

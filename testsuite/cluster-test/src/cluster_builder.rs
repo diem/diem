@@ -303,7 +303,6 @@ impl ClusterBuilder {
                 } else {
                     None
                 };
-                let enable_mgmt_tool = enable_lsr && lsr_backend == "vault";
                 let validator_config = ValidatorConfig {
                     num_validators,
                     num_fullnodes: num_fullnodes_per_validator,
@@ -314,7 +313,6 @@ impl ClusterBuilder {
                     safety_rules_addr,
                     vault_addr,
                     vault_namespace,
-                    enable_mgmt_tool,
                 };
                 if clean_data {
                     self.cluster_swarm
@@ -348,7 +346,6 @@ impl ClusterBuilder {
                 let seed_peer_ip = validator_nodes[validator_index as usize]
                     .internal_ip
                     .clone();
-                let enable_mgmt_tool = enable_lsr && lsr_backend == "vault";
                 let fullnode_config = FullnodeConfig {
                     fullnode_index,
                     num_fullnodes_per_validator,
@@ -358,7 +355,6 @@ impl ClusterBuilder {
                     seed_peer_ip,
                     vault_addr,
                     vault_namespace,
-                    enable_mgmt_tool,
                 };
                 if clean_data {
                     self.cluster_swarm
