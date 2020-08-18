@@ -890,14 +890,12 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - install_code_coverage_deps
       - run:
           name: Sanity check
           command: |
             echo AWS_ACCESS_KEY_ID = ${AWS_ACCESS_KEY_ID: -3}
             echo AWS_SECRET_ACCESS_KEY = ${AWS_SECRET_ACCESS_KEY: -3}
             echo AWS_DEFAULT_REGION = ${AWS_DEFAULT_REGION: -3}
-      - aws-cli/install
       - aws-cli/configure:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
@@ -926,6 +924,19 @@ jobs:
             aws s3 cp --recursive $reportdir "s3://ci-artifacts.libra.org/coverage/unit-coverage/latest";
             _s3_url="https://ci-artifacts.libra.org/coverage/unit-coverage/latest/index.html";
             echo "Grcov available in s3 ${_s3_url}" >> ${MESSAGE_PAYLOAD_FILE}
+      - run:
+          name: lcov html report to S3
+          command: |
+            set -x
+            export AWS_REGION=$AWS_DEFAULT_REGION
+            export GIT_SHORT_REV=$(git rev-parse --short=8 HEAD)
+            export reportdir=${CODECOV_OUTPUT}/lcovhtml;
+            _bucket="ci-artifacts.libra.org/coverage/lcov-unit-coverage/$(date +"%Y-%m-%d")-${GIT_SHORT_REV}";
+            aws s3 cp --recursive $reportdir "s3://$_bucket";
+            echo "have to reupload as aws user doesn't have read access";
+            aws s3 cp --recursive $reportdir "s3://ci-artifacts.libra.org/coverage/lcov-unit-coverage/latest";
+            _s3_url="https://ci-artifacts.libra.org/coverage/lcov-unit-coverage/latest/index.html";
+            echo "Lcovhtml available in s3 ${_s3_url}" >> ${MESSAGE_PAYLOAD_FILE}
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
@@ -1094,6 +1105,11 @@ workflows:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
                 - master
+      # testing only.
+      - code_coverage:
+          context: libra_ci
+          requires:
+            - prefetch-crates
   scheduled-workflow:
     triggers:
       - schedule:
