@@ -47,3 +47,6 @@ full_node_networks:
 
 metrics:
   enabled: false
+
+storage:
+  prune_window: 50000

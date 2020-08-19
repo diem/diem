@@ -40,3 +40,6 @@ upstream:
 
 metrics:
   enabled: false
+
+storage:
+  prune_window: 50000

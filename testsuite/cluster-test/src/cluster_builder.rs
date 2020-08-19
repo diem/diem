@@ -58,13 +58,7 @@ pub struct ClusterBuilderParams {
 
 impl ClusterBuilderParams {
     pub fn cfg_overrides(&self) -> Vec<String> {
-        // Default overrides
-        let mut overrides = vec!["prune_window=50000".to_string()];
-
-        // overrides from the command line
-        overrides.extend(self.cfg.iter().cloned());
-
-        overrides
+        self.cfg.clone()
     }
 
     pub fn enable_lsr(&self) -> bool {
