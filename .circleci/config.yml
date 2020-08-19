@@ -8,27 +8,27 @@ orbs:
 executors:
   build-executor:
     docker:
-      - image: docker.io/libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: 2xlarge
   unittest-executor:
     docker:
-      - image: docker.io/libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: 2xlarge+
   test-executor:
     docker:
-      - image: docker.io/libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: xlarge
   premainnet-cluster-test-executor:
     docker:
-      - image: docker.io/libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: xlarge
   audit-executor:
     docker:
-      - image: docker.io/libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: medium
   terraform-executor:
     docker:
-      - image: libra/build_environment:latest
+      - image: docker.io/libra/build_environment:circleci-latest
     resource_class: small
   docker-executor:
     machine:
@@ -261,17 +261,22 @@ commands:
   setup_docker_signing:
     steps:
       - run:
-          name: Setup docker login and signing
+          name: Setup docker login and signing if creds are available.
           command: |
             set -x
-            # echo 'export DOCKER_CONTENT_TRUST=1' >> $BASH_ENV
-            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}
-            echo 'export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}' >> $BASH_ENV
-            mkdir -p ~/.docker/trust/private/
-            echo ${DOCKERHUB_KEY_MATERIAL} | base64 -d > ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
-            chmod 600 ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
-            docker trust key load ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key --name "$DOCKERHUB_USERNAME"
+            if [[ -z "$DOCKERHUB_PASSWORD" ]]; then
+              echo Lacking credentials for docker hub, not signing in.
+            else
+              # echo 'export DOCKER_CONTENT_TRUST=1' >> $BASH_ENV
+              echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+              export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}
+              echo 'export DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=${DOCKERHUB_KEY_PASSWORD}' >> $BASH_ENV
+              mkdir -p ~/.docker/trust/private/
+              echo ${DOCKERHUB_KEY_MATERIAL} | base64 -d > ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
+              chmod 600 ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key
+              docker trust key load ~/.docker/trust/private/${DOCKERHUB_KEY_NAME}.key --name "$DOCKERHUB_USERNAME"
+              echo Docker hub is logged in, and signing is available.
+            fi
   setup_aws:
     description: Set up access to AWS
     steps:
@@ -279,7 +284,6 @@ commands:
           name: Compose AWS Env Variables
           command: |
             echo 'export AWS_ECR_ACCOUNT_URL="${AWS_ECR_ACCOUNT_NUM}.dkr.ecr.${AWS_REGION}.amazonaws.com"' >> $BASH_ENV
-      - aws-cli/install
       - aws-cli/configure:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
@@ -634,6 +638,11 @@ jobs:
 
   ######################################################################################################
   # Building docker ci base image if relevant files have changed                                       #
+  # Be warned those who dare to touch this:                                                            #
+  # 1. Builds on master of circlci-latest are expected to occur daily, but cannot run in a scheduled   #
+  #    job and still recieve a context "docker" that only the automated user may see                   #
+  # 2. This job is parameterized for multiple docker builds to test dev_setup.sh execution, but only   #
+  #    when one of the relevant files have changed.                                                    #
   ######################################################################################################
   docker-ci-build:
     executor: docker-large-executor
@@ -643,11 +652,30 @@ jobs:
     description: build cimg/base (ubuntu) CI docker image.
     steps:
       - checkout
+      - setup_docker_signing
+      - restore_cache:
+          name: restore daily latch cache file.
+          key: docker-circleci-lastest-daily-<< parameters.base-image >>
       - run:
           name: Should build/test << parameters.base-image >> docker image file
           command: |
+            # This trickery is used to build the libra/build_environment:circleci-latest once a day durring
+            # A push from bors to master, such the context will be properly set and pushing to dockerhub
+            # Will be possible.  Otherwise we will only build and not push on relevant file changes in non
+            # master branches below (this job will not be configured on master except for circle ci.)
+            if [[  $CIRCLE_BRANCH == "master" ]]; then
+              NOW=`date +%Y-%M-%d`
+              LAST=`cat /home/circleci/lastbuild` || true
+              if [[ "$LAST" != "$NOW" ]]; then
+                echo Last build occured $LAST, so building.
+                #continue the build, as unless time is broken, we should build.
+                exit 0
+              fi
+            fi
+
             #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.   TODO: figure out target release branch.
+            #this is specific for prs targeting master.
+            #TODO: figure out if we need this for release branchs?
             git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
             echo ".circleci/config.yml" >> /tmp/ci_docker_files
             echo "cargo-toolchain" >> /tmp/ci_docker_files
@@ -657,7 +685,7 @@ jobs:
 
             #if no relevant files have changed - exit
             if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - exit
+              echo no relevant files have changed - halting
               circleci step halt
             fi
       - run:
@@ -670,10 +698,17 @@ jobs:
               circleci step halt
             fi
       - run:
-          name: push libra/build_environment:<< parameters.base-image >>-latest image
+          name: push libra/build_environment:<< parameters.base-image >>-latest docker image
           command: |
             #signs the pushed image
             docker push --disable-content-trust=false libra/build_environment:<< parameters.base-image >>-latest
+            #since we've built, time to update the cache key file.
+            date +%Y-%M-%d > /home/circleci/lastbuild
+      - save_cache:
+          name: store updated daily latch file.
+          key: docker-circleci-lastest-daily-<< parameters.base-image >>
+          paths:
+            - /home/circleci/lastbuild
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
@@ -752,12 +787,22 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - install_code_coverage_deps
-      - aws-cli/install
+      - restore_cache:
+          name: restore daily latch cache file.
+          key: code-coverage-daily
+      - run:
+          name: Halt job if already built code coverage today.
+          command: |
+            NOW=`date +%Y-%M-%d`
+            LAST=`cat /home/circleci/lastbuild` || true
+            if [[ "$LAST" == "$NOW" ]]; then
+              echo Last build occured today, halting.
+              circleci step halt
+            fi
       - aws-cli/configure:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_DEFAULT_REGION
+          aws-region: AWS_REGION
       - run:
           name: Setup code coverage output
           command: |
@@ -770,22 +815,32 @@ jobs:
           name: Upload result to codecov.io
           command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info -F unittest;
       - run:
-          name: Grcov html report to S3
+          name: Push Coverage Reports to S3
           command: |
             set -x
-            export AWS_REGION=$AWS_DEFAULT_REGION
-            export GIT_SHORT_REV=$(git rev-parse --short=8 HEAD)
-            export reportdir=${CODECOV_OUTPUT}/grcovhtml;
-            _bucket="ci-artifacts.libra.org/coverage/unit-coverage/$(date +"%Y-%m-%d")-${GIT_SHORT_REV}";
-            aws s3 cp --recursive $reportdir "s3://$_bucket";
-            echo "have to reupload as aws user doesn't have read access";
-            aws s3 cp --recursive $reportdir "s3://ci-artifacts.libra.org/coverage/unit-coverage/latest";
-            _s3_url="https://ci-artifacts.libra.org/coverage/unit-coverage/latest/index.html";
-            echo "Grcov available in s3 ${_s3_url}" >> ${MESSAGE_PAYLOAD_FILE}
+            SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
+            PREFIX="ci-artifacts.libra.org/coverage";
+            #Push grcov
+            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
+            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
+            echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
+            #Push lcov
+            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
+            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
+            echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
           webhook: "${WEBHOOK_COVERAGE_INFO}"
+      - run:
+          name: Update cache key file
+          command: |
+            date +%Y-%M-%d > /home/circleci/lastbuild
+      - save_cache:
+          name: store updated daily latch file.
+          key: code-coverage-daily
+          paths:
+            - /home/circleci/lastbuild
 
 workflows:
   commit-workflow:
@@ -893,12 +948,24 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
+      - code_coverage:
+          requires:
+            - prefetch-crates
+          context: libra_ci
+          filters:
+            branches:
+              only:
+                - /^test-[\d|.]+$/
+                - master
+      # Will build and push daily,
+      # or when relevant files change.
       - docker-ci-build:
           context: docker
           base-image: circleci
           filters:
             branches:
               only:
+                - /^test-[\d|.]+$/
                 - master
       - docker-ci-build:
           base-image: circleci
