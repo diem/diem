@@ -12,7 +12,7 @@ use crate::{
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::Author,
+    common::{Author, Round},
     quorum_cert::QuorumCert,
     safety_data::SafetyData,
     timeout::Timeout,
@@ -128,8 +128,12 @@ impl SafetyRules {
     }
 
     /// Second voting rule
-    fn verify_and_update_preferred_round(&mut self, quorum_cert: &QuorumCert) -> Result<(), Error> {
-        let preferred_round = self.persistent_storage.preferred_round()?;
+    fn verify_and_update_preferred_round(
+        &mut self,
+        quorum_cert: &QuorumCert,
+        safety_data: &mut SafetyData,
+    ) -> Result<bool, Error> {
+        let preferred_round = safety_data.preferred_round;
         let one_chain_round = quorum_cert.certified_block().round();
         let two_chain_round = quorum_cert.parent_block().round();
 
@@ -140,19 +144,25 @@ impl SafetyRules {
             ));
         }
 
-        match two_chain_round.cmp(&preferred_round) {
-            Ordering::Greater => self
-                .persistent_storage
-                .set_preferred_round(two_chain_round)?,
+        let updated = match two_chain_round.cmp(&preferred_round) {
+            Ordering::Greater => {
+                safety_data.preferred_round = two_chain_round;
+                send_struct_log!(
+                    logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
+                        .data(LogField::Message.as_str(), safety_data.preferred_round)
+                );
+                true
+            }
             Ordering::Less => {
                 trace!(
                 "2-chain round {} is lower than preferred round {} but 1-chain round {} is higher.",
                 two_chain_round, preferred_round, one_chain_round
-            )
+            );
+                false
             }
-            Ordering::Equal => (),
-        }
-        Ok(())
+            Ordering::Equal => false,
+        };
+        Ok(updated)
     }
 
     /// This verifies whether the author of one proposal is the validator signer
@@ -169,8 +179,8 @@ impl SafetyRules {
     }
 
     /// This verifies the epoch given against storage for consistent verification
-    fn verify_epoch(&self, epoch: u64) -> Result<(), Error> {
-        let expected_epoch = self.persistent_storage.epoch()?;
+    fn verify_epoch(&self, epoch: u64, safety_data: &SafetyData) -> Result<(), Error> {
+        let expected_epoch = safety_data.epoch;
         if epoch != expected_epoch {
             Err(Error::IncorrectEpoch(epoch, expected_epoch))
         } else {
@@ -179,16 +189,22 @@ impl SafetyRules {
     }
 
     /// First voting rule
-    fn verify_last_vote_round(&self, proposed_block: &BlockData) -> Result<(), Error> {
-        let last_voted_round = self.persistent_storage.last_voted_round()?;
-        if proposed_block.round() > last_voted_round {
+    fn verify_and_update_last_vote_round(
+        &self,
+        round: Round,
+        safety_data: &mut SafetyData,
+    ) -> Result<(), Error> {
+        let last_voted_round = safety_data.last_voted_round;
+        if round > last_voted_round {
+            safety_data.last_voted_round = round;
+            send_struct_log!(
+                logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
+                    .data(LogField::Message.as_str(), safety_data.last_voted_round)
+            );
             return Ok(());
         }
 
-        Err(Error::IncorrectLastVotedRound(
-            proposed_block.round(),
-            last_voted_round,
-        ))
+        Err(Error::IncorrectLastVotedRound(round, last_voted_round))
     }
 
     /// This verifies a QC has valid signatures.
@@ -204,12 +220,7 @@ impl SafetyRules {
 
     fn guarded_consensus_state(&mut self) -> Result<ConsensusState, Error> {
         Ok(ConsensusState::new(
-            SafetyData::new(
-                self.persistent_storage.epoch()?,
-                self.persistent_storage.last_voted_round()?,
-                self.persistent_storage.preferred_round()?,
-                self.persistent_storage.last_vote()?,
-            ),
+            self.persistent_storage.safety_data()?,
             self.persistent_storage.waypoint()?,
             self.signer().is_ok(),
         ))
@@ -260,7 +271,7 @@ impl SafetyRules {
             self.validator_signer = None;
         }
 
-        let current_epoch = self.persistent_storage.epoch()?;
+        let current_epoch = self.persistent_storage.safety_data()?.epoch;
 
         if current_epoch < epoch_state.epoch {
             // This is ordered specifically to avoid configuration issues:
@@ -270,10 +281,14 @@ impl SafetyRules {
             // statement cannot be re-entered.
             self.persistent_storage
                 .set_waypoint(&Waypoint::new_epoch_boundary(ledger_info)?)?;
-            self.persistent_storage.set_last_voted_round(0)?;
-            self.persistent_storage.set_preferred_round(0)?;
-            self.persistent_storage.set_last_vote(None)?;
-            self.persistent_storage.set_epoch(epoch_state.epoch)?;
+            self.persistent_storage.set_safety_data(SafetyData::new(
+                epoch_state.epoch,
+                0,
+                0,
+                None,
+            ))?;
+            send_struct_log!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
+                .data(LogField::Message.as_str(), epoch_state.epoch));
         }
         self.epoch_state = Some(epoch_state);
 
@@ -286,6 +301,7 @@ impl SafetyRules {
     ) -> Result<Vote, Error> {
         // Exit early if we cannot sign
         self.signer()?;
+        let mut safety_data = self.persistent_storage.safety_data()?;
 
         let (vote_proposal, execution_signature) = (
             &maybe_signed_vote_proposal.vote_proposal,
@@ -299,21 +315,23 @@ impl SafetyRules {
         }
 
         let proposed_block = vote_proposal.block();
-        self.verify_epoch(proposed_block.epoch())?;
+        self.verify_epoch(proposed_block.epoch(), &safety_data)?;
         self.verify_qc(proposed_block.quorum_cert())?;
         proposed_block.validate_signature(&self.epoch_state()?.verifier)?;
 
-        self.verify_and_update_preferred_round(proposed_block.quorum_cert())?;
+        self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
         // if already voted on this round, send back the previous vote.
-        let last_vote = self.persistent_storage.last_vote()?;
-        if let Some(vote) = last_vote {
+        if let Some(vote) = safety_data.last_vote.clone() {
             if vote.vote_data().proposed().round() == proposed_block.round() {
-                self.persistent_storage
-                    .set_last_voted_round(proposed_block.round())?;
+                safety_data.last_voted_round = proposed_block.round();
+                self.persistent_storage.set_safety_data(safety_data)?;
                 return Ok(vote);
             }
         }
-        self.verify_last_vote_round(proposed_block.block_data())?;
+        self.verify_and_update_last_vote_round(
+            proposed_block.block_data().round(),
+            &mut safety_data,
+        )?;
 
         let vote_data = self.extension_check(vote_proposal)?;
 
@@ -324,20 +342,28 @@ impl SafetyRules {
             self.construct_ledger_info(proposed_block)?,
             validator_signer,
         );
-        self.persistent_storage.set_last_vote(Some(vote.clone()))?;
-        self.persistent_storage
-            .set_last_voted_round(proposed_block.round())?;
+        safety_data.last_vote = Some(vote.clone());
+        self.persistent_storage.set_safety_data(safety_data)?;
 
         Ok(vote)
     }
 
     fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
+        let mut safety_data = self.persistent_storage.safety_data()?;
         self.signer()?;
         self.verify_author(block_data.author())?;
-        self.verify_epoch(block_data.epoch())?;
-        self.verify_last_vote_round(&block_data)?;
+        self.verify_epoch(block_data.epoch(), &safety_data)?;
+        if block_data.round() <= safety_data.last_voted_round {
+            return Err(Error::InvalidProposal(format!(
+                "Proposed round {} is not higher than last voted round {}",
+                block_data.round(),
+                safety_data.last_voted_round
+            )));
+        }
         self.verify_qc(block_data.quorum_cert())?;
-        self.verify_and_update_preferred_round(block_data.quorum_cert())?;
+        if self.verify_and_update_preferred_round(block_data.quorum_cert(), &mut safety_data)? {
+            self.persistent_storage.set_safety_data(safety_data)?;
+        }
 
         Ok(Block::new_proposal_from_block_data(
             block_data,
@@ -347,26 +373,25 @@ impl SafetyRules {
 
     fn guarded_sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.signer()?;
-        self.verify_epoch(timeout.epoch())?;
+        let mut safety_data = self.persistent_storage.safety_data()?;
+        self.verify_epoch(timeout.epoch(), &safety_data)?;
 
-        let preferred_round = self.persistent_storage.preferred_round()?;
-        if timeout.round() <= preferred_round {
+        if timeout.round() <= safety_data.preferred_round {
             return Err(Error::IncorrectPreferredRound(
                 timeout.round(),
-                preferred_round,
+                safety_data.preferred_round,
             ));
         }
 
-        let last_voted_round = self.persistent_storage.last_voted_round()?;
-        if timeout.round() < last_voted_round {
+        if timeout.round() < safety_data.last_voted_round {
             return Err(Error::IncorrectLastVotedRound(
                 timeout.round(),
-                last_voted_round,
+                safety_data.last_voted_round,
             ));
         }
-        if timeout.round() > last_voted_round {
-            self.persistent_storage
-                .set_last_voted_round(timeout.round())?;
+        if timeout.round() > safety_data.last_voted_round {
+            self.verify_and_update_last_vote_round(timeout.round(), &mut safety_data)?;
+            self.persistent_storage.set_safety_data(safety_data)?;
         }
 
         let validator_signer = self.signer()?;

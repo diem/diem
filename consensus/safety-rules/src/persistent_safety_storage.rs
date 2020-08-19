@@ -6,15 +6,9 @@ use crate::{
     logging::{self, LogEntry, LogEvent, LogField},
 };
 use anyhow::Result;
-use consensus_types::{
-    common::{Author, Round},
-    vote::Vote,
-};
+use consensus_types::{common::Author, safety_data::SafetyData};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, LAST_VOTE, LAST_VOTED_ROUND, OWNER_ACCOUNT,
-    PREFERRED_ROUND, WAYPOINT,
-};
+use libra_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
 use libra_logger::prelude::*;
 use libra_secure_storage::{
     CachedStorage, CryptoStorage, InMemoryStorage, KVStorage, Storage, Value,
@@ -85,15 +79,12 @@ impl PersistentSafetyStorage {
         }
 
         internal_store.import_private_key(EXECUTION_KEY, execution_private_key)?;
-        internal_store.set(EPOCH, Value::U64(1))?;
-        internal_store.set(LAST_VOTED_ROUND, Value::U64(0))?;
-        internal_store.set(OWNER_ACCOUNT, Value::String(author.to_string()))?;
-        internal_store.set(PREFERRED_ROUND, Value::U64(0))?;
-        internal_store.set(WAYPOINT, Value::String(waypoint.to_string()))?;
         internal_store.set(
-            LAST_VOTE,
-            Value::Bytes(lcs::to_bytes::<Option<Vote>>(&None)?),
+            SAFETY_DATA,
+            Value::SafetyData(SafetyData::new(1, 0, 0, None)),
         )?;
+        internal_store.set(OWNER_ACCOUNT, Value::String(author.to_string()))?;
+        internal_store.set(WAYPOINT, Value::String(waypoint.to_string()))?;
         Ok(())
     }
 
@@ -138,67 +129,19 @@ impl PersistentSafetyStorage {
             .map(|r| r.public_key)?)
     }
 
-    pub fn epoch(&self) -> Result<u64> {
-        Ok(self.internal_store.get(EPOCH).and_then(|r| r.value.u64())?)
-    }
-
-    pub fn set_epoch(&mut self, epoch: u64) -> Result<()> {
-        self.internal_store.set(EPOCH, Value::U64(epoch))?;
-        counters::set_state("epoch", epoch as i64);
-        send_struct_log!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
-            .data(LogField::Message.as_str(), epoch));
-        Ok(())
-    }
-
-    pub fn last_vote(&self) -> Result<Option<Vote>> {
-        let result = lcs::from_bytes(
-            &self
-                .internal_store
-                .get(LAST_VOTE)
-                .and_then(|r| r.value.bytes())?,
-        )?;
-        Ok(result)
-    }
-
-    pub fn set_last_vote(&mut self, vote: Option<Vote>) -> Result<()> {
-        self.internal_store
-            .set(LAST_VOTE, Value::Bytes(lcs::to_bytes(&vote)?))?;
-        Ok(())
-    }
-
-    pub fn last_voted_round(&self) -> Result<Round> {
+    pub fn safety_data(&self) -> Result<SafetyData> {
         Ok(self
             .internal_store
-            .get(LAST_VOTED_ROUND)
-            .and_then(|r| r.value.u64())?)
+            .get(SAFETY_DATA)
+            .and_then(|r| r.value.safety_data())?)
     }
 
-    pub fn set_last_voted_round(&mut self, last_voted_round: Round) -> Result<()> {
+    pub fn set_safety_data(&mut self, data: SafetyData) -> Result<()> {
+        counters::set_state("epoch", data.epoch as i64);
+        counters::set_state("last_voted_round", data.last_voted_round as i64);
+        counters::set_state("preferred_round", data.preferred_round as i64);
         self.internal_store
-            .set(LAST_VOTED_ROUND, Value::U64(last_voted_round))?;
-        counters::set_state("last_voted_round", last_voted_round as i64);
-        send_struct_log!(
-            logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
-                .data(LogField::Message.as_str(), last_voted_round)
-        );
-        Ok(())
-    }
-
-    pub fn preferred_round(&self) -> Result<Round> {
-        Ok(self
-            .internal_store
-            .get(PREFERRED_ROUND)
-            .and_then(|r| r.value.u64())?)
-    }
-
-    pub fn set_preferred_round(&mut self, preferred_round: Round) -> Result<()> {
-        self.internal_store
-            .set(PREFERRED_ROUND, Value::U64(preferred_round))?;
-        counters::set_state("preferred_round", preferred_round as i64);
-        send_struct_log!(
-            logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
-                .data(LogField::Message.as_str(), preferred_round)
-        );
+            .set(SAFETY_DATA, Value::SafetyData(data))?;
         Ok(())
     }
 
@@ -238,14 +181,16 @@ mod tests {
             private_key,
             Ed25519PrivateKey::generate_for_testing(),
         );
-        assert_eq!(storage.epoch().unwrap(), 1);
-        assert_eq!(storage.last_voted_round().unwrap(), 0);
-        assert_eq!(storage.preferred_round().unwrap(), 0);
-        storage.set_epoch(9).unwrap();
-        storage.set_last_voted_round(8).unwrap();
-        storage.set_preferred_round(1).unwrap();
-        assert_eq!(storage.epoch().unwrap(), 9);
-        assert_eq!(storage.last_voted_round().unwrap(), 8);
-        assert_eq!(storage.preferred_round().unwrap(), 1);
+        let safety_data = storage.safety_data().unwrap();
+        assert_eq!(safety_data.epoch, 1);
+        assert_eq!(safety_data.last_voted_round, 0);
+        assert_eq!(safety_data.preferred_round, 0);
+        storage
+            .set_safety_data(SafetyData::new(9, 8, 1, None))
+            .unwrap();
+        let safety_data = storage.safety_data().unwrap();
+        assert_eq!(safety_data.epoch, 9);
+        assert_eq!(safety_data.last_voted_round, 8);
+        assert_eq!(safety_data.preferred_round, 1);
     }
 }

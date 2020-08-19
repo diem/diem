@@ -3,6 +3,7 @@
 
 use crate::vote::Vote;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 /// Data structure for safety rules to ensure consensus safety.
 #[derive(Debug, Deserialize, Eq, PartialEq, Serialize, Clone, Default)]
@@ -26,5 +27,15 @@ impl SafetyData {
             preferred_round,
             last_vote,
         }
+    }
+}
+
+impl fmt::Display for SafetyData {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "SafetyData: [epoch: {}, last_voted_round: {}, preferred_round: {}]",
+            self.epoch, self.last_voted_round, self.preferred_round
+        )
     }
 }

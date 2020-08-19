@@ -418,8 +418,8 @@ pub mod tests {
             .unwrap()
             .split("Key not set")
             .count();
-        // 11 KeyNotSet results in 12 splits
-        assert_eq!(output, 12);
+        // 9 KeyNotSet results in 10 splits
+        assert_eq!(output, 10);
 
         helper.initialize(namespace.into());
 

@@ -20,8 +20,5 @@ pub const OWNER_KEY: &str = "owner";
 pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
 
 /// Definitions of global data items (e.g., as held in secure storage)
-pub const EPOCH: &str = "epoch";
-pub const LAST_VOTED_ROUND: &str = "last_voted_round";
-pub const PREFERRED_ROUND: &str = "preferred_round";
+pub const SAFETY_DATA: &str = "safety_data";
 pub const WAYPOINT: &str = "waypoint";
-pub const LAST_VOTE: &str = "last_vote";

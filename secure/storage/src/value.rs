@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::error::Error;
+use consensus_types::safety_data::SafetyData;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::HashValue,
@@ -19,7 +20,7 @@ pub enum Value {
     String(String),
     Transaction(Transaction),
     U64(u64),
-    Bytes(Vec<u8>),
+    SafetyData(SafetyData),
 }
 
 impl Value {
@@ -71,8 +72,8 @@ impl Value {
         }
     }
 
-    pub fn bytes(self) -> Result<Vec<u8>, Error> {
-        if let Value::Bytes(value) = self {
+    pub fn safety_data(self) -> Result<SafetyData, Error> {
+        if let Value::SafetyData(value) = self {
             Ok(value)
         } else {
             Err(Error::UnexpectedValueType)

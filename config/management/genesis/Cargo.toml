@@ -17,6 +17,7 @@ thiserror = "1.0.20"
 toml = { version = "0.5.6", default-features = false }
 
 config-builder = { path = "../../config-builder", version = "0.1.0" }
+consensus-types = { path = "../../../consensus/consensus-types", version = "0.1.0" }
 executor = { path = "../../../execution/executor", version = "0.1.0" }
 generate-key = { path = "../../../config/generate-key", version = "0.1.0" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

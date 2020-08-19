@@ -679,6 +679,7 @@ dependencies = [
  "async-trait 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
+ "consensus-types 0.1.0",
  "debug-interface 0.1.0",
  "flate2 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2599,6 +2600,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
+ "consensus-types 0.1.0",
  "executor 0.1.0",
  "generate-key 0.1.0",
  "libra-canonical-serialization 0.1.0",
@@ -3033,6 +3035,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "consensus-types 0.1.0",
  "enum_dispatch 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",

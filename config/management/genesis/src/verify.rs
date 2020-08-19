@@ -3,8 +3,8 @@
 
 use executor::db_bootstrapper;
 use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, OPERATOR_KEY,
-    OWNER_ACCOUNT, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+    SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
@@ -69,9 +69,7 @@ impl Verify {
 
         write_string(&validator_storage, &mut buffer, OPERATOR_ACCOUNT);
         write_string(&validator_storage, &mut buffer, OWNER_ACCOUNT);
-        write_u64(&validator_storage, &mut buffer, EPOCH);
-        write_u64(&validator_storage, &mut buffer, LAST_VOTED_ROUND);
-        write_u64(&validator_storage, &mut buffer, PREFERRED_ROUND);
+        write_safety_data(&validator_storage, &mut buffer, SAFETY_DATA);
         write_waypoint(&validator_storage, &mut buffer, WAYPOINT);
 
         write_break(&mut buffer);
@@ -118,10 +116,14 @@ fn write_string(storage: &Storage, buffer: &mut String, key: &'static str) {
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_u64(storage: &Storage, buffer: &mut String, key: &'static str) {
+fn write_safety_data(storage: &Storage, buffer: &mut String, key: &'static str) {
     let value = storage
-        .u64(key)
-        .map(|v| v.to_string())
+        .value(key)
+        .map(|v| {
+            v.safety_data()
+                .map(|d| d.to_string())
+                .unwrap_or_else(|e| e.to_string())
+        })
         .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }

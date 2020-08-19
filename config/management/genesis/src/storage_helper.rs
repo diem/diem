@@ -4,10 +4,11 @@
 // FIXME: (gnazario) storage helper doesn't belong in the genesis tool, but it's attached to it right now
 
 use crate::command::Command;
+use consensus_types::safety_data::SafetyData;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, LIBRA_ROOT_KEY,
-    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
+    SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
@@ -56,9 +57,12 @@ impl StorageHelper {
         storage.create_key(VALIDATOR_NETWORK_KEY).unwrap();
 
         // Initialize all other data in storage
-        storage.set(EPOCH, Value::U64(0)).unwrap();
-        storage.set(LAST_VOTED_ROUND, Value::U64(0)).unwrap();
-        storage.set(PREFERRED_ROUND, Value::U64(0)).unwrap();
+        storage
+            .set(
+                SAFETY_DATA,
+                Value::SafetyData(SafetyData::new(0, 0, 0, None)),
+            )
+            .unwrap();
         storage.set(WAYPOINT, Value::String("".into())).unwrap();
     }
 

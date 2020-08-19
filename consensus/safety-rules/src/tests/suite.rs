@@ -513,7 +513,7 @@ fn test_sign_old_proposal(safety_rules: &Callback) {
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
-    assert_eq!(err, Error::IncorrectLastVotedRound(0, 0));
+    assert!(matches!(err, Error::InvalidProposal(_)));
 }
 
 fn test_sign_proposal_with_bad_signer(safety_rules: &Callback) {

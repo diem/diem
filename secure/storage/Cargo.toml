@@ -18,6 +18,7 @@ serde = { version = "1.0.114", features = ["rc"], default-features = false }
 serde_json = "1.0.57"
 thiserror = "1.0.20"
 
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-github-client = { path = "github", version = "0.1.0" }

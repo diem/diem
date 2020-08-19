@@ -22,10 +22,11 @@ use libra_logger::info;
 use std::{fs::File, io::Write, path::Path};
 use structopt::StructOpt;
 
+use consensus_types::safety_data::SafetyData;
 use libra_genesis_tool::layout::Layout;
 use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, LIBRA_ROOT_KEY,
-    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
+    SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value, VaultStorage};
@@ -397,18 +398,11 @@ impl ClusterBuilder {
                     .map_err(|e| format_err!("Failed to create {}__{} : {}", pod_name, key, e))?;
             }
             vault_storage
-                .set(EPOCH, Value::U64(0))
-                .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, EPOCH, e))?;
-            vault_storage
-                .set(LAST_VOTED_ROUND, Value::U64(0))
-                .map_err(|e| {
-                    format_err!("Failed to create {}/{} : {}", pod_name, LAST_VOTED_ROUND, e)
-                })?;
-            vault_storage
-                .set(PREFERRED_ROUND, Value::U64(0))
-                .map_err(|e| {
-                    format_err!("Failed to create {}/{} : {}", pod_name, PREFERRED_ROUND, e)
-                })?;
+                .set(
+                    SAFETY_DATA,
+                    Value::SafetyData(SafetyData::new(0, 0, 0, None)),
+                )
+                .map_err(|e| format_err!("Failed to create {}/{}: {}", pod_name, SAFETY_DATA, e))?;
             vault_storage
                 .set(WAYPOINT, Value::String("".into()))
                 .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, WAYPOINT, e))?;

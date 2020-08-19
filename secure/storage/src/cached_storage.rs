@@ -54,8 +54,8 @@ impl<S: KVStorage> KVStorage for CachedStorage<S> {
                         Value::U64(*value),
                         self.time_service.now(),
                     )),
-                    Value::Bytes(value) => Ok(GetResponse::new(
-                        Value::Bytes(value.clone()),
+                    Value::SafetyData(value) => Ok(GetResponse::new(
+                        Value::SafetyData(value.clone()),
                         self.time_service.now(),
                     )),
                 };
@@ -104,12 +104,12 @@ impl<S: KVStorage> KVStorage for CachedStorage<S> {
                         .insert(key.to_string(), Value::U64(value));
                     Ok(GetResponse::new(Value::U64(value), last_update))
                 }
-                Value::Bytes(value) => {
+                Value::SafetyData(value) => {
                     self.cache
                         .write()
                         .unwrap()
-                        .insert(key.to_string(), Value::Bytes(value.clone()));
-                    Ok(GetResponse::new(Value::Bytes(value), last_update))
+                        .insert(key.to_string(), Value::SafetyData(value.clone()));
+                    Ok(GetResponse::new(Value::SafetyData(value), last_update))
                 }
             },
         }
@@ -155,12 +155,12 @@ impl<S: KVStorage> KVStorage for CachedStorage<S> {
                     .insert(key.to_string(), Value::U64(value));
                 Ok(())
             }
-            Value::Bytes(value) => {
-                self.storage.set(key, Value::Bytes(value.clone()))?;
+            Value::SafetyData(value) => {
+                self.storage.set(key, Value::SafetyData(value.clone()))?;
                 self.cache
                     .write()
                     .unwrap()
-                    .insert(key.to_string(), Value::Bytes(value));
+                    .insert(key.to_string(), Value::SafetyData(value));
                 Ok(())
             }
         }

@@ -70,4 +70,9 @@ impl ConsensusState {
     pub fn in_validator_set(&self) -> bool {
         self.in_validator_set
     }
+
+    /// Return a copy of the safety data.
+    pub fn safety_data(&mut self) -> SafetyData {
+        self.safety_data.clone()
+    }
 }
