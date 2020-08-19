@@ -66,46 +66,6 @@ impl<T> PythonEmitter<T>
 where
     T: Write,
 {
-    fn output_additional_imports(&mut self) -> Result<()> {
-        writeln!(
-            self.out,
-            r#"
-from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__BoolVector, TransactionArgument__U8Vector, TransactionArgument__U64Vector, TransactionArgument__U128Vector, TransactionArgument__AddressVector, TransactionArgument__Vector)"#,
-            match &self.libra_package_name {
-                None => "".into(),
-                Some(package) => package.clone() + ".",
-            },
-        )
-    }
-
-    fn output_encode_method(&mut self) -> Result<()> {
-        writeln!(
-            self.out,
-            r#"
-def encode_script(call: ScriptCall) -> Script:
-    """Build a Libra `Script` from a structured object `ScriptCall`.
-    """
-    helper = SCRIPT_ENCODER_MAP[call.__class__]
-    return helper(call)
-"#
-        )
-    }
-
-    fn output_decode_method(&mut self) -> Result<()> {
-        writeln!(
-            self.out,
-            r#"
-def decode_script(script: Script) -> ScriptCall:
-    """Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
-    """
-    helper = SCRIPT_DECODER_MAP.get(script.code)
-    if helper is None:
-        raise ValueError("Unknown script bytecode")
-    return helper(script)
-"#
-        )
-    }
-
     fn output_script_call_enum_with_imports(&mut self, abis: &[ScriptABI]) -> Result<()> {
         let libra_types_module = match &self.libra_package_name {
             None => "libra_types".into(),
@@ -144,6 +104,46 @@ def decode_script(script: Script) -> ScriptCall:
             .output(&mut self.out, &script_registry)
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
         Ok(())
+    }
+
+    fn output_additional_imports(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__BoolVector, TransactionArgument__U8Vector, TransactionArgument__U64Vector, TransactionArgument__U128Vector, TransactionArgument__AddressVector, TransactionArgument__Vector)"#,
+            match &self.libra_package_name {
+                None => "".into(),
+                Some(package) => package.clone() + ".",
+            },
+        )
+    }
+
+    fn output_encode_method(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+def encode_script(call: ScriptCall) -> Script:
+    """Build a Libra `Script` from a structured object `ScriptCall`.
+    """
+    helper = SCRIPT_ENCODER_MAP[call.__class__]
+    return helper(call)
+"#
+        )
+    }
+
+    fn output_decode_method(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+def decode_script(script: Script) -> ScriptCall:
+    """Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
+    """
+    helper = SCRIPT_DECODER_MAP.get(script.code)
+    if helper is None:
+        raise ValueError("Unknown script bytecode")
+    return helper(script)
+"#
+        )
     }
 
     fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
