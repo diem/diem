@@ -664,11 +664,12 @@ jobs:
             # Will be possible.  Otherwise we will only build and not push on relevant file changes in non
             # master branches below (this job will not be configured on master except for circle ci.)
             if [[  $CIRCLE_BRANCH == "master" ]]; then
-              NOW=`date +%Y-%M-%d`
+              NOW=`date +%Y-%m-%d`
               LAST=`cat /home/circleci/lastbuild` || true
               if [[ "$LAST" != "$NOW" ]]; then
                 echo Last build occured $LAST, so building.
-                #continue the build, as unless time is broken, we should build.
+                #since we're building, time to update the cache key file.
+                date +%Y-%m-%d > /home/circleci/lastbuild
                 exit 0
               fi
             fi
@@ -677,7 +678,6 @@ jobs:
             #this is specific for prs targeting master.
             #TODO: figure out if we need this for release branchs?
             git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
-            echo ".circleci/config.yml" >> /tmp/ci_docker_files
             echo "cargo-toolchain" >> /tmp/ci_docker_files
             echo "docker/ci/<< parameters.base-image >>/Dockerfile" >> /tmp/ci_docker_files
             echo "rust-toolchain" >> /tmp/ci_docker_files
@@ -687,7 +687,17 @@ jobs:
             if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
               echo no relevant files have changed - halting
               circleci step halt
+            else
+              echo Relevant files have changed, building.
+              #since we're building, time to update the cache key file.
+              date +%Y-%m-%d > /home/circleci/lastbuild
             fi
+
+      - save_cache:
+          name: store updated daily latch file.
+          key: docker-circleci-lastest-daily-<< parameters.base-image >>-{{ epoch }}
+          paths:
+            - /home/circleci/lastbuild
       - run:
           name: Build/test << parameters.base-image >> docker image file
           command: |
@@ -702,13 +712,6 @@ jobs:
           command: |
             #signs the pushed image
             docker push --disable-content-trust=false libra/build_environment:<< parameters.base-image >>-latest
-            #since we've built, time to update the cache key file.
-            date +%Y-%M-%d > /home/circleci/lastbuild
-      - save_cache:
-          name: store updated daily latch file.
-          key: docker-circleci-lastest-daily-<< parameters.base-image >>
-          paths:
-            - /home/circleci/lastbuild
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
@@ -793,12 +796,20 @@ jobs:
       - run:
           name: Halt job if already built code coverage today.
           command: |
-            NOW=`date +%Y-%M-%d`
+            NOW=`date +%Y-%m-%d`
             LAST=`cat /home/circleci/lastbuild` || true
             if [[ "$LAST" == "$NOW" ]]; then
               echo Last build occured today, halting.
               circleci step halt
+            else
+              echo Last build occured $LAST, building.
+              date +%Y-%m-%d > /home/circleci/lastbuild
             fi
+      - save_cache:
+          name: store updated daily latch file.
+          key: code-coverage-daily-{{ epoch }}
+          paths:
+            - /home/circleci/lastbuild
       - aws-cli/configure:
           aws-access-key-id: AWS_ACCESS_KEY_ID
           aws-secret-access-key: AWS_SECRET_ACCESS_KEY
@@ -832,15 +843,6 @@ jobs:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
           webhook: "${WEBHOOK_COVERAGE_INFO}"
-      - run:
-          name: Update cache key file
-          command: |
-            date +%Y-%M-%d > /home/circleci/lastbuild
-      - save_cache:
-          name: store updated daily latch file.
-          key: code-coverage-daily
-          paths:
-            - /home/circleci/lastbuild
 
 workflows:
   commit-workflow:
@@ -949,8 +951,6 @@ workflows:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
       - code_coverage:
-          requires:
-            - prefetch-crates
           context: libra_ci
           filters:
             branches:
