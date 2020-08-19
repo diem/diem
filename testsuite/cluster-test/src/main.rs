@@ -61,6 +61,8 @@ struct Args {
     #[structopt(long, group = "action", requires = "swarm")]
     diag: bool,
     #[structopt(long, group = "action")]
+    no_teardown: bool,
+    #[structopt(long, group = "action")]
     suite: Option<String>,
     #[structopt(long, group = "action")]
     exec: Option<String>,
@@ -172,7 +174,9 @@ pub async fn main() {
             warn!("Tearing down cluster now");
         }
     }
-    runner.teardown().await;
+    if !args.no_teardown {
+        runner.teardown().await;
+    }
     let perf_msg = exit_on_error(result);
 
     if let Some(mut changelog) = args.changelog {
