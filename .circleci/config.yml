@@ -845,111 +845,12 @@ jobs:
           webhook: "${WEBHOOK_COVERAGE_INFO}"
 
 workflows:
-  commit-workflow:
+  ######################################################################################################################
+  # Once a day when a change lands on master, rebuild the CI base image and code coverage.
+  # Will build the CI base image when relevant files are changed vs on master, on either master or test branches.
+  ######################################################################################################################
+  latched-publish-workflow:
     jobs:
-      - lint-docker:
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - terraform:
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - prefetch-crates
-      - lint:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-dev:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-benchmark:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              ignore:
-                - master
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - build-docs:
-          requires:
-            - lint
-          filters:
-            branches:
-              ignore:
-                - gh-pages
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-      - deploy-docs:
-          requires:
-            - build-docs
-          filters:
-            branches:
-              only: master
-      - check-breaking-change:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              only: master
-      - docker-pre-publish:
-          context: docker
-          filters:
-            branches:
-              only:
-                - auto
-      - docker-publish:
-          context: docker
-          filters:
-            branches:
-              only:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
       - code_coverage:
           context: libra_ci
           filters:
@@ -957,8 +858,6 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - master
-      # Will build and push daily,
-      # or when relevant files change.
       - docker-ci-build:
           context: docker
           base-image: circleci
@@ -967,39 +866,181 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - master
+
+  ######################################################################################################################
+  # Will publish release images to dockerhub and aws when commits land on a release/testing branch.
+  ######################################################################################################################
+  release-dockerhub-publish:
+    jobs:
+      - docker-publish:
+          context: docker
+          filters:
+            branches:
+              only:
+                - /^test-[\d|.]+$/
+                - /^release-[\d|.]+$/
+
+  ######################################################################################################################
+  # Updates documentation when code is committed to master, and checks for breaking changes.
+  ######################################################################################################################
+  document-publish-workflow:
+    jobs:
+      - prefetch-crates:
+          filters:
+            branches:
+              only: master
+      - lint:
+          requires:
+            - prefetch-crates
+      - build-docs:
+          requires:
+            - lint
+      - deploy-docs:
+          requires:
+            - build-docs
+      - check-breaking-change:
+          requires:
+            - prefetch-crates
+
+  ######################################################################################################################
+  # Used by bors to test prs on master's head before committing to master.
+  # Must support auto and canary branchs...
+  ######################################################################################################################
+  commit-workflow:
+    jobs:
+      - docker-pre-publish:
+          context: docker
+          filters:
+            branches:
+              only:
+                - auto
+                - canary
+      - lint-docker:
+          filters:
+            branches:
+              only:
+                - auto
+                - canary
+      - terraform:
+          filters:
+            branches:
+              only:
+                - auto
+                - canary
+      - prefetch-crates:
+          filters:
+            branches:
+              only:
+                - auto
+                - canary
+      - lint:
+          requires:
+            - prefetch-crates
+      - build-dev:
+          requires:
+            - prefetch-crates
+      - run-e2e-test:
+          requires:
+            - prefetch-crates
+      - run-unit-test:
+          requires:
+            - prefetch-crates
+      - run-crypto-unit-test:
+          requires:
+            - prefetch-crates
+      - build-benchmark:
+          requires:
+            - prefetch-crates
+      - build-docs:
+          requires:
+            - lint
       - docker-ci-build:
           base-image: circleci
           filters:
             branches:
-              ignore:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-                - master
+              only:
+                - auto
+                - canary
       - docker-ci-build:
           base-image: centos
           filters:
             branches:
-              ignore:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-                - master
+              only:
+                - auto
+                - canary
       - docker-ci-build:
           #sccache fails to execute in alpine.
           base-image: alpine
           filters:
             branches:
-              ignore:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-                - master
+              only:
+                - auto
+                - canary
       - docker-ci-build:
           base-image: arch
           filters:
             branches:
-              ignore:
-                - /^test-[\d|.]+$/
-                - /^release-[\d|.]+$/
-                - master
+              only:
+                - auto
+                - canary
+
+  pull-request-workflow:
+    jobs:
+      - lint-docker:
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - terraform:
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - prefetch-crates:
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - lint:
+          requires:
+            - prefetch-crates
+      - build-dev:
+          requires:
+            - prefetch-crates
+      - run-e2e-test:
+          requires:
+            - prefetch-crates
+      - run-unit-test:
+          requires:
+            - prefetch-crates
+      - run-crypto-unit-test:
+          requires:
+            - prefetch-crates
+      - build-benchmark:
+          requires:
+            - prefetch-crates
+      - build-docs:
+          requires:
+            - lint
+      - docker-ci-build:
+          base-image: circleci
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - docker-ci-build:
+          base-image: centos
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - docker-ci-build:
+          #sccache fails to execute in alpine.
+          base-image: alpine
+          filters:
+            branches:
+              only: /^pull\/.+$/
+      - docker-ci-build:
+          base-image: arch
+          filters:
+            branches:
+              only: /^pull\/.+$/
+
   scheduled-workflow:
     triggers:
       - schedule:
