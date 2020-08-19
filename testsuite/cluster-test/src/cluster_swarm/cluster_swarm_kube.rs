@@ -98,22 +98,12 @@ impl ClusterSwarmKube {
             .unwrap()
     }
 
-    fn lsr_spec(
-        &self,
-        validator_index: u32,
-        num_validators: u32,
-        node_name: &str,
-        image_tag: &str,
-        lsr_backend: &str,
-    ) -> Result<(Pod, Service)> {
+    fn lsr_spec(&self, pod_name: &str, node_name: &str, image_tag: &str) -> Result<(Pod, Service)> {
         let pod_yaml = format!(
             include_str!("lsr_spec_template.yaml"),
-            validator_index = validator_index,
-            num_validators = num_validators,
+            pod_name = pod_name,
             image_tag = image_tag,
             node_name = node_name,
-            lsr_backend = lsr_backend,
-            cfg_seed = CFG_SEED,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
         let pod_spec = serde_json::value::to_value(pod_spec)?;
@@ -121,7 +111,7 @@ impl ClusterSwarmKube {
             .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
         let service_yaml = format!(
             include_str!("lsr_service_template.yaml"),
-            validator_index = validator_index,
+            pod_name = pod_name,
         );
         let service_spec: serde_yaml::Value = serde_yaml::from_str(&service_yaml).unwrap();
         let service_spec = serde_json::value::to_value(service_spec).unwrap();
@@ -516,13 +506,9 @@ impl ClusterSwarmKube {
             Vault(_vault_config) => {
                 self.vault_spec(instance_config.validator_group.index_only(), &node.name)?
             }
-            LSR(lsr_config) => self.lsr_spec(
-                instance_config.validator_group.index_only(),
-                lsr_config.num_validators,
-                &node.name,
-                &lsr_config.image_tag,
-                &lsr_config.lsr_backend,
-            )?,
+            LSR(lsr_config) => {
+                self.lsr_spec(pod_name.as_str(), &node.name, &lsr_config.image_tag)?
+            }
         };
         match pod_api.create(&PostParams::default(), &p).await {
             Ok(o) => {

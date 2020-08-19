@@ -220,7 +220,6 @@ impl ClusterBuilder {
                             None
                         };
                         let lsr_config = LSRConfig {
-                            num_validators,
                             image_tag: image_tag.to_string(),
                             lsr_backend: lsr_backend.to_string(),
                             vault_addr,
@@ -297,19 +296,15 @@ impl ClusterBuilder {
                 } else {
                     None
                 };
-                let seed_peer_ip = validator_nodes[0].internal_ip.clone();
                 let safety_rules_addr = if enable_lsr {
                     Some(lsr_nodes[i as usize].internal_ip.clone())
                 } else {
                     None
                 };
                 let validator_config = ValidatorConfig {
-                    num_validators,
-                    num_fullnodes: num_fullnodes_per_validator,
                     enable_lsr,
                     image_tag: image_tag.to_string(),
                     config_overrides: config_overrides.to_vec(),
-                    seed_peer_ip,
                     safety_rules_addr,
                     vault_addr,
                     vault_namespace,
@@ -348,8 +343,6 @@ impl ClusterBuilder {
                     .clone();
                 let fullnode_config = FullnodeConfig {
                     fullnode_index,
-                    num_fullnodes_per_validator,
-                    num_validators,
                     image_tag: image_tag.to_string(),
                     config_overrides: config_overrides.to_vec(),
                     seed_peer_ip,
