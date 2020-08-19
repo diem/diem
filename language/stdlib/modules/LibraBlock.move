@@ -9,7 +9,6 @@ module LibraBlock {
 
     resource struct BlockMetadata {
         /// Height of the current block
-        /// TODO: should we keep the height?
         height: u64,
         /// Handle where events with the time of new blocks are emitted
         new_block_events: Event::EventHandle<Self::NewBlockEvent>,
@@ -64,10 +63,7 @@ module LibraBlock {
 
     /// Set the metadata for the current block.
     /// The runtime always runs this before executing the transactions in a block.
-    /// TODO: 1. Make this private, support other metadata
-    ///       2. Should the previous block votes be provided from BlockMetadata or should it come from the ValidatorSet
-    ///          Resource?
-    public fun block_prologue(
+    fun block_prologue(
         vm: &signer,
         round: u64,
         timestamp: u64,
@@ -90,13 +86,12 @@ module LibraBlock {
         Event::emit_event<NewBlockEvent>(
             &mut block_metadata_ref.new_block_events,
             NewBlockEvent {
-                round: round,
-                proposer: proposer,
-                previous_block_votes: previous_block_votes,
+                round,
+                proposer,
+                previous_block_votes,
                 time_microseconds: timestamp,
             }
         );
-        // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
     }
     spec fun block_prologue {
         include LibraTimestamp::AbortsIfNotOperating;

@@ -41,7 +41,6 @@
 </dt>
 <dd>
  Height of the current block
- TODO: should we keep the height?
 </dd>
 <dt>
 
@@ -197,12 +196,9 @@ Helper function to determine whether this module has been initialized.
 
 Set the metadata for the current block.
 The runtime always runs this before executing the transactions in a block.
-TODO: 1. Make this private, support other metadata
-2. Should the previous block votes be provided from BlockMetadata or should it come from the ValidatorSet
-Resource?
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
+<pre><code><b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
 </code></pre>
 
 
@@ -211,7 +207,7 @@ Resource?
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(
+<pre><code><b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(
     vm: &signer,
     round: u64,
     timestamp: u64,
@@ -234,13 +230,12 @@ Resource?
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraBlock_NewBlockEvent">NewBlockEvent</a>&gt;(
         &<b>mut</b> block_metadata_ref.new_block_events,
         <a href="#0x1_LibraBlock_NewBlockEvent">NewBlockEvent</a> {
-            round: round,
-            proposer: proposer,
-            previous_block_votes: previous_block_votes,
+            round,
+            proposer,
+            previous_block_votes,
             time_microseconds: timestamp,
         }
     );
-    // TODO(valerini): call regular reconfiguration here LibraSystem2::update_all_validator_info()
 }
 </code></pre>
 
@@ -309,7 +304,7 @@ Get the current block height
 ### Function `block_prologue`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
+<pre><code><b>fun</b> <a href="#0x1_LibraBlock_block_prologue">block_prologue</a>(vm: &signer, round: u64, timestamp: u64, previous_block_votes: vector&lt;address&gt;, proposer: address)
 </code></pre>
 
 

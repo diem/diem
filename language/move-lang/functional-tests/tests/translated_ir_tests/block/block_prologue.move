@@ -27,20 +27,6 @@ fun main() {
     assert(LibraTimestamp::now_microseconds() != 2000000, 77);
 }
 }
-//! new-transaction
-//! sender: vivian
-script{
-use 0x1::LibraBlock;
-use 0x1::Vector;
-
-fun main(account: &signer) {
-    LibraBlock::block_prologue(account, 1, 10, Vector::empty<address>(), {{vivian}});
-}
-}
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 514
 
 //! new-transaction
 //! sender: vivian

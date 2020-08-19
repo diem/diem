@@ -18,6 +18,7 @@ main() {
 
     return;
 }
+// check: EXECUTED
 
 //! new-transaction
 import 0x1.LibraTimestamp;
@@ -26,20 +27,7 @@ main() {
     assert(LibraTimestamp.now_microseconds() != 2000000, 77);
     return;
 }
-
-//! new-transaction
-//! sender: vivian
-import 0x1.LibraBlock;
-import 0x1.LibraTimestamp;
-import 0x1.Vector;
-
-main(account: &signer) {
-    LibraBlock.block_prologue(move(account), 1, 10, Vector.empty<address>(), {{vivian}});
-
-    return;
-}
-// check: ABORTED
-// check: code: 2
+// check: EXECUTED
 
 //! new-transaction
 //! sender: vivian
@@ -50,9 +38,5 @@ main(account: &signer) {
 
     return;
 }
-
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: code: 2
 // check: ABORTED
 // check: code: 2
