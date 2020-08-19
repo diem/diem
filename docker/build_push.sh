@@ -85,9 +85,8 @@ fi
 
 #if a prebuild, always -1, else if "docker pull" failed build the image.
 if [ "$PULLED" != "0" ]; then
+  export LIBRA_BUILD_TAG=${PRE_NAME}
   docker/$DIR/build.sh
-  echo retagging ${LOCAL_TAG} as ${PRE_NAME}
-  docker tag ${LOCAL_TAG} ${PRE_NAME}
   #push our tagged prebuild image if this is a prebuild.  Usually means this is called from bors' auto branch.
   if [ $PREBUILD == "true" ]; then
     if [ $PUSH == "true" ]; then
