@@ -6,7 +6,13 @@ module FixedPoint32 {
 
     /// Define a fixed-point numeric type with 32 fractional bits.
     /// This is just a u64 integer but it is wrapped in a struct to
-    /// make a unique type.
+    /// make a unique type. This is a binary representation, so decimal
+    /// values may not be exactly representable, but it provides more
+    /// than 9 decimal digits of precision both before and after the
+    /// decimal point (18 digits total). For comparison, double precision
+    /// floating-point has less than 16 decimal digits of precision, so
+    /// be careful about using floating-point to convert these values to
+    /// decimal.
     struct FixedPoint32 { value: u64 }
 
     /// TODO(wrwg): This should be provided somewhere centrally in the framework.
@@ -86,9 +92,13 @@ module FixedPoint32 {
     /// Create a fixed-point value from a rational number specified by its
     /// numerator and denominator. This function is for convenience; it is also
     /// perfectly fine to create a fixed-point value by directly specifying the
-    /// raw value. This will abort if the denominator is zero or if the ratio is
-    /// not in the range 2^-32 .. 2^32-1.
-    /// Note that someone can still create a ratio of zero from a raw value.
+    /// raw value. This will abort if the denominator is zero. It will also
+    /// abort if the numerator is nonzero and the ratio is not in the range
+    /// 2^-32 .. 2^32-1. When specifying decimal fractions, be careful about
+    /// rounding errors: if you round to display N digits after the decimal
+    /// point, you can use a denominator of 10^N to avoid numbers where the
+    /// very small imprecision in the binary representation could change the
+    /// rounding, e.g., 0.0125 will round down to 0.012 instead of up to 0.013.
     public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32 {
         // If the denominator is zero, this will abort.
         // Scale the numerator to have 64 fractional bits and the denominator
