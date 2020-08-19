@@ -68,7 +68,7 @@ impl SafetyRulesManager {
             return Self::new_process(conf.server_address(), config.network_timeout_ms);
         }
 
-        let storage = storage(config).into_cached();
+        let storage = storage(config);
         let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
         match config.service {
             SafetyRulesService::Local => Self::new_local(storage, verify_vote_proposal_signature),
