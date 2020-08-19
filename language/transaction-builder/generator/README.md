@@ -37,6 +37,8 @@ The following languages are currently supported:
 
 * Java 8
 
+* Go >= 1.13
+
 * Rust (NOTE: Code generation of dependency-free Rust is experimental. Consider using the libraries of the Libra repository instead.)
 
 
@@ -97,6 +99,26 @@ Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.jav
 cp language/transaction-builder/generator/examples/java/StdlibDemo.java "$DEST"
 (find "$DEST" -name "*.java" | xargs javac -cp "$DEST")
 java -enableassertions -cp "$DEST" StdlibDemo
+```
+
+### Go
+
+To generate the Go "packages" `testing/libratypes`, and `testing/librastdlib` into a target directory `$DEST`, run:
+
+```bash
+target/debug/generate-transaction-builders \
+    --language go \
+    --module-name librastdlib \
+    --libra-package-name testing \
+    --with-libra-types "testsuite/generate-format/tests/staged/libra.yaml" \
+    --target-source-dir "$DEST" \
+    "language/stdlib/compiled/transaction_scripts/abi"
+```
+Next, you may copy and execute the [Go demo file](examples/golang/stdlib_demo.go) as follows:
+(Note that `$DEST` must be an absolute path)
+```
+cp language/transaction-builder/generator/examples/golang/stdlib_demo.go "$DEST"
+(cd "$DEST" && go mod init testing && go mod edit -replace testing="$DEST" && go run stdlib_demo.go)
 ```
 
 ### Rust (experimental)

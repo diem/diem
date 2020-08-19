@@ -20,6 +20,7 @@ enum Language {
     Rust,
     Cpp,
     Java,
+    Go,
 }
 }
 
@@ -45,12 +46,14 @@ struct Options {
     with_libra_types: Option<PathBuf>,
 
     /// Module name for the transaction builders installed in the `target_source_dir`.
-    /// Rust crates may contain a version number, e.g. "test:1.2.0".
-    /// In Java, this is expected to be a package name, e.g. "com.test" to create Java files in `com/test`.
+    /// * Rust crates may contain a version number, e.g. "test:1.2.0".
+    /// * In Java, this is expected to be a package name, e.g. "com.test" to create Java files in `com/test`.
+    /// * In Go, this is expected to be of the format "go_module/path/go_package_name",
+    /// and `libra_types` is assumed to be in "go_module/path/libra_types".
     #[structopt(long)]
     module_name: Option<String>,
 
-    /// Optional package name where to find the `serde_types` module (useful in Python).
+    /// Optional package name (Python) or module path (Go) of the Serde and LCS runtime dependencies.
     #[structopt(long)]
     serde_package_name: Option<String>,
 
@@ -59,7 +62,7 @@ struct Options {
     #[structopt(long, default_value = "0.1.0")]
     libra_version_number: String,
 
-    /// Optional package name where to find the `libra_types` module (useful in Python).
+    /// Optional package name (Python) or module path (Go) of the `libra_types` dependency.
     #[structopt(long)]
     libra_package_name: Option<String>,
 }
@@ -90,6 +93,16 @@ fn main() {
                 Language::Java => {
                     panic!("Code generation in Java requires --target_source_dir");
                 }
+                Language::Go => {
+                    buildgen::golang::output(
+                        &mut out,
+                        options.serde_package_name.clone(),
+                        options.libra_package_name.clone(),
+                        options.module_name.as_deref().unwrap_or("main").to_string(),
+                        &abis,
+                    )
+                    .unwrap();
+                }
             }
             return;
         }
@@ -107,10 +120,15 @@ fn main() {
                 Language::Rust => Box::new(serdegen::rust::Installer::new(install_dir.clone())),
                 Language::Cpp => Box::new(serdegen::cpp::Installer::new(install_dir.clone())),
                 Language::Java => Box::new(serdegen::java::Installer::new(install_dir.clone())),
+                Language::Go => Box::new(serdegen::golang::Installer::new(
+                    install_dir.clone(),
+                    options.serde_package_name.clone(),
+                )),
             };
 
         match options.language {
-            Language::Rust => (), // In Rust, runtimes are deployed as crates.
+            // In Rust and Go, runtimes are deployed using a global package manager.
+            Language::Rust | Language::Go => (),
             _ => {
                 installer.install_serde_runtime().unwrap();
                 installer.install_lcs_runtime().unwrap();
@@ -128,6 +146,7 @@ fn main() {
                 }
             }
             Language::Java => "org.libra.types".to_string(),
+            Language::Go => "libratypes".to_string(),
             _ => "libra_types".to_string(),
         };
         let config = serdegen::CodeGeneratorConfig::new(name);
@@ -148,6 +167,11 @@ fn main() {
             )),
             Language::Cpp => Box::new(buildgen::cpp::Installer::new(install_dir)),
             Language::Java => Box::new(buildgen::java::Installer::new(install_dir)),
+            Language::Go => Box::new(buildgen::golang::Installer::new(
+                install_dir,
+                options.serde_package_name,
+                options.libra_package_name,
+            )),
         };
 
     if let Some(name) = options.module_name {
