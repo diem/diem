@@ -14,7 +14,6 @@ use crate::noise::stream::NoiseStream;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
-use netcore::transport::ConnectionOrigin;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom as _,
@@ -151,47 +150,6 @@ impl NoiseUpgrader {
             noise_config: noise::NoiseConfig::new(key),
             auth_mode,
         }
-    }
-
-    /// Perform a protocol upgrade on an underlying connection. In addition perform the noise IK
-    /// handshake to establish a noise stream and exchange static public keys. Upon success,
-    /// returns the static public key of the remote as well as a NoiseStream.
-    // TODO(philiphayes): rework socket-bench-server so we can remove this function
-    #[allow(dead_code)]
-    pub async fn upgrade_with_noise<TSocket>(
-        &self,
-        socket: TSocket,
-        origin: ConnectionOrigin,
-        remote_public_key: Option<x25519::PublicKey>,
-    ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
-    where
-        TSocket: AsyncRead + AsyncWrite + Unpin,
-    {
-        // perform the noise handshake
-        let socket = match origin {
-            ConnectionOrigin::Outbound => {
-                let remote_public_key = match remote_public_key {
-                    Some(key) => key,
-                    None if cfg!(any(test, feature = "fuzzing")) => unreachable!(),
-                    None => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::Other,
-                            "noise: SHOULD NOT HAPPEN: missing server's key when dialing",
-                        ));
-                    }
-                };
-                self.upgrade_outbound(socket, remote_public_key, AntiReplayTimestamps::now)
-                    .await?
-            }
-            ConnectionOrigin::Inbound => {
-                let (socket, _peer_id) = self.upgrade_inbound(socket).await?;
-                socket
-            }
-        };
-
-        // return remote public key with a socket including the noise stream
-        let remote_public_key = socket.get_remote_static();
-        Ok((remote_public_key, socket))
     }
 
     /// The prologue is the client's peer_id and the remote's expected public key.
