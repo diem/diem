@@ -74,7 +74,13 @@ fn main() {
             let stdout = std::io::stdout();
             let mut out = stdout.lock();
             match options.language {
-                Language::Python3 => buildgen::python3::output(&mut out, &abis).unwrap(),
+                Language::Python3 => buildgen::python3::output(
+                    &mut out,
+                    options.serde_package_name.clone(),
+                    options.libra_package_name.clone(),
+                    &abis,
+                )
+                .unwrap(),
                 Language::Rust => {
                     buildgen::rust::output(&mut out, &abis, /* local types */ false).unwrap()
                 }

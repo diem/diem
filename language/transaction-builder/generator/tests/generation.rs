@@ -44,7 +44,7 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let source_path = stdlib_dir_path.join("__init__.py");
 
     let mut source = std::fs::File::create(&source_path).unwrap();
-    buildgen::python3::output(&mut source, &abis).unwrap();
+    buildgen::python3::output(&mut source, None, None, &abis).unwrap();
 
     std::fs::copy(
         "examples/python3/stdlib_demo.py",

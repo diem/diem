@@ -17,15 +17,11 @@ use std::{
 };
 
 /// Output transaction builders in Python for the given ABIs.
-pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
-    output_with_optional_packages(out, abis, None, None)
-}
-
-fn output_with_optional_packages(
+pub fn output(
     out: &mut dyn Write,
-    abis: &[ScriptABI],
     serde_package_name: Option<String>,
     libra_package_name: Option<String>,
+    abis: &[ScriptABI],
 ) -> Result<()> {
     let mut emitter = PythonEmitter {
         out: IndentedWriter::new(out, IndentConfig::Space(4)),
@@ -33,7 +29,7 @@ fn output_with_optional_packages(
         libra_package_name,
     };
     emitter.output_script_call_enum_with_imports(abis)?;
-    emitter.output_preamble()?;
+    emitter.output_additional_imports()?;
 
     emitter.output_encode_method()?;
     emitter.output_decode_method()?;
@@ -70,7 +66,7 @@ impl<T> PythonEmitter<T>
 where
     T: Write,
 {
-    fn output_preamble(&mut self) -> Result<()> {
+    fn output_additional_imports(&mut self) -> Result<()> {
         writeln!(
             self.out,
             r#"
@@ -131,7 +127,7 @@ def decode_script(script: Script) -> ScriptCall:
                         "ScriptCall".to_string(),
                         abi.name().to_camel_case(),
                     ],
-                    Self::quote_doc(abi.doc()),
+                    Self::prepare_doc_string(abi.doc()),
                 )
             })
             .collect();
@@ -139,7 +135,6 @@ def decode_script(script: Script) -> ScriptCall:
             vec!["".to_string(), "ScriptCall".to_string()],
             "Structured representation of a call into a known Move script.".into(),
         );
-        // Deactivate serialization for local types to force `Bytes = Vec<u8>`.
         let config = CodeGeneratorConfig::new("".to_string())
             .with_comments(comments)
             .with_external_definitions(external_definitions)
@@ -164,7 +159,11 @@ def decode_script(script: Script) -> ScriptCall:
             .join(", ")
         )?;
         self.out.indent();
-        writeln!(self.out, "\"\"\"{}\n\"\"\"", Self::quote_doc(abi.doc()))?;
+        writeln!(
+            self.out,
+            "\"\"\"{}\n\"\"\"",
+            Self::prepare_doc_string(abi.doc())
+        )?;
         writeln!(
             self.out,
             r#"return Script(
@@ -216,6 +215,19 @@ def decode_script(script: Script) -> ScriptCall:
         writeln!(self.out, ")\n")?;
         self.out.unindent();
         Ok(())
+    }
+
+    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
+        writeln!(
+            self.out,
+            "\n{}_CODE = b\"{}\"",
+            abi.name().to_shouty_snake_case(),
+            abi.code()
+                .iter()
+                .map(|x| format!("\\x{:02x}", x))
+                .collect::<Vec<_>>()
+                .join(""),
+        )
     }
 
     fn output_encoder_map(&mut self, abis: &[ScriptABI]) -> Result<()> {
@@ -300,20 +312,7 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
         )
     }
 
-    fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
-        writeln!(
-            self.out,
-            "\n{}_CODE = b\"{}\"",
-            abi.name().to_shouty_snake_case(),
-            abi.code()
-                .iter()
-                .map(|x| format!("\\x{:02x}", x))
-                .collect::<Vec<_>>()
-                .join(""),
-        )
-    }
-
-    fn quote_doc(doc: &str) -> String {
+    fn prepare_doc_string(doc: &str) -> String {
         let doc = crate::common::prepare_doc_string(doc);
         let s: Vec<_> = doc.splitn(2, |c| c == '.').collect();
         if s.len() <= 1 || s[1].is_empty() {
@@ -421,11 +420,11 @@ impl crate::SourceInstaller for Installer {
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
         let mut file = self.open_module_init_file(name)?;
-        output_with_optional_packages(
+        output(
             &mut file,
-            abis,
             self.serde_package_name.clone(),
             self.libra_package_name.clone(),
+            abis,
         )?;
         Ok(())
     }
