@@ -1,4 +1,7 @@
-use crate::ListPoliciesResponse;
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{ListPoliciesResponse, ReadSecretData, ReadSecretMetadata, ReadSecretResponse};
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
 use serde_json::Value;
@@ -35,12 +38,46 @@ prop_compose! {
     }
 }
 
+// This generates an arbitrary secret read response returned by vault, as well as an arbitrary pair
+// of input strings for the secret and key.
+prop_compose! {
+    pub fn arb_secret_read_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        data in prop::collection::btree_map(any::<String>(), any::<String>(), 1..100),
+        created_time in any::<String>(),
+        version in any::<u32>(),
+        secret in any::<String>(),
+        key in any::<String>(),
+    ) -> (Response, String, String) {
+        let metadata = ReadSecretMetadata {
+            created_time,
+            version,
+        };
+        let data = ReadSecretData {
+            data,
+            metadata,
+        };
+        let read_secret_response = ReadSecretResponse {
+            data
+        };
+
+        let read_secret_response =
+            serde_json::to_string::<ReadSecretResponse>(&read_secret_response).unwrap();
+        let read_secret_response = Response::new(status, &status_text, &read_secret_response);
+
+        (read_secret_response, secret, key)
+    }
+}
+
 // Note: these tests ensure that the various fuzzers are maintained (i.e., not broken
 // at some time in the future and only discovered when a fuzz test fails).
 #[cfg(test)]
 mod tests {
     use crate::{
-        fuzzing::arb_generic_response, process_generic_response, process_policy_list_response,
+        fuzzing::{arb_generic_response, arb_policy_list_response, arb_secret_read_response},
+        process_generic_response, process_policy_list_response, process_secret_read_response,
     };
     use proptest::prelude::*;
 
@@ -55,6 +92,11 @@ mod tests {
         #[test]
         fn process_policy_list_response_proptest(input in arb_policy_list_response()) {
             let _ = process_policy_list_response(input);
+        }
+
+        #[test]
+        fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
+            let _ = process_secret_read_response(&secret, &key, response);
         }
     }
 }

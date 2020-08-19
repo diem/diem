@@ -77,7 +77,7 @@ fn corpus_from_strategy(strategy: impl Strategy) -> Vec<u8> {
     runner.bytes_used()
 }
 
-/// Helper to convert a bytearray to a value implenting the Arbitrary trait.
+/// Helper to convert a bytearray to a value implementing the Arbitrary trait.
 pub fn fuzz_data_to_value<T: std::fmt::Debug>(
     data: &[u8],
     strategy: impl Strategy<Value = T>,
