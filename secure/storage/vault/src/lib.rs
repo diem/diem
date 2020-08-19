@@ -17,6 +17,9 @@ use std::{
 use thiserror::Error;
 use ureq::Response;
 
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod fuzzing;
+
 /// Request timeout for vault operations
 const TIMEOUT: u64 = 10_000;
 

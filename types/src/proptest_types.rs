@@ -39,6 +39,7 @@ use proptest::{
     prelude::*,
 };
 use proptest_derive::Arbitrary;
+use serde_json::Value;
 use std::{convert::TryFrom, iter::Iterator};
 
 impl WriteOp {
@@ -1028,4 +1029,27 @@ impl LedgerInfoWithSignaturesGen {
 
         LedgerInfoWithSignatures::new(ledger_info, signatures)
     }
+}
+
+// This function generates an arbitrary serde_json::Value.
+pub fn arb_json_value() -> impl Strategy<Value = Value> {
+    let leaf = prop_oneof![
+        Just(Value::Null),
+        any::<bool>().prop_map(Value::Bool),
+        any::<f64>().prop_map(|n| serde_json::json!(n)),
+        any::<String>().prop_map(Value::String),
+    ];
+
+    leaf.prop_recursive(
+        10,  // 10 levels deep
+        256, // Maximum size of 256 nodes
+        10,  // Up to 10 items per collection
+        |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..10).prop_map(Value::Array),
+                prop::collection::hash_map(any::<String>(), inner, 0..10)
+                    .prop_map(|map| serde_json::json!(map)),
+            ]
+        },
+    )
 }

@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 base64 = "0.12.3"
 chrono = "0.4.13"
+proptest = { version = "0.10.1", optional = true }
 rustls = "0.17.0"
 serde = { version = "1.0.114", features = ["derive"], default-features = false }
 serde_json = "1.0.57"
@@ -19,4 +20,15 @@ thiserror = "1.0.20"
 ureq = { version = "1.3.0", features = ["json"] }
 
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
+libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0", optional = true }
+libra-types = { path = "../../../types", version = "0.1.0", optional = true }
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+
+[dev-dependencies]
+proptest = "0.10.1"
+
+libra-proptest-helpers = { path = "../../../common/proptest-helpers", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0", features = ["fuzzing"] }
+
+[features]
+fuzzing = ["proptest", "libra-proptest-helpers", "libra-types"]

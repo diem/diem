@@ -693,9 +693,8 @@ pub mod fuzzing {
         TransactionView, TransactionViewResponse, VMStatusView,
     };
     use libra_proptest_helpers::Index;
-    use libra_types::proptest_types::{AccountInfoUniverse, AccountStateBlobGen};
+    use libra_types::proptest_types::{arb_json_value, AccountInfoUniverse, AccountStateBlobGen};
     use proptest::prelude::*;
-    use serde_json::Value;
     use ureq::Response;
 
     // Note: these tests ensure that the various fuzzers are maintained (i.e., not broken
@@ -793,29 +792,6 @@ pub mod fuzzing {
                 serde_json::to_string::<TransactionViewResponse>(&response_body).unwrap();
             Response::new(status, &status_text, &response_body)
         }
-    }
-
-    // This function generates an arbitrary serde_json::Value.
-    fn arb_json_value() -> impl Strategy<Value = Value> {
-        let leaf = prop_oneof![
-            Just(Value::Null),
-            any::<bool>().prop_map(Value::Bool),
-            any::<f64>().prop_map(|n| serde_json::json!(n)),
-            any::<String>().prop_map(Value::String),
-        ];
-
-        leaf.prop_recursive(
-            10,  // 10 levels deep
-            256, // Maximum size of 256 nodes
-            10,  // Up to 10 items per collection
-            |inner| {
-                prop_oneof![
-                    prop::collection::vec(inner.clone(), 0..10).prop_map(Value::Array),
-                    prop::collection::hash_map(any::<String>(), inner, 0..10)
-                        .prop_map(|map| serde_json::json!(map)),
-                ]
-            },
-        )
     }
 
     // This function generates an arbitrary VMStatusView.
