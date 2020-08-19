@@ -212,7 +212,7 @@ jobs:
                   console.error("Failed to check infra error in CT output log.\n", err);
                 }
               } else {
-                body = "Cluster Test failed - test report processing failed.";
+                body = "Cluster Test runner failed.";
                 console.error(err);
               }
               body += " See https://github.com/libra/libra/actions/runs/${{github.run_id}}";
