@@ -200,7 +200,14 @@ async fn handle_cluster_test_runner_commands(
     let startup_timeout = Duration::from_secs(5 * 60);
     runner
         .wait_until_all_healthy(Instant::now() + startup_timeout)
-        .await?;
+        .await
+        .map_err(|err| {
+            runner
+                .report
+                .report_text(format!("Cluster setup failed: `{}`", err));
+            runner.print_report();
+            err
+        })?;
     let mut perf_msg = None;
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
