@@ -19,6 +19,7 @@ pub fn output(out: &mut dyn Write, abis: &[ScriptABI], namespace: Option<&str>) 
         inlined_definitions: true,
     };
     emitter.output_preamble()?;
+    emitter.output_make_transaction_arguments()?;
     emitter.output_open_namespace()?;
     emitter.output_using_namespaces()?;
     for abi in abis {
@@ -60,6 +61,7 @@ pub fn output_library_body(
         inlined_definitions: false,
     };
     writeln!(emitter.out, "#include \"{}.hpp\"\n", library_name)?;
+    emitter.output_make_transaction_arguments()?;
     emitter.output_open_namespace()?;
     emitter.output_using_namespaces()?;
     for abi in abis {
@@ -88,6 +90,23 @@ where
             r#"#pragma once
 
 #include "libra_types.hpp"
+"#
+        )
+    }
+
+    fn output_make_transaction_arguments(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+template <typename A, typename F>
+std::vector<libra_types::TransactionArgument> make_transaction_arguments(std::vector<A> &&values, F func) {{
+    std::vector<libra_types::TransactionArgument> result;
+    result.reserve(values.size());
+    for (auto&& value : values) {{
+        result.emplace_back(func(std::move(value)));
+    }}
+    return result;
+}}
 "#
         )
     }
@@ -218,10 +237,7 @@ using namespace libra_types;
             U64 => "uint64_t".into(),
             U128 => "uint128_t".into(),
             Address => "AccountAddress".into(),
-            Vector(type_tag) => match type_tag.as_ref() {
-                U8 => "std::vector<uint8_t>".into(),
-                _ => common::type_not_allowed(type_tag),
-            },
+            Vector(type_tag) => format!("std::vector<{}>", Self::quote_type(type_tag)),
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
     }
@@ -236,8 +252,32 @@ using namespace libra_types;
             // Adding std::move in the non-obvious cases to be future-proof.
             Address => format!("{{TransactionArgument::Address {{std::move({})}}}}", name),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => format!(
+                    "{{TransactionArgument::BoolVector {{std::move({})}} }}",
+                    name
+                ),
                 U8 => format!("{{TransactionArgument::U8Vector {{std::move({})}}}}", name),
-                _ => common::type_not_allowed(type_tag),
+                U64 => format!(
+                    "{{TransactionArgument::U64Vector {{std::move({})}} }}",
+                    name
+                ),
+                U128 => format!(
+                    "{{TransactionArgument::U128Vector {{std::move({})}} }}",
+                    name
+                ),
+                Address => format!(
+                    "{{TransactionArgument::AddressVector {{std::move({})}}}}",
+                    name
+                ),
+                inner_type_tag => {
+                    let param = format!("{}_value", common::mangle_type(inner_type_tag));
+                    format!(
+                    "{{TransactionArgument::Vector {{ make_transaction_arguments(std::move({}), [](auto&& {}) {{ return TransactionArgument {}; }}) }}}}",
+                    name,
+                    param,
+                    Self::quote_transaction_argument(inner_type_tag, &param)
+                )
+                }
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),

@@ -363,8 +363,18 @@ static SCRIPT_DECODER_MAP: once_cell::sync::Lazy<DecoderMap> = once_cell::sync::
             U128 => ("U128", "Some(value)".to_string()),
             Address => ("Address", "Some(value)".to_string()),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => ("BoolVector", "Some(value)".to_string()),
                 U8 => ("U8Vector", "Some(value)".to_string()),
-                _ => common::type_not_allowed(type_tag),
+                U64 => ("U64Vector", "Some(value)".to_string()),
+                U128 => ("U128Vector", "Some(value)".to_string()),
+                Address => ("AddressVector", "Some(value)".to_string()),
+                inner_type_tag => (
+                    "Vector",
+                    format!(
+                        "value.into_iter().map(decode_{}_argument).collect()",
+                        common::mangle_type(inner_type_tag)
+                    ),
+                ),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         };
@@ -449,7 +459,7 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
                         "Bytes".into()
                     }
                 }
-                _ => common::type_not_allowed(type_tag),
+                inner_type_tag => format!("Vec<{}>", Self::quote_type(inner_type_tag, local_types)),
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -465,8 +475,20 @@ fn decode_{}_argument(arg: TransactionArgument) -> Option<{}> {{
             U128 => format!("TransactionArgument::U128({})", name),
             Address => format!("TransactionArgument::Address({})", name),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => format!("TransactionArgument::BoolVector({})", name),
                 U8 => format!("TransactionArgument::U8Vector({})", name),
-                _ => common::type_not_allowed(type_tag),
+                U64 => format!("TransactionArgument::U64Vector({})", name),
+                U128 => format!("TransactionArgument::U128Vector({})", name),
+                Address => format!("TransactionArgument::AddressVector({})", name),
+                inner_type_tag => {
+                    let param = format!("{}_value", common::mangle_type(inner_type_tag));
+                    format!(
+                        "TransactionArgument::Vector({}.into_iter().map(|{}| {}).collect())",
+                        name,
+                        param,
+                        Self::quote_transaction_argument(inner_type_tag, &param)
+                    )
+                }
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),

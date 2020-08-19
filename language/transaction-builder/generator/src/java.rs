@@ -69,6 +69,8 @@ fn write_helper_file(
 
     emitter.output_decoding_helpers(abis)?;
 
+    emitter.output_make_transaction_arguments()?;
+
     emitter.out.unindent();
     writeln!(emitter.out, "\n}}\n")
 }
@@ -333,8 +335,18 @@ private static java.util.Map<Bytes, DecodingHelper> initDecoderMap() {{"#
             U128 => ("U128", String::new()),
             Address => ("Address", String::new()),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => ("BoolVector", String::new()),
                 U8 => ("U8Vector", String::new()),
-                _ => common::type_not_allowed(type_tag),
+                U64 => ("U64Vector", String::new()),
+                U128 => ("U128Vector", String::new()),
+                Address => ("AddressVector", String::new()),
+                inner_type_tag => (
+                    "Vector",
+                    format!(
+                        ".stream().map(Helpers::decode_{}_argument).collect(java.util.stream.Collectors.toList())",
+                        common::mangle_type(inner_type_tag)
+                    ),
+                ),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         };
@@ -415,11 +427,30 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "Bytes".into(),
-                _ => common::type_not_allowed(type_tag),
+                inner_type_tag => format!("java.util.List<{}>", Self::quote_type(inner_type_tag)),
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         }
+    }
+
+    fn output_make_transaction_arguments(&mut self) -> Result<()> {
+        writeln!(
+            self.out,
+            r#"
+static <A> java.util.List<TransactionArgument>
+make_transaction_arguments(
+    java.util.List<A> values,
+    java.util.function.Function<A, TransactionArgument> func
+) {{
+    java.util.List<TransactionArgument> result = new java.util.ArrayList<>(values.size());
+    for (A value : values) {{
+        result.add(func.apply(value));
+    }}
+    return result;
+}}
+"#
+        )
     }
 
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
@@ -431,8 +462,20 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
             U128 => format!("new TransactionArgument.U128({})", name),
             Address => format!("new TransactionArgument.Address({})", name),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => format!("new TransactionArgument.BoolVector({})", name),
                 U8 => format!("new TransactionArgument.U8Vector({})", name),
-                _ => common::type_not_allowed(type_tag),
+                U64 => format!("new TransactionArgument.U64Vector({})", name),
+                U128 => format!("new TransactionArgument.U128Vector({})", name),
+                Address => format!("new TransactionArgument.AddressVector({})", name),
+                inner_type_tag => {
+                    let param = format!("{}_value", common::mangle_type(inner_type_tag));
+                    format!(
+                        "new TransactionArgument.Vector(make_transaction_arguments({}, ({}) -> {}))",
+                        name,
+                        param,
+                        Self::quote_transaction_argument(inner_type_tag, &param)
+                    )
+                }
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),

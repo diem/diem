@@ -70,7 +70,7 @@ where
         writeln!(
             self.out,
             r#"
-from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector)"#,
+from {}libra_types import (Script, TypeTag, AccountAddress, TransactionArgument, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__BoolVector, TransactionArgument__U8Vector, TransactionArgument__U64Vector, TransactionArgument__U128Vector, TransactionArgument__AddressVector, TransactionArgument__Vector)"#,
             match &self.libra_package_name {
                 None => "".into(),
                 Some(package) => package.clone() + ".",
@@ -285,7 +285,11 @@ SCRIPT_ENCODER_MAP: typing.Dict[typing.Type[ScriptCall], typing.Callable[[Script
             U128 => ("U128", "arg.value".into()),
             Address => ("Address", "arg.value".into()),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => ("BoolVector", "arg.value".into()),
                 U8 => ("U8Vector", "arg.value".into()),
+                U64 => ("U64Vector", "arg.value".into()),
+                U128 => ("U128Vector", "arg.value".into()),
+                Address => ("AddressVector", "arg.value".into()),
                 inner_type_tag => (
                     "Vector",
                     format!(
@@ -360,7 +364,7 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
             Address => "AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "bytes".into(),
-                _ => common::type_not_allowed(type_tag),
+                inner_type_tag => format!("typing.Sequence[{}]", Self::quote_type(inner_type_tag)),
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -376,8 +380,20 @@ def decode_{}_argument(arg: TransactionArgument) -> {}:
             U128 => format!("TransactionArgument__U128(value={})", name),
             Address => format!("TransactionArgument__Address(value={})", name),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => format!("TransactionArgument__BoolVector(value={})", name),
                 U8 => format!("TransactionArgument__U8Vector(value={})", name),
-                _ => common::type_not_allowed(type_tag),
+                U64 => format!("TransactionArgument__U64Vector(value={})", name),
+                U128 => format!("TransactionArgument__U128Vector(value={})", name),
+                Address => format!("TransactionArgument__AddressVector(value={})", name),
+                inner_type_tag => {
+                    let param = format!("{}_value", common::mangle_type(inner_type_tag));
+                    format!(
+                        "TransactionArgument__Vector(value=[{} for {} in {}])",
+                        Self::quote_transaction_argument(inner_type_tag, &param),
+                        param,
+                        name,
+                    )
+                }
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),

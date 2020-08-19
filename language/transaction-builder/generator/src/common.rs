@@ -30,7 +30,7 @@ fn quote_type_as_format(type_tag: &TypeTag) -> Format {
         Address => Format::TypeName("AccountAddress".into()),
         Vector(type_tag) => match type_tag.as_ref() {
             U8 => Format::Bytes,
-            _ => type_not_allowed(type_tag),
+            inner_type_tag => Format::Seq(Box::new(quote_type_as_format(inner_type_tag))),
         },
 
         Struct(_) | Signer => type_not_allowed(type_tag),
@@ -82,8 +82,12 @@ pub(crate) fn mangle_type(type_tag: &TypeTag) -> String {
         U128 => "u128".into(),
         Address => "address".into(),
         Vector(type_tag) => match type_tag.as_ref() {
+            Bool => "boolvector".into(),
             U8 => "u8vector".into(),
-            _ => type_not_allowed(type_tag),
+            U64 => "u64vector".into(),
+            U128 => "u128vector".into(),
+            Address => "addressvector".into(),
+            inner_type_tag => format!("vector_{}", mangle_type(inner_type_tag)),
         },
 
         Struct(_) | Signer => type_not_allowed(type_tag),
@@ -110,8 +114,23 @@ pub(crate) fn get_required_decoding_helper_types(abis: &[ScriptABI]) -> BTreeSet
     let mut required_types = BTreeSet::new();
     for abi in abis {
         for arg in abi.args() {
-            let type_tag = arg.type_tag();
+            let mut type_tag = arg.type_tag();
             required_types.insert(type_tag);
+            while let TypeTag::Vector(inner_type_tag) = type_tag {
+                match **inner_type_tag {
+                    TypeTag::Bool
+                    | TypeTag::U8
+                    | TypeTag::U64
+                    | TypeTag::U128
+                    | TypeTag::Address => {
+                        // These decode_XXvector's do not call decode_XX.
+                        break;
+                    }
+                    _ => (),
+                }
+                type_tag = inner_type_tag;
+                required_types.insert(type_tag);
+            }
         }
     }
     required_types

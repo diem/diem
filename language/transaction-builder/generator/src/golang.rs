@@ -280,8 +280,26 @@ var script_decoder_map = map[string]func(libratypes.Script) (ScriptCall, error) 
             U128 => ("U128", default_stmt),
             Address => ("Address", default_stmt),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => ("BoolVector", default_stmt),
                 U8 => ("U8Vector", default_stmt),
-                _ => common::type_not_allowed(type_tag),
+                U64 => ("U64Vector", default_stmt),
+                U128 => ("U128Vector", default_stmt),
+                Address => ("AddressVector", default_stmt),
+                inner_type_tag => (
+                    "Vector",
+                    format!(
+                        r#"value = make([]{}, len(arg.Value))
+		for i, item := range(arg.Value) {{
+			if v, err := decode_{}_argument(item); err != nil {{
+				value[i] = v
+			}} else {{
+				return nil, err
+			}}
+		}}"#,
+                        Self::quote_type(inner_type_tag),
+                        common::mangle_type(inner_type_tag)
+                    ),
+                ),
             },
             Struct(_) | Signer => common::type_not_allowed(type_tag),
         };
@@ -362,7 +380,7 @@ func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error
             Address => "libratypes.AccountAddress".into(),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => "[]byte".into(),
-                _ => common::type_not_allowed(type_tag),
+                inner_type_tag => format!("[]{}", Self::quote_type(inner_type_tag)),
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),
@@ -378,8 +396,23 @@ func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error
             U128 => format!("libratypes.TransactionArgument__U128{{{}}}", name),
             Address => format!("libratypes.TransactionArgument__Address{{{}}}", name),
             Vector(type_tag) => match type_tag.as_ref() {
+                Bool => format!("libratypes.TransactionArgument__BoolVector{{{}}}", name),
                 U8 => format!("libratypes.TransactionArgument__U8Vector{{{}}}", name),
-                _ => common::type_not_allowed(type_tag),
+                U64 => format!("libratypes.TransactionArgument__U64Vector{{{}}}", name),
+                U128 => format!("libratypes.TransactionArgument__U128Vector{{{}}}", name),
+                Address => format!("libratypes.TransactionArgument__AddressVector{{{}}}", name),
+                inner_type_tag => format!(
+                    r#"libratypes.TransactionArgument__Vector{{(func(arg []{}) []libratypes.TransactionArgument {{
+	values := make([]libratypes.TransactionArgument, len(arg))
+	for i, v := range(arg) {{
+		values[i] = {}
+	}}
+	return values
+}})({})}}"#,
+                    Self::quote_type(inner_type_tag),
+                    Self::quote_transaction_argument(inner_type_tag, "v"),
+                    name,
+                ),
             },
 
             Struct(_) | Signer => common::type_not_allowed(type_tag),
