@@ -93,10 +93,13 @@
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
     -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_Specification_should_track_limits_for_account)
+    -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
     -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `withdraw_from`](#0x1_LibraAccount_Specification_withdraw_from)
+    -  [Function `extract_withdraw_capability`](#0x1_LibraAccount_Specification_extract_withdraw_capability)
+    -  [Function `restore_withdraw_capability`](#0x1_LibraAccount_Specification_restore_withdraw_capability)
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
@@ -2601,6 +2604,105 @@ After genesis, the
 
 
 
+<a name="0x1_LibraAccount_Specification_staple_lbr"></a>
+
+### Function `staple_lbr`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_staple_lbr">staple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(cap.account_address);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(cap.account_address);
+<b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<b>modifies</b> <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address).withdrawal_capability
+    == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address).withdrawal_capability);
+<b>include</b> <a href="#0x1_LibraAccount_StapleLBRAbortsIf">StapleLBRAbortsIf</a>;
+<b>include</b> <a href="#0x1_LibraAccount_StapleLBREnsures">StapleLBREnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_StapleLBRAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBRAbortsIf">StapleLBRAbortsIf</a> {
+    cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
+    amount_lbr: u64;
+    <a name="0x1_LibraAccount_reserve$58"></a>
+    <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <a name="0x1_LibraAccount_amount_coin1$59"></a>
+    <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
+    <a name="0x1_LibraAccount_amount_coin2$60"></a>
+    <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
+    <b>aborts_if</b> amount_lbr == 0 with Errors::INVALID_ARGUMENT;
+    <b>aborts_if</b> reserve.coin1.backing.value + amount_coin1 &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
+    <b>aborts_if</b> reserve.coin2.backing.value + amount_coin2 &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_MintAbortsIf">Libra::MintAbortsIf</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{value: amount_lbr};
+    <b>include</b> <a href="LBR.md#0x1_LBR_CalculateComponentAmountsForLBRAbortsIf">LBR::CalculateComponentAmountsForLBRAbortsIf</a>;
+    <b>include</b> <a href="#0x1_LibraAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;{
+        payee: <a href="LBR.md#0x1_LBR_reserve_address">LBR::reserve_address</a>(), amount: amount_coin1};
+    <b>include</b> <a href="#0x1_LibraAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;{
+        payee: <a href="LBR.md#0x1_LBR_reserve_address">LBR::reserve_address</a>(), amount: amount_coin2};
+    <b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{
+        payer: <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(),
+        payee: cap.account_address,
+        amount: amount_lbr,
+        metadata: x"",
+        metadata_signature: x"",
+    };
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_StapleLBREnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBREnsures">StapleLBREnsures</a> {
+    cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
+    amount_lbr: u64;
+    <a name="0x1_LibraAccount_reserve$61"></a>
+    <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <a name="0x1_LibraAccount_amount_coin1$62"></a>
+    <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
+    <a name="0x1_LibraAccount_amount_coin2$63"></a>
+    <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
+    <a name="0x1_LibraAccount_total_value_coin1$64"></a>
+    <b>let</b> total_value_coin1 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
+    <a name="0x1_LibraAccount_total_value_coin2$65"></a>
+    <b>let</b> total_value_coin2 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
+    <a name="0x1_LibraAccount_total_value_lbr$66"></a>
+    <b>let</b> total_value_lbr = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value
+        == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value) - amount_coin1;
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(cap.account_address).coin.value
+        == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(cap.account_address).coin.value) - amount_coin2;
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_value">Libra::value</a>(reserve.coin1.backing)
+        == <b>old</b>(<a href="Libra.md#0x1_Libra_value">Libra::value</a>(reserve.coin1.backing)) + amount_coin1;
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_value">Libra::value</a>(reserve.coin2.backing)
+        == <b>old</b>(<a href="Libra.md#0x1_Libra_value">Libra::value</a>(reserve.coin2.backing)) + amount_coin2;
+    <b>ensures</b> total_value_coin1 == <b>old</b>(total_value_coin1);
+    <b>ensures</b> total_value_coin2 == <b>old</b>(total_value_coin2);
+    <b>ensures</b> total_value_lbr == <b>old</b>(total_value_lbr) + amount_lbr;
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(cap.account_address).coin.value
+        == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(cap.account_address).coin.value) + amount_lbr;
+}
+</code></pre>
+
+
+
 <a name="0x1_LibraAccount_Specification_unstaple_lbr"></a>
 
 ### Function `unstaple_lbr`
@@ -2630,7 +2732,14 @@ After genesis, the
 
 
 
-<pre><code><b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: to_deposit.value};
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
+<b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee));
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee).withdrawal_capability
+    == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee).withdrawal_capability);
+<b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: to_deposit.value};
 <b>include</b> <a href="#0x1_LibraAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt;{amount: to_deposit.value};
 </code></pre>
 
@@ -2693,7 +2802,9 @@ After genesis, the
 
 
 
-<pre><code><b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;;
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer));
+<b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt;;
 </code></pre>
 
@@ -2761,6 +2872,102 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 
+
+<pre><code>pragma opaque;
+<a name="0x1_LibraAccount_payer$67"></a>
+<b>let</b> payer = cap.account_address;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
+<b>modifies</b> <b>global</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;Token&gt;&gt;(<a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer));
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer).withdrawal_capability
+            == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer).withdrawal_capability);
+<b>include</b> <a href="#0x1_LibraAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt;{balance: <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer)};
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_WithdrawFromAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_WithdrawFromAbortsIf">WithdrawFromAbortsIf</a>&lt;Token&gt; {
+    cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
+    payee: address;
+    amount: u64;
+    <a name="0x1_LibraAccount_payer$57"></a>
+    <b>let</b> payer = cap.account_address;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
+    <b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;{payer: payer, balance: <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer)};
+    <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(payer) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer) with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_extract_withdraw_capability"></a>
+
+### Function `extract_withdraw_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_extract_withdraw_capability">extract_withdraw_capability</a>(sender: &signer): <a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<a name="0x1_LibraAccount_sender_addr$68"></a>
+<b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
+<b>include</b> <a href="#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">ExtractWithdrawCapAbortsIf</a>{sender_addr};
+<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>old</b>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(sender_addr)));
+<b>ensures</b> result.account_address == sender_addr;
+<b>ensures</b> <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(sender_addr);
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(sender_addr) == <b>old</b>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(sender_addr));
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_ExtractWithdrawCapAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">ExtractWithdrawCapAbortsIf</a> {
+    sender_addr: address;
+    <b>aborts_if</b> <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(sender_addr) with Errors::INVALID_STATE;
+    <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(sender_addr) with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_restore_withdraw_capability"></a>
+
+### Function `restore_withdraw_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_restore_withdraw_capability">restore_withdraw_capability</a>(cap: <a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<a name="0x1_LibraAccount_cap_addr$69"></a>
+<b>let</b> cap_addr = cap.account_address;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
+<b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap_addr) with Errors::NOT_PUBLISHED;
+<b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(cap_addr);
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(cap_addr);
+</code></pre>
+
+
+
 <a name="0x1_LibraAccount_Specification_rotate_authentication_key"></a>
 
 ### Function `rotate_authentication_key`
@@ -2822,7 +3029,7 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_account_addr$57"></a>
+<a name="0x1_LibraAccount_account_addr$70"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -3029,7 +3236,7 @@ The LibraAccount under addr holds either no withdraw capability
 (withdraw cap has been delegated) or the withdraw capability for addr itself.
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr1);
 </code></pre>
 

@@ -97,8 +97,10 @@ module AccountLimits {
         )
     }
     spec fun update_deposit_limits {
+        pragma opaque;
+        modifies global<Window<CoinType>>(addr);
         include UpdateDepositLimitsAbortsIf<CoinType>;
-        ensures result == old(spec_update_deposit_limits<CoinType>(amount, addr));
+        include CanReceiveEnsures<CoinType>{receiving: global<Window<CoinType>>(addr)};
     }
     spec schema UpdateDepositLimitsAbortsIf<CoinType> {
         amount: u64;
@@ -129,8 +131,10 @@ module AccountLimits {
         )
     }
     spec fun update_withdrawal_limits {
+        pragma opaque;
+        modifies global<Window<CoinType>>(addr);
         include UpdateWithdrawalLimitsAbortsIf<CoinType>;
-        ensures result == old(spec_update_withdrawal_limits<CoinType>(amount, addr));
+        include CanWithdrawEnsures<CoinType>{sending: global<Window<CoinType>>(addr)};
     }
     spec schema UpdateWithdrawalLimitsAbortsIf<CoinType> {
         amount: u64;
@@ -272,6 +276,7 @@ module AccountLimits {
         }
     }
     spec fun reset_window {
+        pragma opaque;
         include ResetWindowAbortsIf<CoinType>;
         include ResetWindowEnsures<CoinType>;
     }
@@ -318,7 +323,7 @@ module AccountLimits {
         amount: u64,
         receiving: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
-        let limits_definition = borrow_global_mut<LimitsDefinition<CoinType>>(receiving.limit_address);
+        let limits_definition = borrow_global<LimitsDefinition<CoinType>>(receiving.limit_address);
         // If the limits are unrestricted then don't do any more work.
         if (is_unrestricted(limits_definition)) return true;
 
@@ -336,14 +341,9 @@ module AccountLimits {
         inflow_ok && holding_ok
     }
     spec fun can_receive {
+        pragma opaque;
         include CanReceiveAbortsIf<CoinType>;
-        ensures result == spec_receiving_limits_ok(old(receiving), amount);
-        ensures
-            if (result && !spec_window_unrestricted(old(receiving)))
-                receiving.window_inflow == spec_window_reset(old(receiving)).window_inflow + amount &&
-                receiving.tracked_balance == spec_window_reset(old(receiving)).tracked_balance + amount
-            else
-                receiving == spec_window_reset(old(receiving)) || receiving == old(receiving);
+        include CanReceiveEnsures<CoinType>;
     }
     spec schema CanReceiveAbortsIf<CoinType> {
         amount: num;
@@ -361,6 +361,19 @@ module AccountLimits {
         aborts_if spec_window_reset(receiving).window_inflow + amount > max_u64();
         aborts_if spec_window_reset(receiving).tracked_balance + amount > max_u64();
     }
+    spec schema CanReceiveEnsures<CoinType> {
+        amount: num;
+        receiving: Window<CoinType>;
+        result: bool;
+        ensures result == spec_receiving_limits_ok(old(receiving), amount);
+        ensures
+            if (result && !spec_window_unrestricted(old(receiving)))
+                receiving.window_inflow == spec_window_reset(old(receiving)).window_inflow + amount &&
+                receiving.tracked_balance == spec_window_reset(old(receiving)).tracked_balance + amount
+            else
+                receiving == spec_window_reset(old(receiving)) || receiving == old(receiving);
+    }
+
     spec module {
         define spec_window_limits<CoinType>(window: Window<CoinType>): LimitsDefinition<CoinType> {
            global<LimitsDefinition<CoinType>>(window.limit_address)
@@ -387,7 +400,7 @@ module AccountLimits {
         amount: u64,
         sending: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
-        let limits_definition = borrow_global_mut<LimitsDefinition<CoinType>>(sending.limit_address);
+        let limits_definition = borrow_global<LimitsDefinition<CoinType>>(sending.limit_address);
         // If the limits are unrestricted then don't do any more work.
         if (is_unrestricted(limits_definition)) return true;
 
@@ -403,13 +416,9 @@ module AccountLimits {
         outflow_ok
     }
     spec fun can_withdraw {
+        pragma opaque;
         include CanWithdrawAbortsIf<CoinType>;
-        ensures result == spec_withdrawal_limits_ok(old(sending), amount);
-        ensures
-            if (result && !spec_window_unrestricted(old(sending)))
-                sending.window_outflow == spec_window_reset(old(sending)).window_outflow + amount
-            else
-                sending == spec_window_reset(old(sending)) || sending == old(sending);
+        include CanWithdrawEnsures<CoinType>;
     }
     spec schema CanWithdrawAbortsIf<CoinType> {
         amount: u64;
@@ -426,6 +435,18 @@ module AccountLimits {
         };
         aborts_if spec_window_reset(sending).window_outflow + amount > max_u64();
     }
+    spec schema CanWithdrawEnsures<CoinType> {
+        result: bool;
+        amount: u64;
+        sending: &mut Window<CoinType>;
+        ensures result == spec_withdrawal_limits_ok(old(sending), amount);
+        ensures
+            if (result && !spec_window_unrestricted(old(sending)))
+                sending.window_outflow == spec_window_reset(old(sending)).window_outflow + amount
+            else
+                sending == spec_window_reset(old(sending)) || sending == old(sending);
+    }
+
     spec module {
        define spec_withdrawal_limits_ok<CoinType>(sending: Window<CoinType>, amount: u64): bool {
             spec_window_unrestricted(sending) ||

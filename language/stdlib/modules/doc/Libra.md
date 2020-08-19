@@ -2605,7 +2605,11 @@ aborts_with Errors::NOT_PUBLISHED, Errors::LIMIT_EXCEEDED;
 
 
 
-<pre><code><b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<a name="0x1_Libra_currency_info$54"></a>
+<b>let</b> currency_info = <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -2632,8 +2636,11 @@ aborts_with Errors::NOT_PUBLISHED, Errors::LIMIT_EXCEEDED;
 <pre><code><b>schema</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt; {
     value: u64;
     result: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
-    <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value
-                == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) + value;
+    <a name="0x1_Libra_currency_info$49"></a>
+    <b>let</b> currency_info = <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <b>ensures</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+    <b>ensures</b> currency_info
+        == update_field(<b>old</b>(currency_info), total_value, <b>old</b>(currency_info.total_value) + value);
     <b>ensures</b> result.value == value;
 }
 </code></pre>
@@ -2783,9 +2790,9 @@ Must abort if the account does have the Preburn [B13].
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_to_burn$49"></a>
+    <a name="0x1_Libra_to_burn$50"></a>
     <b>let</b> to_burn = preburn.to_burn.value;
-    <a name="0x1_Libra_info$50"></a>
+    <a name="0x1_Libra_info$51"></a>
     <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> to_burn == 0 with Errors::INVALID_STATE;
     <b>aborts_if</b> info.total_value &lt; to_burn with Errors::LIMIT_EXCEEDED;
@@ -2823,7 +2830,7 @@ Must abort if the account does have the Preburn [B13].
 
 <pre><code><b>include</b> <a href="#0x1_Libra_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> preburn.to_burn.value == 0;
-<a name="0x1_Libra_info$53"></a>
+<a name="0x1_Libra_info$55"></a>
 <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
 <b>ensures</b> info.total_value == <b>old</b>(info.total_value) - coin.value;
 </code></pre>
@@ -2839,7 +2846,7 @@ Must abort if the account does have the Preburn [B13].
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> coin.value == 0 with Errors::INVALID_ARGUMENT;
     <b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_info$51"></a>
+    <a name="0x1_Libra_info$52"></a>
     <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> info.total_value &lt; coin.value with Errors::LIMIT_EXCEEDED;
 }
@@ -3111,7 +3118,7 @@ Returns the market cap of CoinType.
 <pre><code><b>schema</b> <a href="#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;CoinType&gt; {
     from_value: num;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_lbr_exchange_rate$52"></a>
+    <a name="0x1_Libra_lbr_exchange_rate$53"></a>
     <b>let</b> lbr_exchange_rate = <a href="#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;();
     <b>include</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">FixedPoint32::MultiplyAbortsIf</a>{val: from_value, multiplier: lbr_exchange_rate};
 }

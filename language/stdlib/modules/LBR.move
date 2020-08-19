@@ -158,6 +158,22 @@ module LBR {
         (amount1 + 1, amount2 + 1)
     }
 
+    spec fun calculate_component_amounts_for_lbr {
+        pragma opaque;
+        let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include CalculateComponentAmountsForLBRAbortsIf;
+        ensures result_1 == FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) + 1;
+        ensures result_2 == FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin2.ratio) + 1;
+    }
+
+    spec schema CalculateComponentAmountsForLBRAbortsIf {
+        amount_lbr: num;
+        let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include LibraTimestamp::AbortsIfNotOperating;
+        aborts_if FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) >= MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin2.ratio) >= MAX_U64 with Errors::LIMIT_EXCEEDED;
+    }
+
     /// Create `amount_lbr` number of `LBR` from the passed in coins. If
     /// enough of each coin is passed in, this will return the `LBR`.
     /// * If the passed in coins are not the exact amount needed to mint `amount_lbr` LBR, the function will abort.
@@ -182,6 +198,45 @@ module LBR {
         Libra::deposit(&mut reserve.coin2.backing, coin2);
         // Once the coins have been deposited in the reserve, we can mint the LBR
         Libra::mint_with_capability<LBR>(amount_lbr, &reserve.mint_cap)
+    }
+
+    spec fun create {
+        pragma opaque;
+        modifies global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        modifies global<Libra::CurrencyInfo<LBR>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        include CreateAbortsIf;
+        let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        let coin1_backing = Libra::value(reserve.coin1.backing);
+        let coin2_backing = Libra::value(reserve.coin2.backing);
+        ensures exists<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        ensures reserve.coin1 ==
+            update_field(
+                old(reserve.coin1),
+                backing,
+                Libra::Libra<Coin1>{ value: old(coin1_backing) + Libra::value(coin1) });
+        ensures reserve.coin2 ==
+            update_field(
+                old(reserve.coin2),
+                backing,
+                Libra::Libra<Coin2>{ value: old(coin2_backing) + Libra::value(coin2) });
+        include Libra::MintEnsures<LBR>{value: amount_lbr};
+    }
+
+    spec schema CreateAbortsIf {
+        amount_lbr: u64;
+        coin1: Libra<Coin1>;
+        coin2: Libra<Coin2>;
+        let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        aborts_if amount_lbr == 0 with Errors::INVALID_ARGUMENT;
+        aborts_if Libra::value(coin1) != FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) + 1
+                with Errors::INVALID_ARGUMENT;
+        aborts_if Libra::value(coin2) != FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin2.ratio) + 1
+                with Errors::INVALID_ARGUMENT;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Libra::DepositAbortsIf<Coin1>{coin: reserve.coin1.backing, check: coin1};
+        include Libra::DepositAbortsIf<Coin2>{coin: reserve.coin2.backing, check: coin2};
+        include Libra::MintAbortsIf<LBR>{value: amount_lbr};
+        include CalculateComponentAmountsForLBRAbortsIf;
     }
 
     /// Unpacks an `LBR` coin, and returns the backing coins that make up the

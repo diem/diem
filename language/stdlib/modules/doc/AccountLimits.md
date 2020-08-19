@@ -592,7 +592,7 @@ specified the
     amount: u64,
     receiving: &<b>mut</b> <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>let</b> limits_definition = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
+    <b>let</b> limits_definition = borrow_global&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
@@ -640,7 +640,7 @@ in its
     amount: u64,
     sending: &<b>mut</b> <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>let</b> limits_definition = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address);
+    <b>let</b> limits_definition = borrow_global&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
@@ -880,8 +880,10 @@ Invariant that
 
 
 
-<pre><code><b>include</b> <a href="#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">UpdateDepositLimitsAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> result == <b>old</b>(<a href="#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount, addr));
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr);
+<b>include</b> <a href="#0x1_AccountLimits_UpdateDepositLimitsAbortsIf">UpdateDepositLimitsAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_AccountLimits_CanReceiveEnsures">CanReceiveEnsures</a>&lt;CoinType&gt;{receiving: <b>global</b>&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr)};
 </code></pre>
 
 
@@ -934,8 +936,10 @@ Invariant that
 
 
 
-<pre><code><b>include</b> <a href="#0x1_AccountLimits_UpdateWithdrawalLimitsAbortsIf">UpdateWithdrawalLimitsAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> result == <b>old</b>(<a href="#0x1_AccountLimits_spec_update_withdrawal_limits">spec_update_withdrawal_limits</a>&lt;CoinType&gt;(amount, addr));
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr);
+<b>include</b> <a href="#0x1_AccountLimits_UpdateWithdrawalLimitsAbortsIf">UpdateWithdrawalLimitsAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_AccountLimits_CanWithdrawEnsures">CanWithdrawEnsures</a>&lt;CoinType&gt;{sending: <b>global</b>&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr)};
 </code></pre>
 
 
@@ -1026,7 +1030,8 @@ Invariant that
 
 
 
-<pre><code><b>include</b> <a href="#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt;;
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_AccountLimits_ResetWindowEnsures">ResetWindowEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
@@ -1101,14 +1106,9 @@ Invariant that
 
 
 
-<pre><code><b>include</b> <a href="#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> result == <a href="#0x1_AccountLimits_spec_receiving_limits_ok">spec_receiving_limits_ok</a>(<b>old</b>(receiving), amount);
-<b>ensures</b>
-    <b>if</b> (result && !<a href="#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(<b>old</b>(receiving)))
-        receiving.window_inflow == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)).window_inflow + amount &&
-        receiving.tracked_balance == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)).tracked_balance + amount
-    <b>else</b>
-        receiving == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)) || receiving == <b>old</b>(receiving);
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_AccountLimits_CanReceiveEnsures">CanReceiveEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
 
@@ -1140,6 +1140,26 @@ Invariant that
     };
     <b>aborts_if</b> <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount &gt; max_u64();
     <b>aborts_if</b> <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).tracked_balance + amount &gt; max_u64();
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_CanReceiveEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanReceiveEnsures">CanReceiveEnsures</a>&lt;CoinType&gt; {
+    amount: num;
+    receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+    result: bool;
+    <b>ensures</b> result == <a href="#0x1_AccountLimits_spec_receiving_limits_ok">spec_receiving_limits_ok</a>(<b>old</b>(receiving), amount);
+    <b>ensures</b>
+        <b>if</b> (result && !<a href="#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(<b>old</b>(receiving)))
+            receiving.window_inflow == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)).window_inflow + amount &&
+            receiving.tracked_balance == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)).tracked_balance + amount
+        <b>else</b>
+            receiving == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(receiving)) || receiving == <b>old</b>(receiving);
 }
 </code></pre>
 
@@ -1183,13 +1203,9 @@ Invariant that
 
 
 
-<pre><code><b>include</b> <a href="#0x1_AccountLimits_CanWithdrawAbortsIf">CanWithdrawAbortsIf</a>&lt;CoinType&gt;;
-<b>ensures</b> result == <a href="#0x1_AccountLimits_spec_withdrawal_limits_ok">spec_withdrawal_limits_ok</a>(<b>old</b>(sending), amount);
-<b>ensures</b>
-    <b>if</b> (result && !<a href="#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(<b>old</b>(sending)))
-        sending.window_outflow == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(sending)).window_outflow + amount
-    <b>else</b>
-        sending == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(sending)) || sending == <b>old</b>(sending);
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_AccountLimits_CanWithdrawAbortsIf">CanWithdrawAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_AccountLimits_CanWithdrawEnsures">CanWithdrawEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
 
@@ -1220,6 +1236,25 @@ Invariant that
         limits_definition: <a href="#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(sending)
     };
     <b>aborts_if</b> <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &gt; max_u64();
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_CanWithdrawEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanWithdrawEnsures">CanWithdrawEnsures</a>&lt;CoinType&gt; {
+    result: bool;
+    amount: u64;
+    sending: &<b>mut</b> <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+    <b>ensures</b> result == <a href="#0x1_AccountLimits_spec_withdrawal_limits_ok">spec_withdrawal_limits_ok</a>(<b>old</b>(sending), amount);
+    <b>ensures</b>
+        <b>if</b> (result && !<a href="#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(<b>old</b>(sending)))
+            sending.window_outflow == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(sending)).window_outflow + amount
+        <b>else</b>
+            sending == <a href="#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(<b>old</b>(sending)) || sending == <b>old</b>(sending);
 }
 </code></pre>
 

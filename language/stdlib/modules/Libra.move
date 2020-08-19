@@ -343,6 +343,9 @@ module Libra {
         Libra<CoinType> { value }
     }
     spec fun mint_with_capability {
+        pragma opaque;
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
     }
@@ -355,8 +358,10 @@ module Libra {
     spec schema MintEnsures<CoinType> {
         value: u64;
         result: Libra<CoinType>;
-        ensures spec_currency_info<CoinType>().total_value
-                    == old(spec_currency_info<CoinType>().total_value) + value;
+        let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures currency_info
+            == update_field(old(currency_info), total_value, old(currency_info.total_value) + value);
         ensures result.value == value;
     }
 
