@@ -5,6 +5,16 @@
 //! block-time: 100000000
 
 //! new-transaction
+//! expiration-time: 99
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
+
+main() {
+    return;
+}
+// check: TRANSACTION_EXPIRED
+
+//! new-transaction
 //! expiration-time: 100
 import 0x1.LibraSystem;
 import 0x1.LibraTimestamp;
@@ -24,7 +34,6 @@ main() {
 }
 // check: EXECUTED
 
-// TODO: 100 + 86400 = 86500, should be rejected after we fix the mempool flakiness. See details in issues #2346.
 //! new-transaction
 //! expiration-time: 86500
 import 0x1.LibraSystem;
@@ -67,4 +76,4 @@ import 0x1.LibraTimestamp;
 main() {
     return;
 }
-// check: TRANSACTION_EXPIRED
+// check: EXECUTED

@@ -8,7 +8,6 @@ address 0x1 {
 /// * LibraSystem, LibraAccount, LibraConfig: to check if the current state is in the genesis state
 /// * LibraBlock: to reach consensus on the global wall clock time
 /// * AccountLimits: to limit the time of account limits
-/// * LibraTransactionTimeout: to determine whether a transaction is still valid
 ///
 module LibraTimestamp {
     use 0x1::CoreAddresses;
@@ -22,6 +21,9 @@ module LibraTimestamp {
     /// A singleton resource used to determine whether time has started. This
     /// is called at the end of genesis.
     resource struct TimeHasStarted {}
+
+    /// Conversion factor between seconds and microseconds
+    const MICRO_CONVERSION_FACTOR: u64 = 1000000;
 
     /// The blockchain is not in the genesis state anymore
     const ENOT_GENESIS: u64 = 0;
@@ -151,7 +153,7 @@ module LibraTimestamp {
     }
 
 
-    /// Gets the timestamp representing `now` in microseconds.
+    /// Gets the current time in microseconds.
     public fun now_microseconds(): u64 acquires CurrentTimeMicroseconds {
         assert(
             exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
@@ -166,6 +168,19 @@ module LibraTimestamp {
     }
     spec define spec_now_microseconds(): u64 {
         global<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()).microseconds
+    }
+
+    /// Gets the current time in seconds.
+    public fun now_seconds(): u64 acquires CurrentTimeMicroseconds {
+        now_microseconds() / MICRO_CONVERSION_FACTOR
+    }
+    spec fun now_seconds {
+        pragma opaque;
+        include AbortsIfNoTime;
+        ensures result == spec_now_microseconds() /  MICRO_CONVERSION_FACTOR;
+    }
+    spec define spec_now_seconds(): u64 {
+        global<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()).microseconds / MICRO_CONVERSION_FACTOR
     }
 
     /// Schema specifying that a function aborts if the timer is not published.

@@ -19,7 +19,6 @@ module Genesis {
     use 0x1::LibraSystem;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionPublishingOption;
-    use 0x1::LibraTransactionTimeout;
     use 0x1::LibraVersion;
     use 0x1::LibraWriteSetManager;
     use 0x1::Signer;
@@ -82,7 +81,6 @@ module Genesis {
             copy dummy_auth_key_prefix,
         );
 
-        LibraTransactionTimeout::initialize(lr_account);
         LibraSystem::initialize_validator_set(
             lr_account,
         );

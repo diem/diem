@@ -7,6 +7,7 @@
 
 -  [Resource `CurrentTimeMicroseconds`](#0x1_LibraTimestamp_CurrentTimeMicroseconds)
 -  [Resource `TimeHasStarted`](#0x1_LibraTimestamp_TimeHasStarted)
+-  [Const `MICRO_CONVERSION_FACTOR`](#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR)
 -  [Const `ENOT_GENESIS`](#0x1_LibraTimestamp_ENOT_GENESIS)
 -  [Const `ENOT_OPERATING`](#0x1_LibraTimestamp_ENOT_OPERATING)
 -  [Const `ETIMER_RESOURCE`](#0x1_LibraTimestamp_ETIMER_RESOURCE)
@@ -16,6 +17,7 @@
 -  [Function `reset_time_has_started_for_test`](#0x1_LibraTimestamp_reset_time_has_started_for_test)
 -  [Function `update_global_time`](#0x1_LibraTimestamp_update_global_time)
 -  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
+-  [Function `now_seconds`](#0x1_LibraTimestamp_now_seconds)
 -  [Function `is_genesis`](#0x1_LibraTimestamp_is_genesis)
 -  [Function `assert_genesis`](#0x1_LibraTimestamp_assert_genesis)
 -  [Function `is_operating`](#0x1_LibraTimestamp_is_operating)
@@ -26,6 +28,7 @@
     -  [Function `set_time_has_started`](#0x1_LibraTimestamp_Specification_set_time_has_started)
     -  [Function `update_global_time`](#0x1_LibraTimestamp_Specification_update_global_time)
     -  [Function `now_microseconds`](#0x1_LibraTimestamp_Specification_now_microseconds)
+    -  [Function `now_seconds`](#0x1_LibraTimestamp_Specification_now_seconds)
     -  [Function `assert_genesis`](#0x1_LibraTimestamp_Specification_assert_genesis)
     -  [Function `assert_operating`](#0x1_LibraTimestamp_Specification_assert_operating)
 
@@ -37,7 +40,6 @@ It interacts with the other modules in the following ways:
 * LibraSystem, LibraAccount, LibraConfig: to check if the current state is in the genesis state
 * LibraBlock: to reach consensus on the global wall clock time
 * AccountLimits: to limit the time of account limits
-* LibraTransactionTimeout: to determine whether a transaction is still valid
 
 
 <a name="0x1_LibraTimestamp_CurrentTimeMicroseconds"></a>
@@ -98,6 +100,18 @@ is called at the end of genesis.
 
 
 </details>
+
+<a name="0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR"></a>
+
+## Const `MICRO_CONVERSION_FACTOR`
+
+Conversion factor between seconds and microseconds
+
+
+<pre><code><b>const</b> MICRO_CONVERSION_FACTOR: u64 = 1000000;
+</code></pre>
+
+
 
 <a name="0x1_LibraTimestamp_ENOT_GENESIS"></a>
 
@@ -293,8 +307,7 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
 
 ## Function `now_microseconds`
 
-Gets the timestamp representing
-<code>now</code> in microseconds.
+Gets the current time in microseconds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>(): u64
@@ -312,6 +325,31 @@ Gets the timestamp representing
         <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ETIMER_RESOURCE)
     );
     borrow_global&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraTimestamp_now_seconds"></a>
+
+## Function `now_seconds`
+
+Gets the current time in seconds.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_seconds">now_seconds</a>(): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_seconds">now_seconds</a>(): u64 <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
+    <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() / MICRO_CONVERSION_FACTOR
 }
 </code></pre>
 
@@ -558,7 +596,7 @@ these assertions verify.
 
 <pre><code><b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>;
-<a name="0x1_LibraTimestamp_now$12"></a>
+<a name="0x1_LibraTimestamp_now$14"></a>
 <b>let</b> now = <b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
 <b>aborts_if</b> [<b>assume</b>]
     (<b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
@@ -597,6 +635,35 @@ these assertions verify.
 
 <pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
 <b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds
+}
+</code></pre>
+
+
+
+<a name="0x1_LibraTimestamp_Specification_now_seconds"></a>
+
+### Function `now_seconds`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_seconds">now_seconds</a>(): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNoTime">AbortsIfNoTime</a>;
+<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() /  MICRO_CONVERSION_FACTOR;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraTimestamp_spec_now_seconds"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_seconds">spec_now_seconds</a>(): u64 {
+<b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds / MICRO_CONVERSION_FACTOR
 }
 </code></pre>
 

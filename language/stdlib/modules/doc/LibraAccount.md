@@ -2247,7 +2247,7 @@ It verifies:
 - That the sequence number matches the transaction's sequence key
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time: u64, chain_id: u8)
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(sender: &signer, txn_sequence_number: u64, txn_public_key: vector&lt;u8&gt;, txn_gas_price: u64, txn_max_gas_units: u64, txn_expiration_time_seconds: u64, chain_id: u8)
 </code></pre>
 
 
@@ -2262,7 +2262,7 @@ It verifies:
     txn_public_key: vector&lt;u8&gt;,
     txn_gas_price: u64,
     txn_max_gas_units: u64,
-    txn_expiration_time: u64,
+    txn_expiration_time_seconds: u64,
     chain_id: u8,
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
@@ -2311,7 +2311,7 @@ It verifies:
         PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
     );
     <b>assert</b>(
-        <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_is_valid_transaction_timestamp">LibraTransactionTimeout::is_valid_transaction_timestamp</a>(txn_expiration_time),
+        <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_seconds">LibraTimestamp::now_seconds</a>() &lt; txn_expiration_time_seconds,
         PROLOGUE_ETRANSACTION_EXPIRED
     );
 }

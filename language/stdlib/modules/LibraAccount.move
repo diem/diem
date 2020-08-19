@@ -16,7 +16,6 @@ module LibraAccount {
     use 0x1::LCS;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionPublishingOption;
-    use 0x1::LibraTransactionTimeout;
     use 0x1::Signer;
     use 0x1::SlidingNonce;
     use 0x1::TransactionFee;
@@ -924,7 +923,7 @@ module LibraAccount {
         txn_public_key: vector<u8>,
         txn_gas_price: u64,
         txn_max_gas_units: u64,
-        txn_expiration_time: u64,
+        txn_expiration_time_seconds: u64,
         chain_id: u8,
     ) acquires LibraAccount, Balance {
         let transaction_sender = Signer::address_of(sender);
@@ -973,7 +972,7 @@ module LibraAccount {
             PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
         );
         assert(
-            LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time),
+            LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
             PROLOGUE_ETRANSACTION_EXPIRED
         );
     }

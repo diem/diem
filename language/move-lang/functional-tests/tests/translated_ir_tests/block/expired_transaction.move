@@ -20,7 +20,6 @@ fun main() {
 }
 // check: EXECUTED
 
-// TODO: 100 + 86400 = 86500, should be rejected after we fix the mempool flakiness. See details in issues #2346.
 //! new-transaction
 //! expiration-time: 86500
 script{
@@ -43,14 +42,6 @@ fun main() {
 
 //! new-transaction
 //! expiration-time: 101
-script{
-fun main() {
-}
-}
-// check: TRANSACTION_EXPIRED
-
-//! new-transaction
-//! expiration-time: 18446744073710
 script{
 fun main() {
 }

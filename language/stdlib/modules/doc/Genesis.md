@@ -79,7 +79,6 @@
         <b>copy</b> dummy_auth_key_prefix,
     );
 
-    <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_initialize">LibraTransactionTimeout::initialize</a>(lr_account);
     <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(
         lr_account,
     );
