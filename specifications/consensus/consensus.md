@@ -81,6 +81,7 @@ Fields
   1. Time Monotonicity: Time is monotonically increasing in the block chain. (i.e. If H1 < H2, H1.Time < H2.Time).
   2. If a block of transactions B is agreed on with timestamp T, then at least f+1 honest validators think that T is in the past. An honest validator will only vote on a block when its own clock >= timestamp T.
   3. If a block of transactions B has a QC with timestamp T, an honest validator will not serve such a block to other validators until its own clock >= timestamp T.
+  4. Current: an honest validator is not issuing blocks with a timestamp in the future. Currently we consider a block is malicious if it was issued more that 5 minutes in the future.
 
 * `quorum_cert` is the quorum certified ancestor and whether the quorum certified ancestor was voted on successfully
 * `block_type` is the type of the block which is specified below.
@@ -93,7 +94,7 @@ Verification
   * ensure `round` is greater than `parent_block.round`
   * ensure `epoch` is equal to `parent_block.epoch`
   * if `parent_block.next_epoch_state` is set, ensure `block_type == BlockType::NIL` or the payload in the `BlockType::Proposal` is empty
-  * if a block is a nil block, or if `parent_block.has_reconfiguration`, ensure the block and the parent block have the same timestamp. otherwise ensure `timestamp_usecs` > `parent_block.timestamp_usecs`
+  * if a block is a nil block, or if `parent_block.has_reconfiguration`, ensure the block and the parent block have the same timestamp, otherwise ensure `timestamp_usecs` > `parent_block.timestamp_usecs`. In any case ensure that `timestamp_usecs` is not too far (5 minutes or more) in the future compared to the current time.
 
 * ensure that if `quorum_cert.commit_info().next_epoch_state()` is set, a proposal should not be generated if the epoch ends, it should transition to next epoch.
 * verify `quorum_cert`
