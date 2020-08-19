@@ -85,8 +85,7 @@ where
     fn output_preamble(&mut self) -> Result<()> {
         writeln!(
             self.out,
-            r#"
-#pragma once
+            r#"#pragma once
 
 #include "libra_types.hpp"
 "#
@@ -170,7 +169,7 @@ using namespace libra_types;
 
     fn quote_doc(doc: &str) -> String {
         let doc = crate::common::prepare_doc_string(doc);
-        textwrap::indent(&doc, "/// ")
+        textwrap::indent(&doc, "/// ").replace("\n\n", "\n///\n")
     }
 
     fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
