@@ -1790,7 +1790,7 @@ fn check_elem_layout(
     ty: &Type,
     v: &Container,
 ) -> PartialVMResult<()> {
-    let is_resource = context.is_resource(ty)?;
+    let is_resource = context.is_resource(ty);
 
     match (ty, v) {
         (Type::U8, Container::VecU8(_))
@@ -2006,7 +2006,7 @@ impl Vector {
             )))),
 
             Type::Vector(_) | Type::Struct(_) | Type::StructInstantiation(_, _) => {
-                if context.is_resource(type_param)? {
+                if context.is_resource(type_param) {
                     Value(ValueImpl::Container(Container::VecR(Rc::new(
                         RefCell::new(vec![]),
                     ))))

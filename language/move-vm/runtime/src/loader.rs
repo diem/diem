@@ -796,7 +796,7 @@ impl Loader {
             ));
         }
         for (ty, expected_k) in ty_args.iter().zip(constraints) {
-            let k = if self.is_resource(ty)? {
+            let k = if self.is_resource(ty) {
                 Kind::Resource
             } else {
                 Kind::Copyable
@@ -842,14 +842,15 @@ impl Loader {
         )
     }
 
-    fn is_resource(&self, type_: &Type) -> PartialVMResult<bool> {
+    fn is_resource(&self, type_: &Type) -> bool {
         match type_ {
-            Type::Struct(idx) => Ok(self
-                .module_cache
-                .lock()
-                .unwrap()
-                .struct_at(*idx)
-                .is_resource),
+            Type::Struct(idx) => {
+                self.module_cache
+                    .lock()
+                    .unwrap()
+                    .struct_at(*idx)
+                    .is_resource
+            }
             Type::StructInstantiation(idx, instantiation) => {
                 if self
                     .module_cache
@@ -858,18 +859,18 @@ impl Loader {
                     .struct_at(*idx)
                     .is_resource
                 {
-                    Ok(true)
+                    true
                 } else {
                     for ty in instantiation {
-                        if self.is_resource(ty)? {
-                            return Ok(true);
+                        if self.is_resource(ty) {
+                            return true;
                         }
                     }
-                    Ok(false)
+                    false
                 }
             }
             Type::Vector(ty) => self.is_resource(ty),
-            _ => Ok(false),
+            _ => false,
         }
     }
 }
@@ -1005,7 +1006,7 @@ impl<'a> Resolver<'a> {
         ))
     }
 
-    pub(crate) fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
+    pub(crate) fn is_resource(&self, ty: &Type) -> bool {
         self.loader.is_resource(ty)
     }
 
@@ -1025,7 +1026,7 @@ impl<'a> Resolver<'a> {
         } else {
             let mut is_resource = false;
             for ty in &struct_inst.instantiation {
-                if self.is_resource(&ty.subst(instantiation)?)? {
+                if self.is_resource(&ty.subst(instantiation)?) {
                     is_resource = true;
                 }
             }
@@ -1855,7 +1856,7 @@ impl Loader {
         let mut is_resource = struct_type.is_resource;
         if !is_resource {
             for ty in ty_args {
-                if self.is_resource(ty)? {
+                if self.is_resource(ty) {
                     is_resource = true;
                 }
             }

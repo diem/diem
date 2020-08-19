@@ -5,6 +5,7 @@ use crate::{interpreter::Interpreter, loader::Resolver};
 use libra_types::account_config::CORE_CODE_ADDRESS;
 use move_core_types::{
     account_address::AccountAddress, gas_schedule::CostTable, value::MoveTypeLayout,
+    vm_status::StatusType,
 };
 use move_vm_natives::{account, debug, event, hash, lcs, signature, signer, vector};
 use move_vm_types::{
@@ -86,7 +87,7 @@ impl NativeFunction {
         t: Vec<Type>,
         v: VecDeque<Value>,
     ) -> PartialVMResult<NativeResult> {
-        match self {
+        let result = match self {
             Self::HashSha2_256 => hash::native_sha2_256(ctx, t, v),
             Self::HashSha3_256 => hash::native_sha3_256(ctx, t, v),
             Self::PubED25519Validate => signature::native_ed25519_publickey_validation(ctx, t, v),
@@ -107,7 +108,12 @@ impl NativeFunction {
             Self::SignerBorrowAddress => signer::native_borrow_address(ctx, t, v),
             Self::CreateSigner => account::native_create_signer(ctx, t, v),
             Self::DestroySigner => account::native_destroy_signer(ctx, t, v),
-        }
+        };
+        debug_assert!(match &result {
+            Err(e) => e.major_status().status_type() == StatusType::InvariantViolation,
+            Ok(_) => true,
+        });
+        result
     }
 }
 
@@ -144,21 +150,19 @@ impl<'a> NativeContext for FunctionContext<'a> {
         self.cost_strategy.cost_table()
     }
 
-    fn save_event(
-        &mut self,
-        guid: Vec<u8>,
-        seq_num: u64,
-        ty: Type,
-        val: Value,
-    ) -> PartialVMResult<()> {
-        Ok(self.data_store.emit_event(guid, seq_num, ty, val))
+    fn save_event(&mut self, guid: Vec<u8>, seq_num: u64, ty: Type, val: Value) {
+        self.data_store.emit_event(guid, seq_num, ty, val)
     }
 
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout> {
-        self.resolver.type_to_type_layout(ty)
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>> {
+        match self.resolver.type_to_type_layout(ty) {
+            Ok(ty_layout) => Ok(Some(ty_layout)),
+            Err(e) if e.major_status().status_type() == StatusType::InvariantViolation => Err(e),
+            Err(_) => Ok(None),
+        }
     }
 
-    fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
+    fn is_resource(&self, ty: &Type) -> bool {
         self.resolver.is_resource(ty)
     }
 }

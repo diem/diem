@@ -23,7 +23,7 @@ pub fn native_emit_event(
     let seq_num = pop_arg!(arguments, u64);
     let guid = pop_arg!(arguments, Vec<u8>);
 
-    context.save_event(guid, seq_num, ty, msg)?;
+    context.save_event(guid, seq_num, ty, msg);
 
     Ok(NativeResult::ok(ZERO_GAS_UNITS, vec![]))
 }

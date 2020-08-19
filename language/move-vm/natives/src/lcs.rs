@@ -24,8 +24,11 @@ pub fn native_to_bytes(
 
     let arg_type = ty_args.pop().unwrap();
     // delegate to the LCS serialization for `Value`
-    let layout = context.type_to_type_layout(&arg_type)?;
-    let serialized_value = match ref_to_val.read_ref()?.simple_serialize(&layout) {
+    let serialized_value_opt = match context.type_to_type_layout(&arg_type)? {
+        None => None,
+        Some(layout) => ref_to_val.read_ref()?.simple_serialize(&layout),
+    };
+    let serialized_value = match serialized_value_opt {
         None => {
             let cost = native_gas(context.cost_table(), NativeCostIndex::LCS_TO_BYTES, 1);
             return Ok(NativeResult::err(cost, NFE_LCS_SERIALIZATION_FAILURE));

@@ -24,6 +24,9 @@ use move_core_types::{
 use std::fmt::Write;
 use vm::errors::PartialVMResult;
 
+pub use move_core_types::vm_status::StatusCode;
+pub use vm::errors::PartialVMError;
+
 /// `NativeContext` - Native function context.
 ///
 /// This is the API, the "privileges", a native function is given.
@@ -36,17 +39,11 @@ pub trait NativeContext {
     /// Gets cost table ref.
     fn cost_table(&self) -> &CostTable;
     /// Saves contract event.
-    fn save_event(
-        &mut self,
-        guid: Vec<u8>,
-        count: u64,
-        ty: Type,
-        val: Value,
-    ) -> PartialVMResult<()>;
+    fn save_event(&mut self, guid: Vec<u8>, count: u64, ty: Type, val: Value);
     /// Get the a data layout via the type.
-    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<MoveTypeLayout>;
+    fn type_to_type_layout(&self, ty: &Type) -> PartialVMResult<Option<MoveTypeLayout>>;
     /// Whether a type is a resource or not.
-    fn is_resource(&self, ty: &Type) -> PartialVMResult<bool>;
+    fn is_resource(&self, ty: &Type) -> bool;
 }
 
 /// Result of a native function execution requires charges for execution cost.
@@ -102,6 +99,15 @@ pub fn native_gas(table: &CostTable, key: NativeCostIndex, size: usize) -> GasUn
 #[macro_export]
 macro_rules! pop_arg {
     ($arguments:ident, $t:ty) => {{
-        $arguments.pop_back().unwrap().value_as::<$t>()?
+        use $crate::natives::function::{NativeResult, PartialVMError, StatusCode};
+        match $arguments.pop_back().map(|v| v.value_as::<$t>()) {
+            None => {
+                return Err(PartialVMError::new(
+                    StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                ))
+            }
+            Some(Err(e)) => return Err(e),
+            Some(Ok(v)) => v,
+        }
     }};
 }
