@@ -4,8 +4,12 @@
 use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use libra_proptest_helpers::ValueGenerator;
 use libra_vault_client::{
-    fuzzing::{arb_generic_response, arb_policy_list_response, arb_secret_read_response},
+    fuzzing::{
+        arb_generic_response, arb_policy_list_response, arb_secret_read_response,
+        arb_unsealed_response,
+    },
     process_generic_response, process_policy_list_response, process_secret_read_response,
+    process_unsealed_response,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -65,5 +69,25 @@ impl FuzzTargetImpl for VaultSecretReadResponse {
     fn fuzz(&self, data: &[u8]) {
         let (response, key, secret) = fuzz_data_to_value(data, arb_secret_read_response());
         let _ = process_secret_read_response(&secret, &key, response);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct VaultUnsealedResponse;
+
+/// This implementation will fuzz process_unsealed_response(): the method used by the vault
+/// client to process an unsealed request from the vault backend.
+impl FuzzTargetImpl for VaultUnsealedResponse {
+    fn description(&self) -> &'static str {
+        "Secure storage vault: process_unsealed_response()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_unsealed_response()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let input = fuzz_data_to_value(data, arb_unsealed_response());
+        let _ = process_unsealed_response(input);
     }
 }

@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{ListPoliciesResponse, ReadSecretData, ReadSecretMetadata, ReadSecretResponse};
+use crate::{
+    ListPoliciesResponse, ReadSecretData, ReadSecretMetadata, ReadSecretResponse,
+    SealStatusResponse,
+};
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
 use serde_json::Value;
@@ -71,13 +74,34 @@ prop_compose! {
     }
 }
 
+// This generates an arbitrary unsealed response returned by vault.
+prop_compose! {
+    pub fn arb_unsealed_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        sealed in any::<bool>(),
+    ) -> Response {
+        let sealed_status_response = SealStatusResponse {
+            sealed,
+        };
+        let sealed_status_response =
+            serde_json::to_string::<SealStatusResponse>(&sealed_status_response).unwrap();
+        Response::new(status, &status_text, &sealed_status_response)
+    }
+}
+
 // Note: these tests ensure that the various fuzzers are maintained (i.e., not broken
 // at some time in the future and only discovered when a fuzz test fails).
 #[cfg(test)]
 mod tests {
     use crate::{
-        fuzzing::{arb_generic_response, arb_policy_list_response, arb_secret_read_response},
+        fuzzing::{
+            arb_generic_response, arb_policy_list_response, arb_secret_read_response,
+            arb_unsealed_response,
+        },
         process_generic_response, process_policy_list_response, process_secret_read_response,
+        process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -97,6 +121,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_unsealed_response_proptest(input in arb_unsealed_response()) {
+            let _ = process_unsealed_response(input);
         }
     }
 }
