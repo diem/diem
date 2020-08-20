@@ -27,11 +27,11 @@ func main() {
 	amount := uint64(1_234_567)
 	script := stdlib.EncodePeerToPeerWithMetadataScript(token, payee, amount, []uint8{}, []uint8{})
 
-	call, err := stdlib.DecodeScript(script)
+	call, err := stdlib.DecodeScript(&script)
 	if err != nil {
 		panic(fmt.Sprintf("failed to decode script: %v", err))
 	}
-	payment := call.(stdlib.ScriptCall__PeerToPeerWithMetadata)
+	payment := call.(*stdlib.ScriptCall__PeerToPeerWithMetadata)
 	if payment.Amount != amount || payment.Payee != payee {
 		panic("wrong script content")
 	}

@@ -136,7 +136,7 @@ func EncodeScript(call ScriptCall) libratypes.Script {{"#
                 .join(", ");
             writeln!(
                 self.out,
-                r#"case ScriptCall__{0}:
+                r#"case *ScriptCall__{0}:
 	return Encode{0}Script({1})"#,
                 abi.name().to_camel_case(),
                 params,
@@ -153,7 +153,7 @@ func EncodeScript(call ScriptCall) libratypes.Script {{"#
             self.out,
             r#"
 // Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
-func DecodeScript(script libratypes.Script) (ScriptCall, error) {{
+func DecodeScript(script *libratypes.Script) (ScriptCall, error) {{
 	if helper := script_decoder_map[string(script.Code)]; helper != nil {{
 		val, err := helper(script)
                 return val, err
@@ -196,7 +196,7 @@ func DecodeScript(script libratypes.Script) (ScriptCall, error) {{
     fn output_script_decoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
         writeln!(
             self.out,
-            "\nfunc decode_{}_script(script libratypes.Script) (ScriptCall, error) {{",
+            "\nfunc decode_{}_script(script *libratypes.Script) (ScriptCall, error) {{",
             abi.name(),
         )?;
         self.out.indent();
@@ -237,7 +237,7 @@ func DecodeScript(script libratypes.Script) (ScriptCall, error) {{
                 arg.name().to_camel_case(),
             )?;
         }
-        writeln!(self.out, "return call, nil")?;
+        writeln!(self.out, "return &call, nil")?;
         self.out.unindent();
         writeln!(self.out, "}}")?;
         Ok(())
@@ -247,7 +247,7 @@ func DecodeScript(script libratypes.Script) (ScriptCall, error) {{
         writeln!(
             self.out,
             r#"
-var script_decoder_map = map[string]func(libratypes.Script) (ScriptCall, error) {{"#
+var script_decoder_map = map[string]func(*libratypes.Script) (ScriptCall, error) {{"#
         )?;
         self.out.indent();
         for abi in abis {
@@ -289,7 +289,7 @@ var script_decoder_map = map[string]func(libratypes.Script) (ScriptCall, error) 
             self.out,
             r#"
 func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error) {{
-	if arg, ok := arg.(libratypes.TransactionArgument__{}); ok {{
+	if arg, ok := arg.(*libratypes.TransactionArgument__{}); ok {{
 		{}
 	}} else {{
 		err = fmt.Errorf("Was expecting a {} argument")
@@ -372,13 +372,13 @@ func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
-            Bool => format!("libratypes.TransactionArgument__Bool{{{}}}", name),
-            U8 => format!("libratypes.TransactionArgument__U8{{{}}}", name),
-            U64 => format!("libratypes.TransactionArgument__U64{{{}}}", name),
-            U128 => format!("libratypes.TransactionArgument__U128{{{}}}", name),
-            Address => format!("libratypes.TransactionArgument__Address{{{}}}", name),
+            Bool => format!("&libratypes.TransactionArgument__Bool{{{}}}", name),
+            U8 => format!("&libratypes.TransactionArgument__U8{{{}}}", name),
+            U64 => format!("&libratypes.TransactionArgument__U64{{{}}}", name),
+            U128 => format!("&libratypes.TransactionArgument__U128{{{}}}", name),
+            Address => format!("&libratypes.TransactionArgument__Address{{{}}}", name),
             Vector(type_tag) => match type_tag.as_ref() {
-                U8 => format!("libratypes.TransactionArgument__U8Vector{{{}}}", name),
+                U8 => format!("&libratypes.TransactionArgument__U8Vector{{{}}}", name),
                 _ => common::type_not_allowed(type_tag),
             },
 
