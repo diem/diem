@@ -121,7 +121,7 @@ mod tests {
             arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_transit_sign_response, process_unsealed_response,
+        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -141,6 +141,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_restore_response_proptest(input in arb_generic_response()) {
+            let _ = process_transit_restore_response(input);
         }
 
         #[test]
