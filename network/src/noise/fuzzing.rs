@@ -14,6 +14,7 @@ use crate::{
 };
 use futures::{executor::block_on, future::join};
 use futures_util::io::AsyncReadExt;
+use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise::NoiseSession, test_utils::TEST_SEED, x25519, Uniform as _};
 use libra_types::PeerId;
 use once_cell::sync::Lazy;
@@ -65,12 +66,12 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     ) = KEYPAIRS.clone();
 
     let initiator = NoiseUpgrader::new(
-        initiator_peer_id,
+        NetworkContext::mock_with_peer_id(initiator_peer_id),
         initiator_private_key,
         HandshakeAuthMode::ServerOnly,
     );
     let responder = NoiseUpgrader::new(
-        responder_peer_id,
+        NetworkContext::mock_with_peer_id(responder_peer_id),
         responder_private_key,
         HandshakeAuthMode::ServerOnly,
     );
@@ -130,7 +131,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let ((initiator_private_key, _, initiator_peer_id), (_, responder_public_key, _)) =
         KEYPAIRS.clone();
     let initiator = NoiseUpgrader::new(
-        initiator_peer_id,
+        NetworkContext::mock_with_peer_id(initiator_peer_id),
         initiator_private_key,
         HandshakeAuthMode::ServerOnly,
     );
@@ -148,7 +149,7 @@ pub fn fuzz_responder(data: &[u8]) {
     // setup responder
     let (_, (responder_private_key, _, responder_peer_id)) = KEYPAIRS.clone();
     let responder = NoiseUpgrader::new(
-        responder_peer_id,
+        NetworkContext::mock_with_peer_id(responder_peer_id),
         responder_private_key,
         HandshakeAuthMode::ServerOnly,
     );

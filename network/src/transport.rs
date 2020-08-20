@@ -14,7 +14,7 @@ use futures::{
     io::{AsyncRead, AsyncWrite},
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkId};
+use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
@@ -310,15 +310,14 @@ where
 {
     pub fn new(
         base_transport: TTransport,
-        self_peer_id: PeerId,
+        network_context: Arc<NetworkContext>,
         identity_key: x25519::PrivateKey,
         trusted_peers: Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
         handshake_version: u8,
         chain_id: ChainId,
-        network_id: NetworkId,
         application_protocols: SupportedProtocols,
     ) -> Self {
-        let mut own_handshake = HandshakeMsg::new(chain_id, network_id);
+        let mut own_handshake = HandshakeMsg::new(chain_id, network_context.network_id().clone());
         own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
         let identity_pubkey = identity_key.public_key();
 
@@ -329,7 +328,7 @@ where
 
         Self {
             ctxt: Arc::new(UpgradeContext {
-                noise: NoiseUpgrader::new(self_peer_id, identity_key, auth_mode),
+                noise: NoiseUpgrader::new(network_context, identity_key, auth_mode),
                 handshake_version,
                 own_handshake,
             }),
@@ -534,6 +533,7 @@ mod test {
     use crate::protocols::wire::handshake::v1::{ProtocolId, SupportedProtocols};
     use bytes::{Bytes, BytesMut};
     use futures::{executor::block_on, future, io::AsyncWriteExt};
+    use libra_config::network_id::NetworkId;
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform};
     use libra_network_address::Protocol::*;
     use memsocket::MemorySocket;
@@ -615,23 +615,21 @@ mod test {
         let chain_id = ChainId::default();
         let listener_transport = LibraNetTransport::new(
             base_transport.clone(),
-            listener_peer_id,
+            NetworkContext::mock_with_peer_id(listener_peer_id),
             listener_key,
             trusted_peers.clone(),
             HANDSHAKE_VERSION,
             chain_id,
-            NetworkId::Validator,
             supported_protocols.clone(),
         );
 
         let dialer_transport = LibraNetTransport::new(
             base_transport,
-            dialer_peer_id,
+            NetworkContext::mock_with_peer_id(dialer_peer_id),
             dialer_key,
             trusted_peers.clone(),
             HANDSHAKE_VERSION,
             chain_id,
-            NetworkId::Validator,
             supported_protocols.clone(),
         );
 

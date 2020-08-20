@@ -273,8 +273,6 @@ impl PeerManagerBuilder {
 
         let protos = transport_context.supported_protocols();
         let chain_id = transport_context.chain_id;
-        let network_id = self.network_context.network_id().clone();
-        let peer_id = self.network_context.peer_id();
 
         let (key, maybe_trusted_peers) = match transport_context.authentication_mode {
             AuthenticationMode::ServerOnly(key) => (key, None),
@@ -286,12 +284,11 @@ impl PeerManagerBuilder {
                 self.tcp_peer_manager = Some(self.build_with_transport(
                     LibraNetTransport::new(
                         LIBRA_TCP_TRANSPORT.clone(),
-                        peer_id,
+                        self.network_context.clone(),
                         key,
                         maybe_trusted_peers,
                         HANDSHAKE_VERSION,
                         chain_id,
-                        network_id,
                         protos,
                     ),
                     executor,
@@ -302,12 +299,11 @@ impl PeerManagerBuilder {
                 self.memory_peer_manager = Some(self.build_with_transport(
                     LibraNetTransport::new(
                         MemoryTransport,
-                        peer_id,
+                        self.network_context.clone(),
                         key,
                         maybe_trusted_peers,
                         HANDSHAKE_VERSION,
                         chain_id,
-                        network_id,
                         protos,
                     ),
                     executor,

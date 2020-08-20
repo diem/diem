@@ -55,9 +55,18 @@ impl NetworkContext {
     }
 
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
+    pub fn mock_with_peer_id(peer_id: PeerId) -> std::sync::Arc<Self> {
+        std::sync::Arc::new(Self {
+            network_id: NetworkId::Validator,
+            role: RoleType::Validator,
+            peer_id,
+        })
+    }
+
+    #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock() -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
-            network_id: NetworkId::default(),
+            network_id: NetworkId::Validator,
             role: RoleType::Validator,
             peer_id: PeerId::random(),
         })

@@ -10,14 +10,20 @@
 //!
 //! [stream]: network::noise::stream
 
-use crate::noise::stream::NoiseStream;
+use crate::{
+    logging::{network_events, network_log},
+    noise::stream::NoiseStream,
+};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
+use libra_logger::sl_debug;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use std::{
     collections::{HashMap, HashSet},
     convert::TryFrom as _,
+    fmt::Debug,
     io,
     sync::{Arc, RwLock},
     time,
@@ -135,8 +141,8 @@ impl HandshakeAuthMode {
 
 /// The Noise configuration to be used to perform a protocol upgrade on an underlying socket.
 pub struct NoiseUpgrader {
-    /// The validator's own peer id.
-    self_peer_id: PeerId,
+    /// The validator's network context
+    network_context: Arc<NetworkContext>,
     /// Config for executing Noise handshakes. Includes our static private key.
     noise_config: noise::NoiseConfig,
     /// Handshake authentication can be either mutual or server-only authentication.
@@ -145,9 +151,13 @@ pub struct NoiseUpgrader {
 
 impl NoiseUpgrader {
     /// Create a new NoiseConfig with the provided keypair and authentication mode.
-    pub fn new(peer_id: PeerId, key: x25519::PrivateKey, auth_mode: HandshakeAuthMode) -> Self {
+    pub fn new(
+        network_context: Arc<NetworkContext>,
+        key: x25519::PrivateKey,
+        auth_mode: HandshakeAuthMode,
+    ) -> Self {
         Self {
-            self_peer_id: peer_id,
+            network_context,
             noise_config: noise::NoiseConfig::new(key),
             auth_mode,
         }
@@ -165,7 +175,7 @@ impl NoiseUpgrader {
         remote_public_key: Option<x25519::PublicKey>,
     ) -> io::Result<(x25519::PublicKey, NoiseStream<TSocket>)>
     where
-        TSocket: AsyncRead + AsyncWrite + Unpin,
+        TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
         // perform the noise handshake
         let socket = match origin {
@@ -218,14 +228,14 @@ impl NoiseUpgrader {
         time_provider: F,
     ) -> io::Result<NoiseStream<TSocket>>
     where
-        TSocket: AsyncRead + AsyncWrite + Unpin,
+        TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
         F: Fn() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE],
     {
         // buffer to hold prologue + first noise handshake message
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
         // craft prologue = self_peer_id | expected_public_key
-        client_message[..PeerId::LENGTH].copy_from_slice(self.self_peer_id.as_ref());
+        client_message[..PeerId::LENGTH].copy_from_slice(self.network_context.peer_id().as_ref());
         client_message[PeerId::LENGTH..Self::PROLOGUE_SIZE]
             .copy_from_slice(remote_public_key.as_slice());
 
@@ -248,15 +258,42 @@ impl NoiseUpgrader {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // send the first handshake message
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "client")
+                .data("step", "writing_data")
+                .log(format!(
+                    "{} noise client writing_data: {}",
+                    self.network_context, remote_public_key
+                ))
+        );
         socket.write_all(&client_message).await?;
         socket.flush().await?;
 
         // receive the server's response (<- e, ee, se)
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "client")
+                .data("step", "reading_data")
+                .log(format!(
+                    "{} noise client reading_data: {}",
+                    self.network_context, remote_public_key
+                ))
+        );
         let mut server_response = [0u8; Self::SERVER_MESSAGE_SIZE];
         socket.read_exact(&mut server_response).await?;
 
         // parse the server's response
         // TODO: security logging here? (mimoo)
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "client")
+                .data("step", "finalizing")
+                .log(format!(
+                    "{} noise client finalize: {}",
+                    self.network_context, remote_public_key
+                ))
+        );
         let (_, session) = self
             .noise_config
             .finalize_connection(initiator_state, &server_response)
@@ -279,12 +316,21 @@ impl NoiseUpgrader {
         mut socket: TSocket,
     ) -> io::Result<(NoiseStream<TSocket>, PeerId)>
     where
-        TSocket: AsyncRead + AsyncWrite + Unpin,
+        TSocket: AsyncRead + AsyncWrite + Debug + Unpin,
     {
         // buffer to contain the client first message
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
         // receive the prologue + first noise handshake message
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "server")
+                .data("step", "reading_data")
+                .log(format!(
+                    "{} noise server reading_data: {:?}",
+                    self.network_context, socket
+                ))
+        );
         socket.read_exact(&mut client_message).await?;
 
         // extract prologue (remote_peer_id | self_public_key)
@@ -308,7 +354,7 @@ impl NoiseUpgrader {
         // this situation could occur either as a result of our own discovery
         // mis-configuration or a potentially malicious discovery peer advertising
         // a (loopback ip or mirror proxy) and our public key.
-        if remote_peer_id == self.self_peer_id {
+        if remote_peer_id == self.network_context.peer_id() {
             // TODO(philiphayes): security logging. someone should investigate
             // on-chain reconfiguration history to see if someone is misbehaving.
             return Err(io::Error::new(
@@ -431,9 +477,27 @@ impl NoiseUpgrader {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // send the response
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "server")
+                .data("step", "writing_data")
+                .log(format!(
+                    "{} noise server writing_data: {}",
+                    self.network_context, remote_peer_id
+                ))
+        );
         socket.write_all(&server_response).await?;
 
         // finalize the connection
+        sl_debug!(
+            network_log(network_events::NOISE_UPGRADE, &self.network_context)
+                .data("role", "server")
+                .data("step", "finalize")
+                .log(format!(
+                    "{} noise server finalize: {}",
+                    self.network_context, remote_peer_id
+                ))
+        );
         Ok((NoiseStream::new(socket, session), remote_peer_id))
     }
 }
@@ -498,8 +562,16 @@ mod test {
             )
         };
 
-        let client = NoiseUpgrader::new(client_peer_id, client_private_key, client_auth);
-        let server = NoiseUpgrader::new(server_peer_id, server_private_key, server_auth);
+        let client = NoiseUpgrader::new(
+            NetworkContext::mock_with_peer_id(client_peer_id),
+            client_private_key,
+            client_auth,
+        );
+        let server = NoiseUpgrader::new(
+            NetworkContext::mock_with_peer_id(server_peer_id),
+            server_private_key,
+            server_auth,
+        );
 
         ((client, client_public_key), (server, server_public_key))
     }

@@ -9,6 +9,7 @@ use futures::{
     sink::SinkExt,
     stream::{Stream, StreamExt},
 };
+use libra_config::network_id::NetworkContext;
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform as _};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
@@ -84,7 +85,7 @@ pub fn build_memsocket_noise_transport() -> impl Transport<Output = NoiseStream<
         let public = private.public_key();
         let peer_id = PeerId::from_identity_public_key(public);
         let noise_config = Arc::new(NoiseUpgrader::new(
-            peer_id,
+            NetworkContext::mock_with_peer_id(peer_id),
             private,
             HandshakeAuthMode::ServerOnly,
         ));
@@ -104,7 +105,7 @@ pub fn build_tcp_noise_transport() -> impl Transport<Output = NoiseStream<TcpSoc
         let public = private.public_key();
         let peer_id = PeerId::from_identity_public_key(public);
         let noise_config = Arc::new(NoiseUpgrader::new(
-            peer_id,
+            NetworkContext::mock_with_peer_id(peer_id),
             private,
             HandshakeAuthMode::ServerOnly,
         ));

@@ -555,6 +555,7 @@ mod test {
         future::join,
         io::{AsyncReadExt, AsyncWriteExt},
     };
+    use libra_config::network_id::NetworkContext;
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _, x25519};
     use libra_types::PeerId;
     use memsocket::MemorySocket;
@@ -577,12 +578,12 @@ mod test {
         let server_peer_id = PeerId::from_identity_public_key(server_public);
 
         let client = NoiseUpgrader::new(
-            client_peer_id,
+            NetworkContext::mock_with_peer_id(client_peer_id),
             client_private,
             HandshakeAuthMode::ServerOnly,
         );
         let server = NoiseUpgrader::new(
-            server_peer_id,
+            NetworkContext::mock_with_peer_id(server_peer_id),
             server_private,
             HandshakeAuthMode::ServerOnly,
         );

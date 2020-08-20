@@ -41,6 +41,7 @@ pub mod network_events {
 
     /// Labels
     pub const CONNECTIVITY_MANAGER_LOOP: &str = "connectivity_manager_loop";
+    pub const NOISE_UPGRADE: &str = "noise_upgrade";
     pub const PEER_MANAGER_LOOP: &str = "peer_manager_loop";
     pub const TRANSPORT_EVENT: &str = "transport_event";
 

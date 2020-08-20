@@ -14,6 +14,7 @@
 //! use network::noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
+//! use libra_config::{config::RoleType, network_id::{NetworkContext, NetworkId}};
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use libra_types::PeerId;
@@ -40,10 +41,20 @@
 //! let trusted_peers = Arc::new(RwLock::new(trusted_peers));
 //!
 //! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
-//! let client = NoiseUpgrader::new(client_peer_id, client_private, client_auth);
+//! let client_context = Arc::new(NetworkContext::new(
+//!     NetworkId::Validator,
+//!     RoleType::Validator,
+//!     client_peer_id,
+//! ));
+//! let client = NoiseUpgrader::new(client_context, client_private, client_auth);
 //!
 //! let server_auth = HandshakeAuthMode::mutual(trusted_peers);
-//! let server = NoiseUpgrader::new(server_peer_id, server_private, server_auth);
+//! let server_context = Arc::new(NetworkContext::new(
+//!     NetworkId::Validator,
+//!     RoleType::Validator,
+//!     server_peer_id,
+//! ));
+//! let server = NoiseUpgrader::new(server_context, server_private, server_auth);
 //!
 //! // use an in-memory socket as example
 //! let (dialer_socket, listener_socket) = MemorySocket::new_pair();

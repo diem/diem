@@ -20,6 +20,7 @@ use std::{io, pin::Pin};
 // ==================
 //
 
+#[derive(Debug)]
 pub struct ReadOnlyTestSocket<'a> {
     /// the content
     content: &'a [u8],
@@ -122,6 +123,7 @@ impl<'a> AsyncRead for ReadOnlyTestSocket<'a> {
 // ==================
 //
 
+#[derive(Debug)]
 pub struct ReadWriteTestSocket<'a> {
     /// an in-memory socket
     inner: MemorySocket,
