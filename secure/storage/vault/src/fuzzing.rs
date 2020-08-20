@@ -39,6 +39,7 @@ prop_compose! {
         let policy_list = ListPoliciesResponse {
             policies,
         };
+
         let policy_list =
             serde_json::to_string::<ListPoliciesResponse>(&policy_list).unwrap();
         Response::new(status, &status_text, &policy_list)
@@ -201,6 +202,7 @@ prop_compose! {
         let list_keys_response = ListKeysResponse {
             data,
         };
+
         let list_keys_response =
             serde_json::to_string::<ListKeysResponse>(&list_keys_response).unwrap();
         Response::new(status, &status_text, &list_keys_response)
@@ -264,6 +266,7 @@ prop_compose! {
         let signature_response = SignatureResponse {
             data,
         };
+
         let signature_response =
             serde_json::to_string::<SignatureResponse>(&signature_response).unwrap();
         Response::new(status, &status_text, &signature_response)
@@ -281,6 +284,7 @@ prop_compose! {
         let sealed_status_response = SealStatusResponse {
             sealed,
         };
+
         let sealed_status_response =
             serde_json::to_string::<SealStatusResponse>(&sealed_status_response).unwrap();
         Response::new(status, &status_text, &sealed_status_response)
@@ -311,23 +315,23 @@ mod tests {
         #![proptest_config(ProptestConfig::with_cases(10))]
 
         #[test]
-        fn process_generic_response_proptest(input in arb_generic_response()) {
-            let _ = process_generic_response(input);
+        fn process_generic_response_proptest(response in arb_generic_response()) {
+            let _ = process_generic_response(response);
         }
 
         #[test]
-        fn process_policy_read_response_proptest(input in arb_generic_response()) {
-            let _ = process_policy_read_response(input);
+        fn process_policy_read_response_proptest(response in arb_generic_response()) {
+            let _ = process_policy_read_response(response);
         }
 
         #[test]
-        fn process_policy_list_response_proptest(input in arb_policy_list_response()) {
-            let _ = process_policy_list_response(input);
+        fn process_policy_list_response_proptest(response in arb_policy_list_response()) {
+            let _ = process_policy_list_response(response);
         }
 
         #[test]
-        fn process_secret_list_response_proptest(input in arb_secret_list_response()) {
-            let _ = process_secret_list_response(input);
+        fn process_secret_list_response_proptest(response in arb_secret_list_response()) {
+            let _ = process_secret_list_response(response);
         }
 
         #[test]
@@ -336,13 +340,13 @@ mod tests {
         }
 
         #[test]
-        fn process_token_create_response_proptest(input in arb_token_create_response()) {
-            let _ = process_token_create_response(input);
+        fn process_token_create_response_proptest(response in arb_token_create_response()) {
+            let _ = process_token_create_response(response);
         }
 
         #[test]
-        fn process_token_renew_response_proptest(input in arb_token_renew_response()) {
-            let _ = process_token_renew_response(input);
+        fn process_token_renew_response_proptest(response in arb_token_renew_response()) {
+            let _ = process_token_renew_response(response);
         }
 
         #[test]
@@ -366,18 +370,18 @@ mod tests {
         }
 
         #[test]
-        fn process_transit_restore_response_proptest(input in arb_generic_response()) {
-            let _ = process_transit_restore_response(input);
+        fn process_transit_restore_response_proptest(response in arb_generic_response()) {
+            let _ = process_transit_restore_response(response);
         }
 
         #[test]
-        fn process_transit_sign_response_proptest(input in arb_transit_sign_response()) {
-            let _ = process_transit_sign_response(input);
+        fn process_transit_sign_response_proptest(response in arb_transit_sign_response()) {
+            let _ = process_transit_sign_response(response);
         }
 
         #[test]
-        fn process_unsealed_response_proptest(input in arb_unsealed_response()) {
-            let _ = process_unsealed_response(input);
+        fn process_unsealed_response_proptest(response in arb_unsealed_response()) {
+            let _ = process_unsealed_response(response);
         }
     }
 }
