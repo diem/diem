@@ -8,7 +8,6 @@ use libra_crypto::{
     hash::CryptoHash,
     Signature, VerifyingKey,
 };
-use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
@@ -82,10 +81,7 @@ impl ValidatorVerifier {
     pub fn new(
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
     ) -> Self {
-        let total_voting_power = address_to_validator_info
-            .values()
-            .map(|x| x.voting_power)
-            .sum();
+        let total_voting_power = sum_voting_power(&address_to_validator_info);
         let quorum_voting_power = if address_to_validator_info.is_empty() {
             0
         } else {
@@ -104,11 +100,7 @@ impl ValidatorVerifier {
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
         quorum_voting_power: u64,
     ) -> Result<Self> {
-        let total_voting_power = address_to_validator_info.values().fold(0, |sum, x| {
-            // The voting power of any node is assumed to be small relative to u64::max_value()
-            assume!(sum <= u64::max_value() - x.voting_power);
-            sum + x.voting_power
-        });
+        let total_voting_power = sum_voting_power(&address_to_validator_info);
         ensure!(
             quorum_voting_power <= total_voting_power,
             "Quorum voting power is greater than the sum of all voting power of authors: {}, \
@@ -267,6 +259,16 @@ impl ValidatorVerifier {
     pub fn quorum_voting_power(&self) -> u64 {
         self.quorum_voting_power
     }
+}
+
+/// Returns sum of voting power from Map of validator account addresses, validator consensus info
+fn sum_voting_power(
+    address_to_validator_info: &BTreeMap<AccountAddress, ValidatorConsensusInfo>,
+) -> u64 {
+    address_to_validator_info.values().fold(0, |sum, x| {
+        sum.checked_add(x.voting_power)
+            .expect("sum of all voting power is greater than u64::max")
+    })
 }
 
 impl fmt::Display for ValidatorVerifier {
@@ -507,6 +509,39 @@ mod tests {
                 .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_very_unequal_vote_quorum_validators() {
+        const NUM_SIGNERS: u8 = 4;
+        // Generate NUM_SIGNERS random signers.
+        let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
+            .map(|i| ValidatorSigner::random([i; 32]))
+            .collect();
+        let dummy_struct = TestLibraCrypto("Hello, World".to_string());
+
+        // Create a map from authors to public keys with increasing weights (0, 1, 2, 3) and
+        // a map of author to signature.
+        let mut author_to_public_key_map = BTreeMap::new();
+        let mut author_to_signature_map = BTreeMap::new();
+        for (i, validator_signer) in validator_signers.iter().enumerate() {
+            let mut voting_power: u64 = i as u64;
+            if i == 3 {
+                voting_power = u64::max_value()
+            }
+            author_to_public_key_map.insert(
+                validator_signer.author(),
+                ValidatorConsensusInfo::new(validator_signer.public_key(), voting_power),
+            );
+            author_to_signature_map.insert(
+                validator_signer.author(),
+                validator_signer.sign(&dummy_struct),
+            );
+        }
+
+        // expect this to panic
+        let _validator_verifier = ValidatorVerifier::new(author_to_public_key_map);
     }
 
     #[test]
