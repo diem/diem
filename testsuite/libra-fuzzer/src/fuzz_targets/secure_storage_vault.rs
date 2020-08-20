@@ -10,9 +10,9 @@ use libra_vault_client::{
         arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
         arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
     },
-    process_generic_response, process_policy_list_response, process_secret_list_response,
-    process_secret_read_response, process_token_create_response, process_token_renew_response,
-    process_transit_create_response, process_transit_export_response,
+    process_generic_response, process_policy_list_response, process_policy_read_response,
+    process_secret_list_response, process_secret_read_response, process_token_create_response,
+    process_token_renew_response, process_transit_create_response, process_transit_export_response,
     process_transit_list_response, process_transit_read_response, process_transit_restore_response,
     process_transit_sign_response, process_unsealed_response,
 };
@@ -34,6 +34,26 @@ impl FuzzTargetImpl for VaultGenericResponse {
     fn fuzz(&self, data: &[u8]) {
         let input = fuzz_data_to_value(data, arb_generic_response());
         let _ = process_generic_response(input);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct VaultPolicyReadResponse;
+
+/// This implementation will fuzz process_policy_read_response(): the method used by the vault
+/// client to process policies read from the vault backend.
+impl FuzzTargetImpl for VaultPolicyReadResponse {
+    fn description(&self) -> &'static str {
+        "Secure storage vault: process_policy_read_response()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_generic_response()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let input = fuzz_data_to_value(data, arb_generic_response());
+        let _ = process_policy_read_response(input);
     }
 }
 

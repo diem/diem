@@ -298,11 +298,12 @@ mod tests {
             arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
             arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
         },
-        process_generic_response, process_policy_list_response, process_secret_list_response,
-        process_secret_read_response, process_token_create_response, process_token_renew_response,
-        process_transit_create_response, process_transit_export_response,
-        process_transit_list_response, process_transit_read_response,
-        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
+        process_generic_response, process_policy_list_response, process_policy_read_response,
+        process_secret_list_response, process_secret_read_response, process_token_create_response,
+        process_token_renew_response, process_transit_create_response,
+        process_transit_export_response, process_transit_list_response,
+        process_transit_read_response, process_transit_restore_response,
+        process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -312,6 +313,11 @@ mod tests {
         #[test]
         fn process_generic_response_proptest(input in arb_generic_response()) {
             let _ = process_generic_response(input);
+        }
+
+        #[test]
+        fn process_policy_read_response_proptest(input in arb_generic_response()) {
+            let _ = process_policy_read_response(input);
         }
 
         #[test]
