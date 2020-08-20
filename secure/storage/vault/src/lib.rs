@@ -850,7 +850,7 @@ struct ReadKeys {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-struct ReadKey {
+pub struct ReadKey {
     creation_time: String,
     public_key: String,
 }

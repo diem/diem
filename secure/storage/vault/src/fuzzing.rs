@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ListPoliciesResponse, ReadSecretData, ReadSecretMetadata, ReadSecretResponse,
-    SealStatusResponse, Signature, SignatureResponse,
+    ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata,
+    ReadSecretResponse, SealStatusResponse, Signature, SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
@@ -30,7 +30,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        policies in prop::collection::vec(any::<String>(), 1..100)
+        policies in prop::collection::vec(any::<String>(), 0..100)
     ) -> Response {
         let policy_list = ListPoliciesResponse {
             policies,
@@ -48,7 +48,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        data in prop::collection::btree_map(any::<String>(), any::<String>(), 1..100),
+        data in prop::collection::btree_map(any::<String>(), any::<String>(), 0..100),
         created_time in any::<String>(),
         version in any::<u32>(),
         secret in any::<String>(),
@@ -74,7 +74,50 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary unsealed response returned by vault.
+// This generates an arbitrary read key struct.
+prop_compose! {
+    pub fn arb_transit_read_key(
+    )(
+        creation_time in any::<String>(),
+        public_key in any::<String>(),
+    ) -> ReadKey {
+        ReadKey {
+            creation_time,
+            public_key
+        }
+    }
+}
+
+// This generates an arbitrary transit read response returned by vault, as well as an arbitrary
+// string name.
+prop_compose! {
+    pub fn arb_transit_read_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        keys in prop::collection::btree_map(any::<u32>(), arb_transit_read_key(), 0..100),
+        name in any::<String>(),
+        key_type in any::<String>(),
+        key_name in any::<String>(),
+    ) -> (Response, String) {
+        let data = ReadKeys {
+            keys,
+            name,
+            key_type,
+        };
+        let read_key_response = ReadKeyResponse {
+            data,
+        };
+
+        let read_key_response =
+            serde_json::to_string::<ReadKeyResponse>(&read_key_response).unwrap();
+        let read_key_response = Response::new(status, &status_text, &read_key_response);
+
+        (read_key_response, key_name)
+    }
+}
+
+// This generates an arbitrary transit sign response returned by vault.
 prop_compose! {
     pub fn arb_transit_sign_response(
     )(
@@ -118,10 +161,11 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_transit_sign_response, arb_unsealed_response,
+            arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
+        process_transit_read_response, process_transit_restore_response,
+        process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -141,6 +185,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_read_response_proptest((response, name) in arb_transit_read_response()) {
+            let _ = process_transit_read_response(&name, response);
         }
 
         #[test]
