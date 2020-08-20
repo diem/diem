@@ -77,6 +77,24 @@ prop_compose! {
     }
 }
 
+// This generates an arbitrary transit create response returned by vault, as well as an arbitrary
+// string name.
+prop_compose! {
+    pub fn arb_transit_create_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        value in arb_json_value(),
+        name in any::<String>(),
+    ) -> (Response, String) {
+        let value =
+            serde_json::to_string::<Value>(&value).unwrap();
+        let create_key_response = Response::new(status, &status_text, &value);
+
+        (create_key_response, name)
+    }
+}
+
 // This generates an arbitrary transit export response returned by vault, as well as an arbitrary
 // string name and version.
 prop_compose! {
@@ -212,13 +230,13 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
-            arb_transit_sign_response, arb_unsealed_response,
+            arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
+            arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_transit_export_response, process_transit_list_response,
-        process_transit_read_response, process_transit_restore_response,
-        process_transit_sign_response, process_unsealed_response,
+        process_transit_create_response, process_transit_export_response,
+        process_transit_list_response, process_transit_read_response,
+        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -238,6 +256,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_create_response_proptest((response, name) in arb_transit_create_response()) {
+            let _ = process_transit_create_response(&name, response);
         }
 
         #[test]

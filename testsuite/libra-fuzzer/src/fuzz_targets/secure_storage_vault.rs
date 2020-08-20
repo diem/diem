@@ -6,12 +6,13 @@ use libra_proptest_helpers::ValueGenerator;
 use libra_vault_client::{
     fuzzing::{
         arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-        arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
-        arb_transit_sign_response, arb_unsealed_response,
+        arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
+        arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
     },
     process_generic_response, process_policy_list_response, process_secret_read_response,
-    process_transit_export_response, process_transit_list_response, process_transit_read_response,
-    process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
+    process_transit_create_response, process_transit_export_response,
+    process_transit_list_response, process_transit_read_response, process_transit_restore_response,
+    process_transit_sign_response, process_unsealed_response,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -71,6 +72,26 @@ impl FuzzTargetImpl for VaultSecretReadResponse {
     fn fuzz(&self, data: &[u8]) {
         let (response, key, secret) = fuzz_data_to_value(data, arb_secret_read_response());
         let _ = process_secret_read_response(&secret, &key, response);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct VaultTransitCreateResponse;
+
+/// This implementation will fuzz process_transit_create_response(): the method used by the vault
+/// client to process a key create request from the vault backend.
+impl FuzzTargetImpl for VaultTransitCreateResponse {
+    fn description(&self) -> &'static str {
+        "Secure storage vault: process_transit_create_response()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_transit_create_response()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let (response, name) = fuzz_data_to_value(data, arb_transit_create_response());
+        let _ = process_transit_create_response(&name, response);
     }
 }
 
