@@ -16,11 +16,59 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v1
+      - name: Get PR number
+        id: pr-num
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          result-encoding: string
+          script: |
+            // Find the number of the pull request that trigggers this push
+            let pr_num = 0;
+            let commit_message = context.payload.head_commit.message;
+            let re = /.*[^]Closes:\s\#(\d+)$/;
+            if (re.test(commit_message)) {
+              let match = re.exec(commit_message);
+              pr_num = match[1];
+              return pr_num
+            } else {
+              console.log("GH event payload\n", context.payload);
+              throw "Did not find pull request num in commit message. -\\_(O_o)_/-"
+            }
+      - name: Save PR number
+        run: |
+          echo "::set-env name=PR_NUM::${{steps.pr-num.outputs.result}}"
+      - name: Get PR base ref
+        id: pr-base-ref
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          result-encoding: string
+          script: |
+            let pr_data = await github.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: process.env.PR_NUM
+            });
+            try {
+              let base_ref = pr_data.data.base.ref;
+              console.log("Base ref:", base_ref);
+              if (!base_ref) {
+                throw "Could not find base ref"
+              }
+              return base_ref
+            } catch (err) {
+              console.log("GH PR payload\n", pr_data);
+              throw err
+            }
       - name: Setup env
         run: |
-          echo "::set-env name=LIBRA_GIT_REV::$(git rev-parse --short=8 HEAD)"
-          echo "::set-env name=MASTER_GIT_REV::$(git rev-parse --short=8 origin/master)"
-          echo "::set-env name=TEST_TAG::land_$(git rev-parse --short=8 HEAD)"
+          BASE_REF=${{steps.pr-base-ref.outputs.result}}
+          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "::set-env name=BASE_REF::$BASE_REF"
+          echo "::set-env name=HEAD_GIT_REV::$HEAD_GIT_REV"
+          echo "::set-env name=TEST_TAG::land_$HEAD_GIT_REV"
+          echo "::set-env name=BASE_GIT_REV::$(git rev-parse --short=8 origin/$BASE_REF)"
       - name: Check kill switch
         id: check_ks
         run: |
@@ -37,7 +85,7 @@ jobs:
           RETRYABLE_EXIT_CODE=2
           for ((i = 0; i < 3; i++)); do
             echo "Build attempt $i"
-            docker/build-aws.sh --build-all-cti --version $LIBRA_GIT_REV --addl_tags canary,${TEST_TAG}
+            docker/build-aws.sh --build-all-cti --version $HEAD_GIT_REV --addl_tags canary,${TEST_TAG}
             return_code=$?
             if [[ $return_code -eq 0 ]]; then
               echo "Build successful"
@@ -55,7 +103,7 @@ jobs:
         if: steps.check_ks.outputs.should_run == 'true'
         run: |
           set +e
-          commit_message=$(git log --pretty=oneline $MASTER_GIT_REV..$LIBRA_GIT_REV)
+          commit_message=$(git log --pretty=oneline $BASE_GIT_REV..$HEAD_GIT_REV)
           echo $commit_message | grep '\[breaking\]'
           ret=$?
           if ${{ secrets.KILL_SWITCH_LAND_BLOCKING_COMPAT }}; then
@@ -63,6 +111,9 @@ jobs:
             echo "::set-env name=TEST_COMPAT::0"
           elif [ $ret -eq 0 ]; then
             echo "Breaking change detected! Will run land_blocking suite"
+            echo "::set-env name=TEST_COMPAT::0"
+          elif [ "$BASE_REF" != "master" ]; then
+            echo "PR base ref is not master. Will run land_blocking suite"
             echo "::set-env name=TEST_COMPAT::0"
           else
             echo "Will run land_blocking_compat suite"
@@ -115,19 +166,22 @@ jobs:
           echo "cti exit code: $ret"
           echo "::set-env name=CTI_REPRO_CMD::$cmd"
           echo "::set-env name=CTI_EXIT_CODE::$ret"
+          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed."
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
             echo "report.json end"
+            msg_text="$msg_text Report:\n$(cat report.json)"
           else
             echo "report.json is empty or not found."
+            msg_text="$msg_text Report:\nEmpty"
             ret=1
           fi
           if [ $ret -ne 0 ]; then
             jq -n \
-              --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
-          $(tail -5 $CTI_OUTPUT_LOG)" \
+              --arg msg "$msg_text" \
               --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+              --arg pr_url "https://github.com/${{ github.repository }}/pull/$PR_NUM" \
             '{
               "attachments": [
                 {
@@ -137,6 +191,11 @@ jobs:
                       "type": "button",
                       "text": "Visit Job",
                       "url": $url
+                    },
+                    {
+                      "type": "button",
+                      "text": "Visit PR",
+                      "url": $pr_url
                     }
                   ]
                 }
@@ -151,14 +210,9 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             // Find the number of the pull request that trigggers this push
-            let pr_num = 0;
-            let commit_message = context.payload.head_commit.message;
-            let re = /.*[^]Closes:\s\#(\d+)$/;
-            if (re.test(commit_message)) {
-              let match = re.exec(commit_message);
-              pr_num = match[1];
-            } else {
-              console.warn("Did not find pull request num in commit message. -\\_(O_o)_/-");
+            let pr_num = process.env.PR_NUM;
+            if (!pr_num) {
+              console.warn("Did not find pull request num in previous step");
               console.log("GH event payload\n", context.payload);
               return;
             }
