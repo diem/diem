@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata,
-    ReadSecretResponse, SealStatusResponse, Signature, SignatureResponse,
+    ListKeys, ListKeysResponse, ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys,
+    ReadSecretData, ReadSecretMetadata, ReadSecretResponse, SealStatusResponse, Signature,
+    SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
@@ -71,6 +72,26 @@ prop_compose! {
         let read_secret_response = Response::new(status, &status_text, &read_secret_response);
 
         (read_secret_response, secret, key)
+    }
+}
+
+// This generates an arbitrary transit list response returned by vault.
+prop_compose! {
+    pub fn arb_transit_list_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        keys in prop::collection::vec(any::<String>(), 0..100),
+    ) -> Response {
+        let data = ListKeys {
+            keys,
+        };
+        let list_keys_response = ListKeysResponse {
+            data,
+        };
+        let list_keys_response =
+            serde_json::to_string::<ListKeysResponse>(&list_keys_response).unwrap();
+        Response::new(status, &status_text, &list_keys_response)
     }
 }
 
@@ -161,11 +182,12 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
+            arb_transit_list_response, arb_transit_read_response, arb_transit_sign_response,
+            arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_transit_read_response, process_transit_restore_response,
-        process_transit_sign_response, process_unsealed_response,
+        process_transit_list_response, process_transit_read_response,
+        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -185,6 +207,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_list_response_proptest(response in arb_transit_list_response()) {
+            let _ = process_transit_list_response(response);
         }
 
         #[test]
