@@ -22,20 +22,29 @@ mod transaction;
 mod vm;
 
 static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy::new(|| {
+    // List fuzz targets here in this format:
     let targets: Vec<Box<dyn FuzzTargetImpl>> = vec![
-        // List fuzz targets here in this format.
+        // Consensus
         Box::new(consensus::ConsensusProposal::default()),
+        // Executor
         Box::new(executor::ExecuteAndCommitChunk::default()),
+        // JSON RPC Service
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),
+        // Mempool
         Box::new(mempool::MempoolIncomingTransactions::default()),
+        // Move VM
         Box::new(move_vm::ValueTarget::default()),
+        // Network
         Box::new(network::RpcInboundRequest::default()),
+        // Network Noise
         Box::new(network_noise::NetworkNoiseInitiator::default()),
         Box::new(network_noise::NetworkNoiseResponder::default()),
         Box::new(network_noise::NetworkNoiseStream::default()),
+        // Secure JSON RPC Client
         Box::new(secure_json_rpc_client::SecureJsonRpcSubmitTransaction::default()),
         Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountState::default()),
         Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountTransaction::default()),
+        // Secure Storage Vault
         Box::new(secure_storage_vault::VaultGenericResponse::default()),
         Box::new(secure_storage_vault::VaultPolicyReadResponse::default()),
         Box::new(secure_storage_vault::VaultPolicyListResponse::default()),
@@ -50,11 +59,15 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(secure_storage_vault::VaultTransitRestoreResponse::default()),
         Box::new(secure_storage_vault::VaultTransitSignResponse::default()),
         Box::new(secure_storage_vault::VaultUnsealedResponse::default()),
+        // State Sync
         Box::new(state_sync::StateSyncMsg::default()),
-        //        Box::new(storage::StorageSaveBlocks::default()),
+        // Storage
+        // Box::new(storage::StorageSaveBlocks::default()),
         Box::new(storage::StorageSchemaDecode::default()),
+        // Transaction
         Box::new(transaction::LanguageTransactionExecution::default()),
         Box::new(transaction::SignedTransactionTarget::default()),
+        // VM
         Box::new(vm::CompiledModuleTarget::default()),
     ];
     targets
