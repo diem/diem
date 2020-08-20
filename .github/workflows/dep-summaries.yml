@@ -1,4 +1,4 @@
-name: Dependency Notififier
+name: Dependency Notifier
 
 on:
   pull_request:
