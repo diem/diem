@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ExportKey, ExportKeyResponse, ListKeys, ListKeysResponse, ListPoliciesResponse, ReadKey,
-    ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata, ReadSecretResponse,
-    RenewTokenAuth, RenewTokenResponse, SealStatusResponse, Signature, SignatureResponse,
+    CreateTokenAuth, CreateTokenResponse, ExportKey, ExportKeyResponse, ListKeys, ListKeysResponse,
+    ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata,
+    ReadSecretResponse, RenewTokenAuth, RenewTokenResponse, SealStatusResponse, Signature,
+    SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
@@ -74,6 +75,27 @@ prop_compose! {
         let read_secret_response = Response::new(status, &status_text, &read_secret_response);
 
         (read_secret_response, secret, key)
+    }
+}
+
+// This generates an arbitrary token create response returned by vault.
+prop_compose! {
+    pub fn arb_token_create_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        client_token in any::<String>(),
+    ) -> Response {
+    let auth = CreateTokenAuth {
+        client_token,
+    };
+    let create_token_response = CreateTokenResponse {
+        auth,
+     };
+
+     let create_token_response =
+            serde_json::to_string::<CreateTokenResponse>(&create_token_response).unwrap();
+     Response::new(status, &status_text, &create_token_response)
     }
 }
 
@@ -251,15 +273,15 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_token_renew_response, arb_transit_create_response, arb_transit_export_response,
-            arb_transit_list_response, arb_transit_read_response, arb_transit_sign_response,
-            arb_unsealed_response,
+            arb_token_create_response, arb_token_renew_response, arb_transit_create_response,
+            arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
+            arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_token_renew_response, process_transit_create_response,
-        process_transit_export_response, process_transit_list_response,
-        process_transit_read_response, process_transit_restore_response,
-        process_transit_sign_response, process_unsealed_response,
+        process_token_create_response, process_token_renew_response,
+        process_transit_create_response, process_transit_export_response,
+        process_transit_list_response, process_transit_read_response,
+        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -279,6 +301,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_token_create_response_proptest(input in arb_token_create_response()) {
+            let _ = process_token_create_response(input);
         }
 
         #[test]
