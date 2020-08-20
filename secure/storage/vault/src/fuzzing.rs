@@ -3,7 +3,7 @@
 
 use crate::{
     ListPoliciesResponse, ReadSecretData, ReadSecretMetadata, ReadSecretResponse,
-    SealStatusResponse,
+    SealStatusResponse, Signature, SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
@@ -76,6 +76,26 @@ prop_compose! {
 
 // This generates an arbitrary unsealed response returned by vault.
 prop_compose! {
+    pub fn arb_transit_sign_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        signature in any::<String>(),
+    ) -> Response {
+        let data = Signature {
+            signature,
+        };
+        let signature_response = SignatureResponse {
+            data,
+        };
+        let signature_response =
+            serde_json::to_string::<SignatureResponse>(&signature_response).unwrap();
+        Response::new(status, &status_text, &signature_response)
+    }
+}
+
+// This generates an arbitrary unsealed response returned by vault.
+prop_compose! {
     pub fn arb_unsealed_response(
     )(
         status in any::<u16>(),
@@ -98,10 +118,10 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_unsealed_response,
+            arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_unsealed_response,
+        process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -121,6 +141,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_sign_response_proptest(input in arb_transit_sign_response()) {
+            let _ = process_transit_sign_response(input);
         }
 
         #[test]
