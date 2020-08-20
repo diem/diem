@@ -33,7 +33,7 @@ use reqwest::Client as HttpClient;
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, S3Client, S3};
 use rusoto_sts::WebIdentityProvider;
-use std::{collections::HashSet, convert::TryFrom, process::Command};
+use std::{collections::HashSet, convert::TryFrom, process::Command, time::Duration};
 use tokio::sync::Semaphore;
 
 const DEFAULT_NAMESPACE: &str = "default";
@@ -59,7 +59,7 @@ impl ClusterSwarmKube {
         Command::new("/usr/local/bin/kubectl")
             .arg("proxy")
             .spawn()?;
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(2000, 60), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move {
                 debug!("Running local kube pod healthcheck on http://127.0.0.1:8001");
                 reqwest::get("http://127.0.0.1:8001").await?.text().await?;
@@ -197,7 +197,7 @@ impl ClusterSwarmKube {
         back_off_limit: u32,
         killed: bool,
     ) -> Result<bool> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 20), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             let job_api: Api<Job> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let job_name = job_name.to_string();
             Box::pin(async move {
@@ -306,7 +306,7 @@ impl ClusterSwarmKube {
     {
         debug!("Deleting {} {}", T::KIND, name);
         let resource_api: Api<T> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 60), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             let resource_api = resource_api.clone();
             let name = name.to_string();
             Box::pin(async move {
@@ -431,7 +431,7 @@ impl ClusterSwarmKube {
     }
 
     pub async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move { self.allocate_node_impl(pod_name).await })
         })
         .await
@@ -564,7 +564,7 @@ impl ClusterSwarmKube {
     }
 
     async fn remove_all_network_effects(&self) -> Result<()> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
         })
         .await
@@ -799,7 +799,7 @@ impl ClusterSwarm for ClusterSwarmKube {
     ) -> Result<()> {
         let bucket = "toro-cluster-test-flamegraphs";
         let run_id = env::var("RUN_ID").expect("RUN_ID is not set.");
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+        libra_retrier::retry_async(k8s_retry_strategy(), || {
             let run_id = &run_id;
             let content = content.clone();
             Box::pin(async move {
@@ -885,4 +885,8 @@ async fn try_join_all_limit<O, E, F: Future<Output = std::result::Result<O, E>>>
 async fn acquire_and_execute<F: TryFuture>(semaphore: &Semaphore, f: F) -> F::Output {
     let _permit = semaphore.acquire().await;
     f.await
+}
+
+fn k8s_retry_strategy() -> impl Iterator<Item = Duration> {
+    libra_retrier::exp_retry_strategy(1000, 5000, 30)
 }
