@@ -698,7 +698,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 vm_outputs,
                 &parent_block_executed_trees,
             )
-            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
+            .map_err(|err| format_err!("Failed to process vm outputs: {:?}", err))?;
 
             let parent_accu = parent_block_executed_trees.txn_accumulator();
 

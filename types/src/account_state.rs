@@ -16,7 +16,7 @@ use crate::{
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
@@ -184,7 +184,13 @@ impl AccountState {
             .get(key)
             .map(|bytes| lcs::from_bytes(bytes))
             .transpose()
-            .map_err(Into::into)
+            .map_err(anyhow::Error::from)
+            .with_context(|| {
+                format!(
+                    "Failed to deserialize resource {}",
+                    std::any::type_name::<T>()
+                )
+            })
     }
 
     pub fn insert(&mut self, key: Vec<u8>, value: Vec<u8>) -> Option<Vec<u8>> {
