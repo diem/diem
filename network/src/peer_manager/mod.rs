@@ -517,7 +517,8 @@ where
                         );
                     }
                 } else {
-                    self.dial_peer(requested_peer_id, addr, response_tx).await;
+                    let request = TransportRequest::DialPeer(requested_peer_id, addr, response_tx);
+                    self.transport_reqs_tx.send(request).await.unwrap();
                 };
             }
             ConnectionRequest::DisconnectPeer(peer_id, resp_tx) => {
@@ -713,16 +714,6 @@ where
                 );
             }
         }
-    }
-
-    async fn dial_peer(
-        &mut self,
-        peer_id: PeerId,
-        address: NetworkAddress,
-        response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
-    ) {
-        let request = TransportRequest::DialPeer(peer_id, address, response_tx);
-        self.transport_reqs_tx.send(request).await.unwrap();
     }
 
     fn spawn_peer_network_events_handler(
