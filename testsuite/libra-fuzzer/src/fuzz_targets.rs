@@ -39,6 +39,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(secure_storage_vault::VaultGenericResponse::default()),
         Box::new(secure_storage_vault::VaultPolicyListResponse::default()),
         Box::new(secure_storage_vault::VaultSecretReadResponse::default()),
+        Box::new(secure_storage_vault::VaultTokenRenewResponse::default()),
         Box::new(secure_storage_vault::VaultTransitCreateResponse::default()),
         Box::new(secure_storage_vault::VaultTransitExportResponse::default()),
         Box::new(secure_storage_vault::VaultTransitListResponse::default()),
