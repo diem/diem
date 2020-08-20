@@ -1,6 +1,6 @@
 [[env_vars]]
 key = "FOLDER"
-value = "{}"
+value = "/Users/runtianz/backup"
 
 [commands]
 create_backup = 'cd "$FOLDER" && mkdir $BACKUP_NAME && echo $BACKUP_NAME'

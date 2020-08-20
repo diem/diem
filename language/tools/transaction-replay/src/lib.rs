@@ -6,11 +6,15 @@ use anyhow::{format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
-    transaction::{Transaction, TransactionOutput, Version},
+    transaction::{ChangeSet, Transaction, TransactionOutput, Version},
 };
-use libra_vm::{LibraVM, VMExecutor};
+use libra_vm::{
+    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor,
+};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{convert::TryFrom, path::Path};
+use vm::errors::VMResult;
 
 pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
 
@@ -122,6 +126,23 @@ impl LibraDebugger {
         seq: u64,
     ) -> Result<Option<Version>> {
         self.debugger.get_version_by_account_sequence(account, seq)
+    }
+
+    pub fn run_session_at_version<F>(&self, version: Version, f: F) -> Result<ChangeSet>
+    where
+        F: FnOnce(&mut Session<RemoteStorage<DebuggerStateView>>) -> VMResult<()>,
+    {
+        let move_vm = MoveVM::new();
+        let state_view = DebuggerStateView::new(&*self.debugger, version);
+        let remote_storage = RemoteStorage::new(&state_view);
+        let mut session = move_vm.new_session(&remote_storage);
+        f(&mut session).map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
+        let txn_effect = session
+            .finish()
+            .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
+        let (write_set, events) = txn_effects_to_writeset_and_events(txn_effect)
+            .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
+        Ok(ChangeSet::new(write_set, events))
     }
 }
 
