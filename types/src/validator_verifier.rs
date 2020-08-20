@@ -99,6 +99,7 @@ impl ValidatorVerifier {
     }
 
     /// Initializes a validator verifier with a specified quorum voting power.
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn new_with_quorum_voting_power(
         address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
         quorum_voting_power: u64,
