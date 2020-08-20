@@ -11,9 +11,6 @@ use move_vm_types::{
 use std::{collections::VecDeque, convert::TryFrom};
 use vm::errors::PartialVMResult;
 
-/// Starting error code number
-const DEFAULT_ERROR_CODE: u64 = 0x0ED2_5519;
-
 pub fn native_ed25519_publickey_validation(
     context: &impl NativeContext,
     _ty_args: Vec<Type>,
@@ -57,17 +54,16 @@ pub fn native_ed25519_signature_verification(
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
-            return Ok(NativeResult::err(cost, DEFAULT_ERROR_CODE));
+            return Ok(NativeResult::ok(cost, vec![Value::bool(false)]));
         }
     };
     let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_slice()) {
         Ok(pk) => pk,
         Err(_) => {
-            return Ok(NativeResult::err(cost, DEFAULT_ERROR_CODE));
+            return Ok(NativeResult::ok(cost, vec![Value::bool(false)]));
         }
     };
 
-    let bool_value = sig.verify_arbitrary_msg(msg.as_slice(), &pk).is_ok();
-    let return_values = vec![Value::bool(bool_value)];
-    Ok(NativeResult::ok(cost, return_values))
+    let verify_result = sig.verify_arbitrary_msg(msg.as_slice(), &pk).is_ok();
+    Ok(NativeResult::ok(cost, vec![Value::bool(verify_result)]))
 }
