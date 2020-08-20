@@ -74,7 +74,8 @@ pub struct StructuredLogEntry {
     /// filename + line (e.g. consensus/src/round_manager.rs:678)
     #[serde(skip_serializing_if = "Option::is_none")]
     location: Option<&'static str>,
-    /// time of the log
+    /// time of the log.  @timestamp is used by elasticsearch
+    #[serde(rename(serialize = "@timestamp"))]
     timestamp: String,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]

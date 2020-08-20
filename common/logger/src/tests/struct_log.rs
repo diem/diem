@@ -100,7 +100,7 @@ fn test_structured_logs() {
     assert!(!map.string("id").is_empty());
 
     // Log time should be the time the structured log entry was created
-    let timestamp = DateTime::parse_from_rfc3339(&map.string("timestamp")).unwrap();
+    let timestamp = DateTime::parse_from_rfc3339(&map.string("@timestamp")).unwrap();
     let timestamp: DateTime<Utc> = DateTime::from(timestamp);
     assert!(before <= timestamp && timestamp <= after);
 
