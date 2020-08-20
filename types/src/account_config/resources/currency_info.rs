@@ -17,7 +17,7 @@ use move_core_types::{
 use serde::{Deserialize, Serialize};
 
 /// Struct that represents a CurrencyInfo resource
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CurrencyInfoResource {
     total_value: u128,
     preburn_value: u64,
