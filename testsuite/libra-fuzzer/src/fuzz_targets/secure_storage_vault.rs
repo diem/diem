@@ -5,15 +5,16 @@ use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use libra_proptest_helpers::ValueGenerator;
 use libra_vault_client::{
     fuzzing::{
-        arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-        arb_token_create_response, arb_token_renew_response, arb_transit_create_response,
-        arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
-        arb_transit_sign_response, arb_unsealed_response,
+        arb_generic_response, arb_policy_list_response, arb_secret_list_response,
+        arb_secret_read_response, arb_token_create_response, arb_token_renew_response,
+        arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
+        arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
     },
-    process_generic_response, process_policy_list_response, process_secret_read_response,
-    process_token_create_response, process_token_renew_response, process_transit_create_response,
-    process_transit_export_response, process_transit_list_response, process_transit_read_response,
-    process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
+    process_generic_response, process_policy_list_response, process_secret_list_response,
+    process_secret_read_response, process_token_create_response, process_token_renew_response,
+    process_transit_create_response, process_transit_export_response,
+    process_transit_list_response, process_transit_read_response, process_transit_restore_response,
+    process_transit_sign_response, process_unsealed_response,
 };
 
 #[derive(Clone, Debug, Default)]
@@ -53,6 +54,26 @@ impl FuzzTargetImpl for VaultPolicyListResponse {
     fn fuzz(&self, data: &[u8]) {
         let input = fuzz_data_to_value(data, arb_policy_list_response());
         let _ = process_policy_list_response(input);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct VaultSecretListResponse;
+
+/// This implementation will fuzz process_secret_list_response(): the method used by the vault
+/// client to process secrets listed from the vault backend.
+impl FuzzTargetImpl for VaultSecretListResponse {
+    fn description(&self) -> &'static str {
+        "Secure storage vault: process_secret_list_response()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_secret_list_response()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let response = fuzz_data_to_value(data, arb_secret_list_response());
+        let _ = process_secret_list_response(response);
     }
 }
 

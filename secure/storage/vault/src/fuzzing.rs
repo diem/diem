@@ -3,9 +3,9 @@
 
 use crate::{
     CreateTokenAuth, CreateTokenResponse, ExportKey, ExportKeyResponse, ListKeys, ListKeysResponse,
-    ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata,
-    ReadSecretResponse, RenewTokenAuth, RenewTokenResponse, SealStatusResponse, Signature,
-    SignatureResponse,
+    ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretListData,
+    ReadSecretListResponse, ReadSecretMetadata, ReadSecretResponse, RenewTokenAuth,
+    RenewTokenResponse, SealStatusResponse, Signature, SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
@@ -42,6 +42,27 @@ prop_compose! {
         let policy_list =
             serde_json::to_string::<ListPoliciesResponse>(&policy_list).unwrap();
         Response::new(status, &status_text, &policy_list)
+    }
+}
+
+// This generates an arbitrary secret list response returned by vault.
+prop_compose! {
+    pub fn arb_secret_list_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        keys in prop::collection::vec(any::<String>(), 0..MAX_COLLECTION_SIZE),
+    ) -> Response {
+        let data = ReadSecretListData {
+            keys,
+        };
+        let read_secret_list_response = ReadSecretListResponse {
+            data
+        };
+
+        let read_secret_list_response =
+            serde_json::to_string::<ReadSecretListResponse>(&read_secret_list_response).unwrap();
+        Response::new(status, &status_text, &read_secret_list_response)
     }
 }
 
@@ -272,13 +293,13 @@ prop_compose! {
 mod tests {
     use crate::{
         fuzzing::{
-            arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_token_create_response, arb_token_renew_response, arb_transit_create_response,
-            arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
-            arb_transit_sign_response, arb_unsealed_response,
+            arb_generic_response, arb_policy_list_response, arb_secret_list_response,
+            arb_secret_read_response, arb_token_create_response, arb_token_renew_response,
+            arb_transit_create_response, arb_transit_export_response, arb_transit_list_response,
+            arb_transit_read_response, arb_transit_sign_response, arb_unsealed_response,
         },
-        process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_token_create_response, process_token_renew_response,
+        process_generic_response, process_policy_list_response, process_secret_list_response,
+        process_secret_read_response, process_token_create_response, process_token_renew_response,
         process_transit_create_response, process_transit_export_response,
         process_transit_list_response, process_transit_read_response,
         process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
@@ -296,6 +317,11 @@ mod tests {
         #[test]
         fn process_policy_list_response_proptest(input in arb_policy_list_response()) {
             let _ = process_policy_list_response(input);
+        }
+
+        #[test]
+        fn process_secret_list_response_proptest(input in arb_secret_list_response()) {
+            let _ = process_secret_list_response(input);
         }
 
         #[test]
