@@ -16,7 +16,7 @@ use std::{
     fmt::Display,
     fs::{File, OpenOptions},
     io,
-    io::Write as IoWrite,
+    io::Write,
     marker::PhantomData,
     net::{TcpStream, ToSocketAddrs},
     str::FromStr,
@@ -45,7 +45,7 @@ const INITIALIZED: usize = 2;
 // Size configurations
 const MAX_LOG_LINE_SIZE: usize = 10240; // 10KiB
 const LOG_INFO_OFFSET: usize = 256;
-const WRITE_CHANNEL_SIZE: usize = 1024;
+const WRITE_CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
 
@@ -426,13 +426,13 @@ impl FileStructLogThread {
 
 /// Sink that streams all structured logs to an address through TCP protocol
 struct TCPStructLog {
-    sender: SyncSender<StructuredLogEntry>,
+    sender: SyncSender<String>,
 }
 
 impl TCPStructLog {
-    pub fn start_new(address: String) -> io::Result<Self> {
+    pub fn start_new(endpoint: String) -> io::Result<Self> {
         let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
-        let sink_thread = TCPStructLogThread::new(receiver, address);
+        let sink_thread = TCPStructLogThread::new(receiver, endpoint);
         thread::spawn(move || sink_thread.run());
         Ok(Self { sender })
     }
@@ -440,94 +440,115 @@ impl TCPStructLog {
 
 impl StructLogSink for TCPStructLog {
     fn send(&self, entry: StructuredLogEntry) {
-        if let Err(e) = self.sender.try_send(entry) {
-            STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
-            // Use log crate macro to avoid generation of structured log in this case
-            // Otherwise we will have infinite loop
-            log::error!("[Logging] Failed to send structured log: {}", e);
+        // Convert and trim before submitting to queue to ensure set log size
+        // TODO: Will this have an impact on performance of the writing thread from serialization?
+        if let Ok(json) = entry.to_json_string() {
+            if let Err(e) = self.sender.try_send(json) {
+                STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
+                // Use log crate macro to avoid generation of structured log in this case
+                // Otherwise we will have infinite loop
+                log::error!("[Logging] Failed to send structured log: {}", e);
+            }
+        } else {
+            STRUCT_LOG_PARSE_ERROR_COUNT.inc();
         }
     }
 }
 
+/// Thread for sending logs to a Logging TCP endpoint
+///
+/// `write_log_line` Blocks on the oldest log in the `receiver` until it can properly connect to an endpoint.
+///   It will drop any message that is disconnected or failed in the middle of transmission.
 struct TCPStructLogThread {
-    receiver: Receiver<StructuredLogEntry>,
-    address: String,
+    receiver: Receiver<String>,
+    endpoint: String,
 }
 
 impl TCPStructLogThread {
-    fn new(receiver: Receiver<StructuredLogEntry>, address: String) -> TCPStructLogThread {
-        TCPStructLogThread { receiver, address }
+    fn new(receiver: Receiver<String>, endpoint: String) -> TCPStructLogThread {
+        TCPStructLogThread { receiver, endpoint }
     }
 
-    // Continually iterate over requests unless writing fails.
-    fn process_requests(&self, stream: &mut TcpStream) {
+    /// Writes a log line into json_lines logstash format, which has a newline at the end
+    fn write_log_line(stream: &mut TcpWriter, message: String) -> io::Result<()> {
+        let message = message + "\n";
+
+        // TODO: Retransmit log line if it fails?
+        stream.write_all(message.as_bytes())
+    }
+
+    pub fn run(self) {
+        let mut writer = TcpWriter::new(self.endpoint.clone());
         for entry in &self.receiver {
             PROCESSED_STRUCT_LOG_COUNT.inc();
-            // Parse string, skipping over anything that can't be parsed
-            let json_string = match entry.to_json_string() {
-                Ok(json_string) => json_string,
-                Err(_) => {
-                    STRUCT_LOG_PARSE_ERROR_COUNT.inc();
-                    continue;
-                }
-            };
 
-            // If we fail to write, exit out and create a new stream
-            if let Err(e) = Self::write_log_line(stream, json_string) {
+            // Write single log lines, guaranteeing stream is ready first
+            // Note: This does not guarantee delivery of a message cut off in the middle
+            if let Err(e) = Self::write_log_line(&mut writer, entry) {
                 STRUCT_LOG_SEND_ERROR_COUNT.inc();
                 log::error!(
                     "[Logging] Error while sending data to logstash({}): {}",
-                    self.address,
+                    self.endpoint,
                     e
                 );
-
-                // Start over stream
-                return;
             } else {
                 SENT_STRUCT_LOG_COUNT.inc()
             }
         }
     }
+}
 
-    pub fn connect(&mut self) -> io::Result<TcpStream> {
-        // resolve addresses to handle DNS names
+/// A wrapper for `TcpStream` that handles reconnecting to the endpoint automatically
+///
+/// `TcpWriter::write()` will block on the message until it is connected.
+struct TcpWriter {
+    /// The DNS name or IP address logs are being sent to
+    endpoint: String,
+    /// The `TCPStream` to write to, which will be `None` when disconnected
+    stream: Option<TcpStream>,
+}
+
+impl TcpWriter {
+    pub fn new(endpoint: String) -> Self {
+        Self {
+            endpoint,
+            stream: None,
+        }
+    }
+
+    /// Ensure that we get a connection, no matter how long it takes
+    /// This will block until there is a connection
+    fn refresh_connection(&mut self) {
+        loop {
+            match self.connect() {
+                Ok(stream) => {
+                    self.stream = Some(stream);
+                    return;
+                }
+                Err(e) => {
+                    log::error!("[Logging] Failed to connect: {}", e);
+                    STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
+                }
+            }
+
+            // Sleep a second so this doesn't just spin as fast as possible
+            std::thread::sleep(Duration::from_millis(1000));
+        }
+    }
+
+    /// Connect and ensure the write timeout is set
+    fn connect(&mut self) -> io::Result<TcpStream> {
+        STRUCT_LOG_TCP_CONNECT_COUNT.inc();
+
         let mut last_error = io::Error::new(
             io::ErrorKind::Other,
-            format!("Unable to resolve and connect to {}", self.address),
+            format!("Unable to resolve and connect to {}", self.endpoint),
         );
-        for addr in self.address.to_socket_addrs()? {
+
+        // resolve addresses to handle DNS names
+        for addr in self.endpoint.to_socket_addrs()? {
             match TcpStream::connect_timeout(&addr, Duration::from_millis(CONNECTION_TIMEOUT_MS)) {
-                Ok(stream) => return Ok(stream),
-                Err(err) => last_error = err,
-            }
-        }
-
-        Err(last_error)
-    }
-
-    /// Writes a log line into json_lines logstash format, which has a newline at the end
-    fn write_log_line(stream: &mut TcpStream, message: String) -> io::Result<()> {
-        let message = message + "\n";
-        stream.write_all(message.as_bytes())
-    }
-
-    fn write_control_msg(stream: &mut TcpStream, msg: &'static str) -> io::Result<()> {
-        let entry = StructuredLogEntry::new_named("logger", msg);
-        let entry = entry
-            .to_json_string()
-            .map_err(|err| io::Error::new(io::ErrorKind::Other, err.to_string()))?;
-        Self::write_log_line(stream, entry)
-    }
-
-    pub fn run(mut self) {
-        loop {
-            let mut maybe_stream = self.connect();
-            STRUCT_LOG_TCP_CONNECT_COUNT.inc();
-
-            // This is to ensure that we do actually connect before sending requests
-            // If the request process loop ends, the stream is broken.  Reset and create a new one.
-            match maybe_stream.as_mut() {
-                Ok(mut stream) => {
+                Ok(stream) => {
                     // Set the write timeout
                     if let Err(err) =
                         stream.set_write_timeout(Some(Duration::from_millis(WRITE_TIMEOUT_MS)))
@@ -536,25 +557,43 @@ impl TCPStructLogThread {
                         log::error!("[Logging] Failed to set write timeout: {}", err);
                         continue;
                     }
-
-                    // Write a log signifying that the logger connected, and test the stream
-                    if let Err(err) = Self::write_control_msg(stream, "connected") {
-                        STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        log::error!("[Logging] control message failed: {}", err);
-                        continue;
-                    }
-
-                    self.process_requests(&mut stream)
+                    return Ok(stream);
                 }
-                Err(err) => {
-                    STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                    log::error!(
-                        "[Logging] Failed to connect to {}, cause {}",
-                        self.address,
-                        err
-                    )
-                }
+                Err(err) => last_error = err,
             }
+        }
+
+        Err(last_error)
+    }
+}
+
+impl Write for TcpWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        // Refresh the connection if it's missing
+        if self.stream.is_none() {
+            self.refresh_connection();
+        }
+
+        // Attempt to write, and if it fails clear underlying stream
+        // This doesn't guarantee a message cut off mid send will work, but it does guarantee that
+        // we will connect first
+        let mut stream = self.stream.as_ref().unwrap();
+        let result = stream.write(buf);
+        if result.is_err() {
+            self.stream = None;
+        }
+
+        result
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        if let Some(mut stream) = self.stream.as_ref() {
+            stream.flush()
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "Can't flush, not connected",
+            ))
         }
     }
 }
