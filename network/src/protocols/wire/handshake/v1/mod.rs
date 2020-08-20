@@ -15,6 +15,9 @@ use libra_types::chain_id::ChainId;
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 #[cfg(test)]
 mod test;
 
@@ -57,6 +60,7 @@ impl fmt::Display for ProtocolId {
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct SupportedProtocols(bitvec::BitVec);
 
 /// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
@@ -88,6 +92,7 @@ impl fmt::Display for HandshakeMsg {
 /// old to new, old having the smallest value.
 /// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub enum MessagingProtocolVersion {
     V1 = 0,
 }
