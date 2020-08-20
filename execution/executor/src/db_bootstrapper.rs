@@ -46,17 +46,22 @@ pub fn maybe_bootstrap<V: VMExecutor>(
     // if the waypoint is not targeted with the genesis txn, it may be either already bootstrapped, or
     // aiming for state sync to catch up.
     if tree_state.num_transactions != waypoint.version() {
-        info!("Skip genesis txn");
+        info!(
+            "Skip genesis txn, local: {}, waypoint: {}, set genesis_file_location to \"\" if want to sync to the waypoint",
+            tree_state.describe(),
+            waypoint
+        );
         return Ok(false);
     }
 
     let committer = calculate_genesis::<V>(db, tree_state, genesis_txn)?;
     ensure!(
         waypoint == committer.waypoint(),
-        "Waypoint verification failed. Expected {:?}, got {:?}.",
+        "Waypoint verification failed. Expected {:?}, got {:?}. ",
         waypoint,
         committer.waypoint(),
     );
+    info!("Waypoint: {} verified.", waypoint);
     committer.commit()?;
     Ok(true)
 }
