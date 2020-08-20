@@ -2,14 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    ListKeys, ListKeysResponse, ListPoliciesResponse, ReadKey, ReadKeyResponse, ReadKeys,
-    ReadSecretData, ReadSecretMetadata, ReadSecretResponse, SealStatusResponse, Signature,
-    SignatureResponse,
+    ExportKey, ExportKeyResponse, ListKeys, ListKeysResponse, ListPoliciesResponse, ReadKey,
+    ReadKeyResponse, ReadKeys, ReadSecretData, ReadSecretMetadata, ReadSecretResponse,
+    SealStatusResponse, Signature, SignatureResponse,
 };
 use libra_types::proptest_types::arb_json_value;
 use proptest::prelude::*;
 use serde_json::Value;
 use ureq::Response;
+
+const MAX_COLLECTION_SIZE: usize = 100;
 
 // This generates an arbitrary generic response returned by vault for various API calls.
 prop_compose! {
@@ -31,7 +33,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        policies in prop::collection::vec(any::<String>(), 0..100)
+        policies in prop::collection::vec(any::<String>(), 0..MAX_COLLECTION_SIZE)
     ) -> Response {
         let policy_list = ListPoliciesResponse {
             policies,
@@ -49,7 +51,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        data in prop::collection::btree_map(any::<String>(), any::<String>(), 0..100),
+        data in prop::collection::btree_map(any::<String>(), any::<String>(), 0..MAX_COLLECTION_SIZE),
         created_time in any::<String>(),
         version in any::<u32>(),
         secret in any::<String>(),
@@ -75,13 +77,41 @@ prop_compose! {
     }
 }
 
+// This generates an arbitrary transit export response returned by vault, as well as an arbitrary
+// string name and version.
+prop_compose! {
+    pub fn arb_transit_export_response(
+    )(
+        status in any::<u16>(),
+        status_text in any::<String>(),
+        keys in prop::collection::btree_map(any::<u32>(), any::<String>(), 0..MAX_COLLECTION_SIZE),
+        name in any::<String>(),
+        key_name in any::<String>(),
+        version in any::<Option<u32>>(),
+    ) -> (Response, String, Option<u32>) {
+        let data = ExportKey {
+            name,
+            keys,
+        };
+        let export_key_response = ExportKeyResponse {
+            data,
+        };
+
+        let export_key_response =
+            serde_json::to_string::<ExportKeyResponse>(&export_key_response).unwrap();
+        let export_key_response = Response::new(status, &status_text, &export_key_response);
+
+        (export_key_response, key_name, version)
+    }
+}
+
 // This generates an arbitrary transit list response returned by vault.
 prop_compose! {
     pub fn arb_transit_list_response(
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        keys in prop::collection::vec(any::<String>(), 0..100),
+        keys in prop::collection::vec(any::<String>(), 0..MAX_COLLECTION_SIZE),
     ) -> Response {
         let data = ListKeys {
             keys,
@@ -116,7 +146,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        keys in prop::collection::btree_map(any::<u32>(), arb_transit_read_key(), 0..100),
+        keys in prop::collection::btree_map(any::<u32>(), arb_transit_read_key(), 0..MAX_COLLECTION_SIZE),
         name in any::<String>(),
         key_type in any::<String>(),
         key_name in any::<String>(),
@@ -182,12 +212,13 @@ mod tests {
     use crate::{
         fuzzing::{
             arb_generic_response, arb_policy_list_response, arb_secret_read_response,
-            arb_transit_list_response, arb_transit_read_response, arb_transit_sign_response,
-            arb_unsealed_response,
+            arb_transit_export_response, arb_transit_list_response, arb_transit_read_response,
+            arb_transit_sign_response, arb_unsealed_response,
         },
         process_generic_response, process_policy_list_response, process_secret_read_response,
-        process_transit_list_response, process_transit_read_response,
-        process_transit_restore_response, process_transit_sign_response, process_unsealed_response,
+        process_transit_export_response, process_transit_list_response,
+        process_transit_read_response, process_transit_restore_response,
+        process_transit_sign_response, process_unsealed_response,
     };
     use proptest::prelude::*;
 
@@ -207,6 +238,11 @@ mod tests {
         #[test]
         fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
             let _ = process_secret_read_response(&secret, &key, response);
+        }
+
+        #[test]
+        fn process_transit_export_response_proptest((response, name, version) in arb_transit_export_response()) {
+            let _ = process_transit_export_response(&name, version, response);
         }
 
         #[test]
