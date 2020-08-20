@@ -238,15 +238,15 @@ impl ClusterSwarmKube {
         job_api
             .delete(job_full_name, &dp)
             .await?
-            .map_left(|o| println!("Deleting Job: {:?}", o.status))
-            .map_right(|s| println!("Deleted Job: {:?}", s));
+            .map_left(|o| debug!("Deleting Job: {:?}", o.status))
+            .map_right(|s| debug!("Deleted Job: {:?}", s));
         let back_off_limit = 0;
         // the job night have been deleted already, so we do not handle error
         match self
             .wait_job_completion(job_full_name, back_off_limit, true)
             .await
         {
-            Ok(_) => info!("Killing job {} returned job_status.success", job_full_name),
+            Ok(_) => debug!("Killing job {} returned job_status.success", job_full_name),
             Err(error) => info!(
                 "Killing job {} returned job_status.failed: {}",
                 job_full_name, error
@@ -285,6 +285,8 @@ impl ClusterSwarmKube {
         if wait_jobs_results.iter().any(|r| !r) {
             bail!("one of the jobs failed")
         }
+        let delete_jobs_futures = job_names.iter().map(|job_name| self.kill_job(job_name));
+        try_join_all_limit(delete_jobs_futures.collect()).await?;
         Ok(())
     }
 
