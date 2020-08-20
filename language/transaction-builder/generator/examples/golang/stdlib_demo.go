@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	token := &libra.TypeTag__Struct{
+	token := libra.TypeTag__Struct{
 		Value: libra.StructTag{
 			Address: libra.AccountAddress{
 				Value: [16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
