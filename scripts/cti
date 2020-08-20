@@ -13,8 +13,8 @@ ENV=""
 REPORT=""
 LOCAL_BUILD=""
 EXIT_CODE=0
-# Default timeout is 30 mins
-TIMEOUT_SECS=1800
+# Default timeout is 45 mins
+TIMEOUT_SECS=2700
 
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
 
