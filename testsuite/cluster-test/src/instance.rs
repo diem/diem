@@ -54,7 +54,6 @@ pub struct LSRConfig {
 pub struct ValidatorConfig {
     pub enable_lsr: bool,
     pub image_tag: String,
-    pub config_overrides: Vec<String>,
     pub safety_rules_addr: Option<String>,
     pub vault_addr: Option<String>,
     pub vault_namespace: Option<String>,
@@ -64,7 +63,6 @@ pub struct ValidatorConfig {
 pub struct FullnodeConfig {
     pub fullnode_index: u32,
     pub image_tag: String,
-    pub config_overrides: Vec<String>,
     pub seed_peer_ip: String,
     pub vault_addr: Option<String>,
     pub vault_namespace: Option<String>,

@@ -43,8 +43,6 @@ const GENESIS_PATH: &str = "/tmp/genesis.blob";
 pub struct ClusterBuilderParams {
     #[structopt(long, default_value = "1")]
     pub fullnodes_per_validator: u32,
-    #[structopt(long, use_delimiter = true, default_value = "")]
-    cfg: Vec<String>,
     #[structopt(long, parse(try_from_str), default_value = "30")]
     pub num_validators: u32,
     #[structopt(long)]
@@ -58,10 +56,6 @@ pub struct ClusterBuilderParams {
 }
 
 impl ClusterBuilderParams {
-    pub fn cfg_overrides(&self) -> Vec<String> {
-        self.cfg.clone()
-    }
-
     pub fn enable_lsr(&self) -> bool {
         self.enable_lsr.unwrap_or(true)
     }
@@ -128,7 +122,6 @@ impl ClusterBuilder {
                 params.enable_lsr(),
                 &params.lsr_backend,
                 current_tag,
-                &params.cfg_overrides(),
                 clean_data,
             )
             .await
@@ -151,7 +144,6 @@ impl ClusterBuilder {
         enable_lsr: bool,
         lsr_backend: &str,
         image_tag: &str,
-        config_overrides: &[String],
         clean_data: bool,
     ) -> Result<(
         Vec<Instance>,
@@ -299,7 +291,6 @@ impl ClusterBuilder {
                 let validator_config = ValidatorConfig {
                     enable_lsr,
                     image_tag: image_tag.to_string(),
-                    config_overrides: config_overrides.to_vec(),
                     safety_rules_addr,
                     vault_addr,
                     vault_namespace,
@@ -339,7 +330,6 @@ impl ClusterBuilder {
                 let fullnode_config = FullnodeConfig {
                     fullnode_index,
                     image_tag: image_tag.to_string(),
-                    config_overrides: config_overrides.to_vec(),
                     seed_peer_ip,
                     vault_addr,
                     vault_namespace,
