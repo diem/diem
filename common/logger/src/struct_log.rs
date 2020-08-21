@@ -38,7 +38,6 @@ static NOP: NopStructLog = NopStructLog {};
 static mut STRUCT_LOGGER: &'static dyn StructLogSink = &NOP;
 static STRUCT_LOGGER_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
 const UNINITIALIZED: usize = 0;
-
 const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 
@@ -48,6 +47,7 @@ const LOG_INFO_OFFSET: usize = 256;
 const WRITE_CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
+const NUM_SEND_RETRIES: u8 = 1;
 
 // Fields to keep when over size
 static FIELDS_TO_KEEP: &[&str] = &["error"];
@@ -457,7 +457,7 @@ impl StructLogSink for TCPStructLog {
 /// Thread for sending logs to a Logging TCP endpoint
 ///
 /// `write_log_line` Blocks on the oldest log in the `receiver` until it can properly connect to an endpoint.
-///   It will drop any message that is disconnected or failed in the middle of transmission.
+///   It will drop any message that is disconnected or failed in the middle of transmission after `NUM_SEND_RETRIES` retries.
 struct TCPStructLogThread {
     receiver: Receiver<String>,
     endpoint: String,
@@ -471,9 +471,20 @@ impl TCPStructLogThread {
     /// Writes a log line into json_lines logstash format, which has a newline at the end
     fn write_log_line(stream: &mut TcpWriter, message: String) -> io::Result<()> {
         let message = message + "\n";
+        let bytes = message.as_bytes();
 
-        // TODO: Retransmit log line if it fails?
-        stream.write_all(message.as_bytes())
+        // Attempt to write the log up to NUM_SEND_RETRIES + 1, and then drop it
+        // Each `write_all` call will attempt to open a connection if one isn't open
+        let mut result = stream.write_all(bytes);
+        for _ in 0..NUM_SEND_RETRIES {
+            if result.is_ok() {
+                break;
+            } else {
+                result = stream.write_all(bytes);
+            }
+        }
+
+        result
     }
 
     pub fn run(self) {
@@ -482,7 +493,8 @@ impl TCPStructLogThread {
             PROCESSED_STRUCT_LOG_COUNT.inc();
 
             // Write single log lines, guaranteeing stream is ready first
-            // Note: This does not guarantee delivery of a message cut off in the middle
+            // Note: This does not guarantee delivery of a message cut off in the middle,
+            //       if there is an error after retries the log will be dropped.
             if let Err(e) = Self::write_log_line(&mut writer, entry) {
                 STRUCT_LOG_SEND_ERROR_COUNT.inc();
                 log::error!(
