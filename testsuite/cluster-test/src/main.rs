@@ -564,6 +564,7 @@ impl ClusterTestRunner {
                     }
                     let commit_lines: Vec<_> = commit.commit.message.split('\n').collect();
                     let commit_head = commit_lines[0];
+                    let commit_head = commit_head.replace("[breaking]", "*[breaking]*");
                     let short_sha = &commit.sha[..6];
                     let email_parts: Vec<_> = commit.commit.author.email.split('@').collect();
                     let author = email_parts[0];
