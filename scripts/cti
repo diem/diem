@@ -271,8 +271,11 @@ pod_status=$(kubectl --context=${context} get pods "${pod_name}" -o jsonpath="{.
 END_UTC=$(TZ=UTC date +"%Y-%m-%dT%H:%M:%SZ")
 END_TS_MS=$(date +%s)000
 echo "**********"
-echo "${BLUE}Logs snapshot:${RESTORE} http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(time:(from:'$START_UTC',to:'$END_UTC'))"
-echo "${BLUE}Dashboard snapshot:${RESTORE} http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/d/2XqUIhnWz/performance?from=${START_TS_MS}&to=${END_TS_MS}"
+LOGS_LINK="http://kibana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/app/kibana#/discover?_g=(time:(from:'${START_UTC}',to:'${END_UTC}'))"
+VAL_LOG_LINK="${LOGS_LINK}&_a=(columns:!(log),query:(language:kuery,query:'kubernetes.pod_name:\"val-1\"'),sort:!(!('@timestamp',desc)))"
+DASHBOARD_LINK="http://grafana.${WORKSPACE}-k8s-testnet.aws.hlw3truzy4ls.com/d/2XqUIhnWz/performance?from=${START_TS_MS}&to=${END_TS_MS}"
+echo "${BLUE}Logs snapshot:${RESTORE} ${LOGS_LINK}"
+echo "${BLUE}Dashboard snapshot:${RESTORE} ${DASHBOARD_LINK}"
 echo "**********"
 if [[ "${pod_status}" != "Succeeded" ]]; then
   echo "${pod_name} status: ${pod_status}"
@@ -280,7 +283,11 @@ if [[ "${pod_status}" != "Succeeded" ]]; then
 fi
 
 if [ ! -z "$REPORT" ]; then
-    cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > $REPORT
+    cat $OUTPUT_TEE | awk '/====json-report-begin===/{f=1;next} /====json-report-end===/{f=0} f' > "${REPORT}"
+    [ ! -s "${REPORT}" ] && echo '{"text": "Cluster test runner terminated"}' > "${REPORT}"  # If no report was generated, fill with default report
+    LINKS="Logs: ${LOGS_LINK}\nDashboard: ${DASHBOARD_LINK}\nValidator 1 logs: ${VAL_LOG_LINK}"
+    jq ".links=\"${LINKS}\"" "${REPORT}" > "${REPORT}.bak"
+    mv "${REPORT}.bak" "${REPORT}"
 fi
 
 exit ${EXIT_CODE}
