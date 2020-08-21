@@ -73,7 +73,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         effects::deactivate_all(&mut effects).await?;
         context
             .report
-            .report_txn_stats(self.to_string(), stats, window);
+            .report_txn_stats(self.to_string(), stats, window, "");
         Ok(())
     }
 

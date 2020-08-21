@@ -272,23 +272,19 @@ impl PerformanceBenchmark {
                 .report
                 .report_metric(&self, "avg_txns_per_block", avg_txns_per_block);
         }
-        context
-            .report
-            .report_txn_stats(self.to_string(), stats, window);
-
-        // Backup throughput
-        if self.backup {
+        let additional = if self.backup {
+            // Backup throughput
             let bytes_per_sec = pv.avg_backup_bytes_per_second().unwrap_or(-1.0);
             context
                 .report
                 .report_metric(&self, "avg_backup_bytes_per_second", bytes_per_sec);
-            context.report.report_text(format!(
-                "{}: Average backup throughput: {}",
-                self,
-                human_readable_bytes_per_sec(bytes_per_sec)
-            ));
-        }
-
+            format!(" backup: {},", human_readable_bytes_per_sec(bytes_per_sec))
+        } else {
+            "".to_string()
+        };
+        context
+            .report
+            .report_txn_stats(self.to_string(), stats, window, &additional);
         Ok(())
     }
 }

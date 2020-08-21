@@ -137,7 +137,7 @@ impl Experiment for TwinValidators {
 
         context
             .report
-            .report_txn_stats(self.to_string(), stats, window);
+            .report_txn_stats(self.to_string(), stats, window, "");
         Ok(())
     }
 

@@ -43,7 +43,13 @@ impl SuiteReport {
         self.text.push_str(&text);
     }
 
-    pub fn report_txn_stats(&mut self, experiment: String, stats: TxStats, window: Duration) {
+    pub fn report_txn_stats(
+        &mut self,
+        experiment: String,
+        stats: TxStats,
+        window: Duration,
+        additional: &str,
+    ) {
         let submitted_txn = stats.submitted;
         let expired_txn = stats.expired;
         let avg_tps = stats.committed / window.as_secs();
@@ -64,8 +70,8 @@ impl SuiteReport {
             format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
         };
         self.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency, {}",
-            experiment, avg_tps, avg_latency_client, p99_latency, expired_text
+            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency,{} {}",
+            experiment, avg_tps, avg_latency_client, p99_latency, additional, expired_text
         ));
     }
 }
