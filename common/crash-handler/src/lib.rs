@@ -35,7 +35,7 @@ fn handle_panic(panic_info: &PanicInfo<'_>) {
     let backtrace = format!("{:#?}", Backtrace::new());
 
     let info = CrashInfo { details, backtrace };
-    crit!("{}", toml::to_string_pretty(&info).unwrap());
+    error!("{}", crash_info = toml::to_string_pretty(&info).unwrap());
 
     // Provide some time to save the log to disk
     thread::sleep(time::Duration::from_millis(100));

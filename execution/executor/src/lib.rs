@@ -318,11 +318,10 @@ where
                 }
                 TransactionStatus::Discard(status) => {
                     if !vm_output.write_set().is_empty() || !vm_output.events().is_empty() {
-                        crit!(
+                        error!(
                             "Discarded transaction has non-empty write set or events. \
                              Transaction: {:?}. Status: {:?}.",
-                            txn,
-                            status,
+                            txn, status,
                         );
                     }
                 }

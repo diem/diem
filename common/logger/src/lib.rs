@@ -134,7 +134,7 @@ pub use log;
 
 pub mod prelude {
     pub use crate::{
-        crit, debug, error, event, info,
+        debug, error, event, info,
         security::{security_events, security_log},
         sl_debug, sl_error, sl_info, sl_level, sl_trace, sl_warn, trace, warn, StructuredLogEntry,
     };
@@ -156,16 +156,6 @@ pub mod counters;
 
 #[cfg(test)]
 mod tests;
-
-/// Define crit macro that specify libra as the target
-// TODO Remove historical crit from code base since it isn't supported in Rust Log.
-#[macro_export]
-macro_rules! crit {
-    ($($arg:tt)+) => ({
-        $crate::text_to_struct_log!($crate::log::Level::Error, $($arg)+);
-        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    })
-}
 
 /// Define debug macro that specify libra as the target
 #[macro_export]

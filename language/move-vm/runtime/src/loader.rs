@@ -235,7 +235,7 @@ impl ModuleCache {
                     // it should exist.
                     // So in the spirit of not crashing we just rewrite the entire `Arc`
                     // over and log the issue.
-                    crit!("Arc<StructType> cannot have any live reference while publishing");
+                    error!("Arc<StructType> cannot have any live reference while publishing");
                     let mut struct_type = (*self.structs[struct_idx]).clone();
                     struct_type.fields = fields;
                     self.structs[struct_idx] = Arc::new(struct_type);
@@ -736,7 +736,7 @@ impl Loader {
             Ok(bytes) => bytes,
             Err(err) if verify_no_missing_modules => return Err(err),
             Err(err) => {
-                crit!("[VM] Error fetching module with id {:?}", id);
+                error!("[VM] Error fetching module with id {:?}", id);
                 return Err(expect_no_verification_errors(err));
             }
         };
@@ -1667,7 +1667,7 @@ fn expect_no_verification_errors(err: VMError) -> VMError {
                 _ => unreachable!(),
             };
 
-            crit!("[VM] {}", message);
+            error!("[VM] {}", error = message);
             PartialVMError::new(major_status)
                 .with_message(message)
                 .at_indices(indices)

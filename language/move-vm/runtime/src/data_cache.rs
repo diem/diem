@@ -176,7 +176,11 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                         None => {
                             let msg =
                                 format!("Failed to deserialize resource {} at {}!", ty_tag, addr);
-                            crit!("[vm] {}", msg);
+                            error!(
+                                "[vm] Failed to deserialize resource {} at {}!",
+                                type_tag = ty_tag,
+                                account = addr
+                            );
                             return Err(PartialVMError::new(
                                 StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
                             )

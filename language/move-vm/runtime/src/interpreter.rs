@@ -319,11 +319,11 @@ impl Interpreter {
         match data_store.load_resource(addr, ty) {
             Ok(gv) => Ok(gv),
             Err(e) => {
-                crit!(
+                error!(
                     "[VM] error loading resource at ({}, {:?}): {:?} from data store",
-                    addr,
-                    ty,
-                    e
+                    account = addr,
+                    type = ty,
+                    error = e
                 );
                 Err(e)
             }
@@ -391,7 +391,7 @@ impl Interpreter {
     fn maybe_core_dump(&self, mut err: VMError, current_frame: &Frame) -> VMError {
         // a verification error cannot happen at runtime so change it into an invariant violation.
         if err.status_type() == StatusType::Verification {
-            crit!("Verification error during runtime: {:?}", err);
+            error!("Verification error during runtime: {:?}", error = err);
             let new_err = PartialVMError::new(StatusCode::VERIFICATION_ERROR);
             let new_err = match err.message() {
                 None => new_err,
@@ -401,10 +401,10 @@ impl Interpreter {
         }
         if err.status_type() == StatusType::InvariantViolation {
             let state = self.get_internal_state(current_frame);
-            crit!(
+            error!(
                 "Error: {:?}\nCORE DUMP: >>>>>>>>>>>>\n{}\n<<<<<<<<<<<<\n",
-                err,
-                state,
+                error = err,
+                state = state,
             );
         }
         err

@@ -74,7 +74,7 @@ impl<'block> StateView for StateViewCache<'block> {
                 Ok(remote_data) => Ok(remote_data),
                 // TODO: should we forward some error info?
                 Err(e) => {
-                    crit!("[VM] Error getting data from storage for {:?}", access_path);
+                    error!("[VM] Error getting data from storage for {:?}", access_path);
                     Err(e)
                 }
             },

@@ -33,10 +33,9 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
         VMStatus::Executed => VMStatus::Executed,
         VMStatus::MoveAbort(location, code) => {
             if location != known_locations::account_module_abort() {
-                crit!(
+                error!(
                     "[libra_vm] Unexpected prologue Move abort: {:?}::{:?}",
-                    location,
-                    code
+                    location, code
                 );
                 return VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION);
             }
@@ -58,10 +57,9 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
                 ESCRIPT_NOT_ALLOWED => StatusCode::UNKNOWN_SCRIPT,
                 EMODULE_NOT_ALLOWED => StatusCode::INVALID_MODULE_PUBLISHER,
                 code => {
-                    crit!(
+                    error!(
                         "[libra_vm] Unexpected prologue Move abort: {:?}::{:?}",
-                        location,
-                        code
+                        location, code
                     );
                     return VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION);
                 }
@@ -69,7 +67,7 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
             VMStatus::Error(new_major_status)
         }
         status @ VMStatus::ExecutionFailure { .. } | status @ VMStatus::Error(_) => {
-            crit!("[libra_vm] Unexpected prologue error: {:?}", status);
+            error!("[libra_vm] Unexpected prologue error: {:?}", status);
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
     }
@@ -83,10 +81,9 @@ pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
         VMStatus::MoveAbort(location, code @ EACCOUNT_FROZEN)
         | VMStatus::MoveAbort(location, code @ EINSUFFICIENT_BALANCE) => {
             if location != known_locations::account_module_abort() {
-                crit!(
+                error!(
                     "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?}",
-                    location,
-                    code
+                    location, code
                 );
                 return VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION);
             }
@@ -96,7 +93,7 @@ pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
         status @ VMStatus::Executed => status,
 
         status => {
-            crit!("[libra_vm] Unexpected success epilogue error: {:?}", status);
+            error!("[libra_vm] Unexpected success epilogue error: {:?}", status);
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
     }
@@ -113,10 +110,9 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
         | VMStatus::MoveAbort(location, code @ EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
         | VMStatus::MoveAbort(location, code @ EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
             if location != known_locations::write_set_manager_module_abort() {
-                crit!(
+                error!(
                     "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?}",
-                    location,
-                    code
+                    location, code
                 );
                 return VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION);
             }
@@ -124,7 +120,7 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
         }
 
         status => {
-            crit!(
+            error!(
                 "[libra_vm] Unexpected write set prologue error: {:?}",
                 status
             );
@@ -144,10 +140,9 @@ pub fn expect_only_successful_execution<'a>(
             VMStatus::Executed => VMStatus::Executed,
 
             status => {
-                crit!(
+                error!(
                     "[libra_vm] Unexpected error from known Move function, '{}'. Error: {:?}",
-                    function_name,
-                    status
+                    function_name, status
                 );
                 VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
             }
