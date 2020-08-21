@@ -119,6 +119,107 @@ impl<'a> AsyncRead for ReadOnlyTestSocket<'a> {
 }
 
 //
+// ReadOnlyTestSocket but with a static lifetime (useful to really replace a socket)
+//
+
+#[derive(Debug)]
+pub struct ReadOnlyTestSocketVec {
+    /// the content
+    content: Vec<u8>,
+    /// the socket will read byte-by-byte
+    fragmented: bool,
+    /// continue to read 0s once content has been fully read
+    trailing: bool,
+}
+
+impl ReadOnlyTestSocketVec {
+    pub fn new(content: Vec<u8>) -> Self {
+        Self {
+            content,
+            fragmented: false,
+            trailing: false,
+        }
+    }
+
+    /// reads will have to be done byte by byte
+    #[allow(dead_code)]
+    pub fn set_fragmented_read(&mut self) {
+        self.fragmented = true;
+    }
+
+    /// reads will never return pending, but 0s
+    #[allow(dead_code)]
+    pub fn set_trailing(&mut self) {
+        self.trailing = true;
+    }
+}
+
+/// Does nothing, but looks to the caller as if write worked
+impl AsyncWrite for ReadOnlyTestSocketVec {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        _context: &mut Context,
+        buf: &[u8],
+    ) -> Poll<io::Result<usize>> {
+        Poll::Ready(Ok(buf.len()))
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, _context: &mut Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+
+    /// Attempt to close the channel. Cannot Fail.
+    fn poll_close(self: Pin<&mut Self>, _context: &mut Context) -> Poll<io::Result<()>> {
+        Poll::Ready(Ok(()))
+    }
+}
+
+/// Read based on the mode set
+impl AsyncRead for ReadOnlyTestSocketVec {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        mut _context: &mut Context,
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
+        // nothing left to read
+        if self.content.is_empty() {
+            if self.trailing {
+                // [0, 0, 0, 0, ...]
+                for val in buf.iter_mut() {
+                    *val = 0;
+                }
+                return Poll::Ready(Ok(buf.len()));
+            } else {
+                // EOF
+                return Poll::Ready(Ok(0));
+            }
+        }
+
+        // if something left return what's asked
+        if self.fragmented {
+            // read only one byte
+            buf[0] = self.content[0];
+
+            // update internal state
+            self.content = self.content.split_off(1);
+
+            // return 1 byte
+            Poll::Ready(Ok(1))
+        } else {
+            // read as much as we can
+            let to_read = std::cmp::min(buf.len(), self.content.len());
+            buf[..to_read].copy_from_slice(&self.content[..to_read]);
+
+            // update internal state
+            self.content = self.content.split_off(to_read);
+
+            // return length read
+            Poll::Ready(Ok(to_read))
+        }
+    }
+}
+
+//
 // ReadWriteTestSocket
 // ==================
 //
@@ -170,6 +271,7 @@ impl<'a> AsyncWrite for ReadWriteTestSocket<'a> {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         let bytes_written = ready!(Pin::new(&mut self.inner).poll_write(context, buf))?;
+
         if let Some(v) = self.written.as_mut() {
             v.extend_from_slice(&buf[..bytes_written])
         }

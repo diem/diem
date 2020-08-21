@@ -23,6 +23,9 @@ pub mod transport;
 
 #[cfg(test)]
 mod transport_tests;
+
+#[cfg(feature = "fuzzing")]
+pub mod fuzzing;
 #[cfg(not(any(feature = "testing", feature = "fuzzing")))]
 mod noise;
 #[cfg(any(feature = "testing", feature = "fuzzing"))]
