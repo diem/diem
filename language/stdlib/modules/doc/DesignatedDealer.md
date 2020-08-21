@@ -30,7 +30,6 @@
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 -  [Specification](#0x1_DesignatedDealer_Specification)
     -  [Resource `TierInfo`](#0x1_DesignatedDealer_Specification_TierInfo)
-    -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
     -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
@@ -671,24 +670,6 @@ that amount that can be minted according to the bounds for the
 
 
 
-<a name="0x1_DesignatedDealer_Specification_publish_designated_dealer_credential"></a>
-
-### Function `publish_designated_dealer_credential`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer, add_all_currencies: bool)
-</code></pre>
-
-
-
-TODO(wrwg): takes a long time but verifies.
-
-
-<pre><code>pragma verify_duration_estimate = 80;
-</code></pre>
-
-
-
 <a name="0x1_DesignatedDealer_Specification_add_currency"></a>
 
 ### Function `add_currency`
@@ -699,10 +680,10 @@ TODO(wrwg): takes a long time but verifies.
 
 
 
-TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times out in Ci
+TODO(shaz): Add specifications
 
 
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma opaque = <b>true</b>;
 </code></pre>
 
 
@@ -718,7 +699,11 @@ TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times o
 
 
 
-<pre><code><b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers) + 1;
+<pre><code>pragma opaque = <b>true</b>;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_start == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start;
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_inflow == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow;
+<b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers) + 1;
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers[len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) - 1] == tier_upperbound;
 </code></pre>
 
@@ -735,7 +720,11 @@ TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times o
 
 
 
-<pre><code><b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers);
+<pre><code>pragma opaque = <b>true</b>;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_start == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start;
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_inflow == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow;
+<b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers);
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers[tier_index] == new_upperbound;
 </code></pre>
 

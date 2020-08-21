@@ -133,8 +133,6 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun add_validator {
-        /// TODO: times out arbitrarily, while succeeding quickly some other times.
-        pragma verify = false;
         include LibraTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         aborts_if !ValidatorConfig::spec_is_valid(account_address) with Errors::INVALID_ARGUMENT;

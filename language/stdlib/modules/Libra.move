@@ -286,9 +286,9 @@ module Libra {
         )
     }
     spec fun burn {
-        // TODO: There was a timeout (> 40s) for this function in CI. Verification turned off.
-        pragma verify = false;
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
+        include BurnAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
     /// Cancels the current burn request in the `Preburn` resource held

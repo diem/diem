@@ -93,19 +93,11 @@
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
     -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_Specification_should_track_limits_for_account)
-    -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
-    -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
-    -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
-    -  [Function `cancel_burn`](#0x1_LibraAccount_Specification_cancel_burn)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
-    -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
-    -  [Function `create_designated_dealer`](#0x1_LibraAccount_Specification_create_designated_dealer)
-    -  [Function `create_parent_vasp_account`](#0x1_LibraAccount_Specification_create_parent_vasp_account)
-    -  [Function `create_child_vasp_account`](#0x1_LibraAccount_Specification_create_child_vasp_account)
 
 
 
@@ -2606,42 +2598,6 @@ After genesis, the
 
 
 
-<a name="0x1_LibraAccount_Specification_staple_lbr"></a>
-
-### Function `staple_lbr`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_staple_lbr">staple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
-</code></pre>
-
-
-
-> TODO: timeout
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_unstaple_lbr"></a>
-
-### Function `unstaple_lbr`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unstaple_lbr">unstaple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
-</code></pre>
-
-
-
-> TODO: timeout
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_Specification_deposit"></a>
 
 ### Function `deposit`
@@ -2653,8 +2609,7 @@ After genesis, the
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: to_deposit.value};
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{amount: to_deposit.value};
 <b>include</b> <a href="#0x1_LibraAccount_DepositEnsures">DepositEnsures</a>&lt;Token&gt;{amount: to_deposit.value};
 </code></pre>
 
@@ -2706,38 +2661,6 @@ After genesis, the
 
 
 
-<a name="0x1_LibraAccount_Specification_tiered_mint"></a>
-
-### Function `tiered_mint`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify_duration_estimate = 100;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_cancel_burn"></a>
-
-### Function `cancel_burn`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
 <a name="0x1_LibraAccount_Specification_withdraw_from_balance"></a>
 
 ### Function `withdraw_from_balance`
@@ -2749,8 +2672,7 @@ After genesis, the
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;;
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceAbortsIf">WithdrawFromBalanceAbortsIf</a>&lt;Token&gt;;
 <b>include</b> <a href="#0x1_LibraAccount_WithdrawFromBalanceEnsures">WithdrawFromBalanceEnsures</a>&lt;Token&gt;;
 </code></pre>
 
@@ -2795,22 +2717,6 @@ After genesis, the
     <b>ensures</b> balance.coin.value == <b>old</b>(balance.coin.value) - amount;
     <b>ensures</b> result.value == amount;
 }
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_preburn"></a>
-
-### Function `preburn`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_preburn">preburn</a>&lt;Token&gt;(dd: &signer, cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify_duration_estimate = 100;
 </code></pre>
 
 
@@ -2893,54 +2799,6 @@ After genesis, the
 <pre><code><b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(cap.account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_create_designated_dealer"></a>
-
-### Function `create_designated_dealer`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_create_parent_vasp_account"></a>
-
-### Function `create_parent_vasp_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_create_child_vasp_account"></a>
-
-### Function `create_child_vasp_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(parent: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

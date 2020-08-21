@@ -93,10 +93,6 @@ module DesignatedDealer {
             add_currency<CoinType>(dd, tc_account);
         };
     }
-    spec fun publish_designated_dealer_credential {
-        /// TODO(wrwg): takes a long time but verifies.
-        pragma verify_duration_estimate = 80;
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Publicly callable APIs by Treasury Compliance Account
@@ -125,8 +121,8 @@ module DesignatedDealer {
         add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
     }
     spec fun add_currency {
-        /// TODO(wrwg): sort out strange behavior: verifies wo/ problem locally, but times out in Ci
-        pragma verify = false;
+        /// TODO(shaz): Add specifications
+        pragma opaque = true;
     }
 
     public fun add_tier<CoinType>(
@@ -146,7 +142,10 @@ module DesignatedDealer {
     }
 
     spec fun add_tier {
-        // modifies global<TierInfo<CoinType>>@dd_addr.tiers;
+        pragma opaque = true;
+        modifies global<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr).window_start == old(global<TierInfo<CoinType>>(dd_addr)).window_start;
+        ensures global<TierInfo<CoinType>>(dd_addr).window_inflow == old(global<TierInfo<CoinType>>(dd_addr)).window_inflow;
         ensures len(global<TierInfo<CoinType>>(dd_addr).tiers) == len(old(global<TierInfo<CoinType>>(dd_addr)).tiers) + 1;
         ensures global<TierInfo<CoinType>>(dd_addr).tiers[len(global<TierInfo<CoinType>>(dd_addr).tiers) - 1] == tier_upperbound;
     }
@@ -184,7 +183,10 @@ module DesignatedDealer {
     }
 
     spec fun update_tier {
-        // modifies global<TierInfo<CoinType>>@dd_addr.tiers;
+        pragma opaque = true;
+        modifies global<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr).window_start == old(global<TierInfo<CoinType>>(dd_addr)).window_start;
+        ensures global<TierInfo<CoinType>>(dd_addr).window_inflow == old(global<TierInfo<CoinType>>(dd_addr)).window_inflow;
         ensures len(global<TierInfo<CoinType>>(dd_addr).tiers) == len(old(global<TierInfo<CoinType>>(dd_addr)).tiers);
         ensures global<TierInfo<CoinType>>(dd_addr).tiers[tier_index] == new_upperbound;
     }

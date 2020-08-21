@@ -443,7 +443,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> [abstract] result == category;
+<b>ensures</b> result == category + (reason &lt;&lt; 8);
 </code></pre>
 
 

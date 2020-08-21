@@ -258,10 +258,6 @@ module LibraAccount {
         // from an existing balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
     }
-    spec fun staple_lbr {
-        /// > TODO: timeout
-        pragma verify = false;
-    }
 
     /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
     /// LBR reserve, and deposit them to `cap.address`.
@@ -279,10 +275,6 @@ module LibraAccount {
         let payee_address = cap.account_address;
         deposit(payer_address, payee_address, coin1, x"", x"");
         deposit(payer_address, payee_address, coin2, x"", x"")
-    }
-    spec fun unstaple_lbr {
-        /// > TODO: timeout
-        pragma verify = false;
     }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
@@ -336,8 +328,6 @@ module LibraAccount {
         );
     }
     spec fun deposit {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         include DepositAbortsIf<Token>{amount: to_deposit.value};
         include DepositEnsures<Token>{amount: to_deposit.value};
     }
@@ -388,9 +378,6 @@ module LibraAccount {
         // balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
     }
-    spec fun tiered_mint {
-        pragma verify_duration_estimate = 100;
-    }
 
     // Cancel the burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
@@ -402,10 +389,6 @@ module LibraAccount {
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
-    }
-    spec fun cancel_burn {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
     }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -433,8 +416,6 @@ module LibraAccount {
         Libra::withdraw(coin, amount)
     }
     spec fun withdraw_from_balance {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
         include WithdrawFromBalanceAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>;
     }
@@ -499,9 +480,6 @@ module LibraAccount {
     ) acquires Balance, AccountOperationsCapability, LibraAccount {
         LibraTimestamp::assert_operating();
         Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
-    }
-    spec fun preburn {
-        pragma verify_duration_estimate = 100;
     }
 
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -720,10 +698,6 @@ module LibraAccount {
         DualAttestation::publish_credential(&new_dd_account, creator_account, human_name);
         make_account(new_dd_account, auth_key_prefix)
     }
-    spec fun create_designated_dealer {
-        // TODO(wrwg): timeout
-        pragma verify = false;
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // VASP methods
@@ -748,10 +722,6 @@ module LibraAccount {
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
-    spec fun create_parent_vasp_account {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
-    }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `Token`. If
@@ -772,10 +742,6 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
-    }
-    spec fun create_child_vasp_account {
-        // TODO: reactivate after aborts_if soundness fix.
-        pragma verify = false;
     }
 
 

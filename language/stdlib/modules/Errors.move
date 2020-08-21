@@ -22,7 +22,7 @@ module Errors {
     spec fun make {
         pragma opaque = true;
         aborts_if false;
-        ensures [abstract] result == category;
+        ensures result == category + (reason << 8);
     }
 
     /// The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
