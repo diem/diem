@@ -202,6 +202,16 @@ enum GlobalValueImpl {
 #[derive(Debug)]
 pub struct GlobalValue(GlobalValueImpl);
 
+/// Simple enum for the change state of a GlobalValue, used by `into_effect`.
+pub enum GlobalValueEffect<T> {
+    /// There was no value, or the value was not changed
+    None,
+    /// The value was removed
+    Deleted,
+    /// Updated with a new value
+    Changed(T),
+}
+
 /***************************************************************************************
  *
  * Misc
@@ -2268,16 +2278,18 @@ impl GlobalValueImpl {
         }
     }
 
-    fn into_effect(self) -> PartialVMResult<Option<Option<ValueImpl>>> {
+    fn into_effect(self) -> PartialVMResult<GlobalValueEffect<ValueImpl>> {
         Ok(match self {
-            Self::None => None,
-            Self::Deleted => Some(None),
-            Self::Fresh { fields } => Some(Some(ValueImpl::Container(Container::StructR(fields)))),
+            Self::None => GlobalValueEffect::None,
+            Self::Deleted => GlobalValueEffect::Deleted,
+            Self::Fresh { fields } => {
+                GlobalValueEffect::Changed(ValueImpl::Container(Container::StructR(fields)))
+            }
             Self::Cached { fields, status } => match &*status.borrow() {
                 GlobalDataStatus::Dirty => {
-                    Some(Some(ValueImpl::Container(Container::StructR(fields))))
+                    GlobalValueEffect::Changed(ValueImpl::Container(Container::StructR(fields)))
                 }
-                GlobalDataStatus::Clean => None,
+                GlobalDataStatus::Clean => GlobalValueEffect::None,
             },
         })
     }
@@ -2311,10 +2323,12 @@ impl GlobalValue {
         self.0.exists()
     }
 
-    pub fn into_effect(self) -> PartialVMResult<Option<Option<Value>>> {
-        self.0
-            .into_effect()
-            .map(|opt| opt.map(|opt| opt.map(Value)))
+    pub fn into_effect(self) -> PartialVMResult<GlobalValueEffect<Value>> {
+        Ok(match self.0.into_effect()? {
+            GlobalValueEffect::None => GlobalValueEffect::None,
+            GlobalValueEffect::Deleted => GlobalValueEffect::Deleted,
+            GlobalValueEffect::Changed(v) => GlobalValueEffect::Changed(Value(v)),
+        })
     }
 }
 

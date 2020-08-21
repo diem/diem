@@ -13,7 +13,7 @@ use move_core_types::{
 use move_vm_types::{
     data_store::DataStore,
     loaded_data::runtime_types::Type,
-    values::{GlobalValue, Value},
+    values::{GlobalValue, GlobalValueEffect, Value},
 };
 use std::collections::btree_map::BTreeMap;
 use vm::errors::*;
@@ -95,17 +95,16 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         for (addr, account_cache) in self.account_map {
             let mut vals = vec![];
             for (ty, gv) in account_cache.data_map {
-                if let Some(eff) = gv.into_effect()? {
-                    match eff {
-                        Some(val) => {
-                            let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                            let ty_layout = self.loader.type_to_type_layout(&ty)?;
-                            vals.push((ty_tag, Some((ty_layout, val))));
-                        }
-                        None => {
-                            let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                            vals.push((ty_tag, None));
-                        }
+                match gv.into_effect()? {
+                    GlobalValueEffect::None => (),
+                    GlobalValueEffect::Deleted => {
+                        let ty_tag = self.loader.type_to_type_tag(&ty)?;
+                        vals.push((ty_tag, None));
+                    }
+                    GlobalValueEffect::Changed(val) => {
+                        let ty_tag = self.loader.type_to_type_tag(&ty)?;
+                        let ty_layout = self.loader.type_to_type_layout(&ty)?;
+                        vals.push((ty_tag, Some((ty_layout, val))));
                     }
                 }
             }
