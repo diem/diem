@@ -145,7 +145,7 @@ async fn assert_peer_disconnected_event(
 ) {
     match peer_notifs_rx.next().await {
         Some(PeerNotification::PeerDisconnected(conn_info, actual_reason)) => {
-            assert_eq!(conn_info.peer_id(), peer_id);
+            assert_eq!(conn_info.peer_id, peer_id);
             assert_eq!(actual_reason, reason);
         }
         event => {

@@ -6,6 +6,9 @@
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 use std::ops::BitAnd;
 
+#[cfg(any(test, feature = "fuzzing"))]
+use proptest_derive::Arbitrary;
+
 // Every u8 is used as a bucket of 8 bits. Total max buckets = 256 / 8 = 32.
 const BUCKET_SIZE: usize = 8;
 const MAX_BUCKETS: usize = 32;
@@ -49,6 +52,7 @@ const MAX_BUCKETS: usize = 32;
 /// assert_eq!(false, intersection.is_set(3));
 /// ```
 #[derive(Clone, Default, Debug, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct BitVec {
     #[serde(with = "serde_bytes")]
     inner: Vec<u8>,

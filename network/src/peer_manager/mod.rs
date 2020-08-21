@@ -358,7 +358,7 @@ where
         let inbound = self
             .active_peers
             .iter()
-            .filter(|(_, (metadata, _))| metadata.origin() == ConnectionOrigin::Inbound)
+            .filter(|(_, (metadata, _))| metadata.origin == ConnectionOrigin::Inbound)
             .count();
         let outbound = total.saturating_sub(inbound);
         let role = self.network_context.role().as_str();
@@ -455,11 +455,11 @@ where
                     .field(CONNECTION_METADATA, &lost_conn_metadata)
                     .data("reason", reason)
                     .data(TYPE, "disconnected"));
-                let peer_id = lost_conn_metadata.peer_id();
+                let peer_id = lost_conn_metadata.peer_id;
                 // If the active connection with the peer is lost, remove it from `active_peers`.
                 if let Entry::Occupied(entry) = self.active_peers.entry(peer_id) {
                     let (conn_metadata, _) = entry.get();
-                    if conn_metadata.connection_id() == lost_conn_metadata.connection_id() {
+                    if conn_metadata.connection_id == lost_conn_metadata.connection_id {
                         // We lost an active connection.
                         entry.remove();
                     }
@@ -469,7 +469,7 @@ where
                 // If the connection was explicitly closed by an upstream client, send an ACK.
                 if let Some(oneshot_tx) = self
                     .outstanding_disconnect_requests
-                    .remove(&lost_conn_metadata.connection_id())
+                    .remove(&lost_conn_metadata.connection_id)
                 {
                     // The client explicitly closed the connection and it should be notified.
                     if let Err(send_err) = oneshot_tx.send(Ok(())) {
@@ -485,8 +485,8 @@ where
                 if !self.active_peers.contains_key(&peer_id) {
                     let notif = ConnectionNotification::LostPeer(
                         peer_id,
-                        lost_conn_metadata.addr().clone(),
-                        lost_conn_metadata.origin(),
+                        lost_conn_metadata.addr.clone(),
+                        lost_conn_metadata.origin,
                         reason,
                     );
                     self.send_conn_notification(peer_id, notif);
@@ -501,7 +501,7 @@ where
             ConnectionRequest::DialPeer(requested_peer_id, addr, response_tx) => {
                 // Only dial peers which we aren't already connected with
                 if let Some((curr_connection, _)) = self.active_peers.get(&requested_peer_id) {
-                    let error = PeerManagerError::AlreadyConnected(curr_connection.addr().clone());
+                    let error = PeerManagerError::AlreadyConnected(curr_connection.addr.clone());
                     debug!(
                         "{} Already connected with Peer {} using connection {:?}. Not dialing address {}",
                         self.network_context,
@@ -529,7 +529,7 @@ where
                     drop(sender);
                     // Add to outstanding disconnect requests.
                     self.outstanding_disconnect_requests
-                        .insert(conn_metadata.connection_id(), resp_tx);
+                        .insert(conn_metadata.connection_id, resp_tx);
                 } else {
                     info!(
                         "{} Connection with peer: {} is already closed",
@@ -621,7 +621,7 @@ where
 
     fn add_peer(&mut self, connection: Connection<TSocket>) {
         let conn_meta = connection.metadata.clone();
-        let peer_id = conn_meta.peer_id();
+        let peer_id = conn_meta.peer_id;
         assert_ne!(self.network_context.peer_id(), peer_id);
 
         let mut send_new_peer_notification = true;
@@ -632,8 +632,8 @@ where
             if Self::simultaneous_dial_tie_breaking(
                 self.network_context.peer_id(),
                 peer_id,
-                curr_conn_metadata.origin(),
-                conn_meta.origin(),
+                curr_conn_metadata.origin,
+                conn_meta.origin,
             ) {
                 let (_, peer_handle) = active_entry.remove();
                 // Drop the existing connection and replace it with the new connection
@@ -693,8 +693,8 @@ where
         if send_new_peer_notification {
             let notif = ConnectionNotification::NewPeer(
                 peer_id,
-                conn_meta.addr().clone(),
-                conn_meta.origin(),
+                conn_meta.addr.clone(),
+                conn_meta.origin,
                 self.network_context.clone(),
             );
             self.send_conn_notification(peer_id, notif);
@@ -948,7 +948,7 @@ where
     ) {
         match upgrade {
             Ok(connection) => {
-                let dialed_peer_id = connection.metadata.peer_id();
+                let dialed_peer_id = connection.metadata.peer_id;
                 let response = if dialed_peer_id == peer_id {
                     debug!(
                         "{} Peer '{}' successfully dialed at '{}'",
@@ -1013,7 +1013,7 @@ where
                 debug!(
                     "{} Connection from {} at {} successfully upgraded",
                     self.network_context,
-                    connection.metadata.peer_id().short_str(),
+                    connection.metadata.peer_id.short_str(),
                     addr
                 );
                 let event = TransportNotification::NewConnection(connection);

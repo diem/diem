@@ -74,7 +74,7 @@ where
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
-        let peer_id = connection.metadata.peer_id();
+        let peer_id = connection.metadata.peer_id;
 
         // Setup and start Peer actor.
         let (peer_reqs_tx, peer_reqs_rx) = channel::new(
