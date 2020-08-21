@@ -365,8 +365,8 @@ where
         if let Some((field, data)) = data {
             log = log.data(field.as_str(), data);
         }
-
-        send_struct_log!(log);
+        // TODO: Fix the leveling of these logs individually. https://github.com/libra/libra/issues/5615
+        sl_info!(log);
     }
 }
 

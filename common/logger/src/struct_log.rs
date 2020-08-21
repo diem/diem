@@ -84,7 +84,6 @@ pub struct StructuredLogEntry {
     data: HashMap<&'static str, Value>,
 }
 
-#[must_use = "use send_struct_log! macro to send structured log"]
 impl StructuredLogEntry {
     /// Base implementation for creating a log
     fn new_unnamed() -> Self {
@@ -243,7 +242,7 @@ impl StructuredLogEntry {
         self
     }
 
-    // Use send_struct_log! macro instead of this method to populate extra meta information such as git rev and module name
+    // Use sl_level! macros instead of this method to populate extra meta information such as git rev and module name
     #[doc(hidden)]
     pub fn send(self) {
         struct_logger().send(self);
@@ -260,7 +259,7 @@ impl StructuredLogEntry {
 ///
 /// mod my_code {
 ///    fn my_fn() {
-///        send_struct_log!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
+///        sl_info!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
 ///    }
 /// }
 pub struct LoggingField<D>(&'static str, PhantomData<D>);

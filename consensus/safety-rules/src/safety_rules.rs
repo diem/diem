@@ -147,7 +147,7 @@ impl SafetyRules {
         let updated = match two_chain_round.cmp(&preferred_round) {
             Ordering::Greater => {
                 safety_data.preferred_round = two_chain_round;
-                send_struct_log!(
+                sl_info!(
                     logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
                         .data(LogField::Message.as_str(), safety_data.preferred_round)
                 );
@@ -197,7 +197,7 @@ impl SafetyRules {
         let last_voted_round = safety_data.last_voted_round;
         if round > last_voted_round {
             safety_data.last_voted_round = round;
-            send_struct_log!(
+            sl_info!(
                 logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
                     .data(LogField::Message.as_str(), safety_data.last_voted_round)
             );
@@ -246,7 +246,7 @@ impl SafetyRules {
                     .consensus_key_for_version(expected_key)
                     .ok()
                     .ok_or_else(|| {
-                        send_struct_log!(logging::safety_log(
+                        sl_error!(logging::safety_log(
                             LogEntry::KeyReconciliation,
                             LogEvent::Error
                         )
@@ -259,12 +259,12 @@ impl SafetyRules {
                 self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
             }
 
-            send_struct_log!(
+            sl_debug!(
                 logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
                     .data(LogField::Message.as_str(), "in set")
             );
         } else {
-            send_struct_log!(
+            sl_debug!(
                 logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
                     .data(LogField::Message.as_str(), "not in set")
             );
@@ -287,7 +287,7 @@ impl SafetyRules {
                 0,
                 None,
             ))?;
-            send_struct_log!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
+            sl_info!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
                 .data(LogField::Message.as_str(), epoch_state.epoch));
         }
         self.epoch_state = Some(epoch_state);
@@ -443,16 +443,16 @@ where
     F: FnOnce() -> Result<R, Error>,
     L: Fn(StructuredLogEntry) -> StructuredLogEntry,
 {
-    send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
+    sl_debug!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
     counters::increment_query(log_entry.as_str(), "request");
     callback()
         .map(|v| {
-            send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
+            sl_info!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
             counters::increment_query(log_entry.as_str(), "success");
             v
         })
         .map_err(|err| {
-            send_struct_log!(log_cb(logging::safety_log(log_entry, LogEvent::Error))
+            sl_error!(log_cb(logging::safety_log(log_entry, LogEvent::Error))
                 .data(LogField::Message.as_str(), &err));
             counters::increment_query(log_entry.as_str(), "error");
             err

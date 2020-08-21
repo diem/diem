@@ -101,7 +101,7 @@ impl NetworkSender {
                 &self.validators,
             )
             .map_err(|e| {
-                send_struct_log!(security_log(security_events::INVALID_RETRIEVED_BLOCK)
+                sl_error!(security_log(security_events::INVALID_RETRIEVED_BLOCK)
                     .data("request_block_reponse", &response)
                     .data_display("error", &e));
                 e

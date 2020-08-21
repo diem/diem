@@ -70,7 +70,8 @@ macro_rules! send_logs {
     ($name:expr, $json:expr) => {
         let log_entry = libra_logger::json_log::JsonLogEntry::new($name, $json);
         libra_logger::json_log::send_json_log(log_entry.clone());
-        libra_logger::send_struct_log!(libra_logger::StructuredLogEntry::new_named(
+        // TODO: we should determine what level we want to use for these traces so they show up
+        libra_logger::sl_trace!(libra_logger::StructuredLogEntry::new_named(
             $crate::trace::LIBRA_TRACE,
             $crate::trace::LIBRA_TRACE
         )
