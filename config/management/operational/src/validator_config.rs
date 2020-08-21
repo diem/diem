@@ -6,14 +6,14 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
-use libra_management::{error::Error, storage::to_x25519};
+use libra_management::{error::Error, storage::to_x25519, validator_config::validate_address};
 use libra_network_address::{
     encrypted::{EncNetworkAddress, Key, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY},
     NetworkAddress, Protocol, RawNetworkAddress,
 };
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
-use std::{convert::TryFrom, net::ToSocketAddrs};
+use std::convert::TryFrom;
 use structopt::StructOpt;
 
 // TODO: Load all chain IDs from the host
@@ -39,43 +39,6 @@ pub struct SetValidatorConfig {
 }
 
 impl SetValidatorConfig {
-    fn address_valid(network_address: &NetworkAddress) -> Result<(), Error> {
-        // Only allow DNS and IP addresses
-        for protocol in network_address.as_slice().iter() {
-            match protocol {
-                Protocol::Ip4(_)
-                | Protocol::Ip6(_)
-                | Protocol::Dns(_)
-                | Protocol::Dns4(_)
-                | Protocol::Dns6(_)
-                | Protocol::Tcp(_) => {}
-                _ => {
-                    return Err(Error::CommandArgumentError(format!(
-                        "Invalid protocol '{}'",
-                        protocol
-                    )))
-                }
-            }
-        }
-
-        // Ensure that the address resolves to IP addresses
-        let addrs = network_address.to_socket_addrs().map_err(|err| {
-            Error::CommandArgumentError(format!(
-                "Failed to resolve address '{}': {}",
-                network_address, err
-            ))
-        })?;
-
-        if addrs.len() < 1 {
-            return Err(Error::CommandArgumentError(format!(
-                "Resolved to no IP addresses '{}' did you forget to add the port? '/tcp/<port>'",
-                network_address
-            )));
-        }
-
-        Ok(())
-    }
-
     pub fn execute(self) -> Result<TransactionContext, Error> {
         let config = self
             .validator_config
@@ -96,7 +59,7 @@ impl SetValidatorConfig {
         // Retrieve the current validator / fullnode addresses and update accordingly
         let validator_config = client.validator_config(owner_account)?;
         let validator_address = if let Some(validator_address) = self.validator_address {
-            Self::address_valid(&validator_address)?;
+            validate_address("validator_network_address", &validator_address)?;
             validator_address
         } else {
             decode_validator_address(
@@ -108,7 +71,7 @@ impl SetValidatorConfig {
         };
 
         let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
-            Self::address_valid(&fullnode_address)?;
+            validate_address("full_node_network_address", &fullnode_address)?;
             fullnode_address
         } else {
             decode_address(&validator_config.full_node_network_address)?
