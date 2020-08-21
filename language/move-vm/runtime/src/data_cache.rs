@@ -31,7 +31,7 @@ pub trait RemoteCache {
 }
 
 pub struct AccountDataCache {
-    data_map: BTreeMap<Type, GlobalValue>,
+    data_map: BTreeMap<Type, (MoveTypeLayout, GlobalValue)>,
     module_map: BTreeMap<ModuleId, Vec<u8>>,
 }
 
@@ -61,7 +61,7 @@ pub(crate) struct TransactionDataCache<'r, 'l, R> {
     remote: &'r R,
     loader: &'l Loader,
     account_map: BTreeMap<AccountAddress, AccountDataCache>,
-    event_data: Vec<(Vec<u8>, u64, Type, Value)>,
+    event_data: Vec<(Vec<u8>, u64, Type, MoveTypeLayout, Value)>,
 }
 
 pub struct TransactionEffects {
@@ -94,7 +94,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         let mut resources = vec![];
         for (addr, account_cache) in self.account_map {
             let mut vals = vec![];
-            for (ty, gv) in account_cache.data_map {
+            for (ty, (ty_layout, gv)) in account_cache.data_map {
                 match gv.into_effect()? {
                     GlobalValueEffect::None => (),
                     GlobalValueEffect::Deleted => {
@@ -103,7 +103,6 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
                     }
                     GlobalValueEffect::Changed(val) => {
                         let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                        let ty_layout = self.loader.type_to_type_layout(&ty)?;
                         vals.push((ty_tag, Some((ty_layout, val))));
                     }
                 }
@@ -120,9 +119,8 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
         }
 
         let mut events = vec![];
-        for (guid, seq_num, ty, val) in self.event_data {
+        for (guid, seq_num, ty, ty_layout, val) in self.event_data {
             let ty_tag = self.loader.type_to_type_tag(&ty)?;
-            let ty_layout = self.loader.type_to_type_layout(&ty)?;
             events.push((guid, seq_num, ty_tag, ty_layout, val))
         }
 
@@ -166,10 +164,10 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
 
         if !account_cache.data_map.contains_key(ty) {
             let ty_tag = self.loader.type_to_type_tag(ty)?;
+            let ty_layout = self.loader.type_to_type_layout(ty)?;
 
             let gv = match self.remote.get_resource(&addr, &ty_tag)? {
                 Some(blob) => {
-                    let ty_layout = self.loader.type_to_type_layout(ty)?;
                     let ty_kind_info = self.loader.type_to_kind_info(ty)?;
                     let val = match Value::simple_deserialize(&blob, &ty_kind_info, &ty_layout) {
                         Some(val) => val,
@@ -193,12 +191,13 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                 None => GlobalValue::none(),
             };
 
-            account_cache.data_map.insert(ty.clone(), gv);
+            account_cache.data_map.insert(ty.clone(), (ty_layout, gv));
         }
 
         Ok(account_cache
             .data_map
             .get_mut(ty)
+            .map(|(_ty_layout, gv)| gv)
             .expect("global value must exist"))
     }
 
@@ -236,7 +235,14 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         Ok(self.remote.get_module(module_id)?.is_some())
     }
 
-    fn emit_event(&mut self, guid: Vec<u8>, seq_num: u64, ty: Type, val: Value) {
-        self.event_data.push((guid, seq_num, ty, val))
+    fn emit_event(
+        &mut self,
+        guid: Vec<u8>,
+        seq_num: u64,
+        ty: Type,
+        val: Value,
+    ) -> PartialVMResult<()> {
+        let ty_layout = self.loader.type_to_type_layout(&ty)?;
+        Ok(self.event_data.push((guid, seq_num, ty, ty_layout, val)))
     }
 }

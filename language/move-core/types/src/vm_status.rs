@@ -177,14 +177,11 @@ impl VMStatus {
                     // to decoding, running the prologue etc.
                     StatusType::Deserialization => Ok(KeptVMStatus::DeserializationError),
                     // Any error encountered during the execution of the transaction will charge gas.
-                    StatusType::Execution => {
-                        debug_assert!(code.should_skip_checks_for_todo());
-                        Ok(KeptVMStatus::ExecutionFailure {
-                            location: AbortLocation::Script,
-                            function: 0,
-                            code_offset: 0,
-                        })
-                    }
+                    StatusType::Execution => Ok(KeptVMStatus::ExecutionFailure {
+                        location: AbortLocation::Script,
+                        function: 0,
+                        code_offset: 0,
+                    }),
                 }
             }
         }
@@ -674,18 +671,6 @@ impl StatusCode {
         }
 
         StatusType::Unknown
-    }
-
-    /// Should only be used in debug asserts. These status codes are missing some data
-    /// checked in debug asserts
-    pub fn should_skip_checks_for_todo(self) -> bool {
-        fn todo_needs_execution_trace_information() -> std::collections::HashSet<StatusCode> {
-            vec![StatusCode::VM_MAX_VALUE_DEPTH_REACHED]
-                .into_iter()
-                .collect()
-        }
-
-        todo_needs_execution_trace_information().contains(&self)
     }
 }
 

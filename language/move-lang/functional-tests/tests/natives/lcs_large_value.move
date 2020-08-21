@@ -84,4 +84,4 @@ script {
         M::encode_257();
     }
 }
-// check: ABORTED { code: 453
+// check: "ABORTED { code: 453, location: 00000000000000000000000000000001::LCS }"
