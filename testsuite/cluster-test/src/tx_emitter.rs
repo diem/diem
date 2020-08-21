@@ -304,7 +304,7 @@ impl TxEmitter {
         requested_accounts: usize,
     ) -> Result<()> {
         if self.accounts.len() >= requested_accounts {
-            info!("Not minting accounts");
+            info!("Not minting account");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
         let num_accounts = requested_accounts - self.accounts.len(); // Only minting extra accounts
