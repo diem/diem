@@ -19,6 +19,11 @@ module Errors {
     fun make(category: u8, reason: u64): u64 {
         (category as u64) + (reason << 8)
     }
+    spec fun make {
+        pragma opaque = true;
+        aborts_if false;
+        ensures [abstract] result == category;
+    }
 
     /// The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
     /// in genesis.
@@ -56,15 +61,74 @@ module Errors {
     const CUSTOM: u8 = 255;
 
     public fun invalid_state(reason: u64): u64 { make(INVALID_STATE, reason) }
+    spec fun invalid_state {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == INVALID_STATE;
+    }
+
     public fun requires_address(reason: u64): u64 { make(REQUIRES_ADDRESS, reason) }
+    spec fun requires_address {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == REQUIRES_ADDRESS;
+    }
+
     public fun requires_role(reason: u64): u64 { make(REQUIRES_ROLE, reason) }
+    spec fun requires_role {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == REQUIRES_ROLE;
+    }
+
     public fun requires_privilege(reason: u64): u64 { make(REQUIRES_PRIVILEGE, reason) }
+    spec fun requires_privilege {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == REQUIRES_PRIVILEGE;
+    }
+
     public fun not_published(reason: u64): u64 { make(NOT_PUBLISHED, reason) }
+    spec fun not_published {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == NOT_PUBLISHED;
+    }
+
     public fun already_published(reason: u64): u64 { make(ALREADY_PUBLISHED, reason) }
+    spec fun already_published {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == ALREADY_PUBLISHED;
+    }
+
     public fun invalid_argument(reason: u64): u64 { make(INVALID_ARGUMENT, reason) }
+    spec fun invalid_argument {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == INVALID_ARGUMENT;
+    }
+
     public fun limit_exceeded(reason: u64): u64 { make(LIMIT_EXCEEDED, reason) }
+    spec fun limit_exceeded {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == LIMIT_EXCEEDED;
+    }
+
     public fun internal(reason: u64): u64 { make(INTERNAL, reason) }
+    spec fun internal {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == INTERNAL;
+    }
+
     public fun custom(reason: u64): u64 { make(CUSTOM, reason) }
+    spec fun custom {
+        pragma opaque = true;
+        aborts_if false;
+        ensures result == CUSTOM;
+    }
 }
 
 }

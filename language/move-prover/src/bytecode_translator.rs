@@ -1811,7 +1811,7 @@ impl<'env> ModuleTranslator<'env> {
                 );
                 emitln!(
                     self.writer,
-                    "$abort_code := i#$Integer({}) mod 256;",
+                    "$abort_code := i#$Integer({});",
                     str_local(*src)
                 );
                 emitln!(self.writer, "goto Abort;")

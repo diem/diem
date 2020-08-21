@@ -161,7 +161,6 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun remove_validator {
-        pragma verify_duration_estimate = 100; // TODO: timeout
         include LibraTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         aborts_if !spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
@@ -241,8 +240,6 @@ module LibraSystem {
         *&(Vector::borrow(&validator_set.validators, *Option::borrow(&validator_index_vec))).config
     }
     spec fun get_validator_config {
-        /// TODO(tzakian): takes a long time but verifies
-        pragma verify_duration_estimate = 80;
         pragma opaque;
         include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         aborts_if !spec_is_validator(addr) with Errors::INVALID_ARGUMENT;

@@ -110,7 +110,6 @@ module RecoveryAddress {
         abort Errors::invalid_argument(EACCOUNT_NOT_RECOVERABLE)
     }
     spec fun rotate_authentication_key {
-        pragma verify_duration_estimate = 100; // TODO: occasional timeout
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
         aborts_if !exists<LibraAccount::LibraAccount>(to_recover) with Errors::NOT_PUBLISHED;
         aborts_if len(new_key) != 32;

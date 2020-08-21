@@ -26,6 +26,18 @@
 -  [Function `limit_exceeded`](#0x1_Errors_limit_exceeded)
 -  [Function `internal`](#0x1_Errors_internal)
 -  [Function `custom`](#0x1_Errors_custom)
+-  [Specification](#0x1_Errors_Specification)
+    -  [Function `make`](#0x1_Errors_Specification_make)
+    -  [Function `invalid_state`](#0x1_Errors_Specification_invalid_state)
+    -  [Function `requires_address`](#0x1_Errors_Specification_requires_address)
+    -  [Function `requires_role`](#0x1_Errors_Specification_requires_role)
+    -  [Function `requires_privilege`](#0x1_Errors_Specification_requires_privilege)
+    -  [Function `not_published`](#0x1_Errors_Specification_not_published)
+    -  [Function `already_published`](#0x1_Errors_Specification_already_published)
+    -  [Function `invalid_argument`](#0x1_Errors_Specification_invalid_argument)
+    -  [Function `limit_exceeded`](#0x1_Errors_Specification_limit_exceeded)
+    -  [Function `internal`](#0x1_Errors_Specification_internal)
+    -  [Function `custom`](#0x1_Errors_Specification_custom)
 
 Module defining error codes used in Move aborts throughout the framework.
 
@@ -412,3 +424,204 @@ A function to create an error from from a category and a reason.
 
 
 </details>
+
+<a name="0x1_Errors_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_Errors_Specification_make"></a>
+
+### Function `make`
+
+
+<pre><code><b>fun</b> <a href="#0x1_Errors_make">make</a>(category: u8, reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> [abstract] result == category;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_invalid_state"></a>
+
+### Function `invalid_state`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_state">invalid_state</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == INVALID_STATE;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_requires_address"></a>
+
+### Function `requires_address`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_address">requires_address</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == REQUIRES_ADDRESS;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_requires_role"></a>
+
+### Function `requires_role`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == REQUIRES_ROLE;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_requires_privilege"></a>
+
+### Function `requires_privilege`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_privilege">requires_privilege</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == REQUIRES_PRIVILEGE;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_not_published"></a>
+
+### Function `not_published`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_not_published">not_published</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == NOT_PUBLISHED;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_already_published"></a>
+
+### Function `already_published`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_already_published">already_published</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == ALREADY_PUBLISHED;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_invalid_argument"></a>
+
+### Function `invalid_argument`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_argument">invalid_argument</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == INVALID_ARGUMENT;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_limit_exceeded"></a>
+
+### Function `limit_exceeded`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_limit_exceeded">limit_exceeded</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == LIMIT_EXCEEDED;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_internal"></a>
+
+### Function `internal`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_internal">internal</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == INTERNAL;
+</code></pre>
+
+
+
+<a name="0x1_Errors_Specification_custom"></a>
+
+### Function `custom`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_custom">custom</a>(reason: u64): u64
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == CUSTOM;
+</code></pre>

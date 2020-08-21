@@ -758,8 +758,7 @@ TODO: times out arbitrarily, while succeeding quickly some other times.
 
 
 
-<pre><code>pragma verify_duration_estimate = 100;
-<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
@@ -860,11 +859,8 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 
 
-TODO(tzakian): takes a long time but verifies
 
-
-<pre><code>pragma verify_duration_estimate = 80;
-pragma opaque;
+<pre><code>pragma opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr) with Errors::INVALID_ARGUMENT;
 <b>ensures</b>

@@ -349,8 +349,7 @@ Aborts if
 
 
 
-<pre><code>pragma verify_duration_estimate = 100;
-<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
+<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> len(new_key) != 32;
 <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);

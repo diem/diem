@@ -206,7 +206,6 @@ module LBR {
         (coin1, coin2)
     }
     spec fun unpack {
-        pragma verify_duration_estimate = 100; // TODO: occasionally times out
         include UnpackAbortsIf;
         ensures Libra::spec_market_cap<LBR>() == old(Libra::spec_market_cap<LBR>()) - coin.value;
         ensures result_1.value == spec_unpack_coin1(coin);
