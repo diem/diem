@@ -210,13 +210,13 @@ impl Client {
     }
 
     /// Read a key/value pair from a given secret store.
-    pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
+    pub fn read_secret(&self, secret: &str) -> Result<ReadResponse<serde_json::Value>, Error> {
         let request = self
             .agent
             .get(&format!("{}/v1/secret/data/{}", self.host, secret));
         let resp = self.upgrade_request(request).call();
 
-        process_secret_read_response(secret, key, resp)
+        process_secret_read_response(secret, resp)
     }
 
     pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
@@ -325,13 +325,13 @@ impl Client {
     }
 
     /// Create or update a key/value pair in a given secret store.
-    pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
+    pub fn write_secret(&self, secret: &str, value: &serde_json::Value) -> Result<(), Error> {
         let request = self
             .agent
             .put(&format!("{}/v1/secret/data/{}", self.host, secret));
         let resp = self
             .upgrade_request(request)
-            .send_json(json!({ "data": { key: value } }));
+            .send_json(json!({ "data": value }));
 
         process_generic_response(resp)
     }
@@ -417,17 +417,13 @@ pub fn process_secret_list_response(resp: Response) -> Result<Vec<String>, Error
 /// Processes the response returned by a secret read vault request.
 pub fn process_secret_read_response(
     secret: &str,
-    key: &str,
     resp: Response,
-) -> Result<ReadResponse<String>, Error> {
+) -> Result<ReadResponse<serde_json::Value>, Error> {
     match resp.status() {
         200 => {
             let mut resp: ReadSecretResponse = serde_json::from_str(&resp.into_string()?)?;
             let data = &mut resp.data;
-            let value = data
-                .data
-                .remove(key)
-                .ok_or_else(|| Error::NotFound(secret.into(), key.into()))?;
+            let value = serde_json::to_value(&data.data)?;
             let created_time = data.metadata.created_time.clone();
             let version = data.metadata.version;
             Ok(ReadResponse::new(created_time, value, version))
@@ -435,7 +431,7 @@ pub fn process_secret_read_response(
         404 => {
             // Explicitly clear buffer so the stream can be re-used.
             resp.into_string()?;
-            Err(Error::NotFound(secret.into(), key.into()))
+            Err(Error::NotFound("secret".into(), secret.into()))
         }
         _ => Err(resp.into()),
     }
@@ -899,7 +895,7 @@ struct ReadSecretResponse {
 /// See ReadPolicyResponse
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct ReadSecretData {
-    data: BTreeMap<String, String>,
+    data: serde_json::Value,
     metadata: ReadSecretMetadata,
 }
 

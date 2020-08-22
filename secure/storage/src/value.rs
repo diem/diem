@@ -11,7 +11,7 @@ use libra_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-#[serde(content = "value", rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "snake_case")]
 #[allow(clippy::large_enum_variant)]
 pub enum Value {
     Ed25519PrivateKey(Ed25519PrivateKey),

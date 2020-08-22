@@ -74,12 +74,11 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        data in prop::collection::btree_map(any::<String>(), any::<String>(), 0..MAX_COLLECTION_SIZE),
+        data in arb_json_value(),
         created_time in any::<String>(),
         version in any::<u32>(),
         secret in any::<String>(),
-        key in any::<String>(),
-    ) -> (Response, String, String) {
+    ) -> (Response, String) {
         let metadata = ReadSecretMetadata {
             created_time,
             version,
@@ -96,7 +95,7 @@ prop_compose! {
             serde_json::to_string::<ReadSecretResponse>(&read_secret_response).unwrap();
         let read_secret_response = Response::new(status, &status_text, &read_secret_response);
 
-        (read_secret_response, secret, key)
+        (read_secret_response, secret)
     }
 }
 
@@ -335,8 +334,8 @@ mod tests {
         }
 
         #[test]
-        fn process_secret_read_response_proptest((response, secret, key) in arb_secret_read_response()) {
-            let _ = process_secret_read_response(&secret, &key, response);
+        fn process_secret_read_response_proptest((response, secret) in arb_secret_read_response()) {
+            let _ = process_secret_read_response(&secret, response);
         }
 
         #[test]

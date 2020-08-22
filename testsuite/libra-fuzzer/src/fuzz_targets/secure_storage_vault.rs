@@ -112,8 +112,8 @@ impl FuzzTargetImpl for VaultSecretReadResponse {
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let (response, key, secret) = fuzz_data_to_value(data, arb_secret_read_response());
-        let _ = process_secret_read_response(&secret, &key, response);
+        let (response, secret) = fuzz_data_to_value(data, arb_secret_read_response());
+        let _ = process_secret_read_response(&secret, response);
     }
 }
 
