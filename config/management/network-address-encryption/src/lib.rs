@@ -5,7 +5,10 @@
 
 use libra_global_constants::VALIDATOR_NETWORK_ADDRESS_KEYS;
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, Key, KeyVersion},
+    encrypted::{
+        EncNetworkAddress, Key, KeyVersion, TEST_SHARED_VAL_NETADDR_KEY,
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress,
 };
 use libra_secure_storage::{Error as StorageError, KVStorage, Storage};
@@ -35,6 +38,15 @@ pub struct Encryptor {
 impl Encryptor {
     pub fn new(storage: Storage) -> Self {
         Self { storage }
+    }
+
+    /// This generates an Encryptor for use in default / testing scenarios where (proper)
+    /// encryption is not necessary.
+    pub fn for_testing() -> Self {
+        let storage = Storage::InMemoryStorage(libra_secure_storage::InMemoryStorage::new());
+        let mut encryptor = Encryptor::new(storage);
+        encryptor.initialize_for_testing().unwrap();
+        encryptor
     }
 
     pub fn add_key(&mut self, version: KeyVersion, key: Key) -> Result<(), Error> {
@@ -144,7 +156,9 @@ where
     let s: String = serde::Deserialize::deserialize(deserializer)?;
     base64::decode(s)
         .map_err(serde::de::Error::custom)
-        .and_then(|v| std::convert::TryInto::try_into(v.as_slice()).map_err(serde::de::Error::custom))
+        .and_then(|v| {
+            std::convert::TryInto::try_into(v.as_slice()).map_err(serde::de::Error::custom)
+        })
 }
 
 #[derive(Debug, Deserialize, Serialize)]

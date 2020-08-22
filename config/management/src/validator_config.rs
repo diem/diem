@@ -14,12 +14,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
-use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, Protocol, RawNetworkAddress,
-};
+use libra_network_address::{NetworkAddress, Protocol, RawNetworkAddress};
 use libra_types::{chain_id::ChainId, transaction::Transaction};
 use std::{
     convert::TryFrom,
@@ -52,6 +47,10 @@ impl ValidatorConfig {
         validator_address: NetworkAddress,
         reconfigure: bool,
     ) -> Result<Transaction, Error> {
+        // Verify addresses
+        validate_address("validator address", &validator_address)?;
+        validate_address("fullnode address", &fullnode_address)?;
+
         let config = self.config()?;
         let mut storage = config.validator_backend();
 
@@ -66,30 +65,26 @@ impl ValidatorConfig {
         // and encrypt the validator address.
         let validator_address =
             validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
-        let raw_validator_address = encode_address(validator_address)?;
-        // Only supports one address for now
-        let key = TEST_SHARED_VAL_NETADDR_KEY;
-        let version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
-        let enc_validator_address = raw_validator_address.encrypt(
-            &key,
-            version,
-            &owner_account,
-            // This needs to be distinct, genesis = 0, post genesis sequence_number + 1
-            sequence_number + if reconfigure { 1 } else { 0 },
-            0, // addr_idx
-        );
-        let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
+        let encryptor = config.validator_backend().encryptor();
+        let raw_enc_validator_address = encryptor
+            .encrypt(
+                &validator_address,
+                owner_account,
+                sequence_number + if reconfigure { 1 } else { 0 },
+            )
             .map_err(|e| {
-                Error::UnexpectedError(format!(
-                    "error serializing encrypted address: '{:?}', error: {}",
-                    enc_validator_address, e
-                ))
+                Error::UnexpectedError(format!("Error encrypting validator address: {}", e))
             })?;
 
         // Build Fullnode address including protocols
         let fullnode_address =
             fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-        let raw_fullnode_address = encode_address(fullnode_address)?;
+        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address).map_err(|e| {
+            Error::UnexpectedError(format!(
+                "Error serializing address: '{}', error: {}",
+                fullnode_address, e
+            ))
+        })?;
 
         // Generate the validator config script
         // TODO(philiphayes): remove network identity pubkey field from struct
@@ -102,7 +97,7 @@ impl ValidatorConfig {
             owner_account,
             consensus_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
-            raw_enc_validator_address.into(),
+            raw_enc_validator_address,
             fullnode_network_key.to_bytes(),
             raw_fullnode_address.into(),
         );
@@ -119,16 +114,6 @@ impl ValidatorConfig {
 
         Ok(txn)
     }
-}
-
-/// Encode an address into bytes
-fn encode_address(address: NetworkAddress) -> Result<RawNetworkAddress, Error> {
-    RawNetworkAddress::try_from(&address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "error serializing address: '{}', error: {}",
-            address, e
-        ))
-    })
 }
 
 /// Validates an address to have a DNS/IP and a port, as well as to be resolvable

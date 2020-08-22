@@ -141,6 +141,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             validator_identity.peer_id_name,
             self.secure_backend(&local_ns, "validator"),
         );
+        validator_network.network_address_key_backend =
+            Some(self.secure_backend(&local_ns, "validator"));
 
         let fullnode_identity = fullnode_network.identity_from_storage();
         fullnode_network.identity = Identity::from_storage(

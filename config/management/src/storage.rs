@@ -6,6 +6,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     x25519,
 };
+use libra_network_address_encryption::Encryptor;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{
     account_address::AccountAddress,
@@ -21,6 +22,10 @@ pub struct StorageWrapper {
 }
 
 impl StorageWrapper {
+    pub fn encryptor(self) -> Encryptor {
+        Encryptor::new(self.storage)
+    }
+
     pub fn value<T: DeserializeOwned>(&self, name: &'static str) -> Result<T, Error> {
         self.storage
             .get(name)

@@ -17,10 +17,8 @@ use libra_config::{
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
-use libra_network_address::{
-    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
-    NetworkAddress,
-};
+use libra_network_address::NetworkAddress;
+use libra_network_address_encryption::Encryptor;
 use libra_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
@@ -42,7 +40,6 @@ use network_simple_onchain_discovery::{
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
-    iter,
     sync::{Arc, RwLock},
 };
 use subscription_service::ReconfigSubscription;
@@ -187,18 +184,17 @@ impl NetworkBuilder {
             );
         }
 
-        // Setup the discovery mechanisms
         match &config.discovery_method {
             DiscoveryMethod::Gossip(gossip_config) => {
                 network_builder.add_gossip_discovery(gossip_config.clone(), pubkey);
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 // TODO:  it should be safe to enable the configuraction_change_listener always.
                 if role == RoleType::Validator {
-                    network_builder.add_configuration_change_listener(role);
+                    network_builder.add_configuration_change_listener(role, config.encryptor());
                 }
             }
             DiscoveryMethod::Onchain => {
-                network_builder.add_configuration_change_listener(role);
+                network_builder.add_configuration_change_listener(role, config.encryptor());
             }
             DiscoveryMethod::None => {}
         }
@@ -333,7 +329,11 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_configuration_change_listener(&mut self, role: RoleType) -> &mut Self {
+    fn add_configuration_change_listener(
+        &mut self,
+        role: RoleType,
+        encryptor: Encryptor,
+    ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");
@@ -342,17 +342,10 @@ impl NetworkBuilder {
         self.reconfig_subscriptions
             .push(simple_discovery_reconfig_subscription);
 
-        // TODO(philiphayes): remove once we get real keys from key manager
-        let shared_val_netaddr_key_map: HashMap<_, _> = iter::once((
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            TEST_SHARED_VAL_NETADDR_KEY,
-        ))
-        .collect();
-
         self.configuration_change_listener_builder =
             Some(ConfigurationChangeListenerBuilder::create(
                 role,
-                shared_val_netaddr_key_map,
+                encryptor,
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,
             ));

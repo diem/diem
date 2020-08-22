@@ -6,11 +6,9 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
-use libra_management::{error::Error, storage::to_x25519, validator_config::validate_address};
-use libra_network_address::{
-    encrypted::{EncNetworkAddress, Key, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY},
-    NetworkAddress, Protocol, RawNetworkAddress,
-};
+use libra_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
+use libra_network_address::{NetworkAddress, Protocol};
+use libra_network_address_encryption::Encryptor;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
 use std::convert::TryFrom;
@@ -53,28 +51,33 @@ impl SetValidatorConfig {
 
         let operator_account = storage.account_address(OPERATOR_ACCOUNT)?;
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
+        let encryptor = config.validator_backend().encryptor();
         let client = JsonRpcClientWrapper::new(config.json_server);
         let sequence_number = client.sequence_number(operator_account)?;
 
         // Retrieve the current validator / fullnode addresses and update accordingly
         let validator_config = client.validator_config(owner_account)?;
         let validator_address = if let Some(validator_address) = self.validator_address {
-            validate_address("validator_network_address", &validator_address)?;
             validator_address
         } else {
-            decode_validator_address(
-                &validator_config.validator_network_address,
-                &owner_account,
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                0, // addr_idx
-            )?
+            let validator_address = encryptor
+                .decrypt(
+                    validator_config.validator_network_address.as_ref(),
+                    owner_account,
+                )
+                .map_err(|e| {
+                    Error::UnexpectedError(format!("Failed to decode network address {}", e))
+                })?;
+            strip_address(&validator_address)
         };
 
         let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
-            validate_address("full_node_network_address", &fullnode_address)?;
             fullnode_address
         } else {
-            decode_address(&validator_config.full_node_network_address)?
+            let fullnode_address =
+                NetworkAddress::try_from(&validator_config.full_node_network_address)
+                    .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
+            strip_address(&fullnode_address)
         };
 
         let txn = self.validator_config.build_transaction(
@@ -189,35 +192,9 @@ impl RotateFullNodeNetworkKey {
     }
 }
 
-pub fn decode_validator_address(
-    address: &RawEncNetworkAddress,
-    account: &AccountAddress,
-    key: &Key,
-    addr_idx: u32,
-) -> Result<NetworkAddress, Error> {
-    let enc_addr = EncNetworkAddress::try_from(address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decode network address {}",
-            e.to_string()
-        ))
-    })?;
-    let raw_addr = enc_addr.decrypt(key, account, addr_idx).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decrypt network address {}",
-            e.to_string()
-        ))
-    })?;
-    decode_address(&raw_addr)
-}
-
-pub fn decode_address(raw_address: &RawNetworkAddress) -> Result<NetworkAddress, Error> {
-    let network_address = NetworkAddress::try_from(raw_address).map_err(|e| {
-        Error::UnexpectedError(format!(
-            "Failed to decode network address {}",
-            e.to_string()
-        ))
-    })?;
-    let protocols = network_address
+/// Returns only the IP/DNS + Port portion of the NetworkAddress
+pub fn strip_address(address: &NetworkAddress) -> NetworkAddress {
+    let protocols = address
         .as_slice()
         .iter()
         .filter(|protocol| match protocol {
@@ -232,7 +209,7 @@ pub fn decode_address(raw_address: &RawNetworkAddress) -> Result<NetworkAddress,
         })
         .cloned()
         .collect::<Vec<_>>();
-    Ok(NetworkAddress::try_from(protocols).unwrap())
+    NetworkAddress::try_from(protocols).unwrap()
 }
 
 #[derive(Debug, StructOpt)]
@@ -244,56 +221,55 @@ pub struct ValidatorConfig {
     /// JSON-RPC Endpoint (e.g. http://localhost:8080)
     #[structopt(long, required_unless = "config")]
     json_server: Option<String>,
+    #[structopt(flatten)]
+    validator_backend: ValidatorBackend,
 }
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<DecryptedValidatorConfig, Error> {
-        let config = self.config.load()?.override_json_server(&self.json_server);
+        let config = self
+            .config
+            .load()?
+            .override_json_server(&self.json_server)
+            .override_validator_backend(&self.validator_backend.validator_backend)?;
+        let encryptor = config.validator_backend().encryptor();
         let client = JsonRpcClientWrapper::new(config.json_server);
-        client.validator_config(self.account_address).map(|config| {
-            DecryptedValidatorConfig::from_validator_config(
-                self.account_address,
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                0,
-                &config,
-            )
-            .unwrap()
-        })
+        client
+            .validator_config(self.account_address)
+            .and_then(|vc| {
+                DecryptedValidatorConfig::from_validator_config(
+                    &vc,
+                    self.account_address,
+                    &encryptor,
+                )
+            })
     }
 }
 
 #[derive(Serialize)]
 pub struct DecryptedValidatorConfig {
     pub consensus_public_key: Ed25519PublicKey,
-    pub validator_network_key: x25519::PublicKey,
     pub validator_network_address: NetworkAddress,
-    pub full_node_network_key: x25519::PublicKey,
     pub full_node_network_address: NetworkAddress,
 }
 
 impl DecryptedValidatorConfig {
     pub fn from_validator_config(
-        account: AccountAddress,
-        address_encryption_key: &libra_network_address::encrypted::Key,
-        addr_idx: u32,
-        validator_config: &libra_types::validator_config::ValidatorConfig,
-    ) -> Result<DecryptedValidatorConfig, Error> {
-        let full_node_network_address =
-            crate::validator_config::decode_address(&validator_config.full_node_network_address)?;
+        config: &libra_types::validator_config::ValidatorConfig,
+        account_address: AccountAddress,
+        encryptor: &Encryptor,
+    ) -> Result<Self, Error> {
+        let full_node_network_address = NetworkAddress::try_from(&config.full_node_network_address)
+            .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
-        let validator_network_address = crate::validator_config::decode_validator_address(
-            &validator_config.validator_network_address,
-            &account,
-            address_encryption_key,
-            addr_idx,
-        )?;
+        let validator_network_address = encryptor
+            .decrypt(config.validator_network_address.as_ref(), account_address)
+            .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
         Ok(DecryptedValidatorConfig {
-            consensus_public_key: validator_config.consensus_public_key.clone(),
-            validator_network_key: validator_config.validator_network_identity_public_key,
-            validator_network_address,
-            full_node_network_key: validator_config.full_node_network_identity_public_key,
+            consensus_public_key: config.consensus_public_key.clone(),
             full_node_network_address,
+            validator_network_address,
         })
     }
 }

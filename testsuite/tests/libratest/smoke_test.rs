@@ -1561,13 +1561,13 @@ fn test_consensus_key_rotation() {
     // Verify that the config has been updated correctly with the new consensus key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let config_consensus_key = op_tool
-        .validator_config(validator_account)
+        .validator_config(validator_account, &backend)
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, config_consensus_key);
 
     // Verify that the validator set info contains the new consensus key
-    let info_consensus_key = op_tool.validator_set(validator_account).unwrap()[0]
+    let info_consensus_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
         .consensus_public_key
         .clone();
     assert_eq!(new_consensus_key, info_consensus_key);
@@ -1622,7 +1622,7 @@ fn test_operator_key_rotation() {
     // Verify that the config has been updated correctly with the new consensus key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let config_consensus_key = op_tool
-        .validator_config(validator_account)
+        .validator_config(validator_account, &backend)
         .unwrap()
         .consensus_public_key;
     assert_eq!(new_consensus_key, config_consensus_key);
@@ -1727,7 +1727,7 @@ fn test_network_key_rotation() {
     // Verify that config has been loaded correctly with new key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let config_network_key = op_tool
-        .validator_config(validator_account)
+        .validator_config(validator_account, &backend)
         .unwrap()
         .validator_network_address
         .find_noise_proto()
@@ -1735,7 +1735,7 @@ fn test_network_key_rotation() {
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key = op_tool.validator_set(validator_account).unwrap()[0]
+    let info_network_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
         .validator_network_address
         .find_noise_proto()
         .unwrap();
@@ -1782,7 +1782,7 @@ fn test_network_key_rotation_recovery() {
     // Verify that config has been loaded correctly with new key
     let validator_account = node_config.validator_network.as_ref().unwrap().peer_id();
     let config_network_key = op_tool
-        .validator_config(validator_account)
+        .validator_config(validator_account, &backend)
         .unwrap()
         .validator_network_address
         .find_noise_proto()
@@ -1790,7 +1790,7 @@ fn test_network_key_rotation_recovery() {
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key = op_tool.validator_set(validator_account).unwrap()[0]
+    let info_network_key = op_tool.validator_set(validator_account, &backend).unwrap()[0]
         .validator_network_address
         .find_noise_proto()
         .unwrap();

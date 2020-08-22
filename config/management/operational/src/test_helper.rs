@@ -155,16 +155,19 @@ impl OperationalTool {
     pub fn validator_config(
         &self,
         account_address: AccountAddress,
+        backend: &config::SecureBackend,
     ) -> Result<DecryptedValidatorConfig, Error> {
         let args = format!(
             "
                 {command}
                 --json-server {json_server}
                 --account-address {account_address}
+                --validator-backend {backend_args}
         ",
             command = command(TOOL_NAME, CommandName::ValidatorConfig),
             json_server = self.host,
             account_address = account_address,
+            backend_args = backend_args(backend)?,
         );
 
         let command = Command::from_iter(args.split_whitespace());
@@ -174,16 +177,19 @@ impl OperationalTool {
     pub fn validator_set(
         &self,
         account_address: AccountAddress,
+        backend: &config::SecureBackend,
     ) -> Result<Vec<DecryptedValidatorInfo>, Error> {
         let args = format!(
             "
                 {command}
                 --json-server {json_server}
                 --account-address {account_address}
+                --validator-backend {backend_args}
         ",
             command = command(TOOL_NAME, CommandName::ValidatorSet),
             json_server = self.host,
             account_address = account_address,
+            backend_args = backend_args(backend)?,
         );
 
         let command = Command::from_iter(args.split_whitespace());

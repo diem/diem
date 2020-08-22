@@ -59,6 +59,14 @@ impl StorageHelper {
             .set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))
             .unwrap();
         storage.set(WAYPOINT, Waypoint::default()).unwrap();
+        let mut encryptor = libra_network_address_encryption::Encryptor::new(storage);
+        encryptor.initialize().unwrap();
+        encryptor
+            .add_key(
+                libra_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+                libra_network_address::encrypted::TEST_SHARED_VAL_NETADDR_KEY,
+            )
+            .unwrap();
     }
 
     pub fn create_and_insert_waypoint(

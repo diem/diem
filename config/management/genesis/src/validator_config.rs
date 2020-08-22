@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_global_constants::{OWNER_ACCOUNT, OWNER_KEY};
-use libra_management::{
-    constants, error::Error, secure_backend::SharedBackend, validator_config::validate_address,
-};
+use libra_management::{constants, error::Error, secure_backend::SharedBackend};
 use libra_network_address::NetworkAddress;
 use libra_types::{account_address, transaction::Transaction};
 use structopt::StructOpt;
@@ -37,9 +35,6 @@ impl ValidatorConfig {
 
         let mut validator_storage = config.validator_backend();
         validator_storage.set(OWNER_ACCOUNT, owner_account)?;
-
-        validate_address("validator_network_address", &self.validator_address)?;
-        validate_address("full_node_network_address", &self.fullnode_address)?;
 
         let txn = self.validator_config.build_transaction(
             0,
