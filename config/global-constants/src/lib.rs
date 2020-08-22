@@ -17,6 +17,7 @@ pub const OPERATOR_ACCOUNT: &str = "operator_account";
 pub const OPERATOR_KEY: &str = "operator";
 pub const OWNER_ACCOUNT: &str = "owner_account";
 pub const OWNER_KEY: &str = "owner";
+pub const VALIDATOR_NETWORK_ADDRESS_KEYS: &str = "validator_network_address_keys";
 pub const VALIDATOR_NETWORK_KEY: &str = "validator_network";
 
 /// Definitions of global data items (e.g., as held in secure storage)

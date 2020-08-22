@@ -2894,6 +2894,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-network-address-encryption"
+version = "0.1.0"
+dependencies = [
+ "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-global-constants 0.1.0",
+ "libra-network-address 0.1.0",
+ "libra-secure-storage 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-nibble"
 version = "0.1.0"
 dependencies = [

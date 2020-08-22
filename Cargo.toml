@@ -33,6 +33,7 @@ members = [
     "config/global-constants",
     "config/management",
     "config/management/genesis",
+    "config/management/network-address-encryption",
     "config/management/operational",
     "config/seed-peer-generator",
     "consensus",
