@@ -8,15 +8,15 @@ script {
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        fullnodes_network_address: vector<u8>,
+        validator_network_addresses: vector<u8>,
+        fullnode_network_addresses: vector<u8>,
     ) {
         ValidatorConfig::set_config(
             account,
             validator_account,
             consensus_pubkey,
-            validator_network_address,
-            fullnodes_network_address
+            validator_network_addresses,
+            fullnode_network_addresses
         );
         LibraSystem::update_config_and_reconfigure(account, validator_account);
      }

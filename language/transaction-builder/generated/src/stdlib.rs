@@ -224,8 +224,8 @@ pub enum ScriptCall {
     RegisterValidatorConfig {
         validator_account: AccountAddress,
         consensus_pubkey: Bytes,
-        validator_network_address: Bytes,
-        fullnodes_network_address: Bytes,
+        validator_network_addresses: Bytes,
+        fullnode_network_addresses: Bytes,
     },
 
     /// Removes a validator from the validator set.
@@ -286,8 +286,8 @@ pub enum ScriptCall {
     SetValidatorConfigAndReconfigure {
         validator_account: AccountAddress,
         consensus_pubkey: Bytes,
-        validator_network_address: Bytes,
-        fullnodes_network_address: Bytes,
+        validator_network_addresses: Bytes,
+        fullnode_network_addresses: Bytes,
     },
 
     /// Set validator's operator
@@ -477,13 +477,13 @@ impl ScriptCall {
             RegisterValidatorConfig {
                 validator_account,
                 consensus_pubkey,
-                validator_network_address,
-                fullnodes_network_address,
+                validator_network_addresses,
+                fullnode_network_addresses,
             } => encode_register_validator_config_script(
                 validator_account,
                 consensus_pubkey,
-                validator_network_address,
-                fullnodes_network_address,
+                validator_network_addresses,
+                fullnode_network_addresses,
             ),
             RemoveValidatorAndReconfigure {
                 sliding_nonce,
@@ -521,13 +521,13 @@ impl ScriptCall {
             SetValidatorConfigAndReconfigure {
                 validator_account,
                 consensus_pubkey,
-                validator_network_address,
-                fullnodes_network_address,
+                validator_network_addresses,
+                fullnode_network_addresses,
             } => encode_set_validator_config_and_reconfigure_script(
                 validator_account,
                 consensus_pubkey,
-                validator_network_address,
-                fullnodes_network_address,
+                validator_network_addresses,
+                fullnode_network_addresses,
             ),
             SetValidatorOperator {
                 operator_name,
@@ -930,8 +930,8 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
 pub fn encode_register_validator_config_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
-    validator_network_address: Vec<u8>,
-    fullnodes_network_address: Vec<u8>,
+    validator_network_addresses: Vec<u8>,
+    fullnode_network_addresses: Vec<u8>,
 ) -> Script {
     Script::new(
         REGISTER_VALIDATOR_CONFIG_CODE.to_vec(),
@@ -939,8 +939,8 @@ pub fn encode_register_validator_config_script(
         vec![
             TransactionArgument::Address(validator_account),
             TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_address),
-            TransactionArgument::U8Vector(fullnodes_network_address),
+            TransactionArgument::U8Vector(validator_network_addresses),
+            TransactionArgument::U8Vector(fullnode_network_addresses),
         ],
     )
 }
@@ -1068,8 +1068,8 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
 pub fn encode_set_validator_config_and_reconfigure_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
-    validator_network_address: Vec<u8>,
-    fullnodes_network_address: Vec<u8>,
+    validator_network_addresses: Vec<u8>,
+    fullnode_network_addresses: Vec<u8>,
 ) -> Script {
     Script::new(
         SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE.to_vec(),
@@ -1077,8 +1077,8 @@ pub fn encode_set_validator_config_and_reconfigure_script(
         vec![
             TransactionArgument::Address(validator_account),
             TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_address),
-            TransactionArgument::U8Vector(fullnodes_network_address),
+            TransactionArgument::U8Vector(validator_network_addresses),
+            TransactionArgument::U8Vector(fullnode_network_addresses),
         ],
     )
 }
@@ -1364,8 +1364,8 @@ fn decode_register_validator_config_script(script: &Script) -> Option<ScriptCall
     Some(ScriptCall::RegisterValidatorConfig {
         validator_account: decode_address_argument(script.args().get(0)?.clone())?,
         consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        validator_network_address: decode_u8vector_argument(script.args().get(2)?.clone())?,
-        fullnodes_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
+        validator_network_addresses: decode_u8vector_argument(script.args().get(2)?.clone())?,
+        fullnode_network_addresses: decode_u8vector_argument(script.args().get(3)?.clone())?,
     })
 }
 
@@ -1424,8 +1424,8 @@ fn decode_set_validator_config_and_reconfigure_script(script: &Script) -> Option
     Some(ScriptCall::SetValidatorConfigAndReconfigure {
         validator_account: decode_address_argument(script.args().get(0)?.clone())?,
         consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        validator_network_address: decode_u8vector_argument(script.args().get(2)?.clone())?,
-        fullnodes_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
+        validator_network_addresses: decode_u8vector_argument(script.args().get(2)?.clone())?,
+        fullnode_network_addresses: decode_u8vector_argument(script.args().get(3)?.clone())?,
     })
 }
 

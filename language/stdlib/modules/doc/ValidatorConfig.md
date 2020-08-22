@@ -22,7 +22,7 @@
 -  [Function `get_human_name`](#0x1_ValidatorConfig_get_human_name)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
--  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
+-  [Function `get_validator_network_addresses`](#0x1_ValidatorConfig_get_validator_network_addresses)
 -  [Specification](#0x1_ValidatorConfig_Specification)
     -  [Function `publish`](#0x1_ValidatorConfig_Specification_publish)
     -  [Function `set_operator`](#0x1_ValidatorConfig_Specification_set_operator)
@@ -89,14 +89,14 @@
 </dd>
 <dt>
 
-<code>validator_network_address: vector&lt;u8&gt;</code>
+<code>validator_network_addresses: vector&lt;u8&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
 
-<code>full_node_network_address: vector&lt;u8&gt;</code>
+<code>fullnode_network_addresses: vector&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -333,7 +333,7 @@ NB! Once the config is set, it can not go to Option::none - this is crucial for 
 of the LibraSystem's code
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -346,8 +346,8 @@ of the LibraSystem's code
     signer: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
-    validator_network_address: vector&lt;u8&gt;,
-    full_node_network_address: vector&lt;u8&gt;,
+    validator_network_addresses: vector&lt;u8&gt;,
+    fullnode_network_addresses: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_account),
@@ -362,8 +362,8 @@ of the LibraSystem's code
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x1_Option_some">Option::some</a>(<a href="#0x1_ValidatorConfig_Config">Config</a> {
         consensus_pubkey,
-        validator_network_address,
-        full_node_network_address,
+        validator_network_addresses,
+        fullnode_network_addresses,
     });
 }
 </code></pre>
@@ -512,15 +512,15 @@ Never aborts
 
 </details>
 
-<a name="0x1_ValidatorConfig_get_validator_network_address"></a>
+<a name="0x1_ValidatorConfig_get_validator_network_addresses"></a>
 
-## Function `get_validator_network_address`
+## Function `get_validator_network_addresses`
 
 Get validator's network address from Config
 Never aborts
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_address">get_validator_network_address</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a>): &vector&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_addresses">get_validator_network_addresses</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a>): &vector&lt;u8&gt;
 </code></pre>
 
 
@@ -529,8 +529,8 @@ Never aborts
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_address">get_validator_network_address</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">Config</a>): &vector&lt;u8&gt; {
-    &config_ref.validator_network_address
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_addresses">get_validator_network_addresses</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">Config</a>): &vector&lt;u8&gt; {
+    &config_ref.validator_network_addresses
 }
 </code></pre>
 
@@ -668,7 +668,7 @@ Returns the human name of the validator
 ### Function `set_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 

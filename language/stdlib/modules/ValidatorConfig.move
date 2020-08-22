@@ -13,8 +13,8 @@ module ValidatorConfig {
 
     struct Config {
         consensus_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        full_node_network_address: vector<u8>,
+        validator_network_addresses: vector<u8>,
+        fullnode_network_addresses: vector<u8>,
     }
 
     resource struct ValidatorConfig {
@@ -157,8 +157,8 @@ module ValidatorConfig {
         signer: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
-        validator_network_address: vector<u8>,
-        full_node_network_address: vector<u8>,
+        validator_network_addresses: vector<u8>,
+        fullnode_network_addresses: vector<u8>,
     ) acquires ValidatorConfig {
         assert(
             Signer::address_of(signer) == get_operator(validator_account),
@@ -173,8 +173,8 @@ module ValidatorConfig {
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
         t_ref.config = Option::some(Config {
             consensus_pubkey,
-            validator_network_address,
-            full_node_network_address,
+            validator_network_addresses,
+            fullnode_network_addresses,
         });
     }
 
@@ -279,8 +279,8 @@ module ValidatorConfig {
 
     /// Get validator's network address from Config
     /// Never aborts
-    public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
-        &config_ref.validator_network_address
+    public fun get_validator_network_addresses(config_ref: &Config): &vector<u8> {
+        &config_ref.validator_network_addresses
     }
 
     spec module {

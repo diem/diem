@@ -145,7 +145,7 @@ script {
     use 0x1::ValidatorConfig;
     fun main() {
         let config = ValidatorConfig::get_config({{bob}});
-        let _ = ValidatorConfig::get_validator_network_address(&config);
+        let _ = ValidatorConfig::get_validator_network_addresses(&config);
     }
 }
 // check: EXECUTED
