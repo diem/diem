@@ -75,20 +75,6 @@ impl RestoreHandler {
         Ok(())
     }
 
-    pub fn save_ledger_info_if_newer(&self, ledger_info: LedgerInfoWithSignatures) -> Result<()> {
-        if let Some(latest_li) = self.ledger_store.get_latest_ledger_info_option() {
-            if latest_li.ledger_info().version() >= ledger_info.ledger_info().version() {
-                return Ok(());
-            }
-        }
-
-        let mut cs = ChangeSet::new();
-        self.ledger_store.put_ledger_info(&ledger_info, &mut cs)?;
-        self.db.write_schemas(cs.batch)?;
-        self.ledger_store.set_latest_ledger_info(ledger_info);
-        Ok(())
-    }
-
     pub fn confirm_or_save_frozen_subtrees(
         &self,
         num_leaves: LeafCount,

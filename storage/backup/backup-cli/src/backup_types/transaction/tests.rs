@@ -87,6 +87,17 @@ fn end_to_end() {
     )
     .unwrap();
 
+    // We don't write down any ledger infos when recovering transactions. State-sync needs to take
+    // care of it before running consensus. The latest transactions are deemed "synced" instead of
+    // "committed" most likely.
+    assert_eq!(
+        tgt_db
+            .get_latest_transaction_info_option()
+            .unwrap()
+            .unwrap()
+            .0,
+        target_version,
+    );
     let recovered_transactions = tgt_db
         .get_transactions(
             first_ver_to_backup,

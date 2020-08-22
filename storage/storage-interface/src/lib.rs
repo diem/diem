@@ -16,7 +16,10 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
-    transaction::{TransactionListWithProof, TransactionToCommit, TransactionWithProof, Version},
+    transaction::{
+        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
+        Version,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -298,6 +301,13 @@ pub trait DbReader: Send + Sync {
 
     /// Get the ledger info of the epoch that `known_version` belongs to.
     fn get_epoch_ending_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
+
+    /// Gets the latest transaction info.
+    /// N.B. Unlike get_startup_info(), even if the db is not bootstrapped, this can return `Some`
+    /// -- those from a db-restore run.
+    fn get_latest_transaction_info_option(&self) -> Result<Option<(Version, TransactionInfo)>> {
+        unimplemented!()
+    }
 }
 
 impl MoveStorage for &dyn DbReader {
