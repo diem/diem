@@ -643,6 +643,7 @@ jobs:
   #    job and still recieve a context "docker" that only the automated user may see                   #
   # 2. This job is parameterized for multiple docker builds to test dev_setup.sh execution, but only   #
   #    when one of the relevant files have changed.                                                    #
+  # 3. Finally prunes dockerhub libra/repos of older images (14 days non-release, 90 days releases)    #
   ######################################################################################################
   docker-ci-build:
     executor: docker-large-executor
@@ -687,10 +688,12 @@ jobs:
             if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
               echo no relevant files have changed - halting
               circleci step halt
-            else
-              echo Relevant files have changed, building.
+            elif [[ $CIRCLE_BRANCH == "master" ]]; then
+              echo Updating cache latch file, Relevant files have changed, building.
               #since we're building, time to update the cache key file.
               date +%Y-%m-%d > /home/circleci/lastbuild
+            else
+              echo Relevant files have changed, building.
             fi
 
       - save_cache:
@@ -712,6 +715,10 @@ jobs:
           command: |
             #signs the pushed image
             docker push --disable-content-trust=false libra/build_environment:<< parameters.base-image >>-latest
+      - run:
+          name: daily docker image pruning.
+          command: |
+            scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}"" -p ${DOCKERHUB_PASSWORD}" -x
 
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
