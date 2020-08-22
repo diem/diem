@@ -117,6 +117,21 @@ impl ValidatorVerifier {
         })
     }
 
+    /// Initializes a validator verifier with a specified quorum voting power and total power.
+    #[cfg(any(test, feature = "fuzzing"))]
+    // This method should only used by tests and fuzzers to produce an arbitrary ValidatorVerifier.
+    pub fn new_for_testing(
+        address_to_validator_info: BTreeMap<AccountAddress, ValidatorConsensusInfo>,
+        quorum_voting_power: u64,
+        total_voting_power: u64,
+    ) -> Self {
+        ValidatorVerifier {
+            address_to_validator_info,
+            quorum_voting_power,
+            total_voting_power,
+        }
+    }
+
     /// Helper method to initialize with a single author and public key with quorum voting power 1.
     pub fn new_single(author: AccountAddress, public_key: Ed25519PublicKey) -> Self {
         let mut author_to_validator_info = BTreeMap::new();

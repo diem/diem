@@ -498,13 +498,19 @@ impl DefaultHasher {
     }
 }
 
+impl fmt::Debug for DefaultHasher {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "DefaultHasher: state = Sha3")
+    }
+}
+
 macro_rules! define_hasher {
     (
         $(#[$attr:meta])*
         ($hasher_type: ident, $hasher_name: ident, $seed_name: ident, $salt: expr)
     ) => {
 
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         $(#[$attr])*
         pub struct $hasher_type(DefaultHasher);
 

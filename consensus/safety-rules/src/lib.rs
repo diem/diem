@@ -24,7 +24,10 @@ pub use crate::{
     t_safety_rules::TSafetyRules,
 };
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod fuzzing_utils;
+
+#[cfg(any(test, feature = "fuzzing", feature = "testing"))]
 #[path = "test_utils.rs"]
 pub mod test_utils;
 

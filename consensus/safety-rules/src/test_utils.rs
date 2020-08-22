@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::persistent_safety_storage::PersistentSafetyStorage;
+use crate::{
+    persistent_safety_storage::PersistentSafetyStorage, serializer::SerializerService, SafetyRules,
+};
 use consensus_types::{
     block::Block,
     common::{Payload, Round},
@@ -218,4 +220,13 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
         Ed25519PrivateKey::generate_for_testing(),
         waypoint,
     )
+}
+
+/// Returns a simple serializer for testing purposes.
+pub fn test_serializer() -> SerializerService {
+    let signer = ValidatorSigner::from_int(0);
+    let storage = test_storage(&signer);
+    let safety_rules = SafetyRules::new(storage, true);
+
+    SerializerService::new(safety_rules)
 }

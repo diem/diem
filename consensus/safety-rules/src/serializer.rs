@@ -11,7 +11,7 @@ use libra_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum SafetyRulesInput {
     ConsensusState,
     Initialize(Box<EpochChangeProof>),

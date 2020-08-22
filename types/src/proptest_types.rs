@@ -915,7 +915,7 @@ impl Arbitrary for BlockMetadata {
 }
 
 #[derive(Debug)]
-struct BlockInfoGen {
+pub struct BlockInfoGen {
     id: HashValue,
     executed_state_id: HashValue,
     timestamp_usecs: u64,

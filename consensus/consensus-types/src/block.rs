@@ -149,6 +149,20 @@ impl Block {
         }
     }
 
+    #[cfg(any(test, feature = "fuzzing"))]
+    // This method should only used by tests and fuzzers to produce arbitrary Block types.
+    pub fn new_for_testing(
+        id: HashValue,
+        block_data: BlockData,
+        signature: Option<Ed25519Signature>,
+    ) -> Self {
+        Block {
+            id,
+            block_data,
+            signature,
+        }
+    }
+
     /// The NIL blocks are special: they're not carrying any real payload and are generated
     /// independently by different validators just to fill in the round with some QC.
     pub fn new_nil(round: Round, quorum_cert: QuorumCert) -> Self {

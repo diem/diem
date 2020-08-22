@@ -141,6 +141,24 @@ impl BlockData {
         BlockData::new_genesis(ledger_info.timestamp_usecs(), genesis_quorum_cert)
     }
 
+    #[cfg(any(test, feature = "fuzzing"))]
+    // This method should only used by tests and fuzzers to produce arbitrary BlockData types.
+    pub fn new_for_testing(
+        epoch: u64,
+        round: Round,
+        timestamp_usecs: u64,
+        quorum_cert: QuorumCert,
+        block_type: BlockType,
+    ) -> Self {
+        Self {
+            epoch,
+            round,
+            timestamp_usecs,
+            quorum_cert,
+            block_type,
+        }
+    }
+
     pub fn new_genesis(timestamp_usecs: u64, quorum_cert: QuorumCert) -> Self {
         assume!(quorum_cert.certified_block().epoch() < u64::max_value()); // unlikely to be false in this universe
         Self {

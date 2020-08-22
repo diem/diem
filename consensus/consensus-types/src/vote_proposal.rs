@@ -13,7 +13,7 @@ use std::{
 
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
-#[derive(Clone, CryptoHasher, Deserialize, LCSCryptoHash, Serialize)]
+#[derive(Clone, Debug, CryptoHasher, Deserialize, LCSCryptoHash, Serialize)]
 pub struct VoteProposal {
     /// Contains the data necessary to construct the parent's execution output state
     /// and the childs in a verifiable way
@@ -60,7 +60,7 @@ impl Display for VoteProposal {
 }
 
 /// Wraps a vote_proposal and its signature.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MaybeSignedVoteProposal {
     /// The vote proposal to be signed.
     pub vote_proposal: VoteProposal,

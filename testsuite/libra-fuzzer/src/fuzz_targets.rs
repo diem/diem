@@ -14,6 +14,7 @@ mod mempool;
 mod move_vm;
 mod network;
 mod network_noise;
+mod safety_rules;
 mod secure_json_rpc_client;
 mod secure_storage_vault;
 mod state_sync;
@@ -40,6 +41,8 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network_noise::NetworkNoiseInitiator::default()),
         Box::new(network_noise::NetworkNoiseResponder::default()),
         Box::new(network_noise::NetworkNoiseStream::default()),
+        // Safety Rules Server (LSR)
+        Box::new(safety_rules::SafetyRulesHandleMessage::default()),
         // Secure JSON RPC Client
         Box::new(secure_json_rpc_client::SecureJsonRpcSubmitTransaction::default()),
         Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountState::default()),

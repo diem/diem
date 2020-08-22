@@ -13,6 +13,7 @@ pub mod commands;
 #[cfg(test)]
 mod coverage;
 pub mod fuzz_targets;
+
 /// Implementation for a particular target of a fuzz operation.
 pub trait FuzzTargetImpl: Sync + Send + fmt::Debug {
     /// The name of the fuzz target.
