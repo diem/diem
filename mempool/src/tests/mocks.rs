@@ -144,10 +144,6 @@ impl MockSharedMempool {
             .mempool
             .lock()
             .expect("[mock shared mempool] failed to acquire mempool lock");
-        pool.read_timeline(timeline_id, count)
-            .0
-            .into_iter()
-            .map(|(_, txn)| txn)
-            .collect()
+        pool.read_timeline(timeline_id, count).0
     }
 }

@@ -664,7 +664,7 @@ fn test_consensus_events_rejected_txns() {
         .expect("[mempool test] failed to acquire mempool lock");
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
-    assert_eq!(timeline.get(0).unwrap().1, kept_txn);
+    assert_eq!(timeline.get(0).unwrap(), &kept_txn);
 }
 
 #[test]
@@ -717,7 +717,7 @@ fn test_state_sync_events_committed_txns() {
         .expect("[mempool test] failed to acquire mempool lock");
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
-    assert_eq!(timeline.get(0).unwrap().1, kept_txn);
+    assert_eq!(timeline.get(0).unwrap(), &kept_txn);
 }
 
 // tests VFN properly identifying upstream peers in a network with both upstream and downstream peers
@@ -952,79 +952,16 @@ fn test_rebroadcast_mempool_is_full() {
 
     smp.add_txns(&full_node, vec![TestTransaction::new(1, 5, 1)]);
 
-    let expected_broadcasts = vec![vec![3, 4, 5], vec![5]];
-    for expected in expected_broadcasts {
+    let expected_broadcast = vec![3, 4, 5];
+
+    for _ in 0..2 {
         let (txns, _recipient) = smp.deliver_message(&full_node, 1, false);
         let seq_nums = txns
             .iter()
             .map(|txn| txn.sequence_number())
             .collect::<Vec<_>>();
-        assert_eq!(expected, seq_nums);
+        assert_eq!(expected_broadcast, seq_nums);
     }
 
-    smp.add_txns(&full_node, vec![TestTransaction::new(0, 0, 1)]);
-
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, false);
-    let seq_nums = txns
-        .iter()
-        .map(|txn| txn.sequence_number())
-        .collect::<Vec<_>>();
-    assert_eq!(vec![5, 0], seq_nums);
-
-    // make space for retried txns
-    smp.remove_txns(&val, all_txns[0..4].to_vec());
-    for seq_num in 1..4 {
-        smp.add_txns(&full_node, vec![TestTransaction::new(0, seq_num, 1)]);
-    }
-
-    let expected_broadcasts = vec![vec![5, 0, 1], vec![2, 3], vec![3]];
-    for expected in expected_broadcasts {
-        let (txns, _recipient) = smp.deliver_message(&full_node, 1, false);
-        let seq_nums = txns
-            .iter()
-            .map(|txn| txn.sequence_number())
-            .collect::<Vec<_>>();
-        assert_eq!(expected, seq_nums);
-    }
-}
-
-#[test]
-fn test_rebroadcast_too_many_txns() {
-    let (mut smp, val, full_node) = SharedMempoolNetwork::bootstrap_vfn_network(3, None, Some(2));
-
-    let mut all_txns = vec![];
-    for i in 0..2 {
-        all_txns.push(TestTransaction::new(1, i, 1));
-    }
-    smp.add_txns(&full_node, all_txns);
-    // FN discovers new peer V
-    smp.send_new_peer_event(&full_node, &val, true);
-
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, true);
-    let seq_nums = txns
-        .iter()
-        .map(|txn| txn.sequence_number())
-        .collect::<Vec<_>>();
-    assert_eq!(vec![0, 1], seq_nums);
-
-    let mut all_txns = vec![];
-    for i in 2..4 {
-        all_txns.push(TestTransaction::new(1, i, 1));
-    }
-    smp.add_txns(&full_node, all_txns);
-
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, false);
-    let seq_nums = txns
-        .iter()
-        .map(|txn| txn.sequence_number())
-        .collect::<Vec<_>>();
-    assert_eq!(vec![2, 3], seq_nums);
-
-    // rebroadcast 'TooManyTransactions' failures
-    let (txns, _recipient) = smp.deliver_message(&full_node, 1, false);
-    let seq_nums = txns
-        .iter()
-        .map(|txn| txn.sequence_number())
-        .collect::<Vec<_>>();
-    assert_eq!(vec![2, 3], seq_nums);
+    // TODO add test for checking we can move past rebroadcasting after receiving non-retry ACK
 }
