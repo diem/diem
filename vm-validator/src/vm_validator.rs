@@ -18,9 +18,7 @@ use storage_interface::{state_view::VerifiedStateView, DbReader};
 #[path = "unit_tests/vm_validator_test.rs"]
 mod vm_validator_test;
 
-pub trait TransactionValidation: Send + Sync + Clone {
-    type ValidationInstance: libra_vm::VMValidator;
-
+pub trait TransactionValidation: Send + Sync {
     /// Validate a txn from client
     fn validate_transaction(&self, _txn: SignedTransaction) -> Result<VMValidatorResult>;
 
@@ -52,8 +50,6 @@ impl VMValidator {
 }
 
 impl TransactionValidation for VMValidator {
-    type ValidationInstance = LibraVMValidator;
-
     fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         use libra_vm::VMValidator;
 

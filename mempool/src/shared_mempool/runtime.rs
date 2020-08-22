@@ -17,6 +17,7 @@ use futures::channel::{
     mpsc::{self, Receiver, UnboundedSender},
     oneshot,
 };
+use libra_config::config::RoleType;
 use libra_config::{config::NodeConfig, network_id::NodeNetworkId};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
@@ -25,6 +26,7 @@ use std::{
 };
 use storage_interface::DbReader;
 use tokio::runtime::{Builder, Handle, Runtime};
+use vm_validator::mocks::mock_vm_validator::MockVMValidator;
 use vm_validator::vm_validator::{TransactionValidation, VMValidator};
 
 /// bootstrap of SharedMempool
@@ -32,7 +34,7 @@ use vm_validator::vm_validator::{TransactionValidation, VMValidator};
 ///   - outbound_sync_task (task that periodically broadcasts transactions to peers)
 ///   - inbound_network_task (task that handles inbound mempool messages and network events)
 ///   - gc_task (task that performs GC of all expired transactions by SystemTTL)
-pub(crate) fn start_shared_mempool<V>(
+pub(crate) fn start_shared_mempool(
     executor: &Handle,
     config: &NodeConfig,
     mempool: Arc<Mutex<CoreMempool>>,
@@ -44,11 +46,9 @@ pub(crate) fn start_shared_mempool<V>(
     state_sync_requests: mpsc::Receiver<CommitNotification>,
     mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     db: Arc<dyn DbReader>,
-    validator: Arc<RwLock<V>>,
+    validator: Arc<RwLock<dyn TransactionValidation>>,
     subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
-) where
-    V: TransactionValidation + 'static,
-{
+) {
     let upstream_config = config.upstream.clone();
     let peer_manager = Arc::new(PeerManager::new(upstream_config));
 
@@ -104,7 +104,12 @@ pub fn bootstrap(
         .build()
         .expect("[shared mempool] failed to create runtime");
     let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
-    let vm_validator = Arc::new(RwLock::new(VMValidator::new(Arc::clone(&db))));
+    let vm_validator: Arc<RwLock<dyn TransactionValidation>> =
+        if config.base.role == RoleType::Validator {
+            Arc::new(RwLock::new(MockVMValidator))
+        } else {
+            Arc::new(RwLock::new(VMValidator::new(Arc::clone(&db))))
+        };
     start_shared_mempool(
         runtime.handle(),
         config,

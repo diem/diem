@@ -27,7 +27,6 @@ impl VMValidator for MockVMValidator {
 }
 
 impl TransactionValidation for MockVMValidator {
-    type ValidationInstance = MockVMValidator;
     fn validate_transaction(&self, txn: SignedTransaction) -> Result<VMValidatorResult> {
         let txn = match txn.check_signature() {
             Ok(txn) => txn,

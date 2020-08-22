@@ -35,8 +35,8 @@ use tokio::{runtime::Handle, time::interval};
 use vm_validator::vm_validator::TransactionValidation;
 
 /// Coordinator that handles inbound network events and outbound txn broadcasts.
-pub(crate) async fn coordinator<V>(
-    mut smp: SharedMempool<V>,
+pub(crate) async fn coordinator(
+    mut smp: SharedMempool,
     executor: Handle,
     network_events: Vec<(NodeNetworkId, MempoolNetworkEvents)>,
     mut client_events: mpsc::Receiver<(
@@ -46,9 +46,7 @@ pub(crate) async fn coordinator<V>(
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
     mut mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
-) where
-    V: TransactionValidation,
-{
+) {
     let smp_events: Vec<_> = network_events
         .into_iter()
         .map(|(network_id, events)| events.map(move |e| (network_id.clone(), e)))

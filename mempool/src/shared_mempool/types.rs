@@ -39,15 +39,12 @@ use vm_validator::vm_validator::TransactionValidation;
 
 /// Struct that owns all dependencies required by shared mempool routines
 #[derive(Clone)]
-pub(crate) struct SharedMempool<V>
-where
-    V: TransactionValidation + 'static,
-{
+pub(crate) struct SharedMempool {
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub config: MempoolConfig,
     pub network_senders: HashMap<NodeNetworkId, MempoolNetworkSender>,
     pub db: Arc<dyn DbReader>,
-    pub validator: Arc<RwLock<V>>,
+    pub validator: Arc<RwLock<dyn TransactionValidation>>,
     pub peer_manager: Arc<PeerManager>,
     pub subscribers: Vec<UnboundedSender<SharedMempoolNotification>>,
 }

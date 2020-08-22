@@ -39,15 +39,13 @@ use vm_validator::vm_validator::{get_account_sequence_number, TransactionValidat
 // ============================== //
 
 /// attempts broadcast to `peer` and schedules the next broadcast
-pub(crate) fn execute_broadcast<V>(
+pub(crate) fn execute_broadcast(
     peer: PeerNetworkId,
     backoff: bool,
-    smp: &mut SharedMempool<V>,
+    smp: &mut SharedMempool,
     scheduled_broadcasts: &mut FuturesUnordered<ScheduledBroadcast>,
     executor: Handle,
-) where
-    V: TransactionValidation,
-{
+) {
     let next_broadcast_backoff = broadcast_single_peer(peer.clone(), backoff, smp);
 
     let interval_ms = if next_broadcast_backoff {
@@ -66,10 +64,7 @@ pub(crate) fn execute_broadcast<V>(
 
 /// broadcasts txns to `peer` if alive
 /// Returns whether the next broadcast scheduled for this peer should be in backpressure mode or not
-fn broadcast_single_peer<V>(peer: PeerNetworkId, backoff: bool, smp: &mut SharedMempool<V>) -> bool
-where
-    V: TransactionValidation,
-{
+fn broadcast_single_peer(peer: PeerNetworkId, backoff: bool, smp: &mut SharedMempool) -> bool {
     // start timer for tracking broadcast latency
     let start_time = Instant::now();
     let peer_manager = &smp.peer_manager;
@@ -211,13 +206,11 @@ fn send_mempool_sync_msg(
 // =============================== //
 
 /// processes transactions directly submitted by client
-pub(crate) async fn process_client_transaction_submission<V>(
-    smp: SharedMempool<V>,
+pub(crate) async fn process_client_transaction_submission(
+    smp: SharedMempool,
     transaction: SignedTransaction,
     callback: oneshot::Sender<Result<SubmissionStatus>>,
-) where
-    V: TransactionValidation,
-{
+) {
     let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
         .with_label_values(&["client"])
         .start_timer();
@@ -241,15 +234,13 @@ pub(crate) async fn process_client_transaction_submission<V>(
 }
 
 /// processes transactions from other nodes
-pub(crate) async fn process_transaction_broadcast<V>(
-    mut smp: SharedMempool<V>,
+pub(crate) async fn process_transaction_broadcast(
+    mut smp: SharedMempool,
     transactions: Vec<SignedTransaction>,
     request_id: String,
     timeline_state: TimelineState,
     peer: PeerNetworkId,
-) where
-    V: TransactionValidation,
-{
+) {
     let _timer = counters::PROCESS_TXN_SUBMISSION_LATENCY
         .with_label_values(&[&peer.peer_id().to_string()])
         .start_timer();
@@ -322,14 +313,11 @@ fn is_txn_retryable(result: SubmissionStatus) -> bool {
 
 /// submits a list of SignedTransaction to the local mempool
 /// and returns a vector containing AdmissionControlStatus
-pub(crate) async fn process_incoming_transactions<V>(
-    smp: &SharedMempool<V>,
+pub(crate) async fn process_incoming_transactions(
+    smp: &SharedMempool,
     transactions: Vec<SignedTransaction>,
     timeline_state: TimelineState,
-) -> Vec<SubmissionStatus>
-where
-    V: TransactionValidation,
-{
+) -> Vec<SubmissionStatus> {
     let mut statuses = vec![];
 
     let start_storage_read = Instant::now();
@@ -572,12 +560,10 @@ async fn commit_txns(
 }
 
 /// processes on-chain reconfiguration notification
-pub(crate) async fn process_config_update<V>(
+pub(crate) async fn process_config_update(
     config_update: OnChainConfigPayload,
-    validator: Arc<RwLock<V>>,
-) where
-    V: TransactionValidation,
-{
+    validator: Arc<RwLock<dyn TransactionValidation>>,
+) {
     // restart VM validator
     validator
         .write()
