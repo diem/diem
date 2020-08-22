@@ -1729,12 +1729,16 @@ fn test_network_key_rotation() {
     let config_network_key = op_tool
         .validator_config(validator_account)
         .unwrap()
-        .validator_network_key;
+        .validator_network_address
+        .find_noise_proto()
+        .unwrap();
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key =
-        op_tool.validator_set(validator_account).unwrap()[0].validator_network_key;
+    let info_network_key = op_tool.validator_set(validator_account).unwrap()[0]
+        .validator_network_address
+        .find_noise_proto()
+        .unwrap();
     assert_eq!(new_network_key, info_network_key);
 
     // Restart validator
@@ -1780,12 +1784,16 @@ fn test_network_key_rotation_recovery() {
     let config_network_key = op_tool
         .validator_config(validator_account)
         .unwrap()
-        .validator_network_key;
+        .validator_network_address
+        .find_noise_proto()
+        .unwrap();
     assert_eq!(new_network_key, config_network_key);
 
     // Verify that the validator set info contains the new network key
-    let info_network_key =
-        op_tool.validator_set(validator_account).unwrap()[0].validator_network_key;
+    let info_network_key = op_tool.validator_set(validator_account).unwrap()[0]
+        .validator_network_address
+        .find_noise_proto()
+        .unwrap();
     assert_eq!(new_network_key, info_network_key);
 
     // Restart validator
