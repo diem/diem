@@ -24,7 +24,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // perform a preburn
 //! new-transaction
@@ -47,7 +47,7 @@ fun main(account: &signer) {
 }
 
 // check: PreburnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // cancel the preburn
 //! new-transaction
@@ -60,7 +60,7 @@ fun main(account: &signer)  {
 }
 }
 // check: CancelBurnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // perform a preburn
 //! new-transaction
@@ -81,9 +81,8 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-
 // check: PreburnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // second (concurrent) preburn disallowed
 //! new-transaction
@@ -99,11 +98,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-
-// check: 6
-// check: ABORTED
-
-
+// check: "Keep(ABORTED { code: 769,"
 
 // perform the burn from the blessed account
 //! new-transaction
@@ -121,7 +116,7 @@ fun main(account: &signer) {
 }
 
 // check: BurnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Preburn allowed but larger than balance
 //! new-transaction
@@ -137,9 +132,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-
-// check: 10
-// check: ABORTED
+// check: "Keep(ABORTED { code: 1288,"
 
 // Try to burn on an account that doesn't have a preburn resource
 //! new-transaction

@@ -13,6 +13,11 @@ Please add the API change in the following format:
 
 ```
 
+## 2020-08-25 Add `BaseUrlRotation` and `ComplianceKeyRotation` events
+- Added two new event types, one is emitted when the public key used for dual
+  attestation on chain is rotated, and the other is emitted when the base url
+  used for dual attestation off-chain communication is changed.
+
 ## 2020-08-11 Added chain_id to get_metadata
 
 - added "chain_id" field to `get_metadata` response so it is available outside

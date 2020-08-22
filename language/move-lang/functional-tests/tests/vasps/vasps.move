@@ -75,7 +75,8 @@ fun main(parent_vasp: &signer) {
     assert(DualAttestation::compliance_public_key({{parent}}) == new_pubkey, 2015);
 }
 }
-// check: EXECUTED
+// check: ComplianceKeyRotationEvent
+// check: "Keep(EXECUTED)"
 
 // getting the parent VASP address of a non-VASP should abort
 //! new-transaction

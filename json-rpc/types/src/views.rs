@@ -5,10 +5,10 @@ use anyhow::{format_err, Error, Result};
 use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
-        AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
-        CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedMintEvent, ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent,
-        UpgradeEvent,
+        AccountResource, AccountRole, BalanceResource, BaseUrlRotationEvent, BurnEvent,
+        CancelBurnEvent, ComplianceKeyRotationEvent, CurrencyInfoResource, FreezingBit, MintEvent,
+        NewBlockEvent, NewEpochEvent, PreburnEvent, ReceivedMintEvent, ReceivedPaymentEvent,
+        SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -60,6 +60,8 @@ pub enum AccountRoleView {
         expiration_time: u64,
         compliance_key: BytesView,
         num_children: u64,
+        compliance_key_rotation_events_key: BytesView,
+        base_url_rotation_events_key: BytesView,
     },
     #[serde(rename = "designated_dealer")]
     DesignatedDealer {
@@ -69,6 +71,8 @@ pub enum AccountRoleView {
         compliance_key: BytesView,
         preburn_balances: Vec<AmountView>,
         received_mint_events_key: BytesView,
+        compliance_key_rotation_events_key: BytesView,
+        base_url_rotation_events_key: BytesView,
     },
 }
 
@@ -172,6 +176,16 @@ pub enum EventDataView {
     ReceivedMint {
         amount: AmountView,
         destination_address: BytesView,
+    },
+    #[serde(rename = "compliancekeyrotation")]
+    ComplianceKeyRotation {
+        new_compliance_public_key: String,
+        time_rotated_seconds: u64,
+    },
+    #[serde(rename = "baseurlrotation")]
+    BaseUrlRotation {
+        new_base_url: String,
+        time_rotated_seconds: u64,
     },
     #[serde(rename = "unknown")]
     Unknown {},
@@ -308,6 +322,28 @@ impl From<(u64, ContractEvent)> for EventView {
                 })
             } else {
                 Err(format_err!("Unable to parse UpgradeEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(ComplianceKeyRotationEvent::struct_tag()) {
+            if let Ok(rotation_event) = ComplianceKeyRotationEvent::try_from(&event) {
+                Ok(EventDataView::ComplianceKeyRotation {
+                    new_compliance_public_key: hex::encode(
+                        rotation_event.new_compliance_public_key(),
+                    ),
+                    time_rotated_seconds: rotation_event.time_rotated_seconds(),
+                })
+            } else {
+                Err(format_err!("Unable to parse ComplianceKeyRotationEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(BaseUrlRotationEvent::struct_tag()) {
+            if let Ok(rotation_event) = BaseUrlRotationEvent::try_from(&event) {
+                String::from_utf8(rotation_event.new_base_url().to_vec())
+                    .map(|new_base_url| EventDataView::BaseUrlRotation {
+                        new_base_url,
+                        time_rotated_seconds: rotation_event.time_rotated_seconds(),
+                    })
+                    .map_err(|_| format_err!("Unable to parse BaseUrlRotationEvent"))
+            } else {
+                Err(format_err!("Unable to parse BaseUrlRotationEvent"))
             }
         } else {
             Err(format_err!("Unknown events"))
@@ -526,6 +562,12 @@ impl From<AccountRole> for AccountRoleView {
                 expiration_time: credential.expiration_date(),
                 compliance_key: BytesView::from(credential.compliance_public_key()),
                 num_children: vasp.num_children(),
+                compliance_key_rotation_events_key: BytesView::from(
+                    credential.compliance_key_rotation_events().key().as_bytes(),
+                ),
+                base_url_rotation_events_key: BytesView::from(
+                    credential.base_url_rotation_events().key().as_bytes(),
+                ),
             },
             AccountRole::DesignatedDealer {
                 dd_credential,
@@ -544,6 +586,15 @@ impl From<AccountRole> for AccountRoleView {
                     .collect(),
                 received_mint_events_key: BytesView::from(
                     designated_dealer.received_mint_events().key().as_bytes(),
+                ),
+                compliance_key_rotation_events_key: BytesView::from(
+                    dd_credential
+                        .compliance_key_rotation_events()
+                        .key()
+                        .as_bytes(),
+                ),
+                base_url_rotation_events_key: BytesView::from(
+                    dd_credential.base_url_rotation_events().key().as_bytes(),
                 ),
             },
         }

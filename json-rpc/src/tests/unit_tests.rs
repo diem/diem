@@ -730,7 +730,7 @@ fn test_json_rpc_protocol() {
                     "delegated_key_rotation_capability": false,
                     "delegated_withdrawal_capability": false,
                     "is_frozen": false,
-                    "received_events_key": "0100000000000000000000000000000000000000000000dd",
+                    "received_events_key": "0300000000000000000000000000000000000000000000dd",
                     "role": {
                         "type": "designated_dealer",
                         "base_url": "",
@@ -747,9 +747,11 @@ fn test_json_rpc_protocol() {
                                 "currency": "Coin2"
                             }
                         ],
-                        "received_mint_events_key": "0000000000000000000000000000000000000000000000dd"
+                        "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
+                        "compliance_key_rotation_events_key": "0100000000000000000000000000000000000000000000dd",
+                        "base_url_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
                     },
-                    "sent_events_key": "0200000000000000000000000000000000000000000000dd",
+                    "sent_events_key": "0400000000000000000000000000000000000000000000dd",
                     "sequence_number": 0
                 }
             }),

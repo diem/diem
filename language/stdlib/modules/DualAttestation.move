@@ -12,6 +12,7 @@ module DualAttestation {
     use 0x1::Signer;
     use 0x1::VASP;
     use 0x1::Vector;
+    use 0x1::Event::{Self, EventHandle};
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
     /// participate in off-chain protocols.
@@ -32,11 +33,32 @@ module DualAttestation {
         /// Expiration date in microseconds from unix epoch. For V1, it is always set to
         /// U64_MAX. Mutable, but only by LibraRoot.
         expiration_date: u64,
+        /// Event handle for `compliance_public_key` rotation events. Emitted
+        /// every time this `compliance_public_key` is rotated.
+        compliance_key_rotation_events: EventHandle<ComplianceKeyRotationEvent>,
+        /// Event handle for `base_url` rotation events. Emitted every time this `base_url` is rotated.
+        base_url_rotation_events: EventHandle<BaseUrlRotationEvent>,
     }
 
     /// Struct to store the limit on-chain
     resource struct Limit {
         micro_lbr_limit: u64,
+    }
+
+    /// The message sent whenever the compliance public key for a `DualAttestation` resource is rotated.
+    struct ComplianceKeyRotationEvent {
+        /// The new `compliance_public_key` that is being used for dual attestation checking.
+        new_compliance_public_key: vector<u8>,
+        /// The time at which the `compliance_public_key` was rotated
+        time_rotated_seconds: u64,
+    }
+
+    /// The message sent whenever the base url for a `DualAttestation` resource is rotated.
+    struct BaseUrlRotationEvent {
+        /// The new `base_url` that is being used for dual attestation checking
+        new_base_url: vector<u8>,
+        /// The time at which the `base_url` was rotated
+        time_rotated_seconds: u64,
     }
 
     const MAX_U64: u128 = 18446744073709551615;
@@ -84,6 +106,8 @@ module DualAttestation {
             compliance_public_key: Vector::empty(),
             // For testnet and V1, so it should never expire. So set to u64::MAX
             expiration_date: U64_MAX,
+            compliance_key_rotation_events: Event::new_event_handle<ComplianceKeyRotationEvent>(created),
+            base_url_rotation_events: Event::new_event_handle<BaseUrlRotationEvent>(created),
         })
     }
     spec fun publish_credential {
@@ -97,10 +121,16 @@ module DualAttestation {
     public fun rotate_base_url(account: &signer, new_url: vector<u8>) acquires Credential {
         let addr = Signer::address_of(account);
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
-        borrow_global_mut<Credential>(addr).base_url = new_url
+        let credential = borrow_global_mut<Credential>(addr);
+        credential.base_url = copy new_url;
+        Event::emit_event(&mut credential.base_url_rotation_events, BaseUrlRotationEvent {
+            new_base_url: new_url,
+            time_rotated_seconds: LibraTimestamp::now_seconds(),
+        });
     }
     spec fun rotate_base_url {
         include AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
+        include LibraTimestamp::AbortsIfNoTime;
         ensures
             global<Credential>(Signer::spec_address_of(account)).base_url == new_url;
     }
@@ -117,10 +147,17 @@ module DualAttestation {
         let addr = Signer::address_of(account);
         assert(exists<Credential>(addr), Errors::not_published(ECREDENTIAL));
         assert(Signature::ed25519_validate_pubkey(copy new_key), Errors::invalid_argument(EINVALID_PUBLIC_KEY));
-        borrow_global_mut<Credential>(addr).compliance_public_key = new_key
+        let credential = borrow_global_mut<Credential>(addr);
+        credential.compliance_public_key = copy new_key;
+        Event::emit_event(&mut credential.compliance_key_rotation_events, ComplianceKeyRotationEvent {
+            new_compliance_public_key: new_key,
+            time_rotated_seconds: LibraTimestamp::now_seconds(),
+        });
+
     }
     spec fun rotate_compliance_public_key {
         include AbortsIfNoCredential{addr: Signer::spec_address_of(account)};
+        include LibraTimestamp::AbortsIfNoTime;
         aborts_if !Signature::ed25519_validate_pubkey(new_key) with Errors::INVALID_ARGUMENT;
         ensures global<Credential>(Signer::spec_address_of(account)).compliance_public_key
              == new_key;

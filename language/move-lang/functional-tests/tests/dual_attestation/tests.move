@@ -78,6 +78,18 @@ script{
 // check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
+//! sender: bob
+script{
+    use 0x1::DualAttestation;
+    fun main(account: &signer) {
+        DualAttestation::rotate_base_url(account, x"");
+    }
+}
+// check: BaseUrlRotationEvent
+// check: "Keep(EXECUTED)"
+
+
+//! new-transaction
 //! sender: blessed
 script{
     use 0x1::DualAttestation;
