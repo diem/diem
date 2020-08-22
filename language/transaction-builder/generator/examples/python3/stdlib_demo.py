@@ -5,7 +5,6 @@
 
 import libra_types as libra
 import serde_types as st
-import lcs
 import libra_stdlib as stdlib
 
 
@@ -33,7 +32,7 @@ def main() -> None:
     assert call.amount == amount;
     assert call.payee == payee;
 
-    for b in lcs.serialize(script, libra.Script):
+    for b in script.lcs_serialize():
         print("%d " % b, end='')
     print()
 

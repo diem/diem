@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/facebookincubator/serde-reflection/serde-generate/runtime/golang/lcs"
 	stdlib "testing/librastdlib"
 	libra "testing/libratypes"
 )
@@ -36,11 +35,10 @@ func main() {
 		panic("wrong script content")
 	}
 
-	serializer := lcs.NewSerializer()
-	if err := script.Serialize(serializer); err != nil {
+	bytes, err := script.LcsSerialize()
+	if err != nil {
 		panic("failed to serialize")
 	}
-	bytes := serializer.GetBytes()
 	for _, b := range(bytes) {
 		fmt.Printf("%d ", b)
 	}

@@ -34,7 +34,8 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
     let src_dir_path = dir.path().join("src");
     let installer =
         serdegen::python3::Installer::new(src_dir_path.clone(), /* package */ None);
-    let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string());
+    let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string())
+        .with_encodings(vec![serdegen::Encoding::Lcs]);
     installer.install_module(&config, &registry).unwrap();
     installer.install_serde_runtime().unwrap();
     installer.install_lcs_runtime().unwrap();
@@ -180,7 +181,8 @@ fn test_that_cpp_code_compiles_and_demo_runs() {
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
-    let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string());
+    let config = serdegen::CodeGeneratorConfig::new("libra_types".to_string())
+        .with_encodings(vec![serdegen::Encoding::Lcs]);
     let lcs_installer = serdegen::cpp::Installer::new(dir.path().to_path_buf());
     lcs_installer.install_module(&config, &registry).unwrap();
     lcs_installer.install_serde_runtime().unwrap();
@@ -225,7 +227,8 @@ fn test_that_java_code_compiles_and_demo_runs() {
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
-    let config = serdegen::CodeGeneratorConfig::new("org.libra.types".to_string());
+    let config = serdegen::CodeGeneratorConfig::new("org.libra.types".to_string())
+        .with_encodings(vec![serdegen::Encoding::Lcs]);
     let lcs_installer = serdegen::java::Installer::new(dir.path().to_path_buf());
     lcs_installer.install_module(&config, &registry).unwrap();
     lcs_installer.install_serde_runtime().unwrap();
@@ -282,7 +285,8 @@ fn test_that_golang_code_compiles_and_demo_runs() {
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
-    let config = serdegen::CodeGeneratorConfig::new("libratypes".to_string());
+    let config = serdegen::CodeGeneratorConfig::new("libratypes".to_string())
+        .with_encodings(vec![serdegen::Encoding::Lcs]);
     let lcs_installer = serdegen::golang::Installer::new(
         dir.path().to_path_buf(),
         /* default Serde module */ None,

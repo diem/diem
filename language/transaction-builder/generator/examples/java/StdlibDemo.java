@@ -5,9 +5,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 import com.facebook.serde.Bytes;
-import com.facebook.serde.Serializer;
 import com.facebook.serde.Unsigned; // used as documentation.
-import com.facebook.lcs.LcsSerializer;
 import org.libra.stdlib.Helpers;
 import org.libra.stdlib.ScriptCall;;
 import org.libra.types.AccountAddress;
@@ -48,10 +46,7 @@ public class StdlibDemo {
         assert(call.amount.equals(amount));
         assert(call.payee.equals(payee));
 
-        Serializer serializer = new LcsSerializer();
-        script.serialize(serializer);
-        byte[] output = serializer.get_bytes();
-
+        byte[] output = script.lcsSerialize();
         for (byte o : output) {
             System.out.print(((int) o & 0xFF) + " ");
         };
