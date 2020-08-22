@@ -23,7 +23,7 @@ use crate::{
     libra_interface::LibraInterface,
     logging::{LogEntry, LogEvent, LogField},
 };
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
+use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::prelude::*;
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
@@ -248,9 +248,7 @@ where
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
         let validator_config = self.libra.retrieve_validator_config(owner_account)?;
-        let network_key = validator_config.validator_network_identity_public_key;
         let network_address = validator_config.validator_network_address;
-        let fullnode_network_key = validator_config.full_node_network_identity_public_key;
         let fullnode_network_address = validator_config.full_node_network_address;
 
         let txn = build_rotation_transaction(
@@ -258,9 +256,7 @@ where
             operator_account,
             seq_id,
             &consensus_key,
-            &network_key,
             &network_address,
-            &fullnode_network_key,
             &fullnode_network_address,
             expiration,
             self.chain_id,
@@ -382,9 +378,7 @@ pub fn build_rotation_transaction(
     operator_address: AccountAddress,
     seq_id: u64,
     consensus_key: &Ed25519PublicKey,
-    network_key: &x25519::PublicKey,
     network_address: &RawEncNetworkAddress,
-    fullnode_network_key: &x25519::PublicKey,
     fullnode_network_address: &RawNetworkAddress,
     expiration_timestamp_secs: u64,
     chain_id: ChainId,
@@ -393,9 +387,7 @@ pub fn build_rotation_transaction(
         transaction_builder_generated::stdlib::encode_set_validator_config_and_reconfigure_script(
             owner_address,
             consensus_key.to_bytes().to_vec(),
-            network_key.as_slice().to_vec(),
             network_address.as_ref().to_vec(),
-            fullnode_network_key.as_slice().to_vec(),
             fullnode_network_address.as_ref().to_vec(),
         );
     RawTransaction::new_script(

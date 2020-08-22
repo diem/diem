@@ -110,11 +110,14 @@ impl RotateKey {
             .config()?
             .override_json_server(&self.json_server);
         let mut storage = config.validator_backend();
+        let encryptor = config.validator_backend().encryptor();
         let client = JsonRpcClientWrapper::new(config.json_server);
 
         // Fetch the current on-chain validator config for the node
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
-        let validator_config = client.validator_config(owner_account)?;
+        let validator_config = client.validator_config(owner_account).and_then(|vc| {
+            DecryptedValidatorConfig::from_validator_config(&vc, owner_account, &encryptor)
+        })?;
 
         // Check that the key held in storage matches the key registered on-chain in the validator
         // config. If so, rotate the key in storage. If not, don't rotate the key in storage and
@@ -124,12 +127,16 @@ impl RotateKey {
         let keys_match = match key_name {
             CONSENSUS_KEY => storage_key == validator_config.consensus_public_key,
             VALIDATOR_NETWORK_KEY => {
-                to_x25519(storage_key.clone())?
-                    == validator_config.validator_network_identity_public_key
+                Some(to_x25519(storage_key.clone())?)
+                    == validator_config
+                        .validator_network_address
+                        .find_noise_proto()
             }
             FULLNODE_NETWORK_KEY => {
-                to_x25519(storage_key.clone())?
-                    == validator_config.full_node_network_identity_public_key
+                Some(to_x25519(storage_key.clone())?)
+                    == validator_config
+                        .full_node_network_address
+                        .find_noise_proto()
             }
             _ => {
                 return Err(Error::UnexpectedError(

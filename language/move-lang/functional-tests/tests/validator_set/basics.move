@@ -95,9 +95,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{vivian}},
-                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
-                                    x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 263,"
@@ -107,7 +105,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 263,"
@@ -126,7 +124,7 @@ script {
 script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{bob}}, x"0000000000000000000000000000000000000000000000000000000000000000", x"", x"");
     }
 }
 // check: "Keep(ABORTED { code: 519"
@@ -147,7 +145,6 @@ script {
     use 0x1::ValidatorConfig;
     fun main() {
         let config = ValidatorConfig::get_config({{bob}});
-        let _ = ValidatorConfig::get_validator_network_identity_pubkey(&config);
         let _ = ValidatorConfig::get_validator_network_address(&config);
     }
 }

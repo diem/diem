@@ -12,19 +12,11 @@ use compiler::Compiler;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
-    traits::ValidCryptoMaterial,
-    x25519, ValidCryptoMaterialStringExt,
 };
 use libra_json_rpc_client::views::{
     AccountView, BlockMetadata, EventView, TransactionView, VMStatusView,
 };
 use libra_logger::prelude::*;
-use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
-};
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
@@ -64,7 +56,6 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
-use transaction_builder::encode_register_validator_config_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -747,75 +738,6 @@ impl ClientProxy {
             ),
             None => unimplemented!(),
         }
-    }
-
-    /// Register an account as validator candidate with ValidatorConfig
-    pub fn register_validator(
-        &mut self,
-        space_delim_strings: &[&str],
-        is_blocking: bool,
-    ) -> Result<()> {
-        ensure!(
-            space_delim_strings[0] == "register_validator",
-            "inconsistent command '{}' for register_validator",
-            space_delim_strings[0]
-        );
-        ensure!(
-            space_delim_strings.len() == 9,
-            "Invalid number of arguments for registering validator"
-        );
-
-        // parse args
-        let (address, _) = self.get_account_address_from_parameter(space_delim_strings[1])?;
-        let private_key = Ed25519PrivateKey::from_encoded_string(space_delim_strings[2])?;
-        let consensus_public_key = Ed25519PublicKey::from_encoded_string(space_delim_strings[3])?;
-        let network_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[4])?;
-        let network_address = NetworkAddress::from_str(space_delim_strings[5])?;
-        let raw_network_address = RawNetworkAddress::try_from(&network_address)?;
-        let fullnode_identity_key = x25519::PublicKey::from_encoded_string(space_delim_strings[6])?;
-        let fullnode_network_address = NetworkAddress::from_str(space_delim_strings[7])?;
-        let raw_fullnode_network_address = RawNetworkAddress::try_from(&fullnode_network_address)?;
-
-        let mut sender = Self::get_account_data_from_address(
-            &mut self.client,
-            address,
-            true,
-            Some(KeyPair::from(private_key)),
-            None,
-        )?;
-
-        let seq_num = sender.sequence_number;
-        let addr_idx = 0;
-
-        let enc_network_address = raw_network_address.encrypt(
-            &TEST_SHARED_VAL_NETADDR_KEY,
-            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-            &address,
-            seq_num,
-            addr_idx,
-        );
-        let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
-
-        let program = encode_register_validator_config_script(
-            address,
-            consensus_public_key.to_bytes().to_vec(),
-            network_identity_key.to_bytes(),
-            raw_enc_network_address.into(),
-            fullnode_identity_key.to_bytes(),
-            raw_fullnode_network_address.into(),
-        );
-        let txn = self.create_txn_to_submit(
-            TransactionPayload::Script(program),
-            &sender,
-            None,
-            None,
-            None,
-        )?;
-        self.client.submit_transaction(Some(&mut sender), txn)?;
-        if is_blocking {
-            self.wait_for_transaction(sender.address, sender.sequence_number)?;
-        }
-        Ok(())
     }
 
     /// Waits for the next transaction for a specific address and prints it

@@ -11,7 +11,7 @@ use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibO
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey, Uniform, ValidCryptoMaterial,
+    PrivateKey, Uniform,
 };
 use libra_network_address::{
     encrypted::{
@@ -605,9 +605,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             let script = transaction_builder::encode_register_validator_config_script(
                 owner_account,
                 consensus_key.to_bytes().to_vec(),
-                identity_key.to_bytes(),
                 raw_enc_addr.into(),
-                identity_key.to_bytes(),
                 raw_addr.into(),
             );
             (operator_key, script)

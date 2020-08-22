@@ -354,7 +354,7 @@ pub mod tests {
         // Verify the validator config in the transaction has the correct account address
         match uploaded_user_transaction.payload() {
             TransactionPayload::Script(script) => {
-                assert_eq!(6, script.args().len());
+                assert_eq!(4, script.args().len());
 
                 match script.args().get(0).unwrap() {
                     TransactionArgument::Address(account_address) => {

@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account_address::AccountAddress, validator_config::ValidatorConfig};
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto::Uniform;
-use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
+use libra_crypto::ed25519::Ed25519PublicKey;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_network_address::{
     encrypted::{
@@ -62,9 +60,6 @@ impl ValidatorInfo {
         consensus_public_key: Ed25519PublicKey,
         consensus_voting_power: u64,
     ) -> Self {
-        let private_key = x25519::PrivateKey::generate_for_testing();
-        let validator_network_identity_public_key = private_key.public_key();
-
         let addr = NetworkAddress::mock();
         let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
         let enc_addr = raw_addr.encrypt(
@@ -75,15 +70,10 @@ impl ValidatorInfo {
             0,
         );
         let validator_network_address = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
-
-        let private_key = x25519::PrivateKey::generate_for_testing();
-        let full_node_network_identity_public_key = private_key.public_key();
         let full_node_network_address = RawNetworkAddress::try_from(&addr).unwrap();
         let config = ValidatorConfig::new(
             consensus_public_key,
-            validator_network_identity_public_key,
             validator_network_address,
-            full_node_network_identity_public_key,
             full_node_network_address,
         );
 
@@ -108,11 +98,6 @@ impl ValidatorInfo {
     /// Returns the voting power for this validator
     pub fn consensus_voting_power(&self) -> u64 {
         self.consensus_voting_power
-    }
-
-    /// Returns the key that establishes a validator's identity in the p2p network
-    pub fn network_identity_public_key(&self) -> x25519::PublicKey {
-        self.config.validator_network_identity_public_key
     }
 
     /// Returns the validator's config

@@ -22,7 +22,6 @@
 -  [Function `get_human_name`](#0x1_ValidatorConfig_get_human_name)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
--  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
 -  [Specification](#0x1_ValidatorConfig_Specification)
     -  [Function `publish`](#0x1_ValidatorConfig_Specification_publish)
@@ -90,23 +89,7 @@
 </dd>
 <dt>
 
-<code>validator_network_identity_pubkey: vector&lt;u8&gt;</code>
-</dt>
-<dd>
- TODO(philiphayes): restructure
-   3) remove validator_network_identity_pubkey
-   4) remove full_node_network_identity_pubkey
-</dd>
-<dt>
-
 <code>validator_network_address: vector&lt;u8&gt;</code>
-</dt>
-<dd>
-
-</dd>
-<dt>
-
-<code>full_node_network_identity_pubkey: vector&lt;u8&gt;</code>
 </dt>
 <dd>
 
@@ -350,7 +333,7 @@ NB! Once the config is set, it can not go to Option::none - this is crucial for 
 of the LibraSystem's code
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_identity_pubkey: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -363,9 +346,7 @@ of the LibraSystem's code
     signer: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
-    validator_network_identity_pubkey: vector&lt;u8&gt;,
     validator_network_address: vector&lt;u8&gt;,
-    full_node_network_identity_pubkey: vector&lt;u8&gt;,
     full_node_network_address: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     <b>assert</b>(
@@ -381,9 +362,7 @@ of the LibraSystem's code
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x1_Option_some">Option::some</a>(<a href="#0x1_ValidatorConfig_Config">Config</a> {
         consensus_pubkey,
-        validator_network_identity_pubkey,
         validator_network_address,
-        full_node_network_identity_pubkey,
         full_node_network_address,
     });
 }
@@ -533,32 +512,6 @@ Never aborts
 
 </details>
 
-<a name="0x1_ValidatorConfig_get_validator_network_identity_pubkey"></a>
-
-## Function `get_validator_network_identity_pubkey`
-
-Get validator's network identity pubkey from Config
-Never aborts
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_identity_pubkey">get_validator_network_identity_pubkey</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a>): &vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_identity_pubkey">get_validator_network_identity_pubkey</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">Config</a>): &vector&lt;u8&gt; {
-    &config_ref.validator_network_identity_pubkey
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_ValidatorConfig_get_validator_network_address"></a>
 
 ## Function `get_validator_network_address`
@@ -637,7 +590,7 @@ Describes abort if ValidatorConfig does not exist.
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
 <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account)
     with Errors::INVALID_ARGUMENT;
-<a name="0x1_ValidatorConfig_sender$18"></a>
+<a name="0x1_ValidatorConfig_sender$17"></a>
 <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
 <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account) with Errors::NOT_PUBLISHED;
@@ -701,7 +654,7 @@ Returns the human name of the validator
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
-<a name="0x1_ValidatorConfig_sender$19"></a>
+<a name="0x1_ValidatorConfig_sender$18"></a>
 <b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
 <b>ensures</b> !<a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
@@ -715,13 +668,13 @@ Returns the human name of the validator
 ### Function `set_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_identity_pubkey: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_config">set_config</a>(signer: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, full_node_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
 
 
-<a name="0x1_ValidatorConfig_sender$20"></a>
+<a name="0x1_ValidatorConfig_sender$19"></a>
 
 
 <pre><code><b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(signer);

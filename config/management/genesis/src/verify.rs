@@ -10,6 +10,7 @@ use libra_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     storage::StorageWrapper as Storage,
 };
+use libra_network_address::NetworkAddress;
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
@@ -18,7 +19,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::Write,
     fs::File,
     io::Read,
@@ -75,7 +76,7 @@ impl Verify {
         write_break(&mut buffer);
 
         if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(&validator_storage, &mut buffer, genesis_path)?;
+            compare_genesis(validator_storage, &mut buffer, genesis_path)?;
         }
 
         Ok(buffer)
@@ -142,7 +143,7 @@ fn write_waypoint(storage: &Storage, buffer: &mut String, key: &'static str) {
 }
 
 fn compare_genesis(
-    storage: &Storage,
+    storage: Storage,
     buffer: &mut String,
     genesis_path: &PathBuf,
 ) -> Result<(), Error> {
@@ -166,19 +167,28 @@ fn compare_genesis(
     );
 
     let actual_validator_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
-    let expected_validator_key = validator_config.validator_network_identity_public_key;
+    let actual_fullnode_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
+    let encryptor = storage.encryptor();
+
+    let addr = encryptor.decrypt(
+        validator_config.validator_network_address.as_ref(),
+        validator_account,
+    );
+    let expected_validator_key = addr.ok().and_then(|addr| addr.find_noise_proto());
     write_assert(
         buffer,
         VALIDATOR_NETWORK_KEY,
-        actual_validator_key == expected_validator_key,
+        Some(actual_validator_key) == expected_validator_key,
     );
 
-    let actual_fullnode_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
-    let expected_fullnode_key = validator_config.full_node_network_identity_public_key;
+    let expected_fullnode_key = (&validator_config.full_node_network_address)
+        .try_into()
+        .ok()
+        .and_then(|addr: NetworkAddress| addr.find_noise_proto());
     write_assert(
         buffer,
         FULLNODE_NETWORK_KEY,
-        actual_fullnode_key == expected_fullnode_key,
+        Some(actual_fullnode_key) == expected_fullnode_key,
     );
 
     Ok(())

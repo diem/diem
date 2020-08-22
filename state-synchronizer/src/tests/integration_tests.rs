@@ -154,7 +154,12 @@ impl SynchronizerEnv {
             .iter()
             .map(|public_keys| {
                 let peer_id = *public_keys.account_address();
-                let pubkey = public_keys.network_identity_public_key();
+                let peer_idx = self
+                    .peer_ids
+                    .iter()
+                    .position(|pid| pid == &peer_id)
+                    .unwrap();
+                let pubkey = self.network_keys[peer_idx].public_key();
                 let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
                 (peer_id, pubkey_set)
             })

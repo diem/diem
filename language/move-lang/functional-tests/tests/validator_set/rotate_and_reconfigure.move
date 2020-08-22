@@ -52,7 +52,7 @@ script {
         // alice rotates bob's public key
         ValidatorConfig::set_config(account, {{bob}},
                                     x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
-                                    x"", x"", x"", x"");
+                                    x"", x"");
         LibraSystem::update_config_and_reconfigure(account, {{bob}});
         // check bob's public key
         let validator_config = LibraSystem::get_validator_config({{bob}});

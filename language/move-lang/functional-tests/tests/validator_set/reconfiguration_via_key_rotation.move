@@ -46,9 +46,7 @@ script{
     use 0x1::ValidatorConfig;
     // rotate alice's pubkey
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{alice}},
-                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
-                                    x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{alice}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
     }
 }
 
@@ -71,9 +69,7 @@ script{
     fun main(account: &signer) {
         assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) !=
                x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 98);
-        ValidatorConfig::set_config(account, {{vivian}},
-                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
-                                    x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
         LibraSystem::update_config_and_reconfigure(account, {{vivian}});
         // check that the validator set contains Vivian's new key after reconfiguration
         assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) ==
@@ -97,9 +93,7 @@ script{
     use 0x1::ValidatorConfig;
     // rotate vivian's pubkey to the same value does not trigger the reconfiguration.
     fun main(account: &signer) {
-        ValidatorConfig::set_config(account, {{vivian}},
-                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
-                                    x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{vivian}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"");
         LibraSystem::update_config_and_reconfigure(account, {{vivian}});
     }
 }

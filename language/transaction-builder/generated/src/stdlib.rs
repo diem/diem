@@ -224,9 +224,7 @@ pub enum ScriptCall {
     RegisterValidatorConfig {
         validator_account: AccountAddress,
         consensus_pubkey: Bytes,
-        validator_network_identity_pubkey: Bytes,
         validator_network_address: Bytes,
-        fullnodes_network_identity_pubkey: Bytes,
         fullnodes_network_address: Bytes,
     },
 
@@ -288,9 +286,7 @@ pub enum ScriptCall {
     SetValidatorConfigAndReconfigure {
         validator_account: AccountAddress,
         consensus_pubkey: Bytes,
-        validator_network_identity_pubkey: Bytes,
         validator_network_address: Bytes,
-        fullnodes_network_identity_pubkey: Bytes,
         fullnodes_network_address: Bytes,
     },
 
@@ -481,16 +477,12 @@ impl ScriptCall {
             RegisterValidatorConfig {
                 validator_account,
                 consensus_pubkey,
-                validator_network_identity_pubkey,
                 validator_network_address,
-                fullnodes_network_identity_pubkey,
                 fullnodes_network_address,
             } => encode_register_validator_config_script(
                 validator_account,
                 consensus_pubkey,
-                validator_network_identity_pubkey,
                 validator_network_address,
-                fullnodes_network_identity_pubkey,
                 fullnodes_network_address,
             ),
             RemoveValidatorAndReconfigure {
@@ -529,16 +521,12 @@ impl ScriptCall {
             SetValidatorConfigAndReconfigure {
                 validator_account,
                 consensus_pubkey,
-                validator_network_identity_pubkey,
                 validator_network_address,
-                fullnodes_network_identity_pubkey,
                 fullnodes_network_address,
             } => encode_set_validator_config_and_reconfigure_script(
                 validator_account,
                 consensus_pubkey,
-                validator_network_identity_pubkey,
                 validator_network_address,
-                fullnodes_network_identity_pubkey,
                 fullnodes_network_address,
             ),
             SetValidatorOperator {
@@ -942,9 +930,7 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
 pub fn encode_register_validator_config_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
-    validator_network_identity_pubkey: Vec<u8>,
     validator_network_address: Vec<u8>,
-    fullnodes_network_identity_pubkey: Vec<u8>,
     fullnodes_network_address: Vec<u8>,
 ) -> Script {
     Script::new(
@@ -953,9 +939,7 @@ pub fn encode_register_validator_config_script(
         vec![
             TransactionArgument::Address(validator_account),
             TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_identity_pubkey),
             TransactionArgument::U8Vector(validator_network_address),
-            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
             TransactionArgument::U8Vector(fullnodes_network_address),
         ],
     )
@@ -1084,9 +1068,7 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
 pub fn encode_set_validator_config_and_reconfigure_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
-    validator_network_identity_pubkey: Vec<u8>,
     validator_network_address: Vec<u8>,
-    fullnodes_network_identity_pubkey: Vec<u8>,
     fullnodes_network_address: Vec<u8>,
 ) -> Script {
     Script::new(
@@ -1095,9 +1077,7 @@ pub fn encode_set_validator_config_and_reconfigure_script(
         vec![
             TransactionArgument::Address(validator_account),
             TransactionArgument::U8Vector(consensus_pubkey),
-            TransactionArgument::U8Vector(validator_network_identity_pubkey),
             TransactionArgument::U8Vector(validator_network_address),
-            TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
             TransactionArgument::U8Vector(fullnodes_network_address),
         ],
     )
@@ -1384,10 +1364,8 @@ fn decode_register_validator_config_script(script: &Script) -> Option<ScriptCall
     Some(ScriptCall::RegisterValidatorConfig {
         validator_account: decode_address_argument(script.args().get(0)?.clone())?,
         consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        validator_network_identity_pubkey: decode_u8vector_argument(script.args().get(2)?.clone())?,
-        validator_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
-        fullnodes_network_identity_pubkey: decode_u8vector_argument(script.args().get(4)?.clone())?,
-        fullnodes_network_address: decode_u8vector_argument(script.args().get(5)?.clone())?,
+        validator_network_address: decode_u8vector_argument(script.args().get(2)?.clone())?,
+        fullnodes_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
     })
 }
 
@@ -1446,10 +1424,8 @@ fn decode_set_validator_config_and_reconfigure_script(script: &Script) -> Option
     Some(ScriptCall::SetValidatorConfigAndReconfigure {
         validator_account: decode_address_argument(script.args().get(0)?.clone())?,
         consensus_pubkey: decode_u8vector_argument(script.args().get(1)?.clone())?,
-        validator_network_identity_pubkey: decode_u8vector_argument(script.args().get(2)?.clone())?,
-        validator_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
-        fullnodes_network_identity_pubkey: decode_u8vector_argument(script.args().get(4)?.clone())?,
-        fullnodes_network_address: decode_u8vector_argument(script.args().get(5)?.clone())?,
+        validator_network_address: decode_u8vector_argument(script.args().get(2)?.clone())?,
+        fullnodes_network_address: decode_u8vector_argument(script.args().get(3)?.clone())?,
     })
 }
 
@@ -1882,11 +1858,10 @@ const PUBLISH_SHARED_ED25519_PUBLIC_KEY_CODE: &[u8] = &[
 ];
 
 const REGISTER_VALIDATOR_CONFIG_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 15, 7, 22, 27, 8, 49, 16, 0, 0, 0, 1,
-    0, 1, 0, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 10, 2, 0, 15, 86, 97, 108, 105, 100, 97, 116,
-    111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 9, 11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11,
-    5, 11, 6, 17, 0, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 11, 7, 18, 27, 8, 45, 16, 0, 0, 0, 1,
+    0, 1, 0, 5, 6, 12, 5, 10, 2, 10, 2, 10, 2, 0, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67,
+    111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 7, 11, 0, 10, 1, 11, 2, 11, 3, 11, 4, 17, 0, 2,
 ];
 
 const REMOVE_VALIDATOR_AND_RECONFIGURE_CODE: &[u8] = &[
@@ -1977,13 +1952,13 @@ const ROTATE_SHARED_ED25519_PUBLIC_KEY_CODE: &[u8] = &[
 ];
 
 const SET_VALIDATOR_CONFIG_AND_RECONFIGURE_CODE: &[u8] = &[
-    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 19, 7, 33, 69, 8, 102, 16, 0, 0, 0,
-    1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 7, 6, 12, 5, 10, 2, 10, 2, 10, 2, 10, 2, 10, 2, 0, 2, 6, 12,
-    5, 11, 76, 105, 98, 114, 97, 83, 121, 115, 116, 101, 109, 15, 86, 97, 108, 105, 100, 97, 116,
-    111, 114, 67, 111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 29,
-    117, 112, 100, 97, 116, 101, 95, 99, 111, 110, 102, 105, 103, 95, 97, 110, 100, 95, 114, 101,
-    99, 111, 110, 102, 105, 103, 117, 114, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-    0, 1, 12, 10, 0, 10, 1, 11, 2, 11, 3, 11, 4, 11, 5, 11, 6, 17, 0, 11, 0, 10, 1, 17, 1, 2,
+    161, 28, 235, 11, 1, 0, 0, 0, 5, 1, 0, 4, 3, 4, 10, 5, 14, 15, 7, 29, 69, 8, 98, 16, 0, 0, 0,
+    1, 1, 2, 0, 1, 0, 0, 3, 2, 1, 0, 5, 6, 12, 5, 10, 2, 10, 2, 10, 2, 0, 2, 6, 12, 5, 11, 76, 105,
+    98, 114, 97, 83, 121, 115, 116, 101, 109, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67,
+    111, 110, 102, 105, 103, 10, 115, 101, 116, 95, 99, 111, 110, 102, 105, 103, 29, 117, 112, 100,
+    97, 116, 101, 95, 99, 111, 110, 102, 105, 103, 95, 97, 110, 100, 95, 114, 101, 99, 111, 110,
+    102, 105, 103, 117, 114, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 10, 10,
+    0, 10, 1, 11, 2, 11, 3, 11, 4, 17, 0, 11, 0, 10, 1, 17, 1, 2,
 ];
 
 const SET_VALIDATOR_OPERATOR_CODE: &[u8] = &[

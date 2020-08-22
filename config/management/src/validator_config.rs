@@ -9,7 +9,6 @@ use crate::{
 };
 use core::str::FromStr;
 use libra_config::config::HANDSHAKE_VERSION;
-use libra_crypto::ValidCryptoMaterial;
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
@@ -96,9 +95,7 @@ impl ValidatorConfig {
         let validator_config_script = transaction_callback(
             owner_account,
             consensus_key.to_bytes().to_vec(),
-            validator_network_key.to_bytes(),
             raw_enc_validator_address,
-            fullnode_network_key.to_bytes(),
             raw_fullnode_address.into(),
         );
 

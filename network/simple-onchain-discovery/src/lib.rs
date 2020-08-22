@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Context};
+use anyhow::anyhow;
 use channel::libra_channel::{self, Receiver};
 use futures::{sink::SinkExt, StreamExt};
 use libra_config::config::RoleType;
@@ -64,21 +64,7 @@ fn extract_updates(
     encryptor: &Encryptor,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
-    // TODO(philiphayes): remove this after removing explicit pubkey field
-    let explicit_pubkeys: HashMap<_, _> = node_set
-        .payload()
-        .iter()
-        .map(|info| {
-            let peer_id = *info.account_address();
-            let pubkey = match role {
-                RoleType::Validator => info.config().validator_network_identity_public_key,
-                RoleType::FullNode => info.config().full_node_network_identity_public_key,
-            };
-            (peer_id, pubkey)
-        })
-        .collect();
-
-    // Collect the set of address updates.
+    // Decode addresses
     let new_peer_addrs: HashMap<_, _> = node_set
         .into_iter()
         .map(|info| {
@@ -89,18 +75,11 @@ fn extract_updates(
                 RoleType::Validator => encryptor
                     .decrypt(config.validator_network_address.as_ref(), peer_id)
                     .map_err(|e| e.into()),
-                RoleType::FullNode => {
-                    let raw_addr = &config.full_node_network_address;
-                    NetworkAddress::try_from(raw_addr)
-                        .map_err(anyhow::Error::new)
-                        .with_context(|| {
-                            format_err!("error deserializing network address: {:?}", raw_addr)
-                        })
-                }
+                RoleType::FullNode => NetworkAddress::try_from(&config.full_node_network_address)
+                    .map_err(|_| anyhow!("error deserializing network address for {}", peer_id)),
             };
 
-            // ignore network addresses that fail to decrypt or deserialize; just
-            // log the error.
+            // ignore bad network addresses and log the error
             let addrs = match addr_res {
                 Ok(addr) => vec![addr],
                 Err(err) => {
@@ -116,15 +95,13 @@ fn extract_updates(
         })
         .collect();
 
+    // Retrieve public keys from addresses
     let new_peer_pubkeys: HashMap<_, _> = new_peer_addrs
         .iter()
         .map(|(peer_id, addrs)| {
-            // parse out pubkeys from addresses
             let pubkeys: HashSet<x25519::PublicKey> = addrs
                 .iter()
                 .filter_map(NetworkAddress::find_noise_proto)
-                // TODO(philiphayes): remove this line after removing explicit pubkey field
-                .chain(explicit_pubkeys.get(peer_id).copied())
                 .collect();
             (*peer_id, pubkeys)
         })

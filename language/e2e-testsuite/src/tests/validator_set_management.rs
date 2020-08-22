@@ -41,9 +41,7 @@ fn validator_add() {
                 ]
                 .to_vec(),
                 vec![254; 32],
-                vec![],
                 vec![253; 32],
-                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -118,9 +116,7 @@ fn validator_rotate_key_and_reconfigure() {
                 ]
                 .to_vec(),
                 vec![254; 32],
-                vec![],
                 vec![253; 32],
-                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -176,9 +172,7 @@ fn validator_rotate_key_and_reconfigure() {
                 ]
                 .to_vec(),
                 vec![254; 32],
-                vec![],
                 vec![253; 32],
-                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -309,9 +303,7 @@ fn validator_set_operator_set_key_reconfigure() {
                 ]
                 .to_vec(),
                 vec![254; 32],
-                vec![],
                 vec![253; 32],
-                vec![],
             ))
             .sequence_number(0)
             .sign(),
@@ -357,9 +349,7 @@ fn validator_set_operator_set_key_reconfigure() {
                 ]
                 .to_vec(),
                 vec![254; 32],
-                vec![],
                 vec![253; 32],
-                vec![],
             ))
             .sequence_number(1)
             .sign(),
