@@ -775,6 +775,10 @@ impl DbReader for LibraDB {
         };
         Ok(ts)
     }
+
+    fn get_latest_transaction_info_option(&self) -> Result<Option<(Version, TransactionInfo)>> {
+        self.ledger_store.get_latest_transaction_info_option()
+    }
 }
 
 impl DbWriter for LibraDB {

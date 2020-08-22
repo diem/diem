@@ -191,12 +191,6 @@ impl TransactionRestoreController {
                     chunk.txn_infos,
                 )?;
             }
-
-            // Last chunk
-            if chunk.manifest.last_version == manifest.last_version {
-                self.restore_handler
-                    .save_ledger_info_if_newer(chunk.ledger_info)?;
-            }
         }
 
         if self.target_version < manifest.last_version {
