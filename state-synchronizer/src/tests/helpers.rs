@@ -65,8 +65,11 @@ impl SynchronizerEnvHelper {
             );
             let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
-            let validator_config =
-                ValidatorConfig::new(signer.public_key(), raw_enc_addr, raw_addr);
+            let validator_config = ValidatorConfig::new(
+                signer.public_key(),
+                lcs::to_bytes(&vec![raw_enc_addr]).unwrap(),
+                lcs::to_bytes(&vec![raw_addr]).unwrap(),
+            );
             let validator_info =
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);
             validators_keys.push(validator_info);

@@ -26,7 +26,6 @@ use crate::{
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::prelude::*;
-use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{
@@ -248,16 +247,14 @@ where
         // Retrieve existing network information as registered on-chain
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
         let validator_config = self.libra.retrieve_validator_config(owner_account)?;
-        let network_address = validator_config.validator_network_address;
-        let fullnode_network_address = validator_config.full_node_network_address;
 
         let txn = build_rotation_transaction(
             owner_account,
             operator_account,
             seq_id,
             &consensus_key,
-            &network_address,
-            &fullnode_network_address,
+            validator_config.validator_network_addresses,
+            validator_config.full_node_network_addresses,
             expiration,
             self.chain_id,
         );
@@ -378,8 +375,8 @@ pub fn build_rotation_transaction(
     operator_address: AccountAddress,
     seq_id: u64,
     consensus_key: &Ed25519PublicKey,
-    network_address: &RawEncNetworkAddress,
-    fullnode_network_address: &RawNetworkAddress,
+    network_addresses: Vec<u8>,
+    fullnode_network_addresses: Vec<u8>,
     expiration_timestamp_secs: u64,
     chain_id: ChainId,
 ) -> RawTransaction {
@@ -387,8 +384,8 @@ pub fn build_rotation_transaction(
         transaction_builder_generated::stdlib::encode_set_validator_config_and_reconfigure_script(
             owner_address,
             consensus_key.to_bytes().to_vec(),
-            network_address.as_ref().to_vec(),
-            fullnode_network_address.as_ref().to_vec(),
+            network_addresses,
+            fullnode_network_addresses,
         );
     RawTransaction::new_script(
         operator_address,

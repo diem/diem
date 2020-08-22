@@ -73,8 +73,8 @@ impl ValidatorInfo {
         let full_node_network_address = RawNetworkAddress::try_from(&addr).unwrap();
         let config = ValidatorConfig::new(
             consensus_public_key,
-            validator_network_address,
-            full_node_network_address,
+            lcs::to_bytes(&vec![validator_network_address]).unwrap(),
+            lcs::to_bytes(&vec![full_node_network_address]).unwrap(),
         );
 
         Self {

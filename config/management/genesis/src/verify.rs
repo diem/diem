@@ -10,7 +10,7 @@ use libra_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     storage::StorageWrapper as Storage,
 };
-use libra_network_address::NetworkAddress;
+use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
@@ -170,21 +170,32 @@ fn compare_genesis(
     let actual_fullnode_key = storage.x25519_public_from_private(FULLNODE_NETWORK_KEY)?;
     let encryptor = storage.encryptor();
 
-    let addr = encryptor.decrypt(
-        validator_config.validator_network_address.as_ref(),
-        validator_account,
-    );
-    let expected_validator_key = addr.ok().and_then(|addr| addr.find_noise_proto());
+    let expected_validator_key = encryptor
+        .decrypt(
+            &validator_config.validator_network_addresses,
+            validator_account,
+        )
+        .ok()
+        .and_then(|addrs| {
+            addrs
+                .get(0)
+                .and_then(|addr: &NetworkAddress| addr.find_noise_proto())
+        });
     write_assert(
         buffer,
         VALIDATOR_NETWORK_KEY,
         Some(actual_validator_key) == expected_validator_key,
     );
 
-    let expected_fullnode_key = (&validator_config.full_node_network_address)
-        .try_into()
+    let expected_fullnode_key = lcs::from_bytes(&validator_config.full_node_network_addresses)
         .ok()
-        .and_then(|addr: NetworkAddress| addr.find_noise_proto());
+        .and_then(|addrs: Vec<RawNetworkAddress>| {
+            addrs.get(0).and_then(|addr| {
+                addr.try_into()
+                    .ok()
+                    .and_then(|addr: NetworkAddress| addr.find_noise_proto())
+            })
+        });
     write_assert(
         buffer,
         FULLNODE_NETWORK_KEY,

@@ -65,9 +65,9 @@ impl ValidatorConfig {
         let validator_address =
             validator_address.append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
         let encryptor = config.validator_backend().encryptor();
-        let raw_enc_validator_address = encryptor
+        let validator_addresses = encryptor
             .encrypt(
-                &validator_address,
+                &[validator_address],
                 owner_account,
                 sequence_number + if reconfigure { 1 } else { 0 },
             )
@@ -95,8 +95,8 @@ impl ValidatorConfig {
         let validator_config_script = transaction_callback(
             owner_account,
             consensus_key.to_bytes().to_vec(),
-            raw_enc_validator_address,
-            raw_fullnode_address.into(),
+            validator_addresses,
+            lcs::to_bytes(&vec![raw_fullnode_address]).unwrap(),
         );
 
         // Create and sign the validator-config transaction

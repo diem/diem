@@ -174,7 +174,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .storage_helper
             .verify_genesis(&local_ns, genesis_path.path())
             .unwrap();
-        assert_eq!(output.split("match").count(), 5);
+        assert_eq!(output.split("match").count(), 5, "Failed to verify genesis");
 
         config.consensus.safety_rules.service = SafetyRulesService::Thread;
         config.consensus.safety_rules.backend = self.secure_backend(&local_ns, "safety-rules");

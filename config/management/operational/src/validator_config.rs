@@ -56,28 +56,23 @@ impl SetValidatorConfig {
         let sequence_number = client.sequence_number(operator_account)?;
 
         // Retrieve the current validator / fullnode addresses and update accordingly
-        let validator_config = client.validator_config(owner_account)?;
+        let vc = client.validator_config(owner_account)?;
+        let validator_config =
+            DecryptedValidatorConfig::from_validator_config(&vc, owner_account, &encryptor)
+                .map_err(|e| {
+                    Error::UnexpectedError(format!("Error parsing validator config: {}", e))
+                })?;
+
         let validator_address = if let Some(validator_address) = self.validator_address {
             validator_address
         } else {
-            let validator_address = encryptor
-                .decrypt(
-                    validator_config.validator_network_address.as_ref(),
-                    owner_account,
-                )
-                .map_err(|e| {
-                    Error::UnexpectedError(format!("Failed to decode network address {}", e))
-                })?;
-            strip_address(&validator_address)
+            strip_address(&validator_config.validator_network_address)
         };
 
         let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
             fullnode_address
         } else {
-            let fullnode_address =
-                NetworkAddress::try_from(&validator_config.full_node_network_address)
-                    .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
-            strip_address(&fullnode_address)
+            strip_address(&validator_config.full_node_network_address)
         };
 
         let txn = self.validator_config.build_transaction(
@@ -266,17 +261,18 @@ impl DecryptedValidatorConfig {
         account_address: AccountAddress,
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {
-        let full_node_network_address = NetworkAddress::try_from(&config.full_node_network_address)
+        let full_node_network_addresses = config
+            .full_node_network_addresses(None)
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
-        let validator_network_address = encryptor
-            .decrypt(config.validator_network_address.as_ref(), account_address)
+        let validator_network_addresses = encryptor
+            .decrypt(&config.validator_network_addresses, account_address)
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
         Ok(DecryptedValidatorConfig {
             consensus_public_key: config.consensus_public_key.clone(),
-            full_node_network_address,
-            validator_network_address,
+            full_node_network_address: full_node_network_addresses[0].clone(),
+            validator_network_address: validator_network_addresses[0].clone(),
         })
     }
 }

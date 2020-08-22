@@ -605,8 +605,8 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             let script = transaction_builder::encode_register_validator_config_script(
                 owner_account,
                 consensus_key.to_bytes().to_vec(),
-                raw_enc_addr.into(),
-                raw_addr.into(),
+                lcs::to_bytes(&vec![raw_enc_addr]).unwrap(),
+                lcs::to_bytes(&vec![raw_addr]).unwrap(),
             );
             (operator_key, script)
         })

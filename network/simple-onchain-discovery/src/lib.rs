@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::anyhow;
 use channel::libra_channel::{self, Receiver};
 use futures::{sink::SinkExt, StreamExt};
 use libra_config::config::RoleType;
@@ -15,7 +14,6 @@ use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     time::Instant,
 };
 use subscription_service::ReconfigSubscription;
@@ -64,28 +62,36 @@ fn extract_updates(
     encryptor: &Encryptor,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
-    // Decode addresses
+    // Decode addresses while ignoring bad addresses
     let new_peer_addrs: HashMap<_, _> = node_set
         .into_iter()
         .map(|info| {
             let peer_id = *info.account_address();
             let config = info.into_config();
 
-            let addr_res = match role {
+            let addrs_res = match role {
                 RoleType::Validator => encryptor
-                    .decrypt(config.validator_network_address.as_ref(), peer_id)
-                    .map_err(|e| e.into()),
-                RoleType::FullNode => NetworkAddress::try_from(&config.full_node_network_address)
-                    .map_err(|_| anyhow!("error deserializing network address for {}", peer_id)),
+                    .decrypt(&config.validator_network_addresses, peer_id)
+                    .map_err(anyhow::Error::from),
+                RoleType::FullNode => {
+                    let cb = |err| {
+                        warn!(
+                            "Failed to parse network address: peer: {}, err: {}",
+                            peer_id, err
+                        )
+                    };
+                    config
+                        .full_node_network_addresses(Some(Box::new(cb)))
+                        .map_err(anyhow::Error::from)
+                }
             };
 
-            // ignore bad network addresses and log the error
-            let addrs = match addr_res {
-                Ok(addr) => vec![addr],
+            let addrs = match addrs_res {
+                Ok(addrs) => addrs,
                 Err(err) => {
                     warn!(
-                        "Failed to get network address: role: {}, peer: {}, err: {:?}",
-                        role, peer_id, err
+                        "Failed to parse any network address: peer: {}, err: {}",
+                        peer_id, err
                     );
                     Vec::new()
                 }

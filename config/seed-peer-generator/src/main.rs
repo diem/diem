@@ -11,7 +11,7 @@ use libra_types::{
     account_config::libra_root_address, on_chain_config::ValidatorSet,
     validator_info::ValidatorInfo, PeerId,
 };
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 
 // TODO: Use the definition from network?
@@ -70,7 +70,14 @@ fn to_seed_peer(
     validator_info: &ValidatorInfo,
 ) -> Result<(PeerId, Vec<NetworkAddress>), lcs::Error> {
     let peer_id = *validator_info.account_address();
-    let network_addr =
-        NetworkAddress::try_from(&validator_info.config().full_node_network_address)?;
-    Ok((peer_id, vec![network_addr]))
+    let cb = |err| {
+        println!(
+            "Failed to parse fullnode network address: peer: {}, err: {}",
+            peer_id, err
+        )
+    };
+    let addrs = validator_info
+        .config()
+        .full_node_network_addresses(Some(Box::new(cb)))?;
+    Ok((peer_id, addrs))
 }

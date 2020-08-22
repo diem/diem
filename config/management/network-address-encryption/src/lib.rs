@@ -71,7 +71,7 @@ impl Encryptor {
 
     pub fn encrypt(
         &self,
-        network_address: &NetworkAddress,
+        network_addresses: &[NetworkAddress],
         account: AccountAddress,
         seq_num: u64,
     ) -> Result<Vec<u8>, Error> {
@@ -80,30 +80,45 @@ impl Encryptor {
             .keys
             .get(&keys.current)
             .ok_or_else(|| Error::VersionNotFound(keys.current))?;
-        let raw_addr = std::convert::TryFrom::<&NetworkAddress>::try_from(network_address)?;
-        // TODO(davidiw) soon we'll take in a set, for now we assume there's only one addr
-        let encrypted_key =
-            EncNetworkAddress::encrypt(raw_addr, &key.0, keys.current, &account, seq_num, 0);
-        lcs::to_bytes(&encrypted_key).map_err(|e| e.into())
+        let mut enc_addrs = Vec::new();
+        for (idx, addr) in network_addresses.iter().enumerate() {
+            let raw_addr = std::convert::TryFrom::<&NetworkAddress>::try_from(addr)?;
+            let idxu32 = idx as u32;
+            let enc_addr = EncNetworkAddress::encrypt(
+                raw_addr,
+                &key.0,
+                keys.current,
+                &account,
+                seq_num,
+                idxu32,
+            );
+            enc_addrs.push(enc_addr);
+        }
+        lcs::to_bytes(&enc_addrs).map_err(|e| e.into())
     }
 
     pub fn decrypt(
         &self,
-        encrypted_network_address: &[u8],
+        encrypted_network_addresses: &[u8],
         account: AccountAddress,
-    ) -> Result<NetworkAddress, Error> {
+    ) -> Result<Vec<NetworkAddress>, Error> {
         let keys = self.read()?;
-        let enc_addr: EncNetworkAddress = lcs::from_bytes(&encrypted_network_address)
+        let enc_addrs: Vec<EncNetworkAddress> = lcs::from_bytes(&encrypted_network_addresses)
             .map_err(|e| Error::AddressDeserialization(account, e.to_string()))?;
-        let key = keys
-            .keys
-            .get(&keys.current)
-            .ok_or_else(|| Error::VersionNotFound(enc_addr.key_version()))?;
-        // TODO(davidiw) soon we'll take in a set, for now we assume there's only one addr
-        let raw_addr = enc_addr
-            .decrypt(&key.0, &account, 0)
-            .map_err(|e| Error::DecryptionError(account, e.to_string()))?;
-        std::convert::TryFrom::<_>::try_from(&raw_addr).map_err(|e: lcs::Error| e.into())
+        let mut addrs = Vec::new();
+        for (idx, enc_addr) in enc_addrs.iter().enumerate() {
+            let key = keys
+                .keys
+                .get(&enc_addr.key_version())
+                .ok_or_else(|| Error::VersionNotFound(enc_addr.key_version()))?;
+            let raw_addr = enc_addr
+                .clone()
+                .decrypt(&key.0, &account, idx as u32)
+                .map_err(|e| Error::DecryptionError(account, e.to_string()))?;
+            let addr = std::convert::TryFrom::<_>::try_from(&raw_addr)?;
+            addrs.push(addr);
+        }
+        Ok(addrs)
     }
 
     pub fn initialize(&mut self) -> Result<(), Error> {
@@ -203,14 +218,15 @@ mod tests {
         encryptor.set_current_version(5).unwrap_err();
 
         let addr = std::str::FromStr::from_str("/ip4/10.0.0.16/tcp/80").unwrap();
+        let addrs = vec![addr];
         let account = AccountAddress::random();
 
-        let enc_addr = encryptor.encrypt(&addr, account, 5).unwrap();
-        let dec_addr = encryptor.decrypt(&enc_addr, account).unwrap();
-        assert_eq!(addr, dec_addr);
+        let enc_addrs = encryptor.encrypt(&addrs, account, 5).unwrap();
+        let dec_addrs = encryptor.decrypt(&enc_addrs, account).unwrap();
+        assert_eq!(addrs, dec_addrs);
 
         let another_account = AccountAddress::random();
-        encryptor.decrypt(&enc_addr, another_account).unwrap_err();
+        encryptor.decrypt(&enc_addrs, another_account).unwrap_err();
     }
 
     // The only purpose of this test is to generate a baseline for vault
