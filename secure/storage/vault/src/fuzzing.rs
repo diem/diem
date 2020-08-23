@@ -74,7 +74,7 @@ prop_compose! {
     )(
         status in any::<u16>(),
         status_text in any::<String>(),
-        data in prop::collection::btree_map(any::<String>(), any::<String>(), 0..MAX_COLLECTION_SIZE),
+        data in prop::collection::btree_map(any::<String>(), arb_json_value(), 0..MAX_COLLECTION_SIZE),
         created_time in any::<String>(),
         version in any::<u32>(),
         secret in any::<String>(),

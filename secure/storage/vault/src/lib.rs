@@ -10,7 +10,7 @@ use libra_crypto::{
     PrivateKey,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -210,7 +210,7 @@ impl Client {
     }
 
     /// Read a key/value pair from a given secret store.
-    pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
+    pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<Value>, Error> {
         let request = self
             .agent
             .get(&format!("{}/v1/secret/data/{}", self.host, secret));
@@ -325,7 +325,7 @@ impl Client {
     }
 
     /// Create or update a key/value pair in a given secret store.
-    pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
+    pub fn write_secret(&self, secret: &str, key: &str, value: &Value) -> Result<(), Error> {
         let request = self
             .agent
             .put(&format!("{}/v1/secret/data/{}", self.host, secret));
@@ -419,7 +419,7 @@ pub fn process_secret_read_response(
     secret: &str,
     key: &str,
     resp: Response,
-) -> Result<ReadResponse<String>, Error> {
+) -> Result<ReadResponse<Value>, Error> {
     match resp.status() {
         200 => {
             let mut resp: ReadSecretResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -899,7 +899,7 @@ struct ReadSecretResponse {
 /// See ReadPolicyResponse
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 struct ReadSecretData {
-    data: BTreeMap<String, String>,
+    data: BTreeMap<String, Value>,
     metadata: ReadSecretMetadata,
 }
 
