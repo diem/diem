@@ -4,7 +4,7 @@
 use crate::{
     annotations::Annotations,
     borrow_analysis, lifetime_analysis, livevar_analysis, packref_analysis, reaching_def_analysis,
-    stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
+    stackless_bytecode::{AttrId, Bytecode, Operation, SpecBlockId},
     writeback_analysis,
 };
 use itertools::Itertools;
@@ -28,6 +28,12 @@ pub struct FunctionTarget<'env> {
 
     // Used for debugging and testing, containing any attached annotation formatters.
     annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
+}
+
+impl<'env> FunctionTarget<'env> {
+    pub fn get_global_env(&'env self) -> &'env GlobalEnv {
+        self.func_env.module_env.env
+    }
 }
 
 impl<'env> Clone for FunctionTarget<'env> {
@@ -334,6 +340,23 @@ impl FunctionTargetData {
         self.next_free_spec_block_id += 1;
         self.generated_spec_blocks_on_impl.insert(id, spec);
         id
+    }
+
+    /// Return the set of callees invoked by this function, including native functions
+    pub fn get_callees(&self) -> Vec<QualifiedId<FunId>> {
+        use Bytecode::*;
+        use Operation::*;
+
+        let mut callees = vec![];
+        for instr in &self.code {
+            if let Call(_, _, Function(mid, fid, _), _) = instr {
+                let callee = mid.qualified(*fid);
+                if !callees.contains(&callee) {
+                    callees.push(callee)
+                }
+            }
+        }
+        callees
     }
 }
 

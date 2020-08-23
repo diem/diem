@@ -41,7 +41,7 @@ use spec_lang::{
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-    stackless_bytecode::SpecBlockId, usage_analysis::TransitiveUsage,
+    stackless_bytecode::SpecBlockId, usage_analysis,
 };
 use std::collections::BTreeSet;
 
@@ -955,21 +955,13 @@ impl<'env> SpecTranslator<'env> {
     pub fn assume_invariants_for_verify(&self) {
         let env = self.global_env();
         let func_target = self.function_target();
-        let usage = TransitiveUsage::default();
-        let used_mem = usage.get_used_memory(
-            self.global_env(),
-            self.targets,
-            func_target
-                .module_env()
-                .get_id()
-                .qualified(func_target.get_id()),
-        );
+        let used_mem = usage_analysis::get_used_memory(&func_target);
         let mut invariants: BTreeSet<GlobalId> = BTreeSet::new();
         for mem in used_mem {
             // Emit type well-formedness invariant.
             let struct_env = env.get_module(mem.module_id).into_struct(mem.id);
             emit!(self.writer, "assume ");
-            let memory_name = boogie_resource_memory_name(func_target.global_env(), mem);
+            let memory_name = boogie_resource_memory_name(func_target.global_env(), *mem);
             emit!(self.writer, "(forall $inv_addr: int");
             let mut type_args = vec![];
             for i in 0..struct_env.get_type_parameters().len() {
@@ -1031,19 +1023,11 @@ impl<'env> SpecTranslator<'env> {
     /// Translate modify targets to constrain havocs at opaque calls
     pub fn translate_modify_targets(&self) {
         let func_target = self.function_target();
-        let usage = TransitiveUsage::default();
-        let modified_types = usage.get_modified_memory(
-            self.global_env(),
-            self.targets,
-            func_target
-                .module_env()
-                .get_id()
-                .qualified(func_target.get_id()),
-        );
+        let modified_types = usage_analysis::get_modified_memory(func_target);
         for type_name in modified_types {
-            let memory_name = self.get_memory_name(type_name);
+            let memory_name = self.get_memory_name(*type_name);
             emitln!(self.writer, "modifies {};", memory_name);
-            let type_name_targets = func_target.get_modify_targets_for_type(&type_name);
+            let type_name_targets = func_target.get_modify_targets_for_type(type_name);
             if let Some(type_name_targets) = type_name_targets {
                 let generate_ensures = |bpl_map| {
                     emit!(self.writer, "ensures {} == old({})", bpl_map, bpl_map);

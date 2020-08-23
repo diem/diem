@@ -18,7 +18,9 @@ use itertools::Itertools;
 use num::{BigUint, Num, ToPrimitive};
 
 use bytecode_source_map::source_map::SourceMap;
-use move_core_types::{account_address::AccountAddress, language_storage, value::MoveValue};
+use move_core_types::{
+    account_address::AccountAddress, identifier::Identifier, language_storage, value::MoveValue,
+};
 use serde::{Deserialize, Serialize};
 use vm::{
     access::ModuleAccess,
@@ -946,6 +948,11 @@ impl GlobalEnv {
         inner.start() >= outer.start() && inner.end() <= outer.end()
     }
 
+    /// Return the `FunctionEnv` for `fun`
+    pub fn get_function(&self, fun: QualifiedId<FunId>) -> FunctionEnv<'_> {
+        self.get_module(fun.module_id).into_function(fun.id)
+    }
+
     // Gets the number of modules in this environment.
     pub fn get_module_count(&self) -> usize {
         self.module_data.len()
@@ -1145,6 +1152,11 @@ impl<'env> ModuleEnv<'env> {
         &self.data.name
     }
 
+    /// Returns the VM identifier for this module
+    pub fn get_identifier(&'env self) -> Identifier {
+        self.data.module.name().to_owned()
+    }
+
     /// Returns true if this is a module representing a script.
     pub fn is_script_module(&self) -> bool {
         self.symbol_pool().string(self.data.name.name()).as_str() == SCRIPT_MODULE_NAME
@@ -1160,6 +1172,16 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_source_path(&self) -> &OsStr {
         let file_id = self.data.loc.file_id;
         self.env.source_files.name(file_id)
+    }
+
+    /// Return the set of ModuleId's that this module depends on (including itself)
+    pub fn get_dependencies(&self) -> Vec<language_storage::ModuleId> {
+        let compiled_module = &self.data.module;
+        compiled_module
+            .module_handles()
+            .iter()
+            .map(|h| compiled_module.module_id_for_handle(h))
+            .collect()
     }
 
     /// Returns documentation associated with this module.
@@ -1441,6 +1463,11 @@ impl<'env> ModuleEnv<'env> {
         VMConstant::deserialize_constant(constant).unwrap()
     }
 
+    /// Return the `AccountAdress` of this module
+    pub fn self_address(&self) -> &AccountAddress {
+        self.data.module.address()
+    }
+
     /// Retrieve an address identifier from the pool
     pub fn get_address_identifier(&self, idx: AddressIdentifierIndex) -> BigUint {
         let addr = &self.data.module.address_identifiers()[idx.0 as usize];
@@ -1586,6 +1613,20 @@ impl<'env> StructEnv<'env> {
     /// Returns the name of this struct.
     pub fn get_name(&self) -> Symbol {
         self.data.name
+    }
+
+    /// Returns the VM identifier for this struct
+    pub fn get_identifier(&self) -> Identifier {
+        let handle = self
+            .module_env
+            .data
+            .module
+            .struct_handle_at(self.data.handle_idx);
+        self.module_env
+            .data
+            .module
+            .identifier_at(handle.name)
+            .to_owned()
     }
 
     /// Shortcut for accessing the symbol pool.
@@ -1952,6 +1993,13 @@ impl<'env> FunctionEnv<'env> {
     /// Returns the name of this function.
     pub fn get_name(&self) -> Symbol {
         self.data.name
+    }
+
+    /// Returns the VM identifier for this function
+    pub fn get_identifier(&'env self) -> Identifier {
+        let m = &self.module_env.data.module;
+        m.identifier_at(m.function_handle_at(self.data.handle_idx).name)
+            .to_owned()
     }
 
     /// Gets the id of this function.
