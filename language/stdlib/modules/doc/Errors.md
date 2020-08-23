@@ -430,6 +430,12 @@ A function to create an error from from a category and a reason.
 ## Specification
 
 
+
+<pre><code>pragma verify;
+</code></pre>
+
+
+
 <a name="0x1_Errors_Specification_make"></a>
 
 ### Function `make`
@@ -442,8 +448,9 @@ A function to create an error from from a category and a reason.
 
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == category + (reason &lt;&lt; 8);
+<b>ensures</b> [concrete] result == category + (reason &lt;&lt; 8);
+<b>aborts_if</b> [abstract] <b>false</b>;
+<b>ensures</b> [abstract] result == category;
 </code></pre>
 
 

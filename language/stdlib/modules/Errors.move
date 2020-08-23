@@ -14,6 +14,7 @@ address 0x1 {
 ///     framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/
 ///     associated module.
 module Errors {
+    spec module { pragma verify; }
 
     /// A function to create an error from from a category and a reason.
     fun make(category: u8, reason: u64): u64 {
@@ -21,8 +22,9 @@ module Errors {
     }
     spec fun make {
         pragma opaque = true;
-        aborts_if false;
-        ensures result == category + (reason << 8);
+        ensures [concrete] result == category + (reason << 8);
+        aborts_if [abstract] false;
+        ensures [abstract] result == category;
     }
 
     /// The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
