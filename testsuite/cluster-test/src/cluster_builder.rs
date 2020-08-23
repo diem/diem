@@ -29,7 +29,7 @@ use libra_global_constants::{
     SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::{CryptoStorage, KVStorage, Value, VaultStorage};
+use libra_secure_storage::{CryptoStorage, KVStorage, VaultStorage};
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::str::FromStr;
 
@@ -388,13 +388,10 @@ impl ClusterBuilder {
                     .map_err(|e| format_err!("Failed to create {}__{} : {}", pod_name, key, e))?;
             }
             vault_storage
-                .set(
-                    SAFETY_DATA,
-                    Value::SafetyData(SafetyData::new(0, 0, 0, None)),
-                )
+                .set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))
                 .map_err(|e| format_err!("Failed to create {}/{}: {}", pod_name, SAFETY_DATA, e))?;
             vault_storage
-                .set(WAYPOINT, Value::String("".into()))
+                .set(WAYPOINT, Waypoint::default())
                 .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, WAYPOINT, e))?;
             Ok::<(), anyhow::Error>(())
         })

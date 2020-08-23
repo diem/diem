@@ -142,12 +142,10 @@ impl WaypointConfig {
             WaypointConfig::FromStorage(backend) => {
                 let storage: Storage = backend.into();
                 let waypoint = storage
-                    .get(libra_global_constants::WAYPOINT)
+                    .get::<Waypoint>(libra_global_constants::WAYPOINT)
                     .expect("Unable to read waypoint")
-                    .value
-                    .string()
-                    .expect("Expected string for waypoint");
-                Some(Waypoint::from_str(&waypoint).expect("Unable to parse waypoint"))
+                    .value;
+                Some(waypoint)
             }
             WaypointConfig::None => None,
         };

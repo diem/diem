@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-mod cached_storage;
 mod crypto_kv_storage;
 mod crypto_storage;
 mod error;
@@ -14,11 +13,9 @@ mod namespaced_storage;
 mod on_disk;
 mod policy;
 mod storage;
-mod value;
 mod vault;
 
 pub use crate::{
-    cached_storage::CachedStorage,
     crypto_kv_storage::CryptoKVStorage,
     crypto_storage::{CryptoStorage, PublicKeyResponse},
     error::Error,
@@ -29,7 +26,6 @@ pub use crate::{
     on_disk::{OnDiskStorage, OnDiskStorageInternal},
     policy::{Capability, Identity, Permission, Policy},
     storage::Storage,
-    value::Value,
     vault::VaultStorage,
 };
 

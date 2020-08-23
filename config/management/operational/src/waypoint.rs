@@ -3,7 +3,6 @@
 
 use libra_global_constants::WAYPOINT;
 use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
-use libra_secure_storage::Value;
 use libra_types::waypoint::Waypoint;
 use structopt::StructOpt;
 
@@ -24,7 +23,7 @@ impl InsertWaypoint {
             .load()?
             .override_validator_backend(&self.validator_backend.validator_backend)?;
         let mut validator_storage = config.validator_backend();
-        validator_storage.set(WAYPOINT, Value::String(self.waypoint.to_string()))?;
+        validator_storage.set(WAYPOINT, self.waypoint)?;
         Ok(())
     }
 }

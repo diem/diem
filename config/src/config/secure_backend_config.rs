@@ -141,24 +141,24 @@ impl From<&SecureBackend> for Storage {
     fn from(backend: &SecureBackend) -> Self {
         match backend {
             SecureBackend::GitHub(config) => {
-                let storage = GitHubStorage::new(
+                let storage = Storage::from(GitHubStorage::new(
                     config.repository_owner.clone(),
                     config.repository.clone(),
                     config.token.read_token().expect("Unable to read token"),
-                );
+                ));
                 if let Some(namespace) = &config.namespace {
-                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                    Storage::from(NamespacedStorage::new(storage, namespace.clone()))
                 } else {
-                    Storage::from(storage)
+                    storage
                 }
             }
             SecureBackend::InMemoryStorage => Storage::from(InMemoryStorage::new()),
             SecureBackend::OnDiskStorage(config) => {
-                let storage = OnDiskStorage::new(config.path());
+                let storage = Storage::from(OnDiskStorage::new(config.path()));
                 if let Some(namespace) = &config.namespace {
-                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                    Storage::from(NamespacedStorage::new(storage, namespace.clone()))
                 } else {
-                    Storage::from(storage)
+                    storage
                 }
             }
             SecureBackend::Vault(config) => Storage::from(VaultStorage::new(

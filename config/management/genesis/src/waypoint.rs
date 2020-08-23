@@ -8,7 +8,6 @@ use libra_management::{
     error::Error,
     secure_backend::{SharedBackend, ValidatorBackend},
 };
-use libra_secure_storage::Value;
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use libra_vm::LibraVM;
@@ -75,7 +74,7 @@ impl CreateAndInsertWaypoint {
             .load()?
             .override_validator_backend(&self.validator_backend.validator_backend)?;
         let mut validator_storage = config.validator_backend();
-        validator_storage.set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        validator_storage.set(WAYPOINT, waypoint)?;
         Ok(waypoint)
     }
 }

@@ -18,7 +18,7 @@ use libra_key_manager::{
 use libra_management::storage::to_x25519;
 use libra_operational_tool::test_helper::OperationalTool;
 use libra_secure_json_rpc::VMStatusView;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_trace::trace::trace_node;
@@ -1662,13 +1662,10 @@ fn test_operator_key_rotation_recovery() {
 
     // Verify that the operator key was updated on-chain
     let mut storage: Storage = (&backend).try_into().unwrap();
-    let operator_account_string = storage
-        .get(OPERATOR_ACCOUNT)
+    let operator_account = storage
+        .get::<AccountAddress>(OPERATOR_ACCOUNT)
         .unwrap()
-        .value
-        .string()
-        .unwrap();
-    let operator_account = AccountAddress::from_str(&operator_account_string).unwrap();
+        .value;
     let account_resource = op_tool.account_resource(operator_account).unwrap();
     let on_chain_operator_key = hex::decode(account_resource.authentication_key).unwrap();
     assert_eq!(
@@ -1887,17 +1884,12 @@ fn test_genesis_transaction_flow() {
         .output()
         .unwrap();
     let output = std::str::from_utf8(&waypoint_command.stdout).unwrap();
-    println!("{:?}", output);
-    let waypoint_str = &parse_waypoint(output);
-    println!("{}", waypoint_str);
+    let waypoint = parse_waypoint(output);
     let set_waypoint = |node_config: &NodeConfig| {
         let f = |backend: &SecureBackend| {
             let mut storage: Storage = backend.into();
             storage
-                .set(
-                    libra_global_constants::WAYPOINT,
-                    Value::String(waypoint_str.to_string()),
-                )
+                .set(libra_global_constants::WAYPOINT, waypoint)
                 .expect("Unable to write waypoint");
         };
         let backend = &node_config.consensus.safety_rules.backend;
@@ -1929,9 +1921,7 @@ fn test_genesis_transaction_flow() {
         env.validator_swarm.add_node(i, false).unwrap();
     }
     println!("8. verify it's able to mint after the waypoint");
-    let mut client_proxy_1 =
-        env.get_validator_client(1, Some(Waypoint::from_str(waypoint_str).unwrap()));
-
+    let mut client_proxy_1 = env.get_validator_client(1, Some(waypoint));
     client_proxy_1.set_accounts(client_proxy_0.copy_all_accounts());
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
@@ -1956,8 +1946,7 @@ fn test_genesis_transaction_flow() {
         .save(&env.validator_swarm.config.config_files[0])
         .unwrap();
     env.validator_swarm.add_node(0, false).unwrap();
-    let mut client_proxy_0 =
-        env.get_validator_client(0, Some(Waypoint::from_str(waypoint_str).unwrap()));
+    let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_0.create_next_account(false).unwrap();
     client_proxy_1
@@ -2004,11 +1993,10 @@ fn test_replay_tooling() {
     );
 }
 
-fn parse_waypoint(db_bootstrapper_output: &str) -> String {
-    Regex::new(r"Got waypoint: (\d+:\w+)")
+fn parse_waypoint(db_bootstrapper_output: &str) -> Waypoint {
+    let waypoint = Regex::new(r"Got waypoint: (\d+:\w+)")
         .unwrap()
         .captures(db_bootstrapper_output)
-        .ok_or_else(|| anyhow!("Failed to parse db-bootstrapper output."))
-        .unwrap()[1]
-        .into()
+        .ok_or_else(|| anyhow!("Failed to parse db-bootstrapper output."));
+    Waypoint::from_str(waypoint.unwrap()[1].into()).unwrap()
 }

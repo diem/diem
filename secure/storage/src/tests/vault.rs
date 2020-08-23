@@ -4,7 +4,7 @@
 use crate::{
     tests::suite,
     vault::{VaultEngine, VaultStorage},
-    Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Storage, Value,
+    Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Storage,
 };
 use libra_crypto::{test_utils::TestLibraCrypto, Signature};
 use libra_vault_client::dev::{self, ROOT_TOKEN};
@@ -101,77 +101,68 @@ fn test_vault_key_value_policies() {
 
     // Initialize data and policies
 
-    storage.set("anyone", Value::U64(1)).unwrap();
+    storage.set("anyone", 1).unwrap();
     storage
         .set_policies("anyone", &VaultEngine::KVSecrets, &anyone)
         .unwrap();
 
-    storage.set("root", Value::U64(2)).unwrap();
+    storage.set("root", 2).unwrap();
     storage
         .set_policies("root", &VaultEngine::KVSecrets, &root)
         .unwrap();
 
-    storage.set("partial", Value::U64(3)).unwrap();
+    storage.set("partial", 3).unwrap();
     storage
         .set_policies("partial", &VaultEngine::KVSecrets, &partial)
         .unwrap();
 
-    storage.set("full", Value::U64(4)).unwrap();
+    storage.set("full", 4).unwrap();
     storage
         .set_policies("full", &VaultEngine::KVSecrets, &full)
         .unwrap();
 
     // Verify initial reading works correctly
 
-    assert_eq!(storage.get("anyone").unwrap().value, Value::U64(1));
-    assert_eq!(storage.get("root").unwrap().value, Value::U64(2));
-    assert_eq!(storage.get("partial").unwrap().value, Value::U64(3));
-    assert_eq!(storage.get("full").unwrap().value, Value::U64(4));
+    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 1);
+    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
+    assert_eq!(storage.get::<u64>("partial").unwrap().value, 3);
+    assert_eq!(storage.get::<u64>("full").unwrap().value, 4);
 
     let writer_token = storage.create_token(vec![&writer]).unwrap();
     let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, ttl);
-    assert_eq!(writer.get("anyone").unwrap().value, Value::U64(1));
-    assert_eq!(writer.get("root"), Err(Error::PermissionDenied));
-    assert_eq!(writer.get("partial").unwrap().value, Value::U64(3));
-    assert_eq!(writer.get("full").unwrap().value, Value::U64(4));
+    assert_eq!(writer.get::<u64>("anyone").unwrap().value, 1);
+    assert_eq!(writer.get::<u64>("root"), Err(Error::PermissionDenied));
+    assert_eq!(writer.get::<u64>("partial").unwrap().value, 3);
+    assert_eq!(writer.get::<u64>("full").unwrap().value, 4);
 
     let reader_token = storage.create_token(vec![&reader]).unwrap();
     let mut reader = VaultStorage::new(dev::test_host(), reader_token, None, None, ttl);
-    assert_eq!(reader.get("anyone").unwrap().value, Value::U64(1));
-    assert_eq!(reader.get("root"), Err(Error::PermissionDenied));
-    assert_eq!(reader.get("partial").unwrap().value, Value::U64(3));
-    assert_eq!(reader.get("full").unwrap().value, Value::U64(4));
+    assert_eq!(reader.get::<u64>("anyone").unwrap().value, 1);
+    assert_eq!(reader.get::<u64>("root"), Err(Error::PermissionDenied));
+    assert_eq!(reader.get::<u64>("partial").unwrap().value, 3);
+    assert_eq!(reader.get::<u64>("full").unwrap().value, 4);
 
     // Attempt writes followed by reads for correctness
 
-    writer.set("anyone", Value::U64(5)).unwrap();
-    assert_eq!(
-        writer.set("root", Value::U64(6)),
-        Err(Error::PermissionDenied)
-    );
-    writer.set("partial", Value::U64(7)).unwrap();
-    writer.set("full", Value::U64(8)).unwrap();
+    writer.set("anyone", 5).unwrap();
+    assert_eq!(writer.set("root", 6), Err(Error::PermissionDenied));
+    writer.set("partial", 7).unwrap();
+    writer.set("full", 8).unwrap();
 
-    assert_eq!(storage.get("anyone").unwrap().value, Value::U64(5));
-    assert_eq!(storage.get("root").unwrap().value, Value::U64(2));
-    assert_eq!(storage.get("partial").unwrap().value, Value::U64(7));
-    assert_eq!(storage.get("full").unwrap().value, Value::U64(8));
+    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 5);
+    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
+    assert_eq!(storage.get::<u64>("partial").unwrap().value, 7);
+    assert_eq!(storage.get::<u64>("full").unwrap().value, 8);
 
-    reader.set("anyone", Value::U64(9)).unwrap();
-    assert_eq!(
-        reader.set("root", Value::U64(10)),
-        Err(Error::PermissionDenied)
-    );
-    assert_eq!(
-        reader.set("partial", Value::U64(11)),
-        Err(Error::PermissionDenied)
-    );
-    reader.set("full", Value::U64(12)).unwrap();
+    reader.set("anyone", 9).unwrap();
+    assert_eq!(reader.set("root", 10), Err(Error::PermissionDenied));
+    assert_eq!(reader.set("partial", 11), Err(Error::PermissionDenied));
+    reader.set("full", 12).unwrap();
 
-    assert_eq!(storage.get("anyone").unwrap().value, Value::U64(9));
-    assert_eq!(storage.get("root").unwrap().value, Value::U64(2));
-    assert_eq!(storage.get("partial").unwrap().value, Value::U64(7));
-    assert_eq!(storage.get("full").unwrap().value, Value::U64(12));
+    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 9);
+    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
+    assert_eq!(storage.get::<u64>("partial").unwrap().value, 7);
+    assert_eq!(storage.get::<u64>("full").unwrap().value, 12);
 }
 
 fn test_vault_crypto_policies() {

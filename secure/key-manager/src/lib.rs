@@ -35,7 +35,6 @@ use libra_types::{
     chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
-use std::str::FromStr;
 use thiserror::Error;
 
 pub mod counters;
@@ -355,15 +354,10 @@ where
     }
 
     fn get_account_from_storage(&self, account_name: &str) -> Result<AccountAddress, Error> {
-        match self
-            .storage
-            .get(account_name)
-            .and_then(|response| response.value.string())
-        {
-            Ok(account_address) => AccountAddress::from_str(&account_address)
-                .map_err(|e| Error::UnknownError(e.to_string())),
-            Err(e) => Err(Error::MissingAccountAddress(e)),
-        }
+        self.storage
+            .get::<AccountAddress>(account_name)
+            .map(|v| v.value)
+            .map_err(Error::MissingAccountAddress)
     }
 
     /// Logs to structured logging using the given log entry, event and data.

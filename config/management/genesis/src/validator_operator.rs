@@ -5,7 +5,6 @@ use libra_global_constants::OPERATOR_KEY;
 use libra_management::{
     config::ConfigPath, constants, error::Error, secure_backend::SharedBackend,
 };
-use libra_secure_storage::Value;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -32,10 +31,7 @@ impl ValidatorOperator {
 
         // Upload the operator name to shared storage
         let mut shared_storage = config.shared_backend();
-        shared_storage.set(
-            constants::VALIDATOR_OPERATOR,
-            Value::String(operator_name.clone()),
-        )?;
+        shared_storage.set(constants::VALIDATOR_OPERATOR, operator_name.clone())?;
 
         Ok(operator_name)
     }

@@ -154,7 +154,7 @@ pub mod tests {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use libra_management::constants;
-    use libra_secure_storage::{KVStorage, Value};
+    use libra_secure_storage::KVStorage;
     use libra_types::{
         account_address,
         chain_id::ChainId,
@@ -300,12 +300,7 @@ pub mod tests {
             .set_layout(temppath.path().to_str().unwrap(), namespace)
             .unwrap();
         let storage = helper.storage(namespace.into());
-        let stored_layout = storage
-            .get(constants::LAYOUT)
-            .unwrap()
-            .value
-            .string()
-            .unwrap();
+        let stored_layout = storage.get::<String>(constants::LAYOUT).unwrap().value;
         assert_eq!(layout_text, stored_layout);
     }
 
@@ -327,7 +322,7 @@ pub mod tests {
         let owner_account = account_address::from_public_key(&owner_key);
         let mut shared_storage = storage_helper.storage(owner_name.into());
         shared_storage
-            .set(OWNER_KEY, Value::Ed25519PublicKey(owner_key))
+            .set(OWNER_KEY, owner_key)
             .map_err(|e| Error::StorageWriteError("shared", OWNER_KEY, e.to_string()))
             .unwrap();
 
@@ -346,11 +341,9 @@ pub mod tests {
         // Verify that a validator config transaction was uploaded to the remote storage
         let shared_storage = storage_helper.storage(remote_operator_ns.into());
         let uploaded_config_tx = shared_storage
-            .get(constants::VALIDATOR_CONFIG)
+            .get::<Transaction>(constants::VALIDATOR_CONFIG)
             .unwrap()
-            .value
-            .transaction()
-            .unwrap();
+            .value;
         assert_eq!(local_config_tx, uploaded_config_tx);
 
         // Verify the transaction sender is the operator account address
@@ -388,7 +381,7 @@ pub mod tests {
         let operator_key = Ed25519PrivateKey::generate_for_testing().public_key();
         let mut shared_storage = storage_helper.storage(operator_name.into());
         shared_storage
-            .set(OPERATOR_KEY, Value::Ed25519PublicKey(operator_key))
+            .set(OPERATOR_KEY, operator_key)
             .map_err(|e| Error::StorageWriteError("shared", OPERATOR_KEY, e.to_string()))
             .unwrap();
 
@@ -400,11 +393,9 @@ pub mod tests {
         // Verify that a file setting the operator was uploaded to the remote storage
         let shared_storage = storage_helper.storage(remote_owner_ns.into());
         let uploaded_operator_name = shared_storage
-            .get(constants::VALIDATOR_OPERATOR)
+            .get::<String>(constants::VALIDATOR_OPERATOR)
             .unwrap()
-            .value
-            .string()
-            .unwrap();
+            .value;
         assert_eq!(local_operator_name, uploaded_operator_name);
     }
 

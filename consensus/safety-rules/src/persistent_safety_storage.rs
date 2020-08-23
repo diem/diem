@@ -10,11 +10,8 @@ use consensus_types::{common::Author, safety_data::SafetyData};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
 use libra_logger::prelude::*;
-use libra_secure_storage::{
-    CachedStorage, CryptoStorage, InMemoryStorage, KVStorage, Storage, Value,
-};
+use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage};
 use libra_types::waypoint::Waypoint;
-use std::str::FromStr;
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
@@ -79,26 +76,10 @@ impl PersistentSafetyStorage {
         }
 
         internal_store.import_private_key(EXECUTION_KEY, execution_private_key)?;
-        internal_store.set(
-            SAFETY_DATA,
-            Value::SafetyData(SafetyData::new(1, 0, 0, None)),
-        )?;
-        internal_store.set(OWNER_ACCOUNT, Value::String(author.to_string()))?;
-        internal_store.set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        internal_store.set(SAFETY_DATA, SafetyData::new(1, 0, 0, None))?;
+        internal_store.set(OWNER_ACCOUNT, author)?;
+        internal_store.set(WAYPOINT, waypoint)?;
         Ok(())
-    }
-
-    pub fn into_cached(self) -> PersistentSafetyStorage {
-        // will be an idempotent operation if the underlying storage is already a CachedStorage
-        if let Storage::CachedStorage(cached_storage) = self.internal_store {
-            PersistentSafetyStorage {
-                internal_store: Storage::CachedStorage(cached_storage),
-            }
-        } else {
-            PersistentSafetyStorage {
-                internal_store: Storage::CachedStorage(CachedStorage::new(self.internal_store)),
-            }
-        }
     }
 
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
@@ -108,18 +89,16 @@ impl PersistentSafetyStorage {
     }
 
     pub fn author(&self) -> Result<Author> {
-        let res = self.internal_store.get(OWNER_ACCOUNT)?;
-        let res = res.value.string()?;
-        std::str::FromStr::from_str(&res)
+        Ok(self.internal_store.get(OWNER_ACCOUNT).map(|v| v.value)?)
     }
 
     pub fn consensus_key_for_version(
         &self,
         version: Ed25519PublicKey,
     ) -> Result<Ed25519PrivateKey> {
-        self.internal_store
-            .export_private_key_for_version(CONSENSUS_KEY, version)
-            .map_err(|e| e.into())
+        Ok(self
+            .internal_store
+            .export_private_key_for_version(CONSENSUS_KEY, version)?)
     }
 
     pub fn execution_public_key(&self) -> Result<Ed25519PublicKey> {
@@ -130,33 +109,23 @@ impl PersistentSafetyStorage {
     }
 
     pub fn safety_data(&self) -> Result<SafetyData> {
-        Ok(self
-            .internal_store
-            .get(SAFETY_DATA)
-            .and_then(|r| r.value.safety_data())?)
+        Ok(self.internal_store.get(SAFETY_DATA).map(|v| v.value)?)
     }
 
     pub fn set_safety_data(&mut self, data: SafetyData) -> Result<()> {
         counters::set_state("epoch", data.epoch as i64);
         counters::set_state("last_voted_round", data.last_voted_round as i64);
         counters::set_state("preferred_round", data.preferred_round as i64);
-        self.internal_store
-            .set(SAFETY_DATA, Value::SafetyData(data))?;
+        self.internal_store.set(SAFETY_DATA, data)?;
         Ok(())
     }
 
     pub fn waypoint(&self) -> Result<Waypoint> {
-        let waypoint = self
-            .internal_store
-            .get(WAYPOINT)
-            .and_then(|r| r.value.string())?;
-        Waypoint::from_str(&waypoint)
-            .map_err(|e| anyhow::anyhow!("Unable to parse waypoint: {}", e))
+        Ok(self.internal_store.get(WAYPOINT).map(|v| v.value)?)
     }
 
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
-        self.internal_store
-            .set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        self.internal_store.set(WAYPOINT, waypoint)?;
         send_struct_log!(logging::safety_log(LogEntry::Waypoint, LogEvent::Update)
             .data(LogField::Message.as_str(), waypoint));
         Ok(())

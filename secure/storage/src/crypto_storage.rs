@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 /// CryptoStorage provides an abstraction for secure generation and handling of cryptographic keys.
 #[enum_dispatch]
-pub trait CryptoStorage: Send + Sync {
+pub trait CryptoStorage {
     /// Securely generates a new named Ed25519 private key. The behavior for calling this interface
     /// multiple times with the same name is implementation specific.
     fn create_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;

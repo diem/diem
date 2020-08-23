@@ -19,8 +19,6 @@ pub enum Error {
     PermissionDenied,
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    #[error("Unexpected value type")]
-    UnexpectedValueType,
     #[error("Key version not found: {0}")]
     KeyVersionNotFound(String),
 }

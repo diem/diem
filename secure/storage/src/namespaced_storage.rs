@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Storage};
+use serde::{de::DeserializeOwned, Serialize};
 
 /// This provides a light wrapper around KV storages to support a namespace. That namespace is
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
@@ -9,7 +10,7 @@ use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
 /// how this library implements namespaces for Vault.
 pub struct NamespacedStorage {
     namespace: String,
-    inner: Box<dyn KVStorage>,
+    inner: Box<Storage>,
 }
 
 impl KVStorage for NamespacedStorage {
@@ -17,11 +18,11 @@ impl KVStorage for NamespacedStorage {
         self.inner.available()
     }
 
-    fn get(&self, key: &str) -> Result<GetResponse, Error> {
+    fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
         self.inner.get(&self.ns_name(key))
     }
 
-    fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
+    fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
         self.inner.set(&self.ns_name(key), value)
     }
 
@@ -33,10 +34,10 @@ impl KVStorage for NamespacedStorage {
 }
 
 impl NamespacedStorage {
-    pub fn new(storage: Box<dyn KVStorage>, namespace: String) -> Self {
+    pub fn new(storage: Storage, namespace: String) -> Self {
         NamespacedStorage {
             namespace,
-            inner: storage,
+            inner: Box::new(storage),
         }
     }
 
@@ -63,19 +64,19 @@ mod test {
 
         let mut default = OnDiskStorage::new(path_buf.clone());
 
-        let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss0 = NamespacedStorage::new(Box::new(storage), ns0.into());
+        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
+        let mut nss0 = NamespacedStorage::new(storage, ns0.into());
 
-        let storage = OnDiskStorage::new(path_buf);
-        let mut nss1 = NamespacedStorage::new(Box::new(storage), ns1.into());
+        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf));
+        let mut nss1 = NamespacedStorage::new(storage, ns1.into());
 
-        default.set(key, Value::U64(0)).unwrap();
-        nss0.set(key, Value::U64(1)).unwrap();
-        nss1.set(key, Value::U64(2)).unwrap();
+        default.set(key, 0).unwrap();
+        nss0.set(key, 1).unwrap();
+        nss1.set(key, 2).unwrap();
 
-        assert_eq!(default.get(key).unwrap().value, Value::U64(0));
-        assert_eq!(nss0.get(key).unwrap().value, Value::U64(1));
-        assert_eq!(nss1.get(key).unwrap().value, Value::U64(2));
+        assert_eq!(default.get::<u64>(key).unwrap().value, 0);
+        assert_eq!(nss0.get::<u64>(key).unwrap().value, 1);
+        assert_eq!(nss1.get::<u64>(key).unwrap().value, 2);
     }
 
     #[test]
@@ -85,17 +86,17 @@ mod test {
 
         let path_buf = TempPath::new().path().to_path_buf();
 
-        let default = OnDiskStorage::new(path_buf.clone());
+        let default = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
 
-        let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss = NamespacedStorage::new(Box::new(storage), ns.into());
+        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf.clone()));
+        let mut nss = NamespacedStorage::new(storage, ns.into());
 
-        let storage = OnDiskStorage::new(path_buf);
-        let another_nss = NamespacedStorage::new(Box::new(storage), ns.into());
+        let storage = Storage::OnDiskStorage(OnDiskStorage::new(path_buf));
+        let another_nss = NamespacedStorage::new(storage, ns.into());
 
-        nss.set(key, Value::U64(1)).unwrap();
-        default.get(key).unwrap_err();
-        assert_eq!(nss.get(key).unwrap().value, Value::U64(1));
-        assert_eq!(another_nss.get(key).unwrap().value, Value::U64(1));
+        nss.set(key, 1).unwrap();
+        default.get::<u64>(key).unwrap_err();
+        assert_eq!(nss.get::<u64>(key).unwrap().value, 1);
+        assert_eq!(another_nss.get::<u64>(key).unwrap().value, 1);
     }
 }

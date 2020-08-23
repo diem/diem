@@ -16,7 +16,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
 };
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
-use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
+use libra_secure_storage::{InMemoryStorageInternal, KVStorage};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
@@ -116,26 +116,19 @@ impl<T: LibraInterface> Node<T> {
     }
 
     fn get_account_from_storage(&mut self, account_name: &str) -> AccountAddress {
-        AccountAddress::try_from(
-            self.key_manager
-                .storage
-                .get(account_name)
-                .unwrap()
-                .value
-                .string()
-                .unwrap(),
-        )
-        .unwrap()
+        self.key_manager
+            .storage
+            .get::<AccountAddress>(account_name)
+            .unwrap()
+            .value
     }
 
     fn get_key_from_storage(&mut self, key_name: &str) -> Ed25519PrivateKey {
         self.key_manager
             .storage
-            .get(key_name)
+            .get::<Ed25519PrivateKey>(key_name)
             .unwrap()
             .value
-            .ed25519_private_key()
-            .unwrap()
     }
 }
 
@@ -392,36 +385,26 @@ fn setup_secure_storage(
 
     // Initialize the owner key and account address in storage
     let owner_key = test_config.owner_key.unwrap();
-    let owner_prikey = Value::Ed25519PrivateKey(owner_key.private_key());
-    sec_storage.set(OWNER_KEY, owner_prikey).unwrap();
+    sec_storage.set(OWNER_KEY, owner_key.private_key()).unwrap();
 
     let owner_account = libra_types::account_address::from_public_key(&owner_key.public_key());
-    sec_storage
-        .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
-        .unwrap();
+    sec_storage.set(OWNER_ACCOUNT, owner_account).unwrap();
 
     // Initialize the operator key and account address in storage
     let operator_key = test_config.operator_key.unwrap();
-    let operator_prikey = Value::Ed25519PrivateKey(operator_key.private_key());
-    sec_storage.set(OPERATOR_KEY, operator_prikey).unwrap();
+    sec_storage
+        .set(OPERATOR_KEY, operator_key.private_key())
+        .unwrap();
 
     let operator_account =
         libra_types::account_address::from_public_key(&operator_key.public_key());
-    sec_storage
-        .set(
-            OPERATOR_ACCOUNT,
-            Value::String(operator_account.to_string()),
-        )
-        .unwrap();
+    sec_storage.set(OPERATOR_ACCOUNT, operator_account).unwrap();
 
     // Initialize the consensus key in storage
     let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
     let consensus_prikey = sr_test_config.consensus_key.as_ref().unwrap().private_key();
     sec_storage
-        .set(
-            crate::CONSENSUS_KEY,
-            Value::Ed25519PrivateKey(consensus_prikey),
-        )
+        .set(crate::CONSENSUS_KEY, consensus_prikey)
         .unwrap();
 
     sec_storage

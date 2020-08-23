@@ -18,7 +18,7 @@ use rand::{
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     string::ToString,
 };
 
@@ -132,12 +132,10 @@ impl NetworkConfig {
             Identity::FromStorage(config) => {
                 let storage: Storage = (&config.backend).into();
                 let peer_id = storage
-                    .get(&config.peer_id_name)
+                    .get::<PeerId>(&config.peer_id_name)
                     .expect("Unable to read peer id")
-                    .value
-                    .string()
-                    .expect("Expected string for peer id");
-                Some(peer_id.try_into().expect("Unable to parse peer id"))
+                    .value;
+                Some(peer_id)
             }
             Identity::None => None,
         }

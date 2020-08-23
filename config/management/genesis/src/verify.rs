@@ -118,12 +118,8 @@ fn write_string(storage: &Storage, buffer: &mut String, key: &'static str) {
 
 fn write_safety_data(storage: &Storage, buffer: &mut String, key: &'static str) {
     let value = storage
-        .value(key)
-        .map(|v| {
-            v.safety_data()
-                .map(|d| d.to_string())
-                .unwrap_or_else(|e| e.to_string())
-        })
+        .value::<consensus_types::safety_data::SafetyData>(key)
+        .map(|v| v.to_string())
         .unwrap_or_else(|e| e.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }

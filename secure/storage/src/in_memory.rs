@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
+use crate::{CryptoKVStorage, Error, GetResponse, KVStorage};
 use libra_secure_time::{RealTimeService, TimeService};
+use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 
 /// InMemoryStorage represents a key value store that is purely in memory and intended for single
@@ -15,7 +16,7 @@ pub type InMemoryStorage = InMemoryStorageInternal<RealTimeService>;
 
 #[derive(Default)]
 pub struct InMemoryStorageInternal<T> {
-    data: HashMap<String, GetResponse>,
+    data: HashMap<String, Vec<u8>>,
     time_service: T,
 }
 
@@ -34,40 +35,24 @@ impl<T: TimeService> InMemoryStorageInternal<T> {
     }
 }
 
-impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
+impl<T: TimeService> KVStorage for InMemoryStorageInternal<T> {
     fn available(&self) -> Result<(), Error> {
         Ok(())
     }
 
-    fn get(&self, key: &str) -> Result<GetResponse, Error> {
+    fn get<V: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<V>, Error> {
         let response = self
             .data
             .get(key)
             .ok_or_else(|| Error::KeyNotSet(key.to_string()))?;
 
-        let value = match &response.value {
-            Value::Ed25519PrivateKey(value) => {
-                // Hack because Ed25519PrivateKey does not support clone / copy
-                let bytes = lcs::to_bytes(&value)?;
-                let key = lcs::from_bytes(&bytes)?;
-                Value::Ed25519PrivateKey(key)
-            }
-            Value::Ed25519PublicKey(value) => Value::Ed25519PublicKey(value.clone()),
-            Value::HashValue(value) => Value::HashValue(*value),
-            Value::SafetyData(value) => Value::SafetyData(value.clone()),
-            Value::String(value) => Value::String(value.clone()),
-            Value::Transaction(value) => Value::Transaction(value.clone()),
-            Value::U64(value) => Value::U64(*value),
-        };
-
-        let last_update = response.last_update;
-        Ok(GetResponse { value, last_update })
+        serde_json::from_slice(&response).map_err(|e| e.into())
     }
 
-    fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
+    fn set<V: Serialize>(&mut self, key: &str, value: V) -> Result<(), Error> {
         self.data.insert(
             key.to_string(),
-            GetResponse::new(value, self.time_service.now()),
+            serde_json::to_vec(&GetResponse::new(value, self.time_service.now()))?,
         );
         Ok(())
     }
@@ -79,4 +64,4 @@ impl<T: Send + Sync + TimeService> KVStorage for InMemoryStorageInternal<T> {
     }
 }
 
-impl<T: TimeService + Send + Sync> CryptoKVStorage for InMemoryStorageInternal<T> {}
+impl<T: TimeService> CryptoKVStorage for InMemoryStorageInternal<T> {}

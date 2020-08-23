@@ -12,9 +12,7 @@ use libra_global_constants::{
 };
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::{
-    CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
-};
+use libra_secure_storage::{CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage};
 use libra_types::{chain_id::ChainId, transaction::Transaction, waypoint::Waypoint};
 use std::{fs::File, path::Path};
 use structopt::StructOpt;
@@ -33,7 +31,7 @@ impl StorageHelper {
 
     pub fn storage(&self, namespace: String) -> Storage {
         let storage = OnDiskStorage::new(self.temppath.path().to_path_buf());
-        Storage::from(NamespacedStorage::new(Box::new(storage), namespace))
+        Storage::from(NamespacedStorage::new(Storage::from(storage), namespace))
     }
 
     pub fn path(&self) -> &Path {
@@ -58,12 +56,9 @@ impl StorageHelper {
 
         // Initialize all other data in storage
         storage
-            .set(
-                SAFETY_DATA,
-                Value::SafetyData(SafetyData::new(0, 0, 0, None)),
-            )
+            .set(SAFETY_DATA, SafetyData::new(0, 0, 0, None))
             .unwrap();
-        storage.set(WAYPOINT, Value::String("".into())).unwrap();
+        storage.set(WAYPOINT, Waypoint::default()).unwrap();
     }
 
     pub fn create_and_insert_waypoint(

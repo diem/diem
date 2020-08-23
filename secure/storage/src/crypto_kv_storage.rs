@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{CryptoStorage, Error, KVStorage, PublicKeyResponse, Value};
+use crate::{CryptoStorage, Error, KVStorage, PublicKeyResponse};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
@@ -24,10 +24,7 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn export_private_key(&self, name: &str) -> Result<Ed25519PrivateKey, Error> {
-        match self.get(name)?.value {
-            Value::Ed25519PrivateKey(private_key) => Ok(private_key),
-            _ => Err(Error::UnexpectedValueType),
-        }
+        self.get(name).map(|v| v.value)
     }
 
     fn export_private_key_for_version(
@@ -54,20 +51,16 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn import_private_key(&mut self, name: &str, key: Ed25519PrivateKey) -> Result<(), Error> {
-        self.set(name, Value::Ed25519PrivateKey(key))
+        self.set(name, key)
     }
 
     fn get_public_key(&self, name: &str) -> Result<PublicKeyResponse, Error> {
         let response = self.get(name)?;
-
-        let public_key = match &response.value {
-            Value::Ed25519PrivateKey(private_key) => private_key.public_key(),
-            _ => return Err(Error::UnexpectedValueType),
-        };
+        let key: Ed25519PrivateKey = response.value;
 
         Ok(PublicKeyResponse {
             last_update: response.last_update,
-            public_key,
+            public_key: key.public_key(),
         })
     }
 
@@ -80,18 +73,11 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     }
 
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error> {
-        match self.get(name)?.value {
-            Value::Ed25519PrivateKey(private_key) => {
-                let (new_private_key, new_public_key) = new_ed25519_key_pair()?;
-                self.set(
-                    &get_previous_version_name(name),
-                    Value::Ed25519PrivateKey(private_key),
-                )?;
-                self.set(name, Value::Ed25519PrivateKey(new_private_key))?;
-                Ok(new_public_key)
-            }
-            _ => Err(Error::UnexpectedValueType),
-        }
+        let private_key: Ed25519PrivateKey = self.get(name)?.value;
+        let (new_private_key, new_public_key) = new_ed25519_key_pair()?;
+        self.set(&get_previous_version_name(name), private_key)?;
+        self.set(name, new_private_key)?;
+        Ok(new_public_key)
     }
 
     fn sign<U: CryptoHash + Serialize>(

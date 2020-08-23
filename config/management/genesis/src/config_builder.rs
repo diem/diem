@@ -12,7 +12,7 @@ use libra_config::{
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_management::constants::{COMMON_NS, LAYOUT};
-use libra_secure_storage::{CryptoStorage, KVStorage, Value};
+use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};
 
@@ -66,7 +66,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .collect();
 
         let mut common_storage = self.storage_helper.storage(COMMON_NS.into());
-        let layout_value = Value::String(layout.to_toml().unwrap());
+        let layout_value = layout.to_toml().unwrap();
         common_storage.set(LAYOUT, layout_value).unwrap();
     }
 

@@ -3,7 +3,6 @@
 
 use crate::{
     Capability, CryptoStorage, Error, GetResponse, Identity, KVStorage, Policy, PublicKeyResponse,
-    Value,
 };
 use chrono::DateTime;
 use libra_crypto::{
@@ -12,7 +11,7 @@ use libra_crypto::{
 };
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_vault_client::{self as vault, Client};
-use serde::ser::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 const LIBRA_DEFAULT: &str = "libra_default";
@@ -219,15 +218,15 @@ impl KVStorage for VaultStorage {
         }
     }
 
-    fn get(&self, key: &str) -> Result<GetResponse, Error> {
+    fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
         let secret = self.secret_name(key);
         let resp = self.client().read_secret(&secret, key)?;
         let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
-        let value: Value = serde_json::from_str(&resp.value)?;
+        let value: T = serde_json::from_str(&resp.value)?;
         Ok(GetResponse { last_update, value })
     }
 
-    fn set(&mut self, key: &str, value: Value) -> Result<(), Error> {
+    fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
         let secret = self.secret_name(key);
         self.client()
             .write_secret(&secret, key, &serde_json::to_string(&value)?)?;

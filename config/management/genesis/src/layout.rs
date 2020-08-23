@@ -4,7 +4,6 @@
 use libra_management::{
     config::ConfigPath, constants, error::Error, secure_backend::SharedBackend,
 };
-use libra_secure_storage::Value;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -67,7 +66,7 @@ impl SetLayout {
             .load()?
             .override_shared_backend(&self.backend.shared_backend)?;
         let mut storage = config.shared_backend();
-        storage.set(constants::LAYOUT, Value::String(data))?;
+        storage.set(constants::LAYOUT, data)?;
 
         Ok(layout)
     }
