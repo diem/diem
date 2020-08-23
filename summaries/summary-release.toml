@@ -328,6 +328,13 @@ status = 'workspace'
 features = ['default']
 
 [[target-package]]
+name = 'libra-network-address-encryption'
+version = '0.1.0'
+workspace-path = 'config/management/network-address-encryption'
+status = 'workspace'
+features = []
+
+[[target-package]]
 name = 'libra-nibble'
 version = '0.1.0'
 workspace-path = 'common/nibble'
