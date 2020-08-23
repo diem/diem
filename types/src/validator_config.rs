@@ -39,28 +39,28 @@ pub struct ValidatorConfig {
     /// This is an lcs serialized Vec<RawEncNetworkAddress>
     pub validator_network_addresses: Vec<u8>,
     /// This is an lcs serialized Vec<RawNetworkAddress>
-    pub full_node_network_addresses: Vec<u8>,
+    pub fullnode_network_addresses: Vec<u8>,
 }
 
 impl ValidatorConfig {
     pub fn new(
         consensus_public_key: Ed25519PublicKey,
         validator_network_addresses: Vec<u8>,
-        full_node_network_addresses: Vec<u8>,
+        fullnode_network_addresses: Vec<u8>,
     ) -> Self {
         ValidatorConfig {
             consensus_public_key,
             validator_network_addresses,
-            full_node_network_addresses,
+            fullnode_network_addresses,
         }
     }
 
-    /// Returns a filtered list of correct NetworkAddresses within the full_node_network_addresses
-    pub fn full_node_network_addresses<'a>(
+    /// Returns a filtered list of correct NetworkAddresses within the fullnode_network_addresses
+    pub fn fullnode_network_addresses<'a>(
         &self,
         err_callback: Option<Box<dyn Fn(String) + 'a>>,
     ) -> Result<Vec<NetworkAddress>, lcs::Error> {
-        let addrs: Vec<RawNetworkAddress> = lcs::from_bytes(&self.full_node_network_addresses)?;
+        let addrs: Vec<RawNetworkAddress> = lcs::from_bytes(&self.fullnode_network_addresses)?;
         Ok(addrs
             .iter()
             .filter_map(|raw_addr| match NetworkAddress::try_from(raw_addr) {

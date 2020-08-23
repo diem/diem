@@ -187,7 +187,7 @@ fn compare_genesis(
         Some(actual_validator_key) == expected_validator_key,
     );
 
-    let expected_fullnode_key = lcs::from_bytes(&validator_config.full_node_network_addresses)
+    let expected_fullnode_key = lcs::from_bytes(&validator_config.fullnode_network_addresses)
         .ok()
         .and_then(|addrs: Vec<RawNetworkAddress>| {
             addrs.get(0).and_then(|addr| {

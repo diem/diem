@@ -72,7 +72,7 @@ impl SetValidatorConfig {
         let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
             fullnode_address
         } else {
-            strip_address(&validator_config.full_node_network_address)
+            strip_address(&validator_config.fullnode_network_address)
         };
 
         let txn = self.validator_config.build_transaction(
@@ -129,9 +129,7 @@ impl RotateKey {
             }
             FULLNODE_NETWORK_KEY => {
                 Some(to_x25519(storage_key.clone())?)
-                    == validator_config
-                        .full_node_network_address
-                        .find_noise_proto()
+                    == validator_config.fullnode_network_address.find_noise_proto()
             }
             _ => {
                 return Err(Error::UnexpectedError(
@@ -252,7 +250,7 @@ impl ValidatorConfig {
 pub struct DecryptedValidatorConfig {
     pub consensus_public_key: Ed25519PublicKey,
     pub validator_network_address: NetworkAddress,
-    pub full_node_network_address: NetworkAddress,
+    pub fullnode_network_address: NetworkAddress,
 }
 
 impl DecryptedValidatorConfig {
@@ -261,8 +259,8 @@ impl DecryptedValidatorConfig {
         account_address: AccountAddress,
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {
-        let full_node_network_addresses = config
-            .full_node_network_addresses(None)
+        let fullnode_network_addresses = config
+            .fullnode_network_addresses(None)
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
         let validator_network_addresses = encryptor
@@ -271,7 +269,7 @@ impl DecryptedValidatorConfig {
 
         Ok(DecryptedValidatorConfig {
             consensus_public_key: config.consensus_public_key.clone(),
-            full_node_network_address: full_node_network_addresses[0].clone(),
+            fullnode_network_address: fullnode_network_addresses[0].clone(),
             validator_network_address: validator_network_addresses[0].clone(),
         })
     }

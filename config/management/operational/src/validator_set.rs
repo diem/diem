@@ -55,7 +55,7 @@ impl ValidatorSet {
             let info = DecryptedValidatorInfo {
                 account_address: *info.account_address(),
                 consensus_public_key: config.consensus_public_key,
-                full_node_network_address: config.full_node_network_address,
+                fullnode_network_address: config.fullnode_network_address,
                 validator_network_address: config.validator_network_address,
             };
             decoded_set.push(info);
@@ -69,6 +69,6 @@ impl ValidatorSet {
 pub struct DecryptedValidatorInfo {
     pub account_address: AccountAddress,
     pub consensus_public_key: Ed25519PublicKey,
-    pub full_node_network_address: NetworkAddress,
+    pub fullnode_network_address: NetworkAddress,
     pub validator_network_address: NetworkAddress,
 }

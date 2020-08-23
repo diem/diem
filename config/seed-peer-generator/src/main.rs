@@ -78,6 +78,6 @@ fn to_seed_peer(
     };
     let addrs = validator_info
         .config()
-        .full_node_network_addresses(Some(Box::new(cb)))?;
+        .fullnode_network_addresses(Some(Box::new(cb)))?;
     Ok((peer_id, addrs))
 }

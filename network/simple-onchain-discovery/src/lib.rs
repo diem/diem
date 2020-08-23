@@ -81,7 +81,7 @@ fn extract_updates(
                         )
                     };
                     config
-                        .full_node_network_addresses(Some(Box::new(cb)))
+                        .fullnode_network_addresses(Some(Box::new(cb)))
                         .map_err(anyhow::Error::from)
                 }
             };

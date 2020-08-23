@@ -254,7 +254,7 @@ where
             seq_id,
             &consensus_key,
             validator_config.validator_network_addresses,
-            validator_config.full_node_network_addresses,
+            validator_config.fullnode_network_addresses,
             expiration,
             self.chain_id,
         );
