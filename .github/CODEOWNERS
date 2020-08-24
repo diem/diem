@@ -1,3 +1,5 @@
+# Subscribe to crypto crate changing PRs
+/crypto @kchalkias @huitseeker @valerini
 # Subscribe to potential JSON API changing PRs
 /json-rpc/json-rpc-spec.md @thefallentree @xli
 /json-rpc/types/ @thefallentree @xli
