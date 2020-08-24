@@ -26,9 +26,7 @@ module Roles {
     /// The signer didn't have the required Parent VASP role
     const EPARENT_VASP: u64 = 3;
     /// The signer didn't have the required Libra Root or Treasury & Compliance role
-    const ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 4;
-    /// The signer didn't have the required Parent VASP or Designated Dealer role
-    const EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5;
+    const EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5; // TODO: This error code and below should decrease by 1.
     /// The signer didn't have the required Designated Dealer role
     const EDESIGNATED_DEALER: u64 = 6;
     /// The signer didn't have the required Validator role
@@ -149,12 +147,11 @@ module Roles {
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
-        // TODO(wrwg): this is implemented different than the doc. Which of them is the truth?
-        assert_libra_root(creating_account);
+        assert_treasury_compliance(creating_account);
         grant_role(new_account, PARENT_VASP_ROLE_ID);
     }
     spec fun new_parent_vasp_role {
-        include AbortsIfNotLibraRoot{account: creating_account};
+        include AbortsIfNotTreasuryCompliance{account: creating_account};
         include GrantRole{account: new_account, role_id: PARENT_VASP_ROLE_ID};
     }
 
@@ -348,23 +345,6 @@ module Roles {
         include AbortsIfNotValidatorOperator;
     }
 
-
-    /// Assert that the account has either the libra root or treasury compliance role.
-    public fun assert_libra_root_or_treasury_compliance(account: &signer) acquires RoleId {
-        CoreAddresses::assert_libra_root_or_treasury_compliance(account);
-        let addr = Signer::address_of(account);
-        assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
-        let role_id = borrow_global<RoleId>(addr).role_id;
-        assert(
-            role_id == LIBRA_ROOT_ROLE_ID || role_id == TREASURY_COMPLIANCE_ROLE_ID,
-            Errors::requires_role(ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
-        )
-    }
-    spec fun assert_libra_root_or_treasury_compliance {
-        pragma opaque;
-        include AbortsIfNotLibraRootOrTreasuryCompliance;
-    }
-
     /// Assert that the account has either the parent vasp or designated dealer role.
     public fun assert_parent_vasp_or_designated_dealer(account: &signer) acquires RoleId {
         let addr = Signer::address_of(account);
@@ -466,17 +446,6 @@ module Roles {
         aborts_if global<RoleId>(addr).role_id != TREASURY_COMPLIANCE_ROLE_ID with Errors::REQUIRES_ROLE;
     }
 
-    spec schema AbortsIfNotLibraRootOrTreasuryCompliance {
-        account: signer;
-        // TODO(wrwg): potentially remove this address check, as it follows from invariant.
-        include CoreAddresses::AbortsIfNotLibraRootOrTreasuryCompliance;
-        let addr = Signer::spec_address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        let role_id = global<RoleId>(addr).role_id;
-        aborts_if role_id != LIBRA_ROOT_ROLE_ID && role_id != TREASURY_COMPLIANCE_ROLE_ID
-            with Errors::REQUIRES_ROLE;
-    }
-
     spec schema AbortsIfNotParentVasp {
         account: signer;
         let addr = Signer::spec_address_of(account);
@@ -545,15 +514,15 @@ module Roles {
         apply ThisRoleIsNotNewlyPublished{this: VALIDATOR_OPERATOR_ROLE_ID} to * except new_validator_operator_role, grant_role;
         apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_operator_role;
 
-        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6](TODO: resolve the discrepancy). A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()` is only
+        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6]. A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()` is only
         /// published through `new_designated_dealer_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: DESIGNATED_DEALER_ROLE_ID} to * except new_designated_dealer_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_designated_dealer_role;
 
-        /// ParentVASP roles are only granted by LibraRoot [B7]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
-        /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the LibraRoot role.
+        /// ParentVASP roles are only granted by TreasuryCompliance [B7]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
+        /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: PARENT_VASP_ROLE_ID} to * except new_parent_vasp_role, grant_role;
-        apply AbortsIfNotLibraRoot{account: creating_account} to new_parent_vasp_role;
+        apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_parent_vasp_role;
 
         /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoleId` with `CHILD_VASP_ROLE_ID()` is only
         /// published through `new_child_vasp_role` which aborts if `creating_account` does not have the ParentVASP role.

@@ -25,7 +25,10 @@ use libra_trace::trace::trace_node;
 use libra_transaction_replay::LibraDebugger;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
+    account_config::{
+        libra_root_address, testnet_dd_account_address, treasury_compliance_account_address,
+        COIN1_NAME,
+    },
     chain_id::ChainId,
     ledger_info::LedgerInfo,
     transaction::{authenticator::AuthenticationKey, Transaction, WriteSetPayload},
@@ -131,6 +134,7 @@ impl TestEnvironment {
         ClientProxy::new(
             ChainId::test(),
             &format!("http://localhost:{}/v1", port),
+            &self.libra_root_key.1,
             &self.libra_root_key.1,
             &self.libra_root_key.1,
             false,
@@ -923,9 +927,8 @@ fn test_full_node_basic_flow() {
     let mut full_node_client_2 = env.get_public_fn_client(0, None);
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
-    //let sender_account = treasury_compliance_account_address();
     let sender_account = testnet_dd_account_address();
-    let creation_account = libra_root_address();
+    let creation_account = treasury_compliance_account_address();
     full_node_client
         .wait_for_transaction(sender_account, 3)
         .unwrap();
@@ -1071,6 +1074,9 @@ fn test_e2e_reconfiguration() {
     client_proxy_1
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
+    client_proxy_1
+        .wait_for_transaction(treasury_compliance_account_address(), 1)
+        .unwrap();
     assert!(compare_balances(
         vec![(10.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap(),
@@ -1088,7 +1094,7 @@ fn test_e2e_reconfiguration() {
     let libra_root = load_libra_root_storage(node_configs.first().unwrap());
     let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy_1
-        .wait_for_transaction(context.address, context.sequence_number)
+        .wait_for_transaction(context.address, context.sequence_number + 1)
         .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
@@ -1262,7 +1268,7 @@ fn test_vfn_failover() {
 
     // some helpers for creation/minting
     let sender_account = testnet_dd_account_address();
-    let creation_account = libra_root_address();
+    let creation_account = treasury_compliance_account_address();
     let sequence_reset = format!("sequence {} true", sender_account);
     let creation_sequence_reset = format!("sequence {} true", creation_account);
     let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
@@ -1291,7 +1297,7 @@ fn test_vfn_failover() {
 
     // wait for VFN 1 to catch up with creation and sender account
     vfn_1_client
-        .wait_for_transaction(creation_account, 3)
+        .wait_for_transaction(creation_account, 1)
         .unwrap();
     vfn_1_client
         .wait_for_transaction(sender_account, 2)
@@ -1317,7 +1323,7 @@ fn test_vfn_failover() {
     }
     // wait for PFN to catch up with creation and sender account
     pfn_0_client
-        .wait_for_transaction(creation_account, 5)
+        .wait_for_transaction(creation_account, 3)
         .unwrap();
     pfn_0_client
         .wait_for_transaction(sender_account, 4)
@@ -1925,10 +1931,14 @@ fn test_genesis_transaction_flow() {
     println!("8. verify it's able to mint after the waypoint");
     let mut client_proxy_1 =
         env.get_validator_client(1, Some(Waypoint::from_str(waypoint_str).unwrap()));
+
     client_proxy_1.set_accounts(client_proxy_0.copy_all_accounts());
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
         .mint_coins(&["mintb", "1", "10", "Coin1"], true)
+        .unwrap();
+    client_proxy_1
+        .wait_for_transaction(treasury_compliance_account_address(), 1)
         .unwrap();
     println!("9. add node 0 back and test if it can sync to the waypoint via state synchronizer");
     let op_tool = env.get_op_tool(1);
@@ -1936,7 +1946,7 @@ fn test_genesis_transaction_flow() {
         .add_validator(validator_address, &load_libra_root_storage(&node_config))
         .unwrap();
     client_proxy_1
-        .wait_for_transaction(context.address, context.sequence_number)
+        .wait_for_transaction(context.address, context.sequence_number + 1)
         .unwrap();
     // setup the waypoint for node 0
     node_config.execution.genesis = None;

@@ -302,7 +302,7 @@ the
     human_name: vector&lt;u8&gt;,
 ) {
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_or_designated_dealer">Roles::assert_parent_vasp_or_designated_dealer</a>(created);
-    <a href="Roles.md#0x1_Roles_assert_libra_root_or_treasury_compliance">Roles::assert_libra_root_or_treasury_compliance</a>(creator);
+    <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(creator);
     <b>assert</b>(
         !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(created)),
         <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECREDENTIAL)
@@ -825,7 +825,7 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedD
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created};
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRootOrTreasuryCompliance">Roles::AbortsIfNotLibraRootOrTreasuryCompliance</a>{account: creator};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: creator};
 <b>aborts_if</b> exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(created)) with Errors::ALREADY_PUBLISHED;
 </code></pre>
 

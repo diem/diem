@@ -40,10 +40,8 @@ module CoreAddresses {
     const ETREASURY_COMPLIANCE: u64 = 1;
     /// The operation can only be performed by the VM
     const EVM: u64 = 2;
-    /// The operation can only be performed by the account at 0xA550C18 (Libra Root) or 0xB1E55ED (Treasury & Compliance)
-    const ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
     /// The operation can only be performed by the account where currencies are registered
-    const ECURRENCY_INFO: u64 = 4;
+    const ECURRENCY_INFO: u64 = 4; // TODO: This error code and below should decrease by 1.
 
     /// Assert that the account is the libra root address.
     public fun assert_libra_root(account: &signer) {
@@ -109,28 +107,6 @@ module CoreAddresses {
     spec schema AbortsIfNotCurrencyInfo {
         account: signer;
         aborts_if Signer::spec_address_of(account) != CURRENCY_INFO_ADDRESS()
-            with Errors::REQUIRES_ADDRESS;
-    }
-
-    /// Assert that the signer has the libra root or treasury compliance address.
-    public fun assert_libra_root_or_treasury_compliance(account: &signer) {
-        let addr = Signer::address_of(account);
-        assert(
-            addr == LIBRA_ROOT_ADDRESS() || addr == TREASURY_COMPLIANCE_ADDRESS(),
-            Errors::requires_address(ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
-        )
-    }
-    spec fun assert_libra_root_or_treasury_compliance {
-        pragma opaque;
-        include AbortsIfNotLibraRootOrTreasuryCompliance;
-    }
-
-    /// Specifies that a function aborts if the account has not either the libra root or the treasury compliance
-    /// address.
-    spec schema AbortsIfNotLibraRootOrTreasuryCompliance {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
-        aborts_if addr != LIBRA_ROOT_ADDRESS() && addr != TREASURY_COMPLIANCE_ADDRESS()
             with Errors::REQUIRES_ADDRESS;
     }
 

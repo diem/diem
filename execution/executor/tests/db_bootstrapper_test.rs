@@ -22,8 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        coin1_tag, from_currency_code_string, libra_root_address, testnet_dd_account_address,
-        BalanceResource, COIN1_NAME,
+        coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        treasury_compliance_account_address, BalanceResource, COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -154,7 +154,7 @@ fn get_account_transaction(
 ) -> Transaction {
     let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
     get_test_signed_transaction(
-        libra_root_address(),
+        treasury_compliance_account_address(),
         /* sequence_number = */ libra_root_seq_num,
         libra_root_key.clone(),
         libra_root_key.public_key(),
@@ -265,8 +265,8 @@ fn test_pre_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_account_transaction(&genesis_key, 1, &account1, &account1_key);
-    let txn2 = get_account_transaction(&genesis_key, 2, &account2, &account2_key);
+    let txn1 = get_account_transaction(&genesis_key, 0, &account1, &account1_key);
+    let txn2 = get_account_transaction(&genesis_key, 1, &account2, &account2_key);
     let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2000);
     let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2000);
     execute_and_commit(vec![txn1, txn2, txn3, txn4], &db_rw, &signer);
@@ -336,8 +336,8 @@ fn test_new_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_account_transaction(&genesis_key, 1, &account1, &account1_key);
-    let txn2 = get_account_transaction(&genesis_key, 2, &account2, &account2_key);
+    let txn1 = get_account_transaction(&genesis_key, 0, &account1, &account1_key);
+    let txn2 = get_account_transaction(&genesis_key, 1, &account2, &account2_key);
     let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2_000_000);
     let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2_000_000);
     execute_and_commit(vec![txn1, txn2, txn3, txn4], &db, &signer);

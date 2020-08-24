@@ -21,11 +21,10 @@ fn burn_txn_fees() {
     let mut executor = FakeExecutor::from_genesis_file();
     let sender = Account::new();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
-    let tc = Account::new_blessed_tc();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -35,7 +34,7 @@ fn burn_txn_fees() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -84,9 +83,10 @@ fn burn_txn_fees() {
     });
 
     let output = executor.execute_and_apply(
-        tc.transaction()
+        blessed
+            .transaction()
             .script(encode_burn_txn_fees_script(coin1_ty))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
 

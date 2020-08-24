@@ -4,7 +4,7 @@
 
 // create a parent VASP account for Bob
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::LBR::LBR;
 use 0x1::LibraAccount;

@@ -12,8 +12,8 @@ use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
-        coin1_tag, from_currency_code_string, libra_root_address, testnet_dd_account_address,
-        COIN1_NAME,
+        coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        treasury_compliance_account_address, COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
@@ -64,11 +64,11 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = testnet_dd_account_address();
-    let root_account = libra_root_address();
+    let tc_account = treasury_compliance_account_address();
 
     let tx1 = get_test_signed_transaction(
-        root_account,
-        /* sequence_number = */ 1,
+        tc_account,
+        /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
@@ -82,8 +82,8 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
     );
 
     let tx2 = get_test_signed_transaction(
-        root_account,
-        /* sequence_number = */ 2,
+        tc_account,
+        /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(
@@ -97,8 +97,8 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
     );
 
     let tx3 = get_test_signed_transaction(
-        root_account,
-        /* sequence_number = */ 3,
+        tc_account,
+        /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_create_parent_vasp_account_script(

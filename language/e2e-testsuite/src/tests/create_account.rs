@@ -12,7 +12,7 @@ use libra_types::{account_config, transaction::TransactionStatus, vm_status::Kep
 fn create_account() {
     let mut executor = FakeExecutor::from_genesis_file();
     // create and publish a sender with 1_000_000 coins
-    let sender = Account::new_libra_root();
+    let sender = Account::new_blessed_tc();
     let new_account = Account::new();
 
     // define the arguments to the create account transaction
@@ -20,7 +20,7 @@ fn create_account() {
     let txn = create_account_txn(
         &sender,
         &new_account,
-        1,
+        0,
         initial_amount,
         account_config::lbr_type_tag(),
     );
@@ -42,5 +42,5 @@ fn create_account() {
         .read_balance_resource(&new_account, account::lbr_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(initial_amount, updated_receiver_balance.coin());
-    assert_eq!(2, updated_sender.sequence_number());
+    assert_eq!(1, updated_sender.sequence_number());
 }

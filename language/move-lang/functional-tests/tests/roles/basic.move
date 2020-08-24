@@ -110,7 +110,7 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 6,"
 
 //! new-transaction
-//! sender: blessed
+//! sender: libraroot
 script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
@@ -124,10 +124,10 @@ fun main(account: &signer) {
     );
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::Roles;
 fun main(account: &signer) {
@@ -137,7 +137,7 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 6,"
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
@@ -153,7 +153,7 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 771,"
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp}}, {{vasp::auth_key}}, b"vasp", true
 stdlib_script::create_parent_vasp_account

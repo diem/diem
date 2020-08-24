@@ -5,16 +5,16 @@
 
 // create parent VASP accounts for alice and bob
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
 use 0x1::LibraAccount;
-fun main(lr_account: &signer) {
+fun main(tc_account: &signer) {
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<Coin1>(
-        lr_account,
+        tc_account,
         {{alice}},
         {{alice::auth_key}},
         x"A1",
@@ -22,7 +22,7 @@ fun main(lr_account: &signer) {
     );
 
     LibraAccount::create_parent_vasp_account<Coin2>(
-        lr_account,
+        tc_account,
         {{bob}},
         {{bob::auth_key}},
         x"B1",

@@ -11,15 +11,15 @@
 // create parent VASP accounts for parent1 and 2
 // create a parent VASP
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::LBR::LBR;
 use 0x1::LibraAccount;
-fun main(lr_account: &signer) {
+fun main(tc_account: &signer) {
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<LBR>(
-        lr_account,
+        tc_account,
         {{parent1}},
         {{parent1::auth_key}},
         x"A1",
@@ -27,7 +27,7 @@ fun main(lr_account: &signer) {
     );
 
     LibraAccount::create_parent_vasp_account<LBR>(
-        lr_account,
+        tc_account,
         {{parent2}},
         {{parent2::auth_key}},
         x"B1",
@@ -174,14 +174,14 @@ module Holder {
 }
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp1}}, {{vasp1::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
 // check: EXECUTED
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp2}}, {{vasp2::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account

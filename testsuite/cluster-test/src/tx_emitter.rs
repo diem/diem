@@ -279,14 +279,14 @@ impl TxEmitter {
         })
     }
 
-    pub async fn load_libra_root_account(&self, instance: &Instance) -> Result<AccountData> {
+    pub async fn load_tc_account(&self, instance: &Instance) -> Result<AccountData> {
         let client = instance.json_rpc_client();
-        let address = account_config::libra_root_address();
+        let address = account_config::treasury_compliance_account_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
             .map_err(|e| {
                 format_err!(
-                    "query_sequence_numbers on {:?} for libra root account failed: {}",
+                    "query_sequence_numbers on {:?} for treasury compliance account failed: {}",
                     client,
                     e
                 )
@@ -312,8 +312,8 @@ impl TxEmitter {
         let mut faucet_account = self
             .load_faucet_account(self.pick_mint_instance(&req.instances))
             .await?;
-        let mut libra_root_account = self
-            .load_libra_root_account(self.pick_mint_instance(&req.instances))
+        let mut tc_account = self
+            .load_tc_account(self.pick_mint_instance(&req.instances))
             .await?;
         let coins_per_account = (SEND_AMOUNT + *GAS_UNIT_PRICE) * MAX_TXNS;
         info!("Minting additional {} accounts", num_accounts);
@@ -330,7 +330,7 @@ impl TxEmitter {
         .map_err(|e| format_err!("Failed to mint into faucet account: {}", e))?;
 
         let seed_accounts = create_seed_accounts(
-            &mut libra_root_account,
+            &mut tc_account,
             req.instances.len(),
             100,
             self.pick_mint_client(&req.instances),

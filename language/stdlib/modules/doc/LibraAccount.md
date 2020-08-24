@@ -98,6 +98,7 @@
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
+    -  [Function `epilogue`](#0x1_LibraAccount_Specification_epilogue)
 
 
 
@@ -1700,13 +1701,12 @@ all available currencies in the system will also be added.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
-    creator_account: &signer,  // libra root
+    creator_account: &signer,  // TreasuryCompliance
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
-    // TODO: restrictions on creator_account?
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
     <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(&new_account, creator_account);
@@ -2799,6 +2799,24 @@ After genesis, the
 <pre><code><b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(cap.account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_epilogue"></a>
+
+### Function `epilogue`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender: address, transaction_fee_amount: u64, txn_sequence_number: u64)
+</code></pre>
+
+
+
+> TODO: timeout
+
+
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

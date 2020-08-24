@@ -95,8 +95,9 @@ fn main() {
         .faucet_account_file
         .clone()
         .unwrap_or_else(|| "".to_string());
-    // Faucet and TreasuryCompliance use the same keypair for now
+    // Faucet, TreasuryCompliance and DD use the same keypair for now
     let treasury_compliance_account_file = faucet_account_file.clone();
+    let dd_account_file = faucet_account_file.clone();
     let mnemonic_file = args.mnemonic_file.clone();
 
     // If waypoint is given explicitly, use its value,
@@ -116,6 +117,7 @@ fn main() {
         &args.url,
         &faucet_account_file,
         &treasury_compliance_account_file,
+        &dd_account_file,
         args.sync,
         args.faucet_url.clone(),
         mnemonic_file,

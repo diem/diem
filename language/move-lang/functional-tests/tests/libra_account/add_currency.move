@@ -79,7 +79,7 @@ fun main(account: &signer) {
 // check: 1031
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp}}, {{vasp::auth_key}}, b"bob", false
 stdlib_script::create_parent_vasp_account

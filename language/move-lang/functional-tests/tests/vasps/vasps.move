@@ -3,7 +3,7 @@
 
 // create a parent VASP
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::DualAttestation;
 use 0x1::LBR::LBR;
@@ -110,7 +110,7 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::VASP;
 fun main(account: &signer) {
@@ -121,14 +121,14 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 771,"
 
 //! new-transaction
-//! sender: blessed
+//! sender: libraroot
 script {
 use 0x1::VASP;
 fun main(account: &signer) {
     VASP::publish_parent_vasp_credential(account, account);
 }
 }
-// check: "Keep(ABORTED { code: 2,"
+// check: "Keep(ABORTED { code: 258,"
 
 //! new-transaction
 //! sender: blessed

@@ -73,7 +73,7 @@ module DualAttestation {
         human_name: vector<u8>,
     ) {
         Roles::assert_parent_vasp_or_designated_dealer(created);
-        Roles::assert_libra_root_or_treasury_compliance(creator);
+        Roles::assert_treasury_compliance(creator);
         assert(
             !exists<Credential>(Signer::address_of(created)),
             Errors::already_published(ECREDENTIAL)
@@ -89,7 +89,7 @@ module DualAttestation {
     spec fun publish_credential {
         /// The permission "RotateDualAttestationInfo" is granted to ParentVASP, DesignatedDealer [B26].
         include Roles::AbortsIfNotParentVaspOrDesignatedDealer{account: created};
-        include Roles::AbortsIfNotLibraRootOrTreasuryCompliance{account: creator};
+        include Roles::AbortsIfNotTreasuryCompliance{account: creator};
         aborts_if exists<Credential>(Signer::spec_address_of(created)) with Errors::ALREADY_PUBLISHED;
     }
 

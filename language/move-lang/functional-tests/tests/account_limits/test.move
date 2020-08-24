@@ -242,7 +242,7 @@ script {
 // chec: 1
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{otherbob}}, {{otherbob::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account

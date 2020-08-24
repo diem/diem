@@ -31,7 +31,8 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         from_currency_code_string, libra_root_address, testnet_dd_account_address,
-        type_tag_for_currency_code, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
+        treasury_compliance_account_address, type_tag_for_currency_code,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
     },
     account_state::AccountState,
     chain_id::ChainId,
@@ -117,6 +118,8 @@ pub struct ClientProxy {
     faucet_url: Url,
     /// Account used for Libra Root operations (e.g., adding a new transaction script)
     pub libra_root_account: Option<AccountData>,
+    /// Account used for Treasury Compliance operations
+    pub tc_account: Option<AccountData>,
     /// Account used for "minting" operations
     pub testnet_designated_dealer_account: Option<AccountData>,
     /// Wallet library managing user accounts.
@@ -134,6 +137,7 @@ impl ClientProxy {
         chain_id: ChainId,
         url: &str,
         libra_root_account_file: &str,
+        tc_account_file: &str,
         testnet_designated_dealer_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_url: Option<String>,
@@ -159,6 +163,21 @@ impl ClientProxy {
             )?;
             Some(libra_root_account_data)
         };
+
+        let tc_account = if tc_account_file.is_empty() {
+            None
+        } else {
+            let tc_account_key = generate_key::load_key(tc_account_file);
+            let tc_account_data = Self::get_account_data_from_address(
+                &mut client,
+                treasury_compliance_account_address(),
+                true,
+                Some(KeyPair::from(tc_account_key)),
+                None,
+            )?;
+            Some(tc_account_data)
+        };
+
         let dd_account = if testnet_designated_dealer_account_file.is_empty() {
             None
         } else {
@@ -192,6 +211,7 @@ impl ClientProxy {
             address_to_ref_id,
             faucet_url,
             libra_root_account,
+            tc_account,
             testnet_designated_dealer_account: dd_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
@@ -254,6 +274,14 @@ impl ClientProxy {
                 hex::encode(&libra_root_account.address),
                 libra_root_account.sequence_number,
                 libra_root_account.status,
+            );
+        }
+        if let Some(tc_account) = &self.tc_account {
+            println!(
+                "TC account address: {}, sequence_number: {}, status: {:?}",
+                hex::encode(&tc_account.address),
+                tc_account.sequence_number,
+                tc_account.status,
             );
         }
         if let Some(testnet_dd_account) = &self.testnet_designated_dealer_account {
@@ -347,6 +375,12 @@ impl ClientProxy {
             if let Some(libra_root_account) = &mut self.libra_root_account {
                 if libra_root_account.address == address {
                     libra_root_account.sequence_number = sequence_number;
+                    return Ok(sequence_number);
+                }
+            }
+            if let Some(tc_account) = &mut self.tc_account {
+                if tc_account.address == address {
+                    tc_account.sequence_number = sequence_number;
                     return Ok(sequence_number);
                 }
             }
@@ -465,7 +499,7 @@ impl ClientProxy {
             "Invalid number of coins to transfer from faucet."
         );
 
-        if self.libra_root_account.is_some() {
+        if self.tc_account.is_some() {
             let script = transaction_builder::encode_create_parent_vasp_account_script(
                 type_tag_for_currency_code(currency_code.clone()),
                 0,
@@ -484,7 +518,7 @@ impl ClientProxy {
                 if &AccountStatus::Local == status {
                     println!(">> Creating recipient account before minting from faucet");
                     // This needs to be blocking since the mint can't happen until it completes
-                    self.association_transaction_with_local_libra_root_account(
+                    self.association_transaction_with_local_tc_account(
                         TransactionPayload::Script(script),
                         true,
                     )?;
@@ -493,7 +527,7 @@ impl ClientProxy {
             } else {
                 // We can't determine the account state. So try and create the account, but
                 // if it already exists don't error.
-                let _result = self.association_transaction_with_local_libra_root_account(
+                let _result = self.association_transaction_with_local_tc_account(
                     TransactionPayload::Script(script),
                     true,
                 );
@@ -1518,6 +1552,30 @@ impl ClientProxy {
         Ok(())
     }
 
+    fn association_transaction_with_local_tc_account(
+        &mut self,
+        payload: TransactionPayload,
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            self.tc_account.is_some(),
+            "No treasury compliance account loaded"
+        );
+        let sender = self.tc_account.as_ref().unwrap();
+        let sender_address = sender.address;
+        let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
+        let mut sender_mut = self.tc_account.as_mut().unwrap();
+        self.client.submit_transaction(Some(&mut sender_mut), txn)?;
+
+        if is_blocking {
+            self.wait_for_transaction(
+                sender_address,
+                self.tc_account.as_ref().unwrap().sequence_number,
+            )?;
+        }
+        Ok(())
+    }
+
     fn association_transaction_with_local_testnet_dd_account(
         &mut self,
         payload: TransactionPayload,
@@ -1760,6 +1818,7 @@ mod tests {
         let mut client_proxy = ClientProxy::new(
             ChainId::test(),
             "http://localhost:8080/v1",
+            &"",
             &"",
             &"",
             false,

@@ -707,13 +707,12 @@ module LibraAccount {
     /// `auth_key_prefix` | `new_account_address`.  If `add_all_currencies` is true, 0 balances for
     /// all available currencies in the system will also be added.
     public fun create_parent_vasp_account<Token>(
-        creator_account: &signer,  // libra root
+        creator_account: &signer,  // TreasuryCompliance
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         add_all_currencies: bool
     ) {
-        // TODO: restrictions on creator_account?
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
@@ -968,6 +967,11 @@ module LibraAccount {
             )
         }
     }
+    spec fun epilogue {
+        /// > TODO: timeout
+        pragma verify = false;
+    }
+
 
     /// The success_epilogue is invoked at the end of successfully executed transactions.
     fun success_epilogue<Token>(

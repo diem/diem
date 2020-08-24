@@ -80,7 +80,7 @@ fun main(account: &signer) {
 // TODO: this can go away once //! account works
 // create a parent VASPx
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 script {
 use 0x1::LibraAccount;
 use 0x1::LBR::LBR;
@@ -243,7 +243,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: libraroot
+//! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account

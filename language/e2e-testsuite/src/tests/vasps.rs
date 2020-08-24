@@ -15,10 +15,10 @@ fn valid_creator_already_vasp() {
 
     let account = Account::new();
 
-    let libra_root = Account::new_libra_root();
+    let treasury_compliance = Account::new_blessed_tc();
 
     executor.execute_and_apply(
-        libra_root
+        treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -28,7 +28,7 @@ fn valid_creator_already_vasp() {
                 vec![],
                 true,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -39,9 +39,9 @@ fn valid_creator_already_vasp() {
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(*account.address()),
-                Value::transaction_argument_signer_reference(*libra_root.address()),
+                Value::transaction_argument_signer_reference(*treasury_compliance.address()),
             ],
-            libra_root.address(),
+            treasury_compliance.address(),
         )
         .unwrap_err();
     if let VMStatus::MoveAbort(_, code) = err {
@@ -59,10 +59,10 @@ fn max_child_accounts_for_vasp() {
 
     let account = Account::new();
 
-    let libra_root = Account::new_libra_root();
+    let treasury_compliance = Account::new_blessed_tc();
 
     executor.execute_and_apply(
-        libra_root
+        treasury_compliance
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -72,7 +72,7 @@ fn max_child_accounts_for_vasp() {
                 vec![],
                 true,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 

@@ -8,7 +8,6 @@
 -  [Const `ELIBRA_ROOT`](#0x1_CoreAddresses_ELIBRA_ROOT)
 -  [Const `ETREASURY_COMPLIANCE`](#0x1_CoreAddresses_ETREASURY_COMPLIANCE)
 -  [Const `EVM`](#0x1_CoreAddresses_EVM)
--  [Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`](#0x1_CoreAddresses_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
 -  [Const `ECURRENCY_INFO`](#0x1_CoreAddresses_ECURRENCY_INFO)
 -  [Function `LIBRA_ROOT_ADDRESS`](#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS)
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
@@ -18,13 +17,11 @@
 -  [Function `assert_treasury_compliance`](#0x1_CoreAddresses_assert_treasury_compliance)
 -  [Function `assert_vm`](#0x1_CoreAddresses_assert_vm)
 -  [Function `assert_currency_info`](#0x1_CoreAddresses_assert_currency_info)
--  [Function `assert_libra_root_or_treasury_compliance`](#0x1_CoreAddresses_assert_libra_root_or_treasury_compliance)
 -  [Specification](#0x1_CoreAddresses_Specification)
     -  [Function `assert_libra_root`](#0x1_CoreAddresses_Specification_assert_libra_root)
     -  [Function `assert_treasury_compliance`](#0x1_CoreAddresses_Specification_assert_treasury_compliance)
     -  [Function `assert_vm`](#0x1_CoreAddresses_Specification_assert_vm)
     -  [Function `assert_currency_info`](#0x1_CoreAddresses_Specification_assert_currency_info)
-    -  [Function `assert_libra_root_or_treasury_compliance`](#0x1_CoreAddresses_Specification_assert_libra_root_or_treasury_compliance)
 
 
 
@@ -60,18 +57,6 @@ The operation can only be performed by the VM
 
 
 <pre><code><b>const</b> EVM: u64 = 2;
-</code></pre>
-
-
-
-<a name="0x1_CoreAddresses_ELIBRA_ROOT_OR_TREASURY_COMPLIANCE"></a>
-
-## Const `ELIBRA_ROOT_OR_TREASURY_COMPLIANCE`
-
-The operation can only be performed by the account at 0xA550C18 (Libra Root) or 0xB1E55ED (Treasury & Compliance)
-
-
-<pre><code><b>const</b> ELIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
 </code></pre>
 
 
@@ -304,35 +289,6 @@ Assert that the signer has the currency info address.
 
 </details>
 
-<a name="0x1_CoreAddresses_assert_libra_root_or_treasury_compliance"></a>
-
-## Function `assert_libra_root_or_treasury_compliance`
-
-Assert that the signer has the libra root or treasury compliance address.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_assert_libra_root_or_treasury_compliance">assert_libra_root_or_treasury_compliance</a>(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_assert_libra_root_or_treasury_compliance">assert_libra_root_or_treasury_compliance</a>(account: &signer) {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(
-        addr == <a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>() || addr == <a href="#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">TREASURY_COMPLIANCE_ADDRESS</a>(),
-        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(ELIBRA_ROOT_OR_TREASURY_COMPLIANCE)
-    )
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_CoreAddresses_Specification"></a>
 
 ## Specification
@@ -456,40 +412,6 @@ Specifies that a function aborts if the account has not the currency info addres
 <pre><code><b>schema</b> <a href="#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">AbortsIfNotCurrencyInfo</a> {
     account: signer;
     <b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CURRENCY_INFO_ADDRESS</a>()
-        with Errors::REQUIRES_ADDRESS;
-}
-</code></pre>
-
-
-
-<a name="0x1_CoreAddresses_Specification_assert_libra_root_or_treasury_compliance"></a>
-
-### Function `assert_libra_root_or_treasury_compliance`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_assert_libra_root_or_treasury_compliance">assert_libra_root_or_treasury_compliance</a>(account: &signer)
-</code></pre>
-
-
-
-
-<pre><code>pragma opaque;
-<b>include</b> <a href="#0x1_CoreAddresses_AbortsIfNotLibraRootOrTreasuryCompliance">AbortsIfNotLibraRootOrTreasuryCompliance</a>;
-</code></pre>
-
-
-Specifies that a function aborts if the account has not either the libra root or the treasury compliance
-address.
-
-
-<a name="0x1_CoreAddresses_AbortsIfNotLibraRootOrTreasuryCompliance"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_CoreAddresses_AbortsIfNotLibraRootOrTreasuryCompliance">AbortsIfNotLibraRootOrTreasuryCompliance</a> {
-    account: signer;
-    <a name="0x1_CoreAddresses_addr$9"></a>
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>aborts_if</b> addr != <a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">LIBRA_ROOT_ADDRESS</a>() && addr != <a href="#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">TREASURY_COMPLIANCE_ADDRESS</a>()
         with Errors::REQUIRES_ADDRESS;
 }
 </code></pre>

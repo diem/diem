@@ -164,7 +164,7 @@ fn account_limits() {
     let vasp_a_child = Account::new();
     let vasp_b_child = Account::new();
     let libra_root = Account::new_libra_root();
-    let tc = Account::new_blessed_tc();
+    let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
 
     let mint_amount = 1_000_000;
@@ -173,7 +173,7 @@ fn account_limits() {
 
     // Create vasp accounts
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -183,12 +183,12 @@ fn account_limits() {
                 vec![],
                 true,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .ttl(ttl)
             .sign(),
     );
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -198,7 +198,7 @@ fn account_limits() {
                 vec![],
                 true,
             ))
-            .sequence_number(2)
+            .sequence_number(1)
             .ttl(ttl)
             .sign(),
     );
@@ -237,7 +237,7 @@ fn account_limits() {
         libra_root
             .transaction()
             .write_set(encode_add_account_limits_admin_script(*vasp_a.address()))
-            .sequence_number(3)
+            .sequence_number(1)
             .sign(),
     );
 
@@ -245,7 +245,7 @@ fn account_limits() {
         libra_root
             .transaction()
             .write_set(encode_add_account_limits_admin_script(*vasp_b.address()))
-            .sequence_number(4)
+            .sequence_number(2)
             .sign(),
     );
 
@@ -278,13 +278,14 @@ fn account_limits() {
     );
 
     executor.execute_and_apply(
-        tc.transaction()
+        blessed
+            .transaction()
             .script(encode_update_account_limit_window_info_script(
                 *vasp_a.address(),
                 0,
                 *vasp_a.address(),
             ))
-            .sequence_number(0)
+            .sequence_number(2)
             .ttl(ttl)
             .sign(),
     );
@@ -295,7 +296,8 @@ fn account_limits() {
 
     // Set vasp A's inflow limit to half of what we just minted them
     executor.execute_and_apply(
-        tc.transaction()
+        blessed
+            .transaction()
             .script(encode_update_account_limit_definition_script(
                 *vasp_a.address(),
                 mint_amount,
@@ -303,7 +305,7 @@ fn account_limits() {
                 0,
                 0,
             ))
-            .sequence_number(1)
+            .sequence_number(3)
             .ttl(ttl)
             .sign(),
     );
@@ -439,7 +441,8 @@ fn account_limits() {
 
     // Set vasp A's outflow to 1000
     executor.execute_and_apply(
-        tc.transaction()
+        blessed
+            .transaction()
             .script(encode_update_account_limit_definition_script(
                 *vasp_a.address(),
                 std::u64::MAX, // unlimit inflow
@@ -447,7 +450,7 @@ fn account_limits() {
                 0,
                 0,
             ))
-            .sequence_number(2)
+            .sequence_number(4)
             .ttl(ttl)
             .sign(),
     );
@@ -579,7 +582,8 @@ fn account_limits() {
             .coin();
         let a_balance = a_parent_balance + a_child_balance;
         executor.execute_and_apply(
-            tc.transaction()
+            blessed
+                .transaction()
                 .script(encode_update_account_limit_definition_script(
                     *vasp_a.address(),
                     0,
@@ -587,19 +591,20 @@ fn account_limits() {
                     a_balance,     // set max holding to the current balance of A
                     0,
                 ))
-                .sequence_number(3)
+                .sequence_number(5)
                 .ttl(ttl)
                 .sign(),
         );
         // TC needs to set the current aggregate balance for vasp a's window
         executor.execute_and_apply(
-            tc.transaction()
+            blessed
+                .transaction()
                 .script(encode_update_account_limit_window_info_script(
                     *vasp_a.address(),
                     a_balance,
                     *vasp_a.address(),
                 ))
-                .sequence_number(4)
+                .sequence_number(6)
                 .ttl(ttl)
                 .sign(),
         );

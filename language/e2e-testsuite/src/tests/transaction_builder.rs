@@ -38,10 +38,9 @@ fn freeze_unfreeze_account() {
     let account = Account::new();
 
     let blessed = Account::new_blessed_tc();
-    let libra_root = Account::new_libra_root();
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -51,7 +50,7 @@ fn freeze_unfreeze_account() {
                 vec![],
                 true,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -60,7 +59,7 @@ fn freeze_unfreeze_account() {
         blessed
             .transaction()
             .script(encode_freeze_account_script(3, *account.address()))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
 
@@ -81,7 +80,7 @@ fn freeze_unfreeze_account() {
         blessed
             .transaction()
             .script(encode_unfreeze_account_script(4, *account.address()))
-            .sequence_number(1)
+            .sequence_number(2)
             .sign(),
     );
     // execute rotate key transaction from unfrozen account now succeeds
@@ -95,7 +94,7 @@ fn freeze_unfreeze_account() {
 #[test]
 fn create_parent_and_child_vasp() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
     let parent = Account::new();
     let child = Account::new();
 
@@ -104,7 +103,7 @@ fn create_parent_and_child_vasp() {
     // create a parent VASP
     let add_all_currencies = false;
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
@@ -114,7 +113,7 @@ fn create_parent_and_child_vasp() {
                 vec![],
                 add_all_currencies,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -158,7 +157,7 @@ fn create_parent_and_child_vasp() {
 #[test]
 fn create_child_vasp_all_currencies() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let parent = Account::new();
     let child = Account::new();
@@ -166,7 +165,7 @@ fn create_child_vasp_all_currencies() {
     // create a parent VASP
     let add_all_currencies = true;
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -176,7 +175,7 @@ fn create_child_vasp_all_currencies() {
                 vec![],
                 add_all_currencies,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -235,7 +234,7 @@ fn create_child_vasp_all_currencies() {
 #[test]
 fn create_child_vasp_with_balance() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let parent = Account::new();
     let child = Account::new();
@@ -243,7 +242,7 @@ fn create_child_vasp_with_balance() {
     // create a parent VASP
     let add_all_currencies = true;
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -253,7 +252,7 @@ fn create_child_vasp_with_balance() {
                 vec![],
                 add_all_currencies,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -314,7 +313,7 @@ fn dual_attestation_payment() {
     let payment_sender = Account::new();
     let sender_child = Account::new();
     let payee_child = Account::new();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (sender_vasp_compliance_private_key, _) = keygen.generate_keypair();
@@ -324,7 +323,7 @@ fn dual_attestation_payment() {
     let payment_amount = COIN1_THRESHOLD;
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -334,12 +333,12 @@ fn dual_attestation_payment() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -349,7 +348,7 @@ fn dual_attestation_payment() {
                 vec![],
                 false,
             ))
-            .sequence_number(2)
+            .sequence_number(1)
             .sign(),
     );
 
@@ -686,7 +685,6 @@ fn dd_dual_attestation_payments() {
     let parent_vasp = Account::new();
     let dd1 = Account::new();
     let dd2 = Account::new();
-    let libra_root = Account::new_libra_root();
     let blessed = Account::new_blessed_tc();
     let mint_dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
@@ -697,7 +695,7 @@ fn dd_dual_attestation_payments() {
 
     // create the VASP account
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -707,7 +705,7 @@ fn dd_dual_attestation_payments() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
     // create the DD1 account
@@ -722,7 +720,7 @@ fn dd_dual_attestation_payments() {
                 vec![],
                 false,
             ))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
     // create the DD2 account
@@ -737,7 +735,7 @@ fn dd_dual_attestation_payments() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(2)
             .sign(),
     );
 
@@ -958,7 +956,7 @@ fn publish_rotate_shared_ed25519_public_key() {
 #[test]
 fn recovery_address() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
 
     let parent = Account::new();
     let mut child = Account::new();
@@ -970,7 +968,7 @@ fn recovery_address() {
     // create a parent VASP
     let add_all_currencies = false;
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
@@ -980,7 +978,7 @@ fn recovery_address() {
                 vec![],
                 add_all_currencies,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -1057,7 +1055,7 @@ fn recovery_address() {
     // create another VASP unrelated to parent/child
     let add_all_currencies = false;
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::lbr_type_tag(),
@@ -1067,7 +1065,7 @@ fn recovery_address() {
                 vec![],
                 add_all_currencies,
             ))
-            .sequence_number(2)
+            .sequence_number(1)
             .sign(),
     );
 
@@ -1111,10 +1109,10 @@ fn add_child_currencies() {
     let vasp_b = Account::new();
     let vasp_b_child1 = Account::new();
     let vasp_b_child2 = Account::new();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -1124,7 +1122,7 @@ fn add_child_currencies() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
@@ -1158,7 +1156,7 @@ fn add_child_currencies() {
     ///////////////////////////////////////////////////////////////////////////
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -1168,7 +1166,7 @@ fn add_child_currencies() {
                 vec![],
                 true,
             ))
-            .sequence_number(2)
+            .sequence_number(1)
             .sign(),
     );
 

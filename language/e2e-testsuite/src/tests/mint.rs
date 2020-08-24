@@ -110,14 +110,13 @@ fn mint_to_existing_not_dd() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
-    let tc = Account::new_blessed_tc();
-    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
 
     // create and publish a sender with 1_000_000 coins
     let receiver = Account::new();
 
     executor.execute_and_apply(
-        libra_root
+        blessed
             .transaction()
             .script(encode_create_parent_vasp_account_script(
                 account_config::coin1_tag(),
@@ -127,13 +126,14 @@ fn mint_to_existing_not_dd() {
                 vec![],
                 false,
             ))
-            .sequence_number(1)
+            .sequence_number(0)
             .sign(),
     );
 
     let mint_amount = 1_000;
     let output = executor.execute_transaction(
-        tc.transaction()
+        blessed
+            .transaction()
             .script(encode_tiered_mint_script(
                 account_config::coin1_tag(),
                 0,
@@ -141,7 +141,7 @@ fn mint_to_existing_not_dd() {
                 mint_amount,
                 4,
             ))
-            .sequence_number(0)
+            .sequence_number(1)
             .sign(),
     );
     assert_eq!(
