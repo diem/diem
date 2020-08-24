@@ -320,7 +320,7 @@ module DesignatedDealer {
         let new_amount = if (LibraTimestamp::spec_now_microseconds() <= tier_info.window_start + ONE_DAY) { tier_info.window_inflow + amount } else { amount };
         aborts_if new_amount > tier_info.tiers[tier_index] with Errors::INVALID_ARGUMENT;
         include LibraTimestamp::AbortsIfNoTime;
-        aborts_if !exists<Libra::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::NOT_PUBLISHED;
+        aborts_if !exists<Libra::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
         include Libra::MintAbortsIf<CoinType>{value: amount};
     }
 

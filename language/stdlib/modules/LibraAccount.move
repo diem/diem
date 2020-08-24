@@ -276,6 +276,10 @@ module LibraAccount {
         deposit(payer_address, payee_address, coin1, x"", x"");
         deposit(payer_address, payee_address, coin2, x"", x"")
     }
+    spec fun unstaple_lbr {
+        /// > TODO: timeout
+        pragma verify = false;
+    }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
     fun deposit<Token>(
@@ -472,6 +476,12 @@ module LibraAccount {
         );
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
+    spec fun withdraw_from {
+        /// Can only withdraw from the balances of cap.account_address [B27].
+        ensures forall addr: address where old(exists<Balance<Token>>(addr)) && addr != cap.account_address:
+            global<Balance<Token>>(addr).coin.value == old(global<Balance<Token>>(addr).coin.value);
+        // TODO(jkpark): this spec block is incomplete.
+    }
 
     /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
     /// resource under `dd`.
@@ -540,6 +550,10 @@ module LibraAccount {
     spec fun rotate_authentication_key {
         include RotateAuthenticationKeyAbortsIf;
         ensures global<LibraAccount>(cap.account_address).authentication_key == new_authentication_key;
+
+        /// Can only rotate the authentication_key of cap.account_address [B26].
+        ensures forall addr: address where addr != cap.account_address && old(exists_at(addr)):
+            global<LibraAccount>(addr).authentication_key == old(global<LibraAccount>(addr).authentication_key);
     }
     spec schema RotateAuthenticationKeyAbortsIf {
         cap: &KeyRotationCapability;
@@ -772,6 +786,13 @@ module LibraAccount {
 
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
+    spec fun add_currency {
+        include Libra::AbortsIfNoCurrency<Token>;
+        aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT; // Aborts if the predicate "can_hold_balance" returns false [E2][E3][E4][E5][E6][E7][E8].
+        aborts_if exists<Balance<Token>>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
+        ensures exists<Balance<Token>>(Signer::address_of(account));
+        ensures global<Balance<Token>>(Signer::address_of(account)) == Balance<Token>{ coin: Libra<Token> { value: 0 } };
+    }
 
     /// Return whether the account at `addr` accepts `Token` type coins
     public fun accepts_currency<Token>(addr: address): bool {
@@ -972,7 +993,6 @@ module LibraAccount {
         pragma verify = false;
     }
 
-
     /// The success_epilogue is invoked at the end of successfully executed transactions.
     fun success_epilogue<Token>(
         account: &signer,
@@ -1117,10 +1137,10 @@ module LibraAccount {
     }
 
     spec module {
-        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B27].
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
         apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
 
-        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B28].
+        /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
         apply EnsuresWithdrawalCap{account: new_account} to make_account;
     }
 
@@ -1136,5 +1156,22 @@ module LibraAccount {
             delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
+    /// only rotate_authentication_key can rotate authentication_key [B26].
+    spec schema AuthenticationKeyRemainsSame {
+        ensures forall addr1: address where old(exists_at(addr1)):
+            global<LibraAccount>(addr1).authentication_key == old(global<LibraAccount>(addr1).authentication_key);
+    }
+    spec module {
+        apply AuthenticationKeyRemainsSame to *, *<T> except rotate_authentication_key;
+    }
+
+    /// only withdraw_from and its helper and clients can withdraw [B27].
+    spec schema BalanceNotDecrease<Token> {
+        ensures forall addr1: address where old(exists<Balance<Token>>(addr1)):
+            global<Balance<Token>>(addr1).coin.value >= old(global<Balance<Token>>(addr1).coin.value);
+    }
+    spec module {
+        apply BalanceNotDecrease<Token> to *<Token> except withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr, preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
+    }
 }
 }

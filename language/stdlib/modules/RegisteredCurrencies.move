@@ -53,22 +53,23 @@ module RegisteredCurrencies {
     }
     spec fun add_currency_code {
         include AddCurrencyCodeAbortsIf;
-        /// The resulting currency_codes is the one before this function is called, with the new one added to the end.
-        ensures Vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
+        include AddCurrencyCodeEnsures;
     }
     spec schema AddCurrencyCodeAbortsIf {
         lr_account: &signer;
         currency_code: vector<u8>;
-        include LibraConfig::AbortsIfNotModifiable<RegisteredCurrencies>{
-            account: lr_account,
-            payload: LibraConfig::get<RegisteredCurrencies>()
-        };
-
+        include LibraConfig::SetAbortsIf<RegisteredCurrencies>{ account: lr_account };
         /// The same currency code can be only added once.
         aborts_if Vector::spec_contains(
             LibraConfig::spec_get<RegisteredCurrencies>().currency_codes,
             currency_code
         ) with Errors::INVALID_ARGUMENT;
+    }
+    spec schema AddCurrencyCodeEnsures {
+        currency_code: vector<u8>;
+        /// The resulting currency_codes is the one before this function is called, with the new one added to the end.
+        ensures Vector::eq_push_back(get_currency_codes(), old(get_currency_codes()), currency_code);
+        include LibraConfig::SetEnsures<RegisteredCurrencies> {payload: LibraConfig::get<RegisteredCurrencies>()};
     }
 
     // **************** Global Specification ****************

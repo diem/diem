@@ -1,8 +1,9 @@
 address 0x1 {
 
 module LibraVMConfig {
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, LibraConfig};
     use 0x1::LibraTimestamp;
+    use 0x1::CoreAddresses;
     use 0x1::Roles;
 
     // The struct to hold all config data needed to operate the LibraVM.
@@ -78,7 +79,7 @@ module LibraVMConfig {
     ) {
         LibraTimestamp::assert_genesis();
 
-        // The permission "UpdateVMConfig" is granted to LibraRoot [B21].
+        // The permission "UpdateVMConfig" is granted to LibraRoot [B20].
         Roles::assert_libra_root(lr_account);
 
         let gas_constants = GasConstants {
@@ -105,6 +106,45 @@ module LibraVMConfig {
                 }
             },
         );
+    }
+    spec fun initialize {
+        let gas_constants = GasConstants {
+            global_memory_per_byte_cost: 4,
+            global_memory_per_byte_write_cost: 9,
+            min_transaction_gas_units: 600,
+            large_transaction_cutoff: 600,
+            intrinsic_gas_per_byte: 8,
+            maximum_number_of_gas_units: 4000000,
+            min_price_per_gas_unit: 0,
+            max_price_per_gas_unit: 10000,
+            max_transaction_size_in_bytes: 4096,
+            gas_unit_scaling_factor: 1000,
+            default_account_size: 800,
+        };
+
+        /// Must abort if the signer does not have the LibraRoot role [B20].
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+
+        include LibraTimestamp::AbortsIfNotGenesis;
+        include LibraConfig::PublishNewConfigAbortsIf<LibraVMConfig>;
+        include LibraConfig::PublishNewConfigEnsures<LibraVMConfig> {
+            payload: LibraVMConfig {
+                gas_schedule: GasSchedule {
+                    instruction_schedule,
+                    native_schedule,
+                    gas_constants,
+                }
+            }};
+    }
+
+    /// Currently, no one can update LibraVMConfig [B20]
+    spec schema LibraVMConfigRemainsSame {
+        ensures old(LibraConfig::spec_is_published<LibraVMConfig>()) ==>
+            global<LibraConfig<LibraVMConfig>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) ==
+                old(global<LibraConfig<LibraVMConfig>>(CoreAddresses::LIBRA_ROOT_ADDRESS()));
+    }
+    spec module {
+        apply LibraVMConfigRemainsSame to *;
     }
 }
 }

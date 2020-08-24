@@ -292,7 +292,7 @@ An invalid block time was encountered.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
 <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a>, <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="Errors.md#0x1_Errors_requires_privilege">Errors::requires_privilege</a>(EMODIFY_CAPABILITY));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="Errors.md#0x1_Errors_requires_capability">Errors::requires_capability</a>(EMODIFY_CAPABILITY));
 
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
     <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
@@ -520,7 +520,7 @@ An invalid block time was encountered.
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="#0x1_LibraConfig_InitializeAbortsIf">InitializeAbortsIf</a>;
-<a name="0x1_LibraConfig_new_config$12"></a>
+<a name="0x1_LibraConfig_new_config$11"></a>
 <b>let</b> new_config = <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>ensures</b> exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
@@ -555,9 +555,8 @@ An invalid block time was encountered.
 
 
 
-<pre><code>pragma opaque;
-<b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
-<b>ensures</b> result == <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;();
+<pre><code><b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
+<b>ensures</b> result == <a href="#0x1_LibraConfig_get">get</a>&lt;Config&gt;();
 </code></pre>
 
 
@@ -584,7 +583,21 @@ An invalid block time was encountered.
 
 
 
-<pre><code><b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt;;
+<pre><code><b>include</b> <a href="#0x1_LibraConfig_SetAbortsIf">SetAbortsIf</a>&lt;Config&gt;;
+<b>include</b> <a href="#0x1_LibraConfig_SetEnsures">SetEnsures</a>&lt;Config&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraConfig_SetAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_SetAbortsIf">SetAbortsIf</a>&lt;Config&gt; {
+    account: signer;
+    <b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt;;
+    <b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
+}
 </code></pre>
 
 
@@ -595,10 +608,19 @@ An invalid block time was encountered.
 
 <pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt; {
     account: signer;
-    payload: Config;
-    <b>include</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt;;
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
-        with Errors::REQUIRES_PRIVILEGE;
+        with Errors::REQUIRES_CAPABILITY;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraConfig_SetEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraConfig_SetEnsures">SetEnsures</a>&lt;Config&gt; {
+    payload: Config;
     <b>ensures</b> <a href="#0x1_LibraConfig_get">get</a>&lt;Config&gt;() == payload;
 }
 </code></pre>
@@ -781,10 +803,6 @@ After genesis, no new configurations are added.
         (forall config_type: type
          where <b>old</b>(!exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())):
              !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;config_type&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()));
-<a name="0x1_LibraConfig_spec_has_config"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_has_config">spec_has_config</a>(): bool {
-    exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
-}
 </code></pre>
 
 
@@ -801,8 +819,7 @@ Spec version of
 </code></pre>
 
 
-Spec version of
-<code>LibraConfig::is_published&lt;Config&gt;</code>.
+Return true iff Config is published
 
 
 <a name="0x1_LibraConfig_spec_is_published"></a>

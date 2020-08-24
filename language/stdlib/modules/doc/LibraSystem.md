@@ -858,7 +858,13 @@ Removed validator should no longer be valid.
 
 
 <pre><code>pragma verify_duration_estimate = 100;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{account: operator_account};
+</code></pre>
+
+
+Must abort if the signer does not have the ValidatorOperator role [B23].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>{account: operator_account};
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
 <b>aborts_if</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">ValidatorConfig::spec_get_operator</a>(validator_address) != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(operator_account)
     with Errors::INVALID_ARGUMENT;
@@ -1110,6 +1116,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 </code></pre>
 
 
+The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account} <b>to</b> add_validator, remove_validator;
@@ -1120,8 +1127,6 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <a name="0x1_LibraSystem_ValidatorSetConfigRemainsSame"></a>
 
-Only {add, remove} validator may change the set of validators in the configuration.
-
 
 <pre><code><b>schema</b> <a href="#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> {
     <b>ensures</b> <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>() == <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
@@ -1129,6 +1134,8 @@ Only {add, remove} validator may change the set of validators in the configurati
 </code></pre>
 
 
+
+Only {add, remove} validator [B22] and update_config_and_reconfigure [B23] may change the set of validators in the configuration.
 
 
 <pre><code><b>apply</b> <a href="#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> <b>to</b> *, *&lt;T&gt;

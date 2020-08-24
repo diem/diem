@@ -40,7 +40,7 @@ module Errors {
     const REQUIRES_ROLE: u8 = 3;
 
     /// The signer of a transaction does not have a required capability.
-    const REQUIRES_PRIVILEGE: u8 = 4;
+    const REQUIRES_CAPABILITY: u8 = 4;
 
     /// A resource is required but not published. Example: access to non-existing AccountLimits resource.
     const NOT_PUBLISHED: u8 = 5;
@@ -83,11 +83,11 @@ module Errors {
         ensures result == REQUIRES_ROLE;
     }
 
-    public fun requires_privilege(reason: u64): u64 { make(REQUIRES_PRIVILEGE, reason) }
-    spec fun requires_privilege {
+    public fun requires_capability(reason: u64): u64 { make(REQUIRES_CAPABILITY, reason) }
+    spec fun requires_capability {
         pragma opaque = true;
         aborts_if false;
-        ensures result == REQUIRES_PRIVILEGE;
+        ensures result == REQUIRES_CAPABILITY;
     }
 
     public fun not_published(reason: u64): u64 { make(NOT_PUBLISHED, reason) }

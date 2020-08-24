@@ -25,8 +25,10 @@ module Roles {
     const ETREASURY_COMPLIANCE: u64 = 2;
     /// The signer didn't have the required Parent VASP role
     const EPARENT_VASP: u64 = 3;
-    /// The signer didn't have the required Libra Root or Treasury & Compliance role
-    const EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5; // TODO: This error code and below should decrease by 1.
+    /// The signer didn't have the required ParentVASP or ChildVASP role
+    const EPARENT_VASP_OR_CHILD_VASP: u64 = 4;
+    /// The signer didn't have the required Parent VASP or Designated Dealer role
+    const EPARENT_VASP_OR_DESIGNATED_DEALER: u64 = 5;
     /// The signer didn't have the required Designated Dealer role
     const EDESIGNATED_DEALER: u64 = 6;
     /// The signer didn't have the required Validator role
@@ -235,14 +237,6 @@ module Roles {
         has_role(account, CHILD_VASP_ROLE_ID)
     }
 
-    public fun has_register_new_currency_privilege(account: &signer): bool acquires RoleId {
-         has_libra_root_role(account)
-    }
-
-    public fun has_update_dual_attestation_limit_privilege(account: &signer): bool acquires RoleId {
-         has_treasury_compliance_role(account)
-    }
-
     /// Return true if `addr` is allowed to receive and send `Libra<T>` for any T
     public fun can_hold_balance(account: &signer): bool acquires RoleId {
         // VASP accounts and designated_dealers can hold balances.
@@ -360,6 +354,20 @@ module Roles {
         include AbortsIfNotParentVaspOrDesignatedDealer;
     }
 
+    public fun assert_parent_vasp_or_child_vasp(account: &signer) acquires RoleId {
+        let addr = Signer::address_of(account);
+        assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+        let role_id = borrow_global<RoleId>(addr).role_id;
+        assert(
+            role_id == PARENT_VASP_ROLE_ID || role_id == CHILD_VASP_ROLE_ID,
+            Errors::requires_role(EPARENT_VASP_OR_CHILD_VASP)
+        );
+    }
+    spec fun assert_parent_vasp_or_child_vasp {
+        pragma opaque;
+        include AbortsIfNotParentVaspOrChildVasp;
+    }
+
 
     //**************** Specifications ****************
 
@@ -405,14 +413,6 @@ module Roles {
 
         define spec_has_child_VASP_role_addr(addr: address): bool {
             spec_has_role_id_addr(addr, CHILD_VASP_ROLE_ID)
-        }
-
-        define spec_has_register_new_currency_privilege_addr(addr: address): bool {
-            spec_has_libra_root_role_addr(addr)
-        }
-
-        define spec_has_update_dual_attestation_limit_privilege_addr(addr: address): bool  {
-            spec_has_treasury_compliance_role_addr(addr)
         }
 
         define spec_can_hold_balance_addr(addr: address): bool {
@@ -469,6 +469,15 @@ module Roles {
             with Errors::REQUIRES_ROLE;
     }
 
+    spec schema AbortsIfNotParentVaspOrChildVasp {
+        account: signer;
+        let addr = Signer::spec_address_of(account);
+        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
+        let role_id = global<RoleId>(addr).role_id;
+        aborts_if role_id != PARENT_VASP_ROLE_ID && role_id != CHILD_VASP_ROLE_ID
+            with Errors::REQUIRES_ROLE;
+    }
+
     spec schema AbortsIfNotValidator {
         account: signer;
         let addr = Signer::spec_address_of(account);
@@ -504,40 +513,56 @@ module Roles {
     /// TODO(wrwg): link to requirements
 
     spec module {
-        /// Validator roles are only granted by LibraRoot [B4]. A new `RoleId` with `VALIDATOR_ROLE_ID()` is only
+        /// The LibraRoot role is only granted in genesis [B2]. A new `RoleId` with `LIBRA_ROOT_ROLE_ID` is only
+        /// published through `grant_libra_root_role` which aborts if it is not invoked in genesis.
+        apply ThisRoleIsNotNewlyPublished{this: LIBRA_ROOT_ROLE_ID} to * except grant_libra_root_role, grant_role;
+        apply LibraTimestamp::AbortsIfNotGenesis to grant_libra_root_role;
+
+        /// TreasuryCompliance role is only granted in genesis [B3]. A new `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` is only
+        /// published through `grant_treasury_compliance_role` which aborts if it is not invoked in genesis.
+        apply ThisRoleIsNotNewlyPublished{this: TREASURY_COMPLIANCE_ROLE_ID} to * except grant_treasury_compliance_role, grant_role;
+        apply LibraTimestamp::AbortsIfNotGenesis to grant_treasury_compliance_role;
+
+        /// Validator roles are only granted by LibraRoot [B4]. A new `RoleId` with `VALIDATOR_ROLE_ID` is only
         /// published through `new_validator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: VALIDATOR_ROLE_ID} to * except new_validator_role, grant_role;
         apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_role;
 
-        /// ValidatorOperator roles are only granted by LibraRoot [B5]. A new `RoleId` with `VALIDATOR_OPERATOR_ROLE_ID()` is only
+        /// ValidatorOperator roles are only granted by LibraRoot [B5]. A new `RoleId` with `VALIDATOR_OPERATOR_ROLE_ID` is only
         /// published through `new_validator_operator_role` which aborts if `creating_account` does not have the LibraRoot role.
         apply ThisRoleIsNotNewlyPublished{this: VALIDATOR_OPERATOR_ROLE_ID} to * except new_validator_operator_role, grant_role;
         apply AbortsIfNotLibraRoot{account: creating_account} to new_validator_operator_role;
 
-        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6]. A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()` is only
-        /// published through `new_designated_dealer_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
+        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6]. A new `RoleId` with `DESIGNATED_DEALER_ROLE_ID()`
+        /// is only published through `new_designated_dealer_role` which aborts if `creating_account` does not have the
+        /// TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: DESIGNATED_DEALER_ROLE_ID} to * except new_designated_dealer_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_designated_dealer_role;
 
-        /// ParentVASP roles are only granted by TreasuryCompliance [B7]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
+        /// ParentVASP roles are only granted by LibraRoot [B7]. A new `RoleId` with `PARENT_VASP_ROLE_ID()` is only
         /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
         apply ThisRoleIsNotNewlyPublished{this: PARENT_VASP_ROLE_ID} to * except new_parent_vasp_role, grant_role;
         apply AbortsIfNotTreasuryCompliance{account: creating_account} to new_parent_vasp_role;
 
-        /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoleId` with `CHILD_VASP_ROLE_ID()` is only
+        /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoleId` with `CHILD_VASP_ROLE_ID` is only
         /// published through `new_child_vasp_role` which aborts if `creating_account` does not have the ParentVASP role.
         apply ThisRoleIsNotNewlyPublished{this: CHILD_VASP_ROLE_ID} to * except new_child_vasp_role, grant_role;
         apply AbortsIfNotParentVasp{account: creating_account} to new_child_vasp_role;
 
-        /// The LibraRoot role is globally unique [C2]. A `RoleId` with `LIBRA_ROOT_ROLE_ID()` can only exists in the
-        /// `LIBRA_ROOT_ADDRESS()`. TODO: Verify that `LIBRA_ROOT_ADDRESS()` has a LibraRoot role after `Genesis::initialize`.
+        /// The LibraRoot role is globally unique [C2], and is published at LIBRA_ROOT_ADDRESS [D2].
+        /// In other words, a `RoleId` with `LIBRA_ROOT_ROLE_ID` uniquely exists at `LIBRA_ROOT_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_libra_root_role_addr(addr):
           addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
+        invariant [global, isolated]
+            LibraTimestamp::is_operating() ==> spec_has_libra_root_role_addr(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        /// The TreasuryCompliance role is globally unique [C3]. A `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID()` can only exists in the
-        /// `TREASURY_COMPLIANCE_ADDRESS()`. TODO: Verify that `TREASURY_COMPLIANCE_ADDRESS()` has a TreasuryCompliance role after `Genesis::initialize`.
+        /// The TreasuryCompliance role is globally unique [C3], and is published at TREASURY_COMPLIANCE_ADDRESS [D3].
+        /// In other words, a `RoleId` with `TREASURY_COMPLIANCE_ROLE_ID` uniquely exists at `TREASURY_COMPLIANCE_ADDRESS`.
         invariant [global, isolated] forall addr: address where spec_has_treasury_compliance_role_addr(addr):
           addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
+        invariant [global, isolated]
+            LibraTimestamp::is_operating() ==>
+                spec_has_treasury_compliance_role_addr(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS());
 
         /// LibraRoot cannot have balances [E2].
         invariant [global, isolated] forall addr: address where spec_has_libra_root_role_addr(addr):
@@ -566,14 +591,6 @@ module Roles {
         /// ChildVASP have balances [E8].
         invariant [global, isolated] forall addr: address where spec_has_child_VASP_role_addr(addr):
             spec_can_hold_balance_addr(addr);
-
-        /// update_dual_attestation_limit_privilege is granted to TreasuryCompliance [B16].
-        invariant [global, isolated] forall addr: address where spec_has_update_dual_attestation_limit_privilege_addr(addr):
-            spec_has_treasury_compliance_role_addr(addr);
-
-        /// register_new_currency_privilege is granted to LibraRoot [B18].
-        invariant [global, isolated] forall addr: address where spec_has_register_new_currency_privilege_addr(addr):
-            spec_has_libra_root_role_addr(addr);
     }
 
     // TODO: Role is supposed to be set by end of genesis?

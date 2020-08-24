@@ -184,9 +184,9 @@ module LibraTest {
     const EIS_SYNTHETIC_CURRENCY: u64 = 4;
     const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 5;
     const EDESTRUCTION_OF_NONZERO_COIN: u64 = 6;
-    const EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE: u64 = 7;
-    const ENOT_A_REGISTERED_CURRENCY: u64 = 8;
-    const ENOT_AN_SCS_CURRENCY: u64 = 9;
+    const ENOT_A_REGISTERED_CURRENCY: u64 = 7;
+    const ENOT_AN_SCS_CURRENCY: u64 = 8;
+    const EDOES_NOT_HAVE_LIBRA_ROOT_ROLE: u64 = 9;
     const EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE: u64 = 10;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -659,7 +659,7 @@ module LibraTest {
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     {
-        assert(Roles::has_register_new_currency_privilege(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+        Roles::assert_libra_root(lr_account);
         // Operational constraint that it must be stored under a specific address.
         assert(
             Signer::address_of(lr_account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
@@ -688,7 +688,7 @@ module LibraTest {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account));
+        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::spec_address_of(lr_account));
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::CURRENCY_INFO_ADDRESS();
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
@@ -709,8 +709,7 @@ module LibraTest {
         fractional_part: u64,
         currency_code: vector<u8>,
     ) {
-        assert(Roles::has_treasury_compliance_role(tc_account),
-               EDOES_NOT_HAVE_TREASURY_COMPLIANCE_ROLE);
+        Roles::assert_treasury_compliance(tc_account);
         let (mint_cap, burn_cap) =
             register_currency<CoinType>(
                 lr_account,

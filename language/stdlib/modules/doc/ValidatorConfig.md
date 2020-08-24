@@ -5,7 +5,6 @@
 
 ### Table of Contents
 
--  [Resource `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
 -  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
 -  [Const `EVALIDATOR_CONFIG`](#0x1_ValidatorConfig_EVALIDATOR_CONFIG)
@@ -35,34 +34,6 @@
     -  [Function `get_operator`](#0x1_ValidatorConfig_Specification_get_operator)
 
 
-
-<a name="0x1_ValidatorConfig_UpdateValidatorConfig"></a>
-
-## Resource `UpdateValidatorConfig`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_ValidatorConfig_Config"></a>
 
@@ -592,6 +563,8 @@ Describes abort if ValidatorConfig does not exist.
 
 
 
+Must abort if the signer does not have the Validator role [B24].
+
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
 <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account)
@@ -602,6 +575,14 @@ Describes abort if ValidatorConfig does not exist.
 <b>aborts_if</b> !<a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account) with Errors::NOT_PUBLISHED;
 <b>ensures</b> <a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(sender);
 <b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(sender) == operator_account;
+</code></pre>
+
+
+The signer can only change its own operator account [B24].
+
+
+<pre><code><b>ensures</b> forall addr: address where addr != sender:
+    <b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account == <b>old</b>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account);
 </code></pre>
 
 
@@ -658,6 +639,8 @@ Returns the human name of the validator
 
 
 
+Must abort if the signer does not have the Validator role [B24].
+
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidator">Roles::AbortsIfNotValidator</a>;
 <a name="0x1_ValidatorConfig_sender$18"></a>
@@ -665,6 +648,14 @@ Returns the human name of the validator
 <b>include</b> <a href="#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">AbortsIfNoValidatorConfig</a>{addr: sender};
 <b>ensures</b> !<a href="#0x1_ValidatorConfig_spec_has_operator">spec_has_operator</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 <b>ensures</b> <a href="#0x1_ValidatorConfig_spec_get_operator">spec_get_operator</a>(sender) == sender;
+</code></pre>
+
+
+The signer can only change its own operator account [B24].
+
+
+<pre><code><b>ensures</b> forall addr: address where addr != sender:
+    <b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account == <b>old</b>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).operator_account);
 </code></pre>
 
 
@@ -836,6 +827,8 @@ change the operator_account field of ValidatorConfig, and this shows that they d
 </code></pre>
 
 
+
+set_operator, remove_operator can change the operator account [B24].
 
 
 <pre><code><b>apply</b> <a href="#0x1_ValidatorConfig_OperatorRemainsSame">OperatorRemainsSame</a> <b>to</b> * <b>except</b> set_operator, remove_operator;

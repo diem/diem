@@ -165,7 +165,7 @@ fun main(account: &signer) {
     Holder::hold(account, burn_cap);
 }
 }
-// check: "Keep(ABORTED { code: 2307,"
+// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: libraroot

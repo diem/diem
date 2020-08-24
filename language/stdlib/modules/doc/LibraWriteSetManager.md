@@ -17,6 +17,7 @@
 -  [Function `epilogue`](#0x1_LibraWriteSetManager_epilogue)
 -  [Specification](#0x1_LibraWriteSetManager_Specification)
     -  [Function `initialize`](#0x1_LibraWriteSetManager_Specification_initialize)
+    -  [Function `prologue`](#0x1_LibraWriteSetManager_Specification_prologue)
 
 
 
@@ -193,6 +194,7 @@ The
     // The below code uses direct <b>abort</b> codes <b>as</b> per contract with VM.
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), PROLOGUE_EINVALID_WRITESET_SENDER);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account), PROLOGUE_EINVALID_WRITESET_SENDER);
 
     <b>let</b> lr_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
@@ -267,4 +269,22 @@ The
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
 <b>aborts_if</b> exists&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with Errors::ALREADY_PUBLISHED;
+</code></pre>
+
+
+
+<a name="0x1_LibraWriteSetManager_Specification_prologue"></a>
+
+### Function `prologue`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraWriteSetManager_prologue">prologue</a>(account: &signer, writeset_sequence_number: u64, writeset_public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+Must abort if the signer does not have the LibraRoot role [B18].
+
+
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role_addr">Roles::spec_has_libra_root_role_addr</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
 </code></pre>

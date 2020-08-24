@@ -8,7 +8,7 @@
 -  [Const `INVALID_STATE`](#0x1_Errors_INVALID_STATE)
 -  [Const `REQUIRES_ADDRESS`](#0x1_Errors_REQUIRES_ADDRESS)
 -  [Const `REQUIRES_ROLE`](#0x1_Errors_REQUIRES_ROLE)
--  [Const `REQUIRES_PRIVILEGE`](#0x1_Errors_REQUIRES_PRIVILEGE)
+-  [Const `REQUIRES_CAPABILITY`](#0x1_Errors_REQUIRES_CAPABILITY)
 -  [Const `NOT_PUBLISHED`](#0x1_Errors_NOT_PUBLISHED)
 -  [Const `ALREADY_PUBLISHED`](#0x1_Errors_ALREADY_PUBLISHED)
 -  [Const `INVALID_ARGUMENT`](#0x1_Errors_INVALID_ARGUMENT)
@@ -19,7 +19,7 @@
 -  [Function `invalid_state`](#0x1_Errors_invalid_state)
 -  [Function `requires_address`](#0x1_Errors_requires_address)
 -  [Function `requires_role`](#0x1_Errors_requires_role)
--  [Function `requires_privilege`](#0x1_Errors_requires_privilege)
+-  [Function `requires_capability`](#0x1_Errors_requires_capability)
 -  [Function `not_published`](#0x1_Errors_not_published)
 -  [Function `already_published`](#0x1_Errors_already_published)
 -  [Function `invalid_argument`](#0x1_Errors_invalid_argument)
@@ -31,7 +31,7 @@
     -  [Function `invalid_state`](#0x1_Errors_Specification_invalid_state)
     -  [Function `requires_address`](#0x1_Errors_Specification_requires_address)
     -  [Function `requires_role`](#0x1_Errors_Specification_requires_role)
-    -  [Function `requires_privilege`](#0x1_Errors_Specification_requires_privilege)
+    -  [Function `requires_capability`](#0x1_Errors_Specification_requires_capability)
     -  [Function `not_published`](#0x1_Errors_Specification_not_published)
     -  [Function `already_published`](#0x1_Errors_Specification_already_published)
     -  [Function `invalid_argument`](#0x1_Errors_Specification_invalid_argument)
@@ -94,14 +94,14 @@ which requires the signer to have the role of treasury compliance.
 
 
 
-<a name="0x1_Errors_REQUIRES_PRIVILEGE"></a>
+<a name="0x1_Errors_REQUIRES_CAPABILITY"></a>
 
-## Const `REQUIRES_PRIVILEGE`
+## Const `REQUIRES_CAPABILITY`
 
 The signer of a transaction does not have a required capability.
 
 
-<pre><code><b>const</b> REQUIRES_PRIVILEGE: u8 = 4;
+<pre><code><b>const</b> REQUIRES_CAPABILITY: u8 = 4;
 </code></pre>
 
 
@@ -271,13 +271,13 @@ A function to create an error from from a category and a reason.
 
 </details>
 
-<a name="0x1_Errors_requires_privilege"></a>
+<a name="0x1_Errors_requires_capability"></a>
 
-## Function `requires_privilege`
+## Function `requires_capability`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_privilege">requires_privilege</a>(reason: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64
 </code></pre>
 
 
@@ -286,7 +286,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_privilege">requires_privilege</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(REQUIRES_PRIVILEGE, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(REQUIRES_CAPABILITY, reason) }
 </code></pre>
 
 
@@ -509,12 +509,12 @@ A function to create an error from from a category and a reason.
 
 
 
-<a name="0x1_Errors_Specification_requires_privilege"></a>
+<a name="0x1_Errors_Specification_requires_capability"></a>
 
-### Function `requires_privilege`
+### Function `requires_capability`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_privilege">requires_privilege</a>(reason: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64
 </code></pre>
 
 
@@ -522,7 +522,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == REQUIRES_PRIVILEGE;
+<b>ensures</b> result == REQUIRES_CAPABILITY;
 </code></pre>
 
 

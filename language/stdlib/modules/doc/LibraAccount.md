@@ -93,11 +93,14 @@
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 -  [Specification](#0x1_LibraAccount_Specification)
     -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_Specification_should_track_limits_for_account)
+    -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
+    -  [Function `withdraw_from`](#0x1_LibraAccount_Specification_withdraw_from)
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
     -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_Specification_extract_key_rotation_capability)
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
+    -  [Function `add_currency`](#0x1_LibraAccount_Specification_add_currency)
     -  [Function `epilogue`](#0x1_LibraAccount_Specification_epilogue)
 
 
@@ -2598,6 +2601,24 @@ After genesis, the
 
 
 
+<a name="0x1_LibraAccount_Specification_unstaple_lbr"></a>
+
+### Function `unstaple_lbr`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unstaple_lbr">unstaple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount_lbr: u64)
+</code></pre>
+
+
+
+> TODO: timeout
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+
 <a name="0x1_LibraAccount_Specification_deposit"></a>
 
 ### Function `deposit`
@@ -2721,6 +2742,25 @@ After genesis, the
 
 
 
+<a name="0x1_LibraAccount_Specification_withdraw_from"></a>
+
+### Function `withdraw_from`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_withdraw_from">withdraw_from</a>&lt;Token&gt;(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, payee: address, amount: u64, metadata: vector&lt;u8&gt;): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
+</code></pre>
+
+
+
+Can only withdraw from the balances of cap.account_address [B27].
+
+
+<pre><code><b>ensures</b> forall addr: address where <b>old</b>(exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr)) && addr != cap.account_address:
+    <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr).coin.value == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr).coin.value);
+</code></pre>
+
+
+
 <a name="0x1_LibraAccount_Specification_rotate_authentication_key"></a>
 
 ### Function `rotate_authentication_key`
@@ -2734,6 +2774,14 @@ After genesis, the
 
 <pre><code><b>include</b> <a href="#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">RotateAuthenticationKeyAbortsIf</a>;
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address).authentication_key == new_authentication_key;
+</code></pre>
+
+
+Can only rotate the authentication_key of cap.account_address [B26].
+
+
+<pre><code><b>ensures</b> forall addr: address where addr != cap.account_address && <b>old</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr)):
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key);
 </code></pre>
 
 
@@ -2799,6 +2847,26 @@ After genesis, the
 <pre><code><b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address) with Errors::NOT_PUBLISHED;
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(cap.account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_add_currency"></a>
+
+### Function `add_currency`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account) with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) with Errors::ALREADY_PUBLISHED;
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) == <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt; { value: 0 } };
 </code></pre>
 
 
@@ -2942,14 +3010,14 @@ Returns true if the LibraAccount at
 
 
 
-the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B27].
+the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
 
 
 <pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a>{account: new_account} <b>to</b> make_account;
 </code></pre>
 
 
-the permission "WithdrawalCapability(addr)" is granted to the account at addr [B28].
+the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
 
 
 <pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a>{account: new_account} <b>to</b> make_account;
@@ -2972,4 +3040,42 @@ The LibraAccount under addr holds either no key rotation capability
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
+</code></pre>
+
+
+only rotate_authentication_key can rotate authentication_key [B26].
+
+
+<a name="0x1_LibraAccount_AuthenticationKeyRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AuthenticationKeyRemainsSame">AuthenticationKeyRemainsSame</a> {
+    <b>ensures</b> forall addr1: address where <b>old</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1)):
+        <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).authentication_key == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).authentication_key);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_LibraAccount_AuthenticationKeyRemainsSame">AuthenticationKeyRemainsSame</a> <b>to</b> *, *&lt;T&gt; <b>except</b> rotate_authentication_key;
+</code></pre>
+
+
+only withdraw_from and its helper and clients can withdraw [B27].
+
+
+<a name="0x1_LibraAccount_BalanceNotDecrease"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_BalanceNotDecrease">BalanceNotDecrease</a>&lt;Token&gt; {
+    <b>ensures</b> forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1)):
+        <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1).coin.value &gt;= <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr1).coin.value);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_LibraAccount_BalanceNotDecrease">BalanceNotDecrease</a>&lt;Token&gt; <b>to</b> *&lt;Token&gt; <b>except</b> withdraw_from, withdraw_from_balance, staple_lbr, unstaple_lbr, preburn, pay_from, epilogue, failure_epilogue, success_epilogue;
 </code></pre>

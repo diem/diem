@@ -10,6 +10,7 @@
 -  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
 -  [Function `initialize`](#0x1_LibraVMConfig_initialize)
 -  [Specification](#0x1_LibraVMConfig_Specification)
+    -  [Function `initialize`](#0x1_LibraVMConfig_Specification_initialize)
 
 
 
@@ -212,7 +213,7 @@
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
 
-    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [B21].
+    // The permission "UpdateVMConfig" is granted <b>to</b> LibraRoot [B20].
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
     <b>let</b> gas_constants = <a href="#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
@@ -253,4 +254,72 @@
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
+</code></pre>
+
+
+
+<a name="0x1_LibraVMConfig_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<a name="0x1_LibraVMConfig_gas_constants$1"></a>
+
+
+<pre><code><b>let</b> gas_constants = <a href="#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
+    global_memory_per_byte_cost: 4,
+    global_memory_per_byte_write_cost: 9,
+    min_transaction_gas_units: 600,
+    large_transaction_cutoff: 600,
+    intrinsic_gas_per_byte: 8,
+    maximum_number_of_gas_units: 4000000,
+    min_price_per_gas_unit: 0,
+    max_price_per_gas_unit: 10000,
+    max_transaction_size_in_bytes: 4096,
+    gas_unit_scaling_factor: 1000,
+    default_account_size: 800,
+};
+</code></pre>
+
+
+Must abort if the signer does not have the LibraRoot role [B20].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigAbortsIf">LibraConfig::PublishNewConfigAbortsIf</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigEnsures">LibraConfig::PublishNewConfigEnsures</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt; {
+    payload: <a href="#0x1_LibraVMConfig">LibraVMConfig</a> {
+        gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">GasSchedule</a> {
+            instruction_schedule,
+            native_schedule,
+            gas_constants,
+        }
+    }};
+</code></pre>
+
+
+Currently, no one can update LibraVMConfig [B20]
+
+
+<a name="0x1_LibraVMConfig_LibraVMConfigRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraVMConfig_LibraVMConfigRemainsSame">LibraVMConfigRemainsSame</a> {
+    <b>ensures</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;()) ==&gt;
+        <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) ==
+            <b>old</b>(<b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()));
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_LibraVMConfig_LibraVMConfigRemainsSame">LibraVMConfigRemainsSame</a> <b>to</b> *;
 </code></pre>

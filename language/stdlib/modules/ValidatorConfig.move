@@ -9,8 +9,6 @@ module ValidatorConfig {
     use 0x1::Roles;
     use 0x1::ValidatorOperatorConfig;
 
-    resource struct UpdateValidatorConfig {}
-
     struct Config {
         consensus_pubkey: vector<u8>,
         validator_network_addresses: vector<u8>,
@@ -100,9 +98,10 @@ module ValidatorConfig {
         assert(exists_config(sender), Errors::not_published(EVALIDATOR_CONFIG));
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
-
     spec fun set_operator {
+        /// Must abort if the signer does not have the Validator role [B24].
         include Roles::AbortsIfNotValidator;
+
         aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account)
             with Errors::INVALID_ARGUMENT;
         let sender = Signer::spec_address_of(account);
@@ -110,6 +109,10 @@ module ValidatorConfig {
         aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account) with Errors::NOT_PUBLISHED;
         ensures spec_has_operator(sender);
         ensures spec_get_operator(sender) == operator_account;
+
+        /// The signer can only change its own operator account [B24].
+        ensures forall addr: address where addr != sender:
+            global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
 
     spec module {
@@ -145,11 +148,17 @@ module ValidatorConfig {
     }
 
     spec fun remove_operator {
+        /// Must abort if the signer does not have the Validator role [B24].
         include Roles::AbortsIfNotValidator;
+
         let sender = Signer::spec_address_of(account);
         include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(account));
         ensures spec_get_operator(sender) == sender;
+
+        /// The signer can only change its own operator account [B24].
+        ensures forall addr: address where addr != sender:
+            global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -303,6 +312,7 @@ module ValidatorConfig {
             global<ValidatorConfig>(addr1).operator_account == old(global<ValidatorConfig>(addr1).operator_account);
     }
     spec module {
+        ///  set_operator, remove_operator can change the operator account [B24].
         apply OperatorRemainsSame to * except set_operator, remove_operator;
     }
 }

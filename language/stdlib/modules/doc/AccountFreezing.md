@@ -597,8 +597,30 @@ After genesis, FreezingBit of TreasuryCompliance is always false.
 </code></pre>
 
 
-The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B17].
+The permission "{Freeze,Unfreeze}Account" is granted to TreasuryCompliance [B16].
 
 
 <pre><code><b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a> <b>to</b> freeze_account, unfreeze_account;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountFreezing_FreezingBitRemainsSame"></a>
+
+The freezing bit stays constant.
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> {
+    <b>ensures</b> forall a: address where <b>old</b>(exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a)):
+        <b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen == <b>old</b>(<b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(a).is_frozen);
+}
+</code></pre>
+
+
+
+only (un)freeze functions can change the freezing bits of accounts [B16].
+
+
+<pre><code><b>apply</b> <a href="#0x1_AccountFreezing_FreezingBitRemainsSame">FreezingBitRemainsSame</a> <b>to</b> * <b>except</b> freeze_account, unfreeze_account;
 </code></pre>

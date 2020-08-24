@@ -245,7 +245,10 @@ module LibraSystem {
         // and (2) the last property in the second spec fun (that the proper validator set entry is properly
         // updated) is commented out.
         pragma verify_duration_estimate = 100;
+
+        /// Must abort if the signer does not have the ValidatorOperator role [B23].
         include Roles::AbortsIfNotValidatorOperator{account: operator_account};
+
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
         aborts_if ValidatorConfig::spec_get_operator(validator_address) != Signer::spec_address_of(operator_account)
             with Errors::INVALID_ARGUMENT;
@@ -471,7 +474,7 @@ module LibraSystem {
         pragma verify;
     }
 
-    // The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
+    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
     spec module {
        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
     }
@@ -489,10 +492,10 @@ module LibraSystem {
     //    for that validator.
     // set_validator_set is a private function, so it does not have to preserve the property.
     spec schema ValidatorSetConfigRemainsSame {
-        /// Only {add, remove} validator may change the set of validators in the configuration.
         ensures spec_get_validator_set() == old(spec_get_validator_set());
     }
     spec module {
+        /// Only {add, remove} validator [B22] and update_config_and_reconfigure [B23] may change the set of validators in the configuration.
         apply ValidatorSetConfigRemainsSame to *, *<T>
            except add_validator, remove_validator, update_config_and_reconfigure,
                initialize_validator_set, set_validator_set;

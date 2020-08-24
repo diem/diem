@@ -9,6 +9,7 @@ module LibraWriteSetManager {
     use 0x1::Signer;
     use 0x1::LibraConfig;
     use 0x1::LibraTimestamp;
+    use 0x1::Roles;
 
     resource struct LibraWriteSetManager {
         upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
@@ -63,6 +64,7 @@ module LibraWriteSetManager {
         // The below code uses direct abort codes as per contract with VM.
         let sender = Signer::address_of(account);
         assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), PROLOGUE_EINVALID_WRITESET_SENDER);
+        assert(Roles::has_libra_root_role(account), PROLOGUE_EINVALID_WRITESET_SENDER);
 
         let lr_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
@@ -74,6 +76,10 @@ module LibraWriteSetManager {
             Hash::sha3_256(writeset_public_key) == lr_auth_key,
             PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
         );
+    }
+    spec fun prologue {
+        /// Must abort if the signer does not have the LibraRoot role [B18].
+        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::address_of(account));
     }
 
     fun epilogue(lr_account: &signer, writeset_payload: vector<u8>) acquires LibraWriteSetManager {

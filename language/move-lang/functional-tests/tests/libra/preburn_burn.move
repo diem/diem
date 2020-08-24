@@ -155,7 +155,7 @@ fun main(account: &signer) {
     Libra::burn<Coin1>(account, {{default}});
 }
 }
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 4,"
 
 // Try to cancel burn on an account that doesn't have a burn capability
 //! new-transaction
@@ -166,7 +166,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(Libra::cancel_burn<Coin1>(account, {{dd}}));
 }
 }
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 4,"
 
 // Try to preburn to an account that doesn't have a preburn resource
 //! new-transaction

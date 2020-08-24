@@ -147,12 +147,13 @@ module AccountLimits {
     /// Root accounts for multi-account entities will hold this resource at
     /// their root/parent account.
     public fun publish_window<CoinType>(
-        lr: &signer,
+        lr_account: &signer,
         to_limit: &signer,
         limit_address: address,
     ) {
-        Roles::assert_libra_root(lr);
+        Roles::assert_libra_root(lr_account);
         assert(exists<LimitsDefinition<CoinType>>(limit_address), Errors::not_published(ELIMITS_DEFINITION));
+        Roles::assert_parent_vasp_or_child_vasp(to_limit);
         assert(
             !exists<Window<CoinType>>(Signer::address_of(to_limit)),
             Errors::already_published(EWINDOW)
@@ -169,8 +170,14 @@ module AccountLimits {
         )
     }
     spec fun publish_window {
-        include Roles::AbortsIfNotLibraRoot{account: lr};
-        // TODO(wrwg): put these conditions into a schema.
+        include PublishWindowAbortsIf<CoinType>;
+    }
+    spec schema PublishWindowAbortsIf<CoinType> {
+        lr_account: signer;
+        to_limit: signer;
+        limit_address: address;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include Roles::AbortsIfNotParentVaspOrChildVasp{account: to_limit}; // Only ParentVASP and ChildVASP can have the account limits [F2][F3][F4][F5][F6][F7][F8].
         aborts_if !exists<LimitsDefinition<CoinType>>(limit_address) with Errors::NOT_PUBLISHED;
         aborts_if exists<Window<CoinType>>(Signer::spec_address_of(to_limit)) with Errors::ALREADY_PUBLISHED;
     }
@@ -470,6 +477,5 @@ module AccountLimits {
     fun current_time(): u64 {
         if (LibraTimestamp::is_not_initialized()) 0 else LibraTimestamp::now_microseconds()
     }
-
 }
 }

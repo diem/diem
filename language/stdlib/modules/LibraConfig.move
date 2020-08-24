@@ -78,9 +78,9 @@ module LibraConfig {
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
     spec fun get {
-        pragma opaque;
+        //pragma opaque;
         include AbortsIfNotPublished<Config>;
-        ensures result == spec_get<Config>();
+        ensures result == get<Config>();
     }
     spec schema AbortsIfNotPublished<Config> {
         aborts_if !exists<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS()) with Errors::NOT_PUBLISHED;
@@ -91,7 +91,7 @@ module LibraConfig {
     public fun set<Config: copyable>(account: &signer, payload: Config)
     acquires LibraConfig, Configuration {
         let signer_address = Signer::address_of(account);
-        assert(exists<ModifyConfigCapability<Config>>(signer_address), Errors::requires_privilege(EMODIFY_CAPABILITY));
+        assert(exists<ModifyConfigCapability<Config>>(signer_address), Errors::requires_capability(EMODIFY_CAPABILITY));
 
         let addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
         assert(exists<LibraConfig<Config>>(addr), Errors::not_published(ELIBRA_CONFIG));
@@ -101,14 +101,21 @@ module LibraConfig {
         reconfigure_();
     }
     spec fun set {
+        include SetAbortsIf<Config>;
+        include SetEnsures<Config>;
+    }
+    spec schema SetAbortsIf<Config> {
+        account: signer;
         include AbortsIfNotModifiable<Config>;
+        include AbortsIfNotPublished<Config>;
     }
     spec schema AbortsIfNotModifiable<Config> {
         account: signer;
-        payload: Config;
-        include AbortsIfNotPublished<Config>;
         aborts_if !exists<ModifyConfigCapability<Config>>(Signer::spec_address_of(account))
-            with Errors::REQUIRES_PRIVILEGE;
+            with Errors::REQUIRES_CAPABILITY;
+    }
+    spec schema SetEnsures<Config> {
+        payload: Config;
         ensures get<Config>() == payload;
     }
 
@@ -294,16 +301,17 @@ module LibraConfig {
                  where old(!exists<LibraConfig<config_type>>(CoreAddresses::LIBRA_ROOT_ADDRESS())):
                      !exists<LibraConfig<config_type>>(CoreAddresses::LIBRA_ROOT_ADDRESS()));
 
-        define spec_has_config(): bool {
-            exists<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS())
-        }
+        // define spec_has_config(): bool {
+        //     exists<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS())
+        // }
 
         /// Spec version of `LibraConfig::get<Config>`.
+        // TODO: Remove this function.
         define spec_get<Config>(): Config {
             global<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).payload
         }
 
-        /// Spec version of `LibraConfig::is_published<Config>`.
+        /// Return true iff Config is published
         define spec_is_published<Config>(): bool {
             exists<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
