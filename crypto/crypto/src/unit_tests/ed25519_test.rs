@@ -276,6 +276,19 @@ proptest! {
     }
 
     #[test]
+    fn test_pub_key_deserialization(bits in any::<[u8; 32]>()){
+        let pt_deser = curve25519_dalek::edwards::CompressedEdwardsY(bits).decompress();
+        let pub_key = Ed25519PublicKey::try_from(&bits[..]);
+        let check = match (pt_deser, pub_key) {
+            (Some(_), Ok(_)) => true, // we agree with Dalek,
+            (Some(_), Err(CryptoMaterialError::SmallSubgroupError)) => true, // dalek does not detect pubkeys in a small subgroup,
+            (None, Err(CryptoMaterialError::DeserializationError)) => true, // we agree on point decompression failures,
+                _ => false
+        };
+        prop_assert!(check);
+    }
+
+    #[test]
     fn test_keys_encode(keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()) {
         {
             let encoded = keypair.private_key.to_encoded_string().unwrap();
@@ -365,6 +378,7 @@ proptest! {
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
         prop_assert!(deserialized.verify(&hashable, &keypair.public_key).is_ok());
     }
+
 
     // Check for canonical S.
     #[test]
