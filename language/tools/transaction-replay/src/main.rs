@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use libra_transaction_replay::{
-    libra_client::LibraJsonRpcDebugger, transaction_debugger_interface::LocalDBDebugger,
-    LibraDebugger,
-};
+use libra_transaction_replay::LibraDebugger;
 use libra_types::{account_address::AccountAddress, transaction::Version};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -44,13 +41,13 @@ enum Command {
 
 fn main() -> Result<()> {
     let opt = Opt::from_args();
-    let debugger = LibraDebugger::new(if let Some(p) = opt.db {
-        Box::new(LocalDBDebugger::open(p)?)
+    let debugger = if let Some(p) = opt.db {
+        LibraDebugger::db(p)?
     } else if let Some(url) = opt.url {
-        Box::new(LibraJsonRpcDebugger::new(url.as_str())?)
+        LibraDebugger::json_rpc(url.as_str())?
     } else {
         panic!("No debugger attached")
-    });
+    };
 
     println!("Connection Succeeded");
 

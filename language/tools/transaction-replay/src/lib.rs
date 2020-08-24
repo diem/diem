@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
+use crate::{json_rpc_debugger::JsonRpcDebuggerInterface, storage_debugger::DBDebuggerInterface};
 use anyhow::{format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
@@ -10,10 +10,13 @@ use libra_types::{
 };
 use libra_vm::{LibraVM, VMExecutor};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, path::Path};
 
-pub mod libra_client;
-pub mod transaction_debugger_interface;
+pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
+
+mod json_rpc_debugger;
+mod storage_debugger;
+mod transaction_debugger_interface;
 
 pub struct LibraDebugger {
     debugger: Box<dyn StorageDebuggerInterface>,
@@ -22,6 +25,18 @@ pub struct LibraDebugger {
 impl LibraDebugger {
     pub fn new(debugger: Box<dyn StorageDebuggerInterface>) -> Self {
         Self { debugger }
+    }
+
+    pub fn json_rpc(url: &str) -> Result<Self> {
+        Ok(Self {
+            debugger: Box::new(JsonRpcDebuggerInterface::new(url)?),
+        })
+    }
+
+    pub fn db<P: AsRef<Path> + Clone>(db_root_path: P) -> Result<Self> {
+        Ok(Self {
+            debugger: Box::new(DBDebuggerInterface::open(db_root_path)?),
+        })
     }
 
     pub fn execute_transactions_at_version(

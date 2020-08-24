@@ -22,7 +22,7 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_trace::trace::trace_node;
-use libra_transaction_replay::{libra_client::LibraJsonRpcDebugger, LibraDebugger};
+use libra_transaction_replay::LibraDebugger;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
@@ -1960,9 +1960,7 @@ fn test_replay_tooling() {
     let (swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     let validator_config = NodeConfig::load(&swarm.validator_swarm.config.config_files[0]).unwrap();
     let swarm_rpc_endpoint = format!("http://localhost:{}", validator_config.rpc.address.port());
-    let json_debugger = LibraDebugger::new(Box::new(
-        LibraJsonRpcDebugger::new(swarm_rpc_endpoint.as_str()).unwrap(),
-    ));
+    let json_debugger = LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap();
 
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();

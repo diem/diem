@@ -11,11 +11,11 @@ use libra_types::{
 };
 use reqwest::Url;
 
-pub struct LibraJsonRpcDebugger {
+pub(crate) struct JsonRpcDebuggerInterface {
     client: JsonRpcClient,
 }
 
-impl LibraJsonRpcDebugger {
+impl JsonRpcDebuggerInterface {
     pub fn new(url: &str) -> Result<Self> {
         let url = Url::parse(url)?;
         Ok(Self {
@@ -32,7 +32,7 @@ impl LibraJsonRpcDebugger {
     }
 }
 
-impl StorageDebuggerInterface for LibraJsonRpcDebugger {
+impl StorageDebuggerInterface for JsonRpcDebuggerInterface {
     fn get_account_state_by_version(
         &self,
         account: AccountAddress,
