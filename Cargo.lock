@@ -3599,6 +3599,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "compiled-stdlib 0.1.0",
+ "disassembler 0.1.0",
+ "errmapgen 0.1.0",
+ "libra-canonical-serialization 0.1.0",
+ "libra-state-view 0.1.0",
+ "libra-types 0.1.0",
+ "libra-vm 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
+ "move-lang 0.0.1",
+ "move-vm-runtime 0.1.0",
+ "move-vm-types 0.1.0",
+ "resource-viewer 0.1.0",
+ "stdlib 0.1.0",
+ "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "move-core-types"
 version = "0.1.0"
 dependencies = [
@@ -4845,6 +4868,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
+ "move-vm-runtime 0.1.0",
  "move-vm-types 0.1.0",
  "once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,0 +1,34 @@
+[package]
+name = "move-cli"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "CLI frontend for the Move compiler and VM"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.31"
+structopt = "0.3.15"
+
+compiled-stdlib = { path = "../../stdlib/compiled", version = "0.1.0" }
+disassembler = { path = "../disassembler", version = "0.1.0" }
+errmapgen = { path = "../../move-prover/errmapgen", version = "0.1.0" }
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
+libra-types = { path = "../../../types", version = "0.1.0" }
+libra-vm = { path = "../../libra-vm", version = "0.1.0" }
+move-core-types = { path = "../../move-core/types", version = "0.1.0" }
+move-lang = { path = "../../move-lang", version = "0.0.1" }
+move-vm-types = { path = "../../move-vm/types", version = "0.1.0" }
+move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0", features = ["debug_module"]}
+resource-viewer = { path = "../../resource-viewer", version = "0.1.0" }
+stdlib = { path = "../../stdlib", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+
+lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+
+[features]
+default = []

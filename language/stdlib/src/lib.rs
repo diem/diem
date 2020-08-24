@@ -59,6 +59,18 @@ pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterat
     })
 }
 
+pub fn filter_move_bytecode_files(
+    dir_iter: impl Iterator<Item = PathBuf>,
+) -> impl Iterator<Item = PathBuf> {
+    dir_iter.flat_map(|path| {
+        if path.extension()?.to_str()? == COMPILED_EXTENSION {
+            Some(path)
+        } else {
+            None
+        }
+    })
+}
+
 pub fn stdlib_files() -> Vec<String> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push(STD_LIB_DIR);
@@ -66,6 +78,41 @@ pub fn stdlib_files() -> Vec<String> {
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
         .collect()
+}
+
+pub fn stdlib_bytecode_files() -> Vec<String> {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push(COMPILED_OUTPUT_PATH);
+    let names = stdlib_files();
+    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    let res: Vec<String> = filter_move_bytecode_files(dirfiles)
+        .filter(|path| {
+            for name in &names {
+                let suffix = "_".to_owned()
+                    + Path::new(name)
+                        .with_extension(COMPILED_EXTENSION)
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap();
+                if path
+                    .file_name()
+                    .map(|f| f.to_str())
+                    .flatten()
+                    .map_or(false, |s| s.ends_with(&suffix))
+                {
+                    return true;
+                }
+            }
+            false
+        })
+        .map(|path| path.into_os_string().into_string().unwrap())
+        .collect();
+    assert!(
+        !res.is_empty(),
+        "Unexpected: no stdlib bytecode files found"
+    );
+    res
 }
 
 pub fn script_files() -> Vec<String> {

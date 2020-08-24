@@ -18,7 +18,6 @@ use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{convert::TryFrom, path::Path};
-use stdlib::stdlib_files;
 use vm::errors::VMResult;
 
 pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
@@ -109,7 +108,8 @@ impl LibraDebugger {
         version: Version,
     ) -> Result<Option<AnnotatedAccountStateBlob>> {
         let state_view = DebuggerStateView::new(&*self.debugger, version);
-        let annotator = MoveValueAnnotator::new(&state_view);
+        let remote_storage = RemoteStorage::new(&state_view);
+        let annotator = MoveValueAnnotator::new(&remote_storage);
         Ok(
             match self
                 .debugger
@@ -222,7 +222,8 @@ fn compile_move_script(file_path: &str, sender: AccountAddress) -> Result<Vec<u8
     let cur_path = file_path.to_owned();
     let targets = &vec![cur_path];
     let sender_opt = Some(sender_addr);
-    let (files, units_or_errors) = move_compile_no_report(targets, &stdlib_files(), sender_opt)?;
+    let (files, units_or_errors) =
+        move_compile_no_report(targets, &stdlib::stdlib_files(), sender_opt)?;
     let unit = match units_or_errors {
         Err(errors) => {
             let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);

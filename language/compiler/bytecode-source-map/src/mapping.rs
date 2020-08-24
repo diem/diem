@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{marking::MarkedSourceMapping, source_map::SourceMap};
+use anyhow::Result;
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An object that associates source code with compiled bytecode and source map.
@@ -31,6 +32,13 @@ impl<Location: Clone + Eq> SourceMapping<Location> {
             source_code: None,
             marks: None,
         }
+    }
+
+    pub fn new_from_module(bytecode: CompiledModule, default_loc: Location) -> Result<Self> {
+        Ok(Self::new(
+            SourceMap::dummy_from_module(&bytecode, default_loc)?,
+            bytecode,
+        ))
     }
 
     pub fn new_from_script(source_map: SourceMap<Location>, bytecode: CompiledScript) -> Self {

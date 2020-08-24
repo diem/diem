@@ -14,15 +14,16 @@ use libra_types::{
 };
 use move_core_types::{
     identifier::Identifier,
-    language_storage::StructTag,
+    language_storage::{ModuleId, StructTag},
     value::{MoveStruct, MoveValue},
 };
+use move_vm_runtime::data_cache::RemoteCache;
 use std::{
     collections::btree_map::BTreeMap,
     convert::TryInto,
     fmt::{Display, Formatter},
 };
-use vm::errors::{Location, PartialVMError};
+use vm::errors::{Location, PartialVMError, PartialVMResult, VMResult};
 
 pub use cached_access_path_table::update_mapping;
 
@@ -59,13 +60,20 @@ pub enum AnnotatedMoveValue {
 
 pub struct MoveValueAnnotator<'a> {
     cache: Resolver<'a>,
-    _data_view: &'a dyn StateView,
+    _data_view: &'a dyn RemoteCache,
 }
 
 impl<'a> MoveValueAnnotator<'a> {
-    pub fn new(view: &'a dyn StateView) -> Self {
+    pub fn new(view: &'a dyn RemoteCache) -> Self {
         Self {
             cache: Resolver::new(view, true),
+            _data_view: view,
+        }
+    }
+
+    pub fn new_no_stdlib(view: &'a dyn RemoteCache) -> Self {
+        Self {
+            cache: Resolver::new(view, false),
             _data_view: view,
         }
     }
@@ -75,9 +83,14 @@ impl<'a> MoveValueAnnotator<'a> {
         access_path: AccessPath,
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
-        let ty = self
-            .cache
-            .resolve_struct(&resource_vec_to_type_tag(access_path.path.as_slice())?)?;
+        self.view_resource(
+            &resource_vec_to_type_tag(access_path.path.as_slice())?,
+            blob,
+        )
+    }
+
+    pub fn view_resource(&self, tag: &StructTag, blob: &[u8]) -> Result<AnnotatedMoveStruct> {
+        let ty = self.cache.resolve_struct(tag)?;
         let struct_def = (&ty)
             .try_into()
             .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
@@ -270,5 +283,19 @@ impl StateView for NullStateView {
 
     fn is_genesis(&self) -> bool {
         false
+    }
+}
+
+impl RemoteCache for NullStateView {
+    fn get_module(&self, _module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+        Ok(None)
+    }
+
+    fn get_resource(
+        &self,
+        _address: &AccountAddress,
+        _tag: &StructTag,
+    ) -> PartialVMResult<Option<Vec<u8>>> {
+        Ok(None)
     }
 }
