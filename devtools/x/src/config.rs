@@ -101,6 +101,7 @@ pub struct SubsetConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct Clippy {
     allowed: Vec<String>,
+    warn: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -146,5 +147,9 @@ impl Config {
 
     pub fn allowed_clippy_lints(&self) -> &[String] {
         &self.clippy.allowed
+    }
+
+    pub fn warn_clippy_lints(&self) -> &[String] {
+        &self.clippy.warn
     }
 }

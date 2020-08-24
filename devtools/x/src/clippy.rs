@@ -19,6 +19,10 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
         pass_through_args.push("-A".into());
         pass_through_args.push(lint.into());
     }
+    for lint in xctx.config().warn_clippy_lints() {
+        pass_through_args.push("-W".into());
+        pass_through_args.push(lint.into());
+    }
     pass_through_args.extend(args.args);
 
     let cmd = CargoCommand::Clippy(xctx.config().cargo_config(), &pass_through_args);

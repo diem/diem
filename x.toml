@@ -15,6 +15,9 @@ allowed = [
     "clippy::mutable_key_type",
     "clippy::eval-order-dependence",
 ]
+warn = [
+    "clippy::wildcard_dependencies",
+]
 
 # This follows the same syntax as CargoOptionsSummary in guppy.
 [summaries.default]
