@@ -37,6 +37,9 @@ pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
 pub const ERROR_DESC_DIR: &str = "error_descriptions";
 pub const ERROR_DESC_FILENAME: &str = "error_descriptions";
 
+pub const PACKED_TYPES_FILENAME: &str = "packed_types";
+pub const PACKED_TYPES_EXTENSION: &str = "txt";
+
 /// The output path under which compiled script files can be found
 pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
 /// The output path for transaction script ABIs.
@@ -59,6 +62,15 @@ pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterat
 pub fn stdlib_files() -> Vec<String> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push(STD_LIB_DIR);
+    let dirfiles = datatest_stable::utils::iterate_directory(&path);
+    filter_move_files(dirfiles)
+        .flat_map(|path| path.into_os_string().into_string())
+        .collect()
+}
+
+pub fn script_files() -> Vec<String> {
+    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push(TRANSACTION_SCRIPTS);
     let dirfiles = datatest_stable::utils::iterate_directory(&path);
     filter_move_files(dirfiles)
         .flat_map(|path| path.into_os_string().into_string())
@@ -175,6 +187,20 @@ fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_scr
     options.abigen.output_directory = output_path.to_string();
     options.abigen.compiled_script_directory = compiled_script_path.to_string();
     options.setup_logging_for_test();
+    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
+}
+
+pub fn build_packed_types_map() {
+    let mut options = move_prover::cli::Options::default();
+    let mut path = PathBuf::from(COMPILED_OUTPUT_PATH);
+    path.push(PACKED_TYPES_FILENAME);
+    path.set_extension(PACKED_TYPES_EXTENSION);
+    options.output_path = path.to_str().unwrap().to_string();
+    let mut sources = stdlib_files();
+    sources.append(&mut script_files());
+    options.move_sources = sources.to_vec();
+    options.verbosity_level = LevelFilter::Warn;
+    options.run_packed_types_gen = true;
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
 

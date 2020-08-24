@@ -56,6 +56,9 @@ pub struct Options {
     pub run_abigen: bool,
     /// Whether to run the error map generator instead of the prover.
     pub run_errmapgen: bool,
+    /// Whether to run a static analysis that computes the set of types that may be packed by the
+    /// Move code under analysis instead of the prover.
+    pub run_packed_types_gen: bool,
     /// An account address to use if none is specified in the source.
     pub account_address: String,
     /// The paths to the Move sources.
@@ -83,6 +86,7 @@ impl Default for Options {
             run_docgen: false,
             run_abigen: false,
             run_errmapgen: false,
+            run_packed_types_gen: false,
             account_address: "0x234567".to_string(),
             verbosity_level: LevelFilter::Info,
             move_sources: vec![],
@@ -364,6 +368,11 @@ impl Options {
                     The generated error map will be written to `errmap` unless configured otherwise"),
             )
             .arg(
+                Arg::with_name("packedtypesgen")
+                    .long("packedtypesgen")
+                    .help("run the packed types generator instead of the prover.")
+            )
+            .arg(
                 Arg::with_name("verify")
                     .long("verify")
                     .takes_value(true)
@@ -486,6 +495,9 @@ impl Options {
         }
         if matches.is_present("errmapgen") {
             options.run_errmapgen = true;
+        }
+        if matches.is_present("packedtypesgen") {
+            options.run_packed_types_gen = true;
         }
         if matches.is_present("warn") {
             options.prover.report_warnings = true;

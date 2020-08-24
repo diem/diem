@@ -60,6 +60,10 @@ impl StructTag {
         key.append(&mut self.hash().to_vec());
         key
     }
+
+    pub fn module_id(&self) -> ModuleId {
+        ModuleId::new(self.address, self.module.to_owned())
+    }
 }
 
 /// Represents the intitial key into global storage where we first index by the address, and then

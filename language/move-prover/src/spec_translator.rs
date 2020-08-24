@@ -986,7 +986,7 @@ impl<'env> SpecTranslator<'env> {
 
             // Collect global invariants.
             invariants.extend(
-                self.get_effective_global_invariants(mem, GlobalInvariantContext::AssumeOnEntry)
+                self.get_effective_global_invariants(*mem, GlobalInvariantContext::AssumeOnEntry)
                     .into_iter(),
             );
         }

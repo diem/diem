@@ -92,6 +92,9 @@ pub fn run_move_prover<W: WriteColor>(
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with transformation errors"));
     }
+    if options.run_packed_types_gen {
+        return run_packed_types_gen(&env, &targets, now);
+    }
     check_modifies(&env, &targets);
     if env.has_errors() {
         env.report_errors(error_writer);
@@ -198,6 +201,30 @@ fn run_errmapgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Re
     info!("generating error map");
     generator.gen();
     generator.save_result();
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    Ok(())
+}
+
+fn run_packed_types_gen(
+    env: &GlobalEnv,
+    targets: &FunctionTargetsHolder,
+    now: Instant,
+) -> anyhow::Result<()> {
+    let checking_elapsed = now.elapsed();
+    info!("generating packed_types");
+    let packed_types = usage_analysis::get_packed_types(&env, &targets);
+    info!("found {:?} packed types", packed_types.len());
+    let mut access_path_type_map = BTreeMap::new();
+    for ty in packed_types {
+        access_path_type_map.insert(ty.access_vector(), ty);
+    }
+    // TODO: save to disk, resource-viewer and an LCS schema extractor should look at this
+
     let generating_elapsed = now.elapsed();
     info!(
         "{:.3}s checking, {:.3}s generating",

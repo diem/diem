@@ -8,6 +8,7 @@ use crate::{
     env::{GlobalEnv, ModuleId, StructEnv, StructId},
     symbol::{Symbol, SymbolPool},
 };
+use move_core_types::language_storage::TypeTag;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -73,6 +74,31 @@ impl TypeError {
     }
 }
 
+impl PrimitiveType {
+    /// Returns true if this type is a specification language only type
+    pub fn is_spec(&self) -> bool {
+        use PrimitiveType::*;
+        match self {
+            Bool | U8 | U64 | U128 | Address | Signer => false,
+            Num | Range | TypeValue => true,
+        }
+    }
+
+    /// Attempt to convert this type into a language_storage::TypeTag
+    pub fn into_type_tag(self) -> Option<TypeTag> {
+        use PrimitiveType::*;
+        Some(match self {
+            Bool => TypeTag::Bool,
+            U8 => TypeTag::U8,
+            U64 => TypeTag::U64,
+            U128 => TypeTag::U128,
+            Address => TypeTag::Address,
+            Signer => TypeTag::Signer,
+            Num | Range | TypeValue => return None,
+        })
+    }
+}
+
 impl Type {
     pub fn new_prim(p: PrimitiveType) -> Type {
         Type::Primitive(p)
@@ -98,6 +124,21 @@ impl Type {
             true
         } else {
             false
+        }
+    }
+
+    /// Returns true if this type is a specification language only type or contains specification
+    /// language only types
+    pub fn is_spec(&self) -> bool {
+        use Type::*;
+        match self {
+            Primitive(p) => p.is_spec(),
+            Fun(..) | TypeDomain(..) | TypeLocal(..) | Error => true,
+            Var(..) | TypeParameter(..) => false,
+            Tuple(ts) => ts.iter().any(|t| t.is_spec()),
+            Struct(_, _, ts) => ts.iter().any(|t| t.is_spec()),
+            Vector(et) => et.is_spec(),
+            Reference(_, bt) => bt.is_spec(),
         }
     }
 
@@ -233,7 +274,74 @@ impl Type {
             Vector(et) => et.is_incomplete(),
             Reference(_, bt) => bt.is_incomplete(),
             TypeDomain(bt) => bt.is_incomplete(),
-            Error | Primitive(..) | TypeParameter(..) | TypeLocal(..) => false,
+            Error | Primitive(..) | TypeLocal(..) | TypeParameter(_) => false,
+        }
+    }
+
+    /// Return true if this type contains free type variables
+    pub fn is_open(&self) -> bool {
+        use Type::*;
+        match self {
+            TypeParameter(_) | TypeLocal(_) => true,
+            Primitive(_) => false,
+            Tuple(ts) => ts.iter().any(|t| t.is_open()),
+            Fun(ts, r) => ts.iter().any(|t| t.is_open()) || r.is_open(),
+            Struct(_, _, ts) => ts.iter().any(|t| t.is_open()),
+            Vector(et) => et.is_open(),
+            Reference(_, bt) => bt.is_open(),
+            TypeDomain(bt) => bt.is_open(),
+            Error | Var(_) => {
+                panic!("Invariant violation: is_open should be called after type checking")
+            }
+        }
+    }
+
+    /// Attempt to convert this type into a language_storage::TypeTag
+    pub fn into_type_tag(self, env: &GlobalEnv) -> Option<TypeTag> {
+        use Type::*;
+        if self.is_open() || self.is_reference() || self.is_spec() {
+            None
+        } else {
+            Some (
+                match self {
+                    Primitive(p) => p.into_type_tag().expect("Invariant violation: unexpected spec primitive"),
+                    Struct(mid, sid, ts) =>TypeTag::Struct(
+                        env.get_struct_tag(mid, sid, &ts)
+                            .expect("Invariant violation: struct type argument contains incomplete, tuple, reference, or spec type")
+                    ),
+                    Vector(et) => TypeTag::Vector(
+                        Box::new(et.into_type_tag(env)
+                                 .expect("Invariant violation: vector type argument contains incomplete, tuple, reference, or spec type"))
+                    ),
+                    Tuple(..) | Error | Fun(..) | TypeDomain(..) | TypeParameter(..) | TypeLocal(..) | Var(..) | Reference(..) =>
+                        return None
+                }
+            )
+        }
+    }
+
+    /// Create a `Type` from `t`
+    pub fn from_type_tag(t: TypeTag, env: &GlobalEnv) -> Self {
+        use Type::*;
+        match t {
+            TypeTag::Bool => Primitive(PrimitiveType::Bool),
+            TypeTag::U8 => Primitive(PrimitiveType::U8),
+            TypeTag::U64 => Primitive(PrimitiveType::U64),
+            TypeTag::U128 => Primitive(PrimitiveType::U128),
+            TypeTag::Address => Primitive(PrimitiveType::Address),
+            TypeTag::Signer => Primitive(PrimitiveType::Signer),
+            TypeTag::Struct(s) => {
+                let qid = env.find_struct_by_tag(&s).unwrap_or_else(|| {
+                    panic!("Invariant violation: couldn't resolve struct {:?}", s)
+                });
+                let type_args = s
+                    .type_params
+                    .into_iter()
+                    .map(|arg| Self::from_type_tag(arg, env))
+                    .collect();
+                Struct(qid.module_id, qid.id, type_args)
+            }
+            TypeTag::Vector(type_param) => Vector(Box::new(Self::from_type_tag(*type_param, env))),
         }
     }
 

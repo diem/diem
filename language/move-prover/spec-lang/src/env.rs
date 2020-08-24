@@ -908,6 +908,19 @@ impl GlobalEnv {
             .find(|m| m.get_name().name() == simple_name)
     }
 
+    /// Gets a StructEnv in this module by its `StructTag`
+    pub fn find_struct_by_tag(
+        &self,
+        tag: &language_storage::StructTag,
+    ) -> Option<QualifiedId<StructId>> {
+        self.find_module(&self.to_module_name(&tag.module_id()))
+            .map(|menv| {
+                menv.find_struct_by_identifier(tag.name.clone())
+                    .map(|sid| menv.get_id().qualified(sid))
+            })
+            .flatten()
+    }
+
     /// Return the module enclosing this location.
     pub fn get_enclosing_module(&self, loc: Loc) -> Option<ModuleEnv<'_>> {
         for data in &self.module_data {
@@ -1061,6 +1074,30 @@ impl GlobalEnv {
             return n.to_usize();
         }
         None
+    }
+
+    /// Attempt to compute a struct tag for (`mid`, `sid`, `ts`). Returns `Some` if all types in
+    /// `ts` are closed, `None` otherwise
+    pub fn get_struct_tag(
+        &self,
+        mid: ModuleId,
+        sid: StructId,
+        ts: &[Type],
+    ) -> Option<language_storage::StructTag> {
+        if ts.iter().any(|t| t.is_open()) {
+            None
+        } else {
+            let menv = self.get_module(mid);
+            Some(language_storage::StructTag {
+                address: *menv.self_address(),
+                module: menv.get_identifier(),
+                name: menv.get_struct(sid).get_identifier(),
+                type_params: ts
+                    .iter()
+                    .map(|t| t.clone().into_type_tag(self).unwrap())
+                    .collect(),
+            })
+        }
     }
 }
 
@@ -1319,6 +1356,20 @@ impl<'env> ModuleEnv<'env> {
             module_env: self.clone(),
             data,
         })
+    }
+
+    /// Gets a StructEnv in this module by identifier
+    pub fn find_struct_by_identifier(&self, identifier: Identifier) -> Option<StructId> {
+        for data in self.data.struct_data.values() {
+            let senv = StructEnv {
+                module_env: self.clone(),
+                data,
+            };
+            if senv.get_identifier() == identifier {
+                return Some(senv.get_id());
+            }
+        }
+        None
     }
 
     /// Gets the struct id from a definition index which must be valid for this environment.

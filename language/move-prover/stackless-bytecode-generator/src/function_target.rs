@@ -30,12 +30,6 @@ pub struct FunctionTarget<'env> {
     annotation_formatters: RefCell<Vec<Box<AnnotationFormatter>>>,
 }
 
-impl<'env> FunctionTarget<'env> {
-    pub fn get_global_env(&'env self) -> &'env GlobalEnv {
-        self.func_env.module_env.env
-    }
-}
-
 impl<'env> Clone for FunctionTarget<'env> {
     fn clone(&self) -> Self {
         // Annotation formatters are transient and forgotten on clone.
