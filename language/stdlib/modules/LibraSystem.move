@@ -82,6 +82,7 @@ module LibraSystem {
         move_to(config_account, CapabilityHolder { cap })
     }
     spec fun initialize_validator_set {
+        modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include LibraTimestamp::AbortsIfNotGenesis;
         include Roles::AbortsIfNotLibraRoot{account: config_account};
         let config_addr = Signer::spec_address_of(config_account);
@@ -95,10 +96,28 @@ module LibraSystem {
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
+        LibraTimestamp::assert_operating();
+        assert(
+            exists<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::not_published(ECAPABILITY_HOLDER)
+        );
         LibraConfig::set_with_capability_and_reconfigure<LibraSystem>(
             &borrow_global<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap,
             value
         )
+    }
+
+    spec fun set_validator_set {
+        pragma opaque = true;
+        modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        include LibraTimestamp::AbortsIfNotOperating;
+        include LibraConfig::AbortsIfNotPublished<LibraSystem>;
+        include AbortsIfNoCapabilityHolder;
+        ensures global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).payload == value;
+    }
+
+    spec schema AbortsIfNoCapabilityHolder {
+        aborts_if !exists<CapabilityHolder>(CoreAddresses::LIBRA_ROOT_ADDRESS()) with Errors::NOT_PUBLISHED;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -133,12 +152,33 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun add_validator {
+        /// TODO: times out arbitrarily, while succeeding quickly some other times.
+//        pragma verify = false;
+        modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include LibraTimestamp::AbortsIfNotOperating;
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        // TODO (dd) Junkil applies this at the end of the file.
+        // include Roles::AbortsIfNotLibraRoot{account: lr_account};
         aborts_if !ValidatorConfig::spec_is_valid(account_address) with Errors::INVALID_ARGUMENT;
         aborts_if spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
         ensures spec_is_validator(account_address);
     }
+
+    spec fun add_validator {
+        let vs = spec_get_validator_set();
+        // TODO (dd) (Issue #5739) BUG: "old" doesn't seem to do anything here.
+        //     Bug will cause eq_push_back to be violated.
+        // let ovs = old(spec_get_validator_set());
+        ensures Vector::eq_push_back(vs,
+                                     // ovs,   // DD replaced with next line because of bug.
+                                     old(spec_get_validator_set()),
+                                     ValidatorInfo {
+                                         addr: account_address,
+                                         config: ValidatorConfig::spec_get_config(account_address),
+                                         consensus_voting_power: 1,
+                                      }
+                                   );
+    }
+
 
     // Removes a validator, only callable by the libra root account
     // If successful, a NewEpochEvent is fired
@@ -159,9 +199,23 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
     spec fun remove_validator {
+        modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include LibraTimestamp::AbortsIfNotOperating;
-        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        // TODO (dd) Junkil applies this at end of file.
+        // include Roles::AbortsIfNotLibraRoot{account: lr_account};
         aborts_if !spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
+        ensures !spec_is_validator(account_address);
+    }
+    spec fun remove_validator {
+        let vs = spec_get_validator_set();
+        // TODO (dd) (Issue #5739) BUG: I think the "old" is getting lost.
+        // let ovs = old(spec_get_validator_set());
+        // TODO (dd) all this times out.
+        // ensures len(vs) == len(ovs) - 1;
+        // TODO (dd) BUG: The next property holds trivially because
+        // ensures forall vi in vs where vi.addr != account_address: exists ovi in ovs: vi == ovi;
+        ensures forall vi in vs where vi.addr != account_address: exists ovi in old(spec_get_validator_set()): vi == ovi;
+        /// Removed validator should no longer be valid.
         ensures !spec_is_validator(account_address);
     }
 
@@ -187,7 +241,9 @@ module LibraSystem {
         }
     }
     spec fun update_config_and_reconfigure {
-        /// TODO: times out arbitrarily, while succeeding quickly some other times.
+        // TODO (dd): This times out.  It will complete quickly IF (1) all aborts_ifs here are commented out,
+        // and (2) the last property in the second spec fun (that the propery validator set entry is properly
+        // update) is commented out.
         pragma verify_duration_estimate = 100;
         include Roles::AbortsIfNotValidatorOperator{account: operator_account};
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};
@@ -198,21 +254,52 @@ module LibraSystem {
         aborts_if !ValidatorConfig::spec_is_valid(validator_address) with Errors::INVALID_ARGUMENT;
     }
 
+    /// *Informally:* Does not change the length of the validator set, only
+    /// changes ValidatorInfo for validator_address, and doesn't change
+    /// any addresses.
+    ///
+    /// This is a separate spec fun so we can use multiple lets.
+    /// TODO: Look at called procedures to understand this better.  Also,
+    ///    look at transactions.
+    spec fun update_config_and_reconfigure {
+        // TODO (dd) BUG: Translated boogie does not have old, so vs == ovs.
+        //    Property is trivial!
+        let vs = spec_get_validator_set();
+        // let ovs = old(spec_get_validator_set());
+        ensures len(vs) == len(old(spec_get_validator_set()));
+        /// No addresses change
+        ensures forall i in 0..len(vs): vs[i].addr == old(spec_get_validator_set())[i].addr;
+        /// If the validator info address is not the one we're changing, the info does not change.
+        ensures forall i in 0..len(vs) where old(spec_get_validator_set())[i].addr != validator_address:
+                         vs[i] == old(spec_get_validator_set())[i];
+        // It updates the correct entry in the correct way (have not been able to verify)
+        ensures forall i in 0..len(spec_get_validator_set())
+                 where old(spec_get_validator_set())[i].addr == validator_address:
+             old(spec_get_validator_set())[i].config == ValidatorConfig::get_config(vs[i].addr);
+    }
+
+
     ///////////////////////////////////////////////////////////////////////////
     // Publicly callable APIs: getters
     ///////////////////////////////////////////////////////////////////////////
 
-    // This returns a copy of the current validator set.
+    // This returns a copy of the LibraSystem resource with current validator set.
+    // TODO (dd): Can this be private?
     public fun get_validator_set(): LibraSystem {
         LibraConfig::get<LibraSystem>()
     }
+    /// Doesn't actually get the validator set. It gets the
+    /// LibraSystem config, which contains the validator set.
     spec fun get_validator_set {
         pragma opaque;
         include LibraConfig::AbortsIfNotPublished<LibraSystem>;
         ensures result == LibraConfig::spec_get<LibraSystem>();
     }
-    spec define spec_get_validator_set(): vector<ValidatorInfo> {
-        LibraConfig::spec_get<LibraSystem>().validators
+    /// Actually gets the validator set, unlike get_validator_set
+    spec module {
+        define spec_get_validator_set(): vector<ValidatorInfo> {
+            LibraConfig::spec_get<LibraSystem>().validators
+        }
     }
 
 
@@ -318,6 +405,10 @@ module LibraSystem {
             return false
         };
         let validator_info = Vector::borrow_mut(validators, i);
+        // TODO (dd): Why can't it abort here?  Right now, ValidatorConfig says validators
+        //    stay published forever, but I wonder if that's reasonable.
+        //    Calling context checks validator role, and there probably should be an
+        //    invariant that validator role ==> validator config.
         let new_validator_config = ValidatorConfig::get_config(validator_info.addr);
         // check if information is the same
         let config_ref = &mut validator_info.config;
@@ -330,12 +421,20 @@ module LibraSystem {
         true
     }
     spec fun update_ith_validator_info_ {
-        //aborts_if i < len(validators) &&
-        //    !ValidatorConfig::spec_is_valid(validators[i].addr);
-        ensures i < len(validators) ==>
-            validators[i].config == ValidatorConfig::spec_get_config(validators[i].addr);
-        ensures i < len(validators) ==>
-            result == (old(validators[i].config) != ValidatorConfig::spec_get_config(validators[i].addr));
+        pragma opaque = true;
+        let ovi = old(validators[i]);
+        let vi = ValidatorInfo {
+                      addr: ovi.addr,
+                      consensus_voting_power: ovi.consensus_voting_power,
+                      config: ValidatorConfig::get_config(validators[i].addr),
+                  };
+        /// Captures exact value of 'result'
+        ensures result == (i < len(validators)
+                     && ValidatorConfig::get_config(validators[i].addr) != ovi.config);
+        /// If result is true, it updates the validator vector at index i, only.
+        ensures result ==> validators == update_vector(old(validators), i, vi);
+        /// If result is false, validators vector is unchanged.
+        ensures !result ==> validators == old(validators);
     }
 
     fun is_validator_(addr: address, validators_vec_ref: &vector<ValidatorInfo>): bool {
@@ -364,9 +463,32 @@ module LibraSystem {
         pragma verify;
     }
 
-    /// The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
+    // The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
     spec module {
-        apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
+       apply Roles::AbortsIfNotLibraRoot{account: lr_account} to add_validator, remove_validator;
     }
+
+    // This restricts the set of functions that can modify the validator set config.
+    // To specify proper access, it is sufficient to show the following conditions,
+    // which are all specified and verified in the spec fun's
+    // 1. `initialize` aborts if not called during genesis
+    // 2. `add_validator` adds a validator without changing anything else in the validator set
+    //    and only completes successfully if the signer is Libra Root.
+    // 3. `remove_validator` removes a validator without changing anything else and only
+    //    completes successfully if the signer is Libra Root
+    // 4. `update_config_and_reconfigure` changes only entry for the validator it's supposed
+    //    to update, and only completes successfully if the signer is the validator operator
+    //    for that validator.
+    // set_validator_set is a private function, so it does not have to preserve the property.
+    spec schema ValidatorSetConfigRemainsSame {
+        /// Only {add, remove} validator may change the set of validators in the configuration.
+        ensures spec_get_validator_set() == old(spec_get_validator_set());
+    }
+    spec module {
+        apply ValidatorSetConfigRemainsSame to *, *<T>
+           except add_validator, remove_validator, update_config_and_reconfigure,
+               initialize_validator_set, set_validator_set;
+    }
+
 }
 }

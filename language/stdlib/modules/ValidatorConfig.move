@@ -224,7 +224,7 @@ module ValidatorConfig {
     }
 
     /// # Validator stays valid once it becomes valid
-
+    /// See comment on set_config -- LibraSystem depends on this.
     spec module {
         invariant update [global]
             forall validator: address where old(spec_is_valid(validator)): spec_is_valid(validator);

@@ -66,7 +66,7 @@ Attempted to add a currency code that is already in use
 Initializes this module. Can only be called from genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -75,11 +75,11 @@ Initializes this module. Can only be called from genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(lr_account: &signer) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
-    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(config_account);
+    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
-        config_account,
+        lr_account,
         <a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a> { currency_codes: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
     );
 }
@@ -133,16 +133,18 @@ Adds a new currency code. The currency code must not yet exist.
 ### Function `initialize`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
 
 
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: config_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigAbortsIf">LibraConfig::PublishNewConfigAbortsIf</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;;
-<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigEnsures">LibraConfig::PublishNewConfigEnsures</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigEnsures">LibraConfig::PublishNewConfigEnsures</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;{
+    payload: <a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a> { currency_codes: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
+};
 <b>ensures</b> len(<a href="#0x1_RegisteredCurrencies_get_currency_codes">get_currency_codes</a>()) == 0;
 </code></pre>
 
@@ -178,7 +180,10 @@ The resulting currency_codes is the one before this function is called, with the
 <pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_AddCurrencyCodeAbortsIf">AddCurrencyCodeAbortsIf</a> {
     lr_account: &signer;
     currency_code: vector&lt;u8&gt;;
-    <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotModifiable">LibraConfig::AbortsIfNotModifiable</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;{account: lr_account};
+    <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotModifiable">LibraConfig::AbortsIfNotModifiable</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;{
+        account: lr_account,
+        payload: <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;()
+    };
 }
 </code></pre>
 

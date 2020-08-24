@@ -779,6 +779,7 @@ Returns true if addr is a valid validator.
 
 ### Validator stays valid once it becomes valid
 
+See comment on set_config -- LibraSystem depends on this.
 
 
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
