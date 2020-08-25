@@ -285,8 +285,6 @@ impl ClusterSwarmKube {
         if wait_jobs_results.iter().any(|r| !r) {
             bail!("one of the jobs failed")
         }
-        let delete_jobs_futures = job_names.iter().map(|job_name| self.kill_job(job_name));
-        try_join_all_limit(delete_jobs_futures.collect()).await?;
         Ok(())
     }
 
