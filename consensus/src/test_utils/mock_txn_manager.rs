@@ -55,8 +55,13 @@ impl TxnManager for MockTransactionManager {
         Ok(random_payload(max_size as usize))
     }
 
-    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    async fn notify(
+        &self,
+        block: &Block,
+        executed_result: Result<&StateComputeResult>,
+    ) -> Result<()> {
         if self.mempool_proxy.is_some() {
+            let compute_results = executed_result.unwrap();
             let mock_compute_result = StateComputeResult::new(
                 compute_results.root_hash(),
                 compute_results.frozen_subtree_roots().clone(),
@@ -71,7 +76,7 @@ impl TxnManager for MockTransactionManager {
                 .mempool_proxy
                 .as_ref()
                 .unwrap()
-                .notify(&block, &mock_compute_result)
+                .notify(&block, Ok(&mock_compute_result))
                 .await
                 .is_ok());
         }

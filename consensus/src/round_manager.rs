@@ -516,15 +516,18 @@ impl RoundManager {
     /// * return a VoteMsg with the LedgerInfo to be committed in case the vote gathers QC.
     async fn execute_and_vote(&mut self, proposed_block: Block) -> anyhow::Result<Vote> {
         trace_code_block!("round_manager::execute_and_vote", {"block", proposed_block.id()});
-        let executed_block = self
+        let executed_result = self
             .block_store
-            .execute_and_insert_block(proposed_block)
-            .context("[RoundManager] Failed to execute_and_insert the block")?;
-        // notify mempool about failed txn
-        let compute_result = executed_block.compute_result();
+            .execute_and_insert_block(proposed_block.clone())
+            .context("[RoundManager] Failed to execute_and_insert the block");
+        let notify_result = match &executed_result {
+            Ok(executed_block) => Ok(executed_block.compute_result()),
+            Err(e) => Err(anyhow::anyhow!("{:?}", e)),
+        };
+        // notify mempool about failed txn or failed block
         if let Err(e) = self
             .txn_manager
-            .notify(executed_block.block(), compute_result)
+            .notify(&proposed_block, notify_result)
             .await
         {
             error!(
@@ -532,6 +535,7 @@ impl RoundManager {
                 e
             );
         }
+        let executed_block = executed_result?;
 
         // Short circuit if already voted.
         ensure!(

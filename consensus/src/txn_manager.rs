@@ -64,23 +64,30 @@ impl TxnManager for MempoolProxy {
     }
 
     // Consensus notifies mempool of executed transactions
-    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    async fn notify(
+        &self,
+        block: &Block,
+        executed_result: Result<&StateComputeResult>,
+    ) -> Result<()> {
         let mut rejected_txns = vec![];
         let txns = match block.payload() {
             Some(txns) => txns,
             None => return Ok(()),
         };
-        // skip the block metadata txn result
-        for (txn, status) in txns
-            .iter()
-            .zip_eq(compute_results.compute_status().iter().skip(1))
-        {
-            if let TransactionStatus::Discard(_) = status {
-                rejected_txns.push(CommittedTransaction {
-                    sender: txn.sender(),
-                    sequence_number: txn.sequence_number(),
-                });
+        match executed_result {
+            Ok(compute_results) => {
+                // skip the block metadata txn result
+                for (txn, status) in txns
+                    .iter()
+                    .zip_eq(compute_results.compute_status().iter().skip(1))
+                {
+                    if let TransactionStatus::Discard(_) = status {
+                        rejected_txns.push(txn);
+                    }
+                }
             }
+            // block execution failed, drop all txns
+            Err(_) => rejected_txns.append(&mut txns.iter().collect()),
         }
 
         if rejected_txns.is_empty() {
@@ -88,7 +95,16 @@ impl TxnManager for MempoolProxy {
         }
 
         let (callback, callback_rcv) = oneshot::channel();
-        let req = ConsensusRequest::RejectNotification(rejected_txns, callback);
+        let req = ConsensusRequest::RejectNotification(
+            rejected_txns
+                .iter()
+                .map(|txn| CommittedTransaction {
+                    sender: txn.sender(),
+                    sequence_number: txn.sequence_number(),
+                })
+                .collect(),
+            callback,
+        );
 
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;

@@ -17,7 +17,11 @@ pub trait TxnManager: Send + Sync {
 
     /// Notifies TxnManager about the executed result of the block,
     /// which includes the specifics of what transactions succeeded and failed.
-    async fn notify(&self, block: &Block, compute_result: &StateComputeResult) -> Result<()>;
+    async fn notify(
+        &self,
+        block: &Block,
+        executed_result: Result<&StateComputeResult>,
+    ) -> Result<()>;
 
     /// Helper to trace transactions after block is generated
     fn trace_transactions(&self, _block: &Block) {}
