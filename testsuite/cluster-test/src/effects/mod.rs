@@ -10,6 +10,7 @@ use std::fmt::Display;
 
 pub mod network_delay;
 pub mod packet_loss;
+pub mod stop_validator;
 
 #[async_trait]
 pub trait Effect: Display {

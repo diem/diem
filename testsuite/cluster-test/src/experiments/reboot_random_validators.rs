@@ -9,12 +9,12 @@ use rand::seq::SliceRandom;
 
 use crate::{
     cluster::Cluster,
+    effects::{self, stop_validator::StopValidator},
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
 };
 use async_trait::async_trait;
-use futures::future::try_join_all;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -89,10 +89,14 @@ impl Experiment for RebootRandomValidators {
     }
 
     async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
-        let futures: Vec<_> = self.instances.iter().map(Instance::stop).collect();
-        try_join_all(futures).await?;
-        let futures: Vec<_> = self.instances.iter().map(|ic| ic.start()).collect();
-        try_join_all(futures).await?;
+        let mut effects: Vec<_> = self
+            .instances
+            .clone()
+            .into_iter()
+            .map(StopValidator::new)
+            .collect();
+        effects::activate_all(&mut effects).await?;
+        effects::deactivate_all(&mut effects).await?;
         Ok(())
     }
 
