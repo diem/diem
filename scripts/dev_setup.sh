@@ -11,6 +11,7 @@
 # 2 .profile will be used to configure the shell
 # 3 ${HOME}/bin/ is expected to be on the path - hashicorp tools/hadolint/etc.  will be installed there on linux systems.
 
+
 HADOLINT_VERSION=1.17.4
 SCCACHE_VERSION=0.2.13
 KUBECTL_VERSION=1.18.6
