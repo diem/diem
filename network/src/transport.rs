@@ -208,6 +208,10 @@ async fn upgrade_inbound<T: TSocket>(
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|err| {
+            sl_warn!(security_log(security_events::INVALID_NETWORK_HANDSHAKE_MSG)
+                .data_display("error", &err)
+                .data("origin", "inbound")
+                .data("remote_peer", remote_peer_id));
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",
                 remote_peer_id, err

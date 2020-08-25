@@ -80,4 +80,7 @@ pub mod security_events {
 
     /// Network identified an invalid peer
     pub const INVALID_NETWORK_PEER: &str = "InvalidNetworkPeer";
+
+    /// Network couldn't negotiate
+    pub const INVALID_NETWORK_HANDSHAKE_MSG: &str = "InvalidNetworkHandshakeMsg";
 }
