@@ -128,7 +128,7 @@ where
     }
 
     fn peer_id(&self) -> PeerId {
-        self.connection_metadata.peer_id()
+        self.connection_metadata.peer_id
     }
 
     pub async fn start(mut self) {

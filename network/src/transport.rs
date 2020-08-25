@@ -92,12 +92,12 @@ impl ConnectionIdGenerator {
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, Serialize)]
 pub struct ConnectionMetadata {
-    peer_id: PeerId,
-    connection_id: ConnectionId,
-    addr: NetworkAddress,
-    origin: ConnectionOrigin,
-    messaging_protocol: MessagingProtocolVersion,
-    application_protocols: SupportedProtocols,
+    pub peer_id: PeerId,
+    pub connection_id: ConnectionId,
+    pub addr: NetworkAddress,
+    pub origin: ConnectionOrigin,
+    pub messaging_protocol: MessagingProtocolVersion,
+    pub application_protocols: SupportedProtocols,
 }
 
 impl ConnectionMetadata {
@@ -117,22 +117,6 @@ impl ConnectionMetadata {
             messaging_protocol,
             application_protocols,
         }
-    }
-
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
-    }
-
-    pub fn connection_id(&self) -> ConnectionId {
-        self.connection_id
-    }
-
-    pub fn addr(&self) -> &NetworkAddress {
-        &self.addr
-    }
-
-    pub fn origin(&self) -> ConnectionOrigin {
-        self.origin
     }
 }
 
