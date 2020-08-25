@@ -52,7 +52,7 @@ const CONNECTION_TIMEOUT_MS: u64 = 5000;
 // Fields to keep when over size
 static FIELDS_TO_KEEP: &[&str] = &["error"];
 
-#[derive(Default, Serialize)]
+#[derive(Debug, Default, Serialize)]
 pub struct StructuredLogEntry {
     /// Unique Id representing this message in Elasticsearch
     id: String,
