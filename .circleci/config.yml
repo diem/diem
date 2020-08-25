@@ -996,6 +996,11 @@ workflows:
 
   pull-request-workflow:
     jobs:
+      - docker-pre-publish:
+          context: docker
+          filters:
+            branches:
+              only: /^pull\/.+$/
       - lint-docker:
           filters:
             branches:
