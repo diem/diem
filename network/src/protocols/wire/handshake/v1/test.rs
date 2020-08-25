@@ -29,65 +29,89 @@ fn protocols_to_from_vec() {
 
 #[test]
 fn represents_same_network() {
-    let network_id = NetworkId::Private("h1".to_string());
-    let chain_id = ChainId::test();
+    let mut handshake_msg = HandshakeMsg::new_for_testing();
+    handshake_msg.network_id = NetworkId::Private("h1".to_string());
 
-    // Positive case
-    let h1 = HandshakeMsg::new(chain_id, network_id.clone());
-    let h2 = HandshakeMsg::new(chain_id, network_id.clone());
-    assert!(h1.verify(&h2));
+    // succeeds: Positive case
+    let h1 = handshake_msg.clone();
+    let h2 = handshake_msg.clone();
+    h1.perform_handshake(&h2).unwrap();
 
-    // Negative cases
-    let h2 = HandshakeMsg::new(chain_id, NetworkId::Private("h2".to_string()));
-    assert!(!h1.verify(&h2));
-    let h2 = HandshakeMsg::new(chain_id, NetworkId::Public);
-    assert!(!h1.verify(&h2));
-    let h2 = HandshakeMsg::new(ChainId::new(chain_id.id() + 1), network_id);
-    assert!(!h1.verify(&h2));
+    // fails: another private network
+    let mut h2 = handshake_msg.clone();
+    h2.network_id = NetworkId::Private("h2".to_string());
+    h1.perform_handshake(&h2).unwrap_err();
+
+    // fails: different network
+    let mut h2 = handshake_msg.clone();
+    h2.network_id = NetworkId::Public;
+    h1.perform_handshake(&h2).unwrap_err();
+
+    // fails: different chain
+    let mut h2 = handshake_msg.clone();
+    h2.chain_id = ChainId::new(h1.chain_id.id() + 1);
+    h1.perform_handshake(&h2).unwrap_err();
 }
 
 #[test]
 fn common_protocols() {
     let network_id = NetworkId::default();
     let chain_id = ChainId::default();
-
-    let mut h1 = HandshakeMsg::new(chain_id, network_id.clone());
-    h1.add(
+    let mut supported_protocols = BTreeMap::new();
+    supported_protocols.insert(
         MessagingProtocolVersion::V1,
         [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend]
             .iter()
             .into(),
     );
 
+    let h1 = HandshakeMsg {
+        chain_id,
+        network_id: network_id.clone(),
+        supported_protocols,
+    };
+
     // Case 1: One intersecting protocol is found for common messaging protocol version.
-    let mut h2 = HandshakeMsg::new(chain_id, network_id.clone());
-    h2.add(
+    let mut supported_protocols = BTreeMap::new();
+    supported_protocols.insert(
         MessagingProtocolVersion::V1,
         [ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend]
             .iter()
             .into(),
     );
+    let h2 = HandshakeMsg {
+        chain_id,
+        network_id: network_id.clone(),
+        supported_protocols,
+    };
+
     assert_eq!(
-        Some((
+        (
             MessagingProtocolVersion::V1,
             [ProtocolId::ConsensusRpc].iter().into()
-        )),
-        h1.find_common_protocols(&h2)
+        ),
+        h1.perform_handshake(&h2).unwrap()
     );
 
     // Case 2: No intersecting messaging protocol version.
     let h2 = HandshakeMsg {
-        network_id: network_id.clone(),
-        supported_protocols: BTreeMap::default(),
         chain_id,
+        network_id: network_id.clone(),
+        supported_protocols: BTreeMap::new(),
     };
-    assert_eq!(None, h1.find_common_protocols(&h2));
+    h1.perform_handshake(&h2).unwrap_err();
 
     // Case 3: Intersecting messaging protocol version is present, but no intersecting protocols.
-    let mut h2 = HandshakeMsg::new(chain_id, network_id);
-    h2.add(MessagingProtocolVersion::V1, SupportedProtocols::default());
+    let mut supported_protocols = BTreeMap::new();
+    supported_protocols.insert(MessagingProtocolVersion::V1, SupportedProtocols::default());
+    let h2 = HandshakeMsg {
+        chain_id,
+        network_id,
+        supported_protocols,
+    };
+
     assert_eq!(
-        Some((MessagingProtocolVersion::V1, [].iter().into())),
-        h1.find_common_protocols(&h2)
+        (MessagingProtocolVersion::V1, [].iter().into()),
+        h1.perform_handshake(&h2).unwrap()
     );
 }

@@ -52,6 +52,7 @@ mod tests {
     use libra_config::network_id::NetworkId;
     use libra_types::chain_id::ChainId;
     use memsocket::MemorySocket;
+    use std::collections::BTreeMap;
 
     fn build_test_connection() -> (MemorySocket, MemorySocket) {
         MemorySocket::new_pair()
@@ -64,8 +65,8 @@ mod tests {
         let (mut outbound, mut inbound) = build_test_connection();
 
         // Create client and server handshake messages.
-        let mut server_handshake = HandshakeMsg::new(chain_id, network_id.clone());
-        server_handshake.add(
+        let mut supported_protocols = BTreeMap::new();
+        supported_protocols.insert(
             MessagingProtocolVersion::V1,
             [
                 ProtocolId::ConsensusDirectSend,
@@ -74,13 +75,23 @@ mod tests {
             .iter()
             .into(),
         );
-        let mut client_handshake = HandshakeMsg::new(chain_id, network_id);
-        client_handshake.add(
+        let server_handshake = HandshakeMsg {
+            chain_id,
+            network_id: network_id.clone(),
+            supported_protocols,
+        };
+        let mut supported_protocols = BTreeMap::new();
+        supported_protocols.insert(
             MessagingProtocolVersion::V1,
             [ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend]
                 .iter()
                 .into(),
         );
+        let client_handshake = HandshakeMsg {
+            chain_id,
+            network_id,
+            supported_protocols,
+        };
 
         let server_handshake_clone = server_handshake.clone();
         let client_handshake_clone = client_handshake.clone();
