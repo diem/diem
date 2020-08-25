@@ -14,7 +14,10 @@ use futures::{
     io::{AsyncRead, AsyncWrite},
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use libra_config::{
+    config::HANDSHAKE_VERSION,
+    network_id::{NetworkContext, NetworkId},
+};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
@@ -22,7 +25,7 @@ use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
 use serde::{export::Formatter, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     convert::TryFrom,
     fmt::Debug,
     io,
@@ -148,52 +151,6 @@ pub struct Connection<TSocket> {
     pub metadata: ConnectionMetadata,
 }
 
-/// Exchange HandshakeMsg's to try negotiating a set of common supported protocols.
-pub async fn perform_handshake<T: TSocket>(
-    peer_id: PeerId,
-    mut socket: T,
-    addr: NetworkAddress,
-    origin: ConnectionOrigin,
-    own_handshake: &HandshakeMsg,
-) -> io::Result<Connection<T>> {
-    let remote_handshake = exchange_handshake(&own_handshake, &mut socket).await?;
-    if !own_handshake.verify(&remote_handshake) {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "Handshakes don't match networks own: {} received: {}",
-                own_handshake, remote_handshake
-            ),
-        ));
-    }
-
-    let intersecting_protocols = own_handshake.find_common_protocols(&remote_handshake);
-    match intersecting_protocols {
-        None => {
-            info!(
-                "No matching protocols found for connection with peer: {}. Handshake received: {}",
-                peer_id.short_str(),
-                remote_handshake
-            );
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                "no matching messaging protocol",
-            ))
-        }
-        Some((messaging_protocol, application_protocols)) => Ok(Connection {
-            socket,
-            metadata: ConnectionMetadata::new(
-                peer_id,
-                CONNECTION_ID_GENERATOR.next(),
-                addr,
-                origin,
-                messaging_protocol,
-                application_protocols,
-            ),
-        }),
-    }
-}
-
 /// Convenience function for adding a timeout to a Future that returns an `io::Result`.
 async fn timeout_io<F, T>(duration: Duration, fut: F) -> io::Result<T>
 where
@@ -210,7 +167,9 @@ where
 struct UpgradeContext {
     noise: NoiseUpgrader,
     handshake_version: u8,
-    own_handshake: HandshakeMsg,
+    supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
+    chain_id: ChainId,
+    network_id: NetworkId,
 }
 
 /// Upgrade an inbound connection. This means we run a Noise IK handshake for
@@ -227,7 +186,7 @@ async fn upgrade_inbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // try authenticating via noise handshake
-    let (socket, peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
+    let (mut socket, remote_peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
         // security logging
         sl_warn!(security_log(security_events::INVALID_NETWORK_PEER)
             .data_display("error", &err)
@@ -237,8 +196,37 @@ async fn upgrade_inbound<T: TSocket>(
     let remote_pubkey = socket.get_remote_static();
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
 
+    // exchange HandshakeMsg
+    let handshake_msg = HandshakeMsg {
+        supported_protocols: ctxt.supported_protocols.clone(),
+        chain_id: ctxt.chain_id,
+        network_id: ctxt.network_id.clone(),
+    };
+    let remote_handshake = exchange_handshake(&handshake_msg, &mut socket).await?;
+
     // try to negotiate common libranet version and supported application protocols
-    perform_handshake(peer_id, socket, addr, origin, &ctxt.own_handshake).await
+    let (messaging_protocol, application_protocols) = handshake_msg
+        .perform_handshake(&remote_handshake)
+        .map_err(|err| {
+            let err = format!(
+                "handshake negotiation with peer {} failed: {}",
+                remote_peer_id, err
+            );
+            io::Error::new(io::ErrorKind::Other, err)
+        })?;
+
+    // return successful connection
+    Ok(Connection {
+        socket,
+        metadata: ConnectionMetadata::new(
+            remote_peer_id,
+            CONNECTION_ID_GENERATOR.next(),
+            addr,
+            origin,
+            messaging_protocol,
+            application_protocols,
+        ),
+    })
 }
 
 /// Upgrade an inbound connection. This means we run a Noise IK handshake for
@@ -254,7 +242,7 @@ async fn upgrade_outbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // noise handshake
-    let socket = ctxt
+    let mut socket = ctxt
         .noise
         .upgrade_outbound(socket, remote_pubkey, AntiReplayTimestamps::now)
         .await?;
@@ -262,8 +250,38 @@ async fn upgrade_outbound<T: TSocket>(
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
 
+    // exchange HandshakeMsg
+    let handshake_msg = HandshakeMsg {
+        supported_protocols: ctxt.supported_protocols.clone(),
+        chain_id: ctxt.chain_id,
+        network_id: ctxt.network_id.clone(),
+    };
+    let remote_handshake = exchange_handshake(&handshake_msg, &mut socket).await?;
+
     // try to negotiate common libranet version and supported application protocols
-    perform_handshake(remote_peer_id, socket, addr, origin, &ctxt.own_handshake).await
+    let (messaging_protocol, application_protocols) = handshake_msg
+        .perform_handshake(&remote_handshake)
+        .map_err(|e| {
+            // TODO(mimoo): security log?
+            let e = format!(
+                "handshake negotiation with peer {} failed: {}",
+                remote_peer_id, e
+            );
+            io::Error::new(io::ErrorKind::Other, e)
+        })?;
+
+    // return successful connection
+    Ok(Connection {
+        socket,
+        metadata: ConnectionMetadata::new(
+            remote_peer_id,
+            CONNECTION_ID_GENERATOR.next(),
+            addr,
+            origin,
+            messaging_protocol,
+            application_protocols,
+        ),
+    })
 }
 
 /// The common LibraNet Transport.
@@ -301,21 +319,29 @@ where
         chain_id: ChainId,
         application_protocols: SupportedProtocols,
     ) -> Self {
-        let mut own_handshake = HandshakeMsg::new(chain_id, network_context.network_id().clone());
-        own_handshake.add(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
-        let identity_pubkey = identity_key.public_key();
+        // build supported protocols
+        let mut supported_protocols = BTreeMap::new();
+        supported_protocols.insert(SUPPORTED_MESSAGING_PROTOCOL, application_protocols);
 
+        // create upgrade context
+        // TODO(mimoo): should we build this based on the networkid, and not on trusted peers
         let auth_mode = match trusted_peers.as_ref() {
             Some(trusted_peers) => HandshakeAuthMode::mutual(trusted_peers.clone()),
             None => HandshakeAuthMode::ServerOnly,
         };
+        let identity_pubkey = identity_key.public_key();
+        let network_id = network_context.network_id().clone();
+
+        let upgrade_context = UpgradeContext {
+            noise: NoiseUpgrader::new(network_context, identity_key, auth_mode),
+            handshake_version,
+            supported_protocols,
+            chain_id,
+            network_id,
+        };
 
         Self {
-            ctxt: Arc::new(UpgradeContext {
-                noise: NoiseUpgrader::new(network_context, identity_key, auth_mode),
-                handshake_version,
-                own_handshake,
-            }),
+            ctxt: Arc::new(upgrade_context),
             base_transport,
             identity_pubkey,
         }

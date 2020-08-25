@@ -14,9 +14,14 @@ use libra_config::network_id::NetworkId;
 use libra_types::chain_id::ChainId;
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
+use thiserror::Error;
 
 #[cfg(test)]
 mod test;
+
+//
+// ProtocolId
+//
 
 /// Unique identifier associated with each application protocol.
 #[repr(u8)]
@@ -56,59 +61,12 @@ impl fmt::Display for ProtocolId {
     }
 }
 
+//
+// SupportedProtocols
+//
+
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct SupportedProtocols(bitvec::BitVec);
-
-/// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
-/// bit-vector specifying application-level protocols supported over that version.
-#[derive(Clone, Deserialize, Serialize, Default)]
-pub struct HandshakeMsg {
-    pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
-    pub chain_id: ChainId,
-    pub network_id: NetworkId,
-}
-
-impl fmt::Debug for HandshakeMsg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-impl fmt::Display for HandshakeMsg {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[{},{},{:?}]",
-            self.chain_id, self.network_id, self.supported_protocols
-        )
-    }
-}
-
-/// Enum representing different versions of the Libra network protocol. These should be listed from
-/// old to new, old having the smallest value.
-/// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
-pub enum MessagingProtocolVersion {
-    V1 = 0,
-}
-
-impl fmt::Debug for MessagingProtocolVersion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-impl fmt::Display for MessagingProtocolVersion {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                MessagingProtocolVersion::V1 => "V1",
-            }
-        )
-    }
-}
 
 impl TryInto<Vec<ProtocolId>> for SupportedProtocols {
     type Error = lcs::Error;
@@ -142,48 +100,110 @@ impl SupportedProtocols {
     }
 }
 
+//
+// MessageProtocolVersion
+//
+
+/// Enum representing different versions of the Libra network protocol. These should be listed from
+/// old to new, old having the smallest value.
+/// We derive `PartialOrd` since nodes need to find highest intersecting protocol version.
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Copy, Hash, Deserialize, Serialize)]
+pub enum MessagingProtocolVersion {
+    V1 = 0,
+}
+
+impl fmt::Debug for MessagingProtocolVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for MessagingProtocolVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                MessagingProtocolVersion::V1 => "V1",
+            }
+        )
+    }
+}
+
+//
+// HandshakeMsg
+//
+
+/// An enum to list the possible errors during the libra handshake negotiation
+#[derive(Debug, Error)]
+pub enum HandshakeError {
+    #[error("libra-handshake: the received message has an invalid chain id: {0}")]
+    InvalidChainId(ChainId),
+    #[error("libra-handshake: the received message has an invalid network id: {0}")]
+    InvalidNetworkId(NetworkId),
+    #[error("libra-handshake: could not find an intersection of supported protocol with the peer")]
+    NoCommonProtocols,
+}
+
+/// The HandshakeMsg contains a mapping from MessagingProtocolVersion suppported by the node to a
+/// bit-vector specifying application-level protocols supported over that version.
+#[derive(Clone, Deserialize, Serialize, Default)]
+pub struct HandshakeMsg {
+    pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
+    pub chain_id: ChainId,
+    pub network_id: NetworkId,
+}
+
 impl HandshakeMsg {
-    pub fn new(chain_id: ChainId, network_id: NetworkId) -> Self {
+    /// Useful function for tests
+    #[cfg(test)]
+    pub fn new_for_testing() -> Self {
+        let mut supported_protocols = BTreeMap::new();
+        supported_protocols.insert(
+            MessagingProtocolVersion::V1,
+            [ProtocolId::StateSynchronizerDirectSend].iter().into(),
+        );
         Self {
-            supported_protocols: Default::default(),
-            network_id,
-            chain_id,
+            chain_id: ChainId::test(),
+            network_id: NetworkId::Validator,
+            supported_protocols,
         }
     }
 
-    pub fn add(
-        &mut self,
-        messaging_protocol: MessagingProtocolVersion,
-        application_protocols: SupportedProtocols,
-    ) {
-        self.supported_protocols
-            .insert(messaging_protocol, application_protocols);
-    }
-
-    pub fn verify(&self, other: &HandshakeMsg) -> bool {
-        self.chain_id == other.chain_id && self.network_id == other.network_id
-    }
-
-    pub fn find_common_protocols(
+    /// This function:
+    /// 1. verifies that both HandshakeMsg are compatible and
+    /// 2. finds out the intersection of protocols that is supported
+    pub fn perform_handshake(
         &self,
         other: &HandshakeMsg,
-    ) -> Option<(MessagingProtocolVersion, SupportedProtocols)> {
-        // First, find the highest MessagingProtocolVersion supported by both nodes.
+    ) -> Result<(MessagingProtocolVersion, SupportedProtocols), HandshakeError> {
+        // verify that both peers are on the same chain
+        if self.chain_id != other.chain_id {
+            return Err(HandshakeError::InvalidChainId(other.chain_id));
+        }
+
+        // verify that both peers are on the same type of network
+        if self.network_id != other.network_id {
+            return Err(HandshakeError::InvalidNetworkId(other.network_id.clone()));
+        }
+
+        // first, find the highest MessagingProtocolVersion supported by both nodes.
         let mut inner = other.supported_protocols.iter().rev().peekable();
-        // Iterate over all supported protocol versions in decreasing order.
+
+        // iterate over all supported protocol versions in decreasing order.
         for (k_outer, _) in self.supported_protocols.iter().rev() {
             // Remove all elements from inner iterator that are larger than the current head of the
             // outer iterator.
             match inner.by_ref().find(|(k_inner, _)| *k_inner <= k_outer) {
                 None => {
-                    return None;
+                    break;
                 }
                 Some((k_inner, _)) if k_inner == k_outer => {
                     // Find all protocols supported by both nodes for the above protocol version.
                     // Both `self` and `other` shold have entry in map for `key`.
                     let protocols_self = self.supported_protocols.get(k_inner).unwrap();
                     let protocols_other = other.supported_protocols.get(k_inner).unwrap();
-                    return Some((
+                    return Ok((
                         *k_inner,
                         protocols_self.clone().intersection(protocols_other.clone()),
                     ));
@@ -191,6 +211,24 @@ impl HandshakeMsg {
                 _ => {}
             }
         }
-        None
+
+        // no intersection found
+        Err(HandshakeError::NoCommonProtocols)
+    }
+}
+
+impl fmt::Debug for HandshakeMsg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl fmt::Display for HandshakeMsg {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{},{},{:?}]",
+            self.chain_id, self.network_id, self.supported_protocols
+        )
     }
 }
