@@ -48,7 +48,7 @@ fn represents_same_network() {
     h1.perform_handshake(&h2).unwrap_err();
 
     // fails: different chain
-    let mut h2 = handshake_msg.clone();
+    let mut h2 = handshake_msg;
     h2.chain_id = ChainId::new(h1.chain_id.id() + 1);
     h1.perform_handshake(&h2).unwrap_err();
 }

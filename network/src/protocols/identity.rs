@@ -120,4 +120,70 @@ mod tests {
 
         block_on(join(server, client));
     }
+
+    #[test]
+    fn handshake_chain_id_mismatch() {
+        let (mut outbound, mut inbound) = MemorySocket::new_pair();
+
+        // server state
+        let server_handshake = HandshakeMsg::new_for_testing();
+
+        // client state
+        let mut client_handshake = server_handshake.clone();
+        client_handshake.chain_id = ChainId::new(client_handshake.chain_id.id() + 1);
+
+        // perform the handshake negotiation
+        let server = async move {
+            let remote_handshake = exchange_handshake(&server_handshake, &mut inbound)
+                .await
+                .unwrap();
+            server_handshake
+                .perform_handshake(&remote_handshake)
+                .unwrap_err()
+        };
+
+        let client = async move {
+            let remote_handshake = exchange_handshake(&client_handshake, &mut outbound)
+                .await
+                .unwrap();
+            client_handshake
+                .perform_handshake(&remote_handshake)
+                .unwrap_err()
+        };
+
+        block_on(join(server, client));
+    }
+
+    #[test]
+    fn handshake_network_id_mismatch() {
+        let (mut outbound, mut inbound) = MemorySocket::new_pair();
+
+        // server state
+        let server_handshake = HandshakeMsg::new_for_testing();
+
+        // client state
+        let mut client_handshake = server_handshake.clone();
+        client_handshake.network_id = NetworkId::Public;
+
+        // perform the handshake negotiation
+        let server = async move {
+            let remote_handshake = exchange_handshake(&server_handshake, &mut inbound)
+                .await
+                .unwrap();
+            server_handshake
+                .perform_handshake(&remote_handshake)
+                .unwrap_err()
+        };
+
+        let client = async move {
+            let remote_handshake = exchange_handshake(&client_handshake, &mut outbound)
+                .await
+                .unwrap();
+            client_handshake
+                .perform_handshake(&remote_handshake)
+                .unwrap_err()
+        };
+
+        block_on(join(server, client));
+    }
 }
