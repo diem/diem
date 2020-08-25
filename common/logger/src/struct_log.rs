@@ -438,6 +438,17 @@ impl TCPStructLog {
 
 impl StructLogSink for TCPStructLog {
     fn send(&self, entry: StructuredLogEntry) {
+        // Write text portion using text logger for reading on container
+        if let Some(message) = &entry.message {
+            log::log!(
+                target: crate::text_log::DEFAULT_TARGET,
+                entry.level,
+                "{}: {}",
+                entry.module,
+                message
+            );
+        }
+
         // Convert and trim before submitting to queue to ensure set log size
         // TODO: Will this have an impact on performance of the writing thread from serialization?
         if let Ok(json) = entry.to_json_string() {

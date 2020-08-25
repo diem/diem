@@ -163,7 +163,6 @@ mod tests;
 macro_rules! crit {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Error, $($arg)+);
-        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
@@ -172,7 +171,6 @@ macro_rules! crit {
 macro_rules! debug {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Debug, $($arg)+);
-        $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
@@ -181,7 +179,6 @@ macro_rules! debug {
 macro_rules! error {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Error, $($arg)+);
-        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
@@ -190,7 +187,6 @@ macro_rules! error {
 macro_rules! info {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Info, $($arg)+);
-        $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
@@ -199,7 +195,6 @@ macro_rules! info {
 macro_rules! trace {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Trace, $($arg)+);
-        $crate::log::trace!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
@@ -208,7 +203,6 @@ macro_rules! trace {
 macro_rules! warn {
     ($($arg:tt)+) => ({
         $crate::text_to_struct_log!($crate::log::Level::Warn, $($arg)+);
-        $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
 }
 
