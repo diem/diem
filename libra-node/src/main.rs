@@ -45,7 +45,7 @@ fn main() {
         libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
         // Let's now log some important information, since the logger is set up
-        sl_info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
+        sl_info!(StructuredLogEntry::new("config", "startup").data("config", &config));
     }
 
     if config.metrics.enabled {

@@ -43,7 +43,7 @@
 //! }
 //!
 //! impl StructuredLogEntry {
-//!     pub fn new_named(category: &'static str, name: &'static str) -> Self { /* ... */ }
+//!     pub fn new(category: &'static str, name: &'static str) -> Self { /* ... */ }
 //!     /* ... Builder style setters for chained initialization such as
 //!         entry.data(a, b).data(x, y) ... */
 //! }

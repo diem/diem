@@ -86,7 +86,7 @@ pub struct StructuredLogEntry {
 
 impl StructuredLogEntry {
     /// Base implementation for creating a log
-    fn new_unnamed() -> Self {
+    fn template() -> Self {
         let mut ret = Self::default();
 
         // Generate a 16 byte random like UUIDv4
@@ -100,14 +100,14 @@ impl StructuredLogEntry {
 
     /// Specifically for text based conversion logs
     pub fn new_text() -> Self {
-        let mut ret = Self::new_unnamed();
+        let mut ret = Self::template();
         ret.category = Some("text");
         ret
     }
 
     /// Creates a log with a category and a name.  This should be preferred
-    pub fn new_named(category: &'static str, name: &'static str) -> Self {
-        let mut ret = Self::new_unnamed();
+    pub fn new(category: &'static str, name: &'static str) -> Self {
+        let mut ret = Self::template();
         ret.category = Some(category);
         ret.name = Some(name);
         ret

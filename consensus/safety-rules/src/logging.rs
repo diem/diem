@@ -4,7 +4,7 @@
 use libra_logger::StructuredLogEntry;
 
 pub fn safety_log(entry: LogEntry, event: LogEvent) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("safety_rules", entry.as_str())
+    StructuredLogEntry::new("safety_rules", entry.as_str())
         .data(LogField::Event.as_str(), event.as_str())
 }
 

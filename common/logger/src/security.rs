@@ -19,7 +19,7 @@ use crate::StructuredLogEntry;
 
 /// helper function to create a security log
 pub fn security_log(name: &'static str) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("security", &name)
+    StructuredLogEntry::new("security", &name)
 }
 
 /// Security events that are possible

@@ -4,7 +4,7 @@
 use libra_logger::StructuredLogEntry;
 
 pub fn key_manager_log(entry: LogEntry) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("key_manager", entry.as_str())
+    StructuredLogEntry::new("key_manager", entry.as_str())
 }
 
 #[derive(Clone, Copy)]

@@ -74,7 +74,7 @@ fn test_structured_logs() {
 
     // Send an info log
     let before = Utc::now();
-    sl_info!(StructuredLogEntry::new_named("category", "name")
+    sl_info!(StructuredLogEntry::new("category", "name")
         .data("test", true)
         .data_display("display", number)
         .field(u64_field, &number)
@@ -115,11 +115,11 @@ fn test_structured_logs() {
     assert_eq!(number, data.val("field").as_u64().unwrap());
 
     // Test all log levels work properly
-    sl_trace!(StructuredLogEntry::new_named("a", "b"));
-    sl_debug!(StructuredLogEntry::new_named("a", "b"));
-    sl_info!(StructuredLogEntry::new_named("a", "b"));
-    sl_warn!(StructuredLogEntry::new_named("a", "b"));
-    sl_error!(StructuredLogEntry::new_named("a", "b"));
+    sl_trace!(StructuredLogEntry::new("a", "b"));
+    sl_debug!(StructuredLogEntry::new("a", "b"));
+    sl_info!(StructuredLogEntry::new("a", "b"));
+    sl_warn!(StructuredLogEntry::new("a", "b"));
+    sl_error!(StructuredLogEntry::new("a", "b"));
 
     // TODO: Fix this as it's fragile based on what the log level is set at
     let vals = vec!["DEBUG", "INFO", "WARN", "ERROR"];
