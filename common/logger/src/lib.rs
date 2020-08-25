@@ -84,6 +84,8 @@ mod libra_logger;
 mod logger;
 mod macros;
 mod metadata;
+pub mod sample;
+
 mod security;
 mod struct_log;
 
