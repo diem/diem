@@ -952,7 +952,7 @@ features = ['alloc', 'default', 'derive', 'rc', 'serde_derive', 'std']
 
 [[target-package]]
 name = 'serde-generate'
-version = '0.12.1'
+version = '0.12.2'
 crates-io = true
 status = 'direct'
 features = []
