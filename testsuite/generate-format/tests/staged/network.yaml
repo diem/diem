@@ -41,9 +41,7 @@ MessagingProtocolVersion:
     0:
       V1: UNIT
 NetworkAddress:
-  NEWTYPESTRUCT:
-    SEQ:
-      TYPENAME: Protocol
+  NEWTYPESTRUCT: BYTES
 NetworkId:
   ENUM:
     0:
@@ -139,10 +137,6 @@ ProtocolId:
     5:
       HealthCheckerRpc: UNIT
 PublicKey:
-  NEWTYPESTRUCT: BYTES
-RawEncNetworkAddress:
-  NEWTYPESTRUCT: BYTES
-RawNetworkAddress:
   NEWTYPESTRUCT: BYTES
 RpcRequest:
   STRUCT:

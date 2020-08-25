@@ -3,12 +3,11 @@
 
 use crate::account_address::AccountAddress;
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_network_address::{NetworkAddress, RawNetworkAddress};
+use libra_network_address::{encrypted::EncNetworkAddress, NetworkAddress};
 use move_core_types::move_resource::MoveResource;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct ValidatorConfigResource {
@@ -36,9 +35,9 @@ impl MoveResource for ValidatorOperatorConfigResource {
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct ValidatorConfig {
     pub consensus_public_key: Ed25519PublicKey,
-    /// This is an lcs serialized Vec<RawEncNetworkAddress>
+    /// This is an lcs serialized Vec<EncNetworkAddress>
     pub validator_network_addresses: Vec<u8>,
-    /// This is an lcs serialized Vec<RawNetworkAddress>
+    /// This is an lcs serialized Vec<NetworkAddress>
     pub fullnode_network_addresses: Vec<u8>,
 }
 
@@ -55,23 +54,11 @@ impl ValidatorConfig {
         }
     }
 
-    /// Returns a filtered list of correct NetworkAddresses within the fullnode_network_addresses
-    pub fn fullnode_network_addresses<'a>(
-        &self,
-        err_callback: Option<Box<dyn Fn(String) + 'a>>,
-    ) -> Result<Vec<NetworkAddress>, lcs::Error> {
-        let addrs: Vec<RawNetworkAddress> = lcs::from_bytes(&self.fullnode_network_addresses)?;
-        Ok(addrs
-            .iter()
-            .filter_map(|raw_addr| match NetworkAddress::try_from(raw_addr) {
-                Ok(addr) => Some(addr),
-                Err(err) => {
-                    if let Some(cb) = &err_callback {
-                        cb(err.to_string());
-                    }
-                    None
-                }
-            })
-            .collect())
+    pub fn fullnode_network_addresses(&self) -> Result<Vec<NetworkAddress>, lcs::Error> {
+        lcs::from_bytes(&self.fullnode_network_addresses)
+    }
+
+    pub fn validator_network_addresses(&self) -> Result<Vec<EncNetworkAddress>, lcs::Error> {
+        lcs::from_bytes(&self.validator_network_addresses)
     }
 }

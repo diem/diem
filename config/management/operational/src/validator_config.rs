@@ -260,7 +260,7 @@ impl DecryptedValidatorConfig {
         encryptor: &Encryptor,
     ) -> Result<Self, Error> {
         let fullnode_network_addresses = config
-            .fullnode_network_addresses(None)
+            .fullnode_network_addresses()
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
         let validator_network_addresses = encryptor

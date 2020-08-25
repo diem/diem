@@ -13,11 +13,8 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
 };
-use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    RawNetworkAddress,
+use libra_network_address::encrypted::{
+    TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 use libra_types::{
     account_address, account_config,
@@ -43,7 +40,7 @@ use move_vm_types::{
 };
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::{collections::btree_map::BTreeMap, convert::TryFrom};
+use std::collections::btree_map::BTreeMap;
 use transaction_builder::encode_create_designated_dealer_script;
 use vm::{file_format::SignatureToken, CompiledModule};
 
@@ -586,18 +583,16 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
                 .discovery_method
                 .advertised_address()
                 .append_prod_protos(identity_key, HANDSHAKE_VERSION);
-            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
 
             let seq_num = 0;
             let addr_idx = 0;
-            let enc_addr = raw_addr.clone().encrypt(
+            let enc_addr = addr.clone().encrypt(
                 &TEST_SHARED_VAL_NETADDR_KEY,
                 TEST_SHARED_VAL_NETADDR_KEY_VERSION,
                 &owner_account,
                 seq_num,
                 addr_idx,
             );
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
@@ -605,8 +600,8 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             let script = transaction_builder::encode_register_validator_config_script(
                 owner_account,
                 consensus_key.to_bytes().to_vec(),
-                lcs::to_bytes(&vec![raw_enc_addr]).unwrap(),
-                lcs::to_bytes(&vec![raw_addr]).unwrap(),
+                lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+                lcs::to_bytes(&vec![addr]).unwrap(),
             );
             (operator_key, script)
         })

@@ -27,29 +27,6 @@ pub mod encrypted;
 
 const MAX_DNS_NAME_SIZE: usize = 255;
 
-/// A `RawNetworkAddress` is the serialized, unverified, on-chain representation
-/// of a [`NetworkAddress`]. Specifically, a `RawNetworkAddress` is usually an
-/// [`lcs`]-serialized `NetworkAddress`.
-///
-/// This representation is useful because:
-///
-/// 1. Move does't understand (and doesn't really need to understand) what a
-///    `NetworkAddress` is, so we can just store an opaque `vector<u8>` on-chain,
-///    which we represent as `RawNetworkAddress` in Rust.
-/// 2. We want to deserialize a `Vec<NetworkAddress>` but ignore ones that don't
-///    properly deserialize. For example, a validator might advertise several
-///    `NetworkAddress`. If that validator is running a newer version of the node
-///    software, and old versions can't understand one of the `NetworkAddress`,
-///    they would be able to ignore the one that doesn't deserialize for them.
-///    We can easily do this by storing a `vector<vector<u8>>` on-chain, which
-///    we deserialize as `Vec<RawNetworkAddress>` in Rust. Then we deserialize
-///    each `RawNetworkAddress` into a `NetworkAddress` individually.
-///
-/// Note: deserializing a `RawNetworkAddress` does no validation, other than
-/// deserializing the underlying `Vec<u8>`.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
-
 /// Libra `NetworkAddress` is a compact, efficient, self-describing and
 /// future-proof network address represented as a stack of protocols. Essentially
 /// libp2p's [multiaddr](https://multiformats.io/multiaddr/) but using [`lcs`] to
@@ -84,7 +61,12 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// Similarly, the `Transport` takes `NetworkAddress` to listen on, which tells
 /// it what protocols to expect on the socket.
 ///
-/// An example of a serialized `NetworkAddress` and `RawNetworkAddress`:
+/// The network address is encoded with the length of the encoded NetworkAddresses and then the
+/// the protocol slices to allow for transparent upgradeability. For example, if the current
+/// software cannot decode a NetworkAddress within a Vec<NetworkAddress> it can still decode the
+/// underlying Vec<u8> and retrieve the remaining Vec<NetworkAddress>.
+///
+/// An example of a serialized `NetworkAddress`:
 ///
 /// ```rust
 /// // human-readable format:
@@ -93,35 +75,25 @@ pub struct RawNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// //
 /// // serialized NetworkAddress:
 /// //
-/// //      [ 02 00 0a 00 00 10 05 80 00 ]
-/// //        \  \  \           \  \
-/// //         \  \  \           \  '-- u16 tcp port
-/// //          \  \  \           '-- uvarint protocol id for /tcp
-/// //           \  \  '-- u32 ipv4 address
-/// //            \  '-- uvarint protocol id for /ip4
-/// //             '-- uvarint number of protocols
-/// //
-/// // serialized RawNetworkAddress:
-/// //
-/// //   [ 09 02 00 0a 00 00 10 05 80 00 ]
-/// //     \  \
-/// //      \  '-- serialized NetworkAddress
-/// //       '-- uvarint length prefix
+/// //      [ 09 02 00 0a 00 00 10 05 80 00 ]
+/// //          \  \  \  \           \  \
+/// //           \  \  \  \           \  '-- u16 tcp port
+/// //            \  \  \  \           '-- uvarint protocol id for /tcp
+/// //             \  \  \  '-- u32 ipv4 address
+/// //              \  \  '-- uvarint protocol id for /ip4
+/// //               \  '-- uvarint number of protocols
+/// //                '-- length of encoded network address
 ///
-/// use libra_network_address::{NetworkAddress, RawNetworkAddress};
+/// use libra_network_address::NetworkAddress;
 /// use lcs;
 /// use std::{str::FromStr, convert::TryFrom};
 ///
 /// let addr = NetworkAddress::from_str("/ip4/10.0.0.16/tcp/80").unwrap();
-/// let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-/// let actual_ser_raw_addr = lcs::to_bytes(&raw_addr).unwrap();
-/// let actual_raw_addr: Vec<u8> = raw_addr.into();
+/// let actual_ser_addr = lcs::to_bytes(&addr).unwrap();
 ///
-/// let expected_raw_addr: Vec<u8> = [2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
-/// let expected_ser_raw_addr: Vec<u8> = [9, 2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
+/// let expected_ser_addr: Vec<u8> = [9, 2, 0, 10, 0, 0, 16, 5, 80, 0].to_vec();
 ///
-/// assert_eq!(expected_raw_addr, actual_raw_addr);
-/// assert_eq!(expected_ser_raw_addr, actual_ser_raw_addr);
+/// assert_eq!(expected_ser_addr, actual_ser_addr);
 /// ```
 #[derive(Clone, Eq, PartialEq)]
 pub struct NetworkAddress(Vec<Protocol>);
@@ -198,72 +170,17 @@ pub enum ParseError {
 
     #[error("dns name is too long: len: {0} bytes, max len: 255 bytes")]
     DnsNameTooLong(usize),
+
+    #[error("error decrypting network address")]
+    DecryptError,
+
+    #[error("lcs error: {0}")]
+    LCSError(#[from] lcs::Error),
 }
 
 #[derive(Error, Debug)]
 #[error("network address cannot be empty")]
 pub struct EmptyError;
-
-///////////////////////
-// RawNetworkAddress //
-///////////////////////
-
-impl RawNetworkAddress {
-    pub fn new(bytes: Vec<u8>) -> Self {
-        Self(bytes)
-    }
-
-    pub fn encrypt(
-        self,
-        shared_val_netaddr_key: &Key,
-        key_version: KeyVersion,
-        account: &AccountAddress,
-        seq_num: u64,
-        addr_idx: u32,
-    ) -> EncNetworkAddress {
-        EncNetworkAddress::encrypt(
-            self,
-            shared_val_netaddr_key,
-            key_version,
-            account,
-            seq_num,
-            addr_idx,
-        )
-    }
-}
-
-impl Into<Vec<u8>> for RawNetworkAddress {
-    fn into(self) -> Vec<u8> {
-        self.0
-    }
-}
-
-impl AsRef<[u8]> for RawNetworkAddress {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
-impl TryFrom<&NetworkAddress> for RawNetworkAddress {
-    type Error = lcs::Error;
-
-    fn try_from(value: &NetworkAddress) -> Result<Self, lcs::Error> {
-        let bytes = lcs::to_bytes(value)?;
-        Ok(RawNetworkAddress::new(bytes))
-    }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for RawNetworkAddress {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        any::<NetworkAddress>()
-            .prop_map(|addr| RawNetworkAddress::try_from(&addr).unwrap())
-            .boxed()
-    }
-}
 
 ////////////////////
 // NetworkAddress //
@@ -286,6 +203,24 @@ impl NetworkAddress {
     pub fn extend_from_slice(mut self, protos: &[Protocol]) -> Self {
         self.0.extend_from_slice(protos);
         self
+    }
+
+    pub fn encrypt(
+        self,
+        shared_val_netaddr_key: &Key,
+        key_version: KeyVersion,
+        account: &AccountAddress,
+        seq_num: u64,
+        addr_idx: u32,
+    ) -> Result<EncNetworkAddress, ParseError> {
+        EncNetworkAddress::encrypt(
+            self,
+            shared_val_netaddr_key,
+            key_version,
+            account,
+            seq_num,
+            addr_idx,
+        )
     }
 
     /// Given a base `NetworkAddress`, append production protocols and
@@ -449,15 +384,6 @@ impl From<Protocol> for NetworkAddress {
     }
 }
 
-impl TryFrom<&RawNetworkAddress> for NetworkAddress {
-    type Error = lcs::Error;
-
-    fn try_from(value: &RawNetworkAddress) -> Result<Self, lcs::Error> {
-        let addr: NetworkAddress = lcs::from_bytes(value.as_ref())?;
-        Ok(addr)
-    }
-}
-
 impl From<SocketAddr> for NetworkAddress {
     fn from(sockaddr: SocketAddr) -> NetworkAddress {
         let ip_proto = Protocol::from(sockaddr.ip());
@@ -486,15 +412,16 @@ impl Serialize for NetworkAddress {
     where
         S: Serializer,
     {
-        #[derive(Serialize)]
-        #[serde(rename = "NetworkAddress")]
-        struct SerializeWrapper<'a>(&'a [Protocol]);
-
         if serializer.is_human_readable() {
             serializer.serialize_str(&self.to_string())
         } else {
-            let val = SerializeWrapper(&self.0.as_ref());
-            val.serialize(serializer)
+            #[derive(Serialize)]
+            #[serde(rename = "NetworkAddress")]
+            struct Wrapper<'a>(#[serde(with = "serde_bytes")] &'a [u8]);
+
+            lcs::to_bytes(&self.as_slice())
+                .map_err(serde::ser::Error::custom)
+                .and_then(|v| Wrapper(&v).serialize(serializer))
         }
     }
 }
@@ -504,17 +431,17 @@ impl<'de> Deserialize<'de> for NetworkAddress {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(rename = "NetworkAddress")]
-        struct DeserializeWrapper(Vec<Protocol>);
-
         if deserializer.is_human_readable() {
             let s = <String>::deserialize(deserializer)?;
             NetworkAddress::from_str(s.as_str()).map_err(de::Error::custom)
         } else {
-            let wrapper = DeserializeWrapper::deserialize(deserializer)?;
-            let addr = NetworkAddress::try_from(wrapper.0).map_err(de::Error::custom)?;
-            Ok(addr)
+            #[derive(Deserialize)]
+            #[serde(rename = "NetworkAddress")]
+            struct Wrapper(#[serde(with = "serde_bytes")] Vec<u8>);
+
+            Wrapper::deserialize(deserializer)
+                .and_then(|v| lcs::from_bytes(&v.0).map_err(de::Error::custom))
+                .and_then(|v: Vec<Protocol>| NetworkAddress::try_from(v).map_err(de::Error::custom))
         }
     }
 }

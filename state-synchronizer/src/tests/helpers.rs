@@ -8,10 +8,8 @@ use anyhow::Result;
 use executor_types::ExecutedTrees;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
+    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
+    NetworkAddress,
 };
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
@@ -22,7 +20,6 @@ use libra_types::{
 };
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    convert::TryFrom,
     str::FromStr,
     sync::{Arc, RwLock},
 };
@@ -55,20 +52,18 @@ impl SynchronizerEnvHelper {
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
             let addr = NetworkAddress::from_str("/memory/0").unwrap();
-            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-            let enc_addr = raw_addr.clone().encrypt(
+            let enc_addr = addr.clone().encrypt(
                 &TEST_SHARED_VAL_NETADDR_KEY,
                 TEST_SHARED_VAL_NETADDR_KEY_VERSION,
                 &signer.author(),
                 0,
                 0,
             );
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
-                lcs::to_bytes(&vec![raw_enc_addr]).unwrap(),
-                lcs::to_bytes(&vec![raw_addr]).unwrap(),
+                lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+                lcs::to_bytes(&vec![addr]).unwrap(),
             );
             let validator_info =
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);

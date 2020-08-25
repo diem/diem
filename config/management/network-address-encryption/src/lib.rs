@@ -25,6 +25,8 @@ pub enum Error {
     DecryptionError(AccountAddress, String),
     #[error("Failed (de)serializing validator_network_address_keys")]
     LCSError(#[from] lcs::Error),
+    #[error("NetworkAddress parse error {0}")]
+    ParseError(#[from] libra_network_address::ParseError),
     #[error("Failed reading validator_network_address_keys from storage")]
     StorageError(#[from] StorageError),
     #[error("The specified version does not exist in validator_network_address_keys: {0}")]
@@ -81,18 +83,8 @@ impl Encryptor {
             .get(&keys.current)
             .ok_or_else(|| Error::VersionNotFound(keys.current))?;
         let mut enc_addrs = Vec::new();
-        for (idx, addr) in network_addresses.iter().enumerate() {
-            let raw_addr = std::convert::TryFrom::<&NetworkAddress>::try_from(addr)?;
-            let idxu32 = idx as u32;
-            let enc_addr = EncNetworkAddress::encrypt(
-                raw_addr,
-                &key.0,
-                keys.current,
-                &account,
-                seq_num,
-                idxu32,
-            );
-            enc_addrs.push(enc_addr);
+        for (idx, addr) in network_addresses.iter().cloned().enumerate() {
+            enc_addrs.push(addr.encrypt(&key.0, keys.current, &account, seq_num, idx as u32)?);
         }
         lcs::to_bytes(&enc_addrs).map_err(|e| e.into())
     }
@@ -111,11 +103,10 @@ impl Encryptor {
                 .keys
                 .get(&enc_addr.key_version())
                 .ok_or_else(|| Error::VersionNotFound(enc_addr.key_version()))?;
-            let raw_addr = enc_addr
+            let addr = enc_addr
                 .clone()
                 .decrypt(&key.0, &account, idx as u32)
                 .map_err(|e| Error::DecryptionError(account, e.to_string()))?;
-            let addr = std::convert::TryFrom::<_>::try_from(&raw_addr)?;
             addrs.push(addr);
         }
         Ok(addrs)

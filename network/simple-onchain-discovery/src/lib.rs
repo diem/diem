@@ -73,17 +73,9 @@ fn extract_updates(
                 RoleType::Validator => encryptor
                     .decrypt(&config.validator_network_addresses, peer_id)
                     .map_err(anyhow::Error::from),
-                RoleType::FullNode => {
-                    let cb = |err| {
-                        warn!(
-                            "Failed to parse network address: peer: {}, err: {}",
-                            peer_id, err
-                        )
-                    };
-                    config
-                        .fullnode_network_addresses(Some(Box::new(cb)))
-                        .map_err(anyhow::Error::from)
-                }
+                RoleType::FullNode => config
+                    .fullnode_network_addresses()
+                    .map_err(anyhow::Error::from),
             };
 
             let addrs = match addrs_res {

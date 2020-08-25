@@ -13,12 +13,9 @@ use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT,
     VALIDATOR_NETWORK_KEY,
 };
-use libra_network_address::{NetworkAddress, Protocol, RawNetworkAddress};
+use libra_network_address::{NetworkAddress, Protocol};
 use libra_types::{chain_id::ChainId, transaction::Transaction};
-use std::{
-    convert::TryFrom,
-    net::{Ipv4Addr, ToSocketAddrs},
-};
+use std::net::{Ipv4Addr, ToSocketAddrs};
 use structopt::StructOpt;
 
 #[derive(Clone, Debug, StructOpt)]
@@ -78,15 +75,8 @@ impl ValidatorConfig {
         // Build Fullnode address including protocols
         let fullnode_address =
             fullnode_address.append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address).map_err(|e| {
-            Error::UnexpectedError(format!(
-                "Error serializing address: '{}', error: {}",
-                fullnode_address, e
-            ))
-        })?;
 
         // Generate the validator config script
-        // TODO(philiphayes): remove network identity pubkey field from struct
         let transaction_callback = if reconfigure {
             transaction_builder::encode_set_validator_config_and_reconfigure_script
         } else {
@@ -96,7 +86,7 @@ impl ValidatorConfig {
             owner_account,
             consensus_key.to_bytes().to_vec(),
             validator_addresses,
-            lcs::to_bytes(&vec![raw_fullnode_address]).unwrap(),
+            lcs::to_bytes(&vec![fullnode_address]).unwrap(),
         );
 
         // Create and sign the validator-config transaction

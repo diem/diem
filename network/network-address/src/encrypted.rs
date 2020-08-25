@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::RawNetworkAddress;
+use crate::{NetworkAddress, ParseError};
 use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
@@ -11,8 +11,7 @@ use move_core_types::account_address::AccountAddress;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, mem};
-use thiserror::Error;
+use std::mem;
 
 /// The length in bytes of the AES-256-GCM authentication tag.
 pub const AES_GCM_TAG_LEN: usize = 16;
@@ -56,11 +55,7 @@ pub const HKDF_SALT: [u8; 32] = [
     0x27, 0x54, 0x19, 0xeb, 0xaa, 0xd1, 0xdb, 0x27, 0xd2, 0xa1, 0x91, 0xb6, 0xd1, 0xdb, 0x6d, 0x13,
 ];
 
-/// A serialized `EncNetworkAddress`.
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
-
-/// An encrypted `RawNetworkAddress`.
+/// An encrypted `NetworkAddress`.
 ///
 /// ### Threat Model
 ///
@@ -110,7 +105,7 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// where `nonce` is a 96-bit integer as described below, `key_version` is
 /// the key version as a u32 big-endian integer, `addr` is the serialized
-/// `RawNetworkAddress`, and `enc_addr` is the encrypted network address
+/// `NetworkAddress`, and `enc_addr` is the encrypted network address
 /// concatenated with the 16-byte authentication tag.
 ///
 /// ### Nonce
@@ -133,61 +128,12 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 /// The `EncNetworkAddress` struct contains a `key_version` field, which
 /// identifies the specific `shared_val_netaddr_key` used to encrypt/decrypt the
 /// `EncNetworkAddress`.
-///
-/// TODO(philiphayes): expand this section
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct EncNetworkAddress {
     key_version: KeyVersion,
     seq_num: u64,
     #[serde(with = "serde_bytes")]
     enc_addr: Vec<u8>,
-}
-
-#[derive(Error, Debug)]
-#[error("error decrypting network address")]
-pub struct DecryptError;
-
-//////////////////////////
-// RawEncNetworkAddress //
-//////////////////////////
-
-impl RawEncNetworkAddress {
-    pub fn new(bytes: Vec<u8>) -> Self {
-        Self(bytes)
-    }
-}
-
-impl Into<Vec<u8>> for RawEncNetworkAddress {
-    fn into(self) -> Vec<u8> {
-        self.0
-    }
-}
-
-impl AsRef<[u8]> for RawEncNetworkAddress {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
-impl TryFrom<&EncNetworkAddress> for RawEncNetworkAddress {
-    type Error = lcs::Error;
-
-    fn try_from(value: &EncNetworkAddress) -> Result<Self, lcs::Error> {
-        let bytes = lcs::to_bytes(value)?;
-        Ok(RawEncNetworkAddress::new(bytes))
-    }
-}
-
-#[cfg(any(test, feature = "fuzzing"))]
-impl Arbitrary for RawEncNetworkAddress {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        any::<EncNetworkAddress>()
-            .prop_map(|enc_addr| RawEncNetworkAddress::try_from(&enc_addr).unwrap())
-            .boxed()
-    }
 }
 
 ///////////////////////
@@ -199,15 +145,15 @@ impl EncNetworkAddress {
     ///
     /// encrypt will panic if `addr` length > 64 GiB.
     pub fn encrypt(
-        addr: RawNetworkAddress,
+        addr: NetworkAddress,
         shared_val_netaddr_key: &Key,
         key_version: KeyVersion,
         account: &AccountAddress,
         seq_num: u64,
         addr_idx: u32,
-    ) -> Self {
-        // unpack the RawNetworkAddress into its base Vec<u8>
-        let mut addr_vec: Vec<u8> = addr.into();
+    ) -> Result<Self, ParseError> {
+        // unpack the NetworkAddress into its base Vec<u8>
+        let mut addr_vec: Vec<u8> = lcs::to_bytes(&addr)?;
 
         let derived_key = Self::derive_key(shared_val_netaddr_key, account);
         let aead = Aes256Gcm::new(GenericArray::from_slice(&derived_key));
@@ -238,11 +184,11 @@ impl EncNetworkAddress {
         // append the authentication tag
         addr_vec.extend_from_slice(auth_tag.as_slice());
 
-        Self {
+        Ok(Self {
             key_version,
             seq_num,
             enc_addr: addr_vec,
-        }
+        })
     }
 
     pub fn decrypt(
@@ -250,7 +196,7 @@ impl EncNetworkAddress {
         shared_val_netaddr_key: &Key,
         account: &AccountAddress,
         addr_idx: u32,
-    ) -> Result<RawNetworkAddress, DecryptError> {
+    ) -> Result<NetworkAddress, ParseError> {
         let key_version = self.key_version;
         let seq_num = self.seq_num;
         let mut enc_addr = self.enc_addr;
@@ -258,7 +204,7 @@ impl EncNetworkAddress {
         // ciphertext is too small to even contain the authentication tag, so it
         // must be invalid.
         if enc_addr.len() < AES_GCM_TAG_LEN {
-            return Err(DecryptError);
+            return Err(ParseError::DecryptError);
         }
 
         let derived_key = Self::derive_key(shared_val_netaddr_key, account);
@@ -286,12 +232,12 @@ impl EncNetworkAddress {
         let auth_tag_slice = GenericArray::from_slice(auth_tag_slice);
 
         aead.decrypt_in_place_detached(nonce_slice, ad_slice, enc_addr_slice, auth_tag_slice)
-            .map_err(|_| DecryptError)?;
+            .map_err(|_| ParseError::DecryptError)?;
 
         // remove the auth tag suffix, leaving just the decrypted network address
         enc_addr.truncate(auth_tag_offset);
 
-        Ok(RawNetworkAddress::new(enc_addr))
+        lcs::from_bytes(&enc_addr).map_err(|e| e.into())
     }
 
     /// Given the shared `shared_val_netaddr_key`, derive the per-validator
@@ -314,15 +260,6 @@ impl EncNetworkAddress {
     }
 }
 
-impl TryFrom<&RawEncNetworkAddress> for EncNetworkAddress {
-    type Error = lcs::Error;
-
-    fn try_from(value: &RawEncNetworkAddress) -> Result<Self, lcs::Error> {
-        let enc_addr: EncNetworkAddress = lcs::from_bytes(value.as_ref())?;
-        Ok(enc_addr)
-    }
-}
-
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for EncNetworkAddress {
     type Parameters = ();
@@ -335,7 +272,7 @@ impl Arbitrary for EncNetworkAddress {
         let seq_num = 0;
         let addr_idx = 0;
 
-        any::<RawNetworkAddress>()
+        any::<NetworkAddress>()
             .prop_map(move |addr| {
                 EncNetworkAddress::encrypt(
                     addr,
@@ -345,6 +282,7 @@ impl Arbitrary for EncNetworkAddress {
                     seq_num,
                     addr_idx,
                 )
+                .unwrap()
             })
             .boxed()
     }
@@ -369,21 +307,23 @@ mod test {
         let seq_num = 0x4589;
         let addr_idx = 123;
         let addr = NetworkAddress::mock();
-        let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let enc_addr = raw_addr.clone().encrypt(
-            &shared_val_netaddr_key,
-            key_version,
-            &account,
-            seq_num,
-            addr_idx,
-        );
+        let enc_addr = addr
+            .clone()
+            .encrypt(
+                &shared_val_netaddr_key,
+                key_version,
+                &account,
+                seq_num,
+                addr_idx,
+            )
+            .unwrap();
 
         // we expect decrypting a properly encrypted address to work
         let dec_addr = enc_addr
             .clone()
             .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap();
-        assert_eq!(raw_addr, dec_addr);
+        assert_eq!(addr, dec_addr);
 
         // modifying the seq_num should cause decryption failure
         let mut malicious_enc_addr = enc_addr.clone();
@@ -439,16 +379,16 @@ mod test {
     proptest! {
         #[test]
         fn encrypt_decrypt_roundtrip(
-            raw_addr in any::<RawNetworkAddress>(),
+            addr in any::<NetworkAddress>(),
         ) {
             let shared_val_netaddr_key = TEST_SHARED_VAL_NETADDR_KEY;
             let key_version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
             let account = AccountAddress::ZERO;
             let seq_num = 0;
             let addr_idx = 0;
-            let enc_addr = raw_addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
-            let dec_addr = enc_addr.decrypt(&shared_val_netaddr_key, &account, addr_idx).unwrap();
-            assert_eq!(raw_addr, dec_addr);
+            let enc_addr = addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
+            let dec_addr = enc_addr.unwrap().decrypt(&shared_val_netaddr_key, &account, addr_idx);
+            assert_eq!(addr, dec_addr.unwrap());
         }
 
         #[test]
@@ -458,19 +398,12 @@ mod test {
             account in any::<[u8; AccountAddress::LENGTH]>(),
             seq_num in any::<u64>(),
             addr_idx in any::<u32>(),
-            raw_addr in any::<RawNetworkAddress>(),
+            addr in any::<NetworkAddress>(),
         ) {
             let account = AccountAddress::new(account);
-            let enc_addr = raw_addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
-            let dec_addr = enc_addr.decrypt(&shared_val_netaddr_key, &account, addr_idx).unwrap();
-            assert_eq!(raw_addr, dec_addr);
-        }
-
-        #[test]
-        fn enc_network_address_serde(enc_addr in any::<EncNetworkAddress>()) {
-            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
-            let enc_addr_2 = EncNetworkAddress::try_from(&raw_enc_addr).unwrap();
-            assert_eq!(enc_addr, enc_addr_2);
+            let enc_addr = addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
+            let dec_addr = enc_addr.unwrap().decrypt(&shared_val_netaddr_key, &account, addr_idx);
+            assert_eq!(addr, dec_addr.unwrap());
         }
     }
 }

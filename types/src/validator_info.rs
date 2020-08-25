@@ -5,16 +5,12 @@ use crate::{account_address::AccountAddress, validator_config::ValidatorConfig};
 use libra_crypto::ed25519::Ed25519PublicKey;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_network_address::{
-    encrypted::{
-        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-    },
-    NetworkAddress, RawNetworkAddress,
+    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
+    NetworkAddress,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
-#[cfg(any(test, feature = "fuzzing"))]
-use std::convert::TryFrom;
 use std::fmt;
 
 /// After executing a special transaction indicates a change to the next epoch, consensus
@@ -61,20 +57,17 @@ impl ValidatorInfo {
         consensus_voting_power: u64,
     ) -> Self {
         let addr = NetworkAddress::mock();
-        let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let enc_addr = raw_addr.encrypt(
+        let enc_addr = addr.clone().encrypt(
             &TEST_SHARED_VAL_NETADDR_KEY,
             TEST_SHARED_VAL_NETADDR_KEY_VERSION,
             &account_address,
             0,
             0,
         );
-        let validator_network_address = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
-        let full_node_network_address = RawNetworkAddress::try_from(&addr).unwrap();
         let config = ValidatorConfig::new(
             consensus_public_key,
-            lcs::to_bytes(&vec![validator_network_address]).unwrap(),
-            lcs::to_bytes(&vec![full_node_network_address]).unwrap(),
+            lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
+            lcs::to_bytes(&vec![addr]).unwrap(),
         );
 
         Self {

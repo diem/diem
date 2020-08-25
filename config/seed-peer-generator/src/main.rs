@@ -70,14 +70,6 @@ fn to_seed_peer(
     validator_info: &ValidatorInfo,
 ) -> Result<(PeerId, Vec<NetworkAddress>), lcs::Error> {
     let peer_id = *validator_info.account_address();
-    let cb = |err| {
-        println!(
-            "Failed to parse fullnode network address: peer: {}, err: {}",
-            peer_id, err
-        )
-    };
-    let addrs = validator_info
-        .config()
-        .fullnode_network_addresses(Some(Box::new(cb)))?;
+    let addrs = validator_info.config().fullnode_network_addresses()?;
     Ok((peer_id, addrs))
 }

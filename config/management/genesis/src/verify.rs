@@ -10,7 +10,7 @@ use libra_management::{
     config::ConfigPath, error::Error, secure_backend::ValidatorBackend,
     storage::StorageWrapper as Storage,
 };
-use libra_network_address::{NetworkAddress, RawNetworkAddress};
+use libra_network_address::NetworkAddress;
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
@@ -19,7 +19,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::Write,
     fs::File,
     io::Read,
@@ -159,11 +159,11 @@ fn compare_genesis(
     let validator_config = validator_config(validator_account, db_rw.reader.clone())?;
 
     let actual_consensus_key = storage.ed25519_public_from_private(CONSENSUS_KEY)?;
-    let expected_consensus_key = validator_config.consensus_public_key;
+    let expected_consensus_key = &validator_config.consensus_public_key;
     write_assert(
         buffer,
         CONSENSUS_KEY,
-        actual_consensus_key == expected_consensus_key,
+        &actual_consensus_key == expected_consensus_key,
     );
 
     let actual_validator_key = storage.x25519_public_from_private(VALIDATOR_NETWORK_KEY)?;
@@ -187,15 +187,9 @@ fn compare_genesis(
         Some(actual_validator_key) == expected_validator_key,
     );
 
-    let expected_fullnode_key = lcs::from_bytes(&validator_config.fullnode_network_addresses)
-        .ok()
-        .and_then(|addrs: Vec<RawNetworkAddress>| {
-            addrs.get(0).and_then(|addr| {
-                addr.try_into()
-                    .ok()
-                    .and_then(|addr: NetworkAddress| addr.find_noise_proto())
-            })
-        });
+    let expected_fullnode_key = validator_config.fullnode_network_addresses().ok().and_then(
+        |addrs: Vec<NetworkAddress>| addrs.get(0).and_then(|addr| addr.find_noise_proto()),
+    );
     write_assert(
         buffer,
         FULLNODE_NETWORK_KEY,
