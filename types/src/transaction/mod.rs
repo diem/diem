@@ -81,10 +81,8 @@ pub struct RawTransaction {
     /// Expiration timestamp for this transaction, represented
     /// as seconds from the Unix Epoch. If the current blockchain timestamp
     /// is greater than or equal to this time, then the transaction has
-    /// expired and will be discarded. The maximum valid value is
-    /// u64::max_value() / 1_000_000 (so that it can be converted to
-    /// microseconds without overflowing); this value can be used to
-    /// indicate that a transaction does not expire.
+    /// expired and will be discarded. This can be set to a large value far
+    /// in the future to indicate that a transaction does not expire.
     expiration_timestamp_secs: u64,
 
     /// Chain ID of the Libra network this transaction is intended for.
