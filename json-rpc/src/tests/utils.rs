@@ -54,7 +54,7 @@ pub fn test_bootstrap(
 
 /// Lightweight mock of LibraDB
 #[derive(Clone)]
-pub(crate) struct MockLibraDB {
+pub struct MockLibraDB {
     pub version: u64,
     pub genesis: HashMap<AccountAddress, AccountStateBlob>,
     pub all_accounts: HashMap<AccountAddress, AccountStateBlob>,

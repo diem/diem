@@ -113,7 +113,7 @@ pub fn bootstrap_from_config(
 /// JSON RPC entry point
 /// Handles all incoming rpc requests
 /// Performs routing based on methods defined in `registry`
-async fn rpc_endpoint(
+pub(crate) async fn rpc_endpoint(
     data: Value,
     service: JsonRpcService,
     registry: Arc<RpcRegistry>,
@@ -157,7 +157,7 @@ async fn rpc_endpoint_without_metrics(
                 warp::reply::json(&Value::Array(responses))
             }
             Err(err) => {
-                let mut resp = Map::new();
+                let mut resp = init_response(&service, &ledger_info);
                 set_response_error(&mut resp, err);
 
                 warp::reply::json(&resp)
@@ -182,25 +182,7 @@ async fn rpc_request_handler(
     request_type_label: &str,
 ) -> Value {
     let request: Map<String, Value>;
-    let mut response = Map::new();
-    let version = ledger_info.ledger_info().version();
-    let timestamp = ledger_info.ledger_info().timestamp_usecs();
-
-    // set defaults: protocol version to 2.0, request id to null
-    response.insert("jsonrpc".to_string(), Value::String("2.0".to_string()));
-    response.insert("id".to_string(), Value::Null);
-    response.insert(
-        JSONRPC_LIBRA_LEDGER_VERSION.to_string(),
-        Value::Number(version.into()),
-    );
-    response.insert(
-        JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS.to_string(),
-        Value::Number(timestamp.into()),
-    );
-    response.insert(
-        JSONRPC_LIBRA_CHAIN_ID.to_string(),
-        Value::Number(service.chain_id().id().into()),
-    );
+    let mut response = init_response(&service, &ledger_info);
 
     match req {
         Value::Object(data) => {
@@ -329,6 +311,32 @@ fn verify_protocol(request: &Map<String, Value>) -> Result<(), JsonRpcError> {
         }
     }
     Err(JsonRpcError::invalid_request())
+}
+
+fn init_response(
+    service: &JsonRpcService,
+    ledger_info: &LedgerInfoWithSignatures,
+) -> Map<String, Value> {
+    let mut response = Map::new();
+    let version = ledger_info.ledger_info().version();
+    let timestamp = ledger_info.ledger_info().timestamp_usecs();
+
+    // set defaults: protocol version to 2.0, request id to null
+    response.insert("jsonrpc".to_string(), Value::String("2.0".to_string()));
+    response.insert("id".to_string(), Value::Null);
+    response.insert(
+        JSONRPC_LIBRA_LEDGER_VERSION.to_string(),
+        Value::Number(version.into()),
+    );
+    response.insert(
+        JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS.to_string(),
+        Value::Number(timestamp.into()),
+    );
+    response.insert(
+        JSONRPC_LIBRA_CHAIN_ID.to_string(),
+        Value::Number(service.chain_id().id().into()),
+    );
+    response
 }
 
 /// Warp rejection types
