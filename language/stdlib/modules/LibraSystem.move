@@ -242,8 +242,8 @@ module LibraSystem {
     }
     spec fun update_config_and_reconfigure {
         // TODO (dd): This times out.  It will complete quickly IF (1) all aborts_ifs here are commented out,
-        // and (2) the last property in the second spec fun (that the propery validator set entry is properly
-        // update) is commented out.
+        // and (2) the last property in the second spec fun (that the proper validator set entry is properly
+        // updated) is commented out.
         pragma verify_duration_estimate = 100;
         include Roles::AbortsIfNotValidatorOperator{account: operator_account};
         include ValidatorConfig::AbortsIfNoValidatorConfig{addr: validator_address};

@@ -40,6 +40,9 @@ module ValidatorConfig {
     // Validator setup methods
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Publishes a mostly empty ValidatorConfig struct. Eventually, it
+    /// will have critical info such as keys, network addresses for validators,
+    /// and the address of the validator operator.
     public fun publish(
         account: &signer,
         lr_account: &signer,
@@ -83,9 +86,12 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Sets a new operator account, preserving the old config.
+    /// Note: Access control.  No one but the owner of the account may change .operator_account
     public fun set_operator(account: &signer, operator_account: address) acquires ValidatorConfig {
         Roles::assert_validator(account);
-        // Role check is not necessary since the role is checked when the config resource is published.
+        // Check for validator role is not necessary since the role is checked when the config
+        // resource is published.
+        // TODO (dd): Probably need to prove an invariant about role.
         assert(
             ValidatorOperatorConfig::has_validator_operator_config(operator_account),
             Errors::invalid_argument(ENOT_A_VALIDATOR_OPERATOR)
@@ -285,6 +291,19 @@ module ValidatorConfig {
 
     spec module {
         pragma verify = true, aborts_if_is_strict = true;
+    }
+
+    /// Specifies that only set_operator and remove_operator may change the operator for a
+    /// particular (validator owner) address. Those two functions have a &signer argument for
+    /// the validator account, so we know that the change has been authorized by the validator
+    /// owner via signing the transaction. But other functions in this module could also
+    /// change the operator_account field of ValidatorConfig, and this shows that they do not.
+    spec schema OperatorRemainsSame {
+        ensures forall addr1: address where old(exists<ValidatorConfig>(addr1)):
+            global<ValidatorConfig>(addr1).operator_account == old(global<ValidatorConfig>(addr1).operator_account);
+    }
+    spec module {
+        apply OperatorRemainsSame to * except set_operator, remove_operator;
     }
 }
 }

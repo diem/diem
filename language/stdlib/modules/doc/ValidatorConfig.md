@@ -201,6 +201,9 @@ Tried to set an account without the correct operator role as a Validator Operato
 
 ## Function `publish`
 
+Publishes a mostly empty ValidatorConfig struct. Eventually, it
+will have critical info such as keys, network addresses for validators,
+and the address of the validator operator.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
@@ -266,6 +269,7 @@ Returns true if a ValidatorConfig resource exists under addr.
 ## Function `set_operator`
 
 Sets a new operator account, preserving the old config.
+Note: Access control.  No one but the owner of the account may change .operator_account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address)
@@ -279,7 +283,9 @@ Sets a new operator account, preserving the old config.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_operator">set_operator</a>(account: &signer, operator_account: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     <a href="Roles.md#0x1_Roles_assert_validator">Roles::assert_validator</a>(account);
-    // Role check is not necessary since the role is checked when the config <b>resource</b> is published.
+    // Check for validator role is not necessary since the role is checked when the config
+    // <b>resource</b> is published.
+    // TODO (dd): Probably need <b>to</b> prove an <b>invariant</b> about role.
     <b>assert</b>(
         <a href="ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_has_validator_operator_config">ValidatorOperatorConfig::has_validator_operator_config</a>(operator_account),
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_A_VALIDATOR_OPERATOR)
@@ -810,4 +816,27 @@ Returns the config published under addr.
 
 
 <pre><code>pragma verify = <b>true</b>, aborts_if_is_strict = <b>true</b>;
+</code></pre>
+
+
+Specifies that only set_operator and remove_operator may change the operator for a
+particular (validator owner) address. Those two functions have a &signer argument for
+the validator account, so we know that the change has been authorized by the validator
+owner via signing the transaction. But other functions in this module could also
+change the operator_account field of ValidatorConfig, and this shows that they do not.
+
+
+<a name="0x1_ValidatorConfig_OperatorRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_ValidatorConfig_OperatorRemainsSame">OperatorRemainsSame</a> {
+    <b>ensures</b> forall addr1: address where <b>old</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr1)):
+        <b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr1).operator_account == <b>old</b>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr1).operator_account);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_ValidatorConfig_OperatorRemainsSame">OperatorRemainsSame</a> <b>to</b> * <b>except</b> set_operator, remove_operator;
 </code></pre>
