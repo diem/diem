@@ -5,7 +5,10 @@ use crate::account_address::AccountAddress;
 use hex::FromHex;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use proptest::prelude::*;
-use std::convert::{AsRef, TryFrom};
+use std::{
+    convert::{AsRef, TryFrom},
+    str::FromStr,
+};
 
 #[test]
 fn test_address_bytes() {
@@ -82,6 +85,12 @@ fn test_deserialize_from_json_value() {
     let address2: AccountAddress =
         serde_json::from_value(json_value).expect("serde_json::from_value fail.");
     assert_eq!(address, address2)
+}
+
+#[test]
+fn test_address_from_empty_string() {
+    assert!(AccountAddress::try_from("".to_string()).is_err());
+    assert!(AccountAddress::from_str("").is_err());
 }
 
 proptest! {
