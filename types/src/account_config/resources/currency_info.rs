@@ -48,6 +48,14 @@ impl CurrencyInfoResource {
         self.scaling_factor
     }
 
+    pub fn total_value(&self) -> u128 {
+        self.total_value
+    }
+
+    pub fn preburn_value(&self) -> u64 {
+        self.preburn_value
+    }
+
     pub fn fractional_part(&self) -> u64 {
         self.fractional_part
     }
