@@ -801,6 +801,7 @@ fn test_sync_pending_ledger_infos() {
 }
 
 #[test]
+#[ignore] // TODO: https://github.com/libra/libra/issues/5771
 fn test_fn_failover() {
     let mut env = SynchronizerEnv::new(5);
     env.start_next_synchronizer(
