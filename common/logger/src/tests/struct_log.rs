@@ -78,7 +78,7 @@ fn test_structured_logs() {
         .data("test", true)
         .data_display("display", number)
         .field(u64_field, &number)
-        .log(log_message.clone()));
+        .message(log_message.clone()));
     let after = Utc::now();
 
     let map = recieve_one_event(&receiver);
@@ -94,7 +94,7 @@ fn test_structured_logs() {
     assert!(map
         .string("location")
         .starts_with("common/logger/src/tests/struct_log.rs"));
-    assert_eq!(log_message, map.string("log"));
+    assert_eq!(log_message, map.string("message"));
 
     // Id should be random, as long as it's not empty, we shoudl be good
     assert!(!map.string("id").is_empty());
@@ -153,7 +153,7 @@ fn test_structured_logs() {
     assert_eq!(pattern, map.string("pattern").as_str());
     assert_eq!(
         format!("Let's try a pattern {} {}", "anonymous", value),
-        map.string("log")
+        map.string("message")
     );
 
     // Ensure data stored is the right type

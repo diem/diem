@@ -434,7 +434,7 @@ where
         match event {
             TransportNotification::NewConnection(conn) => {
                 sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
-                    .log(format!(
+                    .message(format!(
                         "{} New connection established: {}",
                         self.network_context, conn.metadata
                     ))
@@ -448,7 +448,7 @@ where
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
                 sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
-                    .log(format!(
+                    .message(format!(
                         "{} Connection {} closed due to {}",
                         self.network_context, lost_conn_metadata, reason
                     ))

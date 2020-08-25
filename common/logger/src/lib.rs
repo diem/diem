@@ -31,7 +31,7 @@
 //!
 //! pub struct StructuredLogEntry {
 //!     id: String,
-//!     log: Option<String>,
+//!     message: Option<String>,
 //!     pattern: Option<&'static str>,
 //!     category: Option<&'static str>,
 //!     name: Option<&'static str>,
@@ -292,15 +292,15 @@ macro_rules! location {
 #[macro_export]
 macro_rules! format_struct_args_and_pattern {
     ($entry:ident, $fmt:expr) => {
-        $entry.add_log(format!($fmt));
+        $entry.add_message(format!($fmt));
         $entry.add_pattern($fmt);
     };
     ($entry:ident, $fmt:expr,) => {
-        $entry.add_log(format!($fmt));
+        $entry.add_message(format!($fmt));
         $entry.add_pattern($fmt);
     };
     ($entry:ident, $fmt:expr, $($arg:tt)+) => {
-        $entry.add_log(format!($fmt, $($arg)+));
+        $entry.add_message(format!($fmt, $($arg)+));
         $entry.add_pattern($fmt);
         $crate::format_struct_args!($entry, 0, $($arg)+);
     }

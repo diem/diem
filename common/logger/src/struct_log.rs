@@ -58,7 +58,7 @@ pub struct StructuredLogEntry {
     id: String,
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
-    log: Option<String>,
+    message: Option<String>,
     /// description of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
@@ -116,7 +116,7 @@ impl StructuredLogEntry {
     fn clone_without_data(&self) -> Self {
         Self {
             id: self.id.clone(),
-            log: self.log.clone(),
+            message: self.message.clone(),
             pattern: self.pattern,
             category: self.category,
             name: self.name,
@@ -148,10 +148,10 @@ impl StructuredLogEntry {
             );
 
             let mut entry = self.clone_without_data();
-            if let Some(mut log) = entry.log {
-                log.truncate(MAX_LOG_LINE_SIZE - LOG_INFO_OFFSET);
+            if let Some(mut message) = entry.message {
+                message.truncate(MAX_LOG_LINE_SIZE - LOG_INFO_OFFSET);
                 // Leave 128 bytes for all the other info
-                entry.log = Some(log);
+                entry.message = Some(message);
             }
             entry = entry
                 .data(
@@ -204,14 +204,14 @@ impl StructuredLogEntry {
     }
 
     /// Sets the context log line used for text logs.  This is useful for migration of text logs
-    pub fn log(mut self, log: String) -> Self {
-        self.log = Some(log);
+    pub fn message(mut self, message: String) -> Self {
+        self.message = Some(message);
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn add_log(&mut self, log: String) -> &mut Self {
-        self.log = Some(log);
+    pub fn add_message(&mut self, message: String) -> &mut Self {
+        self.message = Some(message);
         self
     }
 
