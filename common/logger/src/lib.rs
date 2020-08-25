@@ -299,12 +299,22 @@ macro_rules! format_struct_args_and_pattern {
 
 #[macro_export]
 macro_rules! format_struct_args {
+    // And one more repetition for name: expr
+    // $($k:ident).+ =
+    ($entry:ident, $acc:tt, $($arg_name:ident).+ = $arg:expr) => {$crate::format_struct_arg!($entry, $acc, $($arg_name).+ = $arg)};
+    ($entry:ident, $acc:tt, $($arg_name:ident).+ = $arg:expr,) => {$crate::format_struct_arg!($entry, $acc, $($arg_name).+ = $arg)};
+    ($entry:ident, $acc:tt, $($arg_name:ident).+ = $arg:expr,$($rest:tt)+) => {
+        $crate::format_struct_arg!($entry, $acc, $($arg_name).+ = $arg);
+        $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
+    };
+
     ($entry:ident, $acc:tt, $arg:ident) => {$crate::format_struct_arg!($entry, $acc, $arg)};
     ($entry:ident, $acc:tt, $arg:ident,) => {$crate::format_struct_arg!($entry, $acc, $arg)};
     ($entry:ident, $acc:tt, $arg:ident,$($rest:tt)+) => {
         $crate::format_struct_arg!($entry, $acc, $arg);
         $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
     };
+
     // Block below is same as block above except arg is expr instead of ident.
     // This is needed because of how rust handles idents/expressions
     ($entry:ident, $acc:tt, $arg:expr) => {$crate::format_struct_arg!($entry, $acc, $arg)};
@@ -313,19 +323,12 @@ macro_rules! format_struct_args {
         $crate::format_struct_arg!($entry, $acc, $arg);
         $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
     };
-    // And one more repetition for name: expr
-    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr) => {$crate::format_struct_arg!($entry, $acc, $arg_name: $arg)};
-    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr,) => {$crate::format_struct_arg!($entry, $acc, $arg_name: $arg)};
-    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr,$($rest:tt)+) => {
-        $crate::format_struct_arg!($entry, $acc, $arg_name=$arg);
-        $crate::format_struct_args!($entry, ($acc + 1), $($rest)+);
-    };
 }
 
 #[macro_export]
 macro_rules! format_struct_arg {
-    ($entry:ident, $acc:tt, $arg_name:ident=$arg:expr) => {
-        $entry.add_data(stringify!($arg_name), format!("{:?}", $arg));
+    ($entry:ident, $acc:tt, $($arg_name:ident).+ = $arg:expr) => {
+        $entry.add_data(stringify!($($arg_name).+), format!("{:?}", $arg));
     };
     ($entry:ident, $acc:tt, $arg:ident) => {
         $entry.add_data(stringify!($arg), format!("{:?}", $arg));

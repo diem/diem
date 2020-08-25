@@ -135,7 +135,7 @@ fn test_structured_logs() {
     debug!("DEBUG {:?}", "Debug this");
     info!("Info, alright! {}", value);
     warn!("Warning! Get serious {}", "Serious warning");
-    error!("Error! I give up {} & {}", "mix", "match");
+    error!("Error! I give up {} & {}", value, "match");
 
     for val in &vals {
         let map = recieve_one_event(&receiver);
@@ -145,19 +145,19 @@ fn test_structured_logs() {
     // Test pattern conversion
     let pattern = "Let's try a pattern {} {}";
     let value = "value";
-    info!("Let's try a pattern {} {}", value, "anonymous");
+    info!("Let's try a pattern {} {}", "anonymous", key = value);
 
     // Check specifics to text conversion
     let map = recieve_one_event(&receiver);
     assert_eq!("text", map.string("category").as_str());
     assert_eq!(pattern, map.string("pattern").as_str());
     assert_eq!(
-        format!("Let's try a pattern {} {}", value, "anonymous"),
+        format!("Let's try a pattern {} {}", "anonymous", value),
         map.string("log")
     );
 
     // Ensure data stored is the right type
     let data = as_object(map.val("data"));
-    assert_eq!(format!("{:?}", value), data.string("value"));
-    assert_eq!(format!("{:?}", "anonymous"), data.string("_1"));
+    assert_eq!(format!("{:?}", value), data.string("key"));
+    assert_eq!(format!("{:?}", "anonymous"), data.string("_0"));
 }
