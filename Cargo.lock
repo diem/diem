@@ -696,6 +696,7 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-management 0.1.0",
  "libra-network-address 0.1.0",
+ "libra-network-address-encryption 0.1.0",
  "libra-operational-tool 0.1.0",
  "libra-retrier 0.1.0",
  "libra-secure-storage 0.1.0",

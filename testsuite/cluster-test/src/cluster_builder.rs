@@ -26,10 +26,10 @@ use consensus_types::safety_data::SafetyData;
 use libra_genesis_tool::layout::Layout;
 use libra_global_constants::{
     CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
-    SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    SAFETY_DATA, VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::{CryptoStorage, KVStorage, VaultStorage};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::str::FromStr;
 
@@ -362,7 +362,7 @@ impl ClusterBuilder {
         let addr = vault_node.internal_ip.clone();
         tokio::task::spawn_blocking(move || {
             let pod_name = validator_pod_name(validator_index);
-            let mut vault_storage = Box::new(VaultStorage::new(
+            let mut vault_storage = Storage::from(VaultStorage::new(
                 format!("http://{}:{}", addr, VAULT_PORT),
                 VAULT_TOKEN.to_string(),
                 Some(pod_name.clone()),
@@ -393,6 +393,16 @@ impl ClusterBuilder {
             vault_storage
                 .set(WAYPOINT, Waypoint::default())
                 .map_err(|e| format_err!("Failed to create {}/{} : {}", pod_name, WAYPOINT, e))?;
+            libra_network_address_encryption::Encryptor::new(vault_storage)
+                .initialize_for_testing()
+                .map_err(|e| {
+                    format_err!(
+                        "Failed to create {}/{} : {}",
+                        pod_name,
+                        VALIDATOR_NETWORK_ADDRESS_KEYS,
+                        e
+                    )
+                })?;
             Ok::<(), anyhow::Error>(())
         })
         .await??;

@@ -95,11 +95,16 @@ impl Encryptor {
     }
 
     pub fn initialize(&mut self) -> Result<(), Error> {
-        let keys = ValidatorKeys {
-            current: 0,
-            keys: HashMap::new(),
-        };
-        self.write(&keys)
+        self.write(&ValidatorKeys::default())
+    }
+
+    pub fn initialize_for_testing(&mut self) -> Result<(), Error> {
+        self.initialize()?;
+        self.add_key(
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            TEST_SHARED_VAL_NETADDR_KEY,
+        )?;
+        self.set_current_version(TEST_SHARED_VAL_NETADDR_KEY_VERSION)
     }
 
     fn read(&self) -> Result<ValidatorKeys, Error> {
@@ -143,9 +148,18 @@ where
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct ValidatorKeys {
+pub struct ValidatorKeys {
     keys: HashMap<KeyVersion, StorageKey>,
     current: KeyVersion,
+}
+
+impl Default for ValidatorKeys {
+    fn default() -> Self {
+        ValidatorKeys {
+            current: 0,
+            keys: HashMap::new(),
+        }
+    }
 }
 
 #[cfg(test)]
