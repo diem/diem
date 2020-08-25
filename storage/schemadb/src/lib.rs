@@ -222,7 +222,7 @@ impl DB {
             );
         }
 
-        let mut db_opts = rocksdb::Options::default();
+        let mut db_opts = Self::common_db_options();
         db_opts.create_if_missing(true);
         db_opts.create_missing_column_families(true);
 
@@ -242,7 +242,7 @@ impl DB {
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<Self> {
-        let db_opts = rocksdb::Options::default();
+        let db_opts = Self::common_db_options();
         DB::open_cf_readonly(&db_opts, path, name, column_families)
     }
 
@@ -256,7 +256,7 @@ impl DB {
         name: &'static str,
         column_families: Vec<ColumnFamilyName>,
     ) -> Result<Self> {
-        let db_opts = rocksdb::Options::default();
+        let db_opts = Self::common_db_options();
         DB::open_cf_as_secondary(
             &db_opts,
             primary_path,
@@ -328,6 +328,17 @@ impl DB {
             inner,
             column_families,
         })
+    }
+
+    fn common_db_options() -> rocksdb::Options {
+        const BLOCK_CACHE_SIZE_BYTES: usize = 1024 << 20;
+        let mut block_based_opts = rocksdb::BlockBasedOptions::default();
+        block_based_opts.set_lru_cache(BLOCK_CACHE_SIZE_BYTES);
+
+        let mut db_opts = rocksdb::Options::default();
+        db_opts.set_block_based_table_factory(&block_based_opts);
+
+        db_opts
     }
 
     /// Reads single record by key.
