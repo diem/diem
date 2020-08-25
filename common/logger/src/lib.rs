@@ -273,8 +273,8 @@ macro_rules! sl_level {
     ($level:expr, $entry:expr) => {
         if $crate::struct_log_enabled!($level) {
             let mut entry = $entry;
-            entry.add_module(module_path!());
-            entry.add_location($crate::location!());
+            entry = entry.module(module_path!());
+            entry = entry.location($crate::location!());
             entry = entry.level($level);
             entry.send();
             $crate::counters::STRUCT_LOG_COUNT.inc();

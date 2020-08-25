@@ -52,33 +52,29 @@ const CONNECTION_TIMEOUT_MS: u64 = 5000;
 // Fields to keep when over size
 static FIELDS_TO_KEEP: &[&str] = &["error"];
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct StructuredLogEntry {
     /// Unique Id representing this message in Elasticsearch
     id: String,
+    /// Log level
+    level: log::Level,
+    /// time of the log
+    timestamp: String,
+    /// rust module (e.g. consensus::round_manager)
+    module: &'static str,
+    /// filename + line (e.g. consensus/src/round_manager.rs:678)
+    location: &'static str,
+    /// category of the event
+    category: &'static str,
+    /// name of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    name: Option<&'static str>,
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
     /// description of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
-    /// category of the event
-    #[serde(skip_serializing_if = "Option::is_none")]
-    category: Option<&'static str>,
-    /// name of the event
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<&'static str>,
-    /// rust module (e.g. consensus::round_manager)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    module: Option<&'static str>,
-    /// filename + line (e.g. consensus/src/round_manager.rs:678)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    location: Option<&'static str>,
-    /// time of the log
-    timestamp: String,
-    /// Log level
-    #[serde(skip_serializing_if = "Option::is_none")]
-    level: Option<log::Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -86,31 +82,34 @@ pub struct StructuredLogEntry {
 
 impl StructuredLogEntry {
     /// Base implementation for creating a log
-    fn template() -> Self {
-        let mut ret = Self::default();
-
+    fn template(category: &'static str, name: Option<&'static str>) -> Self {
         // Generate a 16 byte random like UUIDv4
         let mut rng = rand::thread_rng();
         let mut bytes = [0; 16];
         rng.fill_bytes(&mut bytes);
-        ret.id = hex::encode(bytes);
-        ret.timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true);
-        ret
+
+        Self {
+            id: hex::encode(bytes),
+            level: log::Level::Info,
+            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
+            module: "",
+            location: "",
+            category,
+            name,
+            message: None,
+            pattern: None,
+            data: Default::default(),
+        }
     }
 
     /// Specifically for text based conversion logs
     pub fn new_text() -> Self {
-        let mut ret = Self::template();
-        ret.category = Some("text");
-        ret
+        Self::template("text", None)
     }
 
     /// Creates a log with a category and a name.  This should be preferred
     pub fn new(category: &'static str, name: &'static str) -> Self {
-        let mut ret = Self::template();
-        ret.category = Some(category);
-        ret.name = Some(name);
-        ret
+        Self::template(category, Some(name))
     }
 
     fn clone_without_data(&self) -> Self {
@@ -176,7 +175,7 @@ impl StructuredLogEntry {
 
     /// Sets the log level of the log
     pub fn level(mut self, level: log::Level) -> Self {
-        self.level = Some(level);
+        self.level = level;
         self
     }
 
@@ -222,14 +221,14 @@ impl StructuredLogEntry {
     }
 
     #[doc(hidden)] // set from macro
-    pub fn add_module(&mut self, module: &'static str) -> &mut Self {
-        self.module = Some(module);
+    pub fn module(mut self, module: &'static str) -> Self {
+        self.module = module;
         self
     }
 
     #[doc(hidden)] // set from macro
-    pub fn add_location(&mut self, location: &'static str) -> &mut Self {
-        self.location = Some(location);
+    pub fn location(mut self, location: &'static str) -> Self {
+        self.location = location;
         self
     }
 
