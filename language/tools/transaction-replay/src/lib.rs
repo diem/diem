@@ -2,21 +2,29 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{json_rpc_debugger::JsonRpcDebuggerInterface, storage_debugger::DBDebuggerInterface};
-use anyhow::{format_err, Result};
+use anyhow::{bail, format_err, Result};
 use libra_types::{
     account_address::AccountAddress,
+    account_config::libra_root_address,
     account_state::AccountState,
     transaction::{ChangeSet, Transaction, TransactionOutput, Version},
 };
 use libra_vm::{
     data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor,
 };
+use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
+use move_lang::{compiled_unit::CompiledUnit, move_compile_no_report, shared::Address};
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
+use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator};
 use std::{convert::TryFrom, path::Path};
+use stdlib::stdlib_files;
 use vm::errors::VMResult;
 
 pub use crate::transaction_debugger_interface::{DebuggerStateView, StorageDebuggerInterface};
+
+#[cfg(test)]
+mod unit_tests;
 
 mod json_rpc_debugger;
 mod storage_debugger;
@@ -144,6 +152,61 @@ impl LibraDebugger {
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
         Ok(ChangeSet::new(write_set, events))
     }
+
+    pub fn bisect_transactions_by_script(
+        &self,
+        code_path: &str,
+        sender: AccountAddress,
+        begin: Version,
+        end: Version,
+    ) -> Result<Option<Version>> {
+        let predicate = compile_move_script(code_path, sender)?;
+        let gas_table = zero_cost_schedule();
+        let is_version_ok = |version| {
+            self.run_session_at_version(version, |session| {
+                let mut cost_strategy = CostStrategy::system(&gas_table, GasUnits::new(0));
+                session.execute_script(
+                    predicate.clone(),
+                    vec![],
+                    vec![],
+                    vec![sender, libra_root_address()],
+                    &mut cost_strategy,
+                )
+            })
+            .map(|_| ())
+        };
+
+        self.bisect_transaction_impl(is_version_ok, begin, end)
+    }
+
+    /// Find the first version between [begin, end) that nullify the predicate using binary search.
+    fn bisect_transaction_impl<F>(
+        &self,
+        predicate: F,
+        mut begin: Version,
+        mut end: Version,
+    ) -> Result<Option<Version>>
+    where
+        F: Fn(Version) -> Result<()>,
+    {
+        if self.get_latest_version()? < end || begin > end {
+            bail!("Unexpected Version");
+        }
+
+        let mut result = None;
+        while begin < end {
+            let mid = begin + (end - begin) / 2;
+            let mid_result = predicate(mid);
+            println!("Checking Version: {:?}, got {:?}", mid, mid_result);
+            if mid_result.is_err() {
+                result = Some(mid);
+                end = mid;
+            } else {
+                begin = mid + 1;
+            }
+        }
+        Ok(result)
+    }
 }
 
 fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
@@ -152,4 +215,31 @@ fn is_reconfiguration(vm_output: &TransactionOutput) -> bool {
         .events()
         .iter()
         .any(|event| *event.key() == new_epoch_event_key)
+}
+
+fn compile_move_script(file_path: &str, sender: AccountAddress) -> Result<Vec<u8>> {
+    let sender_addr = Address::try_from(sender.as_ref()).unwrap();
+    let cur_path = file_path.to_owned();
+    let targets = &vec![cur_path];
+    let sender_opt = Some(sender_addr);
+    let (files, units_or_errors) = move_compile_no_report(targets, &stdlib_files(), sender_opt)?;
+    let unit = match units_or_errors {
+        Err(errors) => {
+            let error_buffer = move_lang::errors::report_errors_to_color_buffer(files, errors);
+            bail!(String::from_utf8(error_buffer).unwrap());
+        }
+        Ok(mut units) => {
+            let len = units.len();
+            if len != 1 {
+                bail!("Invalid input. Expected 1 compiled unit but got {}", len)
+            }
+            units.pop().unwrap()
+        }
+    };
+    let mut out = vec![];
+    match unit {
+        CompiledUnit::Script { script, .. } => script.serialize(&mut out)?,
+        _ => bail!("Unexpected module"),
+    };
+    Ok(out)
 }

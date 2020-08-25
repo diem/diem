@@ -1994,6 +1994,28 @@ fn test_replay_tooling() {
         .pop()
         .unwrap();
 
+    let (account, _) = client_proxy
+        .get_account_address_from_parameter("0")
+        .unwrap();
+    let script_path = workspace_builder::workspace_root()
+        .join("language/tools/transaction-replay/examples/account_exists.move");
+
+    let bisect_result = json_debugger
+        .bisect_transactions_by_script(script_path.to_str().unwrap(), account, 0, txn.version)
+        .unwrap()
+        .unwrap();
+
+    let account_creation_txn = client_proxy
+        .get_committed_txn_by_acc_seq(&[
+            "txn_acc_seq",
+            "0000000000000000000000000b1e55ed",
+            "0",
+            "false",
+        ])
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(account_creation_txn.version + 1, bisect_result);
     assert_eq!(replay_result.gas_used(), txn.gas_used);
     assert_eq!(
         JsonVMStatusView::from(&replay_result.status().status().unwrap()),

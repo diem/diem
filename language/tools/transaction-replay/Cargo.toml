@@ -23,6 +23,10 @@ scratchpad = { path = "../../../storage/scratchpad", version = "0.1.0" }
 libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 libra-vm = { path = "../../../language/libra-vm", version = "0.1.0" }
 vm = { path = "../../../language/vm", version = "0.1.0"}
-move-vm-runtime = { path = "../../../language/move-vm/runtime", version = "0.1.0"}
+move-vm-types = { path = "../../../language/move-vm/types", version = "0.1.0" }
+move-core-types = { path = "../../../language/move-core/types", version = "0.1.0" }
+move-vm-runtime = { path = "../../../language/move-vm/runtime", version = "0.1.0" }
 resource-viewer = { path = "../../../language/resource-viewer", version = "0.1.0" }
+stdlib = { path = "../../../language/stdlib", version = "0.1.0" }
+move-lang = { path = "../../../language/move-lang", version = "0.0.1" }
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

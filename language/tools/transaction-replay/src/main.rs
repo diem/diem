@@ -37,6 +37,15 @@ enum Command {
         account: AccountAddress,
         version: Version,
     },
+    #[structopt(name = "bisect-transaction")]
+    BisectTransaction {
+        #[structopt(parse(from_os_str))]
+        script_path: PathBuf,
+        #[structopt(parse(try_from_str))]
+        sender: AccountAddress,
+        begin: Version,
+        end: Version,
+    },
 }
 
 fn main() -> Result<()> {
@@ -80,6 +89,20 @@ fn main() -> Result<()> {
             debugger
                 .annotate_account_state_at_version(account, version)?
                 .expect("Account not found")
+        ),
+        Command::BisectTransaction {
+            sender,
+            script_path,
+            begin,
+            end,
+        } => println!(
+            "{:?}",
+            debugger.bisect_transactions_by_script(
+                script_path.to_str().expect("Expect an str"),
+                sender,
+                begin,
+                end,
+            )
         ),
     }
     Ok(())
