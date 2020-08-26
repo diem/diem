@@ -3,8 +3,8 @@
 
 use crate::Executor;
 use anyhow::Result;
-use executor_types::ChunkExecutor;
-use libra_crypto::HashValue;
+use executor_types::{BlockExecutor, ChunkExecutor};
+use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
 use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
@@ -23,17 +23,36 @@ use libra_types::{
 use libra_vm::VMExecutor;
 use storage_interface::{DbReader, DbReaderWriter, DbWriter, Order, StartupInfo, TreeState};
 
-pub fn fuzz(
-    txn_list_with_proof: TransactionListWithProof,
-    verified_target_li: LedgerInfoWithSignatures,
-) {
+fn create_test_executor() -> Executor<FakeVM> {
     // setup fake db
     let fake_db = FakeDb {};
     let db_reader_writer = DbReaderWriter::new(fake_db);
-    let mut executor = Executor::<FakeVM>::new(db_reader_writer);
+    Executor::<FakeVM>::new(db_reader_writer)
+}
 
-    //
+pub fn fuzz_execute_and_commit_chunk(
+    txn_list_with_proof: TransactionListWithProof,
+    verified_target_li: LedgerInfoWithSignatures,
+) {
+    let mut executor = create_test_executor();
     let _events = executor.execute_and_commit_chunk(txn_list_with_proof, verified_target_li, None);
+}
+
+pub fn fuzz_execute_and_commit_blocks(
+    blocks: Vec<(HashValue, Vec<Transaction>)>,
+    ledger_info_with_sigs: LedgerInfoWithSignatures,
+) {
+    let mut executor = create_test_executor();
+
+    let mut parent_block_id = *SPARSE_MERKLE_PLACEHOLDER_HASH;
+    let mut block_ids = vec![];
+    for block in blocks {
+        let block_id = block.0;
+        let _execution_results = executor.execute_block(block, parent_block_id);
+        parent_block_id = block_id;
+        block_ids.push(block_id);
+    }
+    let _res = executor.commit_blocks(block_ids, ledger_info_with_sigs);
 }
 
 /// A fake VM implementing VMExecutor

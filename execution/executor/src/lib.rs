@@ -741,9 +741,13 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             .data("block_id", block_id_to_commit));
 
         let version = ledger_info_with_sigs.ledger_info().version();
+
+        let num_txns_in_li = version
+            .checked_add(1)
+            .ok_or_else(|| format_err!("version + 1 overflows"))?;
         let num_persistent_txns = self.cache.synced_trees().txn_accumulator().num_leaves();
 
-        if version + 1 < num_persistent_txns {
+        if num_txns_in_li < num_persistent_txns {
             return Err(Error::InternalError {
                 error: format!(
                     "Try to commit stale transactions with the last version as {}",
@@ -752,7 +756,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             });
         }
 
-        if version + 1 == num_persistent_txns {
+        if num_txns_in_li == num_persistent_txns {
             return Ok(self.cache.committed_txns_and_events());
         }
 
@@ -784,7 +788,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         let last_block = blocks
             .last()
-            .expect("CommittableBlockBatch has at least 1 block.");
+            .ok_or_else(|| format_err!("CommittableBlockBatch is empty"))?;
 
         // Check that the version in ledger info (computed by consensus) matches the version
         // computed by us.
@@ -794,18 +798,16 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             .txn_accumulator()
             .num_leaves();
         assert_eq!(
-            version + 1,
-            num_txns_in_speculative_accumulator as Version,
+            num_txns_in_li, num_txns_in_speculative_accumulator as Version,
             "Number of transactions in ledger info ({}) does not match number of transactions \
              in accumulator ({}).",
-            version + 1,
-            num_txns_in_speculative_accumulator,
+            num_txns_in_li, num_txns_in_speculative_accumulator,
         );
 
         let num_txns_to_keep = txns_to_keep.len() as u64;
 
         // Skip txns that are already committed to allow failures in state sync process.
-        let first_version_to_keep = version + 1 - num_txns_to_keep;
+        let first_version_to_keep = num_txns_in_li - num_txns_to_keep;
         assert!(
             first_version_to_keep <= num_persistent_txns,
             "first_version {} in the blocks to commit cannot exceed # of committed txns: {}.",
@@ -835,7 +837,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
 
-            assert_eq!(first_version_to_commit, version + 1 - num_txns_to_commit);
+            assert_eq!(first_version_to_commit, num_txns_in_li - num_txns_to_commit);
             self.db.writer.save_transactions(
                 txns_to_commit,
                 first_version_to_commit,

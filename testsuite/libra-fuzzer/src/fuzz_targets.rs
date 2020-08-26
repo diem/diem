@@ -28,6 +28,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         // Consensus
         Box::new(consensus::ConsensusProposal::default()),
         // Executor
+        Box::new(executor::ExecuteAndCommitBlocks::default()),
         Box::new(executor::ExecuteAndCommitChunk::default()),
         // JSON RPC Service
         Box::new(json_rpc_service::JsonRpcSubmitTransactionRequest::default()),

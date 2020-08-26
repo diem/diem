@@ -69,7 +69,7 @@ impl StartupInfo {
         let committed_tree_state = TreeState {
             num_transactions: 0,
             ledger_frozen_subtree_hashes: Vec::new(),
-            account_state_root_hash: HashValue::zero(),
+            account_state_root_hash: *SPARSE_MERKLE_PLACEHOLDER_HASH,
         };
         let synced_tree_state = None;
 
