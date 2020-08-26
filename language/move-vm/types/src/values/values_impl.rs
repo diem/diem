@@ -273,113 +273,17 @@ impl Container {
 
 impl ValueImpl {
     fn is_resource(&self) -> PartialVMResult<bool> {
-        use ValueImpl::*;
-
         match self {
-            Invalid | U8(_) | U64(_) | U128(_) | Address(_) | Bool(_) | ContainerRef(_)
-            | IndexedRef(_) => Ok(false),
+            Self::Invalid
+            | Self::U8(_)
+            | Self::U64(_)
+            | Self::U128(_)
+            | Self::Address(_)
+            | Self::Bool(_)
+            | Self::ContainerRef(_)
+            | Self::IndexedRef(_) => Ok(false),
 
-            Container(c) => c.is_resource(),
-        }
-    }
-}
-
-impl Value {
-    // Check that a `Value` is the constant represented by `SignatureToken`.
-    // Return false both if the signature is not for a constant, or value and signature
-    // don't match
-    pub fn is_valid_arg(&self, sig: &SignatureToken) -> bool {
-        match (sig, &self.0) {
-            (
-                SignatureToken::Reference(inner_ty),
-                ValueImpl::ContainerRef(ContainerRef::Local(Container::StructR(r))),
-            ) => {
-                let v = &*r.borrow();
-                matches!(**inner_ty, SignatureToken::Signer)
-                    && v.len() == 1
-                    && matches!(&v[0], ValueImpl::Address(_))
-            }
-            _ => self.0.check_constant(sig),
-        }
-    }
-
-    // Check that a `Value` is either a possible constant or a `Signer`.
-    // This function only filters obvious bad args. It is possible to fool
-    // this function to take inconsistent `Vector`s.
-    // `is_valid_arg` above makes the consistency check against the signature
-    // of the function invoked.
-    pub fn is_constant_or_signer_ref(&self) -> bool {
-        match &self.0 {
-            ValueImpl::ContainerRef(ContainerRef::Local(Container::StructR(r))) => {
-                let v = &*r.borrow();
-                v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
-            }
-            _ => self.0.is_constant(),
-        }
-    }
-}
-
-impl ValueImpl {
-    fn check_constant(&self, sig: &SignatureToken) -> bool {
-        match (sig, &self) {
-            (SignatureToken::U8, ValueImpl::U8(_))
-            | (SignatureToken::U64, ValueImpl::U64(_))
-            | (SignatureToken::U128, ValueImpl::U128(_))
-            | (SignatureToken::Bool, ValueImpl::Bool(_))
-            | (SignatureToken::Address, ValueImpl::Address(_)) => true,
-            (SignatureToken::Vector(ty), ValueImpl::Container(c)) => match (&**ty, c) {
-                (SignatureToken::Bool, Container::VecBool(_))
-                | (SignatureToken::U8, Container::VecU8(_))
-                | (SignatureToken::U64, Container::VecU64(_))
-                | (SignatureToken::U128, Container::VecU128(_))
-                | (SignatureToken::Address, Container::VecAddress(_)) => true,
-                (SignatureToken::Vector(inner), Container::VecC(values)) => {
-                    if !inner.is_valid_for_constant() {
-                        return false;
-                    }
-                    for value in &*values.borrow() {
-                        if !value.check_constant(ty) {
-                            return false;
-                        }
-                    }
-                    true
-                }
-                _ => false,
-            },
-            _ => false,
-        }
-    }
-
-    fn is_constant(&self) -> bool {
-        match self {
-            ValueImpl::Bool(_)
-            | ValueImpl::U8(_)
-            | ValueImpl::U64(_)
-            | ValueImpl::U128(_)
-            | ValueImpl::Address(_) => true,
-            ValueImpl::Container(c) => match c {
-                Container::VecBool(_)
-                | Container::VecU8(_)
-                | Container::VecU64(_)
-                | Container::VecU128(_)
-                | Container::VecAddress(_) => true,
-                Container::VecC(values) => {
-                    // this is not verifying vector consistency because it cannot always.
-                    // It's simply checking that every elements in the vector is itself
-                    // a constant or a vector
-                    for value in &*values.borrow() {
-                        if !value.is_constant() {
-                            return false;
-                        }
-                    }
-                    true
-                }
-                Container::Locals(_)
-                | Container::StructC(_)
-                | Container::StructR(_)
-                | Container::VecR(_) => false,
-            },
-            ValueImpl::ContainerRef(_) | ValueImpl::IndexedRef(_) | ValueImpl::Invalid => false,
+            Self::Container(c) => Container::is_resource(c),
         }
     }
 }
@@ -1250,6 +1154,7 @@ impl Value {
 
     // Creates a vector with an iterator of values and a signature that describes
     // the values. Only creates a vector of constant values and so a constant itself.
+    #[deprecated = "This interface violates the safety guarantee of the vm types crate and may be removed soon."]
     pub fn constant_vector_generic(
         it: impl IntoIterator<Item = Value>,
         inner: &SignatureToken,
@@ -1275,10 +1180,10 @@ impl Value {
         // check that each value is of the vector type
         let mut values = vec![];
         for value in it {
-            if !value.0.check_constant(inner) {
-                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
-                    .with_message("nested vector can only be constants".to_string()));
-            }
+            // if !value.0.check_constant(inner) {
+            //    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+            //        .with_message("nested vector can only be constants".to_string()));
+            // }
             values.push(value.0);
         }
 
@@ -2830,7 +2735,7 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveKindInfo, &MoveType
                                 kind_info: elem_k,
                                 layout,
                             }))?;
-                        if k.is_resource() {
+                        if MoveKind::is_resource(k) {
                             Container::VecR(Rc::new(RefCell::new(v)))
                         } else {
                             Container::VecC(Rc::new(RefCell::new(v)))
@@ -3107,7 +3012,7 @@ pub mod prop {
                     f_kinfo.push(kinfo);
                 }
                 let layout = L::Struct(MoveStructLayout::new(f_layouts));
-                let is_resource = is_resource || f_kinfo.iter().any(|kinfo| kinfo.is_resource());
+                let is_resource = is_resource || f_kinfo.iter().any(|kinfo| MoveKindInfo::is_resource(kinfo));
                 let kinfo = K::Struct(T::from_bool(is_resource), f_kinfo);
                 (layout, kinfo)
             }),

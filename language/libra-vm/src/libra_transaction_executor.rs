@@ -30,6 +30,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
+    value::MoveValue,
 };
 use move_vm_runtime::{data_cache::RemoteCache, session::Session};
 
@@ -713,15 +714,19 @@ pub(crate) fn discard_error_output(err: StatusCode) -> TransactionOutput {
 }
 
 /// Convert the transaction arguments into Move values.
-fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
+fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Vec<u8>> {
     args.iter()
-        .map(|arg| match arg {
-            TransactionArgument::U8(i) => Value::u8(*i),
-            TransactionArgument::U64(i) => Value::u64(*i),
-            TransactionArgument::U128(i) => Value::u128(*i),
-            TransactionArgument::Address(a) => Value::address(*a),
-            TransactionArgument::Bool(b) => Value::bool(*b),
-            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+        .map(|arg| {
+            let mv = match arg {
+                TransactionArgument::U8(i) => MoveValue::U8(*i),
+                TransactionArgument::U64(i) => MoveValue::U64(*i),
+                TransactionArgument::U128(i) => MoveValue::U128(*i),
+                TransactionArgument::Address(a) => MoveValue::Address(*a),
+                TransactionArgument::Bool(b) => MoveValue::Bool(*b),
+                TransactionArgument::U8Vector(v) => MoveValue::vector_u8(v.clone()),
+            };
+            mv.simple_serialize()
+                .expect("transaction arguments must serialize")
         })
         .collect()
 }
