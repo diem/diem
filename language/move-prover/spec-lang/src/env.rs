@@ -2127,6 +2127,16 @@ impl<'env> FunctionEnv<'env> {
         default()
     }
 
+    /// Returns whether the value of a numeric pragma is explicitly set for this function.
+    pub fn is_num_pragma_set(&self, name: &str) -> bool {
+        let env = self.module_env.env;
+        env.get_num_property(&self.get_spec().properties, name)
+            .is_some()
+            || env
+                .get_num_property(&self.module_env.get_spec().properties, name)
+                .is_some()
+    }
+
     /// Returns the value of a numeric pragma for this function. This first looks up a
     /// pragma in this function, then the enclosing module, and finally uses the provided default.
     /// value

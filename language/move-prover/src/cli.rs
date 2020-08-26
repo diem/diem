@@ -132,6 +132,8 @@ pub struct ProverOptions {
     pub report_warnings: bool,
     /// Whether to dump the transformed stackless bytecode to a file
     pub dump_bytecode: bool,
+    /// Number of Boogie instances to be run concurrently.
+    pub num_instances: usize,
 }
 
 impl Default for ProverOptions {
@@ -149,6 +151,7 @@ impl Default for ProverOptions {
             report_warnings: false,
             assume_invariant_on_access: false,
             dump_bytecode: false,
+            num_instances: 1,
         }
     }
 }
@@ -433,6 +436,14 @@ impl Options {
                     .long("dump-bytecode")
                     .help("whether to dump the transformed bytecode to a file")
             )
+            .arg(
+                Arg::with_name("num-instances")
+                    .long("num-instances")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets the number of Boogie instances to run concurrently (default 1)")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -515,6 +526,13 @@ impl Options {
         }
         if matches.is_present("dump-bytecode") {
             options.prover.dump_bytecode = true;
+        }
+        if matches.is_present("num-instances") {
+            let num_instances = matches
+                .value_of("num-instances")
+                .unwrap()
+                .parse::<usize>()?;
+            options.prover.num_instances = std::cmp::max(num_instances, 1); // at least one instance
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;

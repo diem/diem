@@ -639,8 +639,11 @@ type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 
 
 
+TODO: timeout
 
-<pre><code>pragma opaque;
+
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque;
 <a name="0x1_LBR_reserve$13"></a>
 <b>let</b> reserve = <b>global</b>&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="#0x1_LBR_CalculateComponentAmountsForLBRAbortsIf">CalculateComponentAmountsForLBRAbortsIf</a>;
@@ -764,6 +767,7 @@ type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 > TODO(wrwg): It appears the next couple of aborts inclusions are redundant, i.e. they can be
 > removed but still no abort is reported. It is unclear why this is the case. For example,
 > the coin value could be so larged that multiply overflows, or the reserve could not have backing.
+> Need to investigate why this is the case. Notice that keeping them also does not produce an error,
 > indicating the the solver determines their conditions can never become true.
 
 

@@ -49,6 +49,7 @@ mod boogie_wrapper;
 mod bytecode_translator;
 pub mod cli;
 mod prelude_template_helpers;
+mod prover_task_runner;
 mod spec_translator;
 
 // =================================================================================================

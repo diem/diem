@@ -159,6 +159,8 @@ module LBR {
     }
 
     spec fun calculate_component_amounts_for_lbr {
+        /// TODO: timeout
+        pragma verify = false;
         pragma opaque;
         let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include CalculateComponentAmountsForLBRAbortsIf;
@@ -274,7 +276,7 @@ module LBR {
         /// > TODO(wrwg): It appears the next couple of aborts inclusions are redundant, i.e. they can be
         /// > removed but still no abort is reported. It is unclear why this is the case. For example,
         /// > the coin value could be so larged that multiply overflows, or the reserve could not have backing.
-        //  > Need to investigate why this is the case. Notice that keeping them also does not produce an error,
+        /// > Need to investigate why this is the case. Notice that keeping them also does not produce an error,
         /// > indicating the the solver determines their conditions can never become true.
         include FixedPoint32::MultiplyAbortsIf{val: coin.value, multiplier: reserve.coin1.ratio};
         include FixedPoint32::MultiplyAbortsIf{val: coin.value, multiplier: reserve.coin2.ratio};

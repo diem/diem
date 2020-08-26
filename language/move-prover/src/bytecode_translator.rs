@@ -617,10 +617,14 @@ impl<'env> ModuleTranslator<'env> {
                         .func_env
                         .get_num_pragma(TIMEOUT_PRAGMA, || self.options.backend.vc_timeout),
                 );
-                let seed = func_target
-                    .func_env
-                    .get_num_pragma(SEED_PRAGMA, || self.options.backend.random_seed);
-                format!("{{:timeLimit {}}} {{:random_seed {}}} ", timeout, seed)
+                if func_target.func_env.is_num_pragma_set(SEED_PRAGMA) {
+                    let seed = func_target
+                        .func_env
+                        .get_num_pragma(SEED_PRAGMA, || self.options.backend.random_seed);
+                    format!("{{:timeLimit {}}} {{:random_seed {}}} ", timeout, seed)
+                } else {
+                    format!("{{:timeLimit {}}} ", timeout)
+                }
             }
         };
         let suffix = entry_point.suffix();
