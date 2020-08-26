@@ -707,8 +707,8 @@ features = []
 
 [[target-package]]
 name = 'curve25519-dalek'
-version = '2.1.0'
-source = 'git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2#45307baa4584b12df4ca7dc80e7126016c620a51'
+version = '3.0.0'
+source = 'git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2'
 status = 'direct'
 features = ['alloc', 'fiat-crypto', 'fiat_u64_backend', 'std']
 
@@ -735,8 +735,8 @@ features = []
 
 [[target-package]]
 name = 'ed25519-dalek'
-version = '1.0.0-pre.4'
-source = 'git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat3#b46e8332ec3e6f9a1f5e10faee18af4e2e3ec9c0'
+version = '1.0.0'
+source = 'git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat4#44d1191bb2aedf18418071992848fd8028e89b35'
 status = 'direct'
 features = ['fiat_u64_backend', 'rand', 'serde', 'serde_crate', 'std']
 
@@ -1113,8 +1113,8 @@ features = ['default', 'multipart', 'tokio-tungstenite', 'websocket']
 
 [[target-package]]
 name = 'x25519-dalek'
-version = '0.6.0'
-source = 'git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2#459bb04bbe7ba650f3e5c30e594542c1f7892225'
+version = '1.0.1'
+source = 'git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat3#494bf274940818b1896d0492fcf2c66a2ee50736'
 status = 'direct'
 features = ['fiat_u64_backend', 'std']
 
@@ -2055,13 +2055,6 @@ version = '0.8.2'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
-
-[[target-package]]
-name = 'sha2'
-version = '0.8.2'
-crates-io = true
-status = 'transitive'
-features = ['std']
 
 [[target-package]]
 name = 'signal-hook-registry'

@@ -224,8 +224,8 @@ features = ['clock', 'default', 'std', 'time']
 
 [[target-package]]
 name = 'curve25519-dalek'
-version = '2.1.0'
-source = 'git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2#45307baa4584b12df4ca7dc80e7126016c620a51'
+version = '3.0.0'
+source = 'git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat3#2940429efd0e6482af1531cff079e6605cbc9cf2'
 status = 'direct'
 features = ['alloc', 'fiat-crypto', 'fiat_u64_backend', 'std']
 
@@ -238,8 +238,8 @@ features = ['alloc', 'std']
 
 [[target-package]]
 name = 'ed25519-dalek'
-version = '1.0.0-pre.4'
-source = 'git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat3#b46e8332ec3e6f9a1f5e10faee18af4e2e3ec9c0'
+version = '1.0.0'
+source = 'git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat4#44d1191bb2aedf18418071992848fd8028e89b35'
 status = 'direct'
 features = ['fiat_u64_backend', 'rand', 'serde', 'serde_crate', 'std']
 
@@ -413,8 +413,8 @@ features = ['cookie', 'cookies', 'default', 'json', 'rustls', 'serde', 'serde_js
 
 [[target-package]]
 name = 'x25519-dalek'
-version = '0.6.0'
-source = 'git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2#459bb04bbe7ba650f3e5c30e594542c1f7892225'
+version = '1.0.1'
+source = 'git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat3#494bf274940818b1896d0492fcf2c66a2ee50736'
 status = 'direct'
 features = ['fiat_u64_backend', 'std']
 
@@ -448,13 +448,6 @@ features = ['default', 'std']
 
 [[target-package]]
 name = 'block-buffer'
-version = '0.7.3'
-crates-io = true
-status = 'transitive'
-features = []
-
-[[target-package]]
-name = 'block-buffer'
 version = '0.9.0'
 crates-io = true
 status = 'transitive'
@@ -463,20 +456,6 @@ features = []
 [[target-package]]
 name = 'block-cipher'
 version = '0.7.1'
-crates-io = true
-status = 'transitive'
-features = []
-
-[[target-package]]
-name = 'block-padding'
-version = '0.1.5'
-crates-io = true
-status = 'transitive'
-features = []
-
-[[target-package]]
-name = 'byte-tools'
-version = '0.3.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -538,13 +517,6 @@ status = 'transitive'
 features = []
 
 [[target-package]]
-name = 'digest'
-version = '0.8.1'
-crates-io = true
-status = 'transitive'
-features = ['std']
-
-[[target-package]]
 name = 'dtoa'
 version = '0.4.6'
 crates-io = true
@@ -573,13 +545,6 @@ status = 'transitive'
 features = []
 
 [[target-package]]
-name = 'fake-simd'
-version = '0.1.2'
-crates-io = true
-status = 'transitive'
-features = []
-
-[[target-package]]
 name = 'fiat-crypto'
 version = '0.1.5'
 crates-io = true
@@ -592,13 +557,6 @@ version = '1.0.7'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
-
-[[target-package]]
-name = 'generic-array'
-version = '0.12.3'
-crates-io = true
-status = 'transitive'
-features = []
 
 [[target-package]]
 name = 'generic-array'
@@ -760,13 +718,6 @@ version = '0.6.0'
 crates-io = true
 status = 'transitive'
 features = []
-
-[[target-package]]
-name = 'sha2'
-version = '0.8.2'
-crates-io = true
-status = 'transitive'
-features = ['std']
 
 [[target-package]]
 name = 'signature'
