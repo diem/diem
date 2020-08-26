@@ -584,7 +584,18 @@ impl LibraVM {
                 }
                 Ok(PreprocessedTransaction::UserTransaction(txn)) => {
                     let _timer = TXN_TOTAL_SECONDS.start_timer();
-                    self.execute_user_transaction(data_cache, &txn)
+                    let (vm_status, output) = self.execute_user_transaction(data_cache, &txn);
+
+                    // Increment the counter for user transactions executed.
+                    let counter_label = match output.status() {
+                        TransactionStatus::Keep(_) => Some("success"),
+                        TransactionStatus::Discard(_) => Some("discarded"),
+                        TransactionStatus::Retry => None,
+                    };
+                    if let Some(label) = counter_label {
+                        USER_TRANSACTIONS_EXECUTED.with_label_values(&[label]).inc();
+                    }
+                    (vm_status, output)
                 }
                 Ok(PreprocessedTransaction::WriteSet(txn)) => {
                     self.process_writeset_transaction(data_cache, *txn)?
@@ -597,16 +608,6 @@ impl LibraVM {
 
             if is_reconfiguration(&output) {
                 should_restart = true;
-            }
-
-            // Increment the counter for transactions executed.
-            let counter_label = match output.status() {
-                TransactionStatus::Keep(_) => Some("success"),
-                TransactionStatus::Discard(_) => Some("discarded"),
-                TransactionStatus::Retry => None,
-            };
-            if let Some(label) = counter_label {
-                USER_TRANSACTIONS_EXECUTED.with_label_values(&[label]).inc();
             }
 
             // `result` is initially empty, a single element is pushed per loop iteration and
