@@ -329,8 +329,11 @@ impl CryptoStorage for VaultStorage {
     ) -> Result<Ed25519Signature, Error> {
         let name = self.crypto_name(name);
         let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
-        lcs::serialize_into(&mut bytes, &message).map_err(|_| {
-            Error::InternalError("Serialization of signable material should not fail.".into())
+        lcs::serialize_into(&mut bytes, &message).map_err(|e| {
+            Error::InternalError(format!(
+                "Serialization of signable material should not fail, yet returned Error:{}",
+                e
+            ))
         })?;
         Ok(self.client().sign_ed25519(&name, &bytes, None)?)
     }
@@ -344,8 +347,11 @@ impl CryptoStorage for VaultStorage {
         let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
         let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
-        lcs::serialize_into(&mut bytes, &message).map_err(|_| {
-            Error::InternalError("Serialization of signable material should not fail.".into())
+        lcs::serialize_into(&mut bytes, &message).map_err(|e| {
+            Error::InternalError(format!(
+                "Serialization of signable material should not fail, yet returned Error:{}",
+                e
+            ))
         })?;
         Ok(self.client().sign_ed25519(&name, &bytes, Some(vers))?)
     }

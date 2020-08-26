@@ -32,8 +32,11 @@ impl MetricsSafetyRules {
         let proofs = self
             .storage
             .retrieve_epoch_change_proof(sr_waypoint.version())
-            .map_err(|_| {
-                Error::InternalError("Unable to retrieve Waypoint state from storage".into())
+            .map_err(|e| {
+                Error::InternalError(format!(
+                    "Unable to retrieve Waypoint state from storage, encountered Error:{}",
+                    e
+                ))
             })?;
         self.initialize(&proofs)
     }

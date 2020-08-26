@@ -64,7 +64,13 @@ impl Prometheus {
                 end.as_secs(),
                 step
             ))
-            .map_err(|_| anyhow!("Failed to make query range url"))?;
+            .map_err(|e| {
+                anyhow!(
+                    "Failed to make query range due to unparseable url: {} resulting in Error: {}",
+                    self.url,
+                    e
+                )
+            })?;
         let response = self
             .client
             .get(url.clone())

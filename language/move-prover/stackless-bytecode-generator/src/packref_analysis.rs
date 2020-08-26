@@ -94,7 +94,7 @@ impl<'a> CopyAnalysis<'a> {
         let after_refs = &self
             .borrow_annotation
             .get_borrow_info_at(code_offset)
-            .ok_or_else(|| ())?
+            .unwrap()
             .after
             .all_refs();
         post.copies = post.copies.intersection(after_refs).cloned().collect();

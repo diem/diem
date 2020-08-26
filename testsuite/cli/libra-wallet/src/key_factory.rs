@@ -160,8 +160,12 @@ impl KeyFactory {
         info.extend_from_slice(&le_n);
 
         let hkdf_expand = Hkdf::<Sha3_256>::expand(&self.main(), Some(&info), 32)?;
-        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice())
-            .map_err(|_| anyhow!("Unable to convert into private key"))?;
+        let sk = Ed25519PrivateKey::try_from(hkdf_expand.as_slice()).map_err(|e| {
+            anyhow!(
+                "Unable to convert hkdf output into private key, met Error:{}",
+                e
+            )
+        })?;
         Ok(ExtendedPrivKey::new(child, sk))
     }
 }

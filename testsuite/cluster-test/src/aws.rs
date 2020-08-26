@@ -37,7 +37,7 @@ pub async fn set_asg_size(
     let credentials_provider = WebIdentityProvider::from_k8s_env();
 
     let dispatcher = rusoto_core::HttpClient::new()
-        .map_err(|_| anyhow!("Failed to create request dispatcher"))?;
+        .map_err(|e| anyhow!("Failed to create request dispatcher, met Error:{}", e))?;
     let asc = AutoscalingClient::new_with(dispatcher, credentials_provider, Region::UsWest2);
     libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 60), || {
         let asc = asc.clone();

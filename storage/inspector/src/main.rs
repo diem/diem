@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use libra_logger::info;
 use libradb::LibraDB;
 use std::path::PathBuf;
@@ -44,7 +44,7 @@ enum Command {
 fn print_head(db: &LibraDB) -> Result<()> {
     let si = db
         .get_startup_info()
-        .map_err(|_| anyhow!("Can't get startup info."))?
+        .expect("Can't get startup info")
         .expect("StartupInfo is empty, database is empty.");
 
     let version = si.latest_ledger_info.ledger_info().version();

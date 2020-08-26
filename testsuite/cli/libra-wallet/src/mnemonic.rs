@@ -77,9 +77,10 @@ impl Mnemonic {
         bit_writer.write_buffer();
 
         // This will never fail as we've already checked the word-list is not empty.
-        let (checksum, entropy) = bit_writer.bytes.split_last().ok_or_else(|| {
-            WalletError::LibraWalletGeneric("Bit writer producing inconsistent byte strings".into())
-        })?;
+        let (checksum, entropy) = bit_writer
+            .bytes
+            .split_last()
+            .unwrap_or_else(|| unreachable!());
         let computed_checksum = Sha256::digest(entropy)[0] >> (8 - len / 3);
         // Checksum validation.
         if *checksum != computed_checksum {

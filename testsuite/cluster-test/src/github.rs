@@ -40,9 +40,13 @@ impl GitHub {
     /// Paging is not implemented yet
     pub fn get_commits(&self, repo: &str, sha: &str) -> Result<Vec<CommitInfo>> {
         let url = format!("https://api.github.com/repos/{}/commits?sha={}", repo, sha);
-        let url: Url = url
-            .parse()
-            .map_err(|_| anyhow!("Failed to parse github url"))?;
+        let url: Url = url.parse().map_err(|e| {
+            anyhow!(
+                "Failed to parse github url: {:?}\n, resulted in Error:{}",
+                url,
+                e
+            )
+        })?;
         let request = self.client.get(url);
         let response = request
             .header(USER_AGENT, "libra-cluster-test")

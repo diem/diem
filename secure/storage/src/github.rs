@@ -34,8 +34,11 @@ impl KVStorage for GitHubStorage {
     fn get<T: DeserializeOwned>(&self, key: &str) -> Result<GetResponse<T>, Error> {
         let data = self.client.get_file(key)?;
         let data = base64::decode(&data)?;
-        let data = std::str::from_utf8(&data).map_err(|_| {
-            Error::InternalError("Unparseable data returned from Github KV Storage".into())
+        let data = std::str::from_utf8(&data).map_err(|e| {
+            Error::InternalError(format!(
+                "Unparseable data: {:?}\n returned from Github KV Storage, met Error:{}",
+                data, e
+            ))
         })?;
         serde_json::from_str(&data).map_err(|e| e.into())
     }
