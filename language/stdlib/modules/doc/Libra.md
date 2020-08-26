@@ -16,6 +16,7 @@
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
 -  [Resource `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Resource `Preburn`](#0x1_Libra_Preburn)
+-  [Const `MAX_SCALING_FACTOR`](#0x1_Libra_MAX_SCALING_FACTOR)
 -  [Const `MAX_U64`](#0x1_Libra_MAX_U64)
 -  [Const `MAX_U128`](#0x1_Libra_MAX_U128)
 -  [Const `EBURN_CAPABILITY`](#0x1_Libra_EBURN_CAPABILITY)
@@ -71,6 +72,7 @@
 -  [Function `assert_is_currency`](#0x1_Libra_assert_is_currency)
 -  [Function `assert_is_SCS_currency`](#0x1_Libra_assert_is_SCS_currency)
 -  [Specification](#0x1_Libra_Specification)
+    -  [Resource `CurrencyInfo`](#0x1_Libra_Specification_CurrencyInfo)
     -  [Function `publish_burn_capability`](#0x1_Libra_Specification_publish_burn_capability)
     -  [Function `mint`](#0x1_Libra_Specification_mint)
     -  [Function `burn`](#0x1_Libra_Specification_burn)
@@ -687,6 +689,17 @@ Concurrent preburn requests are not allowed, only one request (in to_burn) can b
 
 </details>
 
+<a name="0x1_Libra_MAX_SCALING_FACTOR"></a>
+
+## Const `MAX_SCALING_FACTOR`
+
+
+
+<pre><code><b>const</b> MAX_SCALING_FACTOR: u64 = 10000000000;
+</code></pre>
+
+
+
 <a name="0x1_Libra_MAX_U64"></a>
 
 ## Const `MAX_U64`
@@ -966,6 +979,10 @@ to be successful, and will fail with
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_mint">mint</a>&lt;CoinType&gt;(account: &signer, value: u64): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_MintCapability">MintCapability</a> {
+    <b>assert</b>(
+        exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EMINT_CAPABILITY)
+    );
     <a href="#0x1_Libra_mint_with_capability">mint_with_capability</a>(
         value,
         borrow_global&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
@@ -1843,6 +1860,7 @@ adds the currency to the set of
         !exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)),
         <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECURRENCY_INFO)
     );
+    <b>assert</b>(0 &lt; scaling_factor && <a href="#0x1_Libra_scaling_factor">scaling_factor</a> &lt;= MAX_SCALING_FACTOR, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ECURRENCY_INFO));
     move_to(lr_account, <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
         total_value: 0,
         preburn_value: 0,
@@ -2354,6 +2372,141 @@ Asserts that
 ## Specification
 
 
+<a name="0x1_Libra_Specification_CurrencyInfo"></a>
+
+### Resource `CurrencyInfo`
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<dl>
+<dt>
+
+<code>total_value: u128</code>
+</dt>
+<dd>
+ The total value for the currency represented by
+<code>CoinType</code>. Mutable.
+</dd>
+<dt>
+
+<code>preburn_value: u64</code>
+</dt>
+<dd>
+ Value of funds that are in the process of being burned.  Mutable.
+</dd>
+<dt>
+
+<code>to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a></code>
+</dt>
+<dd>
+ The (rough) exchange rate from
+<code>CoinType</code> to
+<code><a href="LBR.md#0x1_LBR">LBR</a></code>. Mutable.
+</dd>
+<dt>
+
+<code>is_synthetic: bool</code>
+</dt>
+<dd>
+ Holds whether or not this currency is synthetic (contributes to the
+ off-chain reserve) or not. An example of such a synthetic
+currency would be the LBR.
+</dd>
+<dt>
+
+<code>scaling_factor: u64</code>
+</dt>
+<dd>
+ The scaling factor for the coin (i.e. the amount to multiply by
+ to get to the human-readable representation for this currency).
+ e.g. 10^6 for
+<code><a href="Coin1.md#0x1_Coin1">Coin1</a></code>
+
+ > TODO(wrwg): should the above be "to divide by"?
+</dd>
+<dt>
+
+<code>fractional_part: u64</code>
+</dt>
+<dd>
+ The smallest fractional part (number of decimal places) to be
+ used in the human-readable representation for the currency (e.g.
+ 10^2 for
+<code><a href="Coin1.md#0x1_Coin1">Coin1</a></code> cents)
+</dd>
+<dt>
+
+<code>currency_code: vector&lt;u8&gt;</code>
+</dt>
+<dd>
+ The code symbol for this
+<code>CoinType</code>. ASCII encoded.
+ e.g. for "LBR" this is x"4C4252". No character limit.
+</dd>
+<dt>
+
+<code>can_mint: bool</code>
+</dt>
+<dd>
+ We may want to disable the ability to mint further coins of a
+ currency while that currency is still around. This allows us to
+ keep the currency in circulation while disallowing further
+ creation of coins in the
+<code>CoinType</code> currency. Mutable.
+</dd>
+<dt>
+
+<code>mint_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_MintEvent">Libra::MintEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for minting and where
+<code><a href="#0x1_Libra_MintEvent">MintEvent</a></code>s will be emitted.
+</dd>
+<dt>
+
+<code>burn_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_BurnEvent">Libra::BurnEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for burning, and where
+<code><a href="#0x1_Libra_BurnEvent">BurnEvent</a></code>s will be emitted.
+</dd>
+<dt>
+
+<code>preburn_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_PreburnEvent">Libra::PreburnEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for preburn requests, and where all
+ <code><a href="#0x1_Libra_PreburnEvent">PreburnEvent</a></code>s for this
+<code>CoinType</code> will be emitted.
+</dd>
+<dt>
+
+<code>cancel_burn_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_CancelBurnEvent">Libra::CancelBurnEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for all cancelled preburn requests for this
+ <code>CoinType</code>.
+</dd>
+<dt>
+
+<code>exchange_rate_update_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">Libra::ToLBRExchangeRateUpdateEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for emiting exchange rate change events
+</dd>
+</dl>
+
+
+
+<pre><code><b>invariant</b> 0 &lt; scaling_factor && <a href="#0x1_Libra_scaling_factor">scaling_factor</a> &lt;= MAX_SCALING_FACTOR;
+</code></pre>
+
+
+
 <a name="0x1_Libra_Specification_publish_burn_capability"></a>
 
 ### Function `publish_burn_capability`
@@ -2408,7 +2561,7 @@ exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::NOT_PUBLISHED;
 <b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt;;
 </code></pre>
@@ -2548,7 +2701,8 @@ exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>;
+<pre><code><b>modifies</b> <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
 <b>aborts_if</b> <a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;() with Errors::INVALID_ARGUMENT;
@@ -2871,6 +3025,8 @@ exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 <pre><code><b>schema</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt; {
     lr_account: signer;
     currency_code: vector&lt;u8&gt;;
+    scaling_factor: u64;
+    <b>aborts_if</b> scaling_factor == 0 || scaling_factor &gt; MAX_SCALING_FACTOR with Errors::INVALID_ARGUMENT;
     <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_register_new_currency_privilege_addr">Roles::spec_has_register_new_currency_privilege_addr</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account))
         with Errors::REQUIRES_ROLE;
     <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotCurrencyInfo">CoreAddresses::AbortsIfNotCurrencyInfo</a>{account: lr_account};
@@ -2893,7 +3049,7 @@ exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 
 
 
-<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
+<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) with Errors::ALREADY_PUBLISHED;
 <b>include</b> <a href="#0x1_Libra_RegisterCurrencyAbortsIf">RegisterCurrencyAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_PublishBurnCapAbortsIfs">PublishBurnCapAbortsIfs</a>&lt;CoinType&gt;{account: tc_account};
 <b>ensures</b> <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));

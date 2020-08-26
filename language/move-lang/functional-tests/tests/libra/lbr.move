@@ -24,7 +24,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(lbr)
 }
 }
-// check: MISSING_DATA
+// check: ABORTED { code: 2565
 
 // burning LBR via Libra::burn should not work. This is cumbersome to test directly, so instead test
 // that the Association account does not have a BurnCapability<LBR>

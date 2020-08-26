@@ -30,10 +30,13 @@
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 -  [Specification](#0x1_DesignatedDealer_Specification)
     -  [Resource `TierInfo`](#0x1_DesignatedDealer_Specification_TierInfo)
+    -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_Specification_publish_designated_dealer_credential)
     -  [Function `add_currency`](#0x1_DesignatedDealer_Specification_add_currency)
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
+    -  [Function `exists_at`](#0x1_DesignatedDealer_Specification_exists_at)
+    -  [Function `validate_and_record_mint`](#0x1_DesignatedDealer_Specification_validate_and_record_mint)
 
 
 
@@ -337,7 +340,7 @@ and default tiers for each known currency at launch.
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <a href="Roles.md#0x1_Roles_assert_designated_dealer">Roles::assert_designated_dealer</a>(dd);
-    <b>assert</b>(!exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EDEALER));
+    <b>assert</b>(!exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(dd)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EDEALER));
     move_to(dd, <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> { mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd) });
     <b>if</b> (add_all_currencies) {
         <a href="#0x1_DesignatedDealer_add_currency">add_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(dd, tc_account);
@@ -418,6 +421,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
     tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <b>assert</b>(exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
     <b>let</b> tiers = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     <b>assert</b>(number_of_tiers + 1 &lt;= MAX_NUM_TIERS, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_ADDITION));
@@ -455,6 +459,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
     new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
+    <b>assert</b>(exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
     <b>let</b> tiers = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     <b>assert</b>(tier_index &lt; number_of_tiers, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_INDEX));
@@ -509,6 +514,7 @@ multi-signer transactions in order to add a new currency to an existing DD.
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>assert</b>(amount &gt; 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_MINT_AMOUNT));
     <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
+    <b>assert</b>(exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EDEALER));
 
     <a href="#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr, amount, tier_index);
     // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
@@ -578,16 +584,16 @@ that amount that can be minted according to the bounds for the
 
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr: address, amount: u64, tier_index: u64)
 <b>acquires</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a> {
-    <b>let</b> tier = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-    <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>(tier);
-    <b>let</b> cur_inflow = tier.window_inflow;
-    <b>let</b> new_inflow = cur_inflow + amount;
-    <b>let</b> tiers = &<b>mut</b> tier.tiers;
+    <b>let</b> tier_info = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+    <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>(tier_info);
+    <b>let</b> cur_inflow = tier_info.window_inflow;
+    <b>let</b> tiers = &tier_info.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     <b>assert</b>(tier_index &lt; number_of_tiers, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TIER_INDEX));
     <b>let</b> tier_upperbound: u64 = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
-    <b>assert</b>(new_inflow &lt;= tier_upperbound, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_AMOUNT_FOR_TIER));
-    tier.window_inflow = new_inflow;
+    <b>assert</b>(amount &lt;= tier_upperbound, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_AMOUNT_FOR_TIER));
+    <b>assert</b>(cur_inflow &lt;= tier_upperbound - amount, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_AMOUNT_FOR_TIER));
+    tier_info.window_inflow = cur_inflow + amount;
 }
 </code></pre>
 
@@ -601,7 +607,7 @@ that amount that can be minted according to the bounds for the
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType&gt;(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_TierInfo">DesignatedDealer::TierInfo</a>&lt;CoinType&gt;)
+<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType&gt;(tier_info: &<b>mut</b> <a href="#0x1_DesignatedDealer_TierInfo">DesignatedDealer::TierInfo</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -610,11 +616,11 @@ that amount that can be minted according to the bounds for the
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType&gt;(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;) {
+<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>&lt;CoinType&gt;(tier_info: &<b>mut</b> <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;) {
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-    <b>if</b> (current_time &gt; dealer.window_start + ONE_DAY) {
-        dealer.window_start = current_time;
-        dealer.window_inflow = 0;
+    <b>if</b> (current_time &gt; ONE_DAY && current_time - ONE_DAY &gt; tier_info.window_start) {
+        tier_info.window_start = current_time;
+        tier_info.window_inflow = 0;
     }
 }
 </code></pre>
@@ -626,6 +632,18 @@ that amount that can be minted according to the bounds for the
 <a name="0x1_DesignatedDealer_Specification"></a>
 
 ## Specification
+
+
+
+<a name="0x1_DesignatedDealer_AbortsIfNoDealer"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_AbortsIfNoDealer">AbortsIfNoDealer</a> {
+    dd_addr: address;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr) with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
 
 
 <a name="0x1_DesignatedDealer_Specification_TierInfo"></a>
@@ -664,8 +682,48 @@ that amount that can be minted according to the bounds for the
 
 
 
-<pre><code><b>invariant</b> len(tiers) &lt;= <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>();
+<pre><code><b>invariant</b> len(tiers) &lt;= MAX_NUM_TIERS;
 <b>invariant</b> forall i in 0..len(tiers), j in 0..len(tiers) where i &lt; j: tiers[i] &lt; tiers[j];
+</code></pre>
+
+
+
+
+<a name="0x1_DesignatedDealer_AbortsIfNoTierInfo"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt; {
+    dd_addr: address;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) with Errors::NOT_PUBLISHED;
+}
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_publish_designated_dealer_credential"></a>
+
+### Function `publish_designated_dealer_credential`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>&lt;CoinType&gt;(dd: &signer, tc_account: &signer, add_all_currencies: bool)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<a name="0x1_DesignatedDealer_dd_addr$10"></a>
+<b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>{account: dd};
+<b>aborts_if</b> exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr) with Errors::ALREADY_PUBLISHED;
+<b>include</b> <b>if</b> (add_all_currencies)
+            <a href="#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;{dd_addr: dd_addr} && <a href="#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;{dd_addr: dd_addr}
+        <b>else</b> <a href="#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;CoinType&gt;{dd_addr: dd_addr};
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
+<b>ensures</b> exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr), <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr), <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(dd_addr);
+<b>ensures</b> <b>if</b> (add_all_currencies) exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(dd_addr) && exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(dd_addr) <b>else</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
 
 
@@ -680,10 +738,40 @@ that amount that can be minted according to the bounds for the
 
 
 
->TODO: times out without any specification, perhaps it won't if fully specified.
+
+<pre><code>pragma opaque;
+<a name="0x1_DesignatedDealer_dd_addr$11"></a>
+<b>let</b> dd_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(dd);
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotDesignatedDealer">Roles::AbortsIfNotDesignatedDealer</a>{account: dd};
+<b>include</b> <a href="#0x1_DesignatedDealer_AbortsIfNoDealer">AbortsIfNoDealer</a>{dd_addr: dd_addr};
+<b>include</b> <a href="#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;CoinType&gt;{dd_addr: dd_addr};
+<b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) ==
+    <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; {
+        window_start: <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>(),
+        window_inflow: 0,
+        tiers: <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers,
+    };
+<b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == MAX_NUM_TIERS;
+</code></pre>
 
 
-<pre><code>pragma verify_duration_estimate = 100;
+
+
+<a name="0x1_DesignatedDealer_AddCurrencyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;CoinType&gt; {
+    dd_addr: address;
+    <b>aborts_if</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) with Errors::ALREADY_PUBLISHED;
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> <a href="Libra.md#0x1_Libra_is_synthetic_currency">Libra::is_synthetic_currency</a>&lt;CoinType&gt;() with Errors::INVALID_ARGUMENT;
+    <b>aborts_if</b> exists&lt;<a href="Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr) with Errors::ALREADY_PUBLISHED;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNoTime">LibraTimestamp::AbortsIfNoTime</a>;
+}
 </code></pre>
 
 
@@ -699,12 +787,23 @@ that amount that can be minted according to the bounds for the
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma opaque;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt;;
+<a name="0x1_DesignatedDealer_tier_info$12"></a>
+<b>let</b> tier_info = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<a name="0x1_DesignatedDealer_number_of_tiers$13"></a>
+<b>let</b> number_of_tiers = len(tier_info.tiers);
+<b>aborts_if</b> number_of_tiers == MAX_NUM_TIERS with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> number_of_tiers &gt; 0 && tier_info.tiers[number_of_tiers - 1] &gt;= tier_upperbound with Errors::INVALID_ARGUMENT;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_start == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start;
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_inflow == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow;
-<b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers) + 1;
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers[len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) - 1] == tier_upperbound;
+<b>ensures</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) ==
+    <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; {
+        window_start: <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start,
+        window_inflow: <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow,
+        tiers: concat_vector(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers, singleton_vector(tier_upperbound)),
+    };
 </code></pre>
 
 
@@ -720,12 +819,22 @@ that amount that can be minted according to the bounds for the
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma opaque;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+<b>include</b> <a href="#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt;;
+<a name="0x1_DesignatedDealer_tier_info$14"></a>
+<b>let</b> tier_info = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>aborts_if</b> tier_index &gt;= len(tier_info.tiers) with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> tier_index &gt; 0 && tier_info.tiers[tier_index - 1] &gt;= new_upperbound with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> tier_index + 1 &lt; len(tier_info.tiers) && tier_info.tiers[tier_index + 1] &lt;= new_upperbound with Errors::INVALID_ARGUMENT;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_start == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start;
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).window_inflow == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow;
-<b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers);
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers[tier_index] == new_upperbound;
+<b>ensures</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr) ==
+    <a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt; {
+        window_start: <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_start,
+        window_inflow: <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).window_inflow,
+        tiers: update_vector(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr)).tiers, tier_index, new_upperbound),
+    };
 </code></pre>
 
 
@@ -741,11 +850,14 @@ that amount that can be minted according to the bounds for the
 
 
 
-<a name="0x1_DesignatedDealer_dealer$10"></a>
-
-
-<pre><code><b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
-<a name="0x1_DesignatedDealer_current_time$11"></a>
+<pre><code>pragma opaque;
+<b>include</b> <a href="#0x1_DesignatedDealer_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;CoinType&gt;;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> exists&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers == <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr).tiers);
+<a name="0x1_DesignatedDealer_dealer$15"></a>
+<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+<a name="0x1_DesignatedDealer_current_time$16"></a>
 <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
 <b>ensures</b> <b>old</b>(dealer.window_start) &lt;= dealer.window_start;
 <b>ensures</b>
@@ -759,21 +871,66 @@ that amount that can be minted according to the bounds for the
 
 
 
-<a name="0x1_DesignatedDealer_AbortsIfNotExistAt"></a>
+<a name="0x1_DesignatedDealer_TieredMintAbortsIf"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_AbortsIfNotExistAt">AbortsIfNotExistAt</a> {
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;CoinType&gt; {
+    tc_account: signer;
     dd_addr: address;
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr) with Errors::NOT_PUBLISHED;
+    amount: u64;
+    tier_index: u64;
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>aborts_if</b> amount == 0 with Errors::INVALID_ARGUMENT;
+    <b>include</b> <a href="#0x1_DesignatedDealer_AbortsIfNoDealer">AbortsIfNoDealer</a>;
+    <b>include</b> <a href="#0x1_DesignatedDealer_AbortsIfNoTierInfo">AbortsIfNoTierInfo</a>&lt;CoinType&gt;;
+    <a name="0x1_DesignatedDealer_tier_info$8"></a>
+    <b>let</b> tier_info = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
+    <b>aborts_if</b> tier_index &gt;= len(tier_info.tiers) with Errors::INVALID_ARGUMENT;
+    <a name="0x1_DesignatedDealer_new_amount$9"></a>
+    <b>let</b> new_amount = <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &lt;= tier_info.window_start + ONE_DAY) { tier_info.window_inflow + amount } <b>else</b> { amount };
+    <b>aborts_if</b> new_amount &gt; tier_info.tiers[tier_index] with Errors::INVALID_ARGUMENT;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNoTime">LibraTimestamp::AbortsIfNoTime</a>;
+    <b>aborts_if</b> !exists&lt;<a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) with Errors::NOT_PUBLISHED;
+    <b>include</b> <a href="Libra.md#0x1_Libra_MintAbortsIf">Libra::MintAbortsIf</a>&lt;CoinType&gt;{value: amount};
 }
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_exists_at"></a>
+
+### Function `exists_at`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr: address): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_validate_and_record_mint"></a>
+
+### Function `validate_and_record_mint`
+
+
+<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_validate_and_record_mint">validate_and_record_mint</a>&lt;CoinType&gt;(dd_addr: address, amount: u64, tier_index: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
 
 
 
 
 <pre><code>pragma verify = <b>true</b>;
-<a name="0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS"></a>
-<b>define</b> <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>(): u64 { 4 }
-<a name="0x1_DesignatedDealer_spec_window_length"></a>
-<b>define</b> <a href="#0x1_DesignatedDealer_spec_window_length">spec_window_length</a>(): u64 { 86400000000 }
 </code></pre>

@@ -18,6 +18,11 @@ module DesignatedDealer {
         mint_event_handle: Event::EventHandle<ReceivedMintEvent>,
     }
 
+    spec schema AbortsIfNoDealer {
+        dd_addr: address;
+        aborts_if !exists<Dealer>(dd_addr) with Errors::NOT_PUBLISHED;
+    }
+
     /// The `TierInfo` resource holds the information needed to track which
     /// tier a mint to a DD needs to be in.
     // Preburn published at top level in Libra.move
@@ -30,8 +35,13 @@ module DesignatedDealer {
         tiers: vector<u64>,
     }
     spec struct TierInfo {
-        invariant len(tiers) <= SPEC_MAX_NUM_TIERS();
+        invariant len(tiers) <= MAX_NUM_TIERS;
         invariant forall i in 0..len(tiers), j in 0..len(tiers) where i < j: tiers[i] < tiers[j];
+    }
+
+    spec schema AbortsIfNoTierInfo<CoinType> {
+        dd_addr: address;
+        aborts_if !exists<TierInfo<CoinType>>(dd_addr) with Errors::NOT_PUBLISHED;
     }
 
     /// Message for mint events
@@ -84,7 +94,7 @@ module DesignatedDealer {
     ) acquires TierInfo {
         Roles::assert_treasury_compliance(tc_account);
         Roles::assert_designated_dealer(dd);
-        assert(!exists<Dealer>(Signer::address_of(tc_account)), Errors::already_published(EDEALER));
+        assert(!exists<Dealer>(Signer::address_of(dd)), Errors::already_published(EDEALER));
         move_to(dd, Dealer { mint_event_handle: Event::new_event_handle<ReceivedMintEvent>(dd) });
         if (add_all_currencies) {
             add_currency<Coin1>(dd, tc_account);
@@ -92,6 +102,23 @@ module DesignatedDealer {
         } else {
             add_currency<CoinType>(dd, tc_account);
         };
+    }
+    spec fun publish_designated_dealer_credential {
+        pragma opaque;
+
+        let dd_addr = Signer::spec_address_of(dd);
+
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include Roles::AbortsIfNotDesignatedDealer{account: dd};
+        aborts_if exists<Dealer>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        include if (add_all_currencies)
+                    AddCurrencyAbortsIf<Coin1>{dd_addr: dd_addr} && AddCurrencyAbortsIf<Coin2>{dd_addr: dd_addr}
+                else AddCurrencyAbortsIf<CoinType>{dd_addr: dd_addr};
+
+        modifies global<Dealer>(dd_addr);
+        ensures exists<Dealer>(dd_addr);
+        modifies global<TierInfo<CoinType>>(dd_addr), global<TierInfo<Coin1>>(dd_addr), global<TierInfo<Coin2>>(dd_addr);
+        ensures if (add_all_currencies) exists<TierInfo<Coin1>>(dd_addr) && exists<TierInfo<Coin2>>(dd_addr) else exists<TierInfo<CoinType>>(dd_addr);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -121,8 +148,33 @@ module DesignatedDealer {
         add_tier<CoinType>(tc_account, dd_addr, TIER_3_DEFAULT * coin_scaling_factor);
     }
     spec fun add_currency {
-        /// >TODO: times out without any specification, perhaps it won't if fully specified.
-        pragma verify_duration_estimate = 100;
+        pragma opaque;
+
+        let dd_addr = Signer::spec_address_of(dd);
+
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include Roles::AbortsIfNotDesignatedDealer{account: dd};
+        include AbortsIfNoDealer{dd_addr: dd_addr};
+        include AddCurrencyAbortsIf<CoinType>{dd_addr: dd_addr};
+
+        modifies global<Libra::Preburn<CoinType>>(dd_addr);
+        modifies global<TierInfo<CoinType>>(dd_addr);
+        ensures exists<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr) ==
+            TierInfo<CoinType> {
+                window_start: LibraTimestamp::spec_now_microseconds(),
+                window_inflow: 0,
+                tiers: global<TierInfo<CoinType>>(dd_addr).tiers,
+            };
+        ensures len(global<TierInfo<CoinType>>(dd_addr).tiers) == MAX_NUM_TIERS;
+    }
+    spec schema AddCurrencyAbortsIf<CoinType> {
+        dd_addr: address;
+        aborts_if exists<TierInfo<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        include Libra::AbortsIfNoCurrency<CoinType>;
+        aborts_if Libra::is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
+        aborts_if exists<Libra::Preburn<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
+        include LibraTimestamp::AbortsIfNoTime;
     }
 
     public fun add_tier<CoinType>(
@@ -131,6 +183,7 @@ module DesignatedDealer {
         tier_upperbound: u64
     ) acquires TierInfo {
         Roles::assert_treasury_compliance(tc_account);
+        assert(exists<TierInfo<CoinType>>(dd_addr), Errors::not_published(EDEALER));
         let tiers = &mut borrow_global_mut<TierInfo<CoinType>>(dd_addr).tiers;
         let number_of_tiers = Vector::length(tiers);
         assert(number_of_tiers + 1 <= MAX_NUM_TIERS, Errors::invalid_argument(EINVALID_TIER_ADDITION));
@@ -140,14 +193,24 @@ module DesignatedDealer {
         };
         Vector::push_back(tiers, tier_upperbound);
     }
-
     spec fun add_tier {
-        pragma opaque = true;
+        pragma opaque;
+
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include AbortsIfNoTierInfo<CoinType>;
+        let tier_info = global<TierInfo<CoinType>>(dd_addr);
+        let number_of_tiers = len(tier_info.tiers);
+        aborts_if number_of_tiers == MAX_NUM_TIERS with Errors::INVALID_ARGUMENT;
+        aborts_if number_of_tiers > 0 && tier_info.tiers[number_of_tiers - 1] >= tier_upperbound with Errors::INVALID_ARGUMENT;
+
         modifies global<TierInfo<CoinType>>(dd_addr);
-        ensures global<TierInfo<CoinType>>(dd_addr).window_start == old(global<TierInfo<CoinType>>(dd_addr)).window_start;
-        ensures global<TierInfo<CoinType>>(dd_addr).window_inflow == old(global<TierInfo<CoinType>>(dd_addr)).window_inflow;
-        ensures len(global<TierInfo<CoinType>>(dd_addr).tiers) == len(old(global<TierInfo<CoinType>>(dd_addr)).tiers) + 1;
-        ensures global<TierInfo<CoinType>>(dd_addr).tiers[len(global<TierInfo<CoinType>>(dd_addr).tiers) - 1] == tier_upperbound;
+        ensures exists<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr) ==
+            TierInfo<CoinType> {
+                window_start: old(global<TierInfo<CoinType>>(dd_addr)).window_start,
+                window_inflow: old(global<TierInfo<CoinType>>(dd_addr)).window_inflow,
+                tiers: concat_vector(old(global<TierInfo<CoinType>>(dd_addr)).tiers, singleton_vector(tier_upperbound)),
+            };
     }
 
     public fun update_tier<CoinType>(
@@ -157,6 +220,7 @@ module DesignatedDealer {
         new_upperbound: u64
     ) acquires TierInfo {
         Roles::assert_treasury_compliance(tc_account);
+        assert(exists<TierInfo<CoinType>>(dd_addr), Errors::not_published(EDEALER));
         let tiers = &mut borrow_global_mut<TierInfo<CoinType>>(dd_addr).tiers;
         let number_of_tiers = Vector::length(tiers);
         assert(tier_index < number_of_tiers, Errors::invalid_argument(EINVALID_TIER_INDEX));
@@ -181,14 +245,24 @@ module DesignatedDealer {
         };
         *Vector::borrow_mut(tiers, tier_index) = new_upperbound;
     }
-
     spec fun update_tier {
-        pragma opaque = true;
+        pragma opaque;
+
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        include AbortsIfNoTierInfo<CoinType>;
+        let tier_info = global<TierInfo<CoinType>>(dd_addr);
+        aborts_if tier_index >= len(tier_info.tiers) with Errors::INVALID_ARGUMENT;
+        aborts_if tier_index > 0 && tier_info.tiers[tier_index - 1] >= new_upperbound with Errors::INVALID_ARGUMENT;
+        aborts_if tier_index + 1 < len(tier_info.tiers) && tier_info.tiers[tier_index + 1] <= new_upperbound with Errors::INVALID_ARGUMENT;
+
         modifies global<TierInfo<CoinType>>(dd_addr);
-        ensures global<TierInfo<CoinType>>(dd_addr).window_start == old(global<TierInfo<CoinType>>(dd_addr)).window_start;
-        ensures global<TierInfo<CoinType>>(dd_addr).window_inflow == old(global<TierInfo<CoinType>>(dd_addr)).window_inflow;
-        ensures len(global<TierInfo<CoinType>>(dd_addr).tiers) == len(old(global<TierInfo<CoinType>>(dd_addr)).tiers);
-        ensures global<TierInfo<CoinType>>(dd_addr).tiers[tier_index] == new_upperbound;
+        ensures exists<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr) ==
+            TierInfo<CoinType> {
+                window_start: old(global<TierInfo<CoinType>>(dd_addr)).window_start,
+                window_inflow: old(global<TierInfo<CoinType>>(dd_addr)).window_inflow,
+                tiers: update_vector(old(global<TierInfo<CoinType>>(dd_addr)).tiers, tier_index, new_upperbound),
+            };
     }
 
     public fun tiered_mint<CoinType>(
@@ -200,6 +274,7 @@ module DesignatedDealer {
         Roles::assert_treasury_compliance(tc_account);
         assert(amount > 0, Errors::invalid_argument(EINVALID_MINT_AMOUNT));
         assert(exists_at(dd_addr), Errors::not_published(EDEALER));
+        assert(exists<TierInfo<CoinType>>(dd_addr), Errors::not_published(EDEALER));
 
         validate_and_record_mint<CoinType>(dd_addr, amount, tier_index);
         // Send ReceivedMintEvent
@@ -213,9 +288,14 @@ module DesignatedDealer {
         );
         Libra::mint<CoinType>(tc_account, amount)
     }
-
     spec fun tiered_mint {
-        // modifies global<TierInfo<CoinType>>@dd_addr.{window_start, window_inflow, mint_event_handle}
+        pragma opaque;
+
+        include TieredMintAbortsIf<CoinType>;
+
+        modifies global<TierInfo<CoinType>>(dd_addr);
+        ensures exists<TierInfo<CoinType>>(dd_addr);
+        ensures global<TierInfo<CoinType>>(dd_addr).tiers == old(global<TierInfo<CoinType>>(dd_addr).tiers);
         let dealer = global<TierInfo<CoinType>>(dd_addr);
         let current_time = LibraTimestamp::spec_now_microseconds();
         ensures old(dealer.window_start) <= dealer.window_start;
@@ -226,13 +306,31 @@ module DesignatedDealer {
         ensures tier_index < len(old(dealer).tiers);
         ensures dealer.window_inflow <= old(dealer).tiers[tier_index];
     }
+    spec schema TieredMintAbortsIf<CoinType> {
+        tc_account: signer;
+        dd_addr: address;
+        amount: u64;
+        tier_index: u64;
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+        aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
+        include AbortsIfNoDealer;
+        include AbortsIfNoTierInfo<CoinType>;
+        let tier_info = global<TierInfo<CoinType>>(dd_addr);
+        aborts_if tier_index >= len(tier_info.tiers) with Errors::INVALID_ARGUMENT;
+        let new_amount = if (LibraTimestamp::spec_now_microseconds() <= tier_info.window_start + ONE_DAY) { tier_info.window_inflow + amount } else { amount };
+        aborts_if new_amount > tier_info.tiers[tier_index] with Errors::INVALID_ARGUMENT;
+        include LibraTimestamp::AbortsIfNoTime;
+        aborts_if !exists<Libra::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::NOT_PUBLISHED;
+        include Libra::MintAbortsIf<CoinType>{value: amount};
+    }
 
     public fun exists_at(dd_addr: address): bool {
         exists<Dealer>(dd_addr)
     }
-    spec schema AbortsIfNotExistAt{
-        dd_addr: address;
-        aborts_if !exists<Dealer>(dd_addr) with Errors::NOT_PUBLISHED;
+    spec fun exists_at {
+        pragma opaque;
+        aborts_if false;
+        ensures result == exists<Dealer>(dd_addr);
     }
 
     /// Validate and record the minting of `amount` of `CoinType` coins against
@@ -241,32 +339,33 @@ module DesignatedDealer {
     /// that amount that can be minted according to the bounds for the `tier_index` tier.
     fun validate_and_record_mint<CoinType>(dd_addr: address, amount: u64, tier_index: u64)
     acquires TierInfo {
-        let tier = borrow_global_mut<TierInfo<CoinType>>(dd_addr);
-        reset_window(tier);
-        let cur_inflow = tier.window_inflow;
-        let new_inflow = cur_inflow + amount;
-        let tiers = &mut tier.tiers;
+        let tier_info = borrow_global_mut<TierInfo<CoinType>>(dd_addr);
+        reset_window(tier_info);
+        let cur_inflow = tier_info.window_inflow;
+        let tiers = &tier_info.tiers;
         let number_of_tiers = Vector::length(tiers);
         assert(tier_index < number_of_tiers, Errors::invalid_argument(EINVALID_TIER_INDEX));
         let tier_upperbound: u64 = *Vector::borrow(tiers, tier_index);
-        assert(new_inflow <= tier_upperbound, Errors::invalid_argument(EINVALID_AMOUNT_FOR_TIER));
-        tier.window_inflow = new_inflow;
+        assert(amount <= tier_upperbound, Errors::invalid_argument(EINVALID_AMOUNT_FOR_TIER));
+        assert(cur_inflow <= tier_upperbound - amount, Errors::invalid_argument(EINVALID_AMOUNT_FOR_TIER));
+        tier_info.window_inflow = cur_inflow + amount;
+    }
+    spec fun validate_and_record_mint {
+        modifies global<TierInfo<CoinType>>(dd_addr);
     }
 
     // If the time window starting at `dealer.window_start` and lasting for
     // `ONE_DAY` has elapsed, resets the window and the inflow and outflow records.
-    fun reset_window<CoinType>(dealer: &mut TierInfo<CoinType>) {
+    fun reset_window<CoinType>(tier_info: &mut TierInfo<CoinType>) {
         let current_time = LibraTimestamp::now_microseconds();
-        if (current_time > dealer.window_start + ONE_DAY) {
-            dealer.window_start = current_time;
-            dealer.window_inflow = 0;
+        if (current_time > ONE_DAY && current_time - ONE_DAY > tier_info.window_start) {
+            tier_info.window_start = current_time;
+            tier_info.window_inflow = 0;
         }
     }
 
     spec module {
         pragma verify = true;
-        define SPEC_MAX_NUM_TIERS(): u64 { 4 }
-        define spec_window_length(): u64 { 86400000000 }
     }
 }
 }

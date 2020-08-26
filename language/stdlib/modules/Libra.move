@@ -159,6 +159,12 @@ module Libra {
         exchange_rate_update_events: EventHandle<ToLBRExchangeRateUpdateEvent>,
     }
 
+    const MAX_SCALING_FACTOR: u64 = 10000000000;
+
+    spec struct CurrencyInfo {
+        invariant 0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR;
+    }
+
     /// A holding area where funds that will subsequently be burned wait while their underlying
     /// assets are moved off-chain.
     /// This resource can only be created by the holder of a `BurnCapability`. An account that
@@ -260,13 +266,17 @@ module Libra {
     /// to be successful, and will fail with `MISSING_DATA` otherwise.
     public fun mint<CoinType>(account: &signer, value: u64): Libra<CoinType>
     acquires CurrencyInfo, MintCapability {
+        assert(
+            exists<MintCapability<CoinType>>(Signer::address_of(account)),
+            Errors::not_published(EMINT_CAPABILITY)
+        );
         mint_with_capability(
             value,
             borrow_global<MintCapability<CoinType>>(Signer::address_of(account))
         )
     }
     spec fun mint {
-        aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account));
+        aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
     }
@@ -435,6 +445,7 @@ module Libra {
         move_to(account, create_preburn<CoinType>(tc_account))
     }
     spec fun publish_preburn_to_account {
+        modifies global<Preburn<CoinType>>(Signer::spec_address_of(account));
         include Roles::AbortsIfNotDesignatedDealer;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
@@ -774,6 +785,7 @@ module Libra {
             !exists<CurrencyInfo<CoinType>>(Signer::address_of(lr_account)),
             Errors::already_published(ECURRENCY_INFO)
         );
+        assert(0 < scaling_factor && scaling_factor <= MAX_SCALING_FACTOR, Errors::invalid_argument(ECURRENCY_INFO));
         move_to(lr_account, CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
@@ -804,6 +816,8 @@ module Libra {
     spec schema RegisterCurrencyAbortsIf<CoinType> {
         lr_account: signer;
         currency_code: vector<u8>;
+        scaling_factor: u64;
+        aborts_if scaling_factor == 0 || scaling_factor > MAX_SCALING_FACTOR with Errors::INVALID_ARGUMENT;
         aborts_if !Roles::spec_has_register_new_currency_privilege_addr(Signer::spec_address_of(lr_account))
             with Errors::REQUIRES_ROLE;
         include CoreAddresses::AbortsIfNotCurrencyInfo{account: lr_account};
@@ -845,7 +859,7 @@ module Libra {
     }
 
     spec fun register_SCS_currency {
-        aborts_if exists<MintCapability<CoinType>>(Signer::spec_address_of(tc_account));
+        aborts_if exists<MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
         include RegisterCurrencyAbortsIf<CoinType>;
         include PublishBurnCapAbortsIfs<CoinType>{account: tc_account};
         ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
