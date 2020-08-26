@@ -272,13 +272,13 @@ var script_decoder_map = map[string]func(*libratypes.Script) (ScriptCall, error)
 
     fn output_decoding_helper(&mut self, type_tag: &TypeTag) -> Result<()> {
         use TypeTag::*;
-        let default_stmt = "value = arg.Value".to_string();
-        let (constructor, expr) = match type_tag {
+        let default_stmt = format!("value = {}(*arg)", Self::quote_type(type_tag));
+        let (constructor, stmt) = match type_tag {
             Bool => ("Bool", default_stmt),
             U8 => ("U8", default_stmt),
             U64 => ("U64", default_stmt),
             U128 => ("U128", default_stmt),
-            Address => ("Address", default_stmt),
+            Address => ("Address", "value = arg.Value".into()),
             Vector(type_tag) => match type_tag.as_ref() {
                 U8 => ("U8Vector", default_stmt),
                 _ => common::type_not_allowed(type_tag),
@@ -288,11 +288,11 @@ var script_decoder_map = map[string]func(*libratypes.Script) (ScriptCall, error)
         writeln!(
             self.out,
             r#"
-func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error) {{
-	if arg, ok := arg.(*libratypes.TransactionArgument__{}); ok {{
-		{}
+func decode_{0}_argument(arg libratypes.TransactionArgument) (value {1}, err error) {{
+	if arg, ok := arg.(*libratypes.TransactionArgument__{2}); ok {{
+		{3}
 	}} else {{
-		err = fmt.Errorf("Was expecting a {} argument")
+		err = fmt.Errorf("Was expecting a {2} argument")
 	}}
 	return
 }}
@@ -300,8 +300,7 @@ func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error
             common::mangle_type(type_tag),
             Self::quote_type(type_tag),
             constructor,
-            expr,
-            constructor,
+            stmt,
         )
     }
 
@@ -372,13 +371,13 @@ func decode_{}_argument(arg libratypes.TransactionArgument) (value {}, err error
     fn quote_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
         use TypeTag::*;
         match type_tag {
-            Bool => format!("&libratypes.TransactionArgument__Bool{{{}}}", name),
-            U8 => format!("&libratypes.TransactionArgument__U8{{{}}}", name),
-            U64 => format!("&libratypes.TransactionArgument__U64{{{}}}", name),
-            U128 => format!("&libratypes.TransactionArgument__U128{{{}}}", name),
+            Bool => format!("(*libratypes.TransactionArgument__Bool)(&{})", name),
+            U8 => format!("(*libratypes.TransactionArgument__U8)(&{})", name),
+            U64 => format!("(*libratypes.TransactionArgument__U64)(&{})", name),
+            U128 => format!("(*libratypes.TransactionArgument__U128)(&{})", name),
             Address => format!("&libratypes.TransactionArgument__Address{{{}}}", name),
             Vector(type_tag) => match type_tag.as_ref() {
-                U8 => format!("&libratypes.TransactionArgument__U8Vector{{{}}}", name),
+                U8 => format!("(*libratypes.TransactionArgument__U8Vector)(&{})", name),
                 _ => common::type_not_allowed(type_tag),
             },
 
