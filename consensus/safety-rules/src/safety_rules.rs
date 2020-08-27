@@ -458,3 +458,16 @@ where
             err
         })
 }
+
+#[cfg(any(test, feature = "fuzzing"))]
+/// This module allows the fuzzer to fuzz the guarded_* request handlers used by safety rules to
+/// handle message requests.
+pub mod fuzzing {
+    use crate::{error::Error, test_utils};
+    use libra_types::epoch_change::EpochChangeProof;
+
+    pub fn fuzz_initialize(proof: EpochChangeProof) -> Result<(), Error> {
+        let mut safety_rules = test_utils::test_safety_rules();
+        safety_rules.guarded_initialize(&proof)
+    }
+}

@@ -106,20 +106,20 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary SafetyRulesInput::Initialize enum instance.
+// This generates an arbitrary EpochChangeProof for the safety rules initialize() method.
 prop_compose! {
-    pub fn arb_safety_rules_input_initialize(
+    pub fn arb_initialize_input(
     )(
         more in any::<bool>(),
         ledger_info_with_sigs in prop::collection::vec(
             any::<LedgerInfoWithSignatures>(),
             0..MAX_NUM_LEDGER_INFO_WITH_SIGS
         ),
-    ) -> SafetyRulesInput {
-        SafetyRulesInput::Initialize(Box::new(EpochChangeProof::new(
+    ) -> EpochChangeProof {
+        EpochChangeProof::new(
             ledger_info_with_sigs,
             more,
-        )))
+        )
     }
 }
 
@@ -255,7 +255,7 @@ fn arb_block_type() -> impl Strategy<Value = BlockType> {
 pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
     prop_oneof![
         Just(SafetyRulesInput::ConsensusState),
-        arb_safety_rules_input_initialize(),
+        arb_initialize_input().prop_map(|input| SafetyRulesInput::Initialize(Box::new(input))),
         arb_safety_rules_input_construct_and_sign_vote(),
         arb_safety_rules_input_sign_proposal(),
         arb_safety_rules_input_sign_timeout(),
@@ -266,15 +266,23 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 // at some time in the future and only discovered when a fuzz test fails).
 #[cfg(test)]
 mod tests {
-    use crate::{fuzz_handle_message, fuzzing_utils::arb_safety_rules_input};
+    use crate::{
+        fuzz_handle_message, fuzz_initialize,
+        fuzzing_utils::{arb_initialize_input, arb_safety_rules_input},
+    };
     use proptest::prelude::*;
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]
 
         #[test]
-        fn handle_message_proptest(safety_rules_input in arb_safety_rules_input()) {
-            let _ = fuzz_handle_message(safety_rules_input);
+        fn handle_message_proptest(input in arb_safety_rules_input()) {
+            let _ = fuzz_handle_message(input);
+        }
+
+        #[test]
+        fn initialize_proptest(input in arb_initialize_input()) {
+            let _ = fuzz_initialize(input);
         }
     }
 }

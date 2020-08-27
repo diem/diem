@@ -223,10 +223,14 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
 }
 
 /// Returns a simple serializer for testing purposes.
-pub fn test_serializer() -> SerializerService {
+pub fn test_safety_rules() -> SafetyRules {
     let signer = ValidatorSigner::from_int(0);
     let storage = test_storage(&signer);
-    let safety_rules = SafetyRules::new(storage, true);
+    SafetyRules::new(storage, true)
+}
 
+/// Returns a simple serializer for testing purposes.
+pub fn test_serializer() -> SerializerService {
+    let safety_rules = test_safety_rules();
     SerializerService::new(safety_rules)
 }
