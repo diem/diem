@@ -367,7 +367,7 @@ fn setup_node<T: LibraInterface + Clone>(
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
-        key_manager_config.chain_id,
+        libra_types::chain_id::ChainId::test(),
     );
 
     Node::new(executor, libra_test_harness, key_manager, time)
@@ -479,8 +479,6 @@ fn test_manual_rotation_on_chain() {
 }
 
 fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
-    let (node_config, _) = get_test_configs();
-
     let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
     let genesis_config = node.libra.retrieve_validator_config(owner_account).unwrap();
     let genesis_info = node.libra.retrieve_validator_info(owner_account).unwrap();
@@ -505,7 +503,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         Vec::new(),
         Vec::new(),
         node.time.now() + TXN_EXPIRATION_SECS,
-        node_config.base.chain_id,
+        libra_types::chain_id::ChainId::test(),
     );
     let txn1 = txn1
         .sign(&operator_privkey, operator_privkey.public_key())

@@ -1,5 +1,4 @@
 base:
-    chain_id: "TESTING"
     data_dir: "/opt/libra/data"
     role: "full_node"
     waypoint:

@@ -14,6 +14,7 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_management::constants::{COMMON_NS, LAYOUT};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_temppath::TempPath;
+use libra_types::chain_id::ChainId;
 use std::path::{Path, PathBuf};
 
 const LIBRA_ROOT_NS: &str = "libra_root";
@@ -129,7 +130,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
                 &(index.to_string() + OWNER_SHARED_NS),
                 validator_network_address,
                 fullnode_network_address,
-                self.template.base.chain_id,
+                ChainId::test(),
                 &local_ns,
                 &remote_ns,
             )
@@ -163,12 +164,12 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         genesis_path.create_as_file().unwrap();
         let genesis = self
             .storage_helper
-            .genesis(self.template.base.chain_id, genesis_path.path())
+            .genesis(ChainId::test(), genesis_path.path())
             .unwrap();
 
         let _ = self
             .storage_helper
-            .create_and_insert_waypoint(self.template.base.chain_id, &local_ns)
+            .create_and_insert_waypoint(ChainId::test(), &local_ns)
             .unwrap();
         let output = self
             .storage_helper
