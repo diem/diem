@@ -91,18 +91,6 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary generic input for the handle_message() method call.
-prop_compose! {
-    pub fn arb_handle_message_input(
-    )(
-        verify_vote_proposal_sig in any::<bool>(),
-        signer_byte in any::<u8>(),
-        safety_rules_input in arb_safety_rules_input(),
-    ) -> (SafetyRulesInput, bool, u8) {
-        (safety_rules_input, verify_vote_proposal_sig, signer_byte)
-    }
-}
-
 // This generates an arbitrary SafetyRulesInput::ConstructAndSignVote enum instance.
 prop_compose! {
     pub fn arb_safety_rules_input_construct_and_sign_vote(
@@ -264,7 +252,7 @@ fn arb_block_type() -> impl Strategy<Value = BlockType> {
 }
 
 // This generates an arbitrary SafetyRulesInput enum.
-fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
+pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
     prop_oneof![
         Just(SafetyRulesInput::ConsensusState),
         arb_safety_rules_input_initialize(),
@@ -278,21 +266,15 @@ fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 // at some time in the future and only discovered when a fuzz test fails).
 #[cfg(test)]
 mod tests {
-    use crate::{fuzzing_utils::arb_handle_message_input, test_utils};
+    use crate::{fuzz_handle_message, fuzzing_utils::arb_safety_rules_input};
     use proptest::prelude::*;
 
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(10))]
 
         #[test]
-        fn handle_message_proptest(safety_rules_input in arb_handle_message_input()) {
-            // Create a safety rules serializer test instance for fuzzing
-            let mut serializer_service = test_utils::test_serializer();
-
-            // LCS encode the safety_rules_input and fuzz the handle_message() method
-            if let Ok(safety_rules_input) = lcs::to_bytes(&safety_rules_input) {
-                let _ = serializer_service.handle_message(safety_rules_input);
-            };
+        fn handle_message_proptest(safety_rules_input in arb_safety_rules_input()) {
+            let _ = fuzz_handle_message(safety_rules_input);
         }
     }
 }

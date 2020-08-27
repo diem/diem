@@ -118,3 +118,24 @@ impl TSerializerClient for LocalService {
             .handle_message(input_message)
     }
 }
+
+#[cfg(any(test, feature = "fuzzing"))]
+/// This module allows the fuzzer to fuzz the handle_message() method exposed by the serializer
+/// service.
+pub mod fuzzing {
+    use crate::{serializer::SafetyRulesInput, test_utils, Error};
+
+    pub fn fuzz_handle_message(safety_rules_input: SafetyRulesInput) -> Result<Vec<u8>, Error> {
+        // Create a safety rules serializer test instance for fuzzing
+        let mut serializer_service = test_utils::test_serializer();
+
+        // LCS encode the safety_rules_input and fuzz the handle_message() method
+        if let Ok(safety_rules_input) = lcs::to_bytes(&safety_rules_input) {
+            serializer_service.handle_message(safety_rules_input)
+        } else {
+            Err(Error::SerializationError(
+                "Unable to serialize safety rules input for fuzzer!".into(),
+            ))
+        }
+    }
+}
