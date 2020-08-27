@@ -93,7 +93,7 @@ pub fn get_bin<S: AsRef<str>>(bin_name: S) -> PathBuf {
 }
 
 static LIBRA_NODE: Lazy<bool> = Lazy::new(|| {
-    let args = vec!["build", "--features", "enable-inject-error"];
+    let args = vec!["build"];
     let mut path = workspace_root();
     path.push("libra-node/");
     info!("Building libra-node binary");
@@ -101,9 +101,9 @@ static LIBRA_NODE: Lazy<bool> = Lazy::new(|| {
         .current_dir(path)
         .args(&args)
         .output()
-        .expect("Failed to build libra node with enable-inject-error");
+        .expect("Failed to build libra node");
     if cargo_build.status.success() {
-        info!("Finished building libra-node with enable-inject-error");
+        info!("Finished building libra-node");
         true
     } else {
         error!("Output: {:?}", cargo_build);

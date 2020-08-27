@@ -60,10 +60,6 @@ fn main() {
         }
     }
 
-    if cfg!(feature = "enable-inject-error") {
-        warn!("Running with enable-inject-error!");
-    }
-
     let _node_handle = libra_node::main_node::setup_environment(&config);
     let term = Arc::new(AtomicBool::new(false));
 

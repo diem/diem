@@ -839,7 +839,6 @@ dependencies = [
  "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "inject-error 0.1.0",
  "itertools 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
@@ -2102,17 +2101,6 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "unindent 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "inject-error"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-workspace-hack 0.1.0",
- "quote 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "syn 1.0.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
