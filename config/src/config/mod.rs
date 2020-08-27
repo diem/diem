@@ -4,7 +4,7 @@
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt, fs,
     fs::File,
     io::{Read, Write},
@@ -84,6 +84,8 @@ pub struct NodeConfig {
     pub upstream: UpstreamConfig,
     #[serde(default)]
     pub validator_network: Option<NetworkConfig>,
+    #[serde(default)]
+    pub failpoints: Option<HashMap<String, String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

@@ -55,7 +55,7 @@ impl LibraNode {
     /// substantially longer time than the networking ports are reserved. Calling prior to
     /// reserving those ports will reduce the liklihood of issues.
     pub fn prepare() {
-        Command::new(workspace_builder::get_libra_node_with_inject_error());
+        Command::new(workspace_builder::get_libra_node_with_failpoints());
     }
 
     pub fn launch(
@@ -73,7 +73,7 @@ impl LibraNode {
             RoleType::Validator => Some(config.validator_network.as_ref().unwrap().peer_id()),
             RoleType::FullNode => None,
         };
-        let mut node_command = Command::new(workspace_builder::get_libra_node_with_inject_error());
+        let mut node_command = Command::new(workspace_builder::get_libra_node_with_failpoints());
         node_command
             .current_dir(workspace_builder::workspace_root())
             .arg("-f")

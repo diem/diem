@@ -28,6 +28,7 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
+use fail::fail_point;
 use libra_logger::prelude::*;
 use libra_time::duration_since_epoch;
 use libra_trace::prelude::*;
@@ -463,6 +464,9 @@ impl RoundManager {
     /// 4. In case a validator chooses to vote, send the vote to the representatives at the next
     /// round.
     async fn process_proposal(&mut self, proposal: Block) -> Result<()> {
+        fail_point!("process_proposal", |_| {
+            Err(anyhow::anyhow!("Injected error in process_proposal"))
+        });
         ensure!(
             self.proposer_election.is_valid_proposal(&proposal),
             "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",

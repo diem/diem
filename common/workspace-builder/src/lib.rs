@@ -16,7 +16,7 @@ static WORKSPACE_BUILT: Lazy<bool> = Lazy::new(|| {
     info!("Building project binaries");
     let args = if cfg!(debug_assertions) {
         // special case: excluding cluster-test as it exports no-struct-opt feature that poisons everything
-        // use get_libra_node_with_inject_error to get libra-node binary
+        // use get_libra_node_with_failpoints to get libra-node binary
         vec![
             "build",
             "--all",
@@ -93,17 +93,17 @@ pub fn get_bin<S: AsRef<str>>(bin_name: S) -> PathBuf {
 }
 
 static LIBRA_NODE: Lazy<bool> = Lazy::new(|| {
-    let args = vec!["build"];
+    let args = vec!["build", "--features", "failpoints"];
     let mut path = workspace_root();
     path.push("libra-node/");
-    info!("Building libra-node binary");
+    info!("Building libra-node binary with failpoints");
     let cargo_build = Command::new("cargo")
         .current_dir(path)
         .args(&args)
         .output()
         .expect("Failed to build libra node");
     if cargo_build.status.success() {
-        info!("Finished building libra-node");
+        info!("Finished building libra-node with failpoints");
         true
     } else {
         error!("Output: {:?}", cargo_build);
@@ -111,9 +111,9 @@ static LIBRA_NODE: Lazy<bool> = Lazy::new(|| {
     }
 });
 
-pub fn get_libra_node_with_inject_error() -> PathBuf {
+pub fn get_libra_node_with_failpoints() -> PathBuf {
     if !*LIBRA_NODE {
-        panic!("Failed to build libra node with enable-inject-error");
+        panic!("Failed to build libra node with failpoints");
     }
     let bin_path = build_dir().join(format!("{}{}", "libra-node", env::consts::EXE_SUFFIX));
     if !bin_path.exists() {

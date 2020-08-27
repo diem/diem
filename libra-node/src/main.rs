@@ -59,6 +59,16 @@ fn main() {
             setup_metrics(peer_id, &config);
         }
     }
+    if fail::has_failpoints() {
+        warn!("Failpoints is enabled");
+        if let Some(failpoints) = &config.failpoints {
+            for (point, actions) in failpoints {
+                fail::cfg(point, actions).expect("fail to set actions for failpoint");
+            }
+        }
+    } else if config.failpoints.is_some() {
+        warn!("failpoints is set in config, but the binary doesn't compile with this feature");
+    }
 
     let _node_handle = libra_node::main_node::setup_environment(&config);
     let term = Arc::new(AtomicBool::new(false));

@@ -10,6 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
+fail = "0.4.0"
 futures = "0.3.5"
 jemallocator = { version = "0.3.2", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 rayon = "1.3.1"
@@ -44,3 +45,4 @@ subscription-service = { path = "../common/subscription-service", version = "0.1
 [features]
 default = []
 assert-private-keys-not-cloneable = ["libra-crypto/assert-private-keys-not-cloneable"]
+failpoints = ["fail/failpoints", "consensus/failpoints"]
