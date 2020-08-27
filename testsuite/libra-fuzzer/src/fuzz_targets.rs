@@ -42,6 +42,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(network_noise::NetworkNoiseResponder::default()),
         Box::new(network_noise::NetworkNoiseStream::default()),
         // Safety Rules Server (LSR)
+        Box::new(safety_rules::SafetyRulesConstructAndSignVote::default()),
         Box::new(safety_rules::SafetyRulesInitialize::default()),
         Box::new(safety_rules::SafetyRulesHandleMessage::default()),
         // Secure JSON RPC Client

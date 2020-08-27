@@ -91,18 +91,18 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary SafetyRulesInput::ConstructAndSignVote enum instance.
+// This generates an arbitrary MaybeSignedVoteProposal for the safety rules
+// construct_and_sign_vote() method.
 prop_compose! {
-    pub fn arb_safety_rules_input_construct_and_sign_vote(
+    pub fn arb_construct_and_sign_vote_input(
     )(
         signature in arb_ed25519_signature(),
         vote_proposal in arb_vote_proposal(),
-    ) -> SafetyRulesInput {
-        let maybe_signed_voted_proposal = MaybeSignedVoteProposal {
+    ) -> MaybeSignedVoteProposal {
+        MaybeSignedVoteProposal {
             vote_proposal,
             signature
-        };
-        SafetyRulesInput::ConstructAndSignVote(Box::new(maybe_signed_voted_proposal))
+        }
     }
 }
 
@@ -256,7 +256,8 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
     prop_oneof![
         Just(SafetyRulesInput::ConsensusState),
         arb_initialize_input().prop_map(|input| SafetyRulesInput::Initialize(Box::new(input))),
-        arb_safety_rules_input_construct_and_sign_vote(),
+        arb_construct_and_sign_vote_input()
+            .prop_map(|input| { SafetyRulesInput::ConstructAndSignVote(Box::new(input)) }),
         arb_safety_rules_input_sign_proposal(),
         arb_safety_rules_input_sign_timeout(),
     ]
@@ -267,8 +268,10 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        fuzz_handle_message, fuzz_initialize,
-        fuzzing_utils::{arb_initialize_input, arb_safety_rules_input},
+        fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize,
+        fuzzing_utils::{
+            arb_construct_and_sign_vote_input, arb_initialize_input, arb_safety_rules_input,
+        },
     };
     use proptest::prelude::*;
 
@@ -283,6 +286,11 @@ mod tests {
         #[test]
         fn initialize_proptest(input in arb_initialize_input()) {
             let _ = fuzz_initialize(input);
+        }
+
+        #[test]
+        fn construct_and_sign_vote_proptest(input in arb_construct_and_sign_vote_input()) {
+            let _ = fuzz_construct_and_sign_vote(input);
         }
     }
 }

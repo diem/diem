@@ -28,7 +28,10 @@ pub use crate::{
 pub mod fuzzing_utils;
 
 #[cfg(any(test, feature = "fuzzing"))]
-pub use crate::{safety_rules::fuzzing::fuzz_initialize, serializer::fuzzing::fuzz_handle_message};
+pub use crate::{
+    safety_rules::fuzzing::{fuzz_construct_and_sign_vote, fuzz_initialize},
+    serializer::fuzzing::fuzz_handle_message,
+};
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test_utils;
