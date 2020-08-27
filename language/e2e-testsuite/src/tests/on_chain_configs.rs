@@ -163,7 +163,7 @@ fn update_script_allow_list() {
 
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(KeptVMStatus::DeserializationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
 
     // LR append this hash to the allow list
@@ -190,6 +190,6 @@ fn update_script_allow_list() {
 
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(KeptVMStatus::DeserializationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
 }

@@ -411,12 +411,8 @@ pub enum VMStatusView {
         function_index: u16,
         code_offset: u16,
     },
-    #[serde(rename = "verification_error")]
-    VerificationError,
-    #[serde(rename = "deserialization_error")]
-    DeserializationError,
-    #[serde(rename = "publishing_failure")]
-    PublishingFailure,
+    #[serde(rename = "miscellaneous_error")]
+    MiscellaneousError,
 }
 
 impl From<&KeptVMStatus> for VMStatusView {
@@ -437,8 +433,7 @@ impl From<&KeptVMStatus> for VMStatusView {
                 function_index: *function,
                 code_offset: *code_offset,
             },
-            KeptVMStatus::VerificationError => VMStatusView::VerificationError,
-            KeptVMStatus::DeserializationError => VMStatusView::DeserializationError,
+            KeptVMStatus::MiscellaneousError => VMStatusView::MiscellaneousError,
         }
     }
 }

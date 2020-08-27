@@ -200,40 +200,24 @@ Object representing execution failure while executing Move code, but not raised 
 | function_index | unsigned int16 | The function index in the `location` where the error occurred |
 | code_offset    | unsigned int16 | The code offset in the function at `function_index` where the execution failure happened |
 
-#### verification_error
-Transaction verification error.
+#### miscellaneous_error
+A general error indicating something went wrong with the transaction outside of it's execution. This could include but is not limited to
+
+* An error caused by the script/module, possibly:
+  * A bytecode verification error
+  * A failure to deserialize the transaction
+* An error caused by the transaction arguments, possibly:
+  * A failure to deserialize the arguments for the given type
+  * An argument's type is not valid for the given script
+
+Note that this explicitly excludes any invariant violation coming from inside of the VM. A transaction that hits any such invariant violation error will be discarded.
 
 ```
-{type: "verification_error"}
-```
-
-| Name                      | Type           | Description                                                           |
-|---------------------------|----------------|-----------------------------------------------------------------------|
-| type                      | string         | constant of string "verification_error"                              |
-
-
-#### deserialization_error
-
-Fail to deserialize transaction.
-
-```
-{type: "deserialization_error"}
+{type: "miscellaneous_error"}
 ```
 
 | Name                      | Type           | Description                                                           |
 |---------------------------|----------------|-----------------------------------------------------------------------|
-| type                      | string         | constant of string "deserialization_error"                              |
-
-#### publishing_failure
-
-Fail to publish transaction.
-
-```
-{type: "publishing_failure"}
-```
-
-| Name                      | Type           | Description                                                           |
-|---------------------------|----------------|-----------------------------------------------------------------------|
-| type                      | string         | constant of string "publishing_failure"                              |
+| type                      | string         | constant of string "miscellaneous_error"                              |
 
 [1]: https://libra.github.io/libra/libra_types/transaction/metadata/enum.Metadata.html "Transaction Metadata"

@@ -43,7 +43,7 @@ fn failed_transaction_cleanup_test() {
     assert_eq!(
         out1.status().status(),
         // StatusCode::TYPE_MISMATCH
-        Ok(KeptVMStatus::VerificationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
 
     // Invariant violations should be discarded and not charged.

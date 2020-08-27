@@ -864,7 +864,7 @@ mod test_helpers {
             HashValue::zero(),
             HashValue::zero(),
             0,
-            KeptVMStatus::VerificationError,
+            KeptVMStatus::MiscellaneousError,
         );
 
         AccountStateProof::new(

@@ -56,7 +56,7 @@ fn bad_module_address() {
     let output = executor.execute_transaction(txn);
     match output.status() {
         TransactionStatus::Keep(status) => {
-            assert!(status == &KeptVMStatus::VerificationError);
+            assert!(status == &KeptVMStatus::MiscellaneousError);
             // assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER);
         }
         vm_status => panic!("Unexpected verification status: {:?}", vm_status),
@@ -107,7 +107,7 @@ fn duplicate_module() {
     let output2 = executor.execute_transaction(txn2);
     assert!(transaction_status_eq(
         &output2.status(),
-        &TransactionStatus::Keep(KeptVMStatus::VerificationError),
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError),
     ));
 }
 

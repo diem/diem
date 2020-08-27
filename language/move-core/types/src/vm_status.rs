@@ -83,8 +83,7 @@ pub enum KeptVMStatus {
         function: u16,
         code_offset: u16,
     },
-    VerificationError,
-    DeserializationError,
+    MiscellaneousError,
 }
 
 pub type DiscardedVMStatus = StatusCode;
@@ -170,12 +169,12 @@ impl VMStatus {
                     // If the VM encountered an invalid internal state, we should discard the transaction.
                     StatusType::InvariantViolation => Err(code),
                     // A transaction that publishes code that cannot be verified will be charged.
-                    StatusType::Verification => Ok(KeptVMStatus::VerificationError),
+                    StatusType::Verification => Ok(KeptVMStatus::MiscellaneousError),
                     // If we are able to decode the`SignedTransaction`, but failed to decode
                     // `SingedTransaction.raw_transaction.payload` (i.e., the transaction script),
                     // there should be a charge made to that user's account for the gas fees related
                     // to decoding, running the prologue etc.
-                    StatusType::Deserialization => Ok(KeptVMStatus::DeserializationError),
+                    StatusType::Deserialization => Ok(KeptVMStatus::MiscellaneousError),
                     // Any error encountered during the execution of the transaction will charge gas.
                     StatusType::Execution => Ok(KeptVMStatus::ExecutionFailure {
                         location: AbortLocation::Script,
@@ -221,8 +220,7 @@ impl fmt::Display for KeptVMStatus {
         match self {
             KeptVMStatus::Executed => write!(f, "EXECUTED"),
             KeptVMStatus::OutOfGas => write!(f, "OUT_OF_GAS"),
-            KeptVMStatus::VerificationError => write!(f, "VERIFICATION_ERROR"),
-            KeptVMStatus::DeserializationError => write!(f, "DESERIALIZATION_ERROR"),
+            KeptVMStatus::MiscellaneousError => write!(f, "MISCELLANEOUS_ERROR"),
             KeptVMStatus::MoveAbort(location, code) => {
                 write!(f, "ABORTED with code {} in {}", code, location)
             }
@@ -285,8 +283,7 @@ impl fmt::Debug for KeptVMStatus {
                 .field("function_definition", function)
                 .field("code_offset", code_offset)
                 .finish(),
-            KeptVMStatus::VerificationError => write!(f, "VERIFICATION_ERROR"),
-            KeptVMStatus::DeserializationError => write!(f, "DESERIALIZATION_ERROR"),
+            KeptVMStatus::MiscellaneousError => write!(f, "MISCELLANEOUS_ERROR"),
         }
     }
 }

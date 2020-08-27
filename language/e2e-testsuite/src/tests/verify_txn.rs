@@ -331,7 +331,7 @@ fn verify_simple_payment() {
     assert_eq!(
         executor.execute_transaction(txn).status(),
         // StatusCode::TYPE_MISMATCH
-        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
 
     // Create a new transaction that has no argument.
@@ -346,7 +346,7 @@ fn verify_simple_payment() {
     assert_eq!(
         executor.execute_transaction(txn).status(),
         // StatusCode::TYPE_MISMATCH
-        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
 }
 
@@ -402,7 +402,7 @@ pub fn test_arbitrary_script_execution() {
     assert_eq!(
         status.status(),
         // StatusCode::CODE_DESERIALIZATION_ERROR
-        Ok(KeptVMStatus::DeserializationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
 }
 
@@ -569,7 +569,7 @@ pub fn test_open_publishing_invalid_address() {
     let output = executor.execute_transaction(txn);
     if let TransactionStatus::Keep(status) = output.status() {
         // assert!(status.status_code() == StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER)
-        assert!(status == &KeptVMStatus::VerificationError);
+        assert!(status == &KeptVMStatus::MiscellaneousError);
     } else {
         panic!("Unexpected execution status: {:?}", output)
     };

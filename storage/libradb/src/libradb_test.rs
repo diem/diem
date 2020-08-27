@@ -465,7 +465,7 @@ fn test_get_latest_tree_state() {
         HashValue::random(),
         HashValue::random(),
         0,
-        KeptVMStatus::VerificationError,
+        KeptVMStatus::MiscellaneousError,
     );
     put_transaction_info(&db, 0, &txn_info);
     let bootstrapped = db.get_latest_tree_state().unwrap();

@@ -12,6 +12,11 @@ Please add the API change in the following format:
 - <describle another change of the API>
 
 ```
+## [breaking] 2020-09-09
+
+- In `KeptVMStatus`, `VerificationError` and `DeserializationError` were merged into `MiscellaneousError`
+- This merger was reflected in `VMStatusView`
+- [See PR #5798](https://github.com/libra/libra/pull/5798)
 
 ## 2020-09-02 Add `address` to `get_account` response.
 - Adding address field to get_account response.

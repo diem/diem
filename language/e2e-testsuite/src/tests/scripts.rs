@@ -47,7 +47,7 @@ fn script_code_unverifiable() {
     assert_eq!(
         status.status(),
         // StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK
-        Ok(KeptVMStatus::VerificationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -121,7 +121,7 @@ fn script_none_existing_module_dep() {
     assert_eq!(
         status.status(),
         //StatusCode::LINKER_ERROR
-        Ok(KeptVMStatus::VerificationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -195,7 +195,7 @@ fn script_non_existing_function_dep() {
     assert_eq!(
         status.status(),
         // StatusCode::LOOKUP_FAILED
-        Ok(KeptVMStatus::VerificationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -270,7 +270,7 @@ fn script_bad_sig_function_dep() {
     assert_eq!(
         status.status(),
         // StatusCode::TYPE_MISMATCH
-        Ok(KeptVMStatus::VerificationError)
+        Ok(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -333,7 +333,7 @@ fn script_type_argument_module_does_not_exist() {
     let status = output.status();
     assert_eq!(
         status,
-        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
@@ -396,7 +396,7 @@ fn script_nested_type_argument_module_does_not_exist() {
     let status = output.status();
     assert_eq!(
         status,
-        &TransactionStatus::Keep(KeptVMStatus::VerificationError)
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
     );
     executor.apply_write_set(output.write_set());
 
