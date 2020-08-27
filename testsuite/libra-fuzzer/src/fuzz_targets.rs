@@ -45,6 +45,7 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(safety_rules::SafetyRulesConstructAndSignVote::default()),
         Box::new(safety_rules::SafetyRulesInitialize::default()),
         Box::new(safety_rules::SafetyRulesHandleMessage::default()),
+        Box::new(safety_rules::SafetyRulesSignProposal::default()),
         // Secure JSON RPC Client
         Box::new(secure_json_rpc_client::SecureJsonRpcSubmitTransaction::default()),
         Box::new(secure_json_rpc_client::SecureJsonRpcGetAccountState::default()),

@@ -464,7 +464,9 @@ where
 /// handle message requests.
 pub mod fuzzing {
     use crate::{error::Error, test_utils};
-    use consensus_types::{vote::Vote, vote_proposal::MaybeSignedVoteProposal};
+    use consensus_types::{
+        block::Block, block_data::BlockData, vote::Vote, vote_proposal::MaybeSignedVoteProposal,
+    };
     use libra_types::epoch_change::EpochChangeProof;
 
     pub fn fuzz_initialize(proof: EpochChangeProof) -> Result<(), Error> {
@@ -477,5 +479,10 @@ pub mod fuzzing {
     ) -> Result<Vote, Error> {
         let mut safety_rules = test_utils::test_safety_rules();
         safety_rules.guarded_construct_and_sign_vote(&maybe_signed_vote_proposal)
+    }
+
+    pub fn fuzz_sign_proposal(block_data: BlockData) -> Result<Block, Error> {
+        let mut safety_rules = test_utils::test_safety_rules();
+        safety_rules.guarded_sign_proposal(block_data)
     }
 }

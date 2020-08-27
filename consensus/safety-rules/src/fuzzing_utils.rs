@@ -123,16 +123,6 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary SafetyRulesInput::SignProposal enum instance.
-prop_compose! {
-    pub fn arb_safety_rules_input_sign_proposal(
-    )(
-        block_data in arb_block_data(),
-    ) -> SafetyRulesInput {
-        SafetyRulesInput::SignProposal(Box::new(block_data))
-    }
-}
-
 // This generates an arbitrary SafetyRulesInput::SignTimeout enum instance.
 prop_compose! {
     pub fn arb_safety_rules_input_sign_timeout(
@@ -258,7 +248,7 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
         arb_initialize_input().prop_map(|input| SafetyRulesInput::Initialize(Box::new(input))),
         arb_construct_and_sign_vote_input()
             .prop_map(|input| { SafetyRulesInput::ConstructAndSignVote(Box::new(input)) }),
-        arb_safety_rules_input_sign_proposal(),
+        arb_block_data().prop_map(|input| { SafetyRulesInput::SignProposal(Box::new(input)) }),
         arb_safety_rules_input_sign_timeout(),
     ]
 }
@@ -268,9 +258,10 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize,
+        fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
         fuzzing_utils::{
-            arb_construct_and_sign_vote_input, arb_initialize_input, arb_safety_rules_input,
+            arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
+            arb_safety_rules_input,
         },
     };
     use proptest::prelude::*;
@@ -291,6 +282,11 @@ mod tests {
         #[test]
         fn construct_and_sign_vote_proptest(input in arb_construct_and_sign_vote_input()) {
             let _ = fuzz_construct_and_sign_vote(input);
+        }
+
+        #[test]
+        fn sign_proposal_proptest(input in arb_block_data()) {
+            let _ = fuzz_sign_proposal(input);
         }
     }
 }

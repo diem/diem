@@ -4,9 +4,10 @@
 use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use libra_proptest_helpers::ValueGenerator;
 use safety_rules::{
-    fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize,
+    fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
     fuzzing_utils::{
-        arb_construct_and_sign_vote_input, arb_initialize_input, arb_safety_rules_input,
+        arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
+        arb_safety_rules_input,
     },
 };
 
@@ -66,5 +67,24 @@ impl FuzzTargetImpl for SafetyRulesConstructAndSignVote {
         let maybe_signed_vote_proposal =
             fuzz_data_to_value(data, arb_construct_and_sign_vote_input());
         let _ = fuzz_construct_and_sign_vote(maybe_signed_vote_proposal);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct SafetyRulesSignProposal;
+
+/// This implementation will fuzz the sign_proposal() method of safety rules.
+impl FuzzTargetImpl for SafetyRulesSignProposal {
+    fn description(&self) -> &'static str {
+        "Safety rules: sign_proposal()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_block_data()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let block_data = fuzz_data_to_value(data, arb_block_data());
+        let _ = fuzz_sign_proposal(block_data);
     }
 }
