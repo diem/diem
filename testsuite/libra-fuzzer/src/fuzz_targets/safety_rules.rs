@@ -5,9 +5,10 @@ use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use libra_proptest_helpers::ValueGenerator;
 use safety_rules::{
     fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
+    fuzz_sign_timeout,
     fuzzing_utils::{
         arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
-        arb_safety_rules_input,
+        arb_safety_rules_input, arb_timeout,
     },
 };
 
@@ -86,5 +87,24 @@ impl FuzzTargetImpl for SafetyRulesSignProposal {
     fn fuzz(&self, data: &[u8]) {
         let block_data = fuzz_data_to_value(data, arb_block_data());
         let _ = fuzz_sign_proposal(block_data);
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct SafetyRulesSignTimeout;
+
+/// This implementation will fuzz the sign_timeout() method of safety rules.
+impl FuzzTargetImpl for SafetyRulesSignTimeout {
+    fn description(&self) -> &'static str {
+        "Safety rules: sign_timeout()"
+    }
+
+    fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
+        Some(corpus_from_strategy(arb_timeout()))
+    }
+
+    fn fuzz(&self, data: &[u8]) {
+        let block_data = fuzz_data_to_value(data, arb_timeout());
+        let _ = fuzz_sign_timeout(block_data);
     }
 }

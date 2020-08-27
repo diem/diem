@@ -465,8 +465,10 @@ where
 pub mod fuzzing {
     use crate::{error::Error, test_utils};
     use consensus_types::{
-        block::Block, block_data::BlockData, vote::Vote, vote_proposal::MaybeSignedVoteProposal,
+        block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+        vote_proposal::MaybeSignedVoteProposal,
     };
+    use libra_crypto::ed25519::Ed25519Signature;
     use libra_types::epoch_change::EpochChangeProof;
 
     pub fn fuzz_initialize(proof: EpochChangeProof) -> Result<(), Error> {
@@ -484,5 +486,10 @@ pub mod fuzzing {
     pub fn fuzz_sign_proposal(block_data: BlockData) -> Result<Block, Error> {
         let mut safety_rules = test_utils::test_safety_rules();
         safety_rules.guarded_sign_proposal(block_data)
+    }
+
+    pub fn fuzz_sign_timeout(timeout: Timeout) -> Result<Ed25519Signature, Error> {
+        let mut safety_rules = test_utils::test_safety_rules();
+        safety_rules.guarded_sign_timeout(&timeout)
     }
 }

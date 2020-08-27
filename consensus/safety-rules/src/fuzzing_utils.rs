@@ -123,14 +123,14 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary SafetyRulesInput::SignTimeout enum instance.
+// This generates an arbitrary Timeout.
 prop_compose! {
-    pub fn arb_safety_rules_input_sign_timeout(
+    pub fn arb_timeout(
     )(
         epoch in any::<u64>(),
         round in any::<u64>(),
-    ) -> SafetyRulesInput {
-        SafetyRulesInput::SignTimeout(Box::new(Timeout::new(epoch, round)))
+    ) -> Timeout {
+        Timeout::new(epoch, round)
     }
 }
 
@@ -249,7 +249,7 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
         arb_construct_and_sign_vote_input()
             .prop_map(|input| { SafetyRulesInput::ConstructAndSignVote(Box::new(input)) }),
         arb_block_data().prop_map(|input| { SafetyRulesInput::SignProposal(Box::new(input)) }),
-        arb_safety_rules_input_sign_timeout(),
+        arb_timeout().prop_map(|input| { SafetyRulesInput::SignTimeout(Box::new(input)) }),
     ]
 }
 
@@ -259,9 +259,10 @@ pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
 mod tests {
     use crate::{
         fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
+        fuzz_sign_timeout,
         fuzzing_utils::{
             arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
-            arb_safety_rules_input,
+            arb_safety_rules_input, arb_timeout,
         },
     };
     use proptest::prelude::*;
@@ -287,6 +288,11 @@ mod tests {
         #[test]
         fn sign_proposal_proptest(input in arb_block_data()) {
             let _ = fuzz_sign_proposal(input);
+        }
+
+        #[test]
+        fn sign_timeout_proptest(input in arb_timeout()) {
+            let _ = fuzz_sign_timeout(input);
         }
     }
 }
