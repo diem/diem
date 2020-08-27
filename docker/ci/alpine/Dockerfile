@@ -1,5 +1,5 @@
 #while using circle we'll use circle's base image.
-FROM alpine:latest AS setup_ci_alpine
+FROM alpine:3.12.0@sha256:a15790640a6690aa1730c38cf0a440e2aa44aaca9b0e8931a9f2b0d7cc90fd65 AS setup_ci_alpine
 
 WORKDIR /libra
 COPY rust-toolchain /libra/rust-toolchain

@@ -1,5 +1,5 @@
 #while using circle we'll use circle's base image.
-FROM cimg/base:2020.01 AS setup_ci
+FROM cimg/base:2020.08@sha256:f19c30e3f8019f5c91fe14fc87c9f280293c5baef56f154e82d48fa5b1a21e86  AS setup_ci
 
 WORKDIR /libra
 COPY rust-toolchain /libra/rust-toolchain

@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: "docker"
+    directory: "/docker/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "docker"
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "github-actions"
+      - "dependencies"
+
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "cargo"
+      - "dependencies"
+    ignore:
+      - dependency-name: "codespan*"
+      - dependency-name: "libfuzzer-sys"
+      - dependency-name: "ureq"
+      - dependency-name: "rustls"
+      - dependency-name: "bindgen"

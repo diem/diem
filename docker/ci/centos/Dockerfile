@@ -1,5 +1,5 @@
 #while using circle we'll use circle's base image.
-FROM centos:latest AS setup_ci_centos
+FROM centos:8@sha256:fc4a234b91cc4b542bac8a6ad23b2ddcee60ae68fc4dbd4a52efb5f1b0baad71 AS setup_ci_centos
 
 WORKDIR /libra
 COPY rust-toolchain /libra/rust-toolchain
