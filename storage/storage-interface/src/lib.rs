@@ -312,7 +312,7 @@ pub trait DbReader: Send + Sync {
 
 impl MoveStorage for &dyn DbReader {
     fn batch_fetch_resources(&self, access_paths: Vec<AccessPath>) -> Result<Vec<Vec<u8>>> {
-        self.batch_fetch_resources_by_version(access_paths, self.get_latest_version()?)
+        self.batch_fetch_resources_by_version(access_paths, self.fetch_synced_version()?)
     }
 
     fn batch_fetch_resources_by_version(
@@ -355,6 +355,19 @@ impl MoveStorage for &dyn DbReader {
                     .clone())
             })
             .collect()
+    }
+
+    fn fetch_synced_version(&self) -> Result<u64> {
+        let (synced_version, _) = self
+            .get_latest_transaction_info_option()
+            .map_err(|e| {
+                format_err!(
+                    "[MoveStorage] Failed fetching latest transaction info: {}",
+                    e
+                )
+            })?
+            .ok_or_else(|| format_err!("[MoveStorage] Latest transaction info not found."))?;
+        Ok(synced_version)
     }
 }
 

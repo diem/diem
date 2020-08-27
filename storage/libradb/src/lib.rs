@@ -687,19 +687,19 @@ impl DbReader for LibraDB {
             .with_label_values(&["get_account_state_with_proof"])
             .start_timer();
 
-        ensure!(
-            version <= ledger_version,
-            "The queried version {} should be equal to or older than ledger version {}.",
-            version,
-            ledger_version
-        );
+        if version <= ledger_version {
+            warn!(
+                "The queried version {} should be equal to or older than ledger version {}.",
+                version, ledger_version
+            );
+        }
         let latest_version = self.get_latest_version()?;
-        ensure!(
-            ledger_version <= latest_version,
-            "The ledger version {} is greater than the latest version currently in ledger: {}",
-            ledger_version,
-            latest_version
-        );
+        if ledger_version <= latest_version {
+            warn!(
+                "The ledger version {} is greater than the latest version currently in ledger: {}",
+                ledger_version, latest_version
+            )
+        }
 
         let txn_info_with_proof = self
             .ledger_store

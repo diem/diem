@@ -93,7 +93,11 @@ impl ExecutorProxy {
             .collect();
         let configs = storage.batch_fetch_resources(access_paths)?;
         let epoch = storage
-            .get_latest_account_state(config_address())?
+            .get_account_state_with_proof_by_version(
+                config_address(),
+                storage.fetch_synced_version()?,
+            )?
+            .0
             .map(|blob| {
                 AccountState::try_from(&blob).and_then(|state| {
                     Ok(state
