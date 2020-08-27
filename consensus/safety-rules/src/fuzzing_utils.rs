@@ -91,10 +91,9 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary MaybeSignedVoteProposal for the safety rules
-// construct_and_sign_vote() method.
+// This generates an arbitrary MaybeSignedVoteProposal.
 prop_compose! {
-    pub fn arb_construct_and_sign_vote_input(
+    pub fn arb_maybe_signed_vote_proposal(
     )(
         signature in arb_ed25519_signature(),
         vote_proposal in arb_vote_proposal(),
@@ -106,9 +105,9 @@ prop_compose! {
     }
 }
 
-// This generates an arbitrary EpochChangeProof for the safety rules initialize() method.
+// This generates an arbitrary EpochChangeProof.
 prop_compose! {
-    pub fn arb_initialize_input(
+    pub fn arb_epoch_change_proof(
     )(
         more in any::<bool>(),
         ledger_info_with_sigs in prop::collection::vec(
@@ -245,8 +244,8 @@ fn arb_block_type() -> impl Strategy<Value = BlockType> {
 pub fn arb_safety_rules_input() -> impl Strategy<Value = SafetyRulesInput> {
     prop_oneof![
         Just(SafetyRulesInput::ConsensusState),
-        arb_initialize_input().prop_map(|input| SafetyRulesInput::Initialize(Box::new(input))),
-        arb_construct_and_sign_vote_input()
+        arb_epoch_change_proof().prop_map(|input| SafetyRulesInput::Initialize(Box::new(input))),
+        arb_maybe_signed_vote_proposal()
             .prop_map(|input| { SafetyRulesInput::ConstructAndSignVote(Box::new(input)) }),
         arb_block_data().prop_map(|input| { SafetyRulesInput::SignProposal(Box::new(input)) }),
         arb_timeout().prop_map(|input| { SafetyRulesInput::SignTimeout(Box::new(input)) }),
@@ -261,7 +260,7 @@ mod tests {
         fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
         fuzz_sign_timeout,
         fuzzing_utils::{
-            arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
+            arb_block_data, arb_epoch_change_proof, arb_maybe_signed_vote_proposal,
             arb_safety_rules_input, arb_timeout,
         },
     };
@@ -276,12 +275,12 @@ mod tests {
         }
 
         #[test]
-        fn initialize_proptest(input in arb_initialize_input()) {
+        fn initialize_proptest(input in arb_epoch_change_proof()) {
             let _ = fuzz_initialize(input);
         }
 
         #[test]
-        fn construct_and_sign_vote_proptest(input in arb_construct_and_sign_vote_input()) {
+        fn construct_and_sign_vote_proptest(input in arb_maybe_signed_vote_proposal()) {
             let _ = fuzz_construct_and_sign_vote(input);
         }
 

@@ -7,7 +7,7 @@ use safety_rules::{
     fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
     fuzz_sign_timeout,
     fuzzing_utils::{
-        arb_block_data, arb_construct_and_sign_vote_input, arb_initialize_input,
+        arb_block_data, arb_epoch_change_proof, arb_maybe_signed_vote_proposal,
         arb_safety_rules_input, arb_timeout,
     },
 };
@@ -42,12 +42,12 @@ impl FuzzTargetImpl for SafetyRulesInitialize {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(arb_initialize_input()))
+        Some(corpus_from_strategy(arb_epoch_change_proof()))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let proof = fuzz_data_to_value(data, arb_initialize_input());
-        let _ = fuzz_initialize(proof);
+        let epoch_change_proof = fuzz_data_to_value(data, arb_epoch_change_proof());
+        let _ = fuzz_initialize(epoch_change_proof);
     }
 }
 
@@ -61,12 +61,11 @@ impl FuzzTargetImpl for SafetyRulesConstructAndSignVote {
     }
 
     fn generate(&self, _idx: usize, _gen: &mut ValueGenerator) -> Option<Vec<u8>> {
-        Some(corpus_from_strategy(arb_construct_and_sign_vote_input()))
+        Some(corpus_from_strategy(arb_maybe_signed_vote_proposal()))
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let maybe_signed_vote_proposal =
-            fuzz_data_to_value(data, arb_construct_and_sign_vote_input());
+        let maybe_signed_vote_proposal = fuzz_data_to_value(data, arb_maybe_signed_vote_proposal());
         let _ = fuzz_construct_and_sign_vote(maybe_signed_vote_proposal);
     }
 }
@@ -104,7 +103,7 @@ impl FuzzTargetImpl for SafetyRulesSignTimeout {
     }
 
     fn fuzz(&self, data: &[u8]) {
-        let block_data = fuzz_data_to_value(data, arb_timeout());
-        let _ = fuzz_sign_timeout(block_data);
+        let timeout = fuzz_data_to_value(data, arb_timeout());
+        let _ = fuzz_sign_timeout(timeout);
     }
 }
