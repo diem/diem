@@ -33,6 +33,8 @@ impl MempoolProxy {
 #[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
     async fn pull_txns(&self, max_size: u64, exclude_payloads: Vec<&Payload>) -> Result<Payload> {
+        // intentional bug
+        return Ok(vec![]);
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
             for transaction in payload {
