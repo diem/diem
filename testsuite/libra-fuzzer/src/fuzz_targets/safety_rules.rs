@@ -3,12 +3,12 @@
 
 use crate::{corpus_from_strategy, fuzz_data_to_value, FuzzTargetImpl};
 use libra_proptest_helpers::ValueGenerator;
-use safety_rules::{
-    fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
-    fuzz_sign_timeout,
-    fuzzing_utils::{
-        arb_block_data, arb_epoch_change_proof, arb_maybe_signed_vote_proposal,
-        arb_safety_rules_input, arb_timeout,
+use safety_rules::fuzzing_utils::{
+    arb_block_data, arb_epoch_change_proof, arb_maybe_signed_vote_proposal, arb_safety_rules_input,
+    arb_timeout,
+    fuzzing::{
+        fuzz_construct_and_sign_vote, fuzz_handle_message, fuzz_initialize, fuzz_sign_proposal,
+        fuzz_sign_timeout,
     },
 };
 

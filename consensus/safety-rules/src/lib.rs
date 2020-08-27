@@ -28,12 +28,7 @@ pub use crate::{
 pub mod fuzzing_utils;
 
 #[cfg(any(test, feature = "fuzzing"))]
-pub use crate::{
-    safety_rules::fuzzing::{
-        fuzz_construct_and_sign_vote, fuzz_initialize, fuzz_sign_proposal, fuzz_sign_timeout,
-    },
-    serializer::fuzzing::fuzz_handle_message,
-};
+pub use crate::fuzzing_utils::fuzzing;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod test_utils;
