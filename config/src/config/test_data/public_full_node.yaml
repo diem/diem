@@ -1,17 +1,34 @@
 base:
+    # Update this value to the location you want Libra to store its database
     data_dir: "/opt/libra/data"
     role: "full_node"
     waypoint:
+        # Update this value to that which Libra publicly provides. Please regard the directions
+        # below on how to safely manage your genesis_file_location with respect to the waypoint.
         from_config: "0:01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210"
 
 execution:
-    genesis_file_location: "relative/path/to/genesis"
+    # Update this to the location to where the genesis.blob is stored, prefer fullpaths
+    # Note, this must be paired with a waypoint. If you update your waypoint without a
+    # corresponding genesis, the file location should be an empty path.
+    genesis_file_location: "/full/path/to/genesis"
+
 
 full_node_networks:
     - discovery_method: "onchain"
-      listen_address: "/ip4/0.0.0.0/tcp/6180"
+      # The network must have a listen address to specify protocols. This runs it locally to
+      # prevent remote, incoming connections.
+      listen_address: "/ip4/127.0.0.1/tcp/6180"
       network_id: "public"
 
+
+rpc:
+    # This specifies your JSON-RPC endpoint. This runs locally to prevent remote queries, setting
+    # it to 0.0.0.0:8080 would open it to all remote connections that can connect to that computer.
+    address: 127.0.0.1:8080
+
+# Do not modify this value as it dictates upstream peers, those which receive outgoing transactions
+# and funnel downward the latest blockchain state.
 upstream:
     networks:
       - public
