@@ -18,4 +18,7 @@ pub trait MoveStorage {
         access_paths: Vec<AccessPath>,
         version: Version,
     ) -> Result<Vec<Vec<u8>>>;
+
+    /// Get the version on the latest transaction info.
+    fn fetch_synced_version(&self) -> Result<Version>;
 }

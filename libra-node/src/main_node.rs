@@ -18,6 +18,7 @@ use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
 use libra_types::{
     account_config::libra_root_address, account_state::AccountState, chain_id::ChainId,
+    move_resource::MoveStorage,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -45,8 +46,14 @@ pub struct LibraHandle {
 fn fetch_chain_id(db: &DbReaderWriter) -> ChainId {
     let blob = db
         .reader
-        .get_latest_account_state(libra_root_address())
+        .get_account_state_with_proof_by_version(
+            libra_root_address(),
+            (&*db.reader)
+                .fetch_synced_version()
+                .expect("[libra-node] failed fetching synced version."),
+        )
         .expect("[libra-node] failed to get Libra root address account state")
+        .0
         .expect("[libra-node] missing Libra root address account state");
     AccountState::try_from(&blob)
         .expect("[libra-node] failed to convert blob to account state")
