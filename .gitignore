@@ -3,6 +3,7 @@
 # .gitignore file locally for IDE/Emacs/Vim generated files.
 **/target
 **/*.rs.bk
+/.idea
 
 # Ignore wallet mnemonic files used for deterministic key derivation
 *.mnemonic

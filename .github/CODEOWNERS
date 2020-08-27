@@ -4,7 +4,7 @@
 /json-rpc/json-rpc-spec.md @thefallentree @xli
 /json-rpc/types/ @thefallentree @xli
 /json-rpc/src/methods.rs @thefallentree @xli
-/client/libra-dev/ @thefallentree @xli
+/client/ @thefallentree @xli
 # Subscribe to LCS format changes
 /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
 # Subscribe to TCB dependency summary changes

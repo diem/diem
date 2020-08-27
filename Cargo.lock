@@ -6248,12 +6248,8 @@ dependencies = [
 name = "transaction-builder"
 version = "0.1.0"
 dependencies = [
- "compiled-stdlib 0.1.0",
- "libra-canonical-serialization 0.1.0",
- "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "move-core-types 0.1.0",
  "transaction-builder-generated 0.1.0",
 ]
 
@@ -6261,6 +6257,8 @@ dependencies = [
 name = "transaction-builder-generated"
 version = "0.1.0"
 dependencies = [
+ "compiled-stdlib 0.1.0",
+ "libra-canonical-serialization 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",

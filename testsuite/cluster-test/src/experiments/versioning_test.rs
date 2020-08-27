@@ -18,7 +18,6 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
     chain_id::ChainId,
-    on_chain_config::LibraVersion,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
 use std::{collections::HashSet, fmt, time::Duration};
@@ -168,10 +167,7 @@ impl Experiment for ValidatorVersioning {
         let allowed_nonce = 0;
         let update_txn = create_user_txn(
             &faucet_account.key_pair,
-            TransactionPayload::Script(encode_update_libra_version_script(
-                allowed_nonce,
-                LibraVersion { major: 11 },
-            )),
+            TransactionPayload::Script(encode_update_libra_version_script(allowed_nonce, 11)),
             faucet_account.address,
             faucet_account.sequence_number,
             123456,

@@ -3,4 +3,5 @@
 
 #![forbid(unsafe_code)]
 
+pub mod misc;
 pub mod stdlib;

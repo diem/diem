@@ -29,7 +29,6 @@ use libra_types::{
     account_state::AccountState,
     chain_id::ChainId,
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::LibraVersion,
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
@@ -642,9 +641,7 @@ impl ClientProxy {
                 TransactionPayload::Script(
                     transaction_builder::encode_update_libra_version_script(
                         self.libra_root_account.as_ref().unwrap().sequence_number,
-                        LibraVersion {
-                            major: space_delim_strings[1].parse::<u64>().unwrap(),
-                        },
+                        space_delim_strings[1].parse::<u64>().unwrap(),
                     ),
                 ),
                 is_blocking,

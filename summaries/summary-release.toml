@@ -596,7 +596,7 @@ features = ['default']
 [[target-package]]
 name = 'transaction-builder-generated'
 version = '0.1.0'
-workspace-path = 'language/transaction-builder/generated'
+workspace-path = 'client/transaction-builder'
 status = 'workspace'
 features = ['default']
 
