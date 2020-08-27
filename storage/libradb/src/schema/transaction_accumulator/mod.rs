@@ -35,9 +35,8 @@ impl KeyCodec<TransactionAccumulatorSchema> for Position {
 
     fn decode_key(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<u64>())?;
-        Ok(Position::from_postorder_index(
-            (&data[..]).read_u64::<BigEndian>()?,
-        ))
+        let index = (&data[..]).read_u64::<BigEndian>()?;
+        Ok(Position::from_postorder_index(index)?)
     }
 }
 

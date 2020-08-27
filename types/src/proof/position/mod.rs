@@ -24,6 +24,7 @@
 //! Note3: The leaf index starting from left-most leaf, starts from 0
 
 use crate::proof::definition::{LeafCount, MAX_ACCUMULATOR_LEAVES, MAX_ACCUMULATOR_PROOF_DEPTH};
+use anyhow::{ensure, Result};
 use mirai_annotations::*;
 use std::fmt;
 
@@ -75,8 +76,13 @@ impl Position {
         self.0
     }
 
-    pub fn from_postorder_index(index: u64) -> Self {
-        Position(postorder_to_inorder(index))
+    pub fn from_postorder_index(index: u64) -> Result<Self> {
+        ensure!(
+            index < (!0u64 >> 2),
+            "node index {} is invalid (greater than 2^63 - 1)",
+            index
+        );
+        Ok(Position(postorder_to_inorder(index)))
     }
 
     pub fn to_postorder_index(self) -> u64 {
