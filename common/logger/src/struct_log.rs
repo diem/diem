@@ -86,7 +86,7 @@ pub struct StructuredLogEntry {
 
 impl StructuredLogEntry {
     /// Base implementation for creating a log
-    fn new_unnamed() -> Self {
+    pub fn new_unnamed() -> Self {
         let mut ret = Self::default();
 
         // Generate a 16 byte random like UUIDv4
@@ -234,6 +234,14 @@ impl StructuredLogEntry {
     #[doc(hidden)] // set from macro
     pub fn add_log(&mut self, log: String) -> &mut Self {
         self.log = Some(log);
+        self
+    }
+
+    #[doc(hidden)] // set from macro
+    pub fn add_category(&mut self, target: &'static str) -> &mut Self {
+        if self.category.is_none() {
+            self.category = Some(target);
+        }
         self
     }
 

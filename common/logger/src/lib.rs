@@ -266,6 +266,7 @@ macro_rules! sl_level {
     ($level:expr, $entry:expr) => {
         if $crate::struct_log_enabled!($level) {
             let mut entry = $entry;
+            entry.add_category(module_path!().split("::").next().unwrap());
             entry.add_module(module_path!());
             entry.add_location($crate::location!());
             entry = entry.level($level);
