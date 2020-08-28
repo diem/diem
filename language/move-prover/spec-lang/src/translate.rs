@@ -1683,9 +1683,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         name: &Name,
         def: &EA::Exp,
     ) {
-        // Check the expression and extract results.
+        // Check the expression and extract results. The let expression can access parameters,
+        // but not use the `old(..)` function, therefore we treat it like a requires or aborts_if.
         let mut et = self
-            .exp_translator_for_context(loc, context, Some(&ConditionKind::Ensures), true)
+            .exp_translator_for_context(loc, context, Some(&ConditionKind::Requires), true)
             .set_in_let()
             .mark_context_scopes();
         let (_, mut def) = et.translate_exp_free(def);
@@ -4272,6 +4273,12 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         generics: Option<&[EA::Type]>,
         args: &[&EA::Exp],
     ) -> Exp {
+        // First check for builtin functions.
+        if let EA::ModuleAccess_::Name(n) = &maccess.value {
+            if n.value == "update_field" {
+                return self.translate_update_field(expected_type, loc, generics, args);
+            }
+        }
         // First check whether this is an Invoke on a function value.
         if let EA::ModuleAccess_::Name(n) = &maccess.value {
             let sym = self.symbol_pool().make(&n.value);
@@ -4662,85 +4669,147 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
 
     /// Translate a Dotted expression.
     fn translate_dotted(&mut self, dotted: &EA::ExpDotted, expected_type: &Type) -> Exp {
-        // Similar as with Index, we must concretize the type of the expression on which
-        // field selection is performed, violating full type inference rules, so we can actually
-        // check and retrieve the field. To avoid this, we would need to introduce the concept
-        // of a type constraint to type unification, where the constraint would be
-        // 'type var X where X has field F'. This makes unification significant more complex,
-        // so lets see how far we get without this.
         match &dotted.value {
             EA::ExpDotted_::Exp(e) => self.translate_exp(e, expected_type),
             EA::ExpDotted_::Dot(e, n) => {
                 let loc = self.to_loc(&dotted.loc);
-                let field_name = self.symbol_pool().make(&n.value);
                 let ty = self.fresh_type_var();
                 let exp = self.translate_dotted(e.as_ref(), &ty);
-                // Try to concretize the type and check its a struct.
-                let struct_ty = self.subs.specialize(&ty);
-                if let Type::Struct(mid, sid, targs) = &struct_ty {
-                    // Lookup the StructEntry in the translator. It must be defined for valid
-                    // Type::Struct instances.
-                    let struct_name = self
-                        .parent
-                        .parent
-                        .reverse_struct_table
-                        .get(&(*mid, *sid))
-                        .expect("invalid Type::Struct");
-                    let entry = self
-                        .parent
-                        .parent
-                        .struct_table
-                        .get(struct_name)
-                        .expect("invalid Type::Struct")
-                        .clone();
-                    // Lookup the field in the struct.
-                    if let Some(fields) = &entry.fields {
-                        if let Some((_, field_ty)) = fields.get(&field_name) {
-                            // We must instantiate the field type by the provided type args.
-                            let field_ty = field_ty.instantiate(targs);
-                            self.check_type(&loc, &field_ty, expected_type, "in field selection");
-                            let id = self.new_node_id_with_type_loc(&field_ty, &loc);
-                            Exp::Call(
-                                id,
-                                Operation::Select(
-                                    entry.module_id,
-                                    entry.struct_id,
-                                    FieldId::new(field_name),
-                                ),
-                                vec![exp],
-                            )
-                        } else {
-                            self.error(
-                                &loc,
-                                &format!(
-                                    "field `{}` not declared in struct `{}`",
-                                    field_name.display(self.symbol_pool()),
-                                    struct_name.display(self.symbol_pool())
-                                ),
-                            );
-                            self.new_error_exp()
-                        }
-                    } else {
-                        self.error(
-                            &loc,
-                            &format!(
-                                "struct `{}` is native and does not support field selection",
-                                struct_name.display(self.symbol_pool())
-                            ),
-                        );
-                        self.new_error_exp()
-                    }
+                if let Some((struct_id, field_id, field_ty)) = self.lookup_field(&loc, &ty, n) {
+                    self.check_type(&loc, &field_ty, expected_type, "in field selection");
+                    let id = self.new_node_id_with_type_loc(&field_ty, &loc);
+                    Exp::Call(
+                        id,
+                        Operation::Select(struct_id.module_id, struct_id.id, field_id),
+                        vec![exp],
+                    )
+                } else {
+                    self.new_error_exp()
+                }
+            }
+        }
+    }
+
+    /// Translate the builtin function `update_field<generics>(args)`. The first arg must
+    /// be a field name, the second the expression to assign the field.
+    fn translate_update_field(
+        &mut self,
+        expected_type: &Type,
+        loc: &Loc,
+        generics: Option<&[EA::Type]>,
+        args: &[&EA::Exp],
+    ) -> Exp {
+        if generics.is_some() {
+            self.error(loc, "`update_field` cannot have type parameters");
+            return self.new_error_exp();
+        }
+        if args.len() != 3 {
+            self.error(loc, "`update_field` requires 3 arguments");
+            return self.new_error_exp();
+        }
+        let struct_exp = self.translate_exp(&args[0], expected_type);
+        if let EA::Exp_::Name(
+            Spanned {
+                value: EA::ModuleAccess_::Name(name),
+                ..
+            },
+            None,
+        ) = &args[1].value
+        {
+            if let Some((struct_id, field_id, field_type)) =
+                self.lookup_field(loc, &expected_type, name)
+            {
+                // Translate the new value with the field type as the expected type.
+                let value_exp = self.translate_exp(&args[2], &field_type);
+                let id = self.new_node_id_with_type_loc(&expected_type, loc);
+                Exp::Call(
+                    id,
+                    Operation::UpdateField(struct_id.module_id, struct_id.id, field_id),
+                    vec![struct_exp, value_exp],
+                )
+            } else {
+                // Error reported
+                self.new_error_exp()
+            }
+        } else {
+            self.error(
+                loc,
+                "second argument of `update_field` must be a field name",
+            );
+            self.new_error_exp()
+        }
+    }
+
+    /// Loops up a field in a struct. Returns field information or None after reporting errors.
+    fn lookup_field(
+        &mut self,
+        loc: &Loc,
+        struct_ty: &Type,
+        name: &Name,
+    ) -> Option<(QualifiedId<StructId>, FieldId, Type)> {
+        // Similar as with Index, we must concretize the type of the expression on which
+        // field selection is performed, violating pure type inference rules, so we can actually
+        // check and retrieve the field. To avoid this, we would need to introduce the concept
+        // of a type constraint to type unification, where the constraint would be
+        // 'type var X where X has field F'. This makes unification significant more complex,
+        // so lets see how far we get without this.
+        let struct_ty = self.subs.specialize(&struct_ty);
+        let field_name = self.symbol_pool().make(&name.value);
+        if let Type::Struct(mid, sid, targs) = &struct_ty {
+            // Lookup the StructEntry in the translator. It must be defined for valid
+            // Type::Struct instances.
+            let struct_name = self
+                .parent
+                .parent
+                .reverse_struct_table
+                .get(&(*mid, *sid))
+                .expect("invalid Type::Struct");
+            let entry = self
+                .parent
+                .parent
+                .struct_table
+                .get(struct_name)
+                .expect("invalid Type::Struct");
+            // Lookup the field in the struct.
+            if let Some(fields) = &entry.fields {
+                if let Some((_, field_ty)) = fields.get(&field_name) {
+                    // We must instantiate the field type by the provided type args.
+                    let field_ty = field_ty.instantiate(targs);
+                    Some((
+                        entry.module_id.qualified(entry.struct_id),
+                        FieldId::new(field_name),
+                        field_ty,
+                    ))
                 } else {
                     self.error(
                         &loc,
                         &format!(
-                            "type `{}` cannot be resolved as a struct",
-                            struct_ty.display(&self.type_display_context()),
+                            "field `{}` not declared in struct `{}`",
+                            field_name.display(self.symbol_pool()),
+                            struct_name.display(self.symbol_pool())
                         ),
                     );
-                    self.new_error_exp()
+                    None
                 }
+            } else {
+                self.error(
+                    &loc,
+                    &format!(
+                        "struct `{}` is native and does not support field selection",
+                        struct_name.display(self.symbol_pool())
+                    ),
+                );
+                None
             }
+        } else {
+            self.error(
+                &loc,
+                &format!(
+                    "type `{}` cannot be resolved as a struct",
+                    struct_ty.display(&self.type_display_context()),
+                ),
+            );
+            None
         }
     }
 
@@ -4760,6 +4829,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         // Translate arguments. Skip any lambda expressions; they are resolved after the overload
         // is identified to avoid restrictions with type inference.
         let (arg_types, mut translated_args) = self.translate_exp_list(args, true);
+        let args_have_errors = arg_types.iter().any(|t| t == &Type::Error);
         // Lookup candidates.
         let cand_modules = if let Some(m) = module {
             vec![m.clone()]
@@ -4824,22 +4894,25 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         // Deliver results, reporting errors if there are no or ambiguous matches.
         match matching.len() {
             0 => {
-                let display = self.display_call_target(module, name);
-                let notes = outruled
-                    .iter()
-                    .map(|(cand, msg)| {
-                        format!(
-                            "outruled candidate `{}` ({})",
-                            self.display_call_cand(module, name, cand),
-                            msg
-                        )
-                    })
-                    .collect_vec();
-                self.parent.parent.env.error_with_notes(
-                    loc,
-                    &format!("no matching declaration of `{}`", display),
-                    notes,
-                );
+                // Only report error if args had no errors.
+                if !args_have_errors {
+                    let display = self.display_call_target(module, name);
+                    let notes = outruled
+                        .iter()
+                        .map(|(cand, msg)| {
+                            format!(
+                                "outruled candidate `{}` ({})",
+                                self.display_call_cand(module, name, cand),
+                                msg
+                            )
+                        })
+                        .collect_vec();
+                    self.parent.parent.env.error_with_notes(
+                        loc,
+                        &format!("no matching declaration of `{}`", display),
+                        notes,
+                    );
+                }
                 self.new_error_exp()
             }
             1 => {
@@ -4914,21 +4987,24 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 Exp::Call(id, cand.oper.clone(), translated_args)
             }
             _ => {
-                let display = self.display_call_target(module, name);
-                let notes = matching
-                    .iter()
-                    .map(|(cand, _, _)| {
-                        format!(
-                            "matching candidate `{}`",
-                            self.display_call_cand(module, name, cand)
-                        )
-                    })
-                    .collect_vec();
-                self.parent.parent.env.error_with_notes(
-                    loc,
-                    &format!("ambiguous application of `{}`", display),
-                    notes,
-                );
+                // Only report error if args had no errors.
+                if !args_have_errors {
+                    let display = self.display_call_target(module, name);
+                    let notes = matching
+                        .iter()
+                        .map(|(cand, _, _)| {
+                            format!(
+                                "matching candidate `{}`",
+                                self.display_call_cand(module, name, cand)
+                            )
+                        })
+                        .collect_vec();
+                    self.parent.parent.env.error_with_notes(
+                        loc,
+                        &format!("ambiguous application of `{}`", display),
+                        notes,
+                    );
+                }
                 self.new_error_exp()
             }
         }

@@ -11,15 +11,14 @@ module TestLet {
     // Spec Block Let
     // ==============
 
-    fun spec_let_with_result(a: u64, b: u64): (u64, u64) {
+    fun spec_let(a: u64, b: u64): (u64, u64) {
         (a + 1 + b, a + b)
     }
-    spec fun spec_let_with_result {
+    spec fun spec_let {
         let x = a + 1;
         let y = x + b;
-        let r2 = result_1 - 1;
         ensures result_1 == y;
-        ensures result_2 == r2;
+        ensures result_2 == result_1 - 1;
     }
 
     fun spec_let_with_old(a: &mut u64, b: &mut u64) {
@@ -28,10 +27,10 @@ module TestLet {
         *b = saved_a + *b;
     }
     spec fun spec_let_with_old {
-       let x = old(a) + 1;
-       let y = x + old(b);
+       let x = a + 1;
+       let y = x + b;
        let r2 = a - 1;
-       ensures a == y;
+       ensures a == old(y); // y in the context of old accesses old a and b.
        ensures b == r2;
     }
 
@@ -41,9 +40,8 @@ module TestLet {
     spec fun spec_let_with_lambda {
         let add_to_a = |n| a + n;
         let add_to_b = |n| b + n;
-        let sub_from_result_1 = |n| result_1 - n;
         ensures result_1 == add_to_b(add_to_a(1));
-        ensures result_2 == sub_from_result_1(1);
+        ensures result_2 == result_1 - 1;
     }
 
     fun spec_let_with_generic<T:copyable>(x: T, y: T): bool {

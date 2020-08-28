@@ -606,6 +606,12 @@ function {:inline} $SelectField(val: $Value, field: $FieldName): $Value {
     $select_vector(val, field)
 }
 
+// Updates a field.
+function {:inline} $UpdateField(val: $Value, field: $FieldName, new_value: $Value): $Value {
+    $update_vector(val, field, new_value)
+}
+
+
 // Dereferences a reference.
 function {:inline} $Dereference(ref: $Mutation): $Value {
     v#$Mutation(ref)

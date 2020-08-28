@@ -6,23 +6,23 @@ error: global memory invariant does not hold
  18 │         invariant [global] forall a: address where exists<R>(a): exists<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:28:5: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:34:5: create_R_invalid
     =         account = <redacted>
-    =     at tests/sources/functional/global_invariants.move:30:9: create_R_invalid
+    =     at tests/sources/functional/global_invariants.move:36:9: create_R_invalid
 
 error: global memory invariant does not hold
 
     ┌── tests/sources/functional/global_invariants.move:20:9 ───
     │
- 20 │         invariant update [global] forall a: address where old(exists<R>(a)): exists<R>(a);
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 20 │         invariant update [global] forall a: address where old(exists_R(a)): exists<R>(a);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:52:5: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:58:5: remove_R_invalid
     =         account = <redacted>,
     =         $t1 = <redacted>
-    =     at tests/sources/functional/global_invariants.move:55:63: remove_R_invalid
-    =     at tests/sources/functional/global_invariants.move:54:34: remove_R_invalid
-    =     at tests/sources/functional/global_invariants.move:55:43: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:61:63: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:60:34: remove_R_invalid
+    =     at tests/sources/functional/global_invariants.move:61:43: remove_R_invalid
 
 error: global memory invariant does not hold
 
@@ -31,9 +31,9 @@ error: global memory invariant does not hold
  18 │         invariant [global] forall a: address where exists<R>(a): exists<S>(a);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_invariants.move:43:5: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:49:5: remove_S_invalid
     =         account = <redacted>,
     =         $t1 = <redacted>
-    =     at tests/sources/functional/global_invariants.move:46:63: remove_S_invalid
-    =     at tests/sources/functional/global_invariants.move:45:34: remove_S_invalid
-    =     at tests/sources/functional/global_invariants.move:46:43: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:52:63: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:51:34: remove_S_invalid
+    =     at tests/sources/functional/global_invariants.move:52:43: remove_S_invalid

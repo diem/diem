@@ -1788,6 +1788,9 @@ impl<'env> SpecTranslator<'env> {
             Operation::Select(module_id, struct_id, field_id) => {
                 self.translate_select(*module_id, *struct_id, *field_id, args)
             }
+            Operation::UpdateField(module_id, struct_id, field_id) => {
+                self.translate_update_field(*module_id, *struct_id, *field_id, args)
+            }
             Operation::Local(sym) => {
                 self.translate_local_var(node_id, *sym);
             }
@@ -1887,7 +1890,7 @@ impl<'env> SpecTranslator<'env> {
         };
         for memory in &fun_decl.used_memory {
             maybe_comma();
-            let memory = boogie_resource_memory_name(self.global_env(), *memory);
+            let memory = self.get_memory_name(*memory);
             emit!(self.writer, &memory);
         }
         for QualifiedId {
@@ -1934,6 +1937,24 @@ impl<'env> SpecTranslator<'env> {
             self.translate_exp(&args[0]);
         }
         emit!(self.writer, ", {})", field_name);
+    }
+
+    fn translate_update_field(
+        &self,
+        module_id: ModuleId,
+        struct_id: StructId,
+        field_id: FieldId,
+        args: &[Exp],
+    ) {
+        let module_env = self.global_env().get_module(module_id);
+        let struct_env = module_env.get_struct(struct_id);
+        let field_env = struct_env.get_field(field_id);
+        let field_name = boogie_field_name(&field_env);
+        emit!(self.writer, "$UpdateField(");
+        self.translate_exp(&args[0]);
+        emit!(self.writer, ", {}, ", field_name);
+        self.translate_exp(&args[1]);
+        emit!(self.writer, ")");
     }
 
     fn translate_type_value(&self, node_id: NodeId) {

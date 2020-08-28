@@ -610,6 +610,9 @@ An out of bounds index for the validator set was encountered
         <b>return</b> <b>false</b>
     };
     <b>let</b> validator_info = <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(validators, i);
+    <b>if</b> (!<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_info.addr)) {
+        <b>return</b> <b>false</b>
+    };
     // TODO (dd): Why can't it <b>abort</b> here?  Right now, <a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a> says validators
     //    stay published forever, but I wonder <b>if</b> that's reasonable.
     //    Calling context checks validator role, and there probably should be an
@@ -1033,14 +1036,16 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <pre><code>pragma opaque;
 <b>aborts_if</b> <b>false</b>;
-<a name="0x1_LibraSystem_res_index$19"></a>
-<b>let</b> res_index = <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(result);
-<a name="0x1_LibraSystem_size$20"></a>
+<a name="0x1_LibraSystem_size$19"></a>
 <b>let</b> size = len(validators);
-<b>ensures</b> (exists i in 0..size: validators[i].addr == addr)
-    == (<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result) && 0 &lt;= res_index && res_index &lt; size
-    && validators[res_index].addr == addr);
 <b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
+<b>ensures</b>
+    (exists i in 0..size: validators[i].addr == addr) ==&gt;
+        <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result) &&
+        {
+            <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+            0 &lt;= at && at &lt; size && validators[at].addr == addr
+        };
 </code></pre>
 
 
@@ -1056,37 +1061,23 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
-<a name="0x1_LibraSystem_ovi$21"></a>
-<b>let</b> ovi = <b>old</b>(validators[i]);
-<a name="0x1_LibraSystem_vi$22"></a>
-<b>let</b> vi = <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
-              addr: ovi.addr,
-              consensus_voting_power: ovi.consensus_voting_power,
-              config: <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validators[i].addr),
-          };
-</code></pre>
-
-
-Captures exact value of 'result'
-
-
-<pre><code><b>ensures</b> result == (i &lt; len(validators)
-             && <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validators[i].addr) != ovi.config);
-</code></pre>
-
-
-If result is true, it updates the validator vector at index i, only.
-
-
-<pre><code><b>ensures</b> result ==&gt; validators == update_vector(<b>old</b>(validators), i, vi);
-</code></pre>
-
-
-If result is false, validators vector is unchanged.
-
-
-<pre><code><b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
+<pre><code>pragma opaque;
+<b>aborts_if</b> <b>false</b>;
+<a name="0x1_LibraSystem_new_validator_config$20"></a>
+<b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validators[i].addr);
+<b>ensures</b>
+    result ==
+        (i &lt; len(validators) &&
+         <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(validators[i].addr) &&
+         new_validator_config != <b>old</b>(validators[i].config));
+<b>ensures</b>
+    result ==&gt;
+        validators == update_vector(
+            <b>old</b>(validators),
+            i,
+            update_field(<b>old</b>(validators[i]), config, new_validator_config)
+        );
+<b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
 </code></pre>
 
 

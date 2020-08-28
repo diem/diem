@@ -17,8 +17,14 @@ module TestGlobalInvariants {
         // Whenever the one resource exists at address, the other one must also exist.
         invariant [global] forall a: address where exists<R>(a): exists<S>(a);
 
-        invariant update [global] forall a: address where old(exists<R>(a)): exists<R>(a);
+        invariant update [global] forall a: address where old(exists_R(a)): exists<R>(a);
+
+        // Use a spec function to test whether the right memory is accessed.
+        define exists_R(addr: address): bool {
+            exists<R>(addr)
+        }
     }
+
 
     public fun create_R(account: &signer) {
         move_to<S>(account, S{x: 0});

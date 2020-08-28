@@ -597,7 +597,7 @@ these assertions verify.
 <pre><code><b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>;
 <a name="0x1_LibraTimestamp_now$14"></a>
-<b>let</b> now = <b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+<b>let</b> now = <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 <b>aborts_if</b> [<b>assume</b>]
     (<b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         now != timestamp

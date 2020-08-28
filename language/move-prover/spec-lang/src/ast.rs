@@ -355,6 +355,7 @@ pub enum Operation {
     Pack(ModuleId, StructId),
     Tuple,
     Select(ModuleId, StructId, FieldId),
+    UpdateField(ModuleId, StructId, FieldId),
     Local(Symbol),
     Result(usize),
     Index,

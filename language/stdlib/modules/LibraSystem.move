@@ -389,12 +389,15 @@ module LibraSystem {
     spec fun get_validator_index_ {
         pragma opaque;
         aborts_if false;
-        let res_index = Option::borrow(result);
         let size = len(validators);
-        ensures (exists i in 0..size: validators[i].addr == addr)
-            == (Option::is_some(result) && 0 <= res_index && res_index < size
-            && validators[res_index].addr == addr);
         ensures (forall i in 0..size: validators[i].addr != addr) ==> Option::is_none(result);
+        ensures
+            (exists i in 0..size: validators[i].addr == addr) ==>
+                Option::is_some(result) &&
+                {
+                    let at = Option::spec_get(result);
+                    0 <= at && at < size && validators[at].addr == addr
+                };
     }
 
     // Updates ith validator info, if nothing changed, return false.
@@ -405,6 +408,9 @@ module LibraSystem {
             return false
         };
         let validator_info = Vector::borrow_mut(validators, i);
+        if (!ValidatorConfig::is_valid(validator_info.addr)) {
+            return false
+        };
         // TODO (dd): Why can't it abort here?  Right now, ValidatorConfig says validators
         //    stay published forever, but I wonder if that's reasonable.
         //    Calling context checks validator role, and there probably should be an
@@ -421,19 +427,21 @@ module LibraSystem {
         true
     }
     spec fun update_ith_validator_info_ {
-        pragma opaque = true;
-        let ovi = old(validators[i]);
-        let vi = ValidatorInfo {
-                      addr: ovi.addr,
-                      consensus_voting_power: ovi.consensus_voting_power,
-                      config: ValidatorConfig::get_config(validators[i].addr),
-                  };
-        /// Captures exact value of 'result'
-        ensures result == (i < len(validators)
-                     && ValidatorConfig::get_config(validators[i].addr) != ovi.config);
-        /// If result is true, it updates the validator vector at index i, only.
-        ensures result ==> validators == update_vector(old(validators), i, vi);
-        /// If result is false, validators vector is unchanged.
+        pragma opaque;
+        aborts_if false;
+        let new_validator_config = ValidatorConfig::spec_get_config(validators[i].addr);
+        ensures
+            result ==
+                (i < len(validators) &&
+                 ValidatorConfig::spec_is_valid(validators[i].addr) &&
+                 new_validator_config != old(validators[i].config));
+        ensures
+            result ==>
+                validators == update_vector(
+                    old(validators),
+                    i,
+                    update_field(old(validators[i]), config, new_validator_config)
+                );
         ensures !result ==> validators == old(validators);
     }
 

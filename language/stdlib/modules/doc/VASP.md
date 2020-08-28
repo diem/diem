@@ -557,8 +557,12 @@ Aborts if
 
 
 
+TODO: this times out some times, some times not. To avoid flakes, turn this off until it
+reliably terminates.
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
+
+<pre><code>pragma verify_duration_estimate = 100;
+<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
 <a name="0x1_VASP_parent_addr$15"></a>
 <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
 <a name="0x1_VASP_child_addr$16"></a>

@@ -139,7 +139,7 @@ module LibraTimestamp {
     spec fun update_global_time {
         include AbortsIfNotOperating;
         include CoreAddresses::AbortsIfNotVM;
-        let now = old(spec_now_microseconds());
+        let now = spec_now_microseconds();
         // TODO(wrwg): remove this assume by ensuring callers do not violate the condition
         aborts_if [assume]
             (if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
