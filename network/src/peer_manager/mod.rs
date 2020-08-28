@@ -762,9 +762,9 @@ where
                         );
                     }
                 } else {
-                    unreachable!(
-                        "{} Received network event for unregistered protocol",
-                        network_context
+                    debug!(
+                        "{} Received network message for unregistered protocol. Message: {:?}",
+                        network_context, msg,
                     );
                 }
             }
@@ -783,9 +783,9 @@ where
                         );
                     }
                 } else {
-                    unreachable!(
-                        "{} Received network event for unregistered protocol",
-                        network_context
+                    debug!(
+                        "{} Received network rpc request for unregistered protocol. RPC: {:?}",
+                        network_context, rpc_req,
                     );
                 }
             }

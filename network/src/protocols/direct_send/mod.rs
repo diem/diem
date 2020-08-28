@@ -163,7 +163,7 @@ impl DirectSend {
                     error!("Unexpected message from peer actor: {:?}", message);
                 }
             }
-            _ => unreachable!("Unexpected PeerNotification"),
+            _ => warn!("Unexpected PeerNotification: {:?}", notif),
         }
     }
 

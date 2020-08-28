@@ -304,7 +304,10 @@ where
                 }
             }
             _ => {
-                unreachable!("Unexpected notification received from Peer actor");
+                warn!(
+                    "Unexpected notification received from Peer actor: {:?}",
+                    notif
+                );
             }
         }
     }
