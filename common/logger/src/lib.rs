@@ -141,6 +141,7 @@ pub mod prelude {
 }
 pub mod json_log;
 
+mod kv;
 mod security;
 mod struct_log;
 
@@ -148,6 +149,8 @@ pub use struct_log::{
     init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,
     struct_logger_enabled, struct_logger_set, LoggingField, StructLogSink, StructuredLogEntry,
 };
+
+pub use kv::{Key, Schema, Value, Visitor};
 
 mod text_log;
 pub use log::Level;

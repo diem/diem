@@ -2,15 +2,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    prelude::*, set_struct_logger, struct_log::InitLoggerError, LoggingField, StructLogSink,
-    StructuredLogEntry,
+    prelude::*, set_struct_logger, struct_log::InitLoggerError, Key, LoggingField, Schema,
+    StructLogSink, StructuredLogEntry, Value, Visitor,
 };
 use chrono::{DateTime, Utc};
-use serde_json::{Map, Value};
+use serde_json::{Map, Value as JsonValue};
 use std::{
     io,
     sync::mpsc::{self, Receiver, SyncSender},
 };
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Enum {
+    FooBar,
+}
+
+struct TestSchema<'a> {
+    foo: usize,
+    bar: &'a Enum,
+}
+
+impl Schema for TestSchema<'_> {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_pair(Key::new("foo"), Value::from_serde(&self.foo));
+        visitor.visit_pair(Key::new("bar"), Value::from_serde(&self.bar));
+    }
+}
 
 struct StreamStructLog {
     sender: SyncSender<StructuredLogEntry>,
@@ -40,12 +58,12 @@ fn set_test_struct_logger() -> Result<Receiver<StructuredLogEntry>, InitLoggerEr
 }
 
 trait MapHelper {
-    fn val(&self, key: &str) -> Value;
+    fn val(&self, key: &str) -> JsonValue;
     fn string(&self, key: &str) -> String;
 }
 
-impl MapHelper for Map<String, Value> {
-    fn val(&self, key: &str) -> Value {
+impl MapHelper for Map<String, JsonValue> {
+    fn val(&self, key: &str) -> JsonValue {
         self.get(key).unwrap().clone()
     }
 
@@ -54,11 +72,11 @@ impl MapHelper for Map<String, Value> {
     }
 }
 
-fn as_object(value: Value) -> Map<String, Value> {
+fn as_object(value: JsonValue) -> Map<String, JsonValue> {
     value.as_object().unwrap().clone()
 }
 
-fn recieve_one_event(receiver: &Receiver<StructuredLogEntry>) -> Map<String, Value> {
+fn recieve_one_event(receiver: &Receiver<StructuredLogEntry>) -> Map<String, JsonValue> {
     let entry = receiver.recv().unwrap();
     let value = serde_json::to_value(entry).unwrap();
     as_object(value)
@@ -77,6 +95,10 @@ fn test_structured_logs() {
     sl_info!(StructuredLogEntry::new_named("category", "name")
         .data("test", true)
         .data_display("display", number)
+        .schema(TestSchema {
+            foo: 5,
+            bar: &Enum::FooBar,
+        })
         .field(u64_field, &number)
         .log(log_message.clone()));
     let after = Utc::now();
@@ -107,6 +129,8 @@ fn test_structured_logs() {
     // Ensure data stored is the right type
     let data = as_object(map.val("data"));
     assert_eq!(true, data.val("test").as_bool().unwrap());
+    assert_eq!(data.val("foo").as_u64().unwrap(), 5);
+    assert_eq!(data.val("bar").as_str().unwrap(), "foo_bar");
 
     // Data display always stores as a number rather than serializing
     assert_eq!(format!("{}", number), data.string("display"));
