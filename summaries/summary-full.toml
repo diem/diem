@@ -1282,7 +1282,7 @@ features = ['default', 'extra_traits', 'std']
 
 [[target-package]]
 name = 'libfuzzer-sys'
-version = '0.3.4'
+version = '0.3.2'
 crates-io = true
 status = 'direct'
 features = []
