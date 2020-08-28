@@ -15,7 +15,7 @@ fun main() {
     assert(LibraTimestamp::now_microseconds() == 1000000, 78);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: alice

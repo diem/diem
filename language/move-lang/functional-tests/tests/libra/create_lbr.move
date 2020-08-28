@@ -20,7 +20,7 @@ fun main(lr_account: &signer) {
     );
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -34,7 +34,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: charlie
@@ -47,7 +47,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap)
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: denise
@@ -60,7 +60,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap)
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Now create LBR in bob's account
 //! new-transaction
@@ -76,7 +76,7 @@ fun main(account: &signer) {
     assert(LibraAccount::balance<LBR>({{bob}}) == 10, 77);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Now unpack from the LBR into the constituent coins
 //! new-transaction
@@ -95,4 +95,4 @@ fun main(account: &signer) {
 }
 // not: PreburnEvent
 // not: BurnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

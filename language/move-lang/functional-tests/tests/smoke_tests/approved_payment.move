@@ -129,10 +129,7 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, invalid_pubkey)
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"
 
 // publish with a valid pubkey...
 
@@ -146,7 +143,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // ... but then rotate to an invalid one
 
@@ -159,10 +156,7 @@ fun main(account: &signer) {
     ApprovedPayment::rotate_sender_key(account, invalid_pubkey)
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"
 
 
 // === publish/unpublish tests ===
@@ -182,7 +176,7 @@ fun main(account: &signer) {
     assert(!ApprovedPayment::exists_at({{alice1}}), 6003);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // === rotate key tests ===
 // Test that rotating the key used to pre-approve payments works
@@ -203,7 +197,7 @@ fun main(account: &signer) {
     ApprovedPayment::rotate_sender_key(account, x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d");
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // offline: alice2 generates payment id 0, signs it, and sends ID + signature to bob2
 // online: now bob2 puts the payment id and signature in transaction and uses it to pay alice2
@@ -219,7 +213,7 @@ fun main(account: &signer) {
     ApprovedPayment::deposit_to_payee<LBR>(account, {{alice2}}, 1000, payment_id, signature);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // charlie publishes an approved payment resource, then tries to rotate to an invalid key
 
@@ -234,10 +228,7 @@ fun main(account: &signer) {
     ApprovedPayment::rotate_sender_key(account, x"0000000000000000000000000000000000000000000000000000000000000000");
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"
 
 
 // === signature checking tests ===
@@ -261,7 +252,7 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey)
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // offline: alice generates payment id 0, signs it, and sends ID + signature to bob
 // online: now bob puts the payment id and signature in transaction and uses it to pay Alice
@@ -277,7 +268,7 @@ fun main(account: &signer) {
     ApprovedPayment::deposit_to_payee<LBR>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // same as above, but with an invalid-length signature. should now abort
 
@@ -293,10 +284,7 @@ fun main(account: &signer) {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9001
+// check: "Keep(ABORTED { code: 9001,"
 
 // same as above, but with an invalid signature. should now abort
 
@@ -311,10 +299,7 @@ fun main(account: &signer) {
     ApprovedPayment::deposit_to_payee<LBR>(account, {{alice3}}, 1000, payment_id, signature);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9002
+// check: "Keep(ABORTED { code: 9002,"
 
 // charlie publishes an invalid approved payment resource (key too long)
 //! new-transaction
@@ -326,8 +311,7 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey);
 }
 }
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"
 
 
 // charlie publishes an invalid approved payment resource (key too short)
@@ -340,10 +324,7 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"
 
 // charlie publishes an invalid approved payment resource (correct length,
 // invalid key),
@@ -356,7 +337,4 @@ fun main(account: &signer) {
     ApprovedPayment::publish(account, pubkey);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9003
+// check: "Keep(ABORTED { code: 9003,"

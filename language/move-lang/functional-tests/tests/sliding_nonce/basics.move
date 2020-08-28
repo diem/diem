@@ -15,7 +15,7 @@ script {
         SlidingNonce::record_nonce_or_abort(account, 129);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob

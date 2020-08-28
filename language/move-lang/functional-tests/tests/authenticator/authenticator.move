@@ -41,7 +41,7 @@ fun main() {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // empty policy should  be rejected
 //! new-transaction
@@ -54,10 +54,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 7,"
 
 // bad threshold should be rejected (threshold 1 for empty keys)
 //! new-transaction
@@ -70,10 +67,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 script {
@@ -93,10 +87,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 2
+// check: "Keep(ABORTED { code: 519,"
 
 // bad threshold should be rejected (threshold 2 for 1 key)
 //! new-transaction
@@ -113,10 +104,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 263,"
 
 // bad threshold should be rejected (threshold 0 for 1 address)
 //! new-transaction
@@ -133,10 +121,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 7,"
 
 // 1-of-1 multi-ed25519 should have a different auth key than ed25519 with the same public key
 //! new-transaction
@@ -166,4 +151,4 @@ fun main() {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

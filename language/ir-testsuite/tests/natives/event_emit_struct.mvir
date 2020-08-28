@@ -23,4 +23,4 @@ main(account: &signer) {
 
 // check: ContractEvent
 // check: MyEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

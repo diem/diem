@@ -29,7 +29,7 @@ module AlicePays {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -40,7 +40,7 @@ fun main(sender: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -57,4 +57,4 @@ fun main() {
     assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

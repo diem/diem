@@ -13,4 +13,4 @@ fun main(account: &signer) {
 }
 }
 // check: ToLBRExchangeRateUpdateEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

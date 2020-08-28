@@ -22,7 +22,7 @@ main<T: copyable>(v: vector<T>) {
 module M {
     struct Box<T> { x: T }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction

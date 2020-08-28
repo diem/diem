@@ -14,7 +14,7 @@ module M {
         return move(r);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! type-args: u64
@@ -25,7 +25,7 @@ main<T>(account: &signer) {
     assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -38,7 +38,7 @@ main<T>(account: &signer) {
     assert(!M.type_eq<T, u8>(copy(account)), 101);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -51,4 +51,4 @@ main<T>(account: &signer) {
     assert(!M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u8>>>>(copy(account)), 101);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

@@ -14,7 +14,7 @@ module M {
         }
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -29,7 +29,7 @@ module N {
         z
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -49,4 +49,4 @@ fun main() {
     _ = r;
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

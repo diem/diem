@@ -2,4 +2,4 @@
 main<T>() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

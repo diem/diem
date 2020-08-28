@@ -26,7 +26,7 @@ module M {
         Debug::print(&box);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -36,4 +36,4 @@ fun main() {
     M::test();
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

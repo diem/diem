@@ -4,7 +4,7 @@ module Test {
   resource NonEmpty2 { f1: bool, f2: u64 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 module EmptyStruct {

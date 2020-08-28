@@ -32,7 +32,7 @@ import 0x1.LibraTimestamp;
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 86500
@@ -42,7 +42,7 @@ import 0x1.LibraTimestamp;
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -56,7 +56,7 @@ import 0x1.LibraTimestamp;
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 101
@@ -76,4 +76,4 @@ import 0x1.LibraTimestamp;
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

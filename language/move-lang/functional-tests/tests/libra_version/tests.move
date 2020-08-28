@@ -5,10 +5,7 @@ fun main(account: &signer) {
     LibraVersion::initialize(account);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 script{
@@ -17,7 +14,4 @@ fun main(account: &signer) {
     LibraVersion::set(account, 0);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 2,"

@@ -3,7 +3,7 @@ main() {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -17,4 +17,4 @@ main(account: &signer) {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

@@ -277,7 +277,7 @@ fun main(account: &signer) {
     SortedLinkedList::create_new_list<u64>(account, 0);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -288,8 +288,7 @@ fun main(account: &signer) {
     SortedLinkedList::create_new_list<u64>(account, 0);
 }
 }
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 3,"
 
 //! new-transaction
 //! sender: bob
@@ -303,7 +302,7 @@ fun main(account: &signer) {
     SortedLinkedList::find_position_and_insert(account, 10, head_entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -317,7 +316,7 @@ fun main(account: &signer) {
     SortedLinkedList::find_position_and_insert(account, 12, head_entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -329,7 +328,7 @@ fun main(account: &signer) {
     SortedLinkedList::find_position_and_insert(account, 11, head_entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -351,7 +350,7 @@ fun main() {
     assert(SortedLinkedList::get_prev_node_addr<u64>(entry3) == {{carol}}, 36);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -363,7 +362,7 @@ fun main(account: &signer) {
     SortedLinkedList::remove_node_by_list_owner<u64>(account, entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -375,7 +374,7 @@ fun main(account: &signer) {
     SortedLinkedList::remove_node_by_node_owner<u64>(account, entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -388,4 +387,4 @@ fun main(account: &signer) {
     SortedLinkedList::remove_list<u64>(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

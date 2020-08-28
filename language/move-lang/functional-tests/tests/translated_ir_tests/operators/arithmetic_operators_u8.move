@@ -12,7 +12,7 @@ fun main() {
     assert(5u8 + 250u8 == 255u8, 1202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -46,7 +46,7 @@ fun main() {
     assert(5u8 - 1u8 - 4u8 == 0u8, 2201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -78,7 +78,7 @@ fun main() {
     assert(127u8 * 2u8 == 254u8, 3200);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -112,7 +112,7 @@ fun main() {
     assert(255u8 / 255u8 == 1u8, 4201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -154,7 +154,7 @@ fun main() {
     assert(255u8 % 255u8 == 0u8, 5201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {

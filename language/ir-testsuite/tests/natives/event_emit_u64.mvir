@@ -10,4 +10,4 @@ main(account: &signer) {
 
 // check: ContractEvent
 // check: U64
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

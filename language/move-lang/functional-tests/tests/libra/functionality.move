@@ -10,7 +10,7 @@ module BurnCapabilityHolder {
         move_to(account, Holder<Token>{ cap })
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -48,7 +48,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(Libra::zero<Coin2>());
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -73,7 +73,7 @@ script {
         Libra::destroy_zero(coins);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -97,7 +97,7 @@ script {
         assert(!Libra::is_synthetic_currency<u64>(), 11);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -124,7 +124,7 @@ script {
         );
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 module Holder {
@@ -133,7 +133,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -240,7 +240,7 @@ fun main() {
     assert(Libra::is_synthetic_currency<LBR>(), 96);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed

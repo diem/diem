@@ -56,4 +56,4 @@ fun main() {
     assert(Compare::cmp_lcs_bytes(&LCS::to_bytes(&x"001"), &LCS::to_bytes(&x"100")) == greater_than, 8034); // potentially confusing
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

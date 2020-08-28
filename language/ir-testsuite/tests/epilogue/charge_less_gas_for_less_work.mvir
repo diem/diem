@@ -8,7 +8,7 @@
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -21,7 +21,7 @@ main() {
     while (copy(x) < 2000) { x = move(x) + 1; };
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -32,4 +32,4 @@ main() {
     assert(LibraAccount.balance<Coin1.Coin1>({{bob}}) < LibraAccount.balance<Coin1.Coin1>({{alice}}), 42);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

@@ -42,7 +42,7 @@ fun main(account: &signer) {
     assert(Libra::market_cap<Coin2>() - prev_mcap2 == 100, 8);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dd1
@@ -57,7 +57,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dd2
@@ -72,7 +72,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 // do some burning
@@ -92,7 +92,7 @@ fun main(account: &signer) {
     assert(prev_mcap2 - Libra::market_cap<Coin2>() == 100, 10);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // check that stop minting works
 //! new-transaction
@@ -107,5 +107,4 @@ fun main(account: &signer) {
     Libra::destroy_zero(coin);
 }
 }
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 1281,"

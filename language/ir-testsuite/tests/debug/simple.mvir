@@ -36,7 +36,7 @@ module M {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.M;
@@ -45,4 +45,4 @@ main() {
     M.test();
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

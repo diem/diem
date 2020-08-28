@@ -10,7 +10,7 @@ module M {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -24,4 +24,4 @@ main(s: &signer) {
 //
 // check: WriteSet
 // not: Deletion
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

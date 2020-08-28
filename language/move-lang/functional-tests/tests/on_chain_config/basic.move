@@ -5,10 +5,7 @@ script {
         LibraConfig::initialize(account);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 script {
@@ -17,10 +14,7 @@ script {
         let _x = LibraConfig::get<u64>();
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 261
+// check: "Keep(ABORTED { code: 261,"
 
 //! new-transaction
 script {
@@ -29,10 +23,7 @@ script {
         LibraConfig::set(account, 0);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 516
+// check: "Keep(ABORTED { code: 516,"
 
 //! new-transaction
 script {
@@ -41,10 +32,7 @@ script {
         LibraConfig::publish_new_config(account, 0);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 module Holder {
@@ -53,7 +41,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot

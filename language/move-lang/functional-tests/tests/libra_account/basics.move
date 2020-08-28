@@ -41,7 +41,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -130,7 +130,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -144,7 +144,7 @@ script {
         assert(LibraAccount::balance<LBR>({{alice}}) == 10000, 60)
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed

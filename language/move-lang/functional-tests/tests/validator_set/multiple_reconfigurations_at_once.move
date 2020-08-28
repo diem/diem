@@ -12,13 +12,13 @@
 //! sender: libraroot
 //! args: 0, {{bob}}, {{bob::auth_key}}, b"bob"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
 //! args: 0, {{dave}}, {{dave::auth_key}}, b"dave"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -30,7 +30,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: viola
@@ -42,7 +42,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -62,13 +62,13 @@ script{
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: alice
 //! block-time: 3
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dave
@@ -96,7 +96,7 @@ script{
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dave
@@ -139,4 +139,4 @@ script {
         assert(LibraSystem::is_validator({{alice}}) == true, 102);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

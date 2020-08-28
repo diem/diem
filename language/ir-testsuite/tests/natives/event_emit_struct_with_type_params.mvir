@@ -26,4 +26,4 @@ main(account: &signer) {
 // check: MyEvent
 // check: U64
 // check: Bool
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

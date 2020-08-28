@@ -32,7 +32,7 @@ fun main(account: &signer) {
     assert(new_auth_key != LibraAccount::authentication_key({{default}}), 3005);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // publishing a key with a bad length should fail
 //! new-transaction

@@ -63,7 +63,7 @@ fun main(account: &signer) {
 //! args: 0, {{bob}}, {{bob::auth_key}}, x"", false
 
 stdlib_script::create_designated_dealer
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -96,7 +96,7 @@ fun main(account: &signer) {
     DesignatedDealer::update_tier<Coin1>(account, {{bob}}, 0, 500000 * Libra::scaling_factor<Coin1>());
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -150,7 +150,7 @@ script {
 }
 // check: ReceivedMintEvent
 // check: MintEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -184,4 +184,4 @@ script {
 }
 // check: ReceivedMintEvent
 // check: MintEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

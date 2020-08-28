@@ -7,6 +7,4 @@ main(val: u64, addr: address) {
     return;
 }
 
-// check: Keep
-// check: ABORTED
-// check: 42
+// check: "Keep(ABORTED { code: 42,"

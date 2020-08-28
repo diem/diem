@@ -35,7 +35,7 @@ script {
         assert(SlidingNonce::try_record_nonce(account, 20000) == 2, 1);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -47,4 +47,4 @@ script {
         SlidingNonce::record_nonce_or_abort(account, 0);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

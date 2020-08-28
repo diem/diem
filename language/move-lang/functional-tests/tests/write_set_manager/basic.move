@@ -5,5 +5,4 @@ fun main(account: &signer) {
     LibraWriteSetManager::initialize(account);
 }
 }
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"

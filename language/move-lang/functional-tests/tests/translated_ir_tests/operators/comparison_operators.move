@@ -13,7 +13,7 @@ fun main() {
     assert(!(1u128 == 0u128), 1202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -31,7 +31,7 @@ fun main() {
     assert(!(0u128 != 0u128), 2201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -49,7 +49,7 @@ fun main() {
     assert(!(0u128 < 0u128), 3202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -67,7 +67,7 @@ fun main() {
     assert(!(0u128 > 0u128), 4202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -85,7 +85,7 @@ fun main() {
     assert(0u128 <= 0u128, 5202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -103,4 +103,4 @@ fun main() {
     assert(0u128 >= 0u128, 6202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

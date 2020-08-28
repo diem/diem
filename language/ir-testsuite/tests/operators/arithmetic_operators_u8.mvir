@@ -11,7 +11,7 @@ main() {
     assert(5u8 + 250u8 == 255u8, 1202);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 main() {
@@ -42,7 +42,7 @@ main() {
     assert(5u8 - 1u8 - 4u8 == 0u8, 2201);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 main() {
@@ -71,7 +71,7 @@ main() {
     assert(127u8 * 2u8 == 254u8, 3200);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 main() {
@@ -102,7 +102,7 @@ main() {
     assert(255u8 / 255u8 == 1u8, 4201);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 main() {
@@ -140,7 +140,7 @@ main() {
     assert(255u8 % 255u8 == 0u8, 5201);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 main() {

@@ -262,7 +262,7 @@ main(account: &signer) {
     SortedLinkedList.create_new_list(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -272,10 +272,7 @@ main(account: &signer) {
     SortedLinkedList.create_new_list(move(account));
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: bob
@@ -285,7 +282,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 10, {{alice}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -295,10 +292,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 12, {{alice}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 3,"
 
 //! new-transaction
 //! sender: carol
@@ -308,10 +302,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 15, {{alice}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 7
+// check: "Keep(ABORTED { code: 7,"
 
 //! new-transaction
 //! sender: carol
@@ -321,7 +312,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 5, {{alice}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: david
@@ -331,10 +322,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 4, {{bob}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 6
+// check: "Keep(ABORTED { code: 6,"
 
 //! new-transaction
 //! sender: david
@@ -344,7 +332,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 15, {{bob}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: frank
@@ -354,10 +342,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 15, {{eve}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 5
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: eve
@@ -367,10 +352,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 6
+// check: "Keep(ABORTED { code: 6,"
 
 //! new-transaction
 //! sender: carol
@@ -380,10 +362,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 5, {{carol}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 3,"
 
 //! new-transaction
 //! sender: eve
@@ -393,7 +372,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 7, {{carol}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -403,7 +382,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -413,10 +392,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 11
+// check: "Keep(ABORTED { code: 11,"
 
 //! new-transaction
 //! sender: carol
@@ -426,7 +402,7 @@ main(account: &signer) {
     SortedLinkedList.add_node(copy(account), 9, {{eve}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -436,7 +412,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(move(account), {{bob}});
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -446,10 +422,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 11
+// check: "Keep(ABORTED { code: 11,"
 
 //! new-transaction
 //! sender: bob
@@ -459,10 +432,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(move(account), {{david}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 15
+// check: "Keep(ABORTED { code: 15,"
 
 //! new-transaction
 //! sender: alice
@@ -472,10 +442,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(move(account), {{alice}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 14
+// check: "Keep(ABORTED { code: 14,"
 
 //! new-transaction
 //! sender: alice
@@ -485,10 +452,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 12
+// check: "Keep(ABORTED { code: 12,"
 
 //! new-transaction
 //! sender: alice
@@ -498,10 +462,7 @@ main(account: &signer) {
     SortedLinkedList.remove_list(move(account));
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 9
+// check: "Keep(ABORTED { code: 9,"
 
 //! new-transaction
 //! sender: alice
@@ -514,10 +475,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_list_owner(copy(account), {{alice}});
     return;
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 14
+// check: "Keep(ABORTED { code: 14,"
 
 //! new-transaction
 //! sender: alice
@@ -530,8 +488,7 @@ main(account: &signer) {
     SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
-// check: ABORTED
-// check: 12
+// check: "Keep(ABORTED { code: 12,"
 
 //! new-transaction
 //! sender: alice
@@ -544,7 +501,7 @@ main(account: &signer) {
     SortedLinkedList.remove_list(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -554,7 +511,7 @@ main(account: &signer) {
     SortedLinkedList.create_new_list(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob

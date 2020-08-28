@@ -15,4 +15,4 @@ main() {
   return;
 }
 
-// check: ABORTED 1
+// check: "Keep(ABORTED { code: 1,"

@@ -7,7 +7,7 @@
 main() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import 0x1.LibraAccount;
@@ -23,4 +23,4 @@ main(account: &signer) {
     assert(LibraAccount.balance<Coin1.Coin1>(move(sender)) >= 5000, 42);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

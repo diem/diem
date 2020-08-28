@@ -21,5 +21,4 @@ main() {
   m = M.new();
   return;
 }
-// check: ABORTED
-// check: 42
+// check: "Keep(ABORTED { code: 42,"

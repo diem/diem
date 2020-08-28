@@ -49,8 +49,7 @@ main(account: &signer) {
     return;
 }
 
-// check: ABORTED
-// check: 11
+// check: "Keep(ABORTED { code: 7,"
 
 //! new-transaction
 //! sender: bob

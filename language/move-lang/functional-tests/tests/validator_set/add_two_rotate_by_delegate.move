@@ -13,7 +13,7 @@
 //! sender: libraroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -25,7 +25,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -37,9 +37,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 //! sender: bob
@@ -51,9 +49,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
+// check: "Keep(ABORTED { code: 5,"
 
 //! new-transaction
 //! sender: alice
@@ -66,4 +62,4 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

@@ -9,7 +9,7 @@
 //! sender: libraroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -26,13 +26,13 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: bob
 //! block-time: 2
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -62,4 +62,4 @@ script {
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

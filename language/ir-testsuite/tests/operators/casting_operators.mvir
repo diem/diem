@@ -17,7 +17,7 @@ main() {
 
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Casting to u64.
 //! new-transaction
@@ -38,7 +38,7 @@ main() {
     assert(to_u64(18446744073709551615u128) == 18446744073709551615u64, 2202);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Casting to u128.
 //! new-transaction
@@ -59,7 +59,7 @@ main() {
     assert(to_u128(340282366920938463463374607431768211455u128) == 340282366920938463463374607431768211455u128, 3202);
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 // Casting to u8, overflowing.

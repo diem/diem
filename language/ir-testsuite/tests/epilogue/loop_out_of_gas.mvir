@@ -29,4 +29,4 @@ main(account: &signer) {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

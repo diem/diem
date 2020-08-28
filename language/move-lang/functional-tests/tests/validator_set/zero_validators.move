@@ -12,7 +12,7 @@ script {
         LibraSystem::get_validator_config({{vivian}});
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -29,7 +29,7 @@ script {
         };
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -39,5 +39,4 @@ script {
         LibraSystem::get_validator_config({{vivian}});
     }
 }
-// check: ABORTED
-// check: 5
+// check: "Keep(ABORTED { code: 775,"

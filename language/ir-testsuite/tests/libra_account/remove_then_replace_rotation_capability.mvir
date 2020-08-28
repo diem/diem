@@ -25,7 +25,7 @@ main(account: &signer) {
   return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Extracting the capability should preclude rotation
 //! new-transaction
@@ -45,6 +45,5 @@ main(account: &signer) {
   return;
 }
 
-// check: ABORTED
-// check: code: 9
+// check: "Keep(ABORTED { code: 2305,"
 // check: location: ::LibraAccount

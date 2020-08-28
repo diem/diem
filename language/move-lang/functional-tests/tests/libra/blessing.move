@@ -19,7 +19,7 @@ fun main() {
     Libra::assert_is_SCS_currency<Coin2>();
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -74,7 +74,7 @@ module Holder {
        x
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot

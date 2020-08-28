@@ -18,7 +18,7 @@ script{
 fun main() {
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 86500
@@ -26,7 +26,7 @@ script{
 fun main() {
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
@@ -38,7 +38,7 @@ script{
 fun main() {
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! expiration-time: 101

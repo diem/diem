@@ -260,4 +260,4 @@ module M {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

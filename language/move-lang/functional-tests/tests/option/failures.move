@@ -8,9 +8,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED 1
+// check: "Keep(ABORTED { code: 263,"
 
 
 //! new-transaction
@@ -22,9 +20,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED 1
+// check: "Keep(ABORTED { code: 263,"
 
 //! new-transaction
 script {
@@ -35,9 +31,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED 1
+// check: "Keep(ABORTED { code: 263,"
 
 
 //! new-transaction
@@ -49,9 +43,7 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED 1
+// check: "Keep(ABORTED { code: 263,"
 
 
 //! new-transaction
@@ -63,7 +55,4 @@ fun main() {
 }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 7,"

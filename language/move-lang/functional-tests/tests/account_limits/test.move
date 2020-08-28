@@ -49,7 +49,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // ------ try and mint to unhosted bob, but inflow is higher than total flow
 
@@ -66,7 +66,7 @@ script {
 }
 
 // TODO fix (should ABORT) - update unhosted //! account directive, and flow/balance updates for accounts
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 // --- increase limits limits
@@ -96,7 +96,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: moneybags
@@ -109,7 +109,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: otherblessed
@@ -122,7 +122,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: moneybags
@@ -135,7 +135,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -148,7 +148,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -180,7 +180,7 @@ script {
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: moneybags
@@ -246,4 +246,4 @@ script {
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{otherbob}}, {{otherbob::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-//! check: EXECUTED
+//! check: "Keep(EXECUTED)"

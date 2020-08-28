@@ -8,13 +8,13 @@
 //! sender: libraroot
 //! args: 0, {{bob}}, {{bob::auth_key}}, b"bob"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
 //! args: 0, {{dave}}, {{dave::auth_key}}, b"dave"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -26,7 +26,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vivian
@@ -38,7 +38,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -51,14 +51,14 @@ script{
 }
 
 // check: events: []
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
 //! block-time: 2
 
 // not: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dave
@@ -78,13 +78,13 @@ script{
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: vivian
 //! block-time: 3
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: dave
@@ -99,4 +99,4 @@ script{
 }
 
 // not: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

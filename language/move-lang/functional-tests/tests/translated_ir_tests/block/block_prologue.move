@@ -37,7 +37,4 @@ fun main(account: &signer) {
     LibraTimestamp::update_global_time(account, {{vivian}}, 20);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 514
+// check: "Keep(ABORTED { code: 514,"

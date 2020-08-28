@@ -25,5 +25,4 @@ main(account: &signer) {
     return;
 }
 
-// check: ABORTED
-// check: 5
+// check: "Keep(ABORTED { code: 1288,"

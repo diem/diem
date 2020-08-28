@@ -157,7 +157,7 @@ fun main(account: &signer) {
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp}}, {{vasp::auth_key}}, b"vasp", true
 stdlib_script::create_parent_vasp_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
@@ -177,7 +177,7 @@ fun main(account: &signer) {
     assert(!Roles::can_hold_balance(account), 1);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -188,7 +188,7 @@ fun main(account: &signer) {
     assert(!Roles::has_validator_operator_role(account), 1);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -198,4 +198,4 @@ fun main(account: &signer) {
     assert(Roles::has_treasury_compliance_role(account), 0);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

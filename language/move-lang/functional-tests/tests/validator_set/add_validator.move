@@ -13,7 +13,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -29,7 +29,7 @@ fun main(creator: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // TODO(valerini): enable the following test once the sender format is supported
 // //! new-transaction
@@ -41,5 +41,5 @@ fun main(creator: &signer) {
 // }
 // }
 //
-// // check: EXECUTED
+// // check: "Keep(EXECUTED)"
 // // check: NewEpochEvent

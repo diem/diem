@@ -2,4 +2,4 @@
 main<T1, T2: copyable, T3: resource>() {
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

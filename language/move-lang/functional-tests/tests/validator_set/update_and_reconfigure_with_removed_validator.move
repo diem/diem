@@ -9,7 +9,7 @@
 //! sender: libraroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -20,7 +20,7 @@ script {
         ValidatorConfig::set_operator(account, {{alice}});
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -31,13 +31,13 @@ script{
         LibraSystem::remove_validator(account, {{bob}});
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: carrol
 //! block-time: 2
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice

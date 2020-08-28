@@ -8,4 +8,4 @@ main() {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

@@ -87,8 +87,7 @@ fun main() {
 }
 }
 
-// check: ABORTED
-// check: 999
+// check: "Keep(ABORTED { code: 999,"
 
 //! new-transaction
 //! gas-price: 0
@@ -116,4 +115,4 @@ fun main() {
     }
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

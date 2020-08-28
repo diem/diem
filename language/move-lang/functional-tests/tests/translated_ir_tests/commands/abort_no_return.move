@@ -7,5 +7,4 @@ fun main() {
 
 // not: VerificationFailure
 
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 0,"

@@ -7,10 +7,7 @@ script {
         LibraTimestamp::initialize(account);
     }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"
 
 //! block-prologue
 //! proposer-address: 0x0
@@ -29,8 +26,7 @@ script {
         LibraTimestamp::set_time_has_started(account);
     }
 }
-// check: ABORTED
-// check: "code: 1"
+// check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
 //! sender: libraroot
@@ -40,7 +36,4 @@ script {
         LibraTimestamp::set_time_has_started(account);
     }
 }
-// check: ABORTED
-// check: "code: 1"
-// check: ABORTED
-// check: "code: 1"
+// check: "Keep(ABORTED { code: 1,"

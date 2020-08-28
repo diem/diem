@@ -17,7 +17,7 @@ fun main() {
     assert((255u128 as u8) == 255u8, 1202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Casting to u64.
 //! new-transaction
@@ -39,7 +39,7 @@ fun main() {
     assert((18446744073709551615u128 as u64) == 18446744073709551615u64, 2202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Casting to u128.
 //! new-transaction
@@ -61,7 +61,7 @@ fun main() {
     assert((340282366920938463463374607431768211455u128 as u128) == 340282366920938463463374607431768211455u128, 3202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 // Casting to u8, overflowing.

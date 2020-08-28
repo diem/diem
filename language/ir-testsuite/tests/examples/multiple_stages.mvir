@@ -38,5 +38,4 @@ main() {
 
 // not: VerificationFailure
 
-// check: ABORTED
-// check: 42
+// check: "Keep(ABORTED { code: 42,"

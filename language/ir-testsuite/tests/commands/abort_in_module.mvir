@@ -14,5 +14,5 @@ main() {
     return;
 }
 
-// check: ABORTED 22
+// check: "Keep(ABORTED { code: 22,"
 // check: location: ::M

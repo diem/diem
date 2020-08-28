@@ -19,7 +19,7 @@ script {
 }
 
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // --------------------------------------------------------------------
 // Blessed treasury initiate mint flow given DD creation
@@ -40,7 +40,7 @@ script {
 
 // check: ReceivedMintEvent
 // check: MintEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // --------------------------------------------------------------------
 // Mint initiated but amount exceeds 1st tier upperbound
@@ -57,8 +57,7 @@ script {
     }
 }
 
-// check: ABORTED
-// check: 6
+// check: "Keep(ABORTED { code: 1287,"
 
 // --------------------------------------------------------------------
 // Mint initiated and is below 2nd tier upperbound
@@ -75,7 +74,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // --------------------------------------------------------------------
 // Mint initiated and is below 3rd tier upperbound
@@ -92,7 +91,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // --------------------------------------------------------------------
 // Too large
@@ -109,10 +108,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 6
+// check: "Keep(ABORTED { code: 1287,"
 
 // --------------------------------------------------------------------
 
@@ -127,10 +123,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 3
+// check: "Keep(ABORTED { code: 775,"
 
 // --------------------------------------------------------------------
 // Validate regular account can not initiate mint, only Blessed treasury account
@@ -147,7 +140,4 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 0
+// check: "Keep(ABORTED { code: 258,"

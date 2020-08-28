@@ -12,7 +12,7 @@ module A {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.A;

@@ -12,4 +12,4 @@ fun main() {
     assert(Errors::custom(0) == 255, 9);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

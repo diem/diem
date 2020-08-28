@@ -36,7 +36,7 @@ fun main(lr_account: &signer) {
 
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // create some child VASP accounts
 //! new-transaction
@@ -61,7 +61,7 @@ fun main(parent_vasp: &signer) {
     assert(VASP::parent_address(0xBB) == {{parent}}, 2014);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: parent
@@ -169,7 +169,7 @@ fun main() {
     assert(!VASP::is_same_vasp({{parent}}, {{blessed}}), 42);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: parent
@@ -179,4 +179,4 @@ fun main() {
     assert(!VASP::is_same_vasp({{blessed}}, {{parent}}), 42);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

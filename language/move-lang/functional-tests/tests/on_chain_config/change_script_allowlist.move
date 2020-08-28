@@ -13,7 +13,7 @@ module FooConfig {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -109,7 +109,7 @@ fun main(config: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 // check: NewEpochEvent
 
 //! new-transaction

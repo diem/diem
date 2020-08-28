@@ -27,7 +27,7 @@ module M {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -37,7 +37,7 @@ main(s: &signer) {
     M.publish(move(s));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -48,7 +48,7 @@ main(s: &signer) {
     M.borrow_and_swap(Signer.address_of(move(s)));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -59,4 +59,4 @@ main(s: &signer) {
     M.verify_effects(Signer.address_of(move(s)));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

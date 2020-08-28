@@ -30,7 +30,7 @@ fun main(tc_account: &signer) {
     );
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Give alice money from richie
 //! new-transaction
@@ -44,7 +44,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Give bob money from sally
 //! new-transaction
@@ -58,7 +58,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -69,7 +69,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -80,7 +80,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin1>(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Adding a bogus currency should abort
 //! new-transaction
@@ -91,10 +91,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<u64>(account);
 }
 }
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
-// check: 16
+// check: "Keep(ABORTED { code: 261,"
 
 // Adding Coin1 a second time should fail with ADD_EXISTING_CURRENCY
 //! new-transaction
@@ -106,8 +103,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin1>(account);
 }
 }
-// check: ABORTED
-// check: 17
+// check: "Keep(ABORTED { code: 3846,"
 
 //! new-transaction
 //! sender: alice
@@ -122,7 +118,7 @@ fun main(account: &signer) {
     assert(LibraAccount::balance<Coin1>({{bob}}) == 10, 1);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -141,4 +137,4 @@ fun main(account: &signer) {
     assert(LibraAccount::balance<Coin2>({{alice}}) == 10, 5);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

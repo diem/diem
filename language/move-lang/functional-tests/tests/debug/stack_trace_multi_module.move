@@ -9,7 +9,7 @@ module M {
         Debug::print_stack_trace();
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -24,7 +24,7 @@ module N {
         Libra::destroy_zero(x);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -35,4 +35,4 @@ fun main() {
     N::foo();
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

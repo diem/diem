@@ -354,7 +354,7 @@ module TestNft {
         TestNft{}
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -379,7 +379,7 @@ module MoveNft {
         NonFungibleToken::put_nft<TestNft>(account, nft);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: nftservice
@@ -391,7 +391,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -407,7 +407,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -418,7 +418,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -430,7 +430,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -456,7 +456,7 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -471,4 +471,4 @@ fun main(account: &signer) {
 }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

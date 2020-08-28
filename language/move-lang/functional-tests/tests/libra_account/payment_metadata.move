@@ -17,7 +17,7 @@ fun main(account: &signer) {
 // check: deadbeef
 // check: ReceivedPaymentEvent
 // check: deadbeef
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -42,4 +42,4 @@ fun main(account: &signer) {
 // check: deadbeef
 // check: ReceivedPaymentEvent
 // check: deadbeef
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

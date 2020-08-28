@@ -20,7 +20,7 @@ script{
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vivian
@@ -35,7 +35,7 @@ script{
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -52,7 +52,7 @@ script{
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // TODO(valerini): enable the following test once the sender format is supported
 // //! new-transaction
@@ -69,4 +69,4 @@ script{
 //     }
 // }
 
-// // check: EXECUTED
+// // check: "Keep(EXECUTED)"

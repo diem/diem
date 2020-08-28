@@ -11,7 +11,7 @@ fun main() {
     assert(!AccountFreezing::account_is_frozen({{bob}}), 0);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -41,7 +41,7 @@ fun main(account: &signer) {
 // check: FreezeAccountEvent
 // check: UnfreezeAccountEvent
 // check: FreezeAccountEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -65,7 +65,7 @@ fun main(account: &signer) {
 script {
 fun main() { }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -94,7 +94,7 @@ fun main(lr_account: &signer) {
     );
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // create a child VASP
 //! new-transaction
@@ -107,7 +107,7 @@ fun main(parent_vasp: &signer) {
     LibraAccount::create_child_vasp_account<LBR>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -131,7 +131,7 @@ fun main(account: &signer) {
 
 // check: FreezeAccountEvent
 // check: UnfreezeAccountEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -191,7 +191,7 @@ script {
         assert(!AccountFreezing::account_is_frozen({{alice}}), 0);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 module Holder {
@@ -206,7 +206,7 @@ module Holder {
        x
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp
@@ -218,7 +218,7 @@ fun main(account: &signer) {
     Holder::hold(account, cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -229,7 +229,7 @@ script {
         assert(AccountFreezing::account_is_frozen({{vasp}}), 1);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -240,14 +240,14 @@ script {
         assert(AccountFreezing::account_is_frozen({{vasp}}), 1);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-//! check: EXECUTED
+//! check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed

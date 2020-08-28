@@ -24,7 +24,7 @@ script {
 //! sender: libraroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
 stdlib_script::create_validator_operator_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -88,7 +88,7 @@ script {
         ValidatorConfig::remove_operator(account);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -148,4 +148,4 @@ script {
         let _ = ValidatorConfig::get_validator_network_addresses(&config);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

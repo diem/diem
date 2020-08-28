@@ -4,5 +4,4 @@ fun main(account: &signer) {
     LibraBlock::initialize_block_metadata(account);
 }
 }
-// check: ABORTED
-// check: 1
+// check: "Keep(ABORTED { code: 1,"

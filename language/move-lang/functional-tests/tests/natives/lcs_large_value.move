@@ -51,7 +51,7 @@ module M {
         LCS::to_bytes(&Box { x: box255(true) })
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -62,7 +62,7 @@ script {
         M::encode_128();
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -73,7 +73,7 @@ script {
         M::encode_256();
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction

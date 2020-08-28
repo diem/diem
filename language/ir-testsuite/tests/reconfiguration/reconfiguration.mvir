@@ -28,7 +28,7 @@ main(account: &signer) {
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -58,4 +58,4 @@ main(account: &signer) {
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

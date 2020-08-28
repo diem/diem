@@ -11,7 +11,7 @@
 //! proposer: bob
 //! block-time: 2
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -23,7 +23,7 @@ script {
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -34,13 +34,13 @@ script {
     }
 }
 
-// check: ABORTED
+// check: "Keep(ABORTED { code: 1025,"
 
 //! block-prologue
 //! proposer: bob
 //! block-time: 3
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -52,4 +52,4 @@ script {
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

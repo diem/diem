@@ -66,7 +66,7 @@ module M {
     public f251<T>() {  Self.f247<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
     public f255<T>() {  Self.f251<Self.Foo<Self.Foo<Self.Foo<Self.Foo<T>>>>>(); return; }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.M;
@@ -75,7 +75,7 @@ main() {
     M.f255<u8>();
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.M;

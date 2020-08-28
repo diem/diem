@@ -18,7 +18,7 @@ script {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // --------------------------------------------------------------------
 // Blessed treasury initiate mint flow given DD creation
@@ -39,7 +39,7 @@ script {
 
 // check: ReceivedMintEvent
 // check: MintEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //TODO(moezinia) add burn txn once specific address directive sender complete

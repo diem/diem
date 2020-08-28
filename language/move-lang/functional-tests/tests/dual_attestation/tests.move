@@ -9,7 +9,7 @@ script{
         DualAttestation::get_cur_microlibra_limit();
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script{
@@ -28,7 +28,7 @@ script{
         DualAttestation::set_microlibra_limit(not_blessed, 1001);
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
@@ -55,7 +55,7 @@ script{
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{bob}}, {{bob::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob

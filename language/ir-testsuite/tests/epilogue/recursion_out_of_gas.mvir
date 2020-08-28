@@ -7,7 +7,7 @@ module M {
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction

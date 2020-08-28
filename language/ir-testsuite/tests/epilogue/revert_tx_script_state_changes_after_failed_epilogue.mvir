@@ -24,8 +24,7 @@ main(account: &signer, amount: u64) {
     return;
 }
 
-// check: ABORTED
-// check: 43
+// check: "Keep(ABORTED { code: 5,"
 
 
 // Bob sends the same transaction script, with the amount set to 1000 instead of his full balance.
@@ -48,7 +47,7 @@ main(account: &signer, amount: u64) {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 // Check that the following invariants holds:
@@ -65,4 +64,4 @@ main() {
     return;
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

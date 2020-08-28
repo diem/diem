@@ -36,7 +36,7 @@ fun main(tc_account: &signer) {
 
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // create two children for parent1
 //! new-transaction
@@ -49,7 +49,7 @@ fun main(account: &signer) {
     LibraAccount::create_child_vasp_account<LBR>(account, {{child2}}, {{child2::auth_key}}, false)
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // === Intended usage ===
 
@@ -63,7 +63,7 @@ fun main(account: &signer) {
     RecoveryAddress::publish(account, LibraAccount::extract_key_rotation_capability(account))
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // delegate parent1's key to child1
 //! new-transaction
@@ -77,7 +77,7 @@ fun main(account: &signer) {
     );
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // ==== Abort cases ===
 
@@ -178,14 +178,14 @@ module Holder {
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp1}}, {{vasp1::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed
 //! type-args: 0x1::Coin1::Coin1
 //! args: 0, {{vasp2}}, {{vasp2::auth_key}}, b"bob", true
 stdlib_script::create_parent_vasp_account
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: vasp1
@@ -196,7 +196,7 @@ fun main(account: &signer) {
     Holder::hold(account, LibraAccount::extract_key_rotation_capability(account));
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // Try to create a recovery address with an invalid key rotation capability
 //! new-transaction

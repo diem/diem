@@ -61,7 +61,7 @@ fun main() {
     assert(0u128 >> 127u8 == 0u128, 1102);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 
@@ -78,7 +78,7 @@ fun main() {
     assert(57348765484584586725315342563424u128 >> 0u8 == 57348765484584586725315342563424u128, 2102);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 
@@ -95,7 +95,7 @@ fun main() {
     assert(1000u128 >> 1u8 == 500u128, 3102);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 
@@ -108,7 +108,7 @@ fun main() {
     assert(43152365326753472145312542634526753u128 >> 127u8 == 0u128, 4002);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 
@@ -121,7 +121,7 @@ fun main() {
     assert(2u128 << 127u8 == 0u128, 5002);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 
@@ -143,4 +143,4 @@ fun main() {
     assert(295429678238907658936718926478967892769u128 << 83u8 == 78660438169199498567214234129963941888u128, 6203);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

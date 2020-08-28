@@ -13,5 +13,4 @@ fun main() {
 }
 }
 
-// check: ABORTED
-// check: 22
+// check: "Keep(ABORTED { code: 22,"

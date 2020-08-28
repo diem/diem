@@ -12,9 +12,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
+// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: alice
@@ -26,9 +24,7 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
+// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: bob
@@ -40,6 +36,4 @@ script {
     }
 }
 
-// TODO(status_migration) remove duplicate check
-// check: ABORTED
-// check: ABORTED
+// check: "Keep(ABORTED { code: 2,"

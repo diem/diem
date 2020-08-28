@@ -11,7 +11,7 @@ fun main() {
     assert(Libra::fractional_part<LBR>() == 1000, 3);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 // minting LBR via Libra::mint should not work
 //! new-transaction
@@ -24,7 +24,7 @@ fun main(account: &signer) {
     Libra::destroy_zero(lbr)
 }
 }
-// check: "ABORTED { code: 2564"
+// check: "Keep(ABORTED { code: 2564,"
 
 // burning LBR via Libra::burn should not work. This is cumbersome to test directly, so instead test
 // that the Association account does not have a BurnCapability<LBR>
@@ -53,7 +53,7 @@ fun main() {
     assert(!LBR::is_lbr<bool>(), 4);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -64,7 +64,7 @@ fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -77,7 +77,7 @@ fun main(account: &signer) {
     LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -98,7 +98,7 @@ module Holder {
         move_to(account, Holder<T> { x })
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed

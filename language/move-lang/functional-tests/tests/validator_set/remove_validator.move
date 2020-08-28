@@ -18,8 +18,7 @@ script{
     }
 }
 
-// check: ABORTED
-// check: 21
+// check: "Keep(ABORTED { code: 775,"
 
 // remove_validator can only be called by the Association
 //! new-transaction
@@ -31,7 +30,7 @@ script{
     }
 }
 
-// check: ABORTED
+// check: "Keep(ABORTED { code: 2,"
 
 //! new-transaction
 //! sender: libraroot
@@ -44,7 +43,7 @@ script{
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: libraroot
@@ -56,4 +55,4 @@ script{
     }
 }
 
-// check: ABORTED
+// check: "Keep(ABORTED { code: 775,"

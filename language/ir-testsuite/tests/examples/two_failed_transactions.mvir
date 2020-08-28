@@ -3,10 +3,7 @@ main() {
     return;
 }
 
-// check: ABORTED
-// check: 42
-// TODO(status_migration) Remove extra check
-// check: ABORTED
+// check: "Keep(ABORTED { code: 42,"
 
 
 //! new-transaction
@@ -15,7 +12,4 @@ main() {
     return;
 }
 
-// check: ABORTED
-// check: 43
-// TODO(status_migration) Remove extra check
-// check: ABORTED
+// check: "Keep(ABORTED { code: 43,"

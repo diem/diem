@@ -10,7 +10,7 @@ fun main(lr: &signer, bob: &signer) {
     assert(Signer::address_of(bob) == {{bob}}, 1);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: blessed

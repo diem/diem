@@ -22,4 +22,4 @@ fun burn_txn_fees<CoinType>(blessed_account: &signer) {
 // check: BurnEvent
 // check: PreburnEvent
 // check: BurnEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

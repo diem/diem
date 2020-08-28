@@ -90,7 +90,7 @@ main(account: &signer) {
 
   return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.M;
@@ -106,7 +106,7 @@ main(account: &signer) {
   assert(M.get_inner(move(account)) == move(byte), 4);
   return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 import {{default}}.M;
@@ -119,4 +119,4 @@ main(account: &signer) {
   Libra.destroy_zero<LBR.LBR>(move(coin));
   return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

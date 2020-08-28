@@ -9,4 +9,4 @@ main() {
     return;
 }
 
-// check: ABORTED 3
+// check: "Keep(ABORTED { code: 3,"

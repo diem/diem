@@ -19,7 +19,7 @@ script{
 }
 
 // check: NewEpochEvent
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! block-prologue
 //! proposer: viola
@@ -37,4 +37,4 @@ script{
     }
 }
 
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

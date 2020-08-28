@@ -12,7 +12,7 @@ fun main() {
     assert(5u64 + 18446744073709551610u64 == 18446744073709551615u64, 1202);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -46,7 +46,7 @@ fun main() {
     assert(5u64 - 1u64 - 4u64 == 0u64, 2201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -78,7 +78,7 @@ fun main() {
     assert(9223372036854775807u64 * 2u64 == 18446744073709551614u64, 3200);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -112,7 +112,7 @@ fun main() {
     assert(18446744073709551615u64 / 18446744073709551615u64 == 1u64, 4201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {
@@ -153,7 +153,7 @@ fun main() {
     assert(18446744073709551615u64 % 18446744073709551615u64 == 0u64, 5201);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 script {

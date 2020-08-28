@@ -379,7 +379,7 @@ fun main(account: &signer) {
     NameService::initialize(account);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: alice
@@ -391,7 +391,7 @@ fun main(account: &signer) {
     NameService::find_position_and_insert(account, b"alice", head);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: bob
@@ -403,7 +403,7 @@ fun main(account: &signer) {
     NameService::find_position_and_insert(account, b"bob", head);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -415,7 +415,7 @@ fun main(account: &signer) {
     NameService::find_position_and_insert(account, b"carol", head);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: david
@@ -428,7 +428,7 @@ fun main() {
     assert(name == b"alice", 26);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: carol
@@ -440,7 +440,7 @@ fun main(account: &signer) {
     NameService::remove_entry_by_entry_owner(account, entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 //! new-transaction
 //! sender: nameservice
@@ -491,4 +491,4 @@ fun main(account: &signer) {
     NameService::remove_entry_by_service_owner(account, entry);
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"

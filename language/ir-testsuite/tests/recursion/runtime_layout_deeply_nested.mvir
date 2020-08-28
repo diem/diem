@@ -53,7 +53,7 @@ module M {
         return;
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -63,7 +63,7 @@ main(account: &signer) {
     M.publish_128(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -73,7 +73,7 @@ main(account: &signer) {
     M.publish_256(move(account));
     return;
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction

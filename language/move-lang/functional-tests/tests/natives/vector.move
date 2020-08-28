@@ -33,7 +33,7 @@ module M {
         (Bar {}, Bar {}) = test_natives<Bar>(Bar {}, Bar {});
     }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
 
 
 //! new-transaction
@@ -44,4 +44,4 @@ fun main() {
     M::test();
 }
 }
-// check: EXECUTED
+// check: "Keep(EXECUTED)"
