@@ -4,11 +4,11 @@
 use crate::metadata::{
     EpochEndingBackupMeta, Metadata, StateSnapshotBackupMeta, TransactionBackupMeta,
 };
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use itertools::Itertools;
 use libra_types::transaction::Version;
 use serde::export::Formatter;
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 pub struct MetadataView {
     epoch_ending_backups: Vec<EpochEndingBackupMeta>,
@@ -140,5 +140,36 @@ impl Display for BackupStorageState {
             self.latest_state_snapshot_version.as_ref().map_or("none".to_string(), Version::to_string),
             self.latest_transaction_version.as_ref().map_or("none".to_string(), Version::to_string),
         )
+    }
+}
+
+trait ParseOptionU64 {
+    fn parse_option_u64(&self) -> Result<Option<u64>>;
+}
+
+impl ParseOptionU64 for Option<regex::Match<'_>> {
+    fn parse_option_u64(&self) -> Result<Option<u64>> {
+        let m = self.ok_or_else(|| anyhow!("No match."))?;
+        if m.as_str() == "none" {
+            Ok(None)
+        } else {
+            Ok(Some(m.as_str().parse()?))
+        }
+    }
+}
+
+impl FromStr for BackupStorageState {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let captures = regex::Regex::new(
+            r"latest_epoch_ending_epoch: (none|\d+), latest_state_snapshot_version: (none|\d+), latest_transaction_version: (none|\d+)",
+        )?.captures(s).ok_or_else(|| anyhow!("Not in BackupStorageState display format: {}", s))?;
+
+        Ok(Self {
+            latest_epoch_ending_epoch: captures.get(1).parse_option_u64()?,
+            latest_state_snapshot_version: captures.get(2).parse_option_u64()?,
+            latest_transaction_version: captures.get(3).parse_option_u64()?,
+        })
     }
 }
