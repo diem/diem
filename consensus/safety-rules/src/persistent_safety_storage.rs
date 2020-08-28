@@ -3,7 +3,7 @@
 
 use crate::{
     counters,
-    logging::{self, LogEntry, LogEvent, LogField},
+    logging::{self, LogEntry, LogEvent},
     Error,
 };
 use consensus_types::{common::Author, safety_data::SafetyData};
@@ -126,8 +126,11 @@ impl PersistentSafetyStorage {
 
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<(), Error> {
         self.internal_store.set(WAYPOINT, waypoint)?;
-        sl_info!(logging::safety_log(LogEntry::Waypoint, LogEvent::Update)
-            .data(LogField::Message.as_str(), waypoint));
+        sl_info!(
+            logging::SafetyLogSchema::new(LogEntry::Waypoint, LogEvent::Update)
+                .waypoint(*waypoint)
+                .into_struct_log()
+        );
         Ok(())
     }
 

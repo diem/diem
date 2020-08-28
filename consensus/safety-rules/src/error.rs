@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Error, PartialEq, Serialize)]
 /// Different reasons for proposal rejection
 pub enum Error {
     #[error("Provided epoch, {0}, does not match expected epoch, {1}")]

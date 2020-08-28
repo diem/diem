@@ -1,14 +1,42 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_logger::StructuredLogEntry;
+use crate::Error;
+use consensus_types::common::Round;
+use libra_logger::Schema;
+use libra_types::waypoint::Waypoint;
+use serde::Serialize;
 
-pub fn safety_log(entry: LogEntry, event: LogEvent) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("safety_rules", entry.as_str())
-        .data(LogField::Event.as_str(), event.as_str())
+#[derive(Schema)]
+pub struct SafetyLogSchema<'a> {
+    name: LogEntry,
+    event: LogEvent,
+    round: Option<Round>,
+    preferred_round: Option<u64>,
+    last_voted_round: Option<u64>,
+    epoch: Option<u64>,
+    #[schema(display)]
+    error: Option<&'a Error>,
+    waypoint: Option<Waypoint>,
 }
 
-#[derive(Clone, Copy)]
+impl<'a> SafetyLogSchema<'a> {
+    pub fn new(name: LogEntry, event: LogEvent) -> Self {
+        Self {
+            name,
+            event,
+            round: None,
+            preferred_round: None,
+            last_voted_round: None,
+            epoch: None,
+            error: None,
+            waypoint: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LogEntry {
     ConsensusState,
     ConstructAndSignVote,
@@ -39,38 +67,11 @@ impl LogEntry {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LogEvent {
     Error,
     Request,
     Success,
     Update,
-}
-
-impl LogEvent {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LogEvent::Error => "error",
-            LogEvent::Request => "request",
-            LogEvent::Success => "success",
-            LogEvent::Update => "update",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum LogField {
-    Event,
-    Message,
-    Round,
-}
-
-impl LogField {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LogField::Event => "event",
-            LogField::Message => "message",
-            LogField::Round => "round",
-        }
-    }
 }

@@ -5,7 +5,7 @@ use crate::{
     consensus_state::ConsensusState,
     counters,
     error::Error,
-    logging::{self, LogEntry, LogEvent, LogField},
+    logging::{LogEntry, LogEvent, SafetyLogSchema},
     persistent_safety_storage::PersistentSafetyStorage,
     t_safety_rules::TSafetyRules,
 };
@@ -148,8 +148,9 @@ impl SafetyRules {
             Ordering::Greater => {
                 safety_data.preferred_round = two_chain_round;
                 sl_info!(
-                    logging::safety_log(LogEntry::PreferredRound, LogEvent::Update)
-                        .data(LogField::Message.as_str(), safety_data.preferred_round)
+                    SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
+                        .preferred_round(safety_data.preferred_round)
+                        .into_struct_log()
                 );
                 true
             }
@@ -198,8 +199,9 @@ impl SafetyRules {
         if round > last_voted_round {
             safety_data.last_voted_round = round;
             sl_info!(
-                logging::safety_log(LogEntry::LastVotedRound, LogEvent::Update)
-                    .data(LogField::Message.as_str(), safety_data.last_voted_round)
+                SafetyLogSchema::new(LogEntry::LastVotedRound, LogEvent::Update)
+                    .last_voted_round(safety_data.last_voted_round)
+                    .into_struct_log()
             );
             return Ok(());
         }
@@ -246,11 +248,12 @@ impl SafetyRules {
                     .consensus_key_for_version(expected_key)
                     .ok()
                     .ok_or_else(|| {
-                        sl_error!(logging::safety_log(
+                        sl_error!(SafetyLogSchema::new(
                             LogEntry::KeyReconciliation,
                             LogEvent::Error
                         )
-                        .data(LogField::Message.as_str(), "Validator key not found"));
+                        .into_struct_log()
+                        .log("Validator key not found".into()));
 
                         self.validator_signer = None;
                         Error::InternalError("Validator key not found".into())
@@ -260,13 +263,15 @@ impl SafetyRules {
             }
 
             sl_debug!(
-                logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
-                    .data(LogField::Message.as_str(), "in set")
+                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
+                    .into_struct_log()
+                    .log("in set".into())
             );
         } else {
             sl_debug!(
-                logging::safety_log(LogEntry::KeyReconciliation, LogEvent::Success)
-                    .data(LogField::Message.as_str(), "not in set")
+                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
+                    .into_struct_log()
+                    .log("not in set".into())
             );
             self.validator_signer = None;
         }
@@ -288,8 +293,10 @@ impl SafetyRules {
                 0,
                 None,
             ))?;
-            sl_info!(logging::safety_log(LogEntry::Epoch, LogEvent::Update)
-                .data(LogField::Message.as_str(), epoch_state.epoch));
+
+            sl_info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update)
+                .epoch(epoch_state.epoch)
+                .into_struct_log());
         }
         self.epoch_state = Some(epoch_state);
 
@@ -407,15 +414,13 @@ impl SafetyRules {
 
 impl TSafetyRules for SafetyRules {
     fn consensus_state(&mut self) -> Result<ConsensusState, Error> {
-        let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_consensus_state();
-        run_and_log(cb, log_cb, LogEntry::ConsensusState)
+        run_and_log(cb, |log| log, LogEntry::ConsensusState)
     }
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
-        let log_cb = |log: StructuredLogEntry| log;
         let cb = || self.guarded_initialize(proof);
-        run_and_log(cb, log_cb, LogEntry::Initialize)
+        run_and_log(cb, |log| log, LogEntry::Initialize)
     }
 
     fn construct_and_sign_vote(
@@ -423,41 +428,39 @@ impl TSafetyRules for SafetyRules {
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
         let round = maybe_signed_vote_proposal.vote_proposal.block().round();
-        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_construct_and_sign_vote(maybe_signed_vote_proposal);
-        run_and_log(cb, log_cb, LogEntry::ConstructAndSignVote)
+        run_and_log(cb, |log| log.round(round), LogEntry::ConstructAndSignVote)
     }
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         let round = block_data.round();
-        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), round);
         let cb = || self.guarded_sign_proposal(block_data);
-        run_and_log(cb, log_cb, LogEntry::SignProposal)
+        run_and_log(cb, |log| log.round(round), LogEntry::SignProposal)
     }
 
     fn sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
-        let log_cb = |log: StructuredLogEntry| log.data(LogField::Round.as_str(), timeout.round());
         let cb = || self.guarded_sign_timeout(timeout);
-        run_and_log(cb, log_cb, LogEntry::SignTimeout)
+        run_and_log(cb, |log| log.round(timeout.round()), LogEntry::SignTimeout)
     }
 }
 
 fn run_and_log<F, L, R>(callback: F, log_cb: L, log_entry: LogEntry) -> Result<R, Error>
 where
     F: FnOnce() -> Result<R, Error>,
-    L: Fn(StructuredLogEntry) -> StructuredLogEntry,
+    L: for<'a> Fn(SafetyLogSchema<'a>) -> SafetyLogSchema<'a>,
 {
-    sl_debug!(log_cb(logging::safety_log(log_entry, LogEvent::Request)));
+    sl_debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)).into_struct_log());
     counters::increment_query(log_entry.as_str(), "request");
     callback()
         .map(|v| {
-            sl_info!(log_cb(logging::safety_log(log_entry, LogEvent::Success)));
+            sl_info!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Success)).into_struct_log());
             counters::increment_query(log_entry.as_str(), "success");
             v
         })
         .map_err(|err| {
-            sl_error!(log_cb(logging::safety_log(log_entry, LogEvent::Error))
-                .data(LogField::Message.as_str(), &err));
+            sl_error!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Error))
+                .error(&err)
+                .into_struct_log());
             counters::increment_query(log_entry.as_str(), "error");
             err
         })
