@@ -52,7 +52,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             ),
         );
 
-        effects::activate_all(&mut effects, context).await?;
+        effects::activate_all(&mut effects, &context).await?;
 
         let window = Duration::from_secs(240);
         let emit_job_request = if context.emit_to_validator {
@@ -70,7 +70,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             .tx_emitter
             .emit_txn_for(window, emit_job_request)
             .await?;
-        effects::deactivate_all(&mut effects, context).await?;
+        effects::deactivate_all(&mut effects, &context).await?;
         context
             .report
             .report_txn_stats(self.to_string(), stats, window, "");

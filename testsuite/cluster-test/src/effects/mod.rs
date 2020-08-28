@@ -19,16 +19,16 @@ pub trait Effect: Display {
     async fn deactivate(&mut self, _context: && mut Context<'_>) -> Result<()>;
 }
 
-pub async fn activate_all<T: Effect>(effects: &mut Vec<T>, context: &mut Context<'_>) -> Result<()> {
+pub async fn activate_all<T: Effect>(effects: &mut Vec<T>, context: &&mut Context<'_>) -> Result<()> {
     try_join_all(effects.iter_mut().map(|e| {
-        Effect::activate(e, &context)
+        Effect::activate(e, context)
     })).await?;
     Ok(())
 }
 
-pub async fn deactivate_all<T: Effect>(effects: &mut Vec<T>, context: &mut Context<'_>) -> Result<()> {
+pub async fn deactivate_all<T: Effect>(effects: &mut Vec<T>, context: &&mut Context<'_>) -> Result<()> {
     try_join_all(effects.iter_mut().map(|e| {
-        Effect::activate(e, &context)
+        Effect::activate(e, context)
     })).await?;
     Ok(())
 }
