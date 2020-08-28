@@ -68,6 +68,28 @@
 //! This macro populates the metadata such as code location and module, and skips the evaluation of
 //! `StructuredLogEntry` entirely if structured logging is disabled for the log level.
 //!
+//! ## Typed Schema's
+//!
+//! The `Schema` trait can be used to implement typed logging schemas. This can either be
+//! implemented by hand or derived using the `Schema` derive proc-macro, implementing the `Schema`
+//! trait for the struct as well as providing setters for all fields.
+//!
+//! ```rust
+//! use libra_logger::Schema;
+//!
+//! #[derive(Schema)]
+//! struct LogSchema<'a> {
+//!     // Log using this type's Serialize impl
+//!     a: usize,
+//!     // Log using this type's Debug impl
+//!     #[schema(debug)]
+//!     b: Option<Vec<bool>>,
+//!     // Log using this type's Display impl
+//!     #[schema(display)]
+//!     c: Option<&'a str>,
+//! }
+//! ```
+//!
 //! ## Log macro bridge
 //!
 //! Crate owners are not required to rewrite their code right away to support new structured logging.
@@ -151,6 +173,7 @@ pub use struct_log::{
 };
 
 pub use kv::{Key, Schema, Value, Visitor};
+pub use libra_log_derive::Schema;
 
 mod text_log;
 pub use log::Level;

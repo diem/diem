@@ -15,6 +15,7 @@ members = [
     "common/lcs",
     "common/libradoc",
     "common/logger",
+    "common/logger/derive",
     "common/metrics",
     "common/nibble",
     "common/num-variants",

@@ -16,6 +16,7 @@ chrono = "0.4.15"
 env_logger = { version = "0.7.1", default-features = false }
 erased-serde = "0.3.12"
 hex = "0.4.2"
+libra-log-derive = { path = "derive", version = "0.1.0" }
 libra-time = { path = "../time", version = "0.1.0" }
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 log = "0.4.11"
