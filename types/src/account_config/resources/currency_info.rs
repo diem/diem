@@ -40,6 +40,38 @@ impl MoveResource for CurrencyInfoResource {
 }
 
 impl CurrencyInfoResource {
+    pub fn new(
+        total_value: u128,
+        preburn_value: u64,
+        to_lbr_exchange_rate: u64,
+        is_synthetic: bool,
+        scaling_factor: u64,
+        fractional_part: u64,
+        currency_code: Identifier,
+        can_mint: bool,
+        mint_events: EventHandle,
+        burn_events: EventHandle,
+        preburn_events: EventHandle,
+        cancel_burn_events: EventHandle,
+        exchange_rate_update_events: EventHandle,
+    ) -> Self {
+        Self {
+            total_value,
+            preburn_value,
+            to_lbr_exchange_rate,
+            is_synthetic,
+            scaling_factor,
+            fractional_part,
+            currency_code,
+            can_mint,
+            mint_events,
+            burn_events,
+            preburn_events,
+            cancel_burn_events,
+            exchange_rate_update_events,
+        }
+    }
+
     pub fn currency_code(&self) -> &IdentStr {
         &self.currency_code
     }
