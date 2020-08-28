@@ -149,7 +149,8 @@ fn main() {
             Language::Go => "libratypes".to_string(),
             _ => "libra_types".to_string(),
         };
-        let config = serdegen::CodeGeneratorConfig::new(name);
+        let config =
+            serdegen::CodeGeneratorConfig::new(name).with_encodings(vec![serdegen::Encoding::Lcs]);
         installer.install_module(&config, &registry).unwrap();
     }
 

@@ -60,7 +60,7 @@ target/debug/generate-transaction-builders \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Python demo file](examples/python3/stdlib_demo.py) with:
-```
+```bash
 cp language/transaction-builder/generator/examples/python3/stdlib_demo.py "$DEST"
 PYTHONPATH="$PYTHONPATH:$DEST" python3 "$DEST/stdlib_demo.py"
 ```
@@ -77,7 +77,7 @@ target/debug/generate-transaction-builders \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [C++ demo file](examples/cpp/stdlib_demo.cpp) with:
-```
+```bash
 cp language/transaction-builder/generator/examples/cpp/stdlib_demo.cpp "$DEST"
 clang++ --std=c++17 -I "$DEST" "$DEST/libra_stdlib.cpp" "$DEST/stdlib_demo.cpp" -o "$DEST/stdlib_demo"
 "$DEST/stdlib_demo"
@@ -95,7 +95,7 @@ target/debug/generate-transaction-builders \
     "language/stdlib/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Java demo file](examples/java/StdlibDemo.java) with:
-```
+```bash
 cp language/transaction-builder/generator/examples/java/StdlibDemo.java "$DEST"
 (find "$DEST" -name "*.java" | xargs javac -cp "$DEST")
 java -enableassertions -cp "$DEST" StdlibDemo
@@ -116,7 +116,7 @@ target/debug/generate-transaction-builders \
 ```
 Next, you may copy and execute the [Go demo file](examples/golang/stdlib_demo.go) as follows:
 (Note that `$DEST` must be an absolute path)
-```
+```bash
 cp language/transaction-builder/generator/examples/golang/stdlib_demo.go "$DEST"
 (cd "$DEST" && go mod init testing && go mod edit -replace testing="$DEST" && go run stdlib_demo.go)
 ```
