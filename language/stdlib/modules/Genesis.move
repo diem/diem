@@ -29,8 +29,9 @@ module Genesis {
     fun initialize(
         lr_account: &signer,
         tc_account: &signer,
+        lr_auth_key: vector<u8>,
         tc_addr: address,
-        genesis_auth_key: vector<u8>,
+        tc_auth_key: vector<u8>,
         initial_script_allow_list: vector<vector<u8>>,
         is_open_module: bool,
         instruction_schedule: vector<u8>,
@@ -95,7 +96,7 @@ module Genesis {
         LibraTimestamp::initialize(lr_account);
 
         let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
-        LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, lr_auth_key);
         LibraAccount::restore_key_rotation_capability(lr_rotate_key_cap);
 
         LibraTransactionPublishingOption::initialize(
@@ -111,7 +112,7 @@ module Genesis {
         );
 
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
-        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
         // Mark that genesis has finished. This must appear as the last call.
