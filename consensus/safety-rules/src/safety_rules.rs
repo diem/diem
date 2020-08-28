@@ -279,8 +279,9 @@ impl SafetyRules {
             // * set the round information,
             // * finally, set the epoch information because once the epoch is set, this `if`
             // statement cannot be re-entered.
-            self.persistent_storage
-                .set_waypoint(&Waypoint::new_epoch_boundary(ledger_info)?)?;
+            let waypoint = &Waypoint::new_epoch_boundary(ledger_info)
+                .map_err(|error| Error::InternalError(error.to_string()))?;
+            self.persistent_storage.set_waypoint(waypoint)?;
             self.persistent_storage.set_safety_data(SafetyData::new(
                 epoch_state.epoch,
                 0,
@@ -311,13 +312,16 @@ impl SafetyRules {
         if let Some(public_key) = self.execution_public_key.as_ref() {
             execution_signature
                 .ok_or_else(|| Error::VoteProposalSignatureNotFound)?
-                .verify(vote_proposal, public_key)?
+                .verify(vote_proposal, public_key)
+                .map_err(|error| Error::InternalError(error.to_string()))?;
         }
 
         let proposed_block = vote_proposal.block();
         self.verify_epoch(proposed_block.epoch(), &safety_data)?;
         self.verify_qc(proposed_block.quorum_cert())?;
-        proposed_block.validate_signature(&self.epoch_state()?.verifier)?;
+        proposed_block
+            .validate_signature(&self.epoch_state()?.verifier)
+            .map_err(|error| Error::InternalError(error.to_string()))?;
 
         self.verify_and_update_preferred_round(proposed_block.quorum_cert(), &mut safety_data)?;
         // if already voted on this round, send back the previous vote.

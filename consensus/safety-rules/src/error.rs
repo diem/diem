@@ -29,16 +29,12 @@ pub enum Error {
     InvalidQuorumCertificate(String),
     #[error("{0} is not set, SafetyRules is not initialized")]
     NotInitialized(String),
+    #[error("Error returned by secure storage: {0}")]
+    SecureStorageError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
     #[error("Vote proposal missing expected signature")]
     VoteProposalSignatureNotFound,
-}
-
-impl From<anyhow::Error> for Error {
-    fn from(error: anyhow::Error) -> Self {
-        Self::InternalError(error.to_string())
-    }
 }
 
 impl From<lcs::Error> for Error {
@@ -50,5 +46,11 @@ impl From<lcs::Error> for Error {
 impl From<libra_secure_net::Error> for Error {
     fn from(error: libra_secure_net::Error) -> Self {
         Self::InternalError(error.to_string())
+    }
+}
+
+impl From<libra_secure_storage::Error> for Error {
+    fn from(error: libra_secure_storage::Error) -> Self {
+        Self::SecureStorageError(error.to_string())
     }
 }

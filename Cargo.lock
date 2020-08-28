@@ -5061,7 +5061,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "safety-rules"
 version = "0.1.0"
 dependencies = [
- "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "consensus-types 0.1.0",
  "criterion 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",

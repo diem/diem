@@ -4,8 +4,8 @@
 use crate::{
     counters,
     logging::{self, LogEntry, LogEvent, LogField},
+    Error,
 };
-use anyhow::Result;
 use consensus_types::{common::Author, safety_data::SafetyData};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
@@ -63,7 +63,7 @@ impl PersistentSafetyStorage {
         consensus_private_key: Ed25519PrivateKey,
         execution_private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let result = internal_store.import_private_key(CONSENSUS_KEY, consensus_private_key);
         // Attempting to re-initialize existing storage. This can happen in environments like
         // cluster test. Rather than be rigid here, leave it up to the developer to detect
@@ -88,31 +88,31 @@ impl PersistentSafetyStorage {
         Self { internal_store }
     }
 
-    pub fn author(&self) -> Result<Author> {
+    pub fn author(&self) -> Result<Author, Error> {
         Ok(self.internal_store.get(OWNER_ACCOUNT).map(|v| v.value)?)
     }
 
     pub fn consensus_key_for_version(
         &self,
         version: Ed25519PublicKey,
-    ) -> Result<Ed25519PrivateKey> {
+    ) -> Result<Ed25519PrivateKey, Error> {
         Ok(self
             .internal_store
             .export_private_key_for_version(CONSENSUS_KEY, version)?)
     }
 
-    pub fn execution_public_key(&self) -> Result<Ed25519PublicKey> {
+    pub fn execution_public_key(&self) -> Result<Ed25519PublicKey, Error> {
         Ok(self
             .internal_store
             .get_public_key(EXECUTION_KEY)
             .map(|r| r.public_key)?)
     }
 
-    pub fn safety_data(&self) -> Result<SafetyData> {
+    pub fn safety_data(&self) -> Result<SafetyData, Error> {
         Ok(self.internal_store.get(SAFETY_DATA).map(|v| v.value)?)
     }
 
-    pub fn set_safety_data(&mut self, data: SafetyData) -> Result<()> {
+    pub fn set_safety_data(&mut self, data: SafetyData) -> Result<(), Error> {
         counters::set_state("epoch", data.epoch as i64);
         counters::set_state("last_voted_round", data.last_voted_round as i64);
         counters::set_state("preferred_round", data.preferred_round as i64);
@@ -120,11 +120,11 @@ impl PersistentSafetyStorage {
         Ok(())
     }
 
-    pub fn waypoint(&self) -> Result<Waypoint> {
+    pub fn waypoint(&self) -> Result<Waypoint, Error> {
         Ok(self.internal_store.get(WAYPOINT).map(|v| v.value)?)
     }
 
-    pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
+    pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<(), Error> {
         self.internal_store.set(WAYPOINT, waypoint)?;
         sl_info!(logging::safety_log(LogEntry::Waypoint, LogEvent::Update)
             .data(LogField::Message.as_str(), waypoint));
