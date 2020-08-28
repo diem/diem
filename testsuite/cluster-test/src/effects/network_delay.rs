@@ -12,6 +12,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use libra_logger::debug;
 use std::{fmt, time::Duration};
+use crate::experiments::Context;
 
 pub struct NetworkDelay {
     instance: Instance,
@@ -31,7 +32,7 @@ impl NetworkDelay {
 
 #[async_trait]
 impl Effect for NetworkDelay {
-    async fn activate(&mut self) -> Result<()> {
+    async fn activate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         debug!("Injecting NetworkDelays for {}", self.instance);
         let mut command = "".to_string();
         // Create a HTB https://linux.die.net/man/8/tc-htb
@@ -64,7 +65,7 @@ impl Effect for NetworkDelay {
         self.instance.util_cmd(command, "ac-net-delay").await
     }
 
-    async fn deactivate(&mut self) -> Result<()> {
+    async fn deactivate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         self.instance
             .util_cmd("tc qdisc delete dev eth0 root; true", "de-net-delay")
             .await

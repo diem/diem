@@ -72,9 +72,9 @@ impl Experiment for PacketLossRandomValidators {
             .into_iter()
             .map(|instance| PacketLoss::new(instance, self.percent))
             .collect();
-        effects::activate_all(&mut effects).await?;
+        effects::activate_all(&mut effects, _context).await?;
         time::delay_for(self.duration).await;
-        effects::deactivate_all(&mut effects).await?;
+        effects::deactivate_all(&mut effects, _context).await?;
         Ok(())
     }
 

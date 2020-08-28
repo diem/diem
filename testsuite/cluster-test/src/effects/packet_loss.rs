@@ -10,6 +10,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use libra_logger::info;
 use std::fmt;
+use crate::experiments::Context;
 
 pub struct PacketLoss {
     instance: Instance,
@@ -24,7 +25,7 @@ impl PacketLoss {
 
 #[async_trait]
 impl Effect for PacketLoss {
-    async fn activate(&mut self) -> Result<()> {
+    async fn activate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
         let cmd = format!(
             "tc qdisc add dev eth0 root netem loss {:.*}%",
@@ -33,7 +34,7 @@ impl Effect for PacketLoss {
         self.instance.util_cmd(cmd, "ac-packet-loss").await
     }
 
-    async fn deactivate(&mut self) -> Result<()> {
+    async fn deactivate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
         let cmd = "tc qdisc delete dev eth0 root; true".to_string();
         self.instance.util_cmd(cmd, "de-packet-loss").await

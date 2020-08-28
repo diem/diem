@@ -95,8 +95,8 @@ impl Experiment for RebootRandomValidators {
             .into_iter()
             .map(StopValidator::new)
             .collect();
-        effects::activate_all(&mut effects).await?;
-        effects::deactivate_all(&mut effects).await?;
+        effects::activate_all(&mut effects, _context).await?;
+        effects::deactivate_all(&mut effects, _context).await?;
         Ok(())
     }
 

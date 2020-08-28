@@ -10,6 +10,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use libra_logger::debug;
 use std::fmt;
+use crate::experiments::Context;
 
 pub struct StopValidator {
     instance: Instance,
@@ -23,12 +24,12 @@ impl StopValidator {
 
 #[async_trait]
 impl Effect for StopValidator {
-    async fn activate(&mut self) -> Result<()> {
+    async fn activate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         debug!("Stopping validator {}", self.instance);
         self.instance.stop().await
     }
 
-    async fn deactivate(&mut self) -> Result<()> {
+    async fn deactivate(&mut self, _context: &&mut Context<'_>) -> Result<()> {
         debug!("Starting validator {}", self.instance);
         self.instance.start().await
     }
