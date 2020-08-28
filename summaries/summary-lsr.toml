@@ -217,7 +217,7 @@ features = ['default', 'std']
 
 [[target-package]]
 name = 'chrono'
-version = '0.4.13'
+version = '0.4.15'
 crates-io = true
 status = 'direct'
 features = ['clock', 'default', 'std', 'time']
@@ -294,7 +294,7 @@ features = []
 
 [[target-package]]
 name = 'once_cell'
-version = '1.4.0'
+version = '1.4.1'
 crates-io = true
 status = 'direct'
 features = ['default', 'std']
@@ -343,7 +343,7 @@ features = ['default', 'log', 'logging']
 
 [[target-package]]
 name = 'serde'
-version = '1.0.114'
+version = '1.0.115'
 crates-io = true
 status = 'direct'
 features = ['default', 'derive', 'rc', 'serde_derive', 'std']
@@ -532,7 +532,7 @@ features = ['serde', 'std']
 
 [[target-package]]
 name = 'either'
-version = '1.5.3'
+version = '1.6.0'
 crates-io = true
 status = 'transitive'
 features = []
@@ -560,7 +560,7 @@ features = ['default', 'std']
 
 [[target-package]]
 name = 'generic-array'
-version = '0.14.3'
+version = '0.14.4'
 crates-io = true
 status = 'transitive'
 features = []
@@ -609,7 +609,7 @@ features = []
 
 [[target-package]]
 name = 'libc'
-version = '0.2.74'
+version = '0.2.76'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
@@ -679,7 +679,7 @@ features = []
 
 [[target-package]]
 name = 'ppv-lite86'
-version = '0.2.8'
+version = '0.2.9'
 crates-io = true
 status = 'transitive'
 features = ['simd', 'std']
@@ -728,7 +728,7 @@ features = ['std']
 
 [[target-package]]
 name = 'smallvec'
-version = '1.4.1'
+version = '1.4.2'
 crates-io = true
 status = 'transitive'
 features = []
@@ -742,7 +742,7 @@ features = []
 
 [[target-package]]
 name = 'standback'
-version = '0.2.9'
+version = '0.2.10'
 crates-io = true
 status = 'transitive'
 features = ['std']
@@ -756,7 +756,7 @@ features = ['std']
 
 [[target-package]]
 name = 'time'
-version = '0.1.43'
+version = '0.1.44'
 crates-io = true
 status = 'transitive'
 features = []
@@ -777,7 +777,7 @@ features = []
 
 [[target-package]]
 name = 'tinyvec'
-version = '0.3.3'
+version = '0.3.4'
 crates-io = true
 status = 'transitive'
 features = ['alloc', 'default']
@@ -882,28 +882,28 @@ features = ['default', 'proc-macro']
 
 [[host-package]]
 name = 'syn'
-version = '1.0.37'
+version = '1.0.39'
 crates-io = true
 status = 'direct'
 features = ['clone-impls', 'default', 'derive', 'extra-traits', 'full', 'parsing', 'printing', 'proc-macro', 'quote', 'visit']
 
 [[host-package]]
 name = 'autocfg'
-version = '1.0.0'
+version = '1.0.1'
 crates-io = true
 status = 'transitive'
 features = []
 
 [[host-package]]
 name = 'cc'
-version = '1.0.58'
+version = '1.0.59'
 crates-io = true
 status = 'transitive'
 features = []
 
 [[host-package]]
 name = 'once_cell'
-version = '1.4.0'
+version = '1.4.1'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
@@ -924,14 +924,14 @@ features = []
 
 [[host-package]]
 name = 'serde_derive'
-version = '1.0.114'
+version = '1.0.115'
 crates-io = true
 status = 'transitive'
 features = ['default']
 
 [[host-package]]
 name = 'standback'
-version = '0.2.9'
+version = '0.2.10'
 crates-io = true
 status = 'transitive'
 features = []

@@ -11,15 +11,15 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.32"
-chrono = "0.4.13"
+chrono = "0.4.15"
 hex = "0.4.2"
 proptest = { version = "0.10.1", optional = true }
 rustyline = "6.2.0"
 rust_decimal = "1.7.0"
 num-traits = "0.2.12"
-reqwest = { version = "0.10.7", features = ["blocking", "json", "rustls-tls"], default-features = false }
-serde = { version = "1.0.114", features = ["derive"] }
-structopt = "0.3.15"
+reqwest = { version = "0.10.8", features = ["blocking", "json", "rustls-tls"], default-features = false }
+serde = { version = "1.0.115", features = ["derive"] }
+structopt = "0.3.17"
 walkdir = "2.3.1"
 
 libra-config = { path = "../../config", version = "0.1.0" }

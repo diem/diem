@@ -12,9 +12,9 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.32"
 hex = "0.4.2"
-serde = { version = "1.0.114", features = ["rc"], default-features = false }
+serde = { version = "1.0.115", features = ["rc"], default-features = false }
 serde_json = "1.0.57"
-structopt = "0.3.15"
+structopt = "0.3.17"
 thiserror = "1.0.20"
 toml = { version = "0.5.6", default-features = false }
 

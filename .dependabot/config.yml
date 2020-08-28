@@ -9,6 +9,12 @@ update_configs:
           dependency_name: "codespan*"
       - match:
           dependency_name: "libfuzzer-sys*"
+      - match:
+          dependency_name: "ureq*"
+      - match:
+          dependency_name: "rustls*"
+      - match:
+          dependency_name: "bindgen*"
     allowed_updates:
       - match:
           update_type: "security"

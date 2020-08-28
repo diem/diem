@@ -11,10 +11,10 @@ edition = "2018"
 
 [dependencies]
 rand = "0.7.3"
-serde = { version = "1.0.114", features = ["derive"] }
+serde = { version = "1.0.115", features = ["derive"] }
 serde-reflection = "0.3.1"
 serde_yaml = "0.8.13"
-structopt = "0.3.15"
+structopt = "0.3.17"
 
 consensus = { path = "../../consensus", version = "0.1.0", features=["fuzzing"] }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features=["fuzzing"] }

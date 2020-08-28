@@ -791,14 +791,14 @@ features = ['default', 'serde', 'std']
 
 [[target-package]]
 name = 'chrono'
-version = '0.4.13'
+version = '0.4.15'
 crates-io = true
 status = 'direct'
 features = ['clock', 'default', 'std', 'time']
 
 [[target-package]]
 name = 'clap'
-version = '2.33.1'
+version = '2.33.3'
 crates-io = true
 status = 'direct'
 features = ['ansi_term', 'atty', 'color', 'default', 'strsim', 'suggestions', 'vec_map']
@@ -896,7 +896,7 @@ features = []
 
 [[target-package]]
 name = 'handlebars'
-version = '3.3.0'
+version = '3.4.0'
 crates-io = true
 status = 'direct'
 features = ['default']
@@ -924,7 +924,7 @@ features = []
 
 [[target-package]]
 name = 'hmac'
-version = '0.8.1'
+version = '0.9.0'
 crates-io = true
 status = 'direct'
 features = []
@@ -959,7 +959,7 @@ features = ['background_threads_runtime_support', 'default', 'profiling', 'unpre
 
 [[target-package]]
 name = 'libc'
-version = '0.2.74'
+version = '0.2.76'
 crates-io = true
 status = 'direct'
 features = ['default', 'extra_traits', 'std']
@@ -994,14 +994,14 @@ features = ['default', 'i128', 'std']
 
 [[target-package]]
 name = 'once_cell'
-version = '1.4.0'
+version = '1.4.1'
 crates-io = true
 status = 'direct'
 features = ['default', 'std']
 
 [[target-package]]
 name = 'pbkdf2'
-version = '0.4.0'
+version = '0.5.0'
 crates-io = true
 status = 'direct'
 features = ['base64', 'default', 'hmac', 'include_simple', 'rand', 'rand_core', 'sha2', 'subtle', 'thread_rng']
@@ -1057,7 +1057,7 @@ features = ['alloc', 'getrandom', 'std']
 
 [[target-package]]
 name = 'rayon'
-version = '1.3.1'
+version = '1.4.0'
 crates-io = true
 status = 'direct'
 features = []
@@ -1078,14 +1078,14 @@ features = ['aho-corasick', 'default', 'memchr', 'perf', 'perf-cache', 'perf-dfa
 
 [[target-package]]
 name = 'reqwest'
-version = '0.10.7'
+version = '0.10.8'
 crates-io = true
 status = 'direct'
 features = ['__tls', 'blocking', 'hyper-rustls', 'json', 'rustls', 'rustls-tls', 'serde_json', 'stream', 'tokio-rustls', 'webpki-roots']
 
 [[target-package]]
 name = 'rocksdb'
-version = '0.14.0'
+version = '0.15.0'
 crates-io = true
 status = 'direct'
 features = ['lz4']
@@ -1113,7 +1113,7 @@ features = ['default', 'dirs-next', 'with-dirs']
 
 [[target-package]]
 name = 'serde'
-version = '1.0.114'
+version = '1.0.115'
 crates-io = true
 status = 'direct'
 features = ['alloc', 'default', 'derive', 'rc', 'serde_derive', 'std']
@@ -1183,7 +1183,7 @@ features = []
 
 [[target-package]]
 name = 'structopt'
-version = '0.3.15'
+version = '0.3.17'
 crates-io = true
 status = 'direct'
 features = ['default']
@@ -1441,6 +1441,13 @@ status = 'transitive'
 features = []
 
 [[target-package]]
+name = 'crossbeam-channel'
+version = '0.4.3'
+crates-io = true
+status = 'transitive'
+features = ['crossbeam-utils', 'default', 'std']
+
+[[target-package]]
 name = 'crossbeam-deque'
 version = '0.7.3'
 crates-io = true
@@ -1453,13 +1460,6 @@ version = '0.8.2'
 crates-io = true
 status = 'transitive'
 features = ['default', 'lazy_static', 'std']
-
-[[target-package]]
-name = 'crossbeam-queue'
-version = '0.2.3'
-crates-io = true
-status = 'transitive'
-features = ['default', 'std']
 
 [[target-package]]
 name = 'crossbeam-utils'
@@ -1478,6 +1478,13 @@ features = ['default', 'limit_128']
 [[target-package]]
 name = 'crypto-mac'
 version = '0.8.0'
+crates-io = true
+status = 'transitive'
+features = []
+
+[[target-package]]
+name = 'crypto-mac'
+version = '0.9.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -1526,14 +1533,14 @@ features = ['serde', 'std']
 
 [[target-package]]
 name = 'either'
-version = '1.5.3'
+version = '1.6.0'
 crates-io = true
 status = 'transitive'
 features = []
 
 [[target-package]]
 name = 'encoding_rs'
-version = '0.8.23'
+version = '0.8.24'
 crates-io = true
 status = 'transitive'
 features = []
@@ -1631,7 +1638,7 @@ features = []
 
 [[target-package]]
 name = 'generic-array'
-version = '0.14.3'
+version = '0.14.4'
 crates-io = true
 status = 'transitive'
 features = []
@@ -1673,7 +1680,7 @@ features = []
 
 [[target-package]]
 name = 'hashbrown'
-version = '0.8.1'
+version = '0.8.2'
 crates-io = true
 status = 'transitive'
 features = ['raw']
@@ -1688,6 +1695,13 @@ features = []
 [[target-package]]
 name = 'headers-core'
 version = '0.2.0'
+crates-io = true
+status = 'transitive'
+features = []
+
+[[target-package]]
+name = 'hmac'
+version = '0.8.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -1729,7 +1743,7 @@ features = []
 
 [[target-package]]
 name = 'indexmap'
-version = '1.5.0'
+version = '1.5.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -1778,7 +1792,7 @@ features = []
 
 [[target-package]]
 name = 'librocksdb-sys'
-version = '6.7.4'
+version = '6.11.4'
 crates-io = true
 status = 'transitive'
 features = ['default', 'lz4', 'static']
@@ -1862,7 +1876,7 @@ features = ['default', 'rev-mappings']
 
 [[target-package]]
 name = 'miniz_oxide'
-version = '0.4.0'
+version = '0.4.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2030,7 +2044,7 @@ features = []
 
 [[target-package]]
 name = 'ppv-lite86'
-version = '0.2.8'
+version = '0.2.9'
 crates-io = true
 status = 'transitive'
 features = ['simd', 'std']
@@ -2052,6 +2066,13 @@ features = []
 [[target-package]]
 name = 'quick-error'
 version = '1.2.3'
+crates-io = true
+status = 'transitive'
+features = []
+
+[[target-package]]
+name = 'quick-error'
+version = '2.0.0'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2149,7 +2170,7 @@ features = []
 
 [[target-package]]
 name = 'rayon-core'
-version = '1.7.1'
+version = '1.8.0'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2184,7 +2205,7 @@ features = []
 
 [[target-package]]
 name = 'rustls'
-version = '0.18.0'
+version = '0.18.1'
 crates-io = true
 status = 'transitive'
 features = ['dangerous_configuration', 'default', 'log', 'logging']
@@ -2247,7 +2268,7 @@ features = ['default', 'std']
 
 [[target-package]]
 name = 'signal-hook-registry'
-version = '1.2.0'
+version = '1.2.1'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2275,7 +2296,7 @@ features = []
 
 [[target-package]]
 name = 'smallvec'
-version = '1.4.1'
+version = '1.4.2'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2296,7 +2317,7 @@ features = []
 
 [[target-package]]
 name = 'standback'
-version = '0.2.9'
+version = '0.2.10'
 crates-io = true
 status = 'transitive'
 features = ['std']
@@ -2331,7 +2352,7 @@ features = []
 
 [[target-package]]
 name = 'time'
-version = '0.1.43'
+version = '0.1.44'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2352,7 +2373,7 @@ features = []
 
 [[target-package]]
 name = 'tinyvec'
-version = '0.3.3'
+version = '0.3.4'
 crates-io = true
 status = 'transitive'
 features = ['alloc', 'default']
@@ -2394,14 +2415,14 @@ features = []
 
 [[target-package]]
 name = 'tracing'
-version = '0.1.18'
+version = '0.1.19'
 crates-io = true
 status = 'transitive'
 features = ['log', 'std']
 
 [[target-package]]
 name = 'tracing-core'
-version = '0.1.12'
+version = '0.1.15'
 crates-io = true
 status = 'transitive'
 features = ['lazy_static', 'std']
@@ -2604,14 +2625,14 @@ features = []
 
 [[host-package]]
 name = 'async-trait'
-version = '0.1.36'
+version = '0.1.38'
 crates-io = true
 status = 'direct'
 features = []
 
 [[host-package]]
 name = 'bindgen'
-version = '0.54.1'
+version = '0.54.0'
 crates-io = true
 status = 'direct'
 features = ['clap', 'default', 'env_logger', 'log', 'logging', 'runtime', 'which', 'which-rustfmt']
@@ -2625,7 +2646,7 @@ features = []
 
 [[host-package]]
 name = 'num-derive'
-version = '0.3.1'
+version = '0.3.2'
 crates-io = true
 status = 'direct'
 features = []
@@ -2646,7 +2667,7 @@ features = ['default', 'proc-macro']
 
 [[host-package]]
 name = 'syn'
-version = '1.0.37'
+version = '1.0.39'
 crates-io = true
 status = 'direct'
 features = ['clone-impls', 'default', 'derive', 'extra-traits', 'full', 'parsing', 'printing', 'proc-macro', 'quote', 'visit', 'visit-mut']
@@ -2688,17 +2709,10 @@ features = []
 
 [[host-package]]
 name = 'autocfg'
-version = '1.0.0'
+version = '1.0.1'
 crates-io = true
 status = 'transitive'
 features = []
-
-[[host-package]]
-name = 'bindgen'
-version = '0.53.3'
-crates-io = true
-status = 'transitive'
-features = ['clap', 'default', 'env_logger', 'log', 'logging', 'runtime', 'which', 'which-rustfmt']
 
 [[host-package]]
 name = 'bitflags'
@@ -2709,7 +2723,7 @@ features = ['default']
 
 [[host-package]]
 name = 'cc'
-version = '1.0.58'
+version = '1.0.59'
 crates-io = true
 status = 'transitive'
 features = ['jobserver', 'parallel']
@@ -2737,7 +2751,7 @@ features = ['clang_6_0', 'gte_clang_3_6', 'gte_clang_3_7', 'gte_clang_3_8', 'gte
 
 [[host-package]]
 name = 'clap'
-version = '2.33.1'
+version = '2.33.3'
 crates-io = true
 status = 'transitive'
 features = ['ansi_term', 'atty', 'color', 'default', 'strsim', 'suggestions', 'vec_map']
@@ -2751,7 +2765,7 @@ features = ['atty', 'default', 'humantime', 'regex', 'termcolor']
 
 [[host-package]]
 name = 'fs_extra'
-version = '1.1.0'
+version = '1.2.0'
 crates-io = true
 status = 'transitive'
 features = []
@@ -2807,14 +2821,14 @@ features = []
 
 [[host-package]]
 name = 'lazycell'
-version = '1.2.1'
+version = '1.3.0'
 crates-io = true
 status = 'transitive'
 features = []
 
 [[host-package]]
 name = 'libc'
-version = '0.2.74'
+version = '0.2.76'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
@@ -2856,7 +2870,7 @@ features = ['alloc', 'std']
 
 [[host-package]]
 name = 'once_cell'
-version = '1.4.0'
+version = '1.4.1'
 crates-io = true
 status = 'transitive'
 features = ['default', 'std']
@@ -3059,7 +3073,7 @@ features = ['default', 'std']
 
 [[host-package]]
 name = 'serde_derive'
-version = '1.0.114'
+version = '1.0.115'
 crates-io = true
 status = 'transitive'
 features = ['default']
@@ -3080,7 +3094,7 @@ features = []
 
 [[host-package]]
 name = 'standback'
-version = '0.2.9'
+version = '0.2.10'
 crates-io = true
 status = 'transitive'
 features = []
@@ -3094,7 +3108,7 @@ features = []
 
 [[host-package]]
 name = 'structopt-derive'
-version = '0.4.8'
+version = '0.4.10'
 crates-io = true
 status = 'transitive'
 features = []

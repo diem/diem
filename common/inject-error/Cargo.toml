@@ -1,0 +1,26 @@
+[package]
+name = "inject-error"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+edition = "2018"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[[bin]]
+name = "test"
+required-features = ["enable-inject-error"]
+
+[dependencies]
+quote = "1.0.7"
+syn = { version = "1.0.39", features = ["full", "extra-traits"] }
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+# dependencies for the test binary
+anyhow = "1.0.32"
+rand = "0.7.3"
+
+[features]
+# only used by the example binary
+enable-inject-error = []
