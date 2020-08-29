@@ -182,14 +182,31 @@ impl TransactionRestoreController {
             }
             // Those to replay:
             if first_to_replay <= last {
+                // ditch those beyond the target version
                 let num_to_replay = (last - first_to_replay + 1) as usize;
                 chunk.txns.truncate(num_to_replay);
                 chunk.txn_infos.truncate(num_to_replay);
-                self.transaction_replayer(first_to_replay)?.replay_chunk(
-                    first_to_replay,
-                    chunk.txns,
-                    chunk.txn_infos,
-                )?;
+
+                // replay in batches
+                println!("Replaying transactions {} to {}.", first_to_replay, last);
+                #[cfg(not(test))]
+                const BATCH_SIZE: usize = 10000;
+                #[cfg(test)]
+                const BATCH_SIZE: usize = 2;
+
+                let mut current_version = first_to_replay;
+                while !chunk.txns.is_empty() {
+                    let this_batch_size = min(BATCH_SIZE, chunk.txns.len());
+                    self.transaction_replayer(current_version)?.replay_chunk(
+                        current_version,
+                        chunk.txns.drain(0..this_batch_size).collect::<Vec<_>>(),
+                        chunk
+                            .txn_infos
+                            .drain(0..this_batch_size)
+                            .collect::<Vec<_>>(),
+                    )?;
+                    current_version += this_batch_size as u64;
+                }
             }
         }
 
