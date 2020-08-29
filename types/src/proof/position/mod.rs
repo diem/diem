@@ -61,10 +61,10 @@ impl Position {
 
     /// pos count start from 0 on each level
     pub fn from_level_and_pos(level: u32, pos: u64) -> Self {
-        precondition!(level < 63);
+        precondition!(level < 64);
         assume!(1u64 << level > 0); // bitwise and integer operations don't mix.
         let level_one_bits = (1u64 << level) - 1;
-        let shifted_pos = pos << (level + 1);
+        let shifted_pos = if level == 63 { 0 } else { pos << (level + 1) };
         Position(shifted_pos | level_one_bits)
     }
 
@@ -78,8 +78,8 @@ impl Position {
 
     pub fn from_postorder_index(index: u64) -> Result<Self> {
         ensure!(
-            index < (!0u64 >> 2),
-            "node index {} is invalid (greater than 2^63 - 1)",
+            index < !0u64,
+            "node index {} is invalid (equal to 2^64 - 1)",
             index
         );
         Ok(Position(postorder_to_inorder(index)))
