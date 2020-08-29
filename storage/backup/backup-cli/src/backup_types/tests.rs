@@ -76,7 +76,7 @@ fn test_end_to_end_impl(d: TestData) {
 
     // Backup
     let global_backup_opt = GlobalBackupOpt {
-        max_chunk_size: 512,
+        max_chunk_size: 2048,
     };
     let state_snapshot_manifest = d.state_snapshot_ver.map(|version| {
         rt.block_on(
