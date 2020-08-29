@@ -8,11 +8,11 @@ use crate::{
         transaction::restore::{TransactionRestoreController, TransactionRestoreOpt},
     },
     metadata,
-    metadata::cache::MetadataCacheOpt,
+    metadata::{cache::MetadataCacheOpt, TransactionBackupMeta},
     storage::BackupStorage,
     utils::GlobalRestoreOpt,
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use libra_types::transaction::Version;
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
@@ -51,29 +51,15 @@ impl RestoreCoordinator {
             metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
                 .await?;
 
-        let epoch_endings = metadata_view.select_epoch_ending_backups(self.target_version())?;
-        let state_snapshot = metadata_view.select_state_snapshot(self.target_version())?;
         let transactions = metadata_view.select_transaction_backups(self.target_version())?;
-
-        if transactions
-            .last()
-            .map_or(true, |b| b.last_version < self.target_version())
-        {
-            println!(
-                "Warning: Can't find transaction backup that contains the target version, \
-            will restore as much as possible"
-            );
-        }
+        let actual_target_version = self.get_actual_target_version(&transactions)?;
+        let epoch_endings = metadata_view.select_epoch_ending_backups(actual_target_version)?;
+        let state_snapshot = metadata_view.select_state_snapshot(actual_target_version)?;
         let replay_transactions_from_version = match &state_snapshot {
             Some(b) => b.version + 1,
-            None => {
-                println!(
-                    "Warning: Can't find usable state snapshot, \
-                will replay transactions from the beginning."
-                );
-                0
-            }
+            None => 0,
         };
+        println!("Planned to restore to version {}.", actual_target_version);
 
         for backup in epoch_endings {
             EpochEndingRestoreController::new(
@@ -124,5 +110,24 @@ impl RestoreCoordinator {
 impl RestoreCoordinator {
     fn target_version(&self) -> Version {
         self.global_opt.target_version()
+    }
+
+    fn get_actual_target_version(
+        &self,
+        transaction_backups: &[TransactionBackupMeta],
+    ) -> Result<Version> {
+        if let Some(b) = transaction_backups.last() {
+            if b.last_version > self.target_version() {
+                Ok(self.target_version())
+            } else {
+                println!(
+                    "Warning: Can't find transaction backup containing the target version, \
+                    will restore as much as possible"
+                );
+                Ok(b.last_version)
+            }
+        } else {
+            bail!("No transaction backup found.")
+        }
     }
 }
