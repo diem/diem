@@ -329,15 +329,15 @@ impl MoveStorage for &dyn DbReader {
 
         let results = addresses
             .iter()
-            .map(|addr| self.get_account_state_with_proof(*addr, version, version))
+            .map(|addr| self.get_account_state_with_proof_by_version(*addr, version))
             .collect::<Result<Vec<_>>>()?;
 
         // Account address --> AccountState
         let account_states = addresses
             .iter()
             .zip_eq(results)
-            .map(|(addr, result)| {
-                let account_state = AccountState::try_from(&result.blob.ok_or_else(|| {
+            .map(|(addr, (blob, _proof))| {
+                let account_state = AccountState::try_from(&blob.ok_or_else(|| {
                     format_err!("missing blob in account state/account does not exist")
                 })?)?;
                 Ok((addr, account_state))
