@@ -146,7 +146,7 @@ jobs:
           fi
       - name: Post test results on PR
         if: steps.check_ks.outputs.should_run == 'true'
-        uses: actions/github-script@0.4.0
+        uses: actions/github-script@v3
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
