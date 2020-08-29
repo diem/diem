@@ -29,7 +29,7 @@ Returns array of [Event](type_event.md) objects
 
 ```
 //Request: get events associated with receivedpayment event stream key "00000000000000001668f6be25668c1a17cd8caf6b8d2f25" for account "1668f6be25668c1a17cd8caf6b8d2f25"
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["00000000000000001668f6be25668c1a17cd8caf6b8d2f25", 0, 10], "id":1}' https://client.testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_events","params": ["00000000000000001668f6be25668c1a17cd8caf6b8d2f25", 0, 10], "id":1}' https://testnet.libra.org/v1
 
 //Response
 {

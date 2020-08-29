@@ -12,7 +12,7 @@
 
 ```
 // Request: fetches current block metadata
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_metadata","params":[],"id":1}' https://client.testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_metadata","params":[],"id":1}' https://testnet.libra.org/v1
 
 // Response
 {

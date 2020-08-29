@@ -17,7 +17,7 @@ Libra JSON-RPC APIs extend to JSON-RPC 2.0 Spec for specific use case, check [Li
 
 ### Testnet
 
-A simplest way to validate your client works is connecting it to Testnet(https://client.testnet.libra.org/v1).
+A simplest way to validate your client works is connecting it to Testnet(https://testnet.libra.org/v1).
 For some query blockchain methods like [get_currencies](method_get_currencies.md) or [get_metadata](method_get_metadata.md), you don't need anything else other than a HTTP client to get back response from server.
 Try out [get_currencies example](method_get_currencies.md#example) on Testnet, and this can be the first query blockchain API you implement for your client.
 

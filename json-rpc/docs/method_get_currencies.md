@@ -19,7 +19,7 @@ Returns array of [CurrencyInfo](type_currency_info.md) objects.
 
 ```
 // Request: fetches currencies supported by the system
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_currencies","params":[],"id":1}' https://client.testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_currencies","params":[],"id":1}' https://testnet.libra.org/v1
 
 // Response
 {

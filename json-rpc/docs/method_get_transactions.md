@@ -25,7 +25,7 @@ if include_events is false, the events field in the Transaction object will be a
 
 ```
 // Request: fetches 10 transactions since version 100000
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[100000, 10, false],"id":1}' https://client.testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_transactions","params":[100000, 10, false],"id":1}' https://testnet.libra.org/v1
 
 // Response
 {

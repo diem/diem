@@ -23,7 +23,7 @@ Null - If account does not exist
 
 ```
 // Request: fetches account for account address "1668f6be25668c1a17cd8caf6b8d2f25"
-curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account","params":["1668f6be25668c1a17cd8caf6b8d2f25"],"id":1}' https://client.testnet.libra.org/v1
+curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"get_account","params":["1668f6be25668c1a17cd8caf6b8d2f25"],"id":1}' https://testnet.libra.org/v1
 
 // Response
 {

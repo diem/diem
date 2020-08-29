@@ -76,5 +76,5 @@ Unless specifically mentioned below, Libra JSON-RPC will return the default erro
 ## Versioning
 
 We use URI versioning to version our API, current version is v1.
-For example, to hit testnet, the server url is: https://client.testnet.libra.org/v1.
+For example, to hit testnet, the server url is: https://testnet.libra.org/v1.
 You may check [API-CHANGELOG.md](API-CHANGELOG.md) and learn more about our API changes.
