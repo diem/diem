@@ -122,7 +122,11 @@ pub fn fuzzer(data: &[u8]) {
 
     let f = future::try_join(f_handle_inbound, f_respond_inbound);
     // we need to use tokio runtime since Rpc uses tokio timers
-    let res = runtime::Runtime::new().unwrap().block_on(f);
+    let res = runtime::Builder::new()
+        .basic_scheduler()
+        .build()
+        .unwrap()
+        .block_on(f);
 
     // there should be no errors when testing with well-formed inputs
     if cfg!(test) {

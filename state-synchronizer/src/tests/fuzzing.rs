@@ -85,7 +85,10 @@ pub fn test_state_sync_msg_fuzzer_impl(msg: StateSynchronizerMsg) {
         MockExecutorProxy::new(SynchronizerEnvHelper::default_handler(), storage_proxy),
         initial_state,
     );
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+    let mut rt = tokio::runtime::Builder::new()
+        .basic_scheduler()
+        .build()
+        .unwrap();
     rt.block_on(async move {
         coordinator
             .process_one_message(PeerNetworkId(node_network_id, *PEER_ID), msg)
