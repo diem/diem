@@ -158,8 +158,11 @@ impl Command {
     }
 
     fn tokio_cmd(&self, cmd_str: &str) -> tokio::process::Command {
-        let mut cmd = tokio::process::Command::new("sh");
-        cmd.args(&["-c", cmd_str]);
+        let mut cmd = tokio::process::Command::new("bash");
+        cmd.args(&[
+            "-c",
+            &format!("set -o nounset -o errexit -o pipefail; {}", cmd_str),
+        ]);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
