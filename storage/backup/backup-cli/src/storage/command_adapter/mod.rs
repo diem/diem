@@ -1,20 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod command;
 mod config;
 
 #[cfg(test)]
 mod tests;
 
 use crate::storage::{
-    command_adapter::config::{CommandAdapterConfig, EnvVar},
+    command_adapter::{
+        command::Command,
+        config::{CommandAdapterConfig, EnvVar},
+    },
     BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef, ShellSafeName,
     TextLine,
 };
 use anyhow::{anyhow, ensure, Result};
 use async_trait::async_trait;
-use serde::export::Formatter;
-use std::{fmt::Debug, path::PathBuf, process::Stdio};
+use std::path::PathBuf;
 use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
@@ -144,53 +147,5 @@ impl BackupStorage for CommandAdapter {
         let mut buf = FileHandle::new();
         stdout.read_to_string(&mut buf).await?;
         Ok(buf.lines().map(str::to_string).collect())
-    }
-}
-
-struct Command {
-    cmd_str: String,
-    env_vars: Vec<EnvVar>,
-}
-
-impl Command {
-    pub fn new(raw_cmd: &str, env_vars: Vec<EnvVar>) -> Self {
-        Self {
-            cmd_str: format!("set -o nounset -o errexit -o pipefail; {}", raw_cmd),
-            env_vars,
-        }
-    }
-
-    fn tokio_cmd(&self) -> tokio::process::Command {
-        let mut cmd = tokio::process::Command::new("bash");
-        cmd.args(&["-c", &self.cmd_str]);
-        cmd.stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit());
-
-        for v in &self.env_vars {
-            cmd.env(&v.key, &v.value);
-        }
-
-        cmd
-    }
-
-    async fn spawn(&mut self) -> Result<tokio::process::Child> {
-        println!("Spawning {:?}", self);
-        Ok(self.tokio_cmd().spawn()?)
-    }
-}
-
-impl Debug for Command {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            r#""{}" with env vars [{}]"#,
-            self.cmd_str,
-            self.env_vars
-                .iter()
-                .map(|v| format!("{}={}", v.key, v.value))
-                .collect::<Vec<_>>()
-                .join(", "),
-        )
     }
 }
