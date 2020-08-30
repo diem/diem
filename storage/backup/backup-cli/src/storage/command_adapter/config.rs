@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::io::AsyncReadExt;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct EnvVar {
     pub key: String,
     pub value: String,
