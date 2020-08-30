@@ -13,7 +13,8 @@ use crate::storage::{
 };
 use anyhow::{anyhow, ensure, Result};
 use async_trait::async_trait;
-use std::{path::PathBuf, process::Stdio};
+use serde::export::Formatter;
+use std::{fmt::Debug, path::PathBuf, process::Stdio};
 use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
@@ -45,7 +46,7 @@ impl CommandAdapter {
 
     fn cmd(&self, cmd_str: &str, mut env_vars: Vec<EnvVar>) -> Command {
         env_vars.extend_from_slice(&self.config.env_vars);
-        Command::new(cmd_str.to_string(), env_vars)
+        Command::new(cmd_str, env_vars)
     }
 }
 
@@ -146,23 +147,22 @@ impl BackupStorage for CommandAdapter {
     }
 }
 
-#[derive(Debug)]
 struct Command {
     cmd_str: String,
     env_vars: Vec<EnvVar>,
 }
 
 impl Command {
-    pub fn new(cmd_str: String, env_vars: Vec<EnvVar>) -> Self {
-        Self { cmd_str, env_vars }
+    pub fn new(raw_cmd: &str, env_vars: Vec<EnvVar>) -> Self {
+        Self {
+            cmd_str: format!("set -o nounset -o errexit -o pipefail; {}", raw_cmd),
+            env_vars,
+        }
     }
 
-    fn tokio_cmd(&self, cmd_str: &str) -> tokio::process::Command {
+    fn tokio_cmd(&self) -> tokio::process::Command {
         let mut cmd = tokio::process::Command::new("bash");
-        cmd.args(&[
-            "-c",
-            &format!("set -o nounset -o errexit -o pipefail; {}", cmd_str),
-        ]);
+        cmd.args(&["-c", &self.cmd_str]);
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
@@ -176,6 +176,21 @@ impl Command {
 
     async fn spawn(&mut self) -> Result<tokio::process::Child> {
         println!("Spawning {:?}", self);
-        Ok(self.tokio_cmd(&self.cmd_str).spawn()?)
+        Ok(self.tokio_cmd().spawn()?)
+    }
+}
+
+impl Debug for Command {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            r#""{}" with env vars [{}]"#,
+            self.cmd_str,
+            self.env_vars
+                .iter()
+                .map(|v| format!("{}={}", v.key, v.value))
+                .collect::<Vec<_>>()
+                .join(", "),
+        )
     }
 }
