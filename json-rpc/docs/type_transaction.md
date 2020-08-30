@@ -76,7 +76,7 @@ User submitted transaction.
 | public_key                | string                 | Hex-encoded public key of the transaction sender                      |
 | sequence_number           | unsigned int64         | Sequence number of this transaction corresponding to sender's account |
 | chain_id                  | unsigned int8          | Chain ID of the Libra network this transaction is intended for        |
-| max_gas_ammount           | unsigned int64         | Maximum amount of gas that can be spent for this transaction          |
+| max_gas_amount            | unsigned int64         | Maximum amount of gas that can be spent for this transaction          |
 | gas_unit_price            | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
 | expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
 | script_hash               | string                 | Hex-encoded hash of the script used in this transaction               |
@@ -174,7 +174,7 @@ Transaction execution runs out of gas, no effect.
 Object representing the abort condition raised by Move code via `abort` or `assert` during execution of a transaction by the VM on the blockchain.
 
 ```
-{ type: "move_about", location: string, abort_code: unsigned int64 }
+{ type: "move_abort", location: string, abort_code: unsigned int64 }
 ```
 
 
