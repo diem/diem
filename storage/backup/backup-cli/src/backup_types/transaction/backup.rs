@@ -162,12 +162,14 @@ impl TransactionBackupController {
             &mut proof_file,
         )
         .await?;
+        proof_file.shutdown().await?;
 
         let (chunk_handle, mut chunk_file) = self
             .storage
             .create_for_write(backup_handle, &Self::chunk_name(first_version))
             .await?;
         chunk_file.write_all(&chunk_bytes).await?;
+        chunk_file.shutdown().await?;
 
         Ok(TransactionChunk {
             first_version,
@@ -196,6 +198,7 @@ impl TransactionBackupController {
         manifest_file
             .write_all(&serde_json::to_vec(&manifest)?)
             .await?;
+        manifest_file.shutdown().await?;
 
         let metadata =
             Metadata::new_transaction_backup(first_version, last_version, manifest_handle.clone());

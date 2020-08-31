@@ -158,6 +158,7 @@ impl EpochEndingBackupController {
             .create_for_write(backup_handle, &Self::chunk_name(first_epoch))
             .await?;
         chunk_file.write_all(&chunk_bytes).await?;
+        chunk_file.shutdown().await?;
         Ok(EpochEndingChunk {
             first_epoch,
             last_epoch,
@@ -187,6 +188,7 @@ impl EpochEndingBackupController {
         manifest_file
             .write_all(&serde_json::to_vec(&manifest)?)
             .await?;
+        manifest_file.shutdown().await?;
 
         let metadata = Metadata::new_epoch_ending_backup(
             first_epoch,

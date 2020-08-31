@@ -55,7 +55,7 @@ proptest! {
         input in arb_metadata_files(),
     ) {
         let tmpdir = TempPath::new();
-        block_on(test_save_and_list_metadata_files_impl(get_store(&tmpdir), input, &tmpdir.path().to_path_buf()));
+        block_on(test_save_and_list_metadata_files_impl(get_store(&tmpdir), input));
     }
 }
 
