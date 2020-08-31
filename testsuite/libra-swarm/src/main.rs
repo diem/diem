@@ -91,7 +91,10 @@ fn main() {
 
     println!(
         "\tcli -u {} -m {:?} --waypoint {} --chain-id {:?}",
-        format!("http://localhost:{}", validator_config.rpc.address.port()),
+        format!(
+            "http://localhost:{}",
+            validator_config.json_rpc.address.port()
+        ),
         libra_root_key_path,
         waypoint,
         ChainId::test().id()
@@ -99,7 +102,7 @@ fn main() {
 
     let ports = validator_swarm.config.config_files.iter().map(|config| {
         let validator_config = NodeConfig::load(config).unwrap();
-        let port = validator_config.rpc.address.port();
+        let port = validator_config.json_rpc.address.port();
         let debug_interface_port = validator_config
             .debug_interface
             .admission_control_node_debug_port;
@@ -134,7 +137,10 @@ fn main() {
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
             "\tcli -u {} -m {:?} --waypoint {} --chain-id {}",
-            format!("http://localhost:{}", full_node_config.rpc.address.port()),
+            format!(
+                "http://localhost:{}",
+                full_node_config.json_rpc.address.port()
+            ),
             libra_root_key_path,
             waypoint,
             ChainId::test().id(),

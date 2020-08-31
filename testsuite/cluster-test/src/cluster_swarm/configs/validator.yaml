@@ -51,7 +51,7 @@ metrics:
 storage:
   prune_window: 50000
 
-rpc:
+json_rpc:
     address: 0.0.0.0:8080
 
 # this is only enabled when the binary is compiled with failpoints feature, otherwise no-op

@@ -25,7 +25,7 @@ fn test_key_manager_consensus_rotation() {
     let (node_config, config_path) = load_node_config(&env.validator_swarm, 0);
     let mut key_manager_config = KeyManagerConfig::default();
     key_manager_config.json_rpc_endpoint =
-        format!("http://127.0.0.1:{}", node_config.rpc.address.port());
+        format!("http://127.0.0.1:{}", node_config.json_rpc.address.port());
     key_manager_config.rotation_period_secs = 10;
     key_manager_config.sleep_period_secs = 1000; // Large sleep period to force a single rotation
 

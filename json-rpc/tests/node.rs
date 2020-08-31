@@ -46,7 +46,7 @@ impl Node {
     }
 
     pub fn port(&self) -> u16 {
-        self.config.rpc.address.port()
+        self.config.json_rpc.address.port()
     }
 
     pub fn url(&self) -> String {

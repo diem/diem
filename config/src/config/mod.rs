@@ -31,8 +31,8 @@ mod mempool_config;
 pub use mempool_config::*;
 mod network_config;
 pub use network_config::*;
-mod rpc_config;
-pub use rpc_config::*;
+mod json_rpc_config;
+pub use json_rpc_config::*;
 mod secure_backend_config;
 pub use secure_backend_config::*;
 mod state_sync_config;
@@ -73,7 +73,7 @@ pub struct NodeConfig {
     #[serde(default)]
     pub mempool: MempoolConfig,
     #[serde(default)]
-    pub rpc: RpcConfig,
+    pub json_rpc: JsonRpcConfig,
     #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
@@ -272,7 +272,7 @@ impl NodeConfig {
 
     pub fn randomize_ports(&mut self) {
         self.debug_interface.randomize_ports();
-        self.rpc.randomize_ports();
+        self.json_rpc.randomize_ports();
         self.storage.randomize_ports();
 
         if let Some(network) = self.validator_network.as_mut() {

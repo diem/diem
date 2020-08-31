@@ -165,10 +165,10 @@ pub fn bootstrap_from_config(
     mp_sender: MempoolClientSender,
 ) -> Runtime {
     bootstrap(
-        config.rpc.address,
-        config.rpc.batch_size_limit,
-        config.rpc.page_size_limit,
-        config.rpc.content_length_limit,
+        config.json_rpc.address,
+        config.json_rpc.batch_size_limit,
+        config.json_rpc.page_size_limit,
+        config.json_rpc.content_length_limit,
         libra_db,
         mp_sender,
         config.base.role,

@@ -91,7 +91,7 @@ impl LibraNode {
             validator_peer_id,
             role,
             debug_client,
-            port: config.rpc.address.port(),
+            port: config.json_rpc.address.port(),
             log: log_path,
         })
     }

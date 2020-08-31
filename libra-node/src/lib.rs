@@ -166,7 +166,7 @@ pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     );
     println!("\tWaypoint: {}", test_config.waypoint);
     let config = NodeConfig::load(&test_config.config_files[0]).unwrap();
-    println!("\tJSON-RPC endpoint: {}", config.rpc.address);
+    println!("\tJSON-RPC endpoint: {}", config.json_rpc.address);
     println!(
         "\tFullNode network: {}",
         config.full_node_networks[0].listen_address

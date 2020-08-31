@@ -24,7 +24,7 @@ full_node_networks:
           4223dd0eeb0b0d78720a8990700955e1:
               - "/dns4/fn.testnet.libra.org/tcp/6182/ln-noise-ik/b6fd31624af370085cc3f872437bb4d9384b31a11b33b9591ddfaaed5a28b613/ln-handshake/0"
 
-rpc:
+json_rpc:
     # This specifies your JSON-RPC endpoint. Intentionally on public so that Docker can export it.
     address: 0.0.0.0:8080
 

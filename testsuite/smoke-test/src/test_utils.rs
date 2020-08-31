@@ -151,7 +151,8 @@ pub mod libra_swarm_utils {
     /// Returns a Libra Debugger pointing to a node at the given node index.
     pub fn get_libra_debugger(swarm: &LibraSwarm, node_index: usize) -> LibraDebugger {
         let (node_config, _) = load_node_config(swarm, node_index);
-        let swarm_rpc_endpoint = format!("http://localhost:{}", node_config.rpc.address.port());
+        let swarm_rpc_endpoint =
+            format!("http://localhost:{}", node_config.json_rpc.address.port());
         LibraDebugger::json_rpc(swarm_rpc_endpoint.as_str()).unwrap()
     }
 
