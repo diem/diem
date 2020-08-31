@@ -867,6 +867,13 @@ status = 'direct'
 features = []
 
 [[target-package]]
+name = 'erased-serde'
+version = '0.3.12'
+crates-io = true
+status = 'direct'
+features = ['default', 'std']
+
+[[target-package]]
 name = 'fail'
 version = '0.4.0'
 crates-io = true
@@ -2613,6 +2620,13 @@ features = ['alloc', 'zeroize_derive']
 name = 'libra-crypto-derive'
 version = '0.1.0'
 workspace-path = 'crypto/crypto-derive'
+status = 'workspace'
+features = []
+
+[[host-package]]
+name = 'libra-log-derive'
+version = '0.1.0'
+workspace-path = 'common/logger/derive'
 status = 'workspace'
 features = []
 
