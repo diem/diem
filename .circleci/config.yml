@@ -1,3 +1,15 @@
+aliases:
+  - &filter-only-prs-dependabot
+    branches:
+      only:
+        - /^pull\/.+$/
+        - /^dependabot\/.+$/
+  - &filter-only-auto-canary
+    branches:
+      only:
+        - auto
+        - canary
+
 version: 2.1
 
 orbs:
@@ -917,29 +929,13 @@ workflows:
     jobs:
       - docker-pre-publish:
           context: docker
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - lint-docker:
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - terraform:
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - prefetch-crates:
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - lint:
           requires:
             - prefetch-crates
@@ -963,48 +959,26 @@ workflows:
             - lint
       - docker-ci-build:
           base-image: circleci
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - docker-ci-build:
           base-image: centos
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - docker-ci-build:
           #sccache fails to execute in alpine.
           base-image: alpine
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
       - docker-ci-build:
           base-image: arch
-          filters:
-            branches:
-              only:
-                - auto
-                - canary
+          filters: *filter-only-auto-canary
 
   pull-request-workflow:
     jobs:
       - lint-docker:
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - terraform:
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - prefetch-crates:
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - lint:
           requires:
             - prefetch-crates
@@ -1028,25 +1002,17 @@ workflows:
             - lint
       - docker-ci-build:
           base-image: circleci
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - docker-ci-build:
           base-image: centos
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - docker-ci-build:
           #sccache fails to execute in alpine.
           base-image: alpine
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
       - docker-ci-build:
           base-image: arch
-          filters:
-            branches:
-              only: /^pull\/.+$/
+          filters: *filter-only-prs-dependabot
 
   scheduled-workflow:
     triggers:
