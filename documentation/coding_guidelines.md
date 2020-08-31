@@ -12,7 +12,7 @@ This document describes the coding guidelines for the Libra Core Rust codebase.
 All code formatting is enforced with [rustfmt](https://github.com/rust-lang/rustfmt) with a project-specific configuration.  Below is an example command to adhere to the Libra Core project conventions.
 
 ```
-libra$ cargo fmt
+libra$ cargo xfmt
 ```
 
 ## Code analysis
@@ -20,10 +20,10 @@ libra$ cargo fmt
 [Clippy](https://github.com/rust-lang/rust-clippy) is used to catch common mistakes and is run as a part of continuous integration.  Before submitting your code for review, you can run clippy with our configuration:
 
 ```
-libra$ cargo xclippy
+libra$ cargo xclippy --all-features
 ```
 
-In general, we follow the recommendations from [rust-lang-nursery](https://rust-lang-nursery.github.io/api-guidelines/about.html).  The remainder of this guide provides detailed guidelines on specific topics in order to achieve uniformity of the codebase.
+In general, we follow the recommendations from [rust-lang-nursery](https://rust-lang-nursery.github.io/api-guidelines/about.html) and [The Rust Programming Language](https://doc.rust-lang.org/book/).  The remainder of this guide provides detailed guidelines on specific topics in order to achieve uniformity of the codebase.
 
 ## Code documentation
 
@@ -63,7 +63,7 @@ The Libra codebase uses inclusive terminology (similar to other projects such as
 
 ### Constants and fields
 
-Describe the purpose and definition of this data.
+Describe the purpose and definition of this data. If the unit is a measurement of time, include it, e.g., `TIMEOUT_MS` for timeout in milliseconds.
 
 ### Functions and methods
 
@@ -165,17 +165,6 @@ Don't abuse the Deref trait to emulate inheritance between structs, and thus reu
 
 We recommend that you use `//` and `///` comments rather than block comments `/* ... */` for uniformity and simpler grepping.
 
-### Cloning
-
-If `x` is reference counted, prefer [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) over `x.clone()`. [`Arc::clone(x)`](https://doc.rust-lang.org/std/sync/struct.Arc.html) explicitly indicates that we are cloning `x`. This avoids confusion about whether we are performing an expensive clone of a `struct`, `enum`, other types, or just a cheap reference copy.
-
-Also, if you are passing around [`Arc<T>`](https://doc.rust-lang.org/std/sync/struct.Arc.html) types, consider using a newtype wrapper:
-
-```rust
-#[derive(Clone, Debug)]
-pub struct Foo(Arc<FooInner>);
-```
-
 ### Concurrent types
 
 Concurrent types such as [`CHashMap`](https://docs.rs/crate/chashmap), [`AtomicUsize`](https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html), etc. have an immutable borrow on self i.e. `fn foo_mut(&self,...)` in order to support concurrent access on interior mutating methods. Good practices (such as those in the examples mentioned) avoid exposing synchronization primitives externally (e.g. `Mutex`, `RwLock`) and document the method semantics and invariants clearly.
@@ -199,15 +188,17 @@ Error handling suggestions follow the [Rust book guidance](https://doc.rust-lang
 * `assert!()` - This macro is kept in both debug/release and should be used to protect invariants of the system as necessary
 * `unreachable!()` - This macro will panic on code that should not be reached (violating an invariant) and can be used where appropriate.
 
+In production (non-test) code, outside of lock management,  all unrecoverable errors should be cleanly documented describing why said event is unrecoverable. For example, if the system is now in a bad state, state what that state is and the motivation for why a crash / restart is more effective than resolving it within a running system, and what if any steps an operator would need to take to resolve the issue.
+
 ### Generics
 
 Generics allow dynamic behavior (similar to [`trait`](https://doc.rust-lang.org/book/ch10-02-traits.html) methods) with static dispatch.  As the number of generic type parameters increases, the difficulty of using the type/method also increases (e.g. consider the combination of trait bounds required for this type, duplicate trait bounds on related types, etc.).  In order to avoid this complexity, we generally try to avoid using a large number of generic type parameters.  We have found that converting code with a large number of generic objects to trait objects with dynamic dispatch often simplifies our code.
 
 ### Getters/setters
 
-Excluding test code, set field visibility to private as much as possible. Private fields allow constructors to enforce internal invariants. Implement getters for data that consumers may need, but avoid setters unless a mutable state is necessary.
+In general, we follow naming recommendations for getters as specified [here](https://rust-lang.github.io/api-guidelines/naming.html#getter-names-follow-rust-convention-c-getter) and for setters as defined [here](https://github.com/rust-lang/rfcs/blob/master/text/0344-conventions-galore.md#gettersetter-apis).
 
-Public fields are most appropriate for [`struct`](https://doc.rust-lang.org/book/ch05-00-structs.html) types in the C spirit: compound, passive data structures without internal invariants.  Naming suggestions follow the guidance [here](https://rust-lang-nursery.github.io/api-guidelines/naming.html#getter-names-follow-rust-convention-c-getter) as shown below.
+Getters/setters should be avoided for [`struct`](https://doc.rust-lang.org/book/ch05-00-structs.html) types in the C spirit: compound, passive data structures without internal invariants. Adding them only increases the complexity and number of lines of code without improving the developer experience.
 
 ```rust
 struct Foo {
@@ -216,14 +207,9 @@ struct Foo {
 }
 
 impl Foo {
-    /// Return a copy when inexpensive
+    /// Simple getter follows xxx pattern
     fn size(&self) -> usize {
         self.size
-    }
-
-    /// Borrow for expensive copies
-    fn key_to_value(&self) -> &HashMap<u32, u32> {
-        &self.key_to_value
     }
 
     /// Setter follows set_xxx pattern
@@ -231,9 +217,7 @@ impl Foo {
         self.size = size;
     }
 
-    /// For a more complex getter, using get_XXX is acceptable
-    /// (similar to HashMap) with well-defined and
-    /// commented semantics
+    /// Complex getter follows get_xxx pattern
     fn get_value(&self, key: u32) -> Option<&u32> {
         self.key_to_value.get(&key)
     }
@@ -254,15 +238,25 @@ We currently use [log](https://docs.rs/log/) for logging.
 
 *Unit tests*
 
-Ideally, all code should be unit tested.  Unit test files should be in the same directory as `mod.rs` and their file names should end in `_test.rs`.  A module to be tested should have the test modules annotated with `#[cfg(test)]`.  For example, if in a crate there is a db module, the expected directory structure is as follows:
+We follow the general guidance provided [here](https://doc.rust-lang.org/book/ch11-03-test-organization.html). Ideally, all code should be unit tested.  Unit tests should be in the same file as the code it is testing though in a distinct module, using the following syntax:
 
-```
-src/db                        -> directory of db module
-src/db/mod.rs                 -> code of db module
-src/db/read_test.rs           -> db test 1
-src/db/write_test.rs          -> db test 2
-src/db/access/mod.rs          -> directory of access submodule
-src/db/access/access_test.rs  -> test of access submodule
+```rust
+struct Foo {
+}
+
+impl Foo {
+  pub fn magic_number() -> u8 {
+    42
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  #test
+  fn verify_magic_number() {
+    assert_eq!(Foo::magic_number(), 42);
+  }
+}
 ```
 
 *Property-based tests*
