@@ -3,11 +3,20 @@
 
 use crate::storage::command_adapter::config::EnvVar;
 use anyhow::{bail, ensure, Result};
+use futures::{
+    future::BoxFuture,
+    task::{Context, Poll},
+    Future, FutureExt,
+};
 use std::{
     fmt::{Debug, Formatter},
     process::Stdio,
 };
-use tokio::process::{Child, ChildStdin, ChildStdout};
+use tokio::{
+    io::AsyncRead,
+    macros::support::Pin,
+    process::{Child, ChildStdin, ChildStdout},
+};
 
 pub(super) struct Command {
     cmd_str: String,
@@ -74,8 +83,8 @@ impl SpawnedCommand {
         self.child.stdin.as_mut().unwrap()
     }
 
-    pub fn into_data_source(mut self) -> ChildStdout {
-        self.child.stdout.take().unwrap()
+    pub fn into_data_source<'a>(self) -> ChildStdoutAsDataSource<'a> {
+        ChildStdoutAsDataSource::new(self)
     }
 
     pub fn into_data_sink(mut self) -> ChildStdin {
@@ -97,5 +106,42 @@ impl SpawnedCommand {
             }
             Err(e) => bail!("Failed joining command {:?}: {}", self.command, e),
         }
+    }
+}
+
+pub(super) struct ChildStdoutAsDataSource<'a> {
+    child: Option<SpawnedCommand>,
+    join_fut: Option<BoxFuture<'a, Result<()>>>,
+}
+
+impl<'a> ChildStdoutAsDataSource<'a> {
+    fn new(child: SpawnedCommand) -> Self {
+        Self {
+            child: Some(child),
+            join_fut: None,
+        }
+    }
+}
+
+impl<'a> AsyncRead for ChildStdoutAsDataSource<'a> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<tokio::io::Result<usize>> {
+        if self.child.is_some() {
+            let res = Pin::new(self.child.as_mut().unwrap().stdout()).poll_read(cx, buf);
+            if let Poll::Ready(Ok(0)) = res {
+                // hit EOF, start joining self.child
+                self.join_fut = Some(self.child.take().unwrap().join().boxed());
+            } else {
+                return res;
+            }
+        }
+
+        Pin::new(self.join_fut.as_mut().unwrap())
+            .poll(cx)
+            .map_ok(|_| 0)
+            .map_err(|e| tokio::io::Error::new(tokio::io::ErrorKind::Other, e))
     }
 }
