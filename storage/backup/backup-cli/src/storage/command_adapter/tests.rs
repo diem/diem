@@ -73,6 +73,8 @@ fn dummy_store(cmd: &str) -> CommandAdapter {
 }
 
 async fn assert_commands_error(cmd: &str) {
+    let name = ShellSafeName::from_str("name").unwrap();
+
     let store = dummy_store(cmd);
 
     // create_backup
@@ -83,7 +85,6 @@ async fn assert_commands_error(cmd: &str) {
 
     /* TODO: enable when dealt with correctly
     let handle = "handle";
-    let name = ShellSafeName::from_str("name").unwrap();
 
     // open_for_read
     let mut buf = String::new();
@@ -104,6 +105,7 @@ async fn assert_commands_error(cmd: &str) {
     }
     .await
     .is_err());
+    */
 
     // save_metadata_line
     assert!(store
@@ -113,7 +115,6 @@ async fn assert_commands_error(cmd: &str) {
 
     // list_metadata_files
     assert!(store.list_metadata_files().await.is_err());
-     */
 }
 
 async fn assert_commands_okay(cmd: &str) {
