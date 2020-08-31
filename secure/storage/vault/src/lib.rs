@@ -6,7 +6,7 @@
 pub mod dev;
 
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH},
     PrivateKey,
 };
 use serde::{Deserialize, Serialize};
@@ -486,16 +486,23 @@ pub fn process_transit_export_response(
 ) -> Result<Ed25519PrivateKey, Error> {
     if resp.ok() {
         let export_key: ExportKeyResponse = serde_json::from_str(&resp.into_string()?)?;
-        if let Some(version) = version {
+        let composite_key = if let Some(version) = version {
             let key = export_key.data.keys.iter().find(|(k, _v)| **k == version);
             let (_, key) = key.ok_or_else(|| Error::NotFound("transit".into(), name.into()))?;
-            // Composite key [private|public]
-            Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+            key
         } else if let Some(key) = export_key.data.keys.values().last() {
-            // Composite key [private|public]
-            Ok(Ed25519PrivateKey::try_from(&base64::decode(key)?[..32])?)
+            key
         } else {
-            Err(Error::NotFound("transit".into(), name.into()))
+            return Err(Error::NotFound("transit".into(), name.into()));
+        };
+
+        let composite_key = base64::decode(composite_key)?;
+        if let Some(composite_key) = composite_key.get(0..ED25519_PRIVATE_KEY_LENGTH) {
+            Ok(Ed25519PrivateKey::try_from(composite_key)?)
+        } else {
+            Err(Error::InternalError(
+                "Insufficient key length returned by vault export key request".into(),
+            ))
         }
     } else {
         Err(resp.into())
