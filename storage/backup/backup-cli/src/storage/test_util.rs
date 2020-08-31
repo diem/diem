@@ -11,15 +11,8 @@ use proptest::{
     collection::{hash_map, vec},
     prelude::*,
 };
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    process::Stdio,
-};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    time::{delay_for, Duration},
-};
+use std::{collections::HashMap, path::Path};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 fn to_file_name(backup_name: &str, file_name: &str) -> String {
     Path::new(backup_name)
@@ -39,6 +32,7 @@ pub async fn test_write_and_read_impl(
             let (handle, mut file) = store.create_for_write(&backup_handle, name).await.unwrap();
             assert_eq!(handle, to_file_name(backup_name, name));
             file.write_all(content).await.unwrap();
+            file.shutdown().await.unwrap();
         }
     }
 
@@ -69,15 +63,10 @@ pub fn arb_backups(
 pub async fn test_save_and_list_metadata_files_impl(
     store: Box<dyn BackupStorage>,
     input: Vec<(ShellSafeName, TextLine)>,
-    path: &PathBuf,
 ) {
     for (name, content) in &input {
         store.save_metadata_line(name, &content).await.unwrap();
     }
-
-    // It takes a little time for the ls command to reflect newly created entries.
-    // it's not a problem in real world.
-    wait_for_dentries(path, input.len()).await;
 
     let mut read_back = Vec::new();
     for file_handle in store.list_metadata_files().await.unwrap() {
@@ -110,45 +99,4 @@ pub async fn test_save_and_list_metadata_files_impl(
 
 pub fn arb_metadata_files() -> impl Strategy<Value = Vec<(ShellSafeName, TextLine)>> {
     vec(any::<(ShellSafeName, TextLine)>(), 0..10)
-}
-
-async fn wait_for_dentries(path: &PathBuf, num_of_files: usize) {
-    // sync
-    tokio::process::Command::new("sync")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap()
-        .await
-        .unwrap();
-
-    // try every 10ms, for 10 seconds at most
-    for n in 1..=1000usize {
-        let output = tokio::process::Command::new("sh")
-            .arg("-c")
-            .arg(&format!(
-                "ls -1 {} || exec",
-                path.join("metadata")
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-            ))
-            .stdin(Stdio::null())
-            .output()
-            .await
-            .unwrap();
-        let got_files = String::from_utf8(output.stdout).unwrap().lines().count();
-        if got_files >= num_of_files {
-            return;
-        } else {
-            println!(
-                "Got {} files on {}-th try, expecting {}.",
-                got_files, n, num_of_files
-            );
-        }
-        delay_for(Duration::from_millis(10)).await;
-    }
-
-    panic!("ls result never contained {} entries", num_of_files);
 }
