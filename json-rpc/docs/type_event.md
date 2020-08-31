@@ -10,7 +10,7 @@ An event emitted during a transaction
 | Name                | Type                     | Description                                                    |
 |---------------------|--------------------------|----------------------------------------------------------------|
 | key                 | string                   | Gobally unique identifier of event stream                      |
-| sequence_number     | string                   | Sequence number of the current event in the given even stream  |
+| sequence_number     | unsigned int64           | Sequence number of the current event in the given even stream  |
 | transaction_version | unsigned int64           | Version of the transaction that emitted this event             |
 | data                | [EventData](#event-data) | Typed event data object                                        |
 
