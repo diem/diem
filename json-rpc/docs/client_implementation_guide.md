@@ -186,9 +186,9 @@ When you implement above logic, you may extract `createRawTransaction` and `crea
 
 ```Java
 
-import com.facebook.lcs.LcsSerializer;
-import com.facebook.serde.Bytes;
-import com.facebook.serde.Serializer;
+import com.novi.lcs.LcsSerializer;
+import com.novi.serde.Bytes;
+import com.novi.serde.Serializer;
 import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
 import org.libra.stdlib.Helpers;

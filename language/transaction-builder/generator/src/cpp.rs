@@ -72,7 +72,7 @@ pub fn output_library_body(
 struct CppEmitter<'a, T> {
     /// Writer.
     out: IndentedWriter<T>,
-    /// Name of the package owning the generated definitions (e.g. "com.facebook.my_package")
+    /// Name of the package owning the generated definitions (e.g. "com.my_org.my_package")
     namespace: Option<&'a str>,
     /// Whether function definitions should be prefixed with "inlined"
     inlined_definitions: bool,

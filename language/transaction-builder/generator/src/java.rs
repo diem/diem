@@ -116,7 +116,7 @@ fn write_script_call_files(
 struct JavaEmitter<'a, T> {
     /// Writer.
     out: IndentedWriter<T>,
-    /// Name of the package owning the generated definitions (e.g. "com.facebook.my_package")
+    /// Name of the package owning the generated definitions (e.g. "com.my_org.my_package")
     package_name: &'a str,
 }
 
@@ -136,9 +136,9 @@ import org.libra.types.AccountAddress;
 import org.libra.types.Script;
 import org.libra.types.TransactionArgument;
 import org.libra.types.TypeTag;
-import com.facebook.serde.Int128;
-import com.facebook.serde.Unsigned;
-import com.facebook.serde.Bytes;
+import com.novi.serde.Int128;
+import com.novi.serde.Unsigned;
+import com.novi.serde.Bytes;
 "#,
         )?;
         Ok(())

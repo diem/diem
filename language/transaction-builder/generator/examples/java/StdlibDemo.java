@@ -4,8 +4,8 @@
 import java.util.Arrays;
 import java.util.ArrayList;
 
-import com.facebook.serde.Bytes;
-import com.facebook.serde.Unsigned; // used as documentation.
+import com.novi.serde.Bytes;
+import com.novi.serde.Unsigned; // used as documentation.
 import org.libra.stdlib.Helpers;
 import org.libra.stdlib.ScriptCall;;
 import org.libra.types.AccountAddress;

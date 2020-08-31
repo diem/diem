@@ -246,8 +246,8 @@ fn test_that_java_code_compiles_and_demo_runs() {
     .unwrap();
 
     let paths = std::iter::empty()
-        .chain(std::fs::read_dir(dir.path().join("com/facebook/serde")).unwrap())
-        .chain(std::fs::read_dir(dir.path().join("com/facebook/lcs")).unwrap())
+        .chain(std::fs::read_dir(dir.path().join("com/novi/serde")).unwrap())
+        .chain(std::fs::read_dir(dir.path().join("com/novi/lcs")).unwrap())
         .chain(std::fs::read_dir(dir.path().join("org/libra/types")).unwrap())
         .chain(std::fs::read_dir(dir.path().join("org/libra/stdlib")).unwrap())
         .map(|e| e.unwrap().path())
