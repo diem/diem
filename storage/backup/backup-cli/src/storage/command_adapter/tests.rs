@@ -95,7 +95,6 @@ async fn assert_commands_error(cmd: &str) {
         .await
         .is_err());
 
-    /* TODO: enable when dealt with correctly
     // create_for_write
     assert!(async {
         let (_, mut file) = store.create_for_write(&handle, &name).await?;
@@ -105,7 +104,6 @@ async fn assert_commands_error(cmd: &str) {
     }
     .await
     .is_err());
-    */
 
     // save_metadata_line
     assert!(store

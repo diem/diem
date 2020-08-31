@@ -13,7 +13,7 @@ use std::{
     process::Stdio,
 };
 use tokio::{
-    io::AsyncRead,
+    io::{AsyncRead, AsyncWrite},
     macros::support::Pin,
     process::{Child, ChildStdin, ChildStdout},
 };
@@ -87,8 +87,8 @@ impl SpawnedCommand {
         ChildStdoutAsDataSource::new(self)
     }
 
-    pub fn into_data_sink(mut self) -> ChildStdin {
-        self.child.stdin.take().unwrap()
+    pub fn into_data_sink<'a>(self) -> ChildStdinAsDataSink<'a> {
+        ChildStdinAsDataSink::new(self)
     }
 
     pub async fn join(self) -> Result<()> {
@@ -142,6 +142,64 @@ impl<'a> AsyncRead for ChildStdoutAsDataSource<'a> {
         Pin::new(self.join_fut.as_mut().unwrap())
             .poll(cx)
             .map_ok(|_| 0)
+            .map_err(|e| tokio::io::Error::new(tokio::io::ErrorKind::Other, e))
+    }
+}
+
+pub(super) struct ChildStdinAsDataSink<'a> {
+    child: Option<SpawnedCommand>,
+    join_fut: Option<BoxFuture<'a, Result<()>>>,
+}
+
+impl<'a> ChildStdinAsDataSink<'a> {
+    fn new(child: SpawnedCommand) -> Self {
+        Self {
+            child: Some(child),
+            join_fut: None,
+        }
+    }
+}
+
+impl<'a> AsyncWrite for ChildStdinAsDataSink<'a> {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, tokio::io::Error>> {
+        if self.join_fut.is_some() {
+            Poll::Ready(Err(tokio::io::ErrorKind::BrokenPipe.into()))
+        } else {
+            Pin::new(self.child.as_mut().unwrap().stdin()).poll_write(cx, buf)
+        }
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), tokio::io::Error>> {
+        if self.join_fut.is_some() {
+            Poll::Ready(Err(tokio::io::ErrorKind::BrokenPipe.into()))
+        } else {
+            Pin::new(self.child.as_mut().unwrap().stdin()).poll_flush(cx)
+        }
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), tokio::io::Error>> {
+        if self.join_fut.is_none() {
+            let res = Pin::new(self.child.as_mut().unwrap().stdin()).poll_shutdown(cx);
+            if let Poll::Ready(Ok(_)) = res {
+                // pipe shutdown successful
+                self.join_fut = Some(self.child.take().unwrap().join().boxed())
+            } else {
+                return res;
+            }
+        }
+
+        Pin::new(self.join_fut.as_mut().unwrap())
+            .poll(cx)
             .map_err(|e| tokio::io::Error::new(tokio::io::ErrorKind::Other, e))
     }
 }
