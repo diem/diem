@@ -172,7 +172,14 @@ fn function(
         subtype(
             context,
             loc,
-            || "Invalid main return type",
+            || {
+                let tu = core::error_format_(&Type_::Unit, &Subst::empty());
+                format!(
+                    "Invalid 'script' function return type. \
+                    The function entry point to a 'script' must have the return type {}",
+                    tu
+                )
+            },
             signature.return_type.clone(),
             sp(loc, Type_::Unit),
         );

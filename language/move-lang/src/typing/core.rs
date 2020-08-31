@@ -380,14 +380,22 @@ impl ast_debug::AstDebug for Subst {
 //**************************************************************************************************
 
 pub fn error_format(b: &Type, subst: &Subst) -> String {
-    error_format_(b, subst, false)
+    error_format_impl(b, subst, false)
+}
+
+pub fn error_format_(b_: &Type_, subst: &Subst) -> String {
+    error_format_impl_(b_, subst, false)
 }
 
 pub fn error_format_nested(b: &Type, subst: &Subst) -> String {
-    error_format_(b, subst, true)
+    error_format_impl(b, subst, true)
 }
 
-fn error_format_(sp!(_, b_): &Type, subst: &Subst, nested: bool) -> String {
+fn error_format_impl(sp!(_, b_): &Type, subst: &Subst, nested: bool) -> String {
+    error_format_impl_(b_, subst, nested)
+}
+
+fn error_format_impl_(b_: &Type_, subst: &Subst, nested: bool) -> String {
     use Type_::*;
     let res = match b_ {
         UnresolvedError | Anything => "_".to_string(),

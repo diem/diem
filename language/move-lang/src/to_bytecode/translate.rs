@@ -200,7 +200,7 @@ fn script(
     let deps: Vec<&F::CompiledModule> = vec![];
     let (script, source_map) = ir_to_bytecode::compiler::compile_script(None, ir_script, deps)
         .map_err(|e| vec![(loc, format!("IR ERROR: {}", e))])?;
-    let function_info = main_function_info(&source_map, info);
+    let function_info = script_function_info(&source_map, info);
     Ok(CompiledUnit::Script {
         loc,
         key,
@@ -264,7 +264,10 @@ fn function_info_map(
     (function_name, function_info)
 }
 
-fn main_function_info(source_map: &SourceMap<Loc>, (params, specs): CollectedInfo) -> FunctionInfo {
+fn script_function_info(
+    source_map: &SourceMap<Loc>,
+    (params, specs): CollectedInfo,
+) -> FunctionInfo {
     let idx = F::FunctionDefinitionIndex(0);
     let function_source_map = source_map.get_function_source_map(idx).unwrap();
     let local_map = function_source_map.make_local_name_to_index_map();
