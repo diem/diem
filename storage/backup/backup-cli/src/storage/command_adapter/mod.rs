@@ -117,12 +117,12 @@ impl BackupStorage for CommandAdapter {
     }
 
     async fn list_metadata_files(&self) -> Result<Vec<FileHandle>> {
-        let mut child = self
+        let child = self
             .cmd(&self.config.commands.list_metadata_files, vec![])
             .spawn()?;
+
         let mut buf = FileHandle::new();
-        child.stdout().read_to_string(&mut buf).await?;
-        child.join().await?;
+        child.into_data_source().read_to_string(&mut buf).await?;
         Ok(buf.lines().map(str::to_string).collect())
     }
 }
