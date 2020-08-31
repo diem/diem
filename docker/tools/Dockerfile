@@ -22,7 +22,7 @@ COPY . /libra
 RUN ./docker/build-common.sh
 
 ### Production Image ###
-FROM debian:buster-slim AS prod
+FROM debian:buster-20200803-slim@sha256:e0a33348ac8cace6b4294885e6e0bb57ecdfe4b6e415f1a7f4c5da5fe3116e02 AS prod
 
 RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list && \
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye

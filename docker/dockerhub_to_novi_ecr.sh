@@ -78,21 +78,21 @@ docker push --disable-content-trust=true ${TARGET_REPO}/libra_cluster_test:${OUT
 docker push --disable-content-trust=true ${TARGET_REPO}/libra_client:${OUTPUT_TAG}
 
 
-#One day we'll push to consistent locations
-#docker tag libra/init:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/init:${OUTPUT_TAG}
-#docker tag libra/mint:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/mint:${OUTPUT_TAG}
-#docker tag libra/tools:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/tools:${OUTPUT_TAG}
-#docker tag libra/validator:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/validator:${OUTPUT_TAG}
-#docker tag libra/validator_tcb:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/validator_tcb:${OUTPUT_TAG}
-#docker tag libra/cluster_test:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/cluster_test:${OUTPUT_TAG}
-#docker tag libra/client:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/client:${OUTPUT_TAG}
-#
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/init:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/mint:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/tools:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/validator:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/validator_tcb:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/cluster_test:${OUTPUT_TAG}
-#docker push --disable-content-trust=true ${TARGET_REPO}/libra/client:${OUTPUT_TAG}
+#Push the proper locations to novi ecr.
+docker tag libra/init:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/init:${OUTPUT_TAG}
+docker tag libra/mint:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/mint:${OUTPUT_TAG}
+docker tag libra/tools:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/tools:${OUTPUT_TAG}
+docker tag libra/validator:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/validator:${OUTPUT_TAG}
+docker tag libra/validator_tcb:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/validator_tcb:${OUTPUT_TAG}
+docker tag libra/cluster_test:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/cluster_test:${OUTPUT_TAG}
+docker tag libra/client:${DOCKERHUB_TAG} ${TARGET_REPO}/libra/client:${OUTPUT_TAG}
+
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/init:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/mint:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/tools:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/validator:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/validator_tcb:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/cluster_test:${OUTPUT_TAG}
+docker push --disable-content-trust=true ${TARGET_REPO}/libra/client:${OUTPUT_TAG}
 
 set +x

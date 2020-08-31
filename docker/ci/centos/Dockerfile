@@ -14,7 +14,8 @@ FROM setup_ci_centos as tested_ci_centos
 
 #Compile a small rust tool?  But we already have in dev_setup (sccache/grcov)...?
 #Test that all commands we need are installed and on the PATH
-RUN [ -x "$(command -v hadolint)" ] \
+RUN [ -x "$(command -v shellcheck)" ] \
+    && [ -x "$(command -v hadolint)" ] \
     && [ -x "$(command -v vault)" ] \
     && [ -x "$(command -v terraform)" ] \
     && [ -x "$(command -v kubectl)" ] \
@@ -24,8 +25,8 @@ RUN [ -x "$(command -v hadolint)" ] \
     && [ -x "$(command -v grcov)" ] \
     && [ -x "$(command -v helm)" ] \
     && [ -x "$(command -v aws)" ] \
-    && [ -x "$(rustup which cargo --toolchain `cat /libra/rust-toolchain`)" ] \
-    && [ -x "$(rustup which cargo --toolchain `cat /libra/cargo-toolchain`)" ]
+    && [ -x "$(xargs rustup which cargo --toolchain < /libra/rust-toolchain )" ] \
+    && [ -x "$(xargs rustup which cargo --toolchain < /libra/cargo-toolchain)" ]
 
 #should be a no-op
 RUN scripts/dev_setup.sh -b -p

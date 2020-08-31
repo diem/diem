@@ -22,7 +22,7 @@ COPY . /libra
 RUN ./docker/build-common.sh
 
 ### Production Image ###
-FROM debian:buster AS prod
+FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d2398d50460145cab81c5ab  AS prod
 
 RUN apt-get update && apt-get -y install wget busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 RUN cd /usr/local/bin && busybox wget "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl

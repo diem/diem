@@ -1,4 +1,6 @@
-FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d2398d50460145cab81c5ab AS toolchain
+FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d2398d50460145cab81c5ab AS debian-base
+
+FROM debian-base AS toolchain
 
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
@@ -22,7 +24,7 @@ COPY . /libra
 RUN ./docker/build-common.sh
 
 ### Production Image ###
-FROM debian:buster AS pre-test
+FROM debian-base AS pre-test
 
 # TODO: Unsure which of these are needed exactly for client
 RUN apt-get update && apt-get install -y python3-pip nano net-tools tcpdump iproute2 netcat \

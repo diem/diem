@@ -14,7 +14,7 @@ version: 2.1
 
 orbs:
   slack: circleci/slack@3.3.0
-  aws-ecr: circleci/aws-ecr@6.5.0
+  aws-ecr: circleci/aws-ecr@6.12.2
   aws-cli: circleci/aws-cli@0.1.13
 
 executors:
@@ -38,20 +38,25 @@ executors:
     docker:
       - image: docker.io/libra/build_environment:circleci-latest
     resource_class: medium
-  terraform-executor:
+  small-executor:
     docker:
       - image: docker.io/libra/build_environment:circleci-latest
     resource_class: small
-  docker-executor:
+  vm-2xlarge-executor:
     machine:
       docker_layer_caching: true
       image: ubuntu-1604:202004-01
     resource_class: 2xlarge
-  docker-large-executor:
+  vm-large-executor:
     machine:
       docker_layer_caching: false
       image: ubuntu-1604:202004-01
     resource_class: large
+  vm-medium-executor:
+    machine:
+      docker_layer_caching: false
+      image: ubuntu-1604:202004-01
+    resource_class: medium
 commands:
   print_versions:
     description: Version Info
@@ -74,13 +79,13 @@ commands:
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
             export RUST_NIGHTLY=$(cat cargo-toolchain)
-            echo 'export RUST_NIGHTLY='${RUST_NIGHTLY} >> $BASH_ENV
+            echo 'export RUST_NIGHTLY='"$RUST_NIGHTLY" >> $BASH_ENV
 
             # Turn on the experimental feature resolver in cargo. See:
             # https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#features
             echo 'export CARGOFLAGS='$(cat cargo-flags) >> $BASH_ENV
             # Use nightly version of cargo to access the new feature resolver
-            echo 'export CARGO='$(rustup which cargo --toolchain $RUST_NIGHTLY) >> $BASH_ENV
+            echo 'export CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $BASH_ENV
             # Pin the version of RUSTC used for all invocations of cargo
             echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
             echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
@@ -158,16 +163,80 @@ commands:
       - run:
           name: Show sccache
           command: sccache -s
-  find_dockerfile_changes:
+  fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256:
     steps:
       - run:
-          name: Get the list of updated docker files
+          name: Verify all debian buster images have sha256s.
+          when: always
           command: |
-            echo 'export CHANGED_DOCKER_FILES=$(
-              for commit in $(git rev-list origin/master..HEAD) ; do
-                git diff-tree --no-commit-id --name-only -r "$commit" -- "*Dockerfile";
-              done
-            )' >> $BASH_ENV
+            set -e
+            # We are using debian for our base images.   Get all debain tags in FROM lines, strip the "AS .*" part
+            ALL_BUSTER_TAGS=$(grep --include=\*Dockerfile -r '.' -e 'FROM debian:' | sed 's/[ ]*[a|A][s|S] .*$//g')
+            while IFS= read -r line ; do
+              # if the line does not end in a git tag, echo the line and mark the build as bad.
+              if [[ ! $line =~ '@sha256:' ]]; then
+                echo "Give this docker image FROM line a sha256 in it's tag.   Failing the build."
+                echo "$line";
+                SHOULD_FAIL="true";
+              else
+                echo checked "$line"
+              fi
+            done \<<< "$ALL_BUSTER_TAGS"
+            if [[ "$SHOULD_FAIL" == "true" ]]; then
+              exit 1
+            fi
+  halt_if_no_relevant_files_changed_since_last_evaluation:
+    description: |
+      halts the job if no relevant files have changed.
+      This is determined by using a cached file containing the last git revision the build evaluated.
+      Branch is part of the cache key name, following the parameter, cache_key_part.
+      The build did not necessarily need to proceed on the last evaluation if no relevant files had changed,
+      and cache keys will still be updated on each evaluation before halting.
+      If this build is the result of a pull request, bors auto run, the pr information is prefered over the $previoushead,
+      and compared to the merge base of the target branch.
+      Relevant files are looked up from an existing file on the execution env, passed in as a parameter, the
+      file of relevant git files.
+    parameters:
+      cache_key_part:
+        description: part of the cache key name used by circle in the job.
+        type: string
+      file_of_relevant_git_files:
+        description: file to be provided to these steps, of relevant git files.
+        type: string
+    steps:
+      - restore_cache:
+          name: restore latch cache file.
+          key: last-githash-{{ .Environment.CIRCLE_BRANCH }}-<< parameters.cache_key_part >>
+      - run:
+          name: Detect if relevant files have changed.
+          command: |
+            touch /home/circleci/lastbuildgithash
+            previoushead=$(cat /home/circleci/lastbuildgithash)
+            output=$(.circleci/get_pr_info.sh -g $previoushead -b)
+            echo Output: "$output"
+            eval "$output"
+            echo Changed: $(cat "$CHANGED_FILE_OUTPUTFILE")
+            if [[ -n "$BASE_GITHASH" ]] && [ $(join "$CHANGED_FILE_OUTPUTFILE" << parameters.file_of_relevant_git_files >> | wc -l) == 0 ]; then
+              echo no relevant files have changed will halt
+              echo "halt" > /tmp/should_halt
+            else
+              echo Relevant files have changed - or could not detect changes, building.
+              echo "continue" > /tmp/should_halt
+            fi
+            git rev-parse HEAD > /home/circleci/lastbuildgithash
+      - save_cache:
+          name: store updated cache file.
+          key: last-githash-{{ .Environment.CIRCLE_BRANCH }}-<< parameters.cache_key_part >>-{{ epoch }}
+          paths:
+            - /home/circleci/lastbuildgithash
+      - run:
+          name: halt if no changes
+          command: |
+            if [[ "$(cat /tmp/should_halt)" == "halt" ]]; then
+              echo halting job.
+              circleci step halt
+            fi
+
   save_cargo_package_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -333,6 +402,18 @@ jobs:
       - run:
           name: cargo fmt
           command: $CARGO $CARGOFLAGS xfmt --check
+      - run:
+          name: shell lints
+          command: |
+            shellcheck scripts/dev_setup.sh && \
+            shellcheck .circleci/get_pr_info.sh
+      - run:
+          name: docker lints
+          command: |
+            hadolint docker/ci/circleci/Dockerfile && \
+            hadolint docker/ci/arch/Dockerfile  && \
+            hadolint docker/ci/alpine/Dockerfile  && \
+            hadolint docker/ci/centos/Dockerfile
       - save_sccache
   build-dev:
     executor: build-executor
@@ -498,7 +579,7 @@ jobs:
               --ignore RUSTSEC-2020-0016
       - build_teardown
   terraform:
-    executor: terraform-executor
+    executor: small-executor
     steps:
       - checkout
       - run:
@@ -515,13 +596,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Check if the docker build job should run
-          command: .circleci/should_build_docker.sh
-      - find_dockerfile_changes
-      - run:
           name: Lint DockerFile changes
           command: |
-            hadolint -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
+            eval `.circleci/get_pr_info.sh -b`
+            CHANGED_DOCKER_FILES=`cat "$CHANGED_FILE_OUTPUTFILE" | grep Dockerfile | tr '\n' ' '`
+            if [[ ! -z "$CHANGED_DOCKER_FILES" ]]; then
+              hadolint -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
+            fi
+      - fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256
   check-breaking-change:
     executor: audit-executor
     description: Detect breaking change in CLI
@@ -632,131 +714,92 @@ jobs:
 
   ######################################################################################################
   # Building docker ci base image if relevant files have changed                                       #
-  # Be warned those who dare to touch this:                                                            #
-  # 1. Builds on master of circlci-latest are expected to occur daily, but cannot run in a scheduled   #
-  #    job and still recieve a context "docker" that only the automated user may see                   #
-  # 2. This job is parameterized for multiple docker builds to test dev_setup.sh execution, but only   #
-  #    when one of the relevant files have changed.                                                    #
-  # 3. Finally prunes dockerhub libra/repos of older images (14 days non-release, 90 days releases)    #
+  # Only if "release" parameter is true, will docker images be pushed to Dockerhub and Novi AWS ECR    #
+  # Dockerhub Image prunning also occurs after a push removing old Dockerhub Images                    #
+  # The "target-image" parameter determines which docker image in to build:                            #
+  #   libra/docker/ci/< target-image >/Dockerfile                                                      #
+  # Only circlci images need to be released, others general should not be and only exist to test the   #
+  # dev_setup.sh script                                                                                #
   ######################################################################################################
   docker-ci-build:
-    executor: docker-large-executor
+    executor: vm-large-executor
     parameters:
-      base-image:
-        type: string
-    description: build cimg/base (ubuntu) CI docker image.
+      target-image:
+        description: |
+          The "target-image" parameter determines which docker image in to build:
+          ex: libra/docker/ci/< target-image >/Dockerfile
+        type: enum
+        enum: ["circleci", "alpine", "arch", "centos"]
+      release:
+        description: Should we push to dockerhub/novi aws ecr.
+        type: boolean
+        default: false
     steps:
       - checkout
-      - setup_docker_signing
-      - restore_cache:
-          name: restore daily latch cache file.
-          key: docker-circleci-lastest-daily-<< parameters.base-image >>
       - run:
-          name: Should build/test << parameters.base-image >> docker image file
+          name: Define relevant files
           command: |
-            # This trickery is used to build the libra/build_environment:circleci-latest once a day durring
-            # A push from bors to master, such the context will be properly set and pushing to dockerhub
-            # Will be possible.  Otherwise we will only build and not push on relevant file changes in non
-            # master branches below (this job will not be configured on master except for circle ci.)
-            if [[  $CIRCLE_BRANCH == "master" ]]; then
-              NOW=`date +%Y-%m-%d`
-              LAST=`cat /home/circleci/lastbuild` || true
-              if [[ "$LAST" != "$NOW" ]]; then
-                echo Last build occured $LAST, so building.
-                #since we're building, time to update the cache key file.
-                date +%Y-%m-%d > /home/circleci/lastbuild
-                exit 0
-              fi
-            fi
-
-            #detect if any relevant files have changed requiring base docker file rebuilding.
-            #this is specific for prs targeting master.
-            #TODO: figure out if we need this for release branchs?
-            git --no-pager diff --name-only HEAD $(git merge-base HEAD origin/master) | sort > /tmp/changed_files
             echo "cargo-toolchain" >> /tmp/ci_docker_files
-            echo "docker/ci/<< parameters.base-image >>/Dockerfile" >> /tmp/ci_docker_files
+            echo "docker/ci/<< parameters.target-image >>/Dockerfile" >> /tmp/ci_docker_files
             echo "rust-toolchain" >> /tmp/ci_docker_files
             echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
-
-            #if no relevant files have changed - exit
-            if [ `join /tmp/changed_files /tmp/ci_docker_files | wc -l` == 0 ]; then
-              echo no relevant files have changed - halting
-              circleci step halt
-            elif [[ $CIRCLE_BRANCH == "master" ]]; then
-              echo Updating cache latch file, Relevant files have changed, building.
-              #since we're building, time to update the cache key file.
-              date +%Y-%m-%d > /home/circleci/lastbuild
-            else
-              echo Relevant files have changed, building.
-            fi
-
-      - save_cache:
-          name: store updated daily latch file.
-          key: docker-circleci-lastest-daily-<< parameters.base-image >>-{{ epoch }}
-          paths:
-            - /home/circleci/lastbuild
+      - halt_if_no_relevant_files_changed_since_last_evaluation:
+          cache_key_part: "dockerbuild"
+          file_of_relevant_git_files: "/tmp/ci_docker_files"
       - run:
-          name: Build/test << parameters.base-image >> docker image file
+          name: Build/test << parameters.target-image >> docker image file
           command: |
-            #otherwise we'll build the docker image.
-            docker build -f docker/ci/<< parameters.base-image >>/Dockerfile -t libra/build_environment:<< parameters.base-image >>-latest .
-            if [[ -z "$DOCKERHUB_PASSWORD" ]]; then
-              echo "Do not attempt to push the image, lacks circleci context - exit"
-              circleci step halt
-            fi
-      - run:
-          name: push libra/build_environment:<< parameters.base-image >>-latest docker image
-          command: |
-            #signs the pushed image
-            docker push --disable-content-trust=false libra/build_environment:<< parameters.base-image >>-latest
-      - run:
-          name: daily docker image pruning.
-          command: |
-            scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}"" -p ${DOCKERHUB_PASSWORD}" -x
+            docker build -f docker/ci/<< parameters.target-image >>/Dockerfile -t libra/build_environment:<< parameters.target-image >>-latest .
+      - when:
+          condition: << parameters.release >>
+          steps:
+            - setup_docker_signing
+            - run:
+                name: push libra/build_environment:<< parameters.target-image >>-latest docker image
+                command: |
+                  #signs the pushed image
+                  docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-latest
+            - run:
+                name: docker image pruning.
+                command: |
+                  scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}"" -p ${DOCKERHUB_PASSWORD}" -x
 
   ######################################################################################################
-  # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
+  # Publish docker artifacts for prs targeting release branches built in "auto" by bors.               #
+  # Disabled for now, until bors pipeline more configurable.                                           #
   ######################################################################################################
   docker-pre-publish:
-    executor: docker-executor
-    description: publish docker images
+    executor: vm-2xlarge-executor
+    description: publish docker images with a pre-* tag.
     steps:
       - checkout
-      - setup_docker_signing
       - run:
           name: should pre build docker images (targeting a release branch)?
           command: |
-            export commit_message=$( git log -1 --pretty=%B )
-            export pr_num=`echo "$commit_message" | tail -1 | sed 's/Closes: #//'`
-            if [ -z $pr_num ]; then
-              echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
-              exit 1
-            fi
-            curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
-            export BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
-
-            export IS_RELEASE=$( if [[ "$BRANCH" =~ "^release-[0-9|.]+$" ]]; then echo true; else echo false; fi )
-            export IS_TEST=$( if [[ "$BRANCH" =~ "^test-[0-9|.]+$" ]]; then echo true; else echo false; fi )
-
-            if [[ $IS_RELEASE  == true ]] || [[ $IS_TEST == true ]] ; then
-              docker/build_push.sh -u -p -b ${BRANCH} -n client
-              docker/build_push.sh -u -p -b ${BRANCH} -n init
-              docker/build_push.sh -u -p -b ${BRANCH} -n mint
-              docker/build_push.sh -u -p -b ${BRANCH} -n tools
-              docker/build_push.sh -u -p -b ${BRANCH} -n validator
-              docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb
-              docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test
-              #build but don't publish
-              docker/build_push.sh -p -b ${BRANCH} -n validator-dynamic
-            else
+            eval `.circleci/get_pr_info.sh -b`
+            if  [[ ! "$TARGET_BRANCH" =~ "^release-[0-9|.]+$" ]] && [[ ! "$TARGET_BRANCH" =~ "^test-[0-9|.]+$" ]] ; then
               echo Targeting branch $TARGET_BRANCH will not publish docker images.
+              circleci step halt
             fi
+      - setup_docker_signing
+      - run:
+          name: pre-release docker images
+          command: |
+            docker/build_push.sh -u -p -b ${BRANCH} -n client
+            docker/build_push.sh -u -p -b ${BRANCH} -n init
+            docker/build_push.sh -u -p -b ${BRANCH} -n mint
+            docker/build_push.sh -u -p -b ${BRANCH} -n tools
+            docker/build_push.sh -u -p -b ${BRANCH} -n validator
+            docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb
+            docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test
+            #build but don't publish
+            docker/build_push.sh -p -b ${BRANCH} -n validator-dynamic
 
   ######################################################################################################
   # Docker Builds:                                                                                     #
   ######################################################################################################
   docker-publish:
-    executor: docker-executor
+    executor: vm-2xlarge-executor
     description: publish docker images
     steps:
       - checkout
@@ -766,7 +809,7 @@ jobs:
           name: pull pre images (or build if not pullable) and push release docker images
           command: |
             set -x
-            export BRANCH=${CIRCLE_BRANCH}
+            BRANCH=${CIRCLE_BRANCH}
             docker/build_push.sh -u -b ${BRANCH} -n client
             docker/build_push.sh -u -b ${BRANCH} -n init
             docker/build_push.sh -u -b ${BRANCH} -n mint
@@ -861,7 +904,8 @@ workflows:
                 - master
       - docker-ci-build:
           context: docker
-          base-image: circleci
+          release: true
+          target-image: circleci
           filters:
             branches:
               only:
@@ -869,7 +913,8 @@ workflows:
                 - master
 
   ######################################################################################################################
-  # Will publish release images to dockerhub and aws when commits land on a release/testing branch.
+  # Will publish release images to dockerhub and aws when commits land on a release/testing branch.                    #
+  # Will also push base images to novi aws ecr to prevent dockerhub api limit violations.                              #
   ######################################################################################################################
   release-dockerhub-publish:
     jobs:
@@ -904,14 +949,12 @@ workflows:
             - prefetch-crates
 
   ######################################################################################################################
-  # Used by bors to test prs on master's head before committing to master.
-  # Must support auto and canary branchs...
+  # Used by bors to test prs on master's head before committing to master.                                             #
+  # The "commit-workflow" must support auto and canary branchs...                                                      #
+  # The "commit-workflow", and the  pull-request-workflow should be identical.                                         #
   ######################################################################################################################
   commit-workflow:
     jobs:
-      - docker-pre-publish:
-          context: docker
-          filters: *filter-only-auto-canary
       - lint-docker:
           filters: *filter-only-auto-canary
       - terraform:
@@ -940,18 +983,23 @@ workflows:
           requires:
             - lint
       - docker-ci-build:
-          base-image: circleci
+          target-image: circleci
           filters: *filter-only-auto-canary
       - docker-ci-build:
-          base-image: centos
+          target-image: centos
           filters: *filter-only-auto-canary
       - docker-ci-build:
           #sccache fails to execute in alpine.
-          base-image: alpine
+          target-image: alpine
           filters: *filter-only-auto-canary
       - docker-ci-build:
-          base-image: arch
+          target-image: arch
           filters: *filter-only-auto-canary
+      - docker-pre-publish:
+          context: docker
+          filters:
+            branches:
+              only: auto
 
   pull-request-workflow:
     jobs:
@@ -983,17 +1031,17 @@ workflows:
           requires:
             - lint
       - docker-ci-build:
-          base-image: circleci
+          target-image: circleci
           filters: *filter-only-prs-dependabot
       - docker-ci-build:
-          base-image: centos
+          target-image: centos
           filters: *filter-only-prs-dependabot
       - docker-ci-build:
           #sccache fails to execute in alpine.
-          base-image: alpine
+          target-image: alpine
           filters: *filter-only-prs-dependabot
       - docker-ci-build:
-          base-image: arch
+          target-image: arch
           filters: *filter-only-prs-dependabot
 
   scheduled-workflow:
