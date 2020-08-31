@@ -135,9 +135,10 @@ impl PendingVotes {
 
                 // error
                 Err(error) => {
-                    error!(
-                        "MUST_FIX: vote received could not be added: {}, vote: {}",
-                        error, vote
+                    unexpected!(
+                        "vote received could not be added: {}, vote: {}",
+                        error,
+                        vote
                     );
                     return VoteReceptionResult::ErrorAddingVote(error);
                 }
@@ -172,9 +173,10 @@ impl PendingVotes {
 
                 // error
                 Err(error) => {
-                    error!(
-                        "MUST_FIX: timeout vote received could not be added: {}, vote: {}",
-                        error, vote
+                    unexpected!(
+                        "timeout vote received could not be added: {}, vote: {}",
+                        error,
+                        vote
                     );
                     return VoteReceptionResult::ErrorAddingVote(error);
                 }

@@ -136,7 +136,8 @@ pub mod prelude {
     pub use crate::{
         debug, error, event, info,
         security::{security_events, security_log},
-        sl_debug, sl_error, sl_info, sl_level, sl_trace, sl_warn, trace, warn, StructuredLogEntry,
+        sl_debug, sl_error, sl_info, sl_level, sl_trace, sl_warn, trace, unexpected, warn,
+        StructuredLogEntry,
     };
 }
 pub mod json_log;
@@ -206,6 +207,16 @@ macro_rules! warn {
 macro_rules! struct_log_enabled {
     ($level:expr) => {
         $crate::struct_logger_enabled($level)
+    };
+}
+
+/// For logging unexpected behavior rather than panicking with `unreachable!`
+#[macro_export]
+macro_rules! unexpected {
+    ($($arg:tt)+) => {
+        let mut entry = $crate::StructuredLogEntry::new_named("unexpected","assertion");
+        $crate::format_struct_args_and_pattern!(entry, $($arg)+);
+        $crate::sl_error!(entry)
     };
 }
 

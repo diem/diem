@@ -304,7 +304,7 @@ where
                 }
             }
             _ => {
-                warn!(
+                unexpected!(
                     "Unexpected notification received from Peer actor: {:?}",
                     notif
                 );
