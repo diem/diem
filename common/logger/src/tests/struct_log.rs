@@ -118,9 +118,6 @@ fn test_structured_logs() {
         .starts_with("common/logger/src/tests/struct_log.rs"));
     assert_eq!(log_message, map.string("log"));
 
-    // Id should be random, as long as it's not empty, we shoudl be good
-    assert!(!map.string("id").is_empty());
-
     // Log time should be the time the structured log entry was created
     let timestamp = DateTime::parse_from_rfc3339(&map.string("timestamp")).unwrap();
     let timestamp: DateTime<Utc> = DateTime::from(timestamp);

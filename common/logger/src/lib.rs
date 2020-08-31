@@ -30,7 +30,6 @@
 //! use serde_json::Value;
 //!
 //! pub struct StructuredLogEntry {
-//!     id: String,
 //!     log: Option<String>,
 //!     pattern: Option<&'static str>,
 //!     category: Option<&'static str>,
