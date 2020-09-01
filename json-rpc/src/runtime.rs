@@ -123,7 +123,8 @@ pub fn bootstrap(
                 user_agent: info.user_agent(),
                 elapsed: info.elapsed(),
             })
-        }));
+        }))
+        .with(warp::cors().allow_any_origin().allow_methods(vec!["POST"]));
 
     // For now we still allow user to use "/", but user should start to move to "/v1" soon
     let route_root = warp::path::end().and(base_route.clone());
