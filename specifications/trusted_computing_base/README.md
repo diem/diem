@@ -1,17 +1,20 @@
 # Trusted Computing Base
 
-The trusted computing base (TCB) part of libra-core is in charge of keys and important operations.
-It is an optional component of libra-core, designed to improve the security of the system.
+The [trusted computing base](https://en.wikipedia.org/wiki/Trusted_computing_base) (TCB) of each Libra validator
+is responsible for performing security critical operations and managing cryptographic keys. It is an optional
+component of Libra Core, designed to improve the security of Libra validators.
 
-The idea of a [trusted computing base](https://en.wikipedia.org/wiki/Trusted_computing_base) is to minimize and segregate the parts needed to for the well-being of a validator.
+If the TCB of a Libra validator remains secure (i.e., uncompromised), it is able to ensure that the validator
+will not violate any safety properties in the network (e.g., forks). In practice, the TCB should be deployed
+in a separate environment from the rest of the system (e.g., using a different set of containers, or deployed
+on a different host).
 
-For libra-core, the TCB runs the code necessary for a validator to be correct in order for the validator not to become unsafe.
-If other parts of the system start misbehaving, the validator as a whole will not be able to perform operations that would help compromise the safety of the network.
-This obviously does not cover liveness issues.
+The security properties offered by the TCB exclude issues of liveness; liveness may be violated if system
+components outside the TCB are compromised on a significant number of machines.
 
-The TCB consists of four different components:
+Overall, the TCB consists of four different components:
 
-* [Safety Rules](./safety_rules.md): ensures that a validator participate in the consensus protocol according to the safety rules.
-* [Execution Correctness](execution_correctness/execution_correctness_specification.md): ensures that transactions are correctly executed.
-* [Key Manager](key_manager/key_manager_specification.md): manages and rotate important keys.
-* [Secure Storage](./secure_storage.md): ensures storage of sensitive data for the Libra blockchain
+* [Safety Rules](safety_rules/README.md): ensures that a validator participates in consensus according to the safety rules.
+* [Execution Correctness](execution_correctness/README.md): ensures that transactions are correctly executed on each validator.
+* [Key Manager](key_manager/README.md): manages and rotates security critical cryptographic keys.
+* [Secure Storage](secure_storage/README.md): provides a secure storage for sensitive data on each validator (e.g., cryptographic keys).
