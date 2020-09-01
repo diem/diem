@@ -1,9 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::counters::{
-    PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
-    STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
-    STRUCT_LOG_TCP_CONNECT_COUNT,
+use crate::{
+    counters::{
+        PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
+        STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
+        STRUCT_LOG_TCP_CONNECT_COUNT,
+    },
+    Level,
 };
 use chrono::{SecondsFormat, Utc};
 use once_cell::sync::Lazy;
@@ -75,7 +78,7 @@ pub struct StructuredLogEntry {
     timestamp: String,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]
-    level: Option<log::Level>,
+    level: Option<Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -174,7 +177,7 @@ impl StructuredLogEntry {
     }
 
     /// Sets the log level of the log
-    pub fn level(mut self, level: log::Level) -> Self {
+    pub fn level(mut self, level: Level) -> Self {
         self.level = Some(level);
         self
     }
@@ -342,13 +345,13 @@ pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), InitL
     }
 }
 
-static STRUCT_LOG_LEVEL: Lazy<log::Level> = Lazy::new(|| {
+static STRUCT_LOG_LEVEL: Lazy<Level> = Lazy::new(|| {
     let level = env::var("STRUCT_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
-    log::Level::from_str(&level).expect("Failed to parse log level")
+    Level::from_str(&level).expect("Failed to parse log level")
 });
 
 /// Checks if structured logging is enabled for level
-pub fn struct_logger_enabled(level: log::Level) -> bool {
+pub fn struct_logger_enabled(level: Level) -> bool {
     struct_logger_set() && level <= *STRUCT_LOG_LEVEL
 }
 

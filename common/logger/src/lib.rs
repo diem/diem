@@ -164,8 +164,11 @@ pub mod json_log;
 
 mod kv;
 mod macros;
+mod metadata;
 mod security;
 mod struct_log;
+
+pub use metadata::Level;
 
 pub use struct_log::{
     init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,
@@ -176,7 +179,6 @@ pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
 
 mod text_log;
-pub use log::Level;
 pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
 pub mod counters;
 
@@ -193,35 +195,35 @@ macro_rules! struct_log_enabled {
 #[macro_export]
 macro_rules! sl_debug {
     ($entry:expr) => {{
-        $crate::sl_level!($crate::log::Level::Debug, $entry);
+        $crate::sl_level!($crate::Level::Debug, $entry);
     }};
 }
 
 #[macro_export]
 macro_rules! sl_error {
     ($entry:expr) => {{
-        $crate::sl_level!($crate::log::Level::Error, $entry);
+        $crate::sl_level!($crate::Level::Error, $entry);
     }};
 }
 
 #[macro_export]
 macro_rules! sl_info {
     ($entry:expr) => {{
-        $crate::sl_level!($crate::log::Level::Info, $entry);
+        $crate::sl_level!($crate::Level::Info, $entry);
     }};
 }
 
 #[macro_export]
 macro_rules! sl_trace {
     ($entry:expr) => {{
-        $crate::sl_level!($crate::log::Level::Trace, $entry);
+        $crate::sl_level!($crate::Level::Trace, $entry);
     }};
 }
 
 #[macro_export]
 macro_rules! sl_warn {
     ($entry:expr) => {{
-        $crate::sl_level!($crate::log::Level::Warn, $entry);
+        $crate::sl_level!($crate::Level::Warn, $entry);
     }};
 }
 
