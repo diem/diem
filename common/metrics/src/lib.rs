@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 #![recursion_limit = "128"]
 
-pub mod counters;
 mod json_encoder;
 mod json_metrics;
 pub mod metric_server;

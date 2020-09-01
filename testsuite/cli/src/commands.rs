@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account_commands::AccountCommand, client_proxy::ClientProxy, dev_commands::DevCommand,
-    info_commands::InfoCommand, query_commands::QueryCommand, transfer_commands::TransferCommand,
+    account_commands::AccountCommand, client_proxy::ClientProxy, counters::COUNTER_CLIENT_ERRORS,
+    dev_commands::DevCommand, info_commands::InfoCommand, query_commands::QueryCommand,
+    transfer_commands::TransferCommand,
 };
 use anyhow::Error;
-use libra_metrics::counters::*;
 use libra_types::{account_address::AccountAddress, transaction::authenticator::AuthenticationKey};
 use std::{collections::HashMap, sync::Arc};
 
