@@ -58,6 +58,11 @@ pub fn bootstrap(
     );
 
     let base_route = warp::any()
+        .and(
+            warp::any()
+                .map(warp::reply)
+                .with(warp::cors().allow_any_origin()),
+        )
         .and(warp::post())
         .and(warp::header::exact("content-type", "application/json"))
         .and(warp::body::content_length_limit(content_len_limit as u64))
