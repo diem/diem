@@ -39,7 +39,7 @@ fn main() {
         .read_env()
         .init();
 
-    MetricsPusher.start();
+    let _mp = MetricsPusher::start();
 
     create_and_execute_key_manager(key_manager_config).unwrap_or_else(|e| {
         eprintln!("Error! The Key Manager has failed during execution: {}", e);

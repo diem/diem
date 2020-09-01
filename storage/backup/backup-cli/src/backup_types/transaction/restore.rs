@@ -208,8 +208,8 @@ impl TransactionRestoreController {
                             .collect::<Vec<_>>(),
                     )?;
                     current_version += this_batch_size as u64;
+                    TRANSACTION_REPLAY_VERSION.set(current_version as i64 - 1);
                 }
-                TRANSACTION_REPLAY_VERSION.set(last as i64);
             }
         }
 

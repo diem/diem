@@ -56,8 +56,7 @@ enum RestoreType {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    libra_logger::Logger::new().init();
-    MetricsPusher.start();
+    let _mp = MetricsPusher::start();
 
     let opt = Opt::from_args();
     let db = Arc::new(

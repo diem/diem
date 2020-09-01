@@ -36,10 +36,10 @@ pub static STATE_SNAPSHOT_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static STATE_SNAPSHOT_TOTAL_LEAVES: Lazy<IntGauge> = Lazy::new(|| {
+pub static STATE_SNAPSHOT_TARGET_LEAF_INDEX: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
-        "libra_db_restore_state_snapshot_total_leaves",
-        "Number of account in the state snapshot being restored."
+        "libra_db_restore_state_snapshot_target_leaf_index",
+        "The biggest leaf index in state snapshot being restored (# of accounts - 1)."
     )
     .unwrap()
 });

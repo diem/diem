@@ -30,7 +30,7 @@ fn main() {
         .read_env()
         .init();
 
-    MetricsPusher.start();
+    let _mp = MetricsPusher::start();
 
     let mut service = Process::new(config);
     service.start();

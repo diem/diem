@@ -12,38 +12,56 @@ pub use prometheus::{
 
 use libra_logger::{error, info};
 use prometheus::{Encoder, TextEncoder};
-use std::{env, thread, thread::JoinHandle, time::Duration};
+use std::{env, sync::mpsc, thread, thread::JoinHandle, time::Duration};
 
 const DEFAULT_PUSH_FREQUENCY_SECS: u64 = 15;
 
 /// MetricsPusher provides a function to push a list of Metrics to a configurable
 /// pushgateway endpoint.
-pub struct MetricsPusher;
+#[must_use = "Assign the contructed pusher to a variable, \
+              otherwise the worker thread is joined immediately."]
+pub struct MetricsPusher {
+    worker_thread: Option<JoinHandle<()>>,
+    quit_sender: mpsc::Sender<()>,
+}
 
 impl MetricsPusher {
-    fn run(self, push_metrics_endpoint: String, push_metrics_frequency_secs: u64) {
-        loop {
-            let mut buffer = Vec::new();
-            if let Err(e) = TextEncoder::new().encode(&prometheus::gather(), &mut buffer) {
-                error!("Failed to encode push metrics: {}.", e.to_string());
-            } else {
-                let response = ureq::post(&push_metrics_endpoint)
-                    .timeout_connect(10_000)
-                    .send_bytes(&buffer);
-                if let Some(error) = response.synthetic_error() {
-                    error!(
-                        "Failed to push metrics to {}. Error: {}",
-                        push_metrics_endpoint, error
-                    );
-                }
+    fn push(push_metrics_endpoint: &str) {
+        let mut buffer = Vec::new();
+
+        if let Err(e) = TextEncoder::new().encode(&prometheus::gather(), &mut buffer) {
+            error!("Failed to encode push metrics: {}.", e.to_string());
+        } else {
+            let response = ureq::post(&push_metrics_endpoint)
+                .timeout_connect(10_000)
+                .send_bytes(&buffer);
+            if let Some(error) = response.synthetic_error() {
+                error!(
+                    "Failed to push metrics to {}. Error: {}",
+                    push_metrics_endpoint, error
+                );
             }
-            thread::sleep(Duration::from_secs(push_metrics_frequency_secs));
         }
     }
 
-    /// start starts a new thread and periodically pushes the metrics to a pushgateway endpoint
-    pub fn start(self) -> Option<JoinHandle<()>> {
-        // eg value for PUSH_METRICS_ENDPOINT: "http://pushgatewar.server.com:9091/metrics/job/safety_rules"
+    fn worker(
+        quit_receiver: mpsc::Receiver<()>,
+        push_metrics_endpoint: String,
+        push_metrics_frequency_secs: u64,
+    ) {
+        while quit_receiver
+            .recv_timeout(Duration::from_secs(push_metrics_frequency_secs))
+            .is_err()
+        {
+            // Timeout, no quit signal received.
+            Self::push(&push_metrics_endpoint);
+        }
+        // final push
+        Self::push(&push_metrics_endpoint);
+    }
+
+    fn start_worker_thread(quit_receiver: mpsc::Receiver<()>) -> Option<JoinHandle<()>> {
+        // eg value for PUSH_METRICS_ENDPOINT: "http://pushgateway.server.com:9091/metrics/job/safety_rules"
         let push_metrics_endpoint = match env::var("PUSH_METRICS_ENDPOINT") {
             Ok(s) => s,
             Err(_) => {
@@ -66,7 +84,42 @@ impl MetricsPusher {
             push_metrics_endpoint, push_metrics_frequency_secs
         );
         Some(thread::spawn(move || {
-            self.run(push_metrics_endpoint, push_metrics_frequency_secs)
+            Self::worker(
+                quit_receiver,
+                push_metrics_endpoint,
+                push_metrics_frequency_secs,
+            )
         }))
+    }
+
+    /// start starts a new thread and periodically pushes the metrics to a pushgateway endpoint
+    pub fn start() -> Self {
+        let (tx, rx) = mpsc::channel();
+        let worker_thread = Self::start_worker_thread(rx);
+
+        Self {
+            worker_thread,
+            quit_sender: tx,
+        }
+    }
+
+    pub fn join(&mut self) {
+        if let Some(worker_thread) = self.worker_thread.take() {
+            if let Err(e) = self.quit_sender.send(()) {
+                error!(
+                    "Failed to send quit signal to metric pushing worker thread: {:?}",
+                    e
+                );
+            }
+            if let Err(e) = worker_thread.join() {
+                error!("Failed to join metric pushing worker thread: {:?}", e);
+            }
+        }
+    }
+}
+
+impl Drop for MetricsPusher {
+    fn drop(&mut self) {
+        self.join()
     }
 }
