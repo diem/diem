@@ -23,7 +23,7 @@ pub const SENT_LABEL: &str = "sent";
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "libra_network_peers",
-        "Libra network peers counter",
+        "Number of peers, and their associated state",
         &["role_type", "state"]
     )
     .unwrap()
@@ -32,7 +32,7 @@ pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
 pub static LIBRA_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "libra_connections",
-        "Libra connections counter",
+        "Number of current connections and their direction",
         &["role_type", "network_id", "peer_id", "direction"]
     )
     .unwrap()
@@ -65,7 +65,7 @@ pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
 pub static LIBRA_NETWORK_RPC_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_rpc_messages",
-        "Libra network rpc messages counter",
+        "Number of RPC messages",
         &["type", "state"]
     )
     .unwrap()
@@ -74,7 +74,7 @@ pub static LIBRA_NETWORK_RPC_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
 pub static LIBRA_NETWORK_RPC_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_bytes",
-        "Libra network rpc bytes histogram",
+        "Number of RPC bytes transferred",
         &["type", "state"]
     )
     .unwrap()
@@ -83,7 +83,7 @@ pub static LIBRA_NETWORK_RPC_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
 pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_latency_seconds",
-        "Libra network rpc latency histogram",
+        "RPC request latency in seconds",
         &["type", "protocol_id", "peer_id"]
     )
     .unwrap()
@@ -92,7 +92,7 @@ pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
 pub static LIBRA_NETWORK_DIRECT_SEND_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_direct_send_messages",
-        "Libra network direct send messages counter",
+        "Number of direct send messages",
         &["state"]
     )
     .unwrap()
@@ -101,7 +101,7 @@ pub static LIBRA_NETWORK_DIRECT_SEND_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|
 pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_direct_send_bytes",
-        "Libra network direct send bytes histogram",
+        "Number of direct send bytes transferred",
         &["state"]
     )
     .unwrap()
@@ -112,7 +112,7 @@ pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
 pub static PENDING_NETWORK_NOTIFICATIONS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_pending_network_notifications",
-        "Counters(queued,dequeued,dropped) related to pending inbound network notifications",
+        "Number of pending inbound network notifications by state",
         &["state"]
     )
     .unwrap()
@@ -122,7 +122,7 @@ pub static PENDING_NETWORK_NOTIFICATIONS: Lazy<IntCounterVec> = Lazy::new(|| {
 pub static PENDING_NETWORK_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_pending_requests",
-        "Counters(queued,dequeued,dropped) related to pending outbound network requests",
+        "Number of pending outbound network requests by state",
         &["state"]
     )
     .unwrap()
@@ -132,16 +132,17 @@ pub static PENDING_NETWORK_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
 pub static PENDING_HEALTH_CHECKER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_pending_health_check_events",
-        "Counters(queued,dequeued,dropped) related to pending network notifications to HealthChecker",
+        "Number of pending health check events by state",
         &["state"]
-    ).unwrap()
+    )
+    .unwrap()
 });
 
 /// Counter of pending network events to Discovery.
 pub static PENDING_DISCOVERY_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_pending_discovery_events",
-        "Counters(queued,dequeued,dropped) related to pending network notifications to Discovery",
+        "Number of pending discovery events by state",
         &["state"]
     )
     .unwrap()
@@ -151,7 +152,7 @@ pub static PENDING_DISCOVERY_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| 
 pub static PENDING_PEER_MANAGER_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_pending_peer_manager_requests",
-        "Counters(queued,dequeued,dropped) related to pending network notifications to PeerManager",
+        "Number of pending peer manager requests by state",
         &["state"]
     )
     .unwrap()
@@ -183,7 +184,8 @@ pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> =
 pub static PENDING_DIRECT_SEND_REQUESTS: &str = "libra_network_pending_direct_send_requests";
 
 /// Counter of pending Direct Send notifications to Network Provider
-pub static PENDING_DIRECT_SEND_NOTIFICATIONS: &str = "libra_network_pending_direct_send_notifications";
+pub static PENDING_DIRECT_SEND_NOTIFICATIONS: &str =
+    "libra_network_pending_direct_send_notifications";
 
 /// Counter of pending requests in RPC
 pub static PENDING_RPC_REQUESTS: &str = "libra_network_pending_rpc_requests";
@@ -198,7 +200,8 @@ pub static PENDING_PEER_REQUESTS: &str = "libra_network_pending_peer_requests";
 pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "libra_network_pending_peer_rpc_notifications";
 
 /// Counter of pending DirectSend events from Peer to DirectSend actor..
-pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: &str = "libra_network_pending_peer_direct_send_notifications";
+pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: &str =
+    "libra_network_pending_peer_direct_send_notifications";
 
 /// Counter of pending connection notifications from Peer to NetworkProvider.
 pub static PENDING_PEER_NETWORK_NOTIFICATIONS: &str = "libra_network_pending_peer_notifications";
