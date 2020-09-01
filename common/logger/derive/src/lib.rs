@@ -95,7 +95,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             #(#setters)*
 
             pub fn into_struct_log(self) -> ::libra_logger::StructuredLogEntry {
-                ::libra_logger::StructuredLogEntry::new_unnamed().schema(self)
+                ::libra_logger::StructuredLogEntry::default().schema(self)
             }
         }
 

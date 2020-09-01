@@ -51,7 +51,7 @@ const NUM_SEND_RETRIES: u8 = 1;
 // Fields to keep when over size
 static FIELDS_TO_KEEP: &[&str] = &["error"];
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct StructuredLogEntry {
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -81,24 +81,33 @@ pub struct StructuredLogEntry {
     data: HashMap<&'static str, Value>,
 }
 
-impl StructuredLogEntry {
-    /// Base implementation for creating a log
-    pub fn new_unnamed() -> Self {
-        let mut ret = Self::default();
-        ret.timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true);
-        ret
+impl Default for StructuredLogEntry {
+    fn default() -> Self {
+        Self {
+            log: None,
+            pattern: None,
+            category: None,
+            name: None,
+            module: None,
+            location: None,
+            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
+            level: None,
+            data: Default::default(),
+        }
     }
+}
 
+impl StructuredLogEntry {
     /// Specifically for text based conversion logs
     pub fn new_text() -> Self {
-        let mut ret = Self::new_unnamed();
+        let mut ret = Self::default();
         ret.category = Some("text");
         ret
     }
 
     /// Creates a log with a category and a name.  This should be preferred
     pub fn new_named(category: &'static str, name: &'static str) -> Self {
-        let mut ret = Self::new_unnamed();
+        let mut ret = Self::default();
         ret.category = Some(category);
         ret.name = Some(name);
         ret
