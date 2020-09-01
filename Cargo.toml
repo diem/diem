@@ -5,6 +5,7 @@ members = [
     "client/libra-dev",
     "client/swiss-knife",
     "client/transaction-builder",
+    "common/annotated-error",
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",
