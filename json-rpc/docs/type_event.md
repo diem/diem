@@ -104,6 +104,46 @@ Event emitted when the url used for off-chain dual attestation checking is rotat
 | new_base_url                | string | New URL endpoint for off-chain communication            |
 | time_rotated_seconds        | u64    | Blockchain time (in seconds) when the rotation occurred |
 
+#### upgrade
+
+TODO: description
+
+| Name      | Type   | Description                 |
+|-----------|--------|-----------------------------|
+| type      | string | Constant string "upgrade"   |
+| write_set | string | TODO: desc                  |
+
+#### newepoch
+
+Event emitted when a new epoch is created after new validator is added / removed, or
+config in the validator set changed.
+
+| Name    | Type                         | Description                 |
+|---------|------------------------------|-----------------------------|
+| type    | string                       | Constant string "newepoch"  |
+| epoch   | unsigned int64(microseconds) | The new epoch               |
+
+#### newblock
+
+Event emitted when a new block is created
+
+| Name          | Type                         | Description                           |
+|---------------|------------------------------|---------------------------------------|
+| type          | string                       | Constant string "newblock"            |
+| round         | unsigned int64               | Round number                          |
+| proposer      | unsigned int64               | proposer account address, hex-encoded |
+| proposed_time | unsigned int64(microseconds) | proposed timestamp                    |
+
+#### receivedmint
+
+Event emitted after minted, destination address received the minted coins.
+
+| Name                | Type                     | Description                       |
+|---------------------|--------------------------|-----------------------------------|
+| type                | string                   | Constant string "receivedmint"    |
+| amount              | [Amount](type_amount.md) | The amount minted                 |
+| destination_address | string                   | The address who received the mint |
+
 #### unknown
 
 Represents events currently unsupported by JSON-RPC API.
