@@ -55,7 +55,7 @@
 //!    .data("block", &block)
 //!    .data_display("author", &author)
 //!    .field(&logging_field, &string)
-//!    .log(format!("Committed block: {:?} by {}", block, author))
+//!    .message(format!("Committed block: {:?} by {}", block, author))
 //! ```
 //!
 //! Arguments passed to `data()` will be serialized into JSON, and must implement `Serialize`.
@@ -308,15 +308,15 @@ macro_rules! location {
 #[macro_export]
 macro_rules! format_struct_args_and_pattern {
     ($entry:ident, $fmt:expr) => {
-        $entry.add_log(format!($fmt));
+        $entry.add_message(format!($fmt));
         $entry.add_pattern($fmt);
     };
     ($entry:ident, $fmt:expr,) => {
-        $entry.add_log(format!($fmt));
+        $entry.add_message(format!($fmt));
         $entry.add_pattern($fmt);
     };
     ($entry:ident, $fmt:expr, $($arg:tt)+) => {
-        $entry.add_log(format!($fmt, $($arg)+));
+        $entry.add_message(format!($fmt, $($arg)+));
         $entry.add_pattern($fmt);
         $crate::format_struct_args!($entry, 0, $($arg)+);
     }

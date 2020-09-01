@@ -259,7 +259,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "writing_data")
-                .log(format!(
+                .message(format!(
                     "{} noise client writing_data: {}",
                     self.network_context, remote_public_key
                 ))
@@ -272,7 +272,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "reading_data")
-                .log(format!(
+                .message(format!(
                     "{} noise client reading_data: {}",
                     self.network_context, remote_public_key
                 ))
@@ -286,7 +286,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "finalizing")
-                .log(format!(
+                .message(format!(
                     "{} noise client finalize: {}",
                     self.network_context, remote_public_key
                 ))
@@ -323,7 +323,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "reading_data")
-                .log(format!(
+                .message(format!(
                     "{} noise server reading_data: {:?}",
                     self.network_context, socket
                 ))
@@ -478,7 +478,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "writing_data")
-                .log(format!(
+                .message(format!(
                     "{} noise server writing_data: {}",
                     self.network_context, remote_peer_id
                 ))
@@ -490,7 +490,7 @@ impl NoiseUpgrader {
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "finalize")
-                .log(format!(
+                .message(format!(
                     "{} noise server finalize: {}",
                     self.network_context, remote_peer_id
                 ))

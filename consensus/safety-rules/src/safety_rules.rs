@@ -253,7 +253,7 @@ impl SafetyRules {
                             LogEvent::Error
                         )
                         .into_struct_log()
-                        .log("Validator key not found".into()));
+                        .message("Validator key not found".into()));
 
                         self.validator_signer = None;
                         Error::InternalError("Validator key not found".into())
@@ -265,13 +265,13 @@ impl SafetyRules {
             sl_debug!(
                 SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
                     .into_struct_log()
-                    .log("in set".into())
+                    .message("in set".into())
             );
         } else {
             sl_debug!(
                 SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
                     .into_struct_log()
-                    .log("not in set".into())
+                    .message("not in set".into())
             );
             self.validator_signer = None;
         }
