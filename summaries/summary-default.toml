@@ -363,6 +363,13 @@ status = 'workspace'
 features = ['default']
 
 [[target-package]]
+name = 'libra-annotated-error'
+version = '0.1.0'
+workspace-path = 'common/annotated-error'
+status = 'workspace'
+features = []
+
+[[target-package]]
 name = 'libra-bitvec'
 version = '0.1.0'
 workspace-path = 'common/bitvec'
