@@ -15,6 +15,8 @@ pub mod java;
 pub mod python3;
 /// Support for code-generation in Rust.
 pub mod rust;
+/// Support for code-generation in Rust.
+pub mod typescript;
 
 /// Internals shared between languages.
 mod common;
