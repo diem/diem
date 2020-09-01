@@ -20,11 +20,5 @@ pub trait ClusterSwarm: Send + Sync {
 
     async fn get_grafana_baseurl(&self) -> Result<String>;
 
-    async fn put_file(
-        &self,
-        node: &str,
-        pod_name: &str,
-        path: &str,
-        content: Vec<u8>,
-    ) -> Result<()>;
+    async fn put_file(&self, node: &str, pod_name: &str, path: &str, content: &[u8]) -> Result<()>;
 }
