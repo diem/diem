@@ -41,6 +41,8 @@ The following languages are currently supported:
 
 * Rust (NOTE: Code generation of dependency-free Rust is experimental. Consider using the libraries of the Diem repository instead.)
 
+* TypeScript / JavaScript
+
 
 ## Quick Start
 
@@ -135,6 +137,19 @@ target/debug/generate-transaction-builders \
     "language/diem-framework/compiled/transaction_scripts/abi"
 ```
 Next, you may copy and execute the [Rust demo file](examples/rust/stdlib_demo.rs). (See [unit test](tests/generation.rs) for details.)
+
+### TypeScript/JavaScript
+
+To generate the TypeScript "module" `libra_stdlib` and its submodules into a target directory `$DEST`, run:
+
+```bash
+target/debug/generate-transaction-builders \
+    --language typescript \
+    --module-name diemStdlib \
+    --with-diem-types "testsuite/generate-format/tests/staged/diem.yaml" \
+    --target-source-dir "$DEST" \
+    "language/stdlib/compiled/transaction_scripts/abi"
+```
 
 
 ## Adding Support for a New Language

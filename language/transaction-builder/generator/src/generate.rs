@@ -21,6 +21,7 @@ enum Language {
     Cpp,
     Java,
     Go,
+    TypeScript
 }
 }
 
@@ -108,6 +109,13 @@ fn main() {
                     )
                     .unwrap();
                 }
+                Language::TypeScript => {
+                    buildgen::typescript::output(
+                        &mut out,
+                        &abis,
+                    )
+                    .unwrap();
+                }
             }
             return;
         }
@@ -125,6 +133,7 @@ fn main() {
                 Language::Rust => Box::new(serdegen::rust::Installer::new(install_dir.clone())),
                 Language::Cpp => Box::new(serdegen::cpp::Installer::new(install_dir.clone())),
                 Language::Java => Box::new(serdegen::java::Installer::new(install_dir.clone())),
+                Language::TypeScript => Box::new(serdegen::typescript::Installer::new(install_dir.clone())),
                 Language::Go => Box::new(serdegen::golang::Installer::new(
                     install_dir.clone(),
                     options.serde_package_name.clone(),
@@ -153,6 +162,7 @@ fn main() {
             ),
             Language::Java => ("com.diem.types".to_string(), vec!["com", "diem", "types"]),
             Language::Go => ("diemtypes".to_string(), vec!["diemtypes"]),
+            Language::TypeScript => ("diemTypes".to_string(), vec!["diemTypes"]),
             _ => ("diem_types".to_string(), vec!["diem_types"]),
         };
         let custom_diem_code = buildgen::read_custom_code_from_paths(
@@ -173,6 +183,7 @@ fn main() {
                 options.serde_package_name,
                 options.diem_package_name,
             )),
+            Language::TypeScript => Box::new(buildgen::typescript::Installer::new(install_dir)),
             Language::Rust => Box::new(buildgen::rust::Installer::new(
                 install_dir,
                 options.diem_version_number,
