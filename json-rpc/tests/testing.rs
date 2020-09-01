@@ -21,6 +21,7 @@ pub struct Env {
     pub dd: Account,
     pub vasps: Vec<Account>,
     pub client: reqwest::blocking::Client,
+    allow_execution_failures: bool,
 }
 
 impl Env {
@@ -34,6 +35,7 @@ impl Env {
             dd: Account::new_with_address(testnet_dd_account_address(), root_private_key),
             vasps: vec![],
             client: reqwest::blocking::Client::new(),
+            allow_execution_failures: false,
         }
     }
 
@@ -157,6 +159,13 @@ impl Env {
         .expect("user signed transaction")
     }
 
+    pub fn allow_execution_failures<T>(&mut self, f: fn(&mut Self) -> T) -> T {
+        self.allow_execution_failures = true;
+        let ret = f(self);
+        self.allow_execution_failures = false;
+        ret
+    }
+
     pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> JsonRpcResponse {
         let txn_hex = hex::encode(lcs::to_bytes(&txn).expect("lcs txn failed"));
         let resp = self.send("submit", json!([txn_hex]));
@@ -175,7 +184,9 @@ impl Env {
             );
             if let Some(result) = resp.result {
                 if result.is_object() {
-                    assert_eq!(result["vm_status"]["type"], "executed", "{:#}", result);
+                    if !self.allow_execution_failures {
+                        assert_eq!(result["vm_status"]["type"], "executed", "{:#}", result);
+                    }
                     assert_eq!(result["hash"], txn_hash, "{:#}", result);
                     break;
                 }

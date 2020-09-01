@@ -2784,6 +2784,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
+ "move-explain 0.1.0",
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",

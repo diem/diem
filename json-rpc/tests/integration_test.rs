@@ -329,5 +329,38 @@ fn create_test_cases() -> Vec<Test> {
                 );
             },
         },
+        Test {
+            name: "peer to peer account failed error explanations",
+            run: |env: &mut testing::Env| {
+                env.allow_execution_failures(|env: &mut testing::Env| {
+                    // transfer too many coins
+                    let txn = env.transfer_coins((0, 0), (1, 0), 200000000000000);
+                    env.wait_for_txn(&txn);
+                });
+
+                let sender = &env.vasps[0].children[0];
+
+                let resp = env.send(
+                    "get_account_transaction",
+                    json!([sender.address.to_string(), 1, true]),
+                );
+                let result = resp.result.unwrap();
+                let vm_status = result["vm_status"].clone();
+                assert_eq!(
+                    vm_status,
+                    json!({
+                        "abort_code": 1288,
+                        "explanation": {
+                            "category": "LIMIT_EXCEEDED",
+                            "category_description": " A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money after account limits window\n is exhausted.",
+                            "reason": "EINSUFFICIENT_BALANCE",
+                            "reason_description": " The account does not hold a large enough balance in the specified currency"
+                        },
+                        "location": "00000000000000000000000000000001::LibraAccount",
+                        "type": "move_abort"
+                    })
+                );
+            },
+        },
     ]
 }

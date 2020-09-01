@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use errmapgen::ErrorMapping;
 use move_core_types::{
     account_address::AccountAddress, identifier::Identifier, language_storage::ModuleId,
 };
@@ -22,8 +21,6 @@ struct Args {
 
 fn main() {
     let args = Args::from_args();
-    let error_descriptions: ErrorMapping =
-        lcs::from_bytes(compiled_stdlib::ERROR_DESCRIPTIONS).unwrap();
 
     let mut location = args.location.trim().split("::");
     let mut address_literal = location.next().expect("Could not find address").to_string();
@@ -39,7 +36,7 @@ fn main() {
         Identifier::new(module_name).expect("Invalid module name encountered"),
     );
 
-    match error_descriptions.get_explanation(&module_id, args.abort_code) {
+    match move_explain::get_explanation(&module_id, args.abort_code) {
         None => println!(
             "Unable to find a description for {}::{}",
             args.location, args.abort_code

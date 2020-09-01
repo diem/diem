@@ -36,6 +36,10 @@ Please add the API change in the following format:
 - adding "type" tag for values in "vm_status" field returned in transction object in method get_transcations, get_account_transcation etc.
 - adding "type" tag for values in "role" field returned in account object in method get_account.
 
+## 2020-09-24 Add human-readable explanations to Move abort statuses
+- Adds an optional human-readable category, reason, and explanations for each
+  Move abort code in the `MoveAbortExplanationView`.
+
 ## Before 2020-08-05
 
 Please refer to [JSON-RPC SPEC before 2020-08-05](https://github.com/libra/libra/blob/888e6cd688a8c9b5805978ab509acdc3c35025ab/json-rpc/json-rpc-spec.md) document for the API spec snapshot.

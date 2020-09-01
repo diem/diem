@@ -23,6 +23,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
+    vm_status::AbortLocation,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryFrom};
@@ -393,6 +394,34 @@ impl From<Vec<u8>> for BytesView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct MoveAbortExplanationView {
+    category: String,
+    category_description: String,
+    reason: String,
+    reason_description: String,
+}
+
+impl TryFrom<&KeptVMStatus> for MoveAbortExplanationView {
+    type Error = ();
+    fn try_from(status: &KeptVMStatus) -> Result<MoveAbortExplanationView, Self::Error> {
+        match status {
+            KeptVMStatus::MoveAbort(AbortLocation::Module(module_id), abort_code) => {
+                let error_context = move_explain::get_explanation(module_id, *abort_code);
+                error_context
+                    .map(|context| MoveAbortExplanationView {
+                        category: context.category.code_name,
+                        category_description: context.category.code_description,
+                        reason: context.reason.code_name,
+                        reason_description: context.reason.code_description,
+                    })
+                    .ok_or_else(|| ())
+            }
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum VMStatusView {
     #[serde(rename = "executed")]
@@ -400,7 +429,11 @@ pub enum VMStatusView {
     #[serde(rename = "out_of_gas")]
     OutOfGas,
     #[serde(rename = "move_abort")]
-    MoveAbort { location: String, abort_code: u64 },
+    MoveAbort {
+        location: String,
+        abort_code: u64,
+        explanation: Option<MoveAbortExplanationView>,
+    },
     #[serde(rename = "execution_failure")]
     ExecutionFailure {
         location: String,
@@ -417,6 +450,7 @@ impl From<&KeptVMStatus> for VMStatusView {
             KeptVMStatus::Executed => VMStatusView::Executed,
             KeptVMStatus::OutOfGas => VMStatusView::OutOfGas,
             KeptVMStatus::MoveAbort(loc, abort_code) => VMStatusView::MoveAbort {
+                explanation: MoveAbortExplanationView::try_from(status).ok(),
                 location: loc.to_string(),
                 abort_code: *abort_code,
             },
