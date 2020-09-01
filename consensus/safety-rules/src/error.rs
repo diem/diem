@@ -23,9 +23,9 @@ pub enum Error {
     InternalError(String),
     #[error("No next_epoch_state specified in the provided Ledger Info")]
     InvalidLedgerInfo,
-    #[error("Invalid proposal: {}", {0})]
+    #[error("Invalid proposal: {0}")]
     InvalidProposal(String),
-    #[error("Invalid QC: {}", {0})]
+    #[error("Invalid QC: {0}")]
     InvalidQuorumCertificate(String),
     #[error("{0} is not set, SafetyRules is not initialized")]
     NotInitialized(String),
