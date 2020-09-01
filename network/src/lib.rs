@@ -18,7 +18,6 @@ pub mod protocols;
 
 pub mod counters;
 mod peer;
-mod sink;
 pub mod transport;
 
 #[cfg(test)]
