@@ -96,6 +96,8 @@ jobs:
               echo "::set-env name=PREV_TAG::$compat_prev_tag"
             fi
           fi
+          # Force disable compat check
+          echo "::set-env name=TEST_COMPAT::0"
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
