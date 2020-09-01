@@ -19,7 +19,7 @@ impl Key {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Value<'v> {
     Debug(&'v (dyn fmt::Debug)),
     Display(&'v (dyn fmt::Display)),
@@ -29,7 +29,6 @@ pub enum Value<'v> {
 impl<'v> fmt::Debug for Value<'v> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            // Value::Primitive(p) => fmt::Debug::fmt(p, f),
             Value::Debug(d) => fmt::Debug::fmt(d, f),
             Value::Display(d) => fmt::Display::fmt(d, f),
             Value::Serde(s) => fmt::Debug::fmt(&serde_json::to_value(s).unwrap(), f),
@@ -51,6 +50,27 @@ impl<'v> Value<'v> {
     /// Get a value from a displayable type.
     pub fn from_display<T: fmt::Display>(value: &'v T) -> Self {
         Value::Display(value)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct KeyValue<'v> {
+    key: Key,
+    value: Value<'v>,
+}
+
+impl<'v> KeyValue<'v> {
+    pub fn new(key: &'static str, value: Value<'v>) -> Self {
+        Self {
+            key: Key::new(key),
+            value,
+        }
+    }
+}
+
+impl<'v> Schema for KeyValue<'v> {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_pair(self.key, self.value)
     }
 }
 

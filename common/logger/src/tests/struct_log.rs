@@ -164,21 +164,14 @@ fn test_structured_logs() {
     }
 
     // Test pattern conversion
-    let pattern = "Let's try a pattern {} {}";
     let value = "value";
-    info!("Let's try a pattern {} {}", "anonymous", key = value);
+    info!("Let's try a pattern {} {}", "anonymous", value);
 
     // Check specifics to text conversion
     let map = recieve_one_event(&receiver);
-    assert_eq!("text", map.string("category").as_str());
-    assert_eq!(pattern, map.string("pattern").as_str());
+    assert_eq!("libra_logger", map.string("category").as_str());
     assert_eq!(
         format!("Let's try a pattern {} {}", "anonymous", value),
         map.string("message")
     );
-
-    // Ensure data stored is the right type
-    let data = as_object(map.val("data"));
-    assert_eq!(format!("{:?}", value), data.string("key"));
-    assert_eq!(format!("{:?}", "anonymous"), data.string("_0"));
 }

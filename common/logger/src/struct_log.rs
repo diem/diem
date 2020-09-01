@@ -206,6 +206,30 @@ impl StructuredLogEntry {
         self
     }
 
+    pub fn schemas(mut self, schemas: &[&dyn crate::Schema]) -> Self {
+        struct JsonVisitor<'a>(&'a mut HashMap<&'static str, serde_json::Value>);
+
+        impl<'a> crate::Visitor for JsonVisitor<'a> {
+            fn visit_pair(&mut self, key: crate::Key, value: crate::Value<'_>) {
+                use crate::Value;
+
+                let v = match value {
+                    Value::Debug(d) => serde_json::Value::String(format!("{:?}", d)),
+                    Value::Display(d) => serde_json::Value::String(d.to_string()),
+                    Value::Serde(s) => serde_json::to_value(s).unwrap(),
+                };
+
+                self.0.insert(key.as_str(), v);
+            }
+        }
+
+        for schema in schemas {
+            schema.visit(&mut JsonVisitor(&mut self.data));
+        }
+
+        self
+    }
+
     /// Add a data field, with a given value, will serialize into JSON and be indexed accordingly
     pub fn data<D: Serialize>(self, key: &'static str, value: D) -> Self {
         self.json_data(
