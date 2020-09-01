@@ -1,6 +1,49 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! # Metrics
+//!
+//! ## Counters
+//!
+//! Used to measure values that are added to over time, rates
+//! can then be used to check how quickly it changes in graphs.
+//! An example would be to add every time an incoming message occurs.
+//! ```
+//! use prometheus::register_int_counter_vec;
+//!
+//! register_int_counter_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+//!
+//! ## Gauges
+//! Used to measure values that change level over time.  An example
+//! would be to set the number of connected peers.
+//! ```
+//! use prometheus::register_int_gauge_vec;
+//!
+//! register_int_gauge_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+//!
+//! ## Histograms
+//! Used to measure histogram values.  An example is network
+//! connection latency.
+//! ```
+//! use prometheus::register_histogram_vec;
+//!
+//! register_histogram_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+
 #![forbid(unsafe_code)]
 #![recursion_limit = "128"]
 

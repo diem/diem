@@ -22,11 +22,8 @@ pub const SENT_LABEL: &str = "sent";
 
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
-        // metric name
         "libra_network_peers",
-        // metric description
         "Libra network peers counter",
-        // metric labels (dimensions)
         &["role_type", "state"]
     )
     .unwrap()
@@ -34,11 +31,8 @@ pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
 
 pub static LIBRA_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
-        // metric name
         "libra_connections",
-        // metric description
         "Libra connections counter",
-        // metric labels (dimensions)
         &["role_type", "network_id", "peer_id", "direction"]
     )
     .unwrap()
@@ -61,11 +55,8 @@ pub fn update_libra_connections(
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
-        // metric name
         "libra_network_discovery_notes",
-        // metric description
         "Libra network discovery notes",
-        // metric labels (dimensions)
         &["role_type"]
     )
     .unwrap()
