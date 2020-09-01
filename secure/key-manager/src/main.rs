@@ -9,7 +9,7 @@ use libra_config::config::KeyManagerConfig;
 use libra_key_manager::{
     libra_interface::JsonRpcLibraInterface,
     logging::{LogEntry, LogEvent, LogField},
-    Error, KeyManager,
+    AnnotatedError, KeyManager,
 };
 use libra_secure_push_metrics::MetricsPusher;
 use libra_secure_storage::Storage;
@@ -47,7 +47,9 @@ fn main() {
     });
 }
 
-fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Result<(), Error> {
+fn create_and_execute_key_manager(
+    key_manager_config: KeyManagerConfig,
+) -> Result<(), AnnotatedError> {
     let json_rpc_endpoint = key_manager_config.json_rpc_endpoint;
     let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint.clone());
     let storage: Storage = (&key_manager_config.secure_backend)

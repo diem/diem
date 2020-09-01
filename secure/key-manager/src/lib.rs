@@ -78,6 +78,8 @@ pub enum Error {
     UnknownError(String),
 }
 
+pub type AnnotatedError = libra_annotated_error::AnnotatedError<Error>;
+
 #[cfg(test)]
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
@@ -128,7 +130,7 @@ where
     /// initiate a key rotation when required. If something goes wrong that we can't handle, an
     /// error will be returned by this method, upon which the key manager will flag the error and
     /// stop execution.
-    pub fn execute(&mut self) -> Result<(), Error> {
+    pub fn execute(&mut self) -> Result<(), AnnotatedError> {
         loop {
             self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Pending), None);
 
@@ -136,22 +138,26 @@ where
                 Ok(_) => {
                     self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Success), None);
                 }
-                Err(Error::LivenessError(last_value, current_value)) => {
-                    // Log the liveness error and continue to execute.
-                    let error = Error::LivenessError(last_value, current_value).to_string();
-                    self.log(
-                        LogEntry::CheckKeyStatus,
-                        Some(LogEvent::Error),
-                        Some((LogField::LivenessError, error)),
-                    );
-                }
-                Err(e) => {
-                    // Log the unexpected error and continue to execute.
-                    self.log(
-                        LogEntry::CheckKeyStatus,
-                        Some(LogEvent::Error),
-                        Some((LogField::UnexpectedError, e.to_string())),
-                    );
+                Err(annotated_error) => {
+                    match annotated_error.error {
+                        Error::LivenessError(last_value, current_value) => {
+                            // Log the liveness error and continue to execute.
+                            let error = Error::LivenessError(last_value, current_value).to_string();
+                            self.log(
+                                LogEntry::CheckKeyStatus,
+                                Some(LogEvent::Error),
+                                Some((LogField::LivenessError, error)),
+                            );
+                        }
+                        error => {
+                            // Log the unexpected error and continue to execute.
+                            self.log(
+                                LogEntry::CheckKeyStatus,
+                                Some(LogEvent::Error),
+                                Some((LogField::UnexpectedError, error.to_string())),
+                            );
+                        }
+                    }
                 }
             };
 
@@ -172,25 +178,25 @@ where
 
     /// Checks the current state of the validator keys and performs any actions that might be
     /// required (e.g., performing a key rotation).
-    pub fn execute_once(&mut self) -> Result<(), Error> {
+    pub fn execute_once(&mut self) -> Result<(), AnnotatedError> {
         let action = self.evaluate_status()?;
         self.perform_action(action)
     }
 
-    pub fn compare_storage_to_config(&self) -> Result<(), Error> {
+    pub fn compare_storage_to_config(&self) -> Result<(), AnnotatedError> {
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
         let validator_config = self.libra.retrieve_validator_config(owner_account)?;
 
-        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
+        let storage_key = self.get_public_key_from_storage(CONSENSUS_KEY)?;
         let config_key = validator_config.consensus_public_key;
         if storage_key != config_key {
-            return Err(Error::ConfigStorageKeyMismatch(config_key, storage_key));
+            return Err(Error::ConfigStorageKeyMismatch(config_key, storage_key).into());
         }
 
         Ok(())
     }
 
-    pub fn compare_info_to_config(&self) -> Result<(), Error> {
+    pub fn compare_info_to_config(&self) -> Result<(), AnnotatedError> {
         let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
         let validator_config = self.libra.retrieve_validator_config(owner_account)?;
         let validator_info = self.libra.retrieve_validator_info(owner_account)?;
@@ -198,35 +204,42 @@ where
         let info_key = validator_info.consensus_public_key();
         let config_key = validator_config.consensus_public_key;
         if &config_key != info_key {
-            return Err(Error::ConfigInfoKeyMismatch(config_key, info_key.clone()));
+            return Err(Error::ConfigInfoKeyMismatch(config_key, info_key.clone()).into());
         }
 
         Ok(())
     }
 
-    pub fn last_reconfiguration(&self) -> Result<u64, Error> {
+    pub fn last_reconfiguration(&self) -> Result<u64, AnnotatedError> {
         // Convert the time to seconds
         Ok(self.libra.last_reconfiguration()? / 1_000_000)
     }
 
-    pub fn last_rotation(&self) -> Result<u64, Error> {
-        Ok(self.storage.get_public_key(CONSENSUS_KEY)?.last_update)
+    pub fn last_rotation(&self) -> Result<u64, AnnotatedError> {
+        Ok(self
+            .storage
+            .get_public_key(CONSENSUS_KEY)
+            .map_err(to_annotated_error)?
+            .last_update)
     }
 
-    pub fn libra_timestamp(&self) -> Result<u64, Error> {
+    pub fn libra_timestamp(&self) -> Result<u64, AnnotatedError> {
         // Convert the time to seconds
         Ok(self.libra.libra_timestamp()? / 1_000_000)
     }
 
-    pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
-        let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
+    pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), AnnotatedError> {
+        let consensus_key = self.get_public_key_from_storage(CONSENSUS_KEY)?;
         counters::increment_state("consensus_key", "submit_tx");
         self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
 
-    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
-        let consensus_key = self.storage.rotate_key(CONSENSUS_KEY)?;
+    pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, AnnotatedError> {
+        let consensus_key = self
+            .storage
+            .rotate_key(CONSENSUS_KEY)
+            .map_err(to_annotated_error)?;
         self.log(
             LogEntry::KeyRotatedInStorage,
             Some(LogEvent::Success),
@@ -239,7 +252,7 @@ where
     pub fn submit_key_rotation_transaction(
         &mut self,
         consensus_key: Ed25519PublicKey,
-    ) -> Result<Ed25519PublicKey, Error> {
+    ) -> Result<Ed25519PublicKey, AnnotatedError> {
         let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = self.time_service.now() + self.txn_expiration_secs;
@@ -259,8 +272,11 @@ where
             self.chain_id,
         );
 
-        let operator_pubkey = self.storage.get_public_key(OPERATOR_KEY)?.public_key;
-        let txn_signature = self.storage.sign(OPERATOR_KEY, &txn)?;
+        let operator_pubkey = self.get_public_key_from_storage(OPERATOR_KEY)?;
+        let txn_signature = self
+            .storage
+            .sign(OPERATOR_KEY, &txn)
+            .map_err(to_annotated_error)?;
         let signed_txn = SignedTransaction::new(txn, operator_pubkey, txn_signature);
 
         self.libra
@@ -276,13 +292,14 @@ where
 
     /// Ensures that the libra_timestamp() value registered on-chain is strictly monotonically
     /// increasing.
-    fn ensure_timestamp_progress(&mut self) -> Result<(), Error> {
+    fn ensure_timestamp_progress(&mut self) -> Result<(), AnnotatedError> {
         let current_libra_timestamp = self.libra.libra_timestamp()?;
         if current_libra_timestamp <= self.last_checked_libra_timestamp {
             return Err(Error::LivenessError(
                 self.last_checked_libra_timestamp,
                 current_libra_timestamp,
-            ));
+            )
+            .into());
         }
 
         self.last_checked_libra_timestamp = current_libra_timestamp;
@@ -296,25 +313,29 @@ where
     /// strictly monotonically increasing. This helps to ensure that the blockchain is making
     /// progress. Otherwise, if no progress is being made on-chain, a reconfiguration event is
     /// unlikely, and the key manager will be unable to rotate keys.
-    pub fn evaluate_status(&mut self) -> Result<Action, Error> {
+    pub fn evaluate_status(&mut self) -> Result<Action, AnnotatedError> {
         self.ensure_timestamp_progress()?;
 
         // If this is inconsistent, then we are waiting on a reconfiguration...
-        if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
-            self.log(LogEntry::WaitForReconfiguration, None, None);
-            counters::increment_state("consensus_key", "waiting_on_reconfiguration");
-            return Ok(Action::NoAction);
+        if let Err(annotated_type) = self.compare_info_to_config() {
+            if let Error::ConfigInfoKeyMismatch(..) = annotated_type.error {
+                self.log(LogEntry::WaitForReconfiguration, None, None);
+                counters::increment_state("consensus_key", "waiting_on_reconfiguration");
+                return Ok(Action::NoAction);
+            }
         }
 
         let last_rotation = self.last_rotation()?;
 
         // If this is inconsistent, then the transaction either failed or was never submitted.
-        if let Err(Error::ConfigStorageKeyMismatch(..)) = self.compare_storage_to_config() {
-            return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
-                Ok(Action::SubmitKeyRotationTransaction)
-            } else {
-                Ok(Action::NoAction)
-            };
+        if let Err(annotated_type) = self.compare_storage_to_config() {
+            if let Error::ConfigStorageKeyMismatch(..) = annotated_type.error {
+                return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
+                    Ok(Action::SubmitKeyRotationTransaction)
+                } else {
+                    Ok(Action::NoAction)
+                };
+            }
         }
 
         if last_rotation + self.rotation_period_secs <= self.time_service.now() {
@@ -324,7 +345,7 @@ where
         }
     }
 
-    pub fn perform_action(&mut self, action: Action) -> Result<(), Error> {
+    pub fn perform_action(&mut self, action: Action) -> Result<(), AnnotatedError> {
         match action {
             Action::FullKeyRotation => {
                 self.log(LogEntry::FullKeyRotation, Some(LogEvent::Pending), None);
@@ -346,11 +367,26 @@ where
         }
     }
 
-    fn get_account_from_storage(&self, account_name: &str) -> Result<AccountAddress, Error> {
-        self.storage
+    fn get_account_from_storage(
+        &self,
+        account_name: &str,
+    ) -> Result<AccountAddress, AnnotatedError> {
+        Ok(self
+            .storage
             .get::<AccountAddress>(account_name)
             .map(|v| v.value)
-            .map_err(Error::MissingAccountAddress)
+            .map_err(Error::MissingAccountAddress)?)
+    }
+
+    fn get_public_key_from_storage(
+        &self,
+        key_name: &str,
+    ) -> Result<Ed25519PublicKey, AnnotatedError> {
+        Ok(self
+            .storage
+            .get_public_key(key_name)
+            .map_err(to_annotated_error)?
+            .public_key)
     }
 
     /// Logs to structured logging using the given log entry, event and data.
@@ -397,4 +433,10 @@ pub fn build_rotation_transaction(
         expiration_timestamp_secs,
         chain_id,
     )
+}
+
+/// TODO(joshlind): remove me once secure storage has been ported to use AnnotatedError.
+fn to_annotated_error(storage_error: libra_secure_storage::Error) -> AnnotatedError {
+    let error = storage_error.into();
+    AnnotatedError::new(error)
 }

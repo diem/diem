@@ -2769,6 +2769,7 @@ dependencies = [
  "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-annotated-error 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-global-constants 0.1.0",
