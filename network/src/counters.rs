@@ -130,7 +130,7 @@ pub static PENDING_NETWORK_NOTIFICATIONS: Lazy<IntCounterVec> = Lazy::new(|| {
 /// Counter of pending requests in Network Provider
 pub static PENDING_NETWORK_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_pending_network_requests",
+        "libra_network_pending_requests",
         "Counters(queued,dequeued,dropped) related to pending outbound network requests",
         &["state"]
     )
@@ -140,7 +140,7 @@ pub static PENDING_NETWORK_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
 /// Counter of pending network events to Health Checker.
 pub static PENDING_HEALTH_CHECKER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "pending_health_checker_network_events",
+        "libra_network_pending_health_check_events",
         "Counters(queued,dequeued,dropped) related to pending network notifications to HealthChecker",
         &["state"]
     ).unwrap()
@@ -149,7 +149,7 @@ pub static PENDING_HEALTH_CHECKER_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::ne
 /// Counter of pending network events to Discovery.
 pub static PENDING_DISCOVERY_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "pending_discovery_network_events",
+        "libra_network_pending_discovery_events",
         "Counters(queued,dequeued,dropped) related to pending network notifications to Discovery",
         &["state"]
     )
@@ -159,7 +159,7 @@ pub static PENDING_DISCOVERY_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| 
 /// Counter of pending requests in Peer Manager
 pub static PENDING_PEER_MANAGER_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "pending_peer_manager_requests",
+        "libra_network_pending_peer_manager_requests",
         "Counters(queued,dequeued,dropped) related to pending network notifications to PeerManager",
         &["state"]
     )
@@ -174,40 +174,40 @@ pub static OP_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_regist
 
 /// Counter of pending requests in Connectivity Manager
 pub static PENDING_CONNECTIVITY_MANAGER_REQUESTS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("pending_connectivity_manager_requests"));
+    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_connectivity_manager_requests"));
 
 /// Counter of pending Connection Handler notifications to PeerManager.
 pub static PENDING_CONNECTION_HANDLER_NOTIFICATIONS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("pending_connection_handler_notifications"));
+    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_connection_handler_notifications"));
 
 /// Counter of pending dial requests in Peer Manager
 pub static PENDING_PEER_MANAGER_DIAL_REQUESTS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("pending_peer_manager_dial_requests"));
+    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_peer_manager_dial_requests"));
 
 /// Counter of messages pending in queue to be sent out on the wire.
 pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("pending_wire_messages"));
+    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_wire_messages"));
 
 /// Counter of pending requests in Direct Send
-pub static PENDING_DIRECT_SEND_REQUESTS: &str = "pending_direct_send_requests";
+pub static PENDING_DIRECT_SEND_REQUESTS: &str = "libra_network_pending_direct_send_requests";
 
 /// Counter of pending Direct Send notifications to Network Provider
-pub static PENDING_DIRECT_SEND_NOTIFICATIONS: &str = "pending_direct_send_notifications";
+pub static PENDING_DIRECT_SEND_NOTIFICATIONS: &str = "libra_network_pending_direct_send_notifications";
 
 /// Counter of pending requests in RPC
-pub static PENDING_RPC_REQUESTS: &str = "pending_rpc_requests";
+pub static PENDING_RPC_REQUESTS: &str = "libra_network_pending_rpc_requests";
 
 /// Counter of pending RPC notifications to Network Provider
-pub static PENDING_RPC_NOTIFICATIONS: &str = "pending_rpc_notifications";
+pub static PENDING_RPC_NOTIFICATIONS: &str = "libra_network_pending_rpc_notifications";
 
 /// Counter of pending requests for each remote peer
-pub static PENDING_PEER_REQUESTS: &str = "pending_peer_requests";
+pub static PENDING_PEER_REQUESTS: &str = "libra_network_pending_peer_requests";
 
 /// Counter of pending RPC events from Peer to Rpc actor.
-pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "pending_peer_rpc_notifications";
+pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "libra_network_pending_peer_rpc_notifications";
 
 /// Counter of pending DirectSend events from Peer to DirectSend actor..
-pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: &str = "pending_peer_direct_send_notifications";
+pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: &str = "libra_network_pending_peer_direct_send_notifications";
 
 /// Counter of pending connection notifications from Peer to NetworkProvider.
-pub static PENDING_PEER_NETWORK_NOTIFICATIONS: &str = "pending_peer_network_notifications";
+pub static PENDING_PEER_NETWORK_NOTIFICATIONS: &str = "libra_network_pending_peer_notifications";
