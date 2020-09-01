@@ -152,19 +152,16 @@ module LibraAccount {
     /// important to the semantics of the system. Those codes also need to be
     /// directly used in aborts instead of augmenting them with a category
     /// via the `Errors` module.
-    const PROLOGUE_EACCOUNT_FROZEN: u64 = 0;
-    const PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
-    const PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
-    const PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 3;
-    const PROLOGUE_EACCOUNT_DNE: u64 = 4;
-    const PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 5;
-    const PROLOGUE_ETRANSACTION_EXPIRED: u64 = 6;
-    const PROLOGUE_EBAD_CHAIN_ID: u64 = 7;
-    const PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 8;
-    const PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 9;
-
-    /// This error will not be translated it should be an invariant violation.
-    const PROLOGUE_EUNEXPECTED_WRITESET: u64 = 10;
+    const PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
+    const PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1001;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 1002;
+    const PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 1003;
+    const PROLOGUE_EACCOUNT_DNE: u64 = 1004;
+    const PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 1005;
+    const PROLOGUE_ETRANSACTION_EXPIRED: u64 = 1006;
+    const PROLOGUE_EBAD_CHAIN_ID: u64 = 1007;
+    const PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 1008;
+    const PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 1009;
 
     const WRITESET_TRANSACTION_TAG: u8 = 0;
     const SCRIPT_TRANSACTION_TAG: u8 = 1;
@@ -377,7 +374,10 @@ module LibraAccount {
         // Check that an account exists at `payee`
         assert(exists_at(payee), Errors::not_published(EPAYEE_DOES_NOT_EXIST));
         // Check that `payee` can accept payments in `Token`
-        assert(exists<Balance<Token>>(payee), Errors::invalid_argument(EPAYEE_CANT_ACCEPT_CURRENCY_TYPE));
+        assert(
+            exists<Balance<Token>>(payee),
+            Errors::invalid_argument(EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
+        );
 
         // Check that the payment complies with dual attestation rules
         DualAttestation::assert_payment_ok<Token>(
@@ -684,7 +684,10 @@ module LibraAccount {
         assert(exists_at(cap.account_address), Errors::not_published(EACCOUNT));
         let sender_account_resource = borrow_global_mut<LibraAccount>(cap.account_address);
         // Don't allow rotating to clearly invalid key
-        assert(Vector::length(&new_authentication_key) == 32, Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY));
+        assert(
+            Vector::length(&new_authentication_key) == 32,
+            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
+        );
         sender_account_resource.authentication_key = new_authentication_key;
     }
     spec fun rotate_authentication_key {
@@ -713,7 +716,7 @@ module LibraAccount {
         // Abort if we already extracted the unique key rotation capability for this account.
         assert(
             !delegated_key_rotation_capability(account_address),
-             Errors::invalid_state(EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
+            Errors::invalid_state(EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
         );
         assert(exists_at(account_address), Errors::not_published(EACCOUNT));
         let account = borrow_global_mut<LibraAccount>(account_address);
@@ -780,7 +783,10 @@ module LibraAccount {
         Vector::append(
             &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
         );
-        assert(Vector::length(&authentication_key) == 32, Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY));
+        assert(
+            Vector::length(&authentication_key) == 32,
+            Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
+        );
         assert(!exists_at(new_account_addr), Errors::already_published(EACCOUNT));
         move_to(
             &new_account,
@@ -919,7 +925,10 @@ module LibraAccount {
         // aborts if `Token` is not a currency type in the system
         Libra::assert_is_currency<Token>();
         // Check that an account with this role is allowed to hold funds
-        assert(Roles::can_hold_balance(account), Errors::invalid_argument(EROLE_CANT_STORE_BALANCE));
+        assert(
+            Roles::can_hold_balance(account),
+            Errors::invalid_argument(EROLE_CANT_STORE_BALANCE)
+        );
         // aborts if this account already has a balance in `Token`
         let addr = Signer::address_of(account);
         assert(!exists<Balance<Token>>(addr), Errors::already_published(EADD_EXISTING_CURRENCY));
@@ -997,7 +1006,7 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         assert(
             LibraTransactionPublishingOption::is_module_allowed(sender),
-            PROLOGUE_EMODULE_NOT_ALLOWED
+            Errors::invalid_state(PROLOGUE_EMODULE_NOT_ALLOWED),
         );
 
         prologue_common<Token>(
@@ -1023,7 +1032,7 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         assert(
             LibraTransactionPublishingOption::is_script_allowed(sender, &script_hash),
-            PROLOGUE_ESCRIPT_NOT_ALLOWED
+            Errors::invalid_state(PROLOGUE_ESCRIPT_NOT_ALLOWED),
         );
 
         prologue_common<Token>(
@@ -1054,124 +1063,107 @@ module LibraAccount {
         let transaction_sender = Signer::address_of(sender);
 
         // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
-        assert(ChainId::get() == chain_id, PROLOGUE_EBAD_CHAIN_ID);
+        assert(ChainId::get() == chain_id, Errors::invalid_argument(PROLOGUE_EBAD_CHAIN_ID));
 
         // Verify that the transaction sender's account exists
-        assert(exists_at(transaction_sender), PROLOGUE_EACCOUNT_DNE);
+        assert(exists_at(transaction_sender), Errors::invalid_argument(PROLOGUE_EACCOUNT_DNE));
 
         // We check whether this account is frozen, if it is no transaction can be sent from it.
         assert(
             !AccountFreezing::account_is_frozen(transaction_sender),
-            PROLOGUE_EACCOUNT_FROZEN
+            Errors::invalid_state(PROLOGUE_EACCOUNT_FROZEN)
         );
 
         // Load the transaction sender's account
-        let sender_account = borrow_global_mut<LibraAccount>(transaction_sender);
+        let sender_account = borrow_global<LibraAccount>(transaction_sender);
 
         // Check that the hash of the transaction's public key matches the account's auth key
         assert(
             Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
-            PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
+            Errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
         );
 
         // Check that the account has enough balance for all of the gas
         assert(
             (txn_gas_price as u128) * (txn_max_gas_units as u128) <= MAX_U64,
-             PROLOGUE_ECANT_PAY_GAS_DEPOSIT
+            Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT),
         );
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
         // Don't grab the balance if the transaction fee is zero
         if (max_transaction_fee > 0) {
+            assert(
+                exists<Balance<Token>>(transaction_sender),
+                Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+            );
             let balance_amount = balance<Token>(transaction_sender);
-            assert(balance_amount >= max_transaction_fee, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
+            assert(
+                balance_amount >= max_transaction_fee,
+                Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+            );
         };
 
         // Check that the transaction sequence number matches the sequence number of the account
-        // TODO: the below assertions overlap, fix this.
         assert(
             txn_sequence_number >= sender_account.sequence_number,
-            PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD
+            Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
         );
         assert(
             txn_sequence_number == sender_account.sequence_number,
-            PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
+            Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
         );
         assert(
             LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
-            PROLOGUE_ETRANSACTION_EXPIRED
+            Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
         );
     }
 
-    /// Collects gas and bumps the sequence number for executing a transaction
+    /// Collects gas and bumps the sequence number for executing a transaction.
+    /// The epilogue is invoked at the end of the transaction.
+    /// If the exection of the epilogue fails, it is re-invoked with different arguments, and
+    /// based on the conditions checked in the prologue, should never fail.
     fun epilogue<Token>(
-        sender: address,
-        transaction_fee_amount: u64,
+        account: &signer,
         txn_sequence_number: u64,
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
+        txn_gas_price: u64,
+        txn_max_gas_units: u64,
+        gas_units_remaining: u64
+    ) acquires LibraAccount, Balance {
+        let sender = Signer::address_of(account);
+        // Charge for gas
+        assert(txn_max_gas_units >= gas_units_remaining, Errors::invalid_argument(EGAS));
+        let gas_used = txn_max_gas_units - gas_units_remaining;
+        assert(
+            (txn_gas_price as u128) * (gas_used as u128) <= MAX_U64,
+            Errors::limit_exceeded(EGAS)
+        );
+        let transaction_fee_amount = txn_gas_price * gas_used;
+
         // Load the transaction sender's account and balance resources
         assert(exists_at(sender), Errors::not_published(EACCOUNT));
         let sender_account = borrow_global_mut<LibraAccount>(sender);
 
         // Bump the sequence number
-        assert(sender_account.sequence_number < (MAX_U64 as u64), Errors::limit_exceeded(ESEQUENCE_NUMBER));
+        assert(
+            sender_account.sequence_number < (MAX_U64 as u64),
+            Errors::limit_exceeded(ESEQUENCE_NUMBER)
+        );
         sender_account.sequence_number = txn_sequence_number + 1;
 
         if (transaction_fee_amount > 0) {
             let sender_balance = borrow_global_mut<Balance<Token>>(sender);
-            TransactionFee::pay_fee(
-                withdraw_from_balance(
-                    sender,
-                    CoreAddresses::LIBRA_ROOT_ADDRESS(),
-                    sender_balance,
-                    transaction_fee_amount
-                )
-            )
+            let coin = &mut sender_balance.coin;
+            // Abort if this withdrawal would make the `account`'s balance go negative
+            assert(
+                Libra::value(coin) >= transaction_fee_amount,
+                Errors::limit_exceeded(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+            );
+            // `withdraw_from_balance` is not used as limits do not apply to this transaction fee
+            TransactionFee::pay_fee(Libra::withdraw(coin, transaction_fee_amount))
         }
     }
     spec fun epilogue {
         /// > TODO: timeout
         pragma verify = false;
-    }
-
-    /// The success_epilogue is invoked at the end of successfully executed transactions.
-    fun success_epilogue<Token>(
-        account: &signer,
-        txn_sequence_number: u64,
-        txn_gas_price: u64,
-        txn_max_gas_units: u64,
-        gas_units_remaining: u64
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        let sender = Signer::address_of(account);
-
-        // Charge for gas
-        assert(txn_max_gas_units >= gas_units_remaining, Errors::invalid_argument(EGAS));
-        let gas_used = txn_max_gas_units - gas_units_remaining;
-        assert((txn_gas_price as u128) * (gas_used as u128) <= MAX_U64, Errors::limit_exceeded(EGAS));
-        let transaction_fee_amount = txn_gas_price * gas_used;
-
-        // Load the transaction sender's balance resource only if it exists. If it doesn't we default the value to 0
-        let sender_balance = if (exists<Balance<Token>>(sender)) balance<Token>(sender) else 0;
-        assert(sender_balance >= transaction_fee_amount, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
-        epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
-    }
-
-    /// The failure_epilogue is invoked at the end of transactions when the transaction is aborted during execution or
-    /// during `success_epilogue`.
-    fun failure_epilogue<Token>(
-        account: &signer,
-        txn_sequence_number: u64,
-        txn_gas_price: u64,
-        txn_max_gas_units: u64,
-        gas_units_remaining: u64
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        let sender = Signer::address_of(account);
-        // Charge for gas
-        assert(txn_max_gas_units >= gas_units_remaining, Errors::invalid_argument(EGAS));
-        let gas_used = txn_max_gas_units - gas_units_remaining;
-        assert((txn_gas_price as u128) * (gas_used as u128) <= MAX_U64, Errors::limit_exceeded(EGAS));
-        let transaction_fee_amount = txn_gas_price * gas_used;
-
-        epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
 
     /// Bump the sequence number of an account. This function should be used only for bumping the sequence number when

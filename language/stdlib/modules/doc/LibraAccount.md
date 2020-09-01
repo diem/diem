@@ -40,7 +40,6 @@
 -  [Const `PROLOGUE_EBAD_CHAIN_ID`](#0x1_LibraAccount_PROLOGUE_EBAD_CHAIN_ID)
 -  [Const `PROLOGUE_ESCRIPT_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_ESCRIPT_NOT_ALLOWED)
 -  [Const `PROLOGUE_EMODULE_NOT_ALLOWED`](#0x1_LibraAccount_PROLOGUE_EMODULE_NOT_ALLOWED)
--  [Const `PROLOGUE_EUNEXPECTED_WRITESET`](#0x1_LibraAccount_PROLOGUE_EUNEXPECTED_WRITESET)
 -  [Const `WRITESET_TRANSACTION_TAG`](#0x1_LibraAccount_WRITESET_TRANSACTION_TAG)
 -  [Const `SCRIPT_TRANSACTION_TAG`](#0x1_LibraAccount_SCRIPT_TRANSACTION_TAG)
 -  [Const `MODULE_TRANSACTION_TAG`](#0x1_LibraAccount_MODULE_TRANSACTION_TAG)
@@ -86,8 +85,6 @@
 -  [Function `script_prologue`](#0x1_LibraAccount_script_prologue)
 -  [Function `prologue_common`](#0x1_LibraAccount_prologue_common)
 -  [Function `epilogue`](#0x1_LibraAccount_epilogue)
--  [Function `success_epilogue`](#0x1_LibraAccount_success_epilogue)
--  [Function `failure_epilogue`](#0x1_LibraAccount_failure_epilogue)
 -  [Function `bump_sequence_number`](#0x1_LibraAccount_bump_sequence_number)
 -  [Function `create_validator_account`](#0x1_LibraAccount_create_validator_account)
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
@@ -640,7 +637,7 @@ via the
 <code><a href="Errors.md#0x1_Errors">Errors</a></code> module.
 
 
-<pre><code><b>const</b> PROLOGUE_EACCOUNT_FROZEN: u64 = 0;
+<pre><code><b>const</b> PROLOGUE_EACCOUNT_FROZEN: u64 = 1000;
 </code></pre>
 
 
@@ -651,7 +648,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1001;
 </code></pre>
 
 
@@ -662,7 +659,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 1002;
 </code></pre>
 
 
@@ -673,7 +670,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 3;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 1003;
 </code></pre>
 
 
@@ -684,7 +681,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_EACCOUNT_DNE: u64 = 4;
+<pre><code><b>const</b> PROLOGUE_EACCOUNT_DNE: u64 = 1004;
 </code></pre>
 
 
@@ -695,7 +692,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 5;
+<pre><code><b>const</b> PROLOGUE_ECANT_PAY_GAS_DEPOSIT: u64 = 1005;
 </code></pre>
 
 
@@ -706,7 +703,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_ETRANSACTION_EXPIRED: u64 = 6;
+<pre><code><b>const</b> PROLOGUE_ETRANSACTION_EXPIRED: u64 = 1006;
 </code></pre>
 
 
@@ -717,7 +714,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_EBAD_CHAIN_ID: u64 = 7;
+<pre><code><b>const</b> PROLOGUE_EBAD_CHAIN_ID: u64 = 1007;
 </code></pre>
 
 
@@ -728,7 +725,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 8;
+<pre><code><b>const</b> PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 1008;
 </code></pre>
 
 
@@ -739,19 +736,7 @@ via the
 
 
 
-<pre><code><b>const</b> PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 9;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_PROLOGUE_EUNEXPECTED_WRITESET"></a>
-
-## Const `PROLOGUE_EUNEXPECTED_WRITESET`
-
-This error will not be translated it should be an invariant violation.
-
-
-<pre><code><b>const</b> PROLOGUE_EUNEXPECTED_WRITESET: u64 = 10;
+<pre><code><b>const</b> PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 1009;
 </code></pre>
 
 
@@ -1027,7 +1012,10 @@ Record a payment of
     // Check that an account exists at `payee`
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(payee), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EPAYEE_DOES_NOT_EXIST));
     // Check that `payee` can accept payments in `Token`
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EPAYEE_CANT_ACCEPT_CURRENCY_TYPE));
+    <b>assert</b>(
+        exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
+    );
 
     // Check that the payment complies with dual attestation rules
     <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">DualAttestation::assert_payment_ok</a>&lt;Token&gt;(
@@ -1395,7 +1383,10 @@ Rotate the authentication key for the account under cap.account_address
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EACCOUNT));
     <b>let</b> sender_account_resource = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
     // Don't allow rotating <b>to</b> clearly invalid key
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_authentication_key) == 32, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_AUTHENTICATION_KEY));
+    <b>assert</b>(
+        <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_authentication_key) == 32,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_AUTHENTICATION_KEY)
+    );
     sender_account_resource.authentication_key = new_authentication_key;
 }
 </code></pre>
@@ -1426,7 +1417,7 @@ Return a unique capability granting permission to rotate the sender's authentica
     // Abort <b>if</b> we already extracted the unique key rotation capability for this account.
     <b>assert</b>(
         !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_address),
-         <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
     );
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(account_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EACCOUNT));
     <b>let</b> account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(account_address);
@@ -1547,7 +1538,10 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
     <a href="Vector.md#0x1_Vector_append">Vector::append</a>(
         &<b>mut</b> authentication_key, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(<a href="Signer.md#0x1_Signer_borrow_address">Signer::borrow_address</a>(&new_account))
     );
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&authentication_key) == 32, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_AUTHENTICATION_KEY));
+    <b>assert</b>(
+        <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&authentication_key) == 32,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_AUTHENTICATION_KEY)
+    );
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EACCOUNT));
     move_to(
         &new_account,
@@ -1890,7 +1884,10 @@ Add a balance of
     // aborts <b>if</b> `Token` is not a currency type in the system
     <a href="Libra.md#0x1_Libra_assert_is_currency">Libra::assert_is_currency</a>&lt;Token&gt;();
     // Check that an account with this role is allowed <b>to</b> hold funds
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EROLE_CANT_STORE_BALANCE));
+    <b>assert</b>(
+        <a href="Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EROLE_CANT_STORE_BALANCE)
+    );
     // aborts <b>if</b> this account already has a balance in `Token`
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(!exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EADD_EXISTING_CURRENCY));
@@ -2168,7 +2165,7 @@ The prologue for module transaction
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>assert</b>(
         <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">LibraTransactionPublishingOption::is_module_allowed</a>(sender),
-        PROLOGUE_EMODULE_NOT_ALLOWED
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(PROLOGUE_EMODULE_NOT_ALLOWED),
     );
 
     <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
@@ -2215,7 +2212,7 @@ The prologue for script transaction
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>assert</b>(
         <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">LibraTransactionPublishingOption::is_script_allowed</a>(sender, &script_hash),
-        PROLOGUE_ESCRIPT_NOT_ALLOWED
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(PROLOGUE_ESCRIPT_NOT_ALLOWED),
     );
 
     <a href="#0x1_LibraAccount_prologue_common">prologue_common</a>&lt;Token&gt;(
@@ -2266,51 +2263,57 @@ It verifies:
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
 
     // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
-    <b>assert</b>(<a href="ChainId.md#0x1_ChainId_get">ChainId::get</a>() == chain_id, PROLOGUE_EBAD_CHAIN_ID);
+    <b>assert</b>(<a href="ChainId.md#0x1_ChainId_get">ChainId::get</a>() == chain_id, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EBAD_CHAIN_ID));
 
     // Verify that the transaction sender's account exists
-    <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), PROLOGUE_EACCOUNT_DNE);
+    <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EACCOUNT_DNE));
 
     // We check whether this account is frozen, <b>if</b> it is no transaction can be sent from it.
     <b>assert</b>(
         !<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(transaction_sender),
-        PROLOGUE_EACCOUNT_FROZEN
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(PROLOGUE_EACCOUNT_FROZEN)
     );
 
     // Load the transaction sender's account
-    <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
+    <b>let</b> sender_account = borrow_global&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
 
     // Check that the hash of the transaction's <b>public</b> key matches the account's auth key
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(txn_public_key) == *&sender_account.authentication_key,
-        PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
     );
 
     // Check that the account has enough balance for all of the gas
     <b>assert</b>(
         (txn_gas_price <b>as</b> u128) * (txn_max_gas_units <b>as</b> u128) &lt;= MAX_U64,
-         PROLOGUE_ECANT_PAY_GAS_DEPOSIT
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ECANT_PAY_GAS_DEPOSIT),
     );
     <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
     // Don't grab the balance <b>if</b> the transaction fee is zero
     <b>if</b> (max_transaction_fee &gt; 0) {
+        <b>assert</b>(
+            exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(transaction_sender),
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+        );
         <b>let</b> balance_amount = <a href="#0x1_LibraAccount_balance">balance</a>&lt;Token&gt;(transaction_sender);
-        <b>assert</b>(balance_amount &gt;= max_transaction_fee, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
+        <b>assert</b>(
+            balance_amount &gt;= max_transaction_fee,
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+        );
     };
 
     // Check that the transaction sequence number matches the sequence number of the account
-    // TODO: the below assertions overlap, fix this.
     <b>assert</b>(
         txn_sequence_number &gt;= sender_account.sequence_number,
-        PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
     );
     <b>assert</b>(
         txn_sequence_number == sender_account.sequence_number,
-        PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
     );
     <b>assert</b>(
         <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_seconds">LibraTimestamp::now_seconds</a>() &lt; txn_expiration_time_seconds,
-        PROLOGUE_ETRANSACTION_EXPIRED
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ETRANSACTION_EXPIRED)
     );
 }
 </code></pre>
@@ -2323,10 +2326,13 @@ It verifies:
 
 ## Function `epilogue`
 
-Collects gas and bumps the sequence number for executing a transaction
+Collects gas and bumps the sequence number for executing a transaction.
+The epilogue is invoked at the end of the transaction.
+If the exection of the epilogue fails, it is re-invoked with different arguments, and
+based on the conditions checked in the prologue, should never fail.
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender: address, transaction_fee_amount: u64, txn_sequence_number: u64)
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
 </code></pre>
 
 
@@ -2336,111 +2342,44 @@ Collects gas and bumps the sequence number for executing a transaction
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(
-    sender: address,
-    transaction_fee_amount: u64,
+    account: &signer,
     txn_sequence_number: u64,
-) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    txn_gas_price: u64,
+    txn_max_gas_units: u64,
+    gas_units_remaining: u64
+) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
+    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    // Charge for gas
+    <b>assert</b>(txn_max_gas_units &gt;= gas_units_remaining, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EGAS));
+    <b>let</b> gas_used = txn_max_gas_units - gas_units_remaining;
+    <b>assert</b>(
+        (txn_gas_price <b>as</b> u128) * (gas_used <b>as</b> u128) &lt;= MAX_U64,
+        <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EGAS)
+    );
+    <b>let</b> transaction_fee_amount = txn_gas_price * gas_used;
+
     // Load the transaction sender's account and balance resources
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(sender), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EACCOUNT));
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender);
 
     // Bump the sequence number
-    <b>assert</b>(sender_account.<a href="#0x1_LibraAccount_sequence_number">sequence_number</a> &lt; (MAX_U64 <b>as</b> u64), <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ESEQUENCE_NUMBER));
+    <b>assert</b>(
+        sender_account.<a href="#0x1_LibraAccount_sequence_number">sequence_number</a> &lt; (MAX_U64 <b>as</b> u64),
+        <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(ESEQUENCE_NUMBER)
+    );
     sender_account.sequence_number = txn_sequence_number + 1;
 
     <b>if</b> (transaction_fee_amount &gt; 0) {
         <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
-        <a href="TransactionFee.md#0x1_TransactionFee_pay_fee">TransactionFee::pay_fee</a>(
-            <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>(
-                sender,
-                <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-                sender_balance,
-                transaction_fee_amount
-            )
-        )
+        <b>let</b> coin = &<b>mut</b> sender_balance.coin;
+        // Abort <b>if</b> this withdrawal would make the `account`'s balance go negative
+        <b>assert</b>(
+            <a href="Libra.md#0x1_Libra_value">Libra::value</a>(coin) &gt;= transaction_fee_amount,
+            <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
+        );
+        // `withdraw_from_balance` is not used <b>as</b> limits do not <b>apply</b> <b>to</b> this transaction fee
+        <a href="TransactionFee.md#0x1_TransactionFee_pay_fee">TransactionFee::pay_fee</a>(<a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(coin, transaction_fee_amount))
     }
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_success_epilogue"></a>
-
-## Function `success_epilogue`
-
-The success_epilogue is invoked at the end of successfully executed transactions.
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_success_epilogue">success_epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_success_epilogue">success_epilogue</a>&lt;Token&gt;(
-    account: &signer,
-    txn_sequence_number: u64,
-    txn_gas_price: u64,
-    txn_max_gas_units: u64,
-    gas_units_remaining: u64
-) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-
-    // Charge for gas
-    <b>assert</b>(txn_max_gas_units &gt;= gas_units_remaining, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EGAS));
-    <b>let</b> gas_used = txn_max_gas_units - gas_units_remaining;
-    <b>assert</b>((txn_gas_price <b>as</b> u128) * (gas_used <b>as</b> u128) &lt;= MAX_U64, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EGAS));
-    <b>let</b> transaction_fee_amount = txn_gas_price * gas_used;
-
-    // Load the transaction sender's balance <b>resource</b> only <b>if</b> it exists. If it doesn't we default the value <b>to</b> 0
-    <b>let</b> sender_balance = <b>if</b> (exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender)) <a href="#0x1_LibraAccount_balance">balance</a>&lt;Token&gt;(sender) <b>else</b> 0;
-    <b>assert</b>(sender_balance &gt;= transaction_fee_amount, PROLOGUE_ECANT_PAY_GAS_DEPOSIT);
-    <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender, transaction_fee_amount, txn_sequence_number);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_failure_epilogue"></a>
-
-## Function `failure_epilogue`
-
-The failure_epilogue is invoked at the end of transactions when the transaction is aborted during execution or
-during
-<code>success_epilogue</code>.
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_failure_epilogue">failure_epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_failure_epilogue">failure_epilogue</a>&lt;Token&gt;(
-    account: &signer,
-    txn_sequence_number: u64,
-    txn_gas_price: u64,
-    txn_max_gas_units: u64,
-    gas_units_remaining: u64
-) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    // Charge for gas
-    <b>assert</b>(txn_max_gas_units &gt;= gas_units_remaining, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EGAS));
-    <b>let</b> gas_used = txn_max_gas_units - gas_units_remaining;
-    <b>assert</b>((txn_gas_price <b>as</b> u128) * (gas_used <b>as</b> u128) &lt;= MAX_U64, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(EGAS));
-    <b>let</b> transaction_fee_amount = txn_gas_price * gas_used;
-
-    <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender, transaction_fee_amount, txn_sequence_number);
 }
 </code></pre>
 
@@ -2640,11 +2579,11 @@ pragma verify_duration_estimate = 100;
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBRAbortsIf">StapleLBRAbortsIf</a> {
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     amount_lbr: u64;
-    <a name="0x1_LibraAccount_reserve$58"></a>
+    <a name="0x1_LibraAccount_reserve$56"></a>
     <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a name="0x1_LibraAccount_amount_coin1$59"></a>
+    <a name="0x1_LibraAccount_amount_coin1$57"></a>
     <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
-    <a name="0x1_LibraAccount_amount_coin2$60"></a>
+    <a name="0x1_LibraAccount_amount_coin2$58"></a>
     <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
     <b>aborts_if</b> amount_lbr == 0 with Errors::INVALID_ARGUMENT;
     <b>aborts_if</b> reserve.coin1.backing.value + amount_coin1 &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
@@ -2675,17 +2614,17 @@ pragma verify_duration_estimate = 100;
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBREnsures">StapleLBREnsures</a> {
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     amount_lbr: u64;
-    <a name="0x1_LibraAccount_reserve$61"></a>
+    <a name="0x1_LibraAccount_reserve$59"></a>
     <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a name="0x1_LibraAccount_amount_coin1$62"></a>
+    <a name="0x1_LibraAccount_amount_coin1$60"></a>
     <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
-    <a name="0x1_LibraAccount_amount_coin2$63"></a>
+    <a name="0x1_LibraAccount_amount_coin2$61"></a>
     <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
-    <a name="0x1_LibraAccount_total_value_coin1$64"></a>
+    <a name="0x1_LibraAccount_total_value_coin1$62"></a>
     <b>let</b> total_value_coin1 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
-    <a name="0x1_LibraAccount_total_value_coin2$65"></a>
+    <a name="0x1_LibraAccount_total_value_coin2$63"></a>
     <b>let</b> total_value_coin2 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
-    <a name="0x1_LibraAccount_total_value_lbr$66"></a>
+    <a name="0x1_LibraAccount_total_value_lbr$64"></a>
     <b>let</b> total_value_lbr = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
     <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value
         == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value) - amount_coin1;
@@ -2876,7 +2815,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_payer$69"></a>
+<a name="0x1_LibraAccount_payer$67"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
@@ -2898,7 +2837,7 @@ Can only withdraw from the balances of cap.account_address [B27].
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     payee: address;
     amount: u64;
-    <a name="0x1_LibraAccount_payer$57"></a>
+    <a name="0x1_LibraAccount_payer$55"></a>
     <b>let</b> payer = cap.account_address;
     <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
@@ -2922,7 +2861,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_sender_addr$70"></a>
+<a name="0x1_LibraAccount_sender_addr$68"></a>
 <b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
 <b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
@@ -2960,7 +2899,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_cap_addr$71"></a>
+<a name="0x1_LibraAccount_cap_addr$69"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap_addr) with Errors::NOT_PUBLISHED;
@@ -3031,7 +2970,7 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_account_addr$72"></a>
+<a name="0x1_LibraAccount_account_addr$70"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -3085,7 +3024,7 @@ Can only rotate the authentication_key of cap.account_address [B26].
 ### Function `epilogue`
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(sender: address, transaction_fee_amount: u64, txn_sequence_number: u64)
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_epilogue">epilogue</a>&lt;Token&gt;(account: &signer, txn_sequence_number: u64, txn_gas_price: u64, txn_max_gas_units: u64, gas_units_remaining: u64)
 </code></pre>
 
 
@@ -3201,7 +3140,7 @@ Returns true if the LibraAccount at
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$67"></a>
+    <a name="0x1_LibraAccount_addr$65"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr);
     <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address == addr;
@@ -3260,7 +3199,7 @@ or the key rotation capability for addr itself [B26].
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$68"></a>
+    <a name="0x1_LibraAccount_addr$66"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr);
     <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address == addr;

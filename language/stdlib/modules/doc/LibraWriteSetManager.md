@@ -96,7 +96,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 33;
+<pre><code><b>const</b> PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 1033;
 </code></pre>
 
 
@@ -107,7 +107,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1001;
 </code></pre>
 
 
@@ -118,7 +118,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 1002;
 </code></pre>
 
 
@@ -129,7 +129,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 1011;
 </code></pre>
 
 
@@ -193,18 +193,27 @@ The
 ) {
     // The below code uses direct <b>abort</b> codes <b>as</b> per contract with VM.
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), PROLOGUE_EINVALID_WRITESET_SENDER);
+    <b>assert</b>(
+        sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EINVALID_WRITESET_SENDER)
+    );
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account), PROLOGUE_EINVALID_WRITESET_SENDER);
 
     <b>let</b> lr_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
-    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD);
+    <b>assert</b>(
+        writeset_sequence_number &gt;= sequence_number,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
+    );
 
-    <b>assert</b>(writeset_sequence_number == sequence_number, PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW);
+    <b>assert</b>(
+        writeset_sequence_number == sequence_number,
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
+    );
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == lr_auth_key,
-        PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY)
     );
 }
 </code></pre>

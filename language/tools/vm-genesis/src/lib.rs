@@ -275,7 +275,7 @@ fn create_and_initialize_main_accounts(
         session,
         root_libra_root_address,
         "LibraAccount",
-        "success_epilogue",
+        "epilogue",
         vec![lbr_ty.clone()],
         vec![
             Value::transaction_argument_signer_reference(root_libra_root_address),

@@ -275,7 +275,7 @@ impl LibraVMImpl {
         let gas_remaining = cost_strategy.remaining_gas().get();
         session.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &SUCCESS_EPILOGUE_NAME,
+            &USER_EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -290,7 +290,7 @@ impl LibraVMImpl {
         )
     }
 
-    /// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function
+    /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
     /// stored in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_failure_epilogue<R: RemoteCache>(
         &self,
@@ -307,7 +307,7 @@ impl LibraVMImpl {
         let gas_remaining = cost_strategy.remaining_gas().get();
         session.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &FAILURE_EPILOGUE_NAME,
+            &USER_EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -318,7 +318,7 @@ impl LibraVMImpl {
             ],
             txn_data.sender,
             cost_strategy,
-            expect_only_successful_execution(FAILURE_EPILOGUE_NAME.as_str()),
+            expect_only_successful_execution(USER_EPILOGUE_NAME.as_str()),
         )
     }
 

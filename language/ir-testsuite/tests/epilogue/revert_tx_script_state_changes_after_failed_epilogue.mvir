@@ -24,7 +24,7 @@ main(account: &signer, amount: u64) {
     return;
 }
 
-// check: "Keep(ABORTED { code: 5,"
+// check: "Keep(ABORTED { code: 257288,"
 
 
 // Bob sends the same transaction script, with the amount set to 1000 instead of his full balance.
