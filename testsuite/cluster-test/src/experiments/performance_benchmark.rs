@@ -213,6 +213,8 @@ impl Experiment for PerformanceBenchmark {
         let futures: Vec<_> = self.down_validators.iter().map(|ic| ic.start()).collect();
         try_join_all(futures).await?;
 
+        anyhow::bail!("Induce failure");
+
         Ok(())
     }
 

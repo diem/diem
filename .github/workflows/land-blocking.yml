@@ -177,6 +177,7 @@ jobs:
             msg_text="$msg_text Report:\nEmpty"
             ret=1
           fi
+          ret=1
           if [ $ret -ne 0 ]; then
             jq -n \
               --arg msg "$msg_text" \
