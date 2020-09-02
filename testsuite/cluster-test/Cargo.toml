@@ -56,7 +56,7 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 
 futures = "0.3.5"
 tokio = { version = "0.2.22", features = ["full"] }
-async-trait = "0.1.38"
+async-trait = "0.1.40"
 
 kube = { version = "0.40.0", default-features = false, features = ["rustls-tls"] }
 
