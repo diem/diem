@@ -130,7 +130,7 @@ module DualAttestation {
     }
     spec fun rotate_base_url {
         let sender = Signer::spec_address_of(account);
-        include LibraTimestamp::AbortsIfNoTime;
+        include LibraTimestamp::AbortsIfNotOperating;
         include AbortsIfNoCredential{addr: sender};
         ensures global<Credential>(sender).base_url == new_url;
 
@@ -160,7 +160,7 @@ module DualAttestation {
 
     }
     spec fun rotate_compliance_public_key {
-        include LibraTimestamp::AbortsIfNoTime;
+        include LibraTimestamp::AbortsIfNotOperating;
         let sender = Signer::spec_address_of(account);
         include AbortsIfNoCredential{addr: sender};
         aborts_if !Signature::ed25519_validate_pubkey(new_key) with Errors::INVALID_ARGUMENT;

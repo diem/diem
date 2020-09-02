@@ -770,7 +770,7 @@ that amount that can be minted according to the bounds for the
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;CoinType&gt;;
     <b>aborts_if</b> <a href="Libra.md#0x1_Libra_is_synthetic_currency">Libra::is_synthetic_currency</a>&lt;CoinType&gt;() with Errors::INVALID_ARGUMENT;
     <b>aborts_if</b> exists&lt;<a href="Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;&gt;(dd_addr) with Errors::ALREADY_PUBLISHED;
-    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNoTime">LibraTimestamp::AbortsIfNoTime</a>;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 }
 </code></pre>
 
@@ -889,7 +889,7 @@ that amount that can be minted according to the bounds for the
     <a name="0x1_DesignatedDealer_new_amount$9"></a>
     <b>let</b> new_amount = <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &lt;= tier_info.window_start + ONE_DAY) { tier_info.window_inflow + amount } <b>else</b> { amount };
     <b>aborts_if</b> new_amount &gt; tier_info.tiers[tier_index] with Errors::INVALID_ARGUMENT;
-    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNoTime">LibraTimestamp::AbortsIfNoTime</a>;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
     <b>aborts_if</b> !exists&lt;<a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account)) with Errors::REQUIRES_CAPABILITY;
     <b>include</b> <a href="Libra.md#0x1_Libra_MintAbortsIf">Libra::MintAbortsIf</a>&lt;CoinType&gt;{value: amount};
 }

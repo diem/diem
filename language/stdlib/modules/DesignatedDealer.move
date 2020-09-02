@@ -174,7 +174,7 @@ module DesignatedDealer {
         include Libra::AbortsIfNoCurrency<CoinType>;
         aborts_if Libra::is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
         aborts_if exists<Libra::Preburn<CoinType>>(dd_addr) with Errors::ALREADY_PUBLISHED;
-        include LibraTimestamp::AbortsIfNoTime;
+        include LibraTimestamp::AbortsIfNotOperating;
     }
 
     public fun add_tier<CoinType>(
@@ -319,7 +319,7 @@ module DesignatedDealer {
         aborts_if tier_index >= len(tier_info.tiers) with Errors::INVALID_ARGUMENT;
         let new_amount = if (LibraTimestamp::spec_now_microseconds() <= tier_info.window_start + ONE_DAY) { tier_info.window_inflow + amount } else { amount };
         aborts_if new_amount > tier_info.tiers[tier_index] with Errors::INVALID_ARGUMENT;
-        include LibraTimestamp::AbortsIfNoTime;
+        include LibraTimestamp::AbortsIfNotOperating;
         aborts_if !exists<Libra::MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::REQUIRES_CAPABILITY;
         include Libra::MintAbortsIf<CoinType>{value: amount};
     }

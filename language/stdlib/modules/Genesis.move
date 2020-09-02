@@ -93,7 +93,6 @@ module Genesis {
         );
         LibraBlock::initialize_block_metadata(lr_account);
         LibraWriteSetManager::initialize(lr_account);
-        LibraTimestamp::initialize(lr_account);
 
         let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
         LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, lr_auth_key);
@@ -114,8 +113,6 @@ module Genesis {
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
         LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, tc_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
-
-        // Mark that genesis has finished. This must appear as the last call.
         LibraTimestamp::set_time_has_started(lr_account);
     }
 

@@ -1,14 +1,5 @@
 //! account: vivian, 1000000, 0, validator
 
-//! new-transaction
-script {
-    use 0x1::LibraTimestamp;
-    fun main(account: &signer) {
-        LibraTimestamp::initialize(account);
-    }
-}
-// check: "Keep(ABORTED { code: 1,"
-
 //! block-prologue
 //! proposer-address: 0x0
 //! block-time: 1

@@ -102,6 +102,17 @@ impl FakeExecutor {
         }
     }
 
+    /// Creates an executor with only the standard library Move modules published and not other
+    /// initialization done.
+    pub fn stdlib_only_genesis() -> Self {
+        let mut genesis = Self::no_genesis();
+        for module in stdlib_modules(StdLibOptions::Compiled) {
+            let id = module.self_id();
+            genesis.add_module(&id, module);
+        }
+        genesis
+    }
+
     /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
         genesis_modules: Vec<CompiledModule>,

@@ -100,17 +100,6 @@ fun main(account: &signer) {
 // check: "Keep(ABORTED { code: 1,"
 
 //! new-transaction
-script {
-use 0x1::VASP;
-use 0x1::LibraTimestamp;
-fun main(account: &signer) {
-    LibraTimestamp::reset_time_has_started_for_test();
-    VASP::initialize(account);
-}
-}
-// check: "Keep(ABORTED { code: 2,"
-
-//! new-transaction
 //! sender: blessed
 script {
 use 0x1::VASP;

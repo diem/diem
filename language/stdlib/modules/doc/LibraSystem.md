@@ -15,11 +15,11 @@
 -  [Const `EINVALID_TRANSACTION_SENDER`](#0x1_LibraSystem_EINVALID_TRANSACTION_SENDER)
 -  [Const `EVALIDATOR_INDEX`](#0x1_LibraSystem_EVALIDATOR_INDEX)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
--  [Function `set_validator_set`](#0x1_LibraSystem_set_validator_set)
+-  [Function `set_libra_system_config`](#0x1_LibraSystem_set_libra_system_config)
 -  [Function `add_validator`](#0x1_LibraSystem_add_validator)
 -  [Function `remove_validator`](#0x1_LibraSystem_remove_validator)
 -  [Function `update_config_and_reconfigure`](#0x1_LibraSystem_update_config_and_reconfigure)
--  [Function `get_validator_set`](#0x1_LibraSystem_get_validator_set)
+-  [Function `get_libra_system_config`](#0x1_LibraSystem_get_libra_system_config)
 -  [Function `is_validator`](#0x1_LibraSystem_is_validator)
 -  [Function `get_validator_config`](#0x1_LibraSystem_get_validator_config)
 -  [Function `validator_set_size`](#0x1_LibraSystem_validator_set_size)
@@ -30,11 +30,11 @@
 -  [Specification](#0x1_LibraSystem_Specification)
     -  [Struct `LibraSystem`](#0x1_LibraSystem_Specification_LibraSystem)
     -  [Function `initialize_validator_set`](#0x1_LibraSystem_Specification_initialize_validator_set)
-    -  [Function `set_validator_set`](#0x1_LibraSystem_Specification_set_validator_set)
+    -  [Function `set_libra_system_config`](#0x1_LibraSystem_Specification_set_libra_system_config)
     -  [Function `add_validator`](#0x1_LibraSystem_Specification_add_validator)
     -  [Function `remove_validator`](#0x1_LibraSystem_Specification_remove_validator)
     -  [Function `update_config_and_reconfigure`](#0x1_LibraSystem_Specification_update_config_and_reconfigure)
-    -  [Function `get_validator_set`](#0x1_LibraSystem_Specification_get_validator_set)
+    -  [Function `get_libra_system_config`](#0x1_LibraSystem_Specification_get_libra_system_config)
     -  [Function `is_validator`](#0x1_LibraSystem_Specification_is_validator)
     -  [Function `get_validator_config`](#0x1_LibraSystem_Specification_get_validator_config)
     -  [Function `validator_set_size`](#0x1_LibraSystem_Specification_validator_set_size)
@@ -264,13 +264,13 @@ An out of bounds index for the validator set was encountered
 
 </details>
 
-<a name="0x1_LibraSystem_set_validator_set"></a>
+<a name="0x1_LibraSystem_set_libra_system_config"></a>
 
-## Function `set_validator_set`
+## Function `set_libra_system_config`
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
+<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
 </code></pre>
 
 
@@ -279,7 +279,7 @@ An out of bounds index for the validator set was encountered
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x1_LibraSystem">LibraSystem</a>) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(value: <a href="#0x1_LibraSystem">LibraSystem</a>) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <b>assert</b>(
         exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
@@ -320,21 +320,21 @@ An out of bounds index for the validator set was encountered
     // A prospective validator must have a validator config <b>resource</b>
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(account_address), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_PROSPECTIVE_VALIDATOR));
 
-    <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
+    <b>let</b> libra_system_config = <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
     // Ensure that this address is not already a validator
     <b>assert</b>(
-        !<a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(account_address, &validator_set.validators),
+        !<a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(account_address, &libra_system_config.validators),
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EALREADY_A_VALIDATOR)
     );
     // it is guaranteed that the config is non-empty
     <b>let</b> config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(account_address);
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> validator_set.validators, <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
+    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> libra_system_config.validators, <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
         addr: account_address,
         config, // <b>copy</b> the config over <b>to</b> ValidatorSet
         consensus_voting_power: 1,
     });
 
-    <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(validator_set);
+    <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
 }
 </code></pre>
 
@@ -363,15 +363,15 @@ An out of bounds index for the validator set was encountered
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
+    <b>let</b> libra_system_config = <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
     // Ensure that this address is an active validator
-    <b>let</b> to_remove_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, account_address);
+    <b>let</b> to_remove_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&libra_system_config.validators, account_address);
     <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&to_remove_index_vec), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_AN_ACTIVE_VALIDATOR));
     <b>let</b> to_remove_index = *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&to_remove_index_vec);
     // Remove corresponding <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> from the validator set
-    _  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> validator_set.validators, to_remove_index);
+    _  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> libra_system_config.validators, to_remove_index);
 
-    <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(validator_set);
+    <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
 }
 </code></pre>
 
@@ -398,18 +398,19 @@ An out of bounds index for the validator set was encountered
     operator_account: &signer,
     validator_address: address,
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <a href="Roles.md#0x1_Roles_assert_validator_operator">Roles::assert_validator_operator</a>(operator_account);
     <b>assert</b>(
         <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(validator_address) == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator_account),
         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_TRANSACTION_SENDER)
     );
-    <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
-    <b>let</b> to_update_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, validator_address);
+    <b>let</b> libra_system_config = <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
+    <b>let</b> to_update_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&libra_system_config.validators, validator_address);
     <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&to_update_index_vec), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_AN_ACTIVE_VALIDATOR));
     <b>let</b> to_update_index = *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&to_update_index_vec);
-    <b>let</b> is_validator_info_updated = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(&<b>mut</b> validator_set.validators, to_update_index);
+    <b>let</b> is_validator_info_updated = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(&<b>mut</b> libra_system_config.validators, to_update_index);
     <b>if</b> (is_validator_info_updated) {
-        <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(validator_set);
+        <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
     }
 }
 </code></pre>
@@ -418,13 +419,13 @@ An out of bounds index for the validator set was encountered
 
 </details>
 
-<a name="0x1_LibraSystem_get_validator_set"></a>
+<a name="0x1_LibraSystem_get_libra_system_config"></a>
 
-## Function `get_validator_set`
+## Function `get_libra_system_config`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>(): <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
 </code></pre>
 
 
@@ -433,7 +434,7 @@ An out of bounds index for the validator set was encountered
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x1_LibraSystem">LibraSystem</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>(): <a href="#0x1_LibraSystem">LibraSystem</a> {
     <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;()
 }
 </code></pre>
@@ -458,7 +459,7 @@ An out of bounds index for the validator set was encountered
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_is_validator">is_validator</a>(addr: address): bool {
-    <a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(addr, &<a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>().validators)
+    <a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(addr, &<a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>().validators)
 }
 </code></pre>
 
@@ -482,10 +483,10 @@ An out of bounds index for the validator set was encountered
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
-    <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
-    <b>let</b> validator_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, addr);
+    <b>let</b> libra_system_config = <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
+    <b>let</b> validator_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&libra_system_config.validators, addr);
     <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&validator_index_vec), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_AN_ACTIVE_VALIDATOR));
-    *&(<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&validator_set.validators, *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&validator_index_vec))).config
+    *&(<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&libra_system_config.validators, *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&validator_index_vec))).config
 }
 </code></pre>
 
@@ -509,7 +510,7 @@ An out of bounds index for the validator set was encountered
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_validator_set_size">validator_set_size</a>(): u64 {
-    <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&<a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>().validators)
+    <a href="Vector.md#0x1_Vector_length">Vector::length</a>(&<a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>().validators)
 }
 </code></pre>
 
@@ -534,7 +535,7 @@ An out of bounds index for the validator set was encountered
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_ith_validator_address">get_ith_validator_address</a>(i: u64): address {
     <b>assert</b>(i &lt; <a href="#0x1_LibraSystem_validator_set_size">validator_set_size</a>(), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EVALIDATOR_INDEX));
-    <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&<a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>().validators, i).addr
+    <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&<a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>().validators, i).addr
 }
 </code></pre>
 
@@ -613,19 +614,13 @@ An out of bounds index for the validator set was encountered
     <b>if</b> (!<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_info.addr)) {
         <b>return</b> <b>false</b>
     };
-    // TODO (dd): Why can't it <b>abort</b> here?  Right now, <a href="ValidatorConfig.md#0x1_ValidatorConfig">ValidatorConfig</a> says validators
-    //    stay published forever, but I wonder <b>if</b> that's reasonable.
-    //    Calling context checks validator role, and there probably should be an
-    //    <b>invariant</b> that validator role ==&gt; validator config.
     <b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_info.addr);
     // check <b>if</b> information is the same
     <b>let</b> config_ref = &<b>mut</b> validator_info.config;
-
     <b>if</b> (config_ref == &new_validator_config) {
         <b>return</b> <b>false</b>
     };
     *config_ref = new_validator_config;
-
     <b>true</b>
 }
 </code></pre>
@@ -733,27 +728,27 @@ to modify it.
 <b>aborts_if</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(config_addr) with Errors::ALREADY_PUBLISHED;
 <b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(config_addr);
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
+<b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()) == 0;
 </code></pre>
 
 
 
-<a name="0x1_LibraSystem_Specification_set_validator_set"></a>
+<a name="0x1_LibraSystem_Specification_set_libra_system_config"></a>
 
-### Function `set_validator_set`
+### Function `set_libra_system_config`
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
+<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
 </code></pre>
 
 
 
 
-<pre><code>pragma opaque = <b>true</b>;
+<pre><code>pragma opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
-<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>include</b> <a href="#0x1_LibraSystem_AbortsIfNoCapabilityHolder">AbortsIfNoCapabilityHolder</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 <b>ensures</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).payload == value;
 </code></pre>
 
@@ -780,11 +775,10 @@ to modify it.
 
 
 
-TODO: times out arbitrarily, while succeeding quickly some other times.
-
 
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 <b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(account_address) with Errors::INVALID_ARGUMENT;
 <b>aborts_if</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
@@ -796,10 +790,9 @@ TODO: times out arbitrarily, while succeeding quickly some other times.
 <a name="0x1_LibraSystem_vs$16"></a>
 
 
-<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>();
+<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>();
 <b>ensures</b> <a href="Vector.md#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(vs,
-                             // ovs,   // DD replaced with next line because of bug.
-                             <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()),
+                             <b>old</b>(vs),
                              <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
                                  addr: account_address,
                                  config: <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(account_address),
@@ -823,6 +816,7 @@ TODO: times out arbitrarily, while succeeding quickly some other times.
 
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig_LibraConfig">LibraConfig::LibraConfig</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 </code></pre>
@@ -833,8 +827,8 @@ TODO: times out arbitrarily, while succeeding quickly some other times.
 <a name="0x1_LibraSystem_vs$17"></a>
 
 
-<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>();
-<b>ensures</b> forall vi in vs where vi.addr != account_address: exists ovi in <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()): vi == ovi;
+<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>();
+<b>ensures</b> forall vi in vs where vi.addr != account_address: exists ovi in <b>old</b>(vs): vi == ovi;
 </code></pre>
 
 
@@ -857,7 +851,7 @@ Removed validator should no longer be valid.
 
 
 
-<pre><code>pragma verify_duration_estimate = 100;
+<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 </code></pre>
 
 
@@ -868,9 +862,12 @@ Must abort if the signer does not have the ValidatorOperator role [B23].
 <b>include</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_AbortsIfNoValidatorConfig">ValidatorConfig::AbortsIfNoValidatorConfig</a>{addr: validator_address};
 <b>aborts_if</b> <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_operator">ValidatorConfig::spec_get_operator</a>(validator_address) != <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(operator_account)
     with Errors::INVALID_ARGUMENT;
-<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(validator_address) with Errors::INVALID_ARGUMENT;
-<b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(validator_address) with Errors::INVALID_ARGUMENT;
+<a name="0x1_LibraSystem_is_validator_info_updated$18"></a>
+<b>let</b> is_validator_info_updated =
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(validator_address) &&
+    (exists v in <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): v.addr == validator_address && v.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_address));
+<b>include</b> is_validator_info_updated ==&gt; <a href="#0x1_LibraSystem_AbortsIfNoCapabilityHolder">AbortsIfNoCapabilityHolder</a> && <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 </code></pre>
 
 
@@ -878,66 +875,57 @@ Must abort if the signer does not have the ValidatorOperator role [B23].
 changes ValidatorInfo for validator_address, and doesn't change
 any addresses.
 
-This is a separate spec fun so we can use multiple lets.
 TODO: Look at called procedures to understand this better.  Also,
 look at transactions.
 
 
-<a name="0x1_LibraSystem_vs$18"></a>
+<a name="0x1_LibraSystem_vs$19"></a>
 
 
-<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>();
-<b>ensures</b> len(vs) == len(<b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()));
+<pre><code><b>let</b> vs = <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>();
+<b>ensures</b> len(vs) == len(<b>old</b>(vs));
 </code></pre>
 
 
 No addresses change
 
 
-<pre><code><b>ensures</b> forall i in 0..len(vs): vs[i].addr == <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())[i].addr;
+<pre><code><b>ensures</b> forall i in 0..len(vs): vs[i].addr == <b>old</b>(vs)[i].addr;
 </code></pre>
 
 
 If the validator info address is not the one we're changing, the info does not change.
 
 
-<pre><code><b>ensures</b> forall i in 0..len(vs) where <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())[i].addr != validator_address:
-                 vs[i] == <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())[i];
-<b>ensures</b> forall i in 0..len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())
-         where <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())[i].addr == validator_address:
-     <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>())[i].config == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(vs[i].addr);
+<pre><code><b>ensures</b> forall i in 0..len(vs) where <b>old</b>(vs)[i].addr != validator_address:
+                 vs[i] == <b>old</b>(vs)[i];
+</code></pre>
+
+
+It updates the correct entry in the correct way
+
+
+<pre><code><b>ensures</b> forall i in 0..len(vs): vs[i].config == <b>old</b>(vs[i].config) ||
+            (<b>old</b>(vs)[i].addr == validator_address &&
+            vs[i].config == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_address));
 </code></pre>
 
 
 
-<a name="0x1_LibraSystem_Specification_get_validator_set"></a>
+<a name="0x1_LibraSystem_Specification_get_libra_system_config"></a>
 
-### Function `get_validator_set`
+### Function `get_libra_system_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>(): <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>(): <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>
 </code></pre>
 
 
-Doesn't actually get the validator set. It gets the
-LibraSystem config, which contains the validator set.
 
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
-<b>ensures</b> result == <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-</code></pre>
-
-
-Actually gets the validator set, unlike get_validator_set
-
-
-<a name="0x1_LibraSystem_spec_get_validator_set"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators
-}
+<b>ensures</b> result == <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 </code></pre>
 
 
@@ -965,7 +953,7 @@ Actually gets the validator set, unlike get_validator_set
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr: address): bool {
-exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>(): v.addr == addr
+exists v in <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): v.addr == addr
 }
 </code></pre>
 
@@ -986,7 +974,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(addr) with Errors::INVALID_ARGUMENT;
 <b>ensures</b>
-    exists info in <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators where info.addr == addr:
+    exists info in <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators where info.addr == addr:
         result == info.config;
 </code></pre>
 
@@ -1005,7 +993,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
-<b>ensures</b> result == len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
+<b>ensures</b> result == len(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>());
 </code></pre>
 
 
@@ -1023,8 +1011,8 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;;
-<b>aborts_if</b> i &gt;= len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) with Errors::INVALID_ARGUMENT;
-<b>ensures</b> result == <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()[i].addr;
+<b>aborts_if</b> i &gt;= len(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()) with Errors::INVALID_ARGUMENT;
+<b>ensures</b> result == <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i].addr;
 </code></pre>
 
 
@@ -1042,7 +1030,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <pre><code>pragma opaque;
 <b>aborts_if</b> <b>false</b>;
-<a name="0x1_LibraSystem_size$19"></a>
+<a name="0x1_LibraSystem_size$20"></a>
 <b>let</b> size = len(validators);
 <b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
 <b>ensures</b>
@@ -1069,7 +1057,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 <pre><code>pragma opaque;
 <b>aborts_if</b> <b>false</b>;
-<a name="0x1_LibraSystem_new_validator_config$20"></a>
+<a name="0x1_LibraSystem_new_validator_config$21"></a>
 <b>let</b> new_validator_config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validators[i].addr);
 <b>ensures</b>
     result ==
@@ -1084,6 +1072,7 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
             update_field(<b>old</b>(validators[i]), config, new_validator_config)
         );
 <b>ensures</b> !result ==&gt; validators == <b>old</b>(validators);
+<b>ensures</b> validators == update_vector(<b>old</b>(validators), i, validators[i]);
 </code></pre>
 
 
@@ -1113,6 +1102,10 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator
 
 
 <pre><code>pragma verify;
+<a name="0x1_LibraSystem_spec_get_validators"></a>
+<b>define</b> <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>(): vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt; {
+    <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;().validators
+}
 </code></pre>
 
 
@@ -1129,7 +1122,7 @@ The permission "{Add, Remove} Validator" is granted to LibraRoot [B22].
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> {
-    <b>ensures</b> <a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>() == <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>());
+    <b>ensures</b> <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>() == <b>old</b>(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>());
 }
 </code></pre>
 
@@ -1140,5 +1133,5 @@ Only {add, remove} validator [B22] and update_config_and_reconfigure [B23] may c
 
 <pre><code><b>apply</b> <a href="#0x1_LibraSystem_ValidatorSetConfigRemainsSame">ValidatorSetConfigRemainsSame</a> <b>to</b> *, *&lt;T&gt;
    <b>except</b> add_validator, remove_validator, update_config_and_reconfigure,
-       initialize_validator_set, set_validator_set;
+       initialize_validator_set, set_libra_system_config;
 </code></pre>

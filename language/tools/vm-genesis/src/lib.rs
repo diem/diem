@@ -503,7 +503,7 @@ fn reconfigure(session: &mut Session<StateViewCache>) {
         session,
         account_config::libra_root_address(),
         "LibraConfig",
-        "emit_reconfiguration_event",
+        "emit_genesis_reconfiguration_event",
         vec![],
         vec![],
     );
