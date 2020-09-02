@@ -23,7 +23,7 @@ BUILD_PROJECTS=()
 
 while [[ "$1" =~ ^- ]]; do case $1 in
   --build-all )
-    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules)
+    BUILD_PROJECTS=(libra-validator libra-cluster-test libra-init libra-mint libra-safety-rules libra-tools)
     ;;
     # NOTE: This is used in land-blocking workflow `.github/workflows/land-blocking.yml`
     #       If you change the list of projects to be built for `--build-all-cti`, please
@@ -45,6 +45,9 @@ while [[ "$1" =~ ^- ]]; do case $1 in
     ;;
   --build-safety-rules )
     BUILD_PROJECTS=(libra-safety-rules)
+    ;;
+  --build-tools )
+    BUILD_PROJECTS=(libra-tools)
     ;;
   --version )
     shift;
