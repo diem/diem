@@ -80,14 +80,14 @@ impl LibraLoggerBuilder {
 
     pub fn build(&mut self) {
         let logger = if self.is_async {
-            let (tx, rx) = mpsc::sync_channel(self.channel_size);
+            let (sender, receiver) = mpsc::sync_channel(self.channel_size);
             let service = LoggerService {
-                rx,
+                receiver,
                 address: self.address.clone(),
                 printer: self.printer.take(),
             };
             let logger = Arc::new(LibraLogger {
-                tx: Some(tx),
+                sender: Some(sender),
                 printer: None,
                 level: self.level,
             });
@@ -96,7 +96,7 @@ impl LibraLoggerBuilder {
             logger
         } else {
             Arc::new(LibraLogger {
-                tx: None,
+                sender: None,
                 printer: self.printer.take(),
                 level: self.level,
             })
@@ -109,7 +109,7 @@ impl LibraLoggerBuilder {
 }
 
 pub struct LibraLogger {
-    tx: Option<SyncSender<StructuredLogEntry>>,
+    sender: Option<SyncSender<StructuredLogEntry>>,
     printer: Option<Box<dyn Writer>>,
     level: Level,
 }
@@ -141,8 +141,8 @@ impl LibraLogger {
             printer.write(s);
         }
 
-        if let Some(tx) = &self.tx {
-            if let Err(e) = tx.try_send(entry) {
+        if let Some(sender) = &self.sender {
+            if let Err(e) = sender.try_send(entry) {
                 STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
                 eprintln!("Failed to send structured log: {}", e);
             }
@@ -185,7 +185,7 @@ impl crate::struct_log::StructLogSink for Arc<LibraLogger> {
 }
 
 struct LoggerService {
-    rx: Receiver<StructuredLogEntry>,
+    receiver: Receiver<StructuredLogEntry>,
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
 }
@@ -194,7 +194,7 @@ impl LoggerService {
     pub fn run(mut self) {
         let mut writer = self.address.take().map(TcpWriter::new);
 
-        for entry in self.rx {
+        for entry in self.receiver {
             PROCESSED_STRUCT_LOG_COUNT.inc();
 
             if let Some(writer) = &mut writer {
