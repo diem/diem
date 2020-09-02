@@ -77,30 +77,12 @@ jobs:
           else
             echo "::set-output name=should_run::true";
           fi;
-      - name: Build, tag and push images
-        if: steps.check_ks.outputs.should_run == 'true'
-        run: |
-          set +e
-          date
-          RETRYABLE_EXIT_CODE=2
-          for ((i = 0; i < 3; i++)); do
-            echo "Build attempt $i"
-            docker/build-aws.sh --build-all-cti --version $HEAD_GIT_REV --addl_tags canary,${TEST_TAG}
-            return_code=$?
-            if [[ $return_code -eq 0 ]]; then
-              echo "Build successful"
-              exit 0
-            fi
-            if [[ $return_code -ne ${RETRYABLE_EXIT_CODE} ]]; then
-              echo "Build failed"
-              exit 1
-            fi
-            echo "Retrying build"
-          done
-          echo "Build failed after retries"
-          exit 1
       - name: Determine which cluster-test suite to run
         if: steps.check_ks.outputs.should_run == 'true'
+        # Runs land_blocking if KS activated or [breaking] in commit message heading.
+        # Runs land_blocking_compat otherwise. Compat needs to find an image with PREV_TAG
+        # to test against, otherwise will create one from BASE_GIT_REV in the next step,
+        # flagged by setting BUILD_PREV
         run: |
           set +e
           commit_message=$(git log --pretty=oneline $BASE_GIT_REV..$HEAD_GIT_REV)
@@ -112,18 +94,16 @@ jobs:
           elif [ $ret -eq 0 ]; then
             echo "Breaking change detected! Will run land_blocking suite"
             echo "::set-env name=TEST_COMPAT::0"
-          elif [ "$BASE_REF" != "master" ]; then
-            echo "PR base ref is not master. Will run land_blocking suite"
-            echo "::set-env name=TEST_COMPAT::0"
           else
             echo "Will run land_blocking_compat suite"
             echo "::set-env name=TEST_COMPAT::1"
             echo "Finding a previous image tag to test against"
             .github/actions/land-blocking/find-lbt-images.sh > lbt_images_output.txt
             if [ $? -ne 0 ]; then
+              echo "::set-env name=BUILD_PREV::1"
               cat lbt_images_output.txt
               jq -n \
-                --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. Could not find an image tag for Compat Test" \
+                --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. Could not find a recent image tag for Compat Test" \
                 --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
               '{
                 "attachments": [
@@ -140,12 +120,36 @@ jobs:
                 ]
               }' > /tmp/payload
               curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
-              exit 1
+              exit 0
             else
               compat_prev_tag=$(tail -1 lbt_images_output.txt)
               echo "Using previous image tag $compat_prev_tag"
               echo "::set-env name=PREV_TAG::$compat_prev_tag"
             fi
+          fi
+          echo "::set-env name=BUILD_PREV::0"
+      - name: Build, tag and push images
+        if: steps.check_ks.outputs.should_run == 'true'
+        # Builds the images from the PR, tagging with TEST_TAG. If compat needs an extra image
+        # built (e.g. BUILD_PREV -eq 1) then the builds occur in parallel.
+        run: |
+          echo "Starting codebuild for $TEST_TAG"
+          VERSION=$HEAD_GIT_REV ADDL_TAG=$TEST_TAG .github/actions/land-blocking/cti-codebuild.sh &> codebuild.log &
+          build_pid=$!
+          if [ $BUILD_PREV -eq 1 ]; then
+            compat_prev_tag=land_$BASE_GIT_REV
+            echo "Starting codebuild for $compat_prev_tag"
+            echo "::set-env name=PREV_TAG::$compat_prev_tag"
+            VERSION=$BASE_GIT_REV ADDL_TAG=$compat_prev_tag .github/actions/land-blocking/cti-codebuild.sh &> codebuild-prev.log &
+            prev_build_pid=$!
+          fi
+          wait $build_pid
+          echo "====== codebuild.log start ======"
+          cat codebuild.log
+          if [ $BUILD_PREV -eq 1 ]; then
+            wait $prev_build_pid
+            echo "====== codebuild-prev.log start ======"
+            cat codebuild-prev.log
           fi
       - name: Launch cluster test
         if: steps.check_ks.outputs.should_run == 'true'
