@@ -12,6 +12,7 @@ use backup_cli::{
     storage::StorageOpt,
     utils::GlobalRestoreOpt,
 };
+use libra_logger::{Level, Logger};
 use libra_secure_push_metrics::MetricsPusher;
 use libradb::{GetRestoreHandler, LibraDB};
 use std::sync::Arc;
@@ -56,6 +57,7 @@ enum RestoreType {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    Logger::new().level(Level::Info).init();
     let _mp = MetricsPusher::start();
 
     let opt = Opt::from_args();

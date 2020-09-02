@@ -16,6 +16,7 @@ use backup_cli::{
         GlobalBackupOpt,
     },
 };
+use libra_logger::{Level, Logger};
 use std::sync::Arc;
 use structopt::StructOpt;
 
@@ -120,6 +121,7 @@ struct CoordinatorRunOpt {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    Logger::new().level(Level::Info).init();
     let cmd = Command::from_args();
     match cmd {
         Command::OneShot(one_shot_cmd) => match one_shot_cmd {
