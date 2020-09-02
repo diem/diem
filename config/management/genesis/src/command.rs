@@ -245,13 +245,15 @@ pub mod tests {
             .treasury_compliance_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
 
-        // Step 3) Upload each owner key:
+        // Step 3) Upload each owner key (except carol, she'll have auth_key [0; 32]):
         for ns in [alice_ns, bob_ns, carol_ns].iter() {
             let ns = (*ns).to_string();
             let ns_shared = (*ns).to_string() + shared;
 
             helper.initialize(ns.clone());
-            helper.owner_key(&ns, &ns_shared).unwrap();
+            if ns != carol_ns {
+                helper.owner_key(&ns, &ns_shared).unwrap();
+            }
         }
 
         // Step 4) Upload each operator key:
@@ -356,7 +358,8 @@ pub mod tests {
         // Upload an owner key to the remote storage
         let owner_name = "owner";
         let owner_key = Ed25519PrivateKey::generate_for_testing().public_key();
-        let owner_account = account_address::from_public_key(&owner_key);
+        let owner_account =
+            libra_config::utils::validator_owner_account_from_name(owner_name.as_bytes());
         let mut shared_storage = storage_helper.storage(owner_name.into());
         shared_storage
             .set(OWNER_KEY, owner_key)

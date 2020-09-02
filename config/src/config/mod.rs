@@ -279,29 +279,22 @@ impl NodeConfig {
 
     pub fn random() -> Self {
         let mut rng = StdRng::from_seed([0u8; 32]);
-        Self::random_with_rng(&mut rng)
+        Self::random_with_template(0, &NodeConfig::default(), &mut rng)
     }
 
-    pub fn random_with_rng(rng: &mut StdRng) -> Self {
-        let mut config = NodeConfig::default();
-        config.random_internal(rng);
-        config
-    }
-
-    pub fn random_with_template(template: &Self, rng: &mut StdRng) -> Self {
+    pub fn random_with_template(idx: u32, template: &Self, rng: &mut StdRng) -> Self {
         let mut config = template.clone();
-        config.random_internal(rng);
+        config.random_internal(idx, rng);
         config
     }
 
-    fn random_internal(&mut self, rng: &mut StdRng) {
+    fn random_internal(&mut self, idx: u32, rng: &mut StdRng) {
         let mut test = TestConfig::new_with_temp_dir();
 
         if self.base.role == RoleType::Validator {
             test.random_account_key(rng);
-            let peer_id = libra_types::account_address::from_public_key(
-                &test.owner_key.as_ref().unwrap().public_key(),
-            );
+            let peer_id =
+                crate::utils::validator_owner_account_from_name(idx.to_string().as_bytes());
 
             if self.validator_network.is_none() {
                 let network_config = NetworkConfig::network_with_id(NetworkId::Validator);

@@ -158,8 +158,9 @@ impl FullNodeConfig {
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config
         let actual_nodes = self.num_full_nodes + 1;
-        for _index in 0..actual_nodes {
-            let mut config = NodeConfig::random_with_template(&self.template, &mut rng);
+        for index in 0..actual_nodes {
+            let mut config =
+                NodeConfig::random_with_template(index as u32, &self.template, &mut rng);
             if randomize_ports {
                 config.randomize_ports();
             }

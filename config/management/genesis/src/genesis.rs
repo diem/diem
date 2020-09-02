@@ -100,7 +100,7 @@ impl Genesis {
 
         for owner in layout.owners.iter() {
             let owner_storage = config.shared_backend_with_namespace(owner.into());
-            let owner_key = owner_storage.ed25519_key(OWNER_KEY)?;
+            let owner_key = owner_storage.ed25519_key(OWNER_KEY).ok();
 
             let operator_name = owner_storage.string(constants::VALIDATOR_OPERATOR)?;
             let operator_storage = config.shared_backend_with_namespace(operator_name.clone());
@@ -112,7 +112,8 @@ impl Genesis {
                 operator_account,
             );
 
-            operator_assignments.push((owner_key, owner.as_bytes().to_vec(), set_operator_script));
+            let owner_name_vec = owner.as_bytes().to_vec();
+            operator_assignments.push((owner_key, owner_name_vec, set_operator_script));
         }
 
         Ok(operator_assignments)

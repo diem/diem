@@ -85,6 +85,22 @@ impl Account {
         }
     }
 
+    /// Creates a new account with the given addr and key pair
+    ///
+    /// Like with [`Account::new`], the account returned by this constructor is a purely logical
+    /// entity.
+    pub fn new_validator(
+        addr: AccountAddress,
+        privkey: Ed25519PrivateKey,
+        pubkey: Ed25519PublicKey,
+    ) -> Self {
+        Account {
+            addr,
+            privkey,
+            pubkey,
+        }
+    }
+
     /// Creates a new account in memory representing an account created in the genesis transaction.
     ///
     /// The address will be [`address`], which should be an address for a genesis account and

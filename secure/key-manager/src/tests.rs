@@ -386,7 +386,7 @@ fn setup_secure_storage(
     let owner_key = test_config.owner_key.unwrap();
     sec_storage.set(OWNER_KEY, owner_key.private_key()).unwrap();
 
-    let owner_account = libra_types::account_address::from_public_key(&owner_key.public_key());
+    let owner_account = config.consensus.safety_rules.test.as_ref().unwrap().author;
     sec_storage.set(OWNER_ACCOUNT, owner_account).unwrap();
 
     // Initialize the operator key and account address in storage

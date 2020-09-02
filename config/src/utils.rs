@@ -4,8 +4,23 @@
 use crate::config::NodeConfig;
 use get_if_addrs::get_if_addrs;
 use libra_network_address::{NetworkAddress, Protocol};
-use libra_types::transaction::Transaction;
+use libra_types::{
+    account_address::AccountAddress,
+    transaction::{authenticator::AuthenticationKey, Transaction},
+};
 use std::net::{TcpListener, TcpStream};
+
+pub fn default_validator_owner_auth_key_from_name(name: &[u8]) -> AuthenticationKey {
+    let salt = "validator_owner::";
+    let mut name_in_bytes = salt.as_bytes().to_vec();
+    name_in_bytes.extend_from_slice(name);
+    let hash = libra_crypto::HashValue::sha3_256_of(&name_in_bytes);
+    AuthenticationKey::new(*hash.as_ref())
+}
+
+pub fn validator_owner_account_from_name(name: &[u8]) -> AccountAddress {
+    default_validator_owner_auth_key_from_name(name).derived_address()
+}
 
 /// Return an ephemeral, available port. On unix systems, the port returned will be in the
 /// TIME_WAIT state ensuring that the OS won't hand out this port for some grace period.

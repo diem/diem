@@ -175,19 +175,22 @@ impl Config {
         let total_validator_accounts = validator_accounts;
 
         // generate a validator set with |validator_accounts| validators
-        let validator_keys = if validator_accounts > 0 {
+        let validators = if validator_accounts > 0 {
             let mut swarm = generator::validator_swarm_for_testing(validator_accounts);
             swarm
                 .nodes
                 .iter_mut()
                 .map(|c| {
-                    c.test
+                    let account = c.consensus.safety_rules.test.as_ref().unwrap().author;
+                    let key = c
+                        .test
                         .as_ref()
                         .unwrap()
                         .owner_key
                         .as_ref()
                         .unwrap()
-                        .private_key()
+                        .private_key();
+                    (account, key)
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -224,10 +227,9 @@ impl Config {
                     let balance = def.balance.as_ref().unwrap_or(&DEFAULT_BALANCE).clone();
                     let account_data = if entry.is_validator() {
                         validator_accounts -= 1;
-                        let privkey = &validator_keys.get(validator_accounts).unwrap().clone();
-                        AccountData::with_keypair(
-                            privkey.clone(),
-                            privkey.public_key(),
+                        let (account, privkey) = &validators.get(validator_accounts).unwrap();
+                        AccountData::with_account(
+                            Account::new_validator(*account, privkey.clone(), privkey.public_key()),
                             balance.amount,
                             balance.currency_code,
                             def.sequence_number.unwrap_or(0),

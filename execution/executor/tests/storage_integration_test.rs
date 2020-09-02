@@ -15,7 +15,7 @@ use libra_types::{
     account_address,
     account_config::{coin1_tag, libra_root_address, treasury_compliance_account_address},
     account_state::AccountState,
-    transaction::{authenticator::AuthenticationKey, Script},
+    transaction::Script,
     trusted_state::{TrustedState, TrustedStateChange},
 };
 use std::convert::TryFrom;
@@ -60,19 +60,6 @@ fn test_reconfiguration() {
 
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
-    let validator_pubkey = config
-        .test
-        .as_ref()
-        .unwrap()
-        .owner_key
-        .as_ref()
-        .unwrap()
-        .public_key();
-    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    assert!(
-        auth_key.derived_address() == validator_account,
-        "Address derived from validator auth key does not match validator account address"
-    );
 
     // test the current keys in the validator's account equals to the key in the validator set
     let (li, _epoch_change_proof, _accumulator_consistency_proof) =
@@ -448,11 +435,6 @@ fn test_extend_allowlist() {
         .private_key();
     let validator_pubkey = validator_privkey.public_key();
     let signer = extract_signer(&mut config);
-    let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
-    assert!(
-        auth_key.derived_address() == validator_account,
-        "Address derived from validator auth key does not match validator account address"
-    );
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(

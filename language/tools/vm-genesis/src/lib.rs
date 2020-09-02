@@ -58,9 +58,14 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
 
 pub static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 
+const ZERO_AUTH_KEY: [u8; 32] = [0; 32];
+
 pub type Name = Vec<u8>;
-pub type OperatorAssignment = (Ed25519PublicKey, Name, Script); // Assigns an operator to each owner
-pub type OperatorRegistration = (Ed25519PublicKey, Name, Script); // Registers a validator config
+// Defines a validator owner and maps that to an operator
+pub type OperatorAssignment = (Option<Ed25519PublicKey>, Name, Script);
+
+// Defines a validator operator and maps that to a validator (config)
+pub type OperatorRegistration = (Ed25519PublicKey, Name, Script);
 
 pub fn encode_genesis_transaction(
     libra_root_key: Ed25519PublicKey,
@@ -395,17 +400,34 @@ fn create_and_initialize_owners_operators(
 ) {
     let libra_root_address = account_config::libra_root_address();
 
-    // Create accounts for each validator owner
-    for (owner_key, owner_name, _) in operator_assignments {
-        let owner_auth_key = AuthenticationKey::ed25519(&owner_key);
-        let owner_account = account_address::from_public_key(owner_key);
+    // Create accounts for each validator owner. The inputs for creating an account are the auth
+    // key prefix and account address. Internally move then computes the auth key as auth key
+    // prefix || address. Because of this, the initial auth key will be invalid as we produce the
+    // account address from the name and not the public key.
+    for (owner_key, owner_name, _op_assignment) in operator_assignments {
+        let staged_owner_auth_key =
+            libra_config::utils::default_validator_owner_auth_key_from_name(owner_name);
+        let owner_address = staged_owner_auth_key.derived_address();
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
             0,
-            owner_account,
-            owner_auth_key.prefix().to_vec(),
+            owner_address,
+            staged_owner_auth_key.prefix().to_vec(),
             owner_name.clone(),
         );
         exec_script(session, libra_root_address, &create_owner_script);
+
+        // If there is a key, make it the auth key, otherwise use a zero auth key.
+        let real_owner_auth_key = if let Some(owner_key) = owner_key {
+            AuthenticationKey::ed25519(owner_key).to_vec()
+        } else {
+            ZERO_AUTH_KEY.to_vec()
+        };
+
+        exec_script(
+            session,
+            owner_address,
+            &transaction_builder::encode_rotate_authentication_key_script(real_owner_auth_key),
+        );
     }
 
     // Create accounts for each validator operator
@@ -423,9 +445,9 @@ fn create_and_initialize_owners_operators(
     }
 
     // Set the validator operator for each validator owner
-    for (owner_key, _, assignment) in operator_assignments {
-        let owner_account = account_address::from_public_key(owner_key);
-        exec_script(session, owner_account, assignment);
+    for (_owner_key, owner_name, op_assignment) in operator_assignments {
+        let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
+        exec_script(session, owner_address, op_assignment);
     }
 
     // Set the validator config for each validator
@@ -435,8 +457,8 @@ fn create_and_initialize_owners_operators(
     }
 
     // Add each validator to the validator set
-    for (owner_key, _, _) in operator_assignments {
-        let owner_account = account_address::from_public_key(owner_key);
+    for (_owner_key, owner_name, _op_assignment) in operator_assignments {
+        let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
         exec_function(
             session,
             libra_root_address,
@@ -445,7 +467,7 @@ fn create_and_initialize_owners_operators(
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(libra_root_address),
-                Value::address(owner_account),
+                Value::address(owner_address),
             ],
         );
     }
@@ -556,18 +578,22 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
 
 /// Generates an artificial set of OperatorAssignments using the given node configurations for
 /// testing.
-pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistration> {
+pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorAssignment> {
     node_configs
         .iter()
-        .map(|n| {
+        .enumerate()
+        .map(|(idx, n)| {
             let test_config = n.test.as_ref().unwrap();
             let owner_key = test_config.owner_key.as_ref().unwrap().public_key();
             let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
             let operator_account = account_address::from_public_key(&operator_key);
-            let set_operator_script =
-                transaction_builder::encode_set_validator_operator_script(vec![], operator_account);
+            let name = idx.to_string().as_bytes().to_vec();
+            let set_operator_script = transaction_builder::encode_set_validator_operator_script(
+                name.clone(),
+                operator_account,
+            );
 
-            (owner_key, vec![], set_operator_script)
+            (Some(owner_key), name, set_operator_script)
         })
         .collect::<Vec<_>>()
 }
@@ -577,10 +603,11 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistra
 pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegistration> {
     node_configs
         .iter()
-        .map(|n| {
+        .enumerate()
+        .map(|(idx, n)| {
             let test_config = n.test.as_ref().unwrap();
-            let owner_key = test_config.owner_key.as_ref().unwrap().public_key();
-            let owner_account = AuthenticationKey::ed25519(&owner_key).derived_address();
+            let name = idx.to_string().as_bytes().to_vec();
+            let owner_account = libra_config::utils::validator_owner_account_from_name(&name);
             let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
 
             let sr_test = n.consensus.safety_rules.test.as_ref().unwrap();
@@ -613,7 +640,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
                 lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
                 lcs::to_bytes(&vec![addr]).unwrap(),
             );
-            (operator_key, vec![], script)
+            (operator_key, name, script)
         })
         .collect::<Vec<_>>()
 }
