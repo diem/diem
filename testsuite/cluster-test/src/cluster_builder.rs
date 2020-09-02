@@ -26,7 +26,8 @@ use consensus_types::safety_data::SafetyData;
 use libra_genesis_tool::layout::Layout;
 use libra_global_constants::{
     CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
-    SAFETY_DATA, VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_ADDRESS_KEYS, VALIDATOR_NETWORK_KEY,
+    WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, VaultStorage};
@@ -373,6 +374,21 @@ impl ClusterBuilder {
                 vault_storage.create_key(LIBRA_ROOT_KEY).map_err(|e| {
                     format_err!("Failed to create {}__{} : {}", pod_name, LIBRA_ROOT_KEY, e)
                 })?;
+                let key = vault_storage
+                    .export_private_key(LIBRA_ROOT_KEY)
+                    .map_err(|e| {
+                        format_err!("Failed to export {}__{} : {}", pod_name, LIBRA_ROOT_KEY, e)
+                    })?;
+                vault_storage
+                    .import_private_key(TREASURY_COMPLIANCE_KEY, key)
+                    .map_err(|e| {
+                        format_err!(
+                            "Failed to import {}__{} : {}",
+                            pod_name,
+                            TREASURY_COMPLIANCE_KEY,
+                            e
+                        )
+                    })?;
             }
             let keys = vec![
                 OWNER_KEY,
@@ -421,7 +437,8 @@ impl ClusterBuilder {
         let layout = Layout {
             owners: owners.clone(),
             operators: owners,
-            libra_root: vec![LIBRA_ROOT_NS.to_string()],
+            libra_root: LIBRA_ROOT_NS.to_string(),
+            treasury_compliance: LIBRA_ROOT_NS.to_string(),
         };
         let layout_path = "/tmp/layout.yaml";
         write!(
@@ -451,6 +468,16 @@ impl ClusterBuilder {
             .map_err(|e| format_err!("Failed to set_layout : {}", e))?;
         genesis_helper
             .libra_root_key(
+                VAULT_BACKEND,
+                format!("http://{}:{}", vault_nodes[0].internal_ip, VAULT_PORT).as_str(),
+                token_path,
+                LIBRA_ROOT_NS,
+                LIBRA_ROOT_NS,
+            )
+            .await
+            .map_err(|e| format_err!("Failed to libra_root_key : {}", e))?;
+        genesis_helper
+            .treasury_compliance_key(
                 VAULT_BACKEND,
                 format!("http://{}:{}", vault_nodes[0].internal_ip, VAULT_PORT).as_str(),
                 token_path,

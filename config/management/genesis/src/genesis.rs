@@ -41,12 +41,13 @@ impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
         let libra_root_key = self.libra_root_key(&layout)?;
+        let treasury_compliance_key = self.treasury_compliance_key(&layout)?;
         let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let genesis = vm_genesis::encode_genesis_transaction(
-            libra_root_key.clone(),
             libra_root_key,
+            treasury_compliance_key,
             &operator_assignments,
             &operator_registrations,
             // TODO: swap back by 8/15
@@ -73,7 +74,7 @@ impl Genesis {
     /// only supports a single libra root key.
     pub fn libra_root_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
         let config = self.config()?;
-        let storage = config.shared_backend_with_namespace(layout.libra_root[0].clone());
+        let storage = config.shared_backend_with_namespace(layout.libra_root.clone());
         storage.ed25519_key(LIBRA_ROOT_KEY)
     }
 
@@ -133,5 +134,12 @@ impl Genesis {
         }
 
         Ok(registrations)
+    }
+
+    /// Retrieves the treasury root key from the remote storage.
+    pub fn treasury_compliance_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
+        let config = self.config()?;
+        let storage = config.shared_backend_with_namespace(layout.libra_root.clone());
+        storage.ed25519_key(libra_global_constants::TREASURY_COMPLIANCE_KEY)
     }
 }

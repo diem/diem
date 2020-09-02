@@ -146,6 +146,41 @@ impl GenesisHelper {
             .expect("tokio spawn_blocking runtime error")
     }
 
+    pub async fn treasury_compliance_key(
+        &self,
+        validator_backend: &str,
+        server: &str,
+        token_path: &str,
+        validator_ns: &str,
+        shared_ns: &str,
+    ) -> Result<Ed25519PublicKey, Error> {
+        let args = format!(
+            "
+                libra-genesis-tool
+                treasury-compliance-key
+                --validator-backend backend={validator_backend};\
+                    server={server};\
+                    token={token_path};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
+                    path={path};\
+                    namespace={shared_ns}
+            ",
+            backend = DISK,
+            validator_backend = validator_backend,
+            server = server,
+            token_path = token_path,
+            path = self.path,
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        spawn_blocking(|| command.treasury_compliance_key())
+            .await
+            .expect("tokio spawn_blocking runtime error")
+    }
+
     pub async fn validator_config(
         &self,
         owner_name: &str,

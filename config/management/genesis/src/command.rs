@@ -24,6 +24,8 @@ pub enum Command {
     SetLayout(crate::layout::SetLayout),
     #[structopt(about = "Sets the validator operator chosen by the owner")]
     SetOperator(crate::validator_operator::ValidatorOperator),
+    #[structopt(about = "Submits an Ed25519PublicKey for the treasury root")]
+    TreasuryComplianceKey(crate::key::TreasuryComplianceKey),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
@@ -40,6 +42,7 @@ pub enum CommandName {
     OwnerKey,
     SetLayout,
     SetOperator,
+    TreasuryComplianceKey,
     ValidatorConfig,
     Verify,
 }
@@ -55,6 +58,7 @@ impl From<&Command> for CommandName {
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
             Command::SetOperator(_) => CommandName::SetOperator,
+            Command::TreasuryComplianceKey(_) => CommandName::TreasuryComplianceKey,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -72,6 +76,7 @@ impl std::fmt::Display for CommandName {
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
             CommandName::SetOperator => "set-operator",
+            CommandName::TreasuryComplianceKey => "treasury-compliance-key",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -92,6 +97,9 @@ impl Command {
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
             Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
+            Command::TreasuryComplianceKey(_) => {
+                self.treasury_compliance_key().unwrap().to_string()
+            }
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
@@ -131,6 +139,14 @@ impl Command {
 
     pub fn set_operator(self) -> Result<String, Error> {
         execute_command!(self, Command::SetOperator, CommandName::SetOperator)
+    }
+
+    pub fn treasury_compliance_key(self) -> Result<Ed25519PublicKey, Error> {
+        execute_command!(
+            self,
+            Command::TreasuryComplianceKey,
+            CommandName::TreasuryComplianceKey
+        )
     }
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
@@ -189,7 +205,8 @@ pub mod tests {
         let layout_text = "\
             operators = [\"operator_alice_shared\", \"operator_bob_shared\", \"operator_carol_shared\"]\n\
             owners = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
-            libra_root = [\"dave_shared\"]\n\
+            libra_root = \"dave_shared\"\n\
+            treasury_compliance = \"dave_shared\"\n\
         ";
 
         let temppath = libra_temppath::TempPath::new();
@@ -203,10 +220,13 @@ pub mod tests {
             .set_layout(temppath.path().to_str().unwrap(), constants::COMMON_NS)
             .unwrap();
 
-        // Step 2) Upload the libra root key:
+        // Step 2) Upload the root keys:
         helper.initialize(dave_ns.into());
         helper
             .libra_root_key(dave_ns, &(dave_ns.to_string() + shared))
+            .unwrap();
+        helper
+            .treasury_compliance_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
 
         // Step 3) Upload each owner key:
@@ -290,7 +310,8 @@ pub mod tests {
         let layout_text = "\
             operators = [\"alice\", \"bob\"]\n\
             owners = [\"carol\"]\n\
-            libra_root = [\"dave\"]\n\
+            libra_root = \"dave\"\n\
+            treasury_compliance = \"other_dave\"\n\
         ";
         file.write_all(&layout_text.to_string().into_bytes())
             .unwrap();

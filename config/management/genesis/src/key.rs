@@ -119,6 +119,19 @@ impl OwnerKey {
     }
 }
 
+#[derive(Debug, StructOpt)]
+pub struct TreasuryComplianceKey {
+    #[structopt(flatten)]
+    key: Key,
+}
+
+impl TreasuryComplianceKey {
+    pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
+        self.key
+            .submit_key(libra_global_constants::TREASURY_COMPLIANCE_KEY, None)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

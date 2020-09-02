@@ -8,7 +8,7 @@ use consensus_types::safety_data::SafetyData;
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
     CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
-    SAFETY_DATA, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_management::{error::Error, secure_backend::DISK};
 use libra_network_address::NetworkAddress;
@@ -47,6 +47,11 @@ impl StorageHelper {
 
         // Initialize all keys in storage
         storage.create_key(LIBRA_ROOT_KEY).unwrap();
+        // TODO(davidiw) use distinct keys in tests for treasury and libra root keys
+        let libra_root_key = storage.export_private_key(LIBRA_ROOT_KEY).unwrap();
+        storage
+            .import_private_key(TREASURY_COMPLIANCE_KEY, libra_root_key)
+            .unwrap();
         storage.create_key(CONSENSUS_KEY).unwrap();
         storage.create_key(EXECUTION_KEY).unwrap();
         storage.create_key(FULLNODE_NETWORK_KEY).unwrap();
@@ -232,6 +237,32 @@ impl StorageHelper {
 
         let command = Command::from_iter(args.split_whitespace());
         command.set_operator()
+    }
+
+    pub fn treasury_compliance_key(
+        &self,
+        validator_ns: &str,
+        shared_ns: &str,
+    ) -> Result<Ed25519PublicKey, Error> {
+        let args = format!(
+            "
+                libra-genesis-tool
+                treasury-compliance-key
+                --validator-backend backend={backend};\
+                    path={path};\
+                    namespace={validator_ns}
+                --shared-backend backend={backend};\
+                    path={path};\
+                    namespace={shared_ns}
+            ",
+            backend = DISK,
+            path = self.path_string(),
+            validator_ns = validator_ns,
+            shared_ns = shared_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.treasury_compliance_key()
     }
 
     pub fn validator_config(

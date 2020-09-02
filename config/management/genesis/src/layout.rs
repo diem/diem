@@ -19,7 +19,8 @@ use structopt::StructOpt;
 pub struct Layout {
     pub operators: Vec<String>,
     pub owners: Vec<String>,
-    pub libra_root: Vec<String>,
+    pub libra_root: String,
+    pub treasury_compliance: String,
 }
 
 impl Layout {
@@ -81,7 +82,8 @@ mod tests {
         let contents = "\
             operators = [\"alice\", \"bob\"]\n\
             owners = [\"carol\"]\n\
-            libra_root = [\"dave\"]\n\
+            libra_root = \"dave\"\n\
+            treasury_compliance = \"other_dave\"\n\
         ";
 
         let layout = Layout::parse(contents).unwrap();
@@ -90,6 +92,7 @@ mod tests {
             vec!["alice".to_string(), "bob".to_string()]
         );
         assert_eq!(layout.owners, vec!["carol".to_string()]);
-        assert_eq!(layout.libra_root, vec!["dave".to_string()]);
+        assert_eq!(layout.libra_root, "dave");
+        assert_eq!(layout.treasury_compliance, "other_dave");
     }
 }
