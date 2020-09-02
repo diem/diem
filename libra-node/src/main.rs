@@ -41,8 +41,8 @@ fn main() {
             .channel_size(config.logger.chan_size)
             .is_async(config.logger.is_async)
             .level(config.logger.level)
+            .read_env()
             .init();
-        libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
         // Let's now log some important information, since the logger is set up
         sl_info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));

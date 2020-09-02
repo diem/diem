@@ -175,10 +175,7 @@ pub use crate::libra_logger::{
 pub use event::Event;
 pub use metadata::{Level, Metadata};
 
-pub use struct_log::{
-    init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,
-    struct_logger_enabled, struct_logger_set, LoggingField, StructLogSink, StructuredLogEntry,
-};
+pub use struct_log::{struct_logger_enabled, LoggingField, StructuredLogEntry};
 
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;

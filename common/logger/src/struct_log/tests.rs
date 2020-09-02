@@ -8,10 +8,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value as JsonValue};
-use std::{
-    io,
-    sync::mpsc::{self, Receiver, SyncSender},
-};
+use std::sync::mpsc::{self, Receiver, SyncSender};
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -36,9 +33,9 @@ struct StreamStructLog {
 }
 
 impl StreamStructLog {
-    pub fn start_new() -> io::Result<(Self, Receiver<StructuredLogEntry>)> {
+    pub fn start_new() -> (Self, Receiver<StructuredLogEntry>) {
         let (sender, receiver) = mpsc::sync_channel(1024);
-        Ok((Self { sender }, receiver))
+        (Self { sender }, receiver)
     }
 }
 
@@ -53,7 +50,7 @@ impl StructLogSink for StreamStructLog {
 }
 
 fn set_test_struct_logger() -> Result<Receiver<StructuredLogEntry>, InitLoggerError> {
-    let (logger, receiver) = StreamStructLog::start_new().map_err(InitLoggerError::IoError)?;
+    let (logger, receiver) = StreamStructLog::start_new();
     let logger = Box::leak(Box::new(logger));
     set_struct_logger(logger).map(|_| receiver)
 }

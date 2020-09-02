@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{
-    counters::{
-        PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_CONNECT_ERROR_COUNT,
-        STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
-        STRUCT_LOG_TCP_CONNECT_COUNT,
-    },
+    counters::{STRUCT_LOG_CONNECT_ERROR_COUNT, STRUCT_LOG_TCP_CONNECT_COUNT},
     Level,
 };
 use chrono::{SecondsFormat, Utc};
@@ -16,17 +12,12 @@ use std::{
     collections::HashMap,
     env,
     fmt::Display,
-    fs::{File, OpenOptions},
     io,
     io::Write,
     marker::PhantomData,
     net::{TcpStream, ToSocketAddrs},
     str::FromStr,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        mpsc::{self, Receiver, SyncSender},
-    },
-    thread,
+    sync::atomic::{AtomicUsize, Ordering},
     time::Duration,
 };
 
@@ -49,10 +40,8 @@ const INITIALIZED: usize = 2;
 // Size configurations
 const MAX_LOG_LINE_SIZE: usize = 10240; // 10KiB
 const LOG_INFO_OFFSET: usize = 256;
-const WRITE_CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
-const NUM_SEND_RETRIES: u8 = 1;
 
 // Fields to keep when over size
 static FIELDS_TO_KEEP: &[&str] = &["error"];
@@ -363,49 +352,8 @@ pub fn struct_logger_set() -> bool {
     STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZED
 }
 
-/// Initializes struct logger from STRUCT_LOG_FILE env var.
-/// If STRUCT_LOG_FILE is set, STRUCT_LOG_TCP_ADDR will be ignored.
-/// Can only be called once
-pub fn init_struct_log_from_env() -> Result<(), InitLoggerError> {
-    if let Ok(file) = env::var("STRUCT_LOG_FILE") {
-        init_file_struct_log(file)
-    } else if let Ok(address) = env::var("STRUCT_LOG_TCP_ADDR") {
-        init_tcp_struct_log(address)
-    } else if let Ok(address) = env::var("STRUCT_LOG_UDP_ADDR") {
-        // Remove once all usages of STRUCT_LOG_UDP_ADDR are transferred over
-        init_tcp_struct_log(address)
-    } else {
-        Ok(())
-    }
-}
-
-/// Initializes struct logger sink that writes to specified file.
-/// Can only be called once
-pub fn init_file_struct_log(file_path: String) -> Result<(), InitLoggerError> {
-    let logger = FileStructLog::start_new(file_path).map_err(InitLoggerError::IoError)?;
-    let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
-}
-
-/// Initializes struct logger sink that stream logs through TCP protocol.
-/// Can only be called once
-pub fn init_tcp_struct_log(address: String) -> Result<(), InitLoggerError> {
-    let logger = TCPStructLog::start_new(address).map_err(InitLoggerError::IoError)?;
-    let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
-}
-
-/// Initialize struct logger sink that prints all structured logs to stdout
-/// Can only be called once
-pub fn init_println_struct_log() -> Result<(), InitLoggerError> {
-    let logger = PrintStructLog {};
-    let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger)
-}
-
 #[derive(Debug)]
 pub enum InitLoggerError {
-    IoError(io::Error),
     StructLoggerAlreadySet,
 }
 
@@ -431,140 +379,6 @@ struct PrintStructLog {}
 impl StructLogSink for PrintStructLog {
     fn send(&self, entry: StructuredLogEntry) {
         println!("{}", serde_json::to_string(&entry).unwrap());
-    }
-}
-
-/// Sink that prints all structured logs to specified file
-struct FileStructLog {
-    sender: SyncSender<StructuredLogEntry>,
-}
-
-impl FileStructLog {
-    /// Creates new FileStructLog and starts async thread to write results
-    pub fn start_new(file_path: String) -> io::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
-        let file = OpenOptions::new()
-            .append(true)
-            .create(true)
-            .open(file_path)?;
-        let sink_thread = FileStructLogThread { receiver, file };
-        thread::spawn(move || sink_thread.run());
-        Ok(Self { sender })
-    }
-}
-
-impl StructLogSink for FileStructLog {
-    fn send(&self, entry: StructuredLogEntry) {
-        if let Err(e) = self.sender.try_send(entry) {
-            // Use log crate macro to avoid generation of structured log in this case
-            // Otherwise we will have infinite loop
-            log::error!("Failed to send structured log: {}", e);
-        }
-    }
-}
-
-struct FileStructLogThread {
-    receiver: Receiver<StructuredLogEntry>,
-    file: File,
-}
-
-impl FileStructLogThread {
-    pub fn run(mut self) {
-        for entry in self.receiver {
-            let json_string = match entry.to_json_string() {
-                Ok(json_string) => json_string,
-                Err(_) => continue,
-            };
-            if let Err(e) = writeln!(&mut self.file, "{}", json_string) {
-                log::error!("Failed to write struct log entry: {}", e);
-            }
-        }
-    }
-}
-
-/// Sink that streams all structured logs to an address through TCP protocol
-struct TCPStructLog {
-    sender: SyncSender<String>,
-}
-
-impl TCPStructLog {
-    pub fn start_new(endpoint: String) -> io::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel(WRITE_CHANNEL_SIZE);
-        let sink_thread = TCPStructLogThread::new(receiver, endpoint);
-        thread::spawn(move || sink_thread.run());
-        Ok(Self { sender })
-    }
-}
-
-impl StructLogSink for TCPStructLog {
-    fn send(&self, entry: StructuredLogEntry) {
-        // Convert and trim before submitting to queue to ensure set log size
-        // TODO: Will this have an impact on performance of the writing thread from serialization?
-        if let Ok(json) = entry.to_json_string() {
-            if let Err(e) = self.sender.try_send(json) {
-                STRUCT_LOG_QUEUE_ERROR_COUNT.inc();
-                // Use log crate macro to avoid generation of structured log in this case
-                // Otherwise we will have infinite loop
-                log::error!("[Logging] Failed to send structured log: {}", e);
-            }
-        } else {
-            STRUCT_LOG_PARSE_ERROR_COUNT.inc();
-        }
-    }
-}
-
-/// Thread for sending logs to a Logging TCP endpoint
-///
-/// `write_log_line` Blocks on the oldest log in the `receiver` until it can properly connect to an endpoint.
-///   It will drop any message that is disconnected or failed in the middle of transmission after `NUM_SEND_RETRIES` retries.
-struct TCPStructLogThread {
-    receiver: Receiver<String>,
-    endpoint: String,
-}
-
-impl TCPStructLogThread {
-    fn new(receiver: Receiver<String>, endpoint: String) -> TCPStructLogThread {
-        TCPStructLogThread { receiver, endpoint }
-    }
-
-    /// Writes a log line into json_lines logstash format, which has a newline at the end
-    fn write_log_line(stream: &mut TcpWriter, message: String) -> io::Result<()> {
-        let message = message + "\n";
-        let bytes = message.as_bytes();
-
-        // Attempt to write the log up to NUM_SEND_RETRIES + 1, and then drop it
-        // Each `write_all` call will attempt to open a connection if one isn't open
-        let mut result = stream.write_all(bytes);
-        for _ in 0..NUM_SEND_RETRIES {
-            if result.is_ok() {
-                break;
-            } else {
-                result = stream.write_all(bytes);
-            }
-        }
-
-        result
-    }
-
-    pub fn run(self) {
-        let mut writer = TcpWriter::new(self.endpoint.clone());
-        for entry in &self.receiver {
-            PROCESSED_STRUCT_LOG_COUNT.inc();
-
-            // Write single log lines, guaranteeing stream is ready first
-            // Note: This does not guarantee delivery of a message cut off in the middle,
-            //       if there is an error after retries the log will be dropped.
-            if let Err(e) = Self::write_log_line(&mut writer, entry) {
-                STRUCT_LOG_SEND_ERROR_COUNT.inc();
-                log::error!(
-                    "[Logging] Error while sending data to logstash({}): {}",
-                    self.endpoint,
-                    e
-                );
-            } else {
-                SENT_STRUCT_LOG_COUNT.inc()
-            }
-        }
     }
 }
 

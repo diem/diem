@@ -36,8 +36,8 @@ fn main() {
         .channel_size(key_manager_config.logger.chan_size)
         .is_async(key_manager_config.logger.is_async)
         .level(key_manager_config.logger.level)
+        .read_env()
         .init();
-    libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
 
     MetricsPusher.start();
 
