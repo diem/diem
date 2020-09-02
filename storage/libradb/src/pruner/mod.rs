@@ -7,6 +7,7 @@
 use crate::{
     metrics::{
         LIBRA_STORAGE_OTHER_TIMERS_SECONDS, LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION,
+        LIBRA_STORAGE_PRUNE_WINDOW,
     },
     schema::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
@@ -59,6 +60,7 @@ impl Pruner {
         let worker_progress = Arc::new(AtomicU64::new(0));
         let worker_progress_clone = Arc::clone(&worker_progress);
 
+        LIBRA_STORAGE_PRUNE_WINDOW.set(historical_versions_to_keep as i64);
         let worker_thread = std::thread::Builder::new()
             .name("libradb_pruner".into())
             .spawn(move || Worker::new(db, command_receiver, worker_progress_clone).work_loop())

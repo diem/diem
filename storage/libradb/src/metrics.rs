@@ -63,6 +63,10 @@ pub static LIBRA_STORAGE_NEXT_BLOCK_EPOCH: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static LIBRA_STORAGE_PRUNE_WINDOW: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!("libra_storage_prune_window", "Libra storage prune window").unwrap()
+});
+
 pub static LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_storage_pruner_least_readable_state_version",
