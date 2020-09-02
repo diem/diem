@@ -106,12 +106,12 @@ Event emitted when the url used for off-chain dual attestation checking is rotat
 
 #### upgrade
 
-TODO: description
+Event emitted when a WriteSet transaction is committed which causes the state to be updated.
 
 | Name      | Type   | Description                 |
 |-----------|--------|-----------------------------|
 | type      | string | Constant string "upgrade"   |
-| write_set | string | TODO: desc                  |
+| write_set | string | lcs serialized writeset     |
 
 #### newepoch
 
