@@ -222,7 +222,8 @@ impl Writer for StderrWriter {
 
 #[cfg(test)]
 mod tests {
-    use crate::{text_log::*, *};
+    use super::*;
+    use crate::info;
     use std::sync::{Arc, RwLock};
 
     #[derive(Default)]

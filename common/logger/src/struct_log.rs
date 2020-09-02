@@ -58,7 +58,7 @@ static FIELDS_TO_KEEP: &[&str] = &["error"];
 pub struct StructuredLogEntry {
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
-    message: Option<String>,
+    pub(crate) message: Option<String>,
     /// description of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
@@ -73,12 +73,12 @@ pub struct StructuredLogEntry {
     module: Option<&'static str>,
     /// filename + line (e.g. consensus/src/round_manager.rs:678)
     #[serde(skip_serializing_if = "Option::is_none")]
-    location: Option<&'static str>,
+    pub(crate) location: Option<&'static str>,
     /// time of the log
-    timestamp: String,
+    pub(crate) timestamp: String,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]
-    level: Option<Level>,
+    pub(crate) level: Option<Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -138,7 +138,7 @@ impl StructuredLogEntry {
         value
     }
 
-    fn to_json_string(&self) -> Result<String, serde_json::Error> {
+    pub(crate) fn to_json_string(&self) -> Result<String, serde_json::Error> {
         let json = self.to_json()?;
 
         // If the message is too long, let's truncate the message and leave helpful info
@@ -568,7 +568,7 @@ impl TCPStructLogThread {
 /// A wrapper for `TcpStream` that handles reconnecting to the endpoint automatically
 ///
 /// `TcpWriter::write()` will block on the message until it is connected.
-struct TcpWriter {
+pub(crate) struct TcpWriter {
     /// The DNS name or IP address logs are being sent to
     endpoint: String,
     /// The `TCPStream` to write to, which will be `None` when disconnected
@@ -581,6 +581,10 @@ impl TcpWriter {
             endpoint,
             stream: None,
         }
+    }
+
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
     }
 
     /// Ensure that we get a connection, no matter how long it takes

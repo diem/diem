@@ -162,12 +162,14 @@ pub mod json_log;
 
 mod event;
 mod kv;
+mod libra_logger;
 mod logger;
 mod macros;
 mod metadata;
 mod security;
 mod struct_log;
 
+pub use crate::libra_logger::{LibraLogger, LibraLoggerBuilder, Writer};
 pub use event::Event;
 pub use metadata::{Level, Metadata};
 

@@ -20,6 +20,9 @@ pub struct Metadata {
 
     /// The line number in the source code file where the event occurred
     line: u32,
+
+    //TODO remove this once StructLogEntry is removed
+    location: &'static str,
 }
 
 impl Metadata {
@@ -29,6 +32,7 @@ impl Metadata {
         module_path: &'static str,
         file: &'static str,
         line: u32,
+        location: &'static str,
     ) -> Self {
         Self {
             level,
@@ -36,6 +40,7 @@ impl Metadata {
             module_path,
             file,
             line,
+            location,
         }
     }
 
@@ -61,6 +66,10 @@ impl Metadata {
 
     pub fn line(&self) -> u32 {
         self.line
+    }
+
+    pub fn location(&self) -> &'static str {
+        self.location
     }
 }
 

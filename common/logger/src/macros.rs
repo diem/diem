@@ -11,6 +11,7 @@ macro_rules! log {
             module_path!(),
             file!(),
             line!(),
+            $crate::location!(),
         );
 
         if metadata.enabled() {
