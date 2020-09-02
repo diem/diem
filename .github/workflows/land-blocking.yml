@@ -98,24 +98,6 @@ jobs:
             if [ $? -ne 0 ]; then
               echo "::set-env name=BUILD_PREV::1"
               cat lbt_images_output.txt
-              jq -n \
-                --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. Could not find a recent image tag for Compat Test" \
-                --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-              '{
-                "attachments": [
-                  {
-                    "text": $msg,
-                    "actions": [
-                      {
-                        "type": "button",
-                        "text": "Visit Job",
-                        "url": $url
-                      }
-                    ]
-                  }
-                ]
-              }' > /tmp/payload
-              curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
               exit 0
             else
               compat_prev_tag=$(tail -1 lbt_images_output.txt)
@@ -174,32 +156,6 @@ jobs:
             echo "report.json is empty or not found."
             msg_text="$msg_text Report:\nEmpty"
             ret=1
-          fi
-          if [ $ret -ne 0 ]; then
-            jq -n \
-              --arg msg "$msg_text" \
-              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
-              --arg pr_url "https://github.com/${{ github.repository }}/pull/$PR_NUM" \
-            '{
-              "attachments": [
-                {
-                  "text": $msg,
-                  "actions": [
-                    {
-                      "type": "button",
-                      "text": "Visit Job",
-                      "url": $url
-                    },
-                    {
-                      "type": "button",
-                      "text": "Visit PR",
-                      "url": $pr_url
-                    }
-                  ]
-                }
-              ]
-            }' > /tmp/payload
-            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
           fi
       - name: Post test results on PR
         if: steps.check_ks.outputs.should_run == 'true'
