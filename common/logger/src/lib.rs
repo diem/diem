@@ -162,13 +162,16 @@ pub mod prelude {
 }
 pub mod json_log;
 
+mod event;
 mod kv;
+mod logger;
 mod macros;
 mod metadata;
 mod security;
 mod struct_log;
 
-pub use metadata::Level;
+pub use event::Event;
+pub use metadata::{Level, Metadata};
 
 pub use struct_log::{
     init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,

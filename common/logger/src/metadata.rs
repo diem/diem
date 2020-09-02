@@ -1,10 +1,69 @@
-use serde::Serialize;
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Metadata {
+    /// The level of verbosity of the event
+    level: Level,
+
+    /// The part of the system where the event occurred
+    target: &'static str,
+
+    /// The name of the Rust module where the event occurred
+    module_path: &'static str,
+
+    /// The name of the source code file where the event occurred
+    file: &'static str,
+
+    /// The line number in the source code file where the event occurred
+    line: u32,
+}
+
+impl Metadata {
+    pub const fn new(
+        level: Level,
+        target: &'static str,
+        module_path: &'static str,
+        file: &'static str,
+        line: u32,
+    ) -> Self {
+        Self {
+            level,
+            target,
+            module_path,
+            file,
+            line,
+        }
+    }
+
+    pub fn level(&self) -> Level {
+        self.level
+    }
+
+    pub fn target(&self) -> &'static str {
+        self.target
+    }
+
+    pub fn module_path(&self) -> &'static str {
+        self.module_path
+    }
+
+    pub fn file(&self) -> &'static str {
+        self.file
+    }
+
+    pub fn line(&self) -> u32 {
+        self.line
+    }
+}
 
 static LOG_LEVEL_NAMES: &[&str] = &["ERROR", "WARN", "INFO", "DEBUG", "TRACE"];
 
 #[repr(usize)]
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Level {
     /// The "error" level.

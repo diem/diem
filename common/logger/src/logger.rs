@@ -1,0 +1,31 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{Event, Metadata};
+
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
+
+static LOGGER: OnceCell<Arc<dyn Logger>> = OnceCell::new();
+
+/// A trait encapsulating the operations required of a logger.
+pub trait Logger: Sync + Send + 'static {
+    /// Determines if an event with the specified metadata would be logged
+    fn enabled(&self, metadata: &Metadata) -> bool;
+
+    /// Record an event
+    fn record(&self, event: &Event);
+}
+
+pub(crate) fn dispatch(event: &Event) {
+    if let Some(logger) = LOGGER.get() {
+        logger.record(event)
+    }
+}
+
+pub fn set_global_logger(logger: Arc<dyn Logger>) {
+    LOGGER
+        .set(logger)
+        .map_err(|_| ())
+        .expect("Global logger has already been set");
+}
