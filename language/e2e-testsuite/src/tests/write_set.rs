@@ -204,7 +204,7 @@ fn bad_writesets() {
         *genesis_account.address(),
         StructTag {
             address: CORE_CODE_ADDRESS,
-            module: Identifier::new("LibraWriteSetManager").unwrap(),
+            module: Identifier::new("LibraTransaction").unwrap(),
             name: Identifier::new("LibraWriteSetManager").unwrap(),
             type_params: vec![],
         },

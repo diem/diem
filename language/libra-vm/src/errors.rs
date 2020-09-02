@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_logger::prelude::*;
-use move_core_types::vm_status::{known_locations, StatusCode, VMStatus};
+use move_core_types::vm_status::{known_locations, AbortLocation, StatusCode, VMStatus};
+use std::collections::HashMap;
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
 /// they are raised during the prologue.
@@ -24,6 +25,17 @@ pub const EMODULE_NOT_ALLOWED: u64 = 9;
 pub const EINVALID_WRITESET_SENDER: u64 = 33;
 // writeset prologue sequence nubmer is too new
 pub const EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+
+struct ErrorMap(HashMap<AbortLocation, HashMap<u64, VMStatus>>);
+
+impl ErrorMap {
+    pub fn new(map: Vec<(AbortLocation, u64, VMStatus)>) -> Self {
+        let mut result = HashMap::new();
+        for (loc, err_code, vm_status) in map.into_iter() {
+            result.entry(loc).or
+        }
+    }
+}
 
 /// Converts particular Move abort codes to specific validation error codes for the prologue
 /// Any non-abort non-execution code is considered an invariant violation, specifically

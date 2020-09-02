@@ -358,19 +358,19 @@ pub mod known_locations {
     }
 
     /// The name of the Write Set Manager module.
-    pub const WRITE_SET_MANAGER_MODULE_NAME: &str = "LibraWriteSetManager";
-    /// The Identifier for the Write Set Manager module.
-    pub static WRITE_SET_MANAGER_MODULE_IDENTIFIER: Lazy<Identifier> =
-        Lazy::new(|| Identifier::new(WRITE_SET_MANAGER_MODULE_NAME).unwrap());
-    /// The ModuleId for the Write Set Manager module.
-    pub static WRITE_SET_MANAGER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
+    pub const LIBRA_TRANSACTION_MODULE_NAME: &str = "LibraTransaction";
+    /// The Identifier for the LibraTransaction module.
+    pub static LIBRA_TRANSACTION_MODULE_IDENTIFIER: Lazy<Identifier> =
+        Lazy::new(|| Identifier::new(LIBRA_TRANSACTION_MODULE_NAME).unwrap());
+    /// The ModuleId for the LibraTransaction module.
+    pub static LIBRA_TRANSACTION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         ModuleId::new(
             CORE_CODE_ADDRESS,
-            WRITE_SET_MANAGER_MODULE_IDENTIFIER.clone(),
+            LIBRA_TRANSACTION_MODULE_IDENTIFIER.clone(),
         )
     });
-    pub fn write_set_manager_module_abort() -> AbortLocation {
-        AbortLocation::Module(WRITE_SET_MANAGER_MODULE.clone())
+    pub fn libra_transaction_module_abort() -> AbortLocation {
+        AbortLocation::Module(LIBRA_TRANSACTION_MODULE.clone())
     }
 }
 

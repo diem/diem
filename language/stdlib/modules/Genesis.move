@@ -20,7 +20,7 @@ module Genesis {
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionPublishingOption;
     use 0x1::LibraVersion;
-    use 0x1::LibraWriteSetManager;
+    use 0x1::LibraTransaction;
     use 0x1::Signer;
     use 0x1::TransactionFee;
     use 0x1::Roles;
@@ -92,7 +92,7 @@ module Genesis {
             lr_account,
         );
         LibraBlock::initialize_block_metadata(lr_account);
-        LibraWriteSetManager::initialize(lr_account);
+        LibraTransaction::initialize(lr_account);
         LibraTimestamp::initialize(lr_account);
 
         let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
