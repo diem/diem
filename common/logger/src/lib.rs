@@ -151,8 +151,6 @@
 //! 3) `FileStructLog` prints structured logs into a file. This logger separate thread for writing files asynchronously.
 //! 4) `TCPStructLog` sends structured logs to a TCP endpoint. This logger separate thread for sending logs asynchronously.
 
-pub use log;
-
 pub mod prelude {
     pub use crate::{
         debug, error, event, info,

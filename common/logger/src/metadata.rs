@@ -39,6 +39,10 @@ impl Metadata {
         }
     }
 
+    pub fn enabled(&self) -> bool {
+        crate::logger::enabled(self)
+    }
+
     pub fn level(&self) -> Level {
         self.level
     }

@@ -23,6 +23,13 @@ pub(crate) fn dispatch(event: &Event) {
     }
 }
 
+pub(crate) fn enabled(metadata: &Metadata) -> bool {
+    LOGGER
+        .get()
+        .map(|logger| logger.enabled(metadata))
+        .unwrap_or(false)
+}
+
 pub fn set_global_logger(logger: Arc<dyn Logger>) {
     LOGGER
         .set(logger)

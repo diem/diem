@@ -149,29 +149,4 @@ fn test_structured_logs() {
         let map = recieve_one_event(&receiver);
         assert_eq!(val, &map.string("level").as_str());
     }
-
-    // Ensure levels are copied over and logs are converted to structured logs
-    let value = "value";
-    trace!("NOT-ENABLED");
-    debug!("DEBUG {:?}", "Debug this");
-    info!("Info, alright! {}", value);
-    warn!("Warning! Get serious {}", "Serious warning");
-    error!("Error! I give up {} & {}", value, "match");
-
-    for val in &vals {
-        let map = recieve_one_event(&receiver);
-        assert_eq!(val, &map.string("level").as_str());
-    }
-
-    // Test pattern conversion
-    let value = "value";
-    info!("Let's try a pattern {} {}", "anonymous", value);
-
-    // Check specifics to text conversion
-    let map = recieve_one_event(&receiver);
-    assert_eq!("libra_logger", map.string("category").as_str());
-    assert_eq!(
-        format!("Let's try a pattern {} {}", "anonymous", value),
-        map.string("message")
-    );
 }

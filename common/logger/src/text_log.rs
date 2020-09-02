@@ -1,20 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::{Event, Level, Metadata};
 use chrono::Utc;
-use env_logger::filter;
-use log::{self, Level, Log, Metadata, Record};
 
 use std::{
-    env, fmt,
+    fmt,
     fmt::Write,
-    sync::mpsc::{self, Receiver, RecvError, SyncSender, TrySendError},
+    sync::{
+        mpsc::{self, Receiver, RecvError, SyncSender, TrySendError},
+        Arc,
+    },
     thread,
 };
 
 pub const CHANNEL_SIZE: usize = 256;
 pub const DEFAULT_TARGET: &str = "libra";
-const RUST_LOG: &str = "RUST_LOG";
 
 /// Logging framework for Libra that encapsulates a minimal dependency logger with support for
 /// environmental variable (RUST_LOG) and asynchronous logging.
@@ -74,46 +75,22 @@ impl Logger {
     }
 
     fn internal_init<W: 'static + Writer>(&mut self, writer: W) {
-        // Always prefer RUST_LOG
-        let mut use_level = self.override_rust_log;
-        let mut filter_builder = filter::Builder::new();
-
-        if let Ok(s) = env::var(RUST_LOG) {
-            filter_builder.parse(&s);
-        } else if self.environment_only {
-            // Turn off in case there was an active logger
-            log::set_max_level(::log::LevelFilter::Off);
+        if self.environment_only && ::std::env::var("RUST_LOG").is_err() {
             return;
-        } else {
-            use_level = true;
         }
-
-        if use_level {
-            filter_builder.filter(None, self.level.to_level_filter());
-        }
-
-        let filter = filter_builder.build();
-        // Even if there is an existing logger, update the logging level
-        log::set_max_level(filter.filter());
 
         if self.is_async {
             let (sender, receiver) = mpsc::sync_channel(self.channel_size);
 
-            let client = AsyncLogClient { filter, sender };
-            if let Err(e) = log::set_boxed_logger(Box::new(client)) {
-                eprintln!("Unable to set logger: {}", e);
-                return;
-            };
+            let client = AsyncLogClient { sender };
+            crate::logger::set_global_logger(Arc::new(client));
 
             let service = AsyncLogService { receiver, writer };
 
             thread::spawn(move || service.log_handler());
         } else {
-            let logger = SyncLogger { filter, writer };
-            if let Err(e) = log::set_boxed_logger(Box::new(logger)) {
-                eprintln!("Unable to set logger: {}", e);
-                return;
-            };
+            let logger = SyncLogger { writer };
+            crate::logger::set_global_logger(Arc::new(logger));
         }
     }
 }
@@ -126,27 +103,17 @@ impl Default for Logger {
 
 /// Provies the log::Log for Libra's synchronous logger
 struct SyncLogger<W> {
-    filter: filter::Filter,
     writer: W,
 }
 
-impl<W: Writer> Log for SyncLogger<W> {
+impl<W: Writer + 'static> crate::logger::Logger for SyncLogger<W> {
     /// Determines if a log message with the specified metadata would be logged.
     fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.enabled(metadata)
+        metadata.level() < Level::Trace
     }
 
     /// Logs the provided record but first evaluates the filters and then writes it.
-    fn log(&self, record: &Record) {
-        // The following filters out everything that does not deal with Libra
-        if record.metadata().target() != DEFAULT_TARGET {
-            return;
-        }
-
-        if !self.filter.matches(record) {
-            return;
-        }
-
+    fn record(&self, record: &Event) {
         match format(record) {
             Ok(formatted) => self.writer.write(formatted),
             Err(e) => self
@@ -154,9 +121,6 @@ impl<W: Writer> Log for SyncLogger<W> {
                 .write(format!("Unable to format log {:?}: {}", record, e)),
         };
     }
-
-    /// In this logger, this doesn't do anything.
-    fn flush(&self) {}
 }
 
 /// Operations between the AsyncLogClient and AsyncLogService
@@ -194,28 +158,18 @@ impl<W: Writer> AsyncLogService<W> {
 
 /// Provides the log::Log interface for Libra's asynchronous logger
 struct AsyncLogClient {
-    filter: filter::Filter,
     sender: SyncSender<LogOp>,
 }
 
-impl Log for AsyncLogClient {
+impl crate::logger::Logger for AsyncLogClient {
     /// Determines if a log message with the specified metadata would be logged.
     fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.enabled(metadata)
+        metadata.level() < Level::Trace
     }
 
     /// Logs the provided record but first evaluates the filters and then sending it to the
     /// AsyncLogService via a SyncSender.
-    fn log(&self, record: &Record) {
-        // The following filters out everything that does not deal with Libra
-        if record.metadata().target() != DEFAULT_TARGET {
-            return;
-        }
-
-        if !self.filter.matches(record) {
-            return;
-        }
-
+    fn record(&self, record: &Event) {
         let formatted = format(record)
             .unwrap_or_else(|e| format!("Unable to format log {:?} due to {}", record, e));
         if let Err(e) = self.sender.try_send(LogOp::Log(formatted)) {
@@ -227,30 +181,25 @@ impl Log for AsyncLogClient {
             }
         };
     }
-
-    /// In this logger, this doesn't do anything.
-    fn flush(&self) {}
 }
 
 /// Converts a record into a string representation:
 /// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
 /// Example:
 /// 2020-03-07 05:03:03 INFO common/libra-logger/src/lib.rs:261 Hello
-fn format(record: &Record) -> Result<String, fmt::Error> {
+fn format(record: &Event) -> Result<String, fmt::Error> {
     let mut buffer = String::new();
 
     write!(buffer, "{} ", record.metadata().level())?;
     write!(buffer, "{} ", Utc::now().format("%F %T"))?;
 
-    if let Some(file) = record.file() {
-        write!(buffer, "{}", file)?;
-        if let Some(line) = record.line() {
-            write!(buffer, ":{}", line)?;
-        }
-        write!(buffer, " ")?;
-    }
+    write!(buffer, "{}", record.metadata().file())?;
+    write!(buffer, ":{}", record.metadata().line())?;
+    write!(buffer, " ")?;
 
-    write!(buffer, "{}", record.args())?;
+    if let Some(message) = record.message() {
+        write!(buffer, "{}", message)?;
+    }
 
     Ok(buffer)
 }
@@ -295,9 +244,6 @@ mod tests {
 
         assert_eq!(logs.read().unwrap().len(), 0);
         info!("Hello");
-        assert_eq!(logs.read().unwrap().len(), 1);
-        // Ensure that libra target filtering works
-        log::info!("Hello");
         assert_eq!(logs.read().unwrap().len(), 1);
         let string = logs.write().unwrap().remove(0);
         assert!(string.contains("INFO"));

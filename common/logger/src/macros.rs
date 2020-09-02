@@ -2,63 +2,60 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #[macro_export]
-macro_rules! log1 {
+macro_rules! log {
     // Entry, Log Level + stuff
-    ($level:expr, $($args:tt)+) => {
-        if $crate::level_enabled!($level) {
-            let mut entry = $crate::StructuredLogEntry::default();
-            entry.add_category(module_path!().split("::").next().unwrap());
-            entry.add_module(module_path!());
-            entry.add_location($crate::location!());
-            if let Some(fmt_args) = $crate::fmt_args!($($args)+) {
-                entry = entry.message(::std::fmt::format(fmt_args));
-            }
-            entry = entry.level($level);
+    ($level:expr, $($args:tt)+) => {{
+        let metadata = $crate::Metadata::new(
+            $level,
+            module_path!().split("::").next().unwrap(),
+            module_path!(),
+            file!(),
+            line!(),
+        );
 
-            entry = entry.schemas($crate::schema!($($args)+));
-            entry.send();
+        if metadata.enabled() {
+            $crate::Event::dispatch(
+                &metadata,
+                $crate::fmt_args!($($args)+),
+                $crate::schema!($($args)+),
+            );
         }
-    };
+    }};
 }
 
 #[macro_export]
 macro_rules! trace {
-    ($($arg:tt)+) => {{
-        $crate::log1!($crate::Level::Trace, $($arg)+);
-        $crate::log::trace!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    }};
+    ($($arg:tt)+) => {
+        $crate::log!($crate::Level::Trace, $($arg)+)
+    };
 }
 
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)+) => {{
-        $crate::log1!($crate::Level::Debug, $($arg)+);
-        $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    }};
+    ($($arg:tt)+) => {
+        $crate::log!($crate::Level::Debug, $($arg)+)
+    };
 }
 
 #[macro_export]
 macro_rules! info {
-    ($($arg:tt)+) => {{
-        $crate::log1!($crate::Level::Info, $($arg)+);
-        $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    }};
+    ($($arg:tt)+) => {
+        $crate::log!($crate::Level::Info, $($arg)+)
+    };
 }
 
 #[macro_export]
 macro_rules! warn {
-    ($($arg:tt)+) => {{
-        $crate::log1!($crate::Level::Warn, $($arg)+);
-        $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    }};
+    ($($arg:tt)+) => {
+        $crate::log!($crate::Level::Warn, $($arg)+)
+    };
 }
 
 #[macro_export]
 macro_rules! error {
-    ($($arg:tt)+) => {{
-        $crate::log1!($crate::Level::Error, $($arg)+);
-        $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
-    }};
+    ($($arg:tt)+) => {
+        $crate::log!($crate::Level::Error, $($arg)+)
+    };
 }
 
 #[doc(hidden)]
@@ -190,17 +187,5 @@ macro_rules! fmt_args {
 macro_rules! __log_stringify {
     ($s:expr) => {
         stringify!($s)
-    };
-}
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! level_enabled {
-    // ($lvl:expr) => {
-    //     $lvl <= $crate::level_filters::STATIC_MAX_LEVEL
-    //         && $lvl <= $crate::level_filters::LevelFilter::current()
-    // };
-    ($level:expr) => {
-        $crate::struct_logger_enabled($level)
     };
 }

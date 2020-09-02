@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_logger::CHANNEL_SIZE;
-use log::Level;
+use libra_logger::{Level, CHANNEL_SIZE};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
