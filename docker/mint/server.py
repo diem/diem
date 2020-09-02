@@ -34,7 +34,7 @@ def create_client():
             chain_id)
 
         application.client = pexpect.spawn(cmd)
-        application.client.delaybeforesend = 0.1
+        application.client.delaybeforesend = 1.0
         application.client.expect("Please, input commands")
 
 
@@ -74,7 +74,7 @@ def send_transaction():
 
         application.client.sendline(
             "a m {} {} {} use_base_units".format(auth_key, amount, currency_code))
-        application.client.expect("Request submitted to faucet", timeout=2)
+        application.client.expect("Request submitted to faucet", timeout=4)
 
         application.client.terminate(True)
     except pexpect.exceptions.ExceptionPexpect:
