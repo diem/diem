@@ -88,20 +88,36 @@ impl Command {
     pub fn execute(self) -> String {
         match &self {
             Command::CreateAndInsertWaypoint(_) => {
-                self.create_and_insert_waypoint().unwrap().to_string()
+                Self::print_waypoint(self.create_and_insert_waypoint())
             }
-            Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
-            Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
-            Command::LibraRootKey(_) => self.libra_root_key().unwrap().to_string(),
-            Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
-            Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
-            Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
-            Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
-            Command::TreasuryComplianceKey(_) => {
-                self.treasury_compliance_key().unwrap().to_string()
-            }
-            Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
+            Command::CreateWaypoint(_) => Self::print_waypoint(self.create_waypoint()),
+            Command::Genesis(_) => Self::print(self.genesis()),
+            Command::LibraRootKey(_) => Self::print(self.libra_root_key()),
+            Command::OperatorKey(_) => Self::print(self.operator_key()),
+            Command::OwnerKey(_) => Self::print(self.owner_key()),
+            Command::SetLayout(_) => Self::print(self.set_layout()),
+            Command::SetOperator(_) => Self::print(self.set_operator()),
+            Command::TreasuryComplianceKey(_) => Self::print(self.treasury_compliance_key()),
+            Command::ValidatorConfig(_) => Self::print(self.validator_config()),
             Command::Verify(_) => self.verify().unwrap(),
+        }
+    }
+
+    fn print<T>(result: Result<T, Error>) -> String {
+        match result {
+            Ok(_) => "Success!".to_string(),
+            Err(e) => Self::print_error(e),
+        }
+    }
+
+    fn print_error(error: Error) -> String {
+        format!("Operation unsuccessful: {}", error.to_string())
+    }
+
+    fn print_waypoint(result: Result<Waypoint, Error>) -> String {
+        match result {
+            Ok(waypoint) => format!("Waypoint value: {}", waypoint),
+            Err(e) => Self::print_error(e),
         }
     }
 
