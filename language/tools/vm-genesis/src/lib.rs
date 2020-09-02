@@ -58,8 +58,9 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
 
 pub static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 
-pub type OperatorAssignment = (Ed25519PublicKey, Script); // Assigns an operator to each owner
-pub type OperatorRegistration = (Ed25519PublicKey, Script); // Registers a validator config
+pub type Name = Vec<u8>;
+pub type OperatorAssignment = (Ed25519PublicKey, Name, Script); // Assigns an operator to each owner
+pub type OperatorRegistration = (Ed25519PublicKey, Name, Script); // Registers a validator config
 
 pub fn encode_genesis_transaction(
     libra_root_key: Ed25519PublicKey,
@@ -395,20 +396,20 @@ fn create_and_initialize_owners_operators(
     let libra_root_address = account_config::libra_root_address();
 
     // Create accounts for each validator owner
-    for (owner_key, _) in operator_assignments {
+    for (owner_key, owner_name, _) in operator_assignments {
         let owner_auth_key = AuthenticationKey::ed25519(&owner_key);
         let owner_account = account_address::from_public_key(owner_key);
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
             0,
             owner_account,
             owner_auth_key.prefix().to_vec(),
-            vec![],
+            owner_name.clone(),
         );
         exec_script(session, libra_root_address, &create_owner_script);
     }
 
     // Create accounts for each validator operator
-    for (operator_key, _) in operator_registrations {
+    for (operator_key, operator_name, _) in operator_registrations {
         let operator_auth_key = AuthenticationKey::ed25519(&operator_key);
         let operator_account = account_address::from_public_key(operator_key);
         let create_operator_script =
@@ -416,25 +417,25 @@ fn create_and_initialize_owners_operators(
                 0,
                 operator_account,
                 operator_auth_key.prefix().to_vec(),
-                vec![],
+                operator_name.clone(),
             );
         exec_script(session, libra_root_address, &create_operator_script);
     }
 
     // Set the validator operator for each validator owner
-    for (owner_key, assignment) in operator_assignments {
+    for (owner_key, _, assignment) in operator_assignments {
         let owner_account = account_address::from_public_key(owner_key);
         exec_script(session, owner_account, assignment);
     }
 
     // Set the validator config for each validator
-    for (operator_key, registration) in operator_registrations {
+    for (operator_key, _, registration) in operator_registrations {
         let operator_account = account_address::from_public_key(operator_key);
         exec_script(session, operator_account, registration);
     }
 
     // Add each validator to the validator set
-    for (owner_key, _) in operator_assignments {
+    for (owner_key, _, _) in operator_assignments {
         let owner_account = account_address::from_public_key(owner_key);
         exec_function(
             session,
@@ -566,7 +567,7 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorRegistra
             let set_operator_script =
                 transaction_builder::encode_set_validator_operator_script(vec![], operator_account);
 
-            (owner_key, set_operator_script)
+            (owner_key, vec![], set_operator_script)
         })
         .collect::<Vec<_>>()
 }
@@ -612,7 +613,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
                 lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
                 lcs::to_bytes(&vec![addr]).unwrap(),
             );
-            (operator_key, script)
+            (operator_key, vec![], script)
         })
         .collect::<Vec<_>>()
 }
