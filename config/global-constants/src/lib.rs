@@ -12,7 +12,7 @@
 pub const CONSENSUS_KEY: &str = "consensus";
 pub const EXECUTION_KEY: &str = "execution";
 pub const FULLNODE_NETWORK_KEY: &str = "fullnode_network";
-pub const LIBRA_ROOT_KEY: &str = "root";
+pub const LIBRA_ROOT_KEY: &str = "libra_root";
 pub const OPERATOR_ACCOUNT: &str = "operator_account";
 pub const OPERATOR_KEY: &str = "operator";
 pub const OWNER_ACCOUNT: &str = "owner_account";

@@ -45,6 +45,7 @@ impl Genesis {
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let genesis = vm_genesis::encode_genesis_transaction(
+            libra_root_key.clone(),
             libra_root_key,
             &operator_assignments,
             &operator_registrations,

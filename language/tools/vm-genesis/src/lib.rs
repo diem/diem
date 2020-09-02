@@ -62,7 +62,8 @@ pub type OperatorAssignment = (Ed25519PublicKey, Script); // Assigns an operator
 pub type OperatorRegistration = (Ed25519PublicKey, Script); // Registers a validator config
 
 pub fn encode_genesis_transaction(
-    public_key: Ed25519PublicKey,
+    libra_root_key: Ed25519PublicKey,
+    treasury_compliance_key: Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
     vm_publishing_option: Option<VMPublishingOption>,
@@ -70,7 +71,8 @@ pub fn encode_genesis_transaction(
 ) -> Transaction {
     Transaction::GenesisTransaction(WriteSetPayload::Direct(
         encode_genesis_change_set(
-            &public_key,
+            &libra_root_key,
+            &treasury_compliance_key,
             operator_assignments,
             operator_registrations,
             stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
@@ -93,7 +95,8 @@ fn merge_txn_effects(
 }
 
 pub fn encode_genesis_change_set(
-    public_key: &Ed25519PublicKey,
+    libra_root_key: &Ed25519PublicKey,
+    treasury_compliance_key: &Ed25519PublicKey,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
     stdlib_modules: &[CompiledModule],
@@ -120,7 +123,8 @@ pub fn encode_genesis_change_set(
 
     create_and_initialize_main_accounts(
         &mut session,
-        &public_key,
+        &libra_root_key,
+        &treasury_compliance_key,
         vm_publishing_option,
         &lbr_ty,
         chain_id,
@@ -134,7 +138,7 @@ pub fn encode_genesis_change_set(
     reconfigure(&mut session);
 
     // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut session, &public_key);
+    create_and_initialize_testnet_minting(&mut session, &treasury_compliance_key);
 
     let effects_1 = session.finish().unwrap();
 
@@ -217,12 +221,14 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
-    public_key: &Ed25519PublicKey,
+    libra_root_key: &Ed25519PublicKey,
+    treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
     lbr_ty: &TypeTag,
     chain_id: ChainId,
 ) {
-    let genesis_auth_key = AuthenticationKey::ed25519(public_key);
+    let libra_root_auth_key = AuthenticationKey::ed25519(libra_root_key);
+    let treasury_compliance_auth_key = AuthenticationKey::ed25519(treasury_compliance_key);
 
     let root_libra_root_address = account_config::libra_root_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
@@ -245,9 +251,9 @@ fn create_and_initialize_main_accounts(
         vec![
             Value::transaction_argument_signer_reference(root_libra_root_address),
             Value::transaction_argument_signer_reference(tc_account_address),
-            Value::vector_u8(genesis_auth_key.to_vec()),
+            Value::vector_u8(libra_root_auth_key.to_vec()),
             Value::address(tc_account_address),
-            Value::vector_u8(genesis_auth_key.to_vec()),
+            Value::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
             Value::bool(publishing_option.is_open_module),
             Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
@@ -520,6 +526,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
+        &GENESIS_KEYPAIR.1,
         &operator_assignments(&swarm.nodes),
         &operator_registrations(&swarm.nodes),
         stdlib_modules,
@@ -535,6 +542,7 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
     let swarm = libra_config::generator::validator_swarm_for_testing(10);
 
     encode_genesis_change_set(
+        &GENESIS_KEYPAIR.1,
         &GENESIS_KEYPAIR.1,
         &operator_assignments(&swarm.nodes),
         &operator_registrations(&swarm.nodes),

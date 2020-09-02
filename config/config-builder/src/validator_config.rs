@@ -150,6 +150,7 @@ impl ValidatorConfig {
 
         let genesis = vm_genesis::encode_genesis_transaction(
             libra_root_key.public_key(),
+            libra_root_key.public_key(),
             &operator_assignments,
             &operator_registrations,
             self.template

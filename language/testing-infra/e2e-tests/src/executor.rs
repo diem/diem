@@ -114,6 +114,7 @@ impl FakeExecutor {
 
             vm_genesis::encode_genesis_change_set(
                 &GENESIS_KEYPAIR.1,
+                &GENESIS_KEYPAIR.1,
                 &vm_genesis::operator_assignments(&swarm.nodes),
                 &vm_genesis::operator_registrations(&swarm.nodes),
                 &genesis_modules,
