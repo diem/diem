@@ -8,6 +8,7 @@ use crate::{
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
 use anyhow::{anyhow, ensure, Result};
+use libra_logger::prelude::*;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures, transaction::Version, waypoint::Waypoint,
 };
@@ -44,14 +45,14 @@ impl EpochEndingRestoreController {
     }
 
     pub async fn run(self) -> Result<()> {
-        println!(
+        info!(
             "Epoch ending restore started. Manifest: {}",
             self.manifest_handle
         );
         self.run_impl()
             .await
             .map_err(|e| anyhow!("Epoch ending restore failed: {}", e))?;
-        println!("Epoch ending restore succeeded.");
+        info!("Epoch ending restore succeeded.");
         Ok(())
     }
 }
@@ -101,7 +102,7 @@ impl EpochEndingRestoreController {
                 .iter()
                 .position(|li| li.ledger_info().version() > self.target_version)
             {
-                println!(
+                info!(
                     "Ignoring epoch ending info beyond target_version. Epoch {} ends at {}, target_version: {}.",
                     lis[_end].ledger_info().epoch(),
                     lis[_end].ledger_info().version(),
@@ -122,7 +123,6 @@ impl EpochEndingRestoreController {
                 break;
             }
         }
-        println!("Finished restoring epoch ending info.");
 
         Ok(())
     }

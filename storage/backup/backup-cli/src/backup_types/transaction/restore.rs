@@ -10,6 +10,7 @@ use crate::{
 use anyhow::{anyhow, ensure, Result};
 use executor::Executor;
 use executor_types::TransactionReplayer;
+use libra_logger::prelude::*;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{TransactionAccumulatorRangeProof, TransactionListProof},
@@ -133,14 +134,14 @@ impl TransactionRestoreController {
     }
 
     pub async fn run(self) -> Result<()> {
-        println!(
+        info!(
             "Transaction restore started. Manifest: {}",
             self.manifest_handle
         );
         self.run_impl()
             .await
             .map_err(|e| anyhow!("Transaction restore failed: {}", e))?;
-        println!("Transaction restore succeeded.");
+        info!("Transaction restore succeeded.");
         Ok(())
     }
 }
@@ -151,7 +152,7 @@ impl TransactionRestoreController {
             self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
         if self.target_version < manifest.first_version {
-            println!(
+            warn!(
                 "Manifest {} skipped since its entirety is newer than target version {}.",
                 self.manifest_handle, self.target_version,
             );
@@ -190,7 +191,7 @@ impl TransactionRestoreController {
                 chunk.txn_infos.truncate(num_to_replay);
 
                 // replay in batches
-                println!("Replaying transactions {} to {}.", first_to_replay, last);
+                info!("Replaying transactions {} to {}.", first_to_replay, last);
                 #[cfg(not(test))]
                 const BATCH_SIZE: usize = 10000;
                 #[cfg(test)]
@@ -214,7 +215,7 @@ impl TransactionRestoreController {
         }
 
         if self.target_version < manifest.last_version {
-            println!(
+            warn!(
                 "Transactions newer than target version {} ignored.",
                 self.target_version,
             )

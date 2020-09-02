@@ -14,6 +14,7 @@ use crate::{
     utils::GlobalRestoreOpt,
 };
 use anyhow::{bail, Result};
+use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
@@ -48,6 +49,7 @@ impl RestoreCoordinator {
     }
 
     pub async fn run(self) -> Result<()> {
+        info!("Restore coordinator started.");
         let metadata_view =
             metadata::cache::sync_and_load(&self.metadata_cache_opt, Arc::clone(&self.storage))
                 .await?;
@@ -61,7 +63,7 @@ impl RestoreCoordinator {
             None => 0,
         };
         COORDINATOR_TARGET_VERSION.set(actual_target_version as i64);
-        println!("Planned to restore to version {}.", actual_target_version);
+        info!("Planned to restore to version {}.", actual_target_version);
 
         for backup in epoch_endings {
             EpochEndingRestoreController::new(
@@ -104,7 +106,7 @@ impl RestoreCoordinator {
             .await?;
         }
 
-        println!("Restore finished.");
+        info!("Restore coordinator exiting with success.");
         Ok(())
     }
 }
@@ -122,8 +124,8 @@ impl RestoreCoordinator {
             if b.last_version > self.target_version() {
                 Ok(self.target_version())
             } else {
-                println!(
-                    "Warning: Can't find transaction backup containing the target version, \
+                warn!(
+                    "Can't find transaction backup containing the target version, \
                     will restore as much as possible"
                 );
                 Ok(b.last_version)

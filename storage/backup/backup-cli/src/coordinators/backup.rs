@@ -14,6 +14,7 @@ use crate::{
 };
 use anyhow::{anyhow, ensure, Result};
 use futures::{stream, Future, StreamExt};
+use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use libradb::backup::backup_handler::DbState;
 use std::{fmt::Debug, sync::Arc};
@@ -124,7 +125,7 @@ impl BackupCoordinator {
             )
             .boxed_local();
 
-        println!("Backup coordinator started.");
+        info!("Backup coordinator started.");
         let mut all_work = stream::select_all(vec![
             watch_db_state,
             backup_epoch_endings,
@@ -132,7 +133,6 @@ impl BackupCoordinator {
             backup_transactions,
         ]);
 
-        println!("Backup coordinator started.");
         loop {
             all_work
                 .next()
@@ -149,7 +149,10 @@ impl BackupCoordinator {
                 .broadcast(s.expect("Db should have been bootstrapped."))
                 .map_err(|e| anyhow!("Receivers should not be cancelled: {}", e))
                 .unwrap(),
-            Err(e) => println!("Failed pulling DbState from local Libra node: {}", e),
+            Err(e) => warn!(
+                "Failed pulling DbState from local Libra node: {}. Will keep trying.",
+                e
+            ),
         };
     }
 
@@ -264,7 +267,7 @@ impl BackupCoordinator {
                     .ok_or_else(|| anyhow!("The broadcaster has been dropped."))
                     .unwrap();
                 let next_state = worker(self, s, db_state).await.unwrap_or_else(|e| {
-                    println!("backup failed: {}. Keep trying with state {:?}.", e, s);
+                    warn!("backup failed: {}. Keep trying with state {:?}.", e, s);
                     s
                 });
                 Some(((), (next_state, rx)))

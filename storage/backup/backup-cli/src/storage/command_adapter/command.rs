@@ -8,6 +8,7 @@ use futures::{
     task::{Context, Poll},
     Future, FutureExt,
 };
+use libra_logger::prelude::*;
 use std::{
     fmt::{Debug, Formatter},
     process::Stdio,
@@ -58,7 +59,7 @@ pub(super) struct SpawnedCommand {
 
 impl SpawnedCommand {
     pub fn spawn(command: Command) -> Result<Self> {
-        println!("Spawning {:?}", command);
+        debug!("Spawning {:?}", command);
 
         let mut cmd = tokio::process::Command::new("bash");
         cmd.args(&["-c", &command.cmd_str]);

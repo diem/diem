@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
@@ -52,14 +53,14 @@ impl StateSnapshotRestoreController {
     }
 
     pub async fn run(self) -> Result<()> {
-        println!(
+        info!(
             "State snapshot restore started. Manifest: {}",
             self.manifest_handle
         );
         self.run_impl()
             .await
             .map_err(|e| anyhow!("State snapshot restore failed: {}", e))?;
-        println!("State snapshot restore succeeded.");
+        info!("State snapshot restore succeeded.");
         Ok(())
     }
 }
@@ -67,8 +68,8 @@ impl StateSnapshotRestoreController {
 impl StateSnapshotRestoreController {
     async fn run_impl(self) -> Result<()> {
         if self.version > self.target_version {
-            println!(
-                "Trying to restore state snapshot to version {}, which is newer than the target version {}.",
+            warn!(
+                "Trying to restore state snapshot to version {}, which is newer than the target version {}, skipping.",
                 self.version,
                 self.target_version,
             );
@@ -94,7 +95,6 @@ impl StateSnapshotRestoreController {
         }
 
         receiver.finish()?;
-        println!("Finished restoring state snapshot.");
         Ok(())
     }
 

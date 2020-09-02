@@ -13,6 +13,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use libra_crypto::HashValue;
+use libra_logger::prelude::*;
 use libra_types::{
     account_state_blob::AccountStateBlob, ledger_info::LedgerInfoWithSignatures,
     proof::TransactionInfoWithProof, transaction::Version,
@@ -54,7 +55,7 @@ impl StateSnapshotBackupController {
     }
 
     pub async fn run(self) -> Result<FileHandle> {
-        println!(
+        info!(
             "State snapshot backup started, for version {}.",
             self.version,
         );
@@ -62,7 +63,7 @@ impl StateSnapshotBackupController {
             .run_impl()
             .await
             .map_err(|e| anyhow!("State snapshot backup failed: {}", e))?;
-        println!("State snapshot backup succeeded. Manifest: {}", ret);
+        info!("State snapshot backup succeeded. Manifest: {}", ret);
         Ok(ret)
     }
 

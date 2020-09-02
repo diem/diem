@@ -170,7 +170,6 @@ proptest! {
 
     #[test]
     fn test_end_to_end(d in test_data_strategy()) {
-        println!("{:?}", d);
         test_end_to_end_impl(d)
     }
 }

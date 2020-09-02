@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use anyhow::{anyhow, ensure, Result};
+use libra_logger::prelude::*;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint};
 use once_cell::sync::Lazy;
 use std::{convert::TryInto, str::FromStr, sync::Arc};
@@ -54,7 +55,7 @@ impl EpochEndingBackupController {
     }
 
     pub async fn run(self) -> Result<FileHandle> {
-        println!(
+        info!(
             "Epoch ending backup started, starting from epoch {}, unill epoch {} (excluded).",
             self.start_epoch, self.end_epoch,
         );
@@ -62,7 +63,7 @@ impl EpochEndingBackupController {
             .run_impl()
             .await
             .map_err(|e| anyhow!("Epoch ending backup failed: {}", e))?;
-        println!("Epoch ending backup succeeded. Manifest: {}", ret);
+        info!("Epoch ending backup succeeded. Manifest: {}", ret);
         Ok(ret)
     }
 }

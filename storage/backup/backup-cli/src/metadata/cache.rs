@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
+use libra_logger::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
@@ -74,6 +75,7 @@ pub async fn sync_and_load(
         .map(|file_handle| (file_handle.file_handle_hash(), file_handle))
         .collect();
     let remote_hashes: HashSet<_> = remote_file_handle_by_hash.keys().cloned().collect();
+    info!("Metadata files listed.");
 
     // Sync local cache with remote metadata files.
     let stale_local_hashes = local_hashes.difference(&remote_hashes);
@@ -110,6 +112,7 @@ pub async fn sync_and_load(
                 .into_iter(),
         )
     }
+    info!("Metadata cache loaded.");
     Ok(metadata_vec.into())
 }
 
