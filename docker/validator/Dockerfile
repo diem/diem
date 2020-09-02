@@ -17,6 +17,7 @@ RUN rustup install $(cat cargo-toolchain)
 
 FROM toolchain AS builder
 
+ARG ENABLE_FAILPOINTS
 COPY . /libra
 
 RUN ./docker/build-common.sh

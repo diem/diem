@@ -85,6 +85,7 @@ submit_build() {
     # comma in its specification
     BUILD_ID=$(aws codebuild start-build --project-name "${PROJECT}" \
     --environment-variables-override name=TAGS,value=${TAGS//,/:} \
+      name=ENABLE_FAILPOINTS,value=$ENABLE_FAILPOINTS \
     --source-version ${SOURCE_VERSION} | jq -r .build.id)
 
     if [ -z "${BUILD_ID}" ]; then

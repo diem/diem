@@ -26,6 +26,12 @@ ${CARGO} ${CARGOFLAGS} build --release \
          -p backup-cli \
          "$@"
 
+# Build and overwrite the libra-node binary with feature failpoints if $ENABLE_FAILPOINTS is configured
+if [ "$ENABLE_FAILPOINTS" = "1" ]; then
+  echo "Building libra-node with failpoints feature"
+  (cd libra-node && ${CARGO} ${CARGOFLAGS} build --release --features failpoints "$@")
+fi
+
 # These non-release binaries are built separately to avoid feature unification issues
 ${CARGO} ${CARGOFLAGS} build --release \
          -p cluster-test \

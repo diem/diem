@@ -14,7 +14,7 @@ RESTORE='\001\033[0m\002'
 BLUE='\001\033[01;34m\002'
 DOCKERFILE_BUILD_RE='^RUN ./docker/build-common.sh$'
 
-if [ -z "$DOCKERFILE" ] || [ -z "$TAG" ]
+if [ -z "$DOCKERFILE" ] || [ -z "$TAGS" ]
 then
   echo "Usage libra-build.sh <Docker_file> <Local_tag> <Other_args>"
 fi
@@ -60,7 +60,7 @@ if [ "$1" = "--incremental" ]; then
     echo "${BLUE}Tip:${RESTORE}: If you see unexpected failure, try docker rm -f $CONTAINER"
   fi
   CONTAINER_TARGET=/target
-  docker exec -e "STRIP_DIR=$CONTAINER_TARGET" -i -t "$CONTAINER" ./docker/build-common.sh --target-dir "$CONTAINER_TARGET"
+  docker exec -e "STRIP_DIR=$CONTAINER_TARGET" -e "ENABLE_FAILPOINTS=$ENABLE_FAILPOINTS" -i -t "$CONTAINER" ./docker/build-common.sh --target-dir "$CONTAINER_TARGET"
   echo "${BLUE}Build is done, copying over artifacts${RESTORE}"
   docker exec -i -t "$CONTAINER" sh -c 'find /target/release -maxdepth 1 -executable -type f | xargs -I F cp F /out-target'
   TMP_DOCKERFILE="$DOCKERFILE.tmp"
@@ -76,6 +76,7 @@ for _ in seq 1 2; do
     --build-arg GIT_REV="$(git rev-parse HEAD)" \
     --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" \
     --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+    --build-arg ENABLE_FAILPOINTS="$ENABLE_FAILPOINTS"
     $PROXY \
     "$@"; then
       exit 0
