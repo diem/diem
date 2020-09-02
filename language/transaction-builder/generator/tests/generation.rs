@@ -245,20 +245,32 @@ fn test_that_java_code_compiles_and_demo_runs() {
     )
     .unwrap();
 
-    let paths = std::iter::empty()
-        .chain(std::fs::read_dir(dir.path().join("com/novi/serde")).unwrap())
-        .chain(std::fs::read_dir(dir.path().join("com/novi/lcs")).unwrap())
-        .chain(std::fs::read_dir(dir.path().join("org/libra/types")).unwrap())
-        .chain(std::fs::read_dir(dir.path().join("org/libra/stdlib")).unwrap())
-        .map(|e| e.unwrap().path())
-        .chain(std::iter::once(dir.path().join("StdlibDemo.java")));
+    let paths = || {
+        std::iter::empty()
+            .chain(std::fs::read_dir(dir.path().join("com/novi/serde")).unwrap())
+            .chain(std::fs::read_dir(dir.path().join("com/novi/lcs")).unwrap())
+            .chain(std::fs::read_dir(dir.path().join("org/libra/types")).unwrap())
+            .chain(std::fs::read_dir(dir.path().join("org/libra/stdlib")).unwrap())
+            .map(|e| e.unwrap().path())
+            .chain(std::iter::once(dir.path().join("StdlibDemo.java")))
+    };
+
+    let status = Command::new("javadoc")
+        .arg("-sourcepath")
+        .arg(dir.path())
+        .arg("-d")
+        .arg(dir.path().join("html"))
+        .args(paths())
+        .status()
+        .unwrap();
+    assert!(status.success());
 
     let status = Command::new("javac")
         .arg("-cp")
         .arg(dir.path())
         .arg("-d")
         .arg(dir.path())
-        .args(paths)
+        .args(paths())
         .status()
         .unwrap();
     assert!(status.success());

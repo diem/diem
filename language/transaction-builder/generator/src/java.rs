@@ -94,7 +94,7 @@ fn write_script_call_files(
                 .collect::<Vec<_>>();
             paths.push("ScriptCall".to_string());
             paths.push(abi.name().to_camel_case());
-            (paths, crate::common::prepare_doc_string(abi.doc()))
+            (paths, prepare_doc_string(abi.doc()))
         })
         .collect();
     comments.insert(
@@ -110,6 +110,24 @@ fn write_script_call_files(
         .write_source_files(install_dir, &script_registry)
         .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, format!("{}", err)))?;
     Ok(())
+}
+
+/// Add minimal escaping for Javadoc.
+fn prepare_doc_string(doc: &str) -> String {
+    let doc = crate::common::prepare_doc_string(doc);
+    // Escape quoted strings and special characters.
+    let doc = regex::Regex::new("`([^`]*)`|(>=)|(<=)|(>)|(<)")
+        .unwrap()
+        .replace_all(&doc, "{@code $1$2$3$4$5}");
+    // Replace subsection titles.
+    let doc = regex::Regex::new("##* (.*)\n")
+        .unwrap()
+        .replace_all(&doc, "<p><b>$1</b>\n");
+    // Simulate lists.
+    let doc = regex::Regex::new("\n\\* (.*)")
+        .unwrap()
+        .replace_all(&doc, "\n<ul><li>$1</li></ul>");
+    doc.to_string()
 }
 
 /// Shared state for the Java code generator.
@@ -149,7 +167,10 @@ import com.novi.serde.Bytes;
             self.out,
             r#"
 /**
- * Build a Libra `Script` from a structured object `ScriptCall`.
+ * Build a Libra {{@link org.libra.types.Script}} from a structured value {{@link ScriptCall}}.
+ *
+ * @param call {{@link ScriptCall}} value to encode.
+ * @return Encoded script.
  */
 public static Script encode_script(ScriptCall call) {{
     EncodingHelper helper = SCRIPT_ENCODER_MAP.get(call.getClass());
@@ -163,7 +184,10 @@ public static Script encode_script(ScriptCall call) {{
             self.out,
             r#"
 /**
- * Try to recognize a Libra `Script` and convert it into a structured object `ScriptCall`.
+ * Try to recognize a Libra {{@link org.libra.types.Script}} and convert it into a structured value {{@code ScriptCall}}.
+ *
+ * @param script {{@link org.libra.types.Script}} values to decode.
+ * @return Decoded {{@link ScriptCall}} value.
  */
 public static ScriptCall decode_script(Script script) throws IllegalArgumentException, IndexOutOfBoundsException {{
     DecodingHelper helper = SCRIPT_DECODER_MAP.get(script.code);
@@ -177,17 +201,43 @@ public static ScriptCall decode_script(Script script) throws IllegalArgumentExce
     }
 
     fn output_script_encoder_function(&mut self, abi: &ScriptABI) -> Result<()> {
+        let quoted_type_params: Vec<_> = abi
+            .ty_args()
+            .iter()
+            .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
+            .collect();
+        let quoted_type_params_doc: Vec<_> = abi
+            .ty_args()
+            .iter()
+            .map(|ty_arg| format!("{} {{@code TypeTag}} value", ty_arg.name()))
+            .collect();
+        let quoted_params: Vec<_> = abi
+            .args()
+            .iter()
+            .map(|arg| format!("{} {}", Self::quote_type(arg.type_tag()), arg.name()))
+            .collect();
+        let quoted_params_doc: Vec<_> = abi
+            .args()
+            .iter()
+            .map(|arg| {
+                format!(
+                    "{} {{@code {}}} value",
+                    arg.name(),
+                    Self::quote_type(arg.type_tag())
+                )
+            })
+            .collect();
+
         writeln!(
             self.out,
             "\n{}public static Script encode_{}_script({}) {{",
-            Self::quote_doc(abi.doc()),
+            Self::quote_doc(
+                abi.doc(),
+                [quoted_type_params_doc, quoted_params_doc].concat(),
+                "Encoded {@link org.libra.types.Script} value.",
+            ),
             abi.name(),
-            [
-                Self::quote_type_parameters(abi.ty_args()),
-                Self::quote_parameters(abi.args()),
-            ]
-            .concat()
-            .join(", ")
+            [quoted_type_params, quoted_params].concat().join(", ")
         )?;
         self.out.indent();
         writeln!(
@@ -360,7 +410,7 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
     fn output_code_constant(&mut self, abi: &ScriptABI) -> Result<()> {
         writeln!(
             self.out,
-            "\npublic static byte[] {}_CODE = {{{}}};",
+            "\nprivate static byte[] {}_CODE = {{{}}};",
             abi.name().to_shouty_snake_case(),
             abi.code()
                 .iter()
@@ -371,23 +421,17 @@ private static {} decode_{}_argument(TransactionArgument arg) {{
         Ok(())
     }
 
-    fn quote_doc(doc: &str) -> String {
-        let doc = crate::common::prepare_doc_string(doc);
+    fn quote_doc<I>(doc: &str, params_doc: I, return_doc: &str) -> String
+    where
+        I: IntoIterator<Item = String>,
+    {
+        let mut doc = prepare_doc_string(doc) + "\n";
+        for text in params_doc {
+            doc = format!("{}\n@param {}", doc, text);
+        }
+        doc = format!("{}\n@return {}", doc, return_doc);
         let text = textwrap::indent(&doc, " * ").replace("\n\n", "\n *\n");
         format!("/**\n{} */\n", text)
-    }
-
-    fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
-        ty_args
-            .iter()
-            .map(|ty_arg| format!("TypeTag {}", ty_arg.name()))
-            .collect()
-    }
-
-    fn quote_parameters(args: &[ArgumentABI]) -> Vec<String> {
-        args.iter()
-            .map(|arg| format!("{} {}", Self::quote_type(arg.type_tag()), arg.name()))
-            .collect()
     }
 
     fn quote_type_arguments(ty_args: &[TypeArgumentABI]) -> String {
