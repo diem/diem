@@ -96,7 +96,7 @@ impl Drop for SpeculationBlock {
             .unwrap()
             .remove(&self.id())
             .expect("Speculation block must exist in block_map before being dropped.");
-        sl_debug!(executor_log(LogEntry::Cache)
+        debug!(executor_log(LogEntry::Cache)
             .data(logging::EVENT, "Block dropped")
             .data("block_id", self.id()));
     }
@@ -189,7 +189,7 @@ impl SpeculationCache {
             // Update the root block id with reconfig virtual block id, to be consistent
             // with the logic of Consensus.
             let id = Block::make_genesis_block_from_ledger_info(committed_ledger_info).id();
-            sl_info!(executor_log(LogEntry::Cache)
+            info!(executor_log(LogEntry::Cache)
                 .data(
                     logging::EVENT,
                     "Updated with a new root block as a virtual block of reconfiguration block"
@@ -202,7 +202,7 @@ impl SpeculationCache {
             id
         } else {
             let id = committed_ledger_info.consensus_block_id();
-            sl_info!(executor_log(LogEntry::Cache)
+            info!(executor_log(LogEntry::Cache)
                 .data(logging::EVENT, "Updated with a new root block")
                 .data("root_block_id", id));
             id

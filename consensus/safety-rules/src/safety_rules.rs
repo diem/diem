@@ -147,7 +147,7 @@ impl SafetyRules {
         let updated = match two_chain_round.cmp(&preferred_round) {
             Ordering::Greater => {
                 safety_data.preferred_round = two_chain_round;
-                sl_info!(
+                info!(
                     SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
                         .preferred_round(safety_data.preferred_round)
                         .into_struct_log()
@@ -198,7 +198,7 @@ impl SafetyRules {
         let last_voted_round = safety_data.last_voted_round;
         if round > last_voted_round {
             safety_data.last_voted_round = round;
-            sl_info!(
+            info!(
                 SafetyLogSchema::new(LogEntry::LastVotedRound, LogEvent::Update)
                     .last_voted_round(safety_data.last_voted_round)
                     .into_struct_log()
@@ -248,12 +248,11 @@ impl SafetyRules {
                     .consensus_key_for_version(expected_key)
                     .ok()
                     .ok_or_else(|| {
-                        sl_error!(SafetyLogSchema::new(
-                            LogEntry::KeyReconciliation,
-                            LogEvent::Error
-                        )
-                        .into_struct_log()
-                        .message("Validator key not found".into()));
+                        error!(
+                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error)
+                                .into_struct_log()
+                                .message("Validator key not found".into())
+                        );
 
                         self.validator_signer = None;
                         Error::InternalError("Validator key not found".into())
@@ -262,13 +261,13 @@ impl SafetyRules {
                 self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
             }
 
-            sl_debug!(
+            debug!(
                 SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
                     .into_struct_log()
                     .message("in set".into())
             );
         } else {
-            sl_debug!(
+            debug!(
                 SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
                     .into_struct_log()
                     .message("not in set".into())
@@ -294,7 +293,7 @@ impl SafetyRules {
                 None,
             ))?;
 
-            sl_info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update)
+            info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update)
                 .epoch(epoch_state.epoch)
                 .into_struct_log());
         }
@@ -449,16 +448,16 @@ where
     F: FnOnce() -> Result<R, Error>,
     L: for<'a> Fn(SafetyLogSchema<'a>) -> SafetyLogSchema<'a>,
 {
-    sl_debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)).into_struct_log());
+    debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)).into_struct_log());
     counters::increment_query(log_entry.as_str(), "request");
     callback()
         .map(|v| {
-            sl_info!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Success)).into_struct_log());
+            info!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Success)).into_struct_log());
             counters::increment_query(log_entry.as_str(), "success");
             v
         })
         .map_err(|err| {
-            sl_error!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Error))
+            error!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Error))
                 .error(&err)
                 .into_struct_log());
             counters::increment_query(log_entry.as_str(), "error");

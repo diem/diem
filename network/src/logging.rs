@@ -9,7 +9,7 @@
 //! use libra_logger::prelude::*;
 //! use network::logging::*;
 //!
-//! sl_info!(
+//! info!(
 //!   network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &NetworkContext::mock())
 //!     .data(network_events::TYPE, network_events::START)
 //!     .field(network_events::EVENT_ID, &5)

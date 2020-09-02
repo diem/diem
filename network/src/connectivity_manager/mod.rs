@@ -250,7 +250,7 @@ where
         // When we first startup, let's attempt to connect with our seed peers.
         self.check_connectivity(&mut pending_dials).await;
 
-        sl_info!(network_log(
+        info!(network_log(
             network_events::CONNECTIVITY_MANAGER_LOOP,
             &self.network_context
         )
@@ -259,14 +259,14 @@ where
             self.event_id = self.event_id.wrapping_add(1);
             ::futures::select! {
                 _ = self.ticker.select_next_some() => {
-                    sl_trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "tick")
                         .field(network_events::EVENT_ID, &self.event_id)
                     );
                     self.check_connectivity(&mut pending_dials).await;
                 },
                 req = self.requests_rx.select_next_some() => {
-                    sl_trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connectivity_request")
                         .field(network_events::CONNECTIVITY_REQUEST, &req)
                         .field(network_events::EVENT_ID, &self.event_id)
@@ -274,7 +274,7 @@ where
                     self.handle_request(req);
                 },
                 notif = self.connection_notifs_rx.select_next_some() => {
-                    sl_trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connection_notification")
                         .field(network_events::EVENT_ID, &self.event_id)
                         .field(network_events::CONNECTION_NOTIFICATION, &notif)
@@ -282,7 +282,7 @@ where
                     self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
-                    sl_trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "dial_complete")
                         .field(network_events::EVENT_ID, &self.event_id)
                         .field(network_events::REMOTE_PEER, &peer_id)
@@ -290,7 +290,7 @@ where
                     self.dial_queue.remove(&peer_id);
                 },
                 complete => {
-                    sl_error!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                    error!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, network_events::TERMINATION)
                     );
                     break;
@@ -543,7 +543,7 @@ where
         // Only log the total state if anything has actually changed.
         if have_any_changed {
             let peer_addrs = &self.peer_addrs;
-            sl_info!(network_log("peer_addresses_update", &self.network_context)
+            info!(network_log("peer_addresses_update", &self.network_context)
                 .field(DISCOVERY_SOURCE, &src)
                 .data("peer_addresses", &peer_addrs));
         }
@@ -593,7 +593,7 @@ where
             // to generate the new eligible peers set.
             let new_eligible = self.peer_pubkeys.union_all();
 
-            sl_info!(network_log("eligible_peers_update", &self.network_context)
+            info!(network_log("eligible_peers_update", &self.network_context)
                 .field(DISCOVERY_SOURCE, &src)
                 .data("eligible_peers", &new_eligible));
 

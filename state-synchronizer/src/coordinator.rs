@@ -332,7 +332,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     .await
                 {
                     // security log
-                    sl_error!(security_log(security_events::STATE_SYNC_INVALID_CHUNK)
+                    error!(security_log(security_events::STATE_SYNC_INVALID_CHUNK)
                         .data("from_peer", &peer)
                         .data_display("error", &err)
                         .data("chunk", &response));

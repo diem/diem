@@ -386,7 +386,7 @@ where
     /// Start listening on the set address and return a future which runs PeerManager
     pub async fn start(mut self) {
         // Start listening for connections.
-        sl_info!(
+        info!(
             network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                 .data(network_events::TYPE, network_events::START)
         );
@@ -394,21 +394,21 @@ where
         loop {
             ::futures::select! {
                 connection_event = self.transport_notifs_rx.select_next_some() => {
-                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connection_event")
                         .data(network_events::EVENT, &connection_event)
                     );
                     self.handle_connection_event(connection_event);
                 }
                 request = self.requests_rx.select_next_some() => {
-                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "request")
                         .field(network_events::PEER_MANAGER_REQUEST, &request)
                     );
                     self.handle_request(request).await;
                 }
                 connection_request = self.connection_reqs_rx.select_next_some() => {
-                    sl_trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    trace!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, "connection_request")
                         .field(network_events::CONNECTION_REQUEST, &connection_request)
                     );
@@ -416,7 +416,7 @@ where
                 }
                 complete => {
                     // TODO: This should be ok when running in client mode.
-                    sl_error!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                    error!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
                         .data(network_events::TYPE, network_events::TERMINATION)
                     );
                     break;
@@ -433,7 +433,7 @@ where
         );
         match event {
             TransportNotification::NewConnection(conn) => {
-                sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
+                info!(network_log(TRANSPORT_EVENT, &self.network_context)
                     .message(format!(
                         "{} New connection established: {}",
                         self.network_context, conn.metadata
@@ -447,7 +447,7 @@ where
             TransportNotification::Disconnected(lost_conn_metadata, reason) => {
                 // See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for
                 // detailed reasoning on `Disconnected` events should be handled correctly.
-                sl_info!(network_log(TRANSPORT_EVENT, &self.network_context)
+                info!(network_log(TRANSPORT_EVENT, &self.network_context)
                     .message(format!(
                         "{} Connection {} closed due to {}",
                         self.network_context, lost_conn_metadata, reason

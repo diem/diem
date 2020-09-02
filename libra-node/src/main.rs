@@ -45,7 +45,7 @@ fn main() {
             .init();
 
         // Let's now log some important information, since the logger is set up
-        sl_info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
+        info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
     }
 
     if config.metrics.enabled {

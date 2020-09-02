@@ -17,7 +17,7 @@ use crate::{
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
-use libra_logger::sl_debug;
+use libra_logger::debug;
 use libra_time::duration_since_epoch;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
@@ -255,7 +255,7 @@ impl NoiseUpgrader {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // send the first handshake message
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "writing_data")
@@ -268,7 +268,7 @@ impl NoiseUpgrader {
         socket.flush().await?;
 
         // receive the server's response (<- e, ee, se)
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "reading_data")
@@ -282,7 +282,7 @@ impl NoiseUpgrader {
 
         // parse the server's response
         // TODO: security logging here? (mimoo)
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "client")
                 .data("step", "finalizing")
@@ -319,7 +319,7 @@ impl NoiseUpgrader {
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
         // receive the prologue + first noise handshake message
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "reading_data")
@@ -474,7 +474,7 @@ impl NoiseUpgrader {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // send the response
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "writing_data")
@@ -486,7 +486,7 @@ impl NoiseUpgrader {
         socket.write_all(&server_response).await?;
 
         // finalize the connection
-        sl_debug!(
+        debug!(
             network_log(network_events::NOISE_UPGRADE, &self.network_context)
                 .data("role", "server")
                 .data("step", "finalize")

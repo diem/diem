@@ -186,7 +186,7 @@ where
         let first_txn_version = match txn_list_with_proof.first_transaction_version {
             Some(tx) => tx as Version,
             None => {
-                sl_error!(StructuredLogEntry::new_named("MUST_FIX", "assertion")
+                error!(StructuredLogEntry::new_named("MUST_FIX", "assertion")
                     .data("details", "first_transaction_version should exist."));
                 return Err(anyhow!("first_transaction_version should exist."));
             }
@@ -208,7 +208,7 @@ where
         // 2. Verify that skipped transactions match what's already persisted (no fork):
         let num_txns_to_skip = num_committed_txns - first_txn_version;
 
-        sl_info!(executor_log(LogEntry::Chunk)
+        info!(executor_log(LogEntry::Chunk)
             .data(logging::EVENT, "skipping_chunk_txns")
             .data("num", num_txns_to_skip));
 
@@ -524,7 +524,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // 1. Update the cache in executor to be consistent with latest synced state.
         self.reset_cache()?;
 
-        sl_info!(executor_log(LogEntry::Chunk)
+        info!(executor_log(LogEntry::Chunk)
             .data(logging::EVENT, "sync_request_received")
             .data(
                 "local_synced_version",
@@ -574,7 +574,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         }
         self.cache.reset();
 
-        sl_info!(executor_log(LogEntry::Chunk)
+        info!(executor_log(LogEntry::Chunk)
             .data(logging::EVENT, "synced_finished")
             .data(
                 "synced_to_version",
@@ -651,7 +651,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             let parent_block = parent.lock().unwrap();
             let parent_output = parent_block.output();
 
-            sl_info!(executor_log(LogEntry::Block)
+            info!(executor_log(LogEntry::Block)
                 .data(logging::EVENT, "reconfig_descendant_block_received",)
                 .data("block_id", block_id));
 
@@ -672,7 +672,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             (output, state_compute_result)
         } else {
-            sl_info!(executor_log(LogEntry::Block)
+            info!(executor_log(LogEntry::Block)
                 .data(logging::EVENT, "execute_block")
                 .data("block id", block_id));
 
@@ -736,7 +736,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
-        sl_info!(executor_log(LogEntry::Block)
+        info!(executor_log(LogEntry::Block)
             .data(logging::EVENT, "commit_block",)
             .data("block_id", block_id_to_commit));
 
@@ -819,7 +819,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         let first_version_to_commit = first_version_to_keep + num_txns_to_skip;
 
         if num_txns_to_skip != 0 {
-            sl_info!(executor_log(LogEntry::Block)
+            info!(executor_log(LogEntry::Block)
                 .data(logging::EVENT, "skip_transactions_when_committing")
                 .data("lastest_synced_version", num_persistent_txns - 1)
                 .data("first_version_to_keep", first_version_to_keep)

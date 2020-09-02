@@ -366,7 +366,7 @@ where
             log = log.data(field.as_str(), data);
         }
         // TODO: Fix the leveling of these logs individually. https://github.com/libra/libra/issues/5615
-        sl_info!(log);
+        info!(log);
     }
 }
 

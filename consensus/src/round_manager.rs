@@ -334,7 +334,7 @@ impl RoundManager {
             sync_info
                 .verify(&self.epoch_state().verifier)
                 .map_err(|e| {
-                    sl_error!(security_log(security_events::INVALID_SYNC_INFO_MSG)
+                    error!(security_log(security_events::INVALID_SYNC_INFO_MSG)
                         .data("sync_info", &sync_info)
                         .data_display("error", &e));
                     e

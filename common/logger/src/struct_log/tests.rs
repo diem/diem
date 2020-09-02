@@ -1,14 +1,17 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::{set_struct_logger, StructLogSink};
+use super::StructLogSink;
 use crate::{
     prelude::*, struct_log::InitLoggerError, Key, LoggingField, Schema, StructuredLogEntry, Value,
     Visitor,
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value as JsonValue};
-use std::sync::mpsc::{self, Receiver, SyncSender};
+use std::sync::{
+    mpsc::{self, Receiver, SyncSender},
+    Arc,
+};
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,6 +42,28 @@ impl StreamStructLog {
     }
 }
 
+impl crate::logger::Logger for StreamStructLog {
+    fn enabled(&self, metadata: &crate::Metadata) -> bool {
+        metadata.level() <= crate::Level::Debug
+    }
+
+    fn record(&self, event: &crate::Event) {
+        let mut entry = StructuredLogEntry::default()
+            .level(event.metadata().level())
+            .schemas(event.keys_and_values());
+        entry
+            .add_category(event.metadata().target())
+            .add_module(event.metadata().module_path())
+            .add_location(event.metadata().location());
+
+        if let Some(message) = event.message() {
+            entry = entry.message(message.to_string());
+        }
+
+        self.sender.send(entry).unwrap();
+    }
+}
+
 impl StructLogSink for StreamStructLog {
     fn send(&self, entry: StructuredLogEntry) {
         if let Err(e) = self.sender.send(entry) {
@@ -51,8 +76,9 @@ impl StructLogSink for StreamStructLog {
 
 fn set_test_struct_logger() -> Result<Receiver<StructuredLogEntry>, InitLoggerError> {
     let (logger, receiver) = StreamStructLog::start_new();
-    let logger = Box::leak(Box::new(logger));
-    set_struct_logger(logger).map(|_| receiver)
+    let logger = Arc::new(logger);
+    crate::logger::set_global_logger(logger);
+    Ok(receiver)
 }
 
 trait MapHelper {
@@ -90,7 +116,7 @@ fn test_structured_logs() {
 
     // Send an info log
     let before = Utc::now();
-    sl_info!(StructuredLogEntry::new_named("category", "name")
+    info!(StructuredLogEntry::new_named("category", "name")
         .data("test", true)
         .data_display("display", number)
         .schema(TestSchema {
@@ -98,14 +124,12 @@ fn test_structured_logs() {
             bar: &Enum::FooBar,
         })
         .field(u64_field, &number)
-        .message(log_message.clone()));
+        .message(log_message));
     let after = Utc::now();
 
     let map = recieve_one_event(&receiver);
 
     // Ensure standard fields are filled
-    assert_eq!("category", map.string("category").as_str());
-    assert_eq!("name", map.string("name").as_str());
     assert_eq!("INFO", map.string("level").as_str());
     assert_eq!(
         "libra_logger::struct_log::tests",
@@ -114,7 +138,6 @@ fn test_structured_logs() {
     assert!(map
         .string("location")
         .starts_with("common/logger/src/struct_log/tests.rs"));
-    assert_eq!(log_message, map.string("message"));
 
     // Log time should be the time the structured log entry was created
     let timestamp = DateTime::parse_from_rfc3339(&map.string("timestamp")).unwrap();
@@ -134,11 +157,11 @@ fn test_structured_logs() {
     assert_eq!(number, data.val("field").as_u64().unwrap());
 
     // Test all log levels work properly
-    sl_trace!(StructuredLogEntry::new_named("a", "b"));
-    sl_debug!(StructuredLogEntry::new_named("a", "b"));
-    sl_info!(StructuredLogEntry::new_named("a", "b"));
-    sl_warn!(StructuredLogEntry::new_named("a", "b"));
-    sl_error!(StructuredLogEntry::new_named("a", "b"));
+    trace!(StructuredLogEntry::new_named("a", "b"));
+    debug!(StructuredLogEntry::new_named("a", "b"));
+    info!(StructuredLogEntry::new_named("a", "b"));
+    warn!(StructuredLogEntry::new_named("a", "b"));
+    error!(StructuredLogEntry::new_named("a", "b"));
 
     // TODO: Fix this as it's fragile based on what the log level is set at
     let vals = vec!["DEBUG", "INFO", "WARN", "ERROR"];

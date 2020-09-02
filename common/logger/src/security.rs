@@ -8,7 +8,7 @@
 //! ```
 //! use libra_logger::prelude::*;
 //!
-//! sl_error!(
+//! error!(
 //!   security_log(security_events::INVALID_RETRIEVED_BLOCK)
 //!     .data("some_data", "the data")
 //! );

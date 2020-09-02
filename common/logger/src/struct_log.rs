@@ -92,6 +92,16 @@ impl Default for StructuredLogEntry {
     }
 }
 
+impl crate::Schema for StructuredLogEntry {
+    fn visit(&self, visitor: &mut dyn crate::Visitor) {
+        use crate::{Key, Value};
+
+        for (key, val) in &self.data {
+            visitor.visit_pair(Key::new(key), Value::from_serde(val));
+        }
+    }
+}
+
 impl StructuredLogEntry {
     /// Specifically for text based conversion logs
     pub fn new_text() -> Self {
@@ -307,7 +317,7 @@ impl StructuredLogEntry {
 ///
 /// mod my_code {
 ///    fn my_fn() {
-///        sl_info!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
+///        info!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
 ///    }
 /// }
 pub struct LoggingField<D>(&'static str, PhantomData<D>);

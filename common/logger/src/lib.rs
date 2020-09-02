@@ -51,7 +51,7 @@
 //! let logging_field: LoggingField<String> = LoggingField::new("String");
 //! let string = "test".to_string();
 //!
-//! sl_info!(StructuredLogEntry::new_named("TransactionEvents", "Committed")
+//! info!(StructuredLogEntry::new_named("TransactionEvents", "Committed")
 //!    .data("block", &block)
 //!    .data_display("author", &author)
 //!    .field(&logging_field, &string)
@@ -155,7 +155,7 @@ pub mod prelude {
     pub use crate::{
         debug, error, event, info,
         security::{security_events, security_log},
-        sl_debug, sl_error, sl_info, sl_level, sl_trace, sl_warn, trace, warn, StructuredLogEntry,
+        trace, warn, StructuredLogEntry,
     };
 }
 pub mod json_log;
@@ -181,65 +181,6 @@ pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
 
 pub mod counters;
-
-#[macro_export]
-macro_rules! struct_log_enabled {
-    ($level:expr) => {
-        $crate::struct_logger_enabled($level)
-    };
-}
-
-#[macro_export]
-macro_rules! sl_debug {
-    ($entry:expr) => {{
-        $crate::sl_level!($crate::Level::Debug, $entry);
-    }};
-}
-
-#[macro_export]
-macro_rules! sl_error {
-    ($entry:expr) => {{
-        $crate::sl_level!($crate::Level::Error, $entry);
-    }};
-}
-
-#[macro_export]
-macro_rules! sl_info {
-    ($entry:expr) => {{
-        $crate::sl_level!($crate::Level::Info, $entry);
-    }};
-}
-
-#[macro_export]
-macro_rules! sl_trace {
-    ($entry:expr) => {{
-        $crate::sl_level!($crate::Level::Trace, $entry);
-    }};
-}
-
-#[macro_export]
-macro_rules! sl_warn {
-    ($entry:expr) => {{
-        $crate::sl_level!($crate::Level::Warn, $entry);
-    }};
-}
-
-/// Allows for dynamic macro levels, but still filtering
-/// Use of this is highly discouraged, and you should stick to the `sl_info!` type macros.
-#[macro_export]
-macro_rules! sl_level {
-    ($level:expr, $entry:expr) => {
-        if $crate::struct_log_enabled!($level) {
-            let mut entry = $entry;
-            entry.add_category(module_path!().split("::").next().unwrap());
-            entry.add_module(module_path!());
-            entry.add_location($crate::location!());
-            entry = entry.level($level);
-            entry.send();
-            $crate::counters::STRUCT_LOG_COUNT.inc();
-        }
-    };
-}
 
 #[macro_export]
 macro_rules! location {
