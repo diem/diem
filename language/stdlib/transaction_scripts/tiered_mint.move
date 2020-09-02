@@ -2,7 +2,7 @@ script {
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
 
-/// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+/// Mint `mint_amount` to `designated_dealer_address` for `tier_index` tier.
 /// Max valid tier index is 3 since there are max 4 tiers per DD.
 /// Sender should be treasury compliance account and receiver authorized DD.
 /// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.

@@ -305,7 +305,7 @@ pub enum ScriptCall {
         operator_account: AccountAddress,
     },
 
-    /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+    /// Mint `mint_amount` to `designated_dealer_address` for `tier_index` tier.
     /// Max valid tier index is 3 since there are max 4 tiers per DD.
     /// Sender should be treasury compliance account and receiver authorized DD.
     /// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
@@ -1117,7 +1117,7 @@ pub fn encode_set_validator_operator_with_nonce_admin_script(
     )
 }
 
-/// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+/// Mint `mint_amount` to `designated_dealer_address` for `tier_index` tier.
 /// Max valid tier index is 3 since there are max 4 tiers per DD.
 /// Sender should be treasury compliance account and receiver authorized DD.
 /// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.

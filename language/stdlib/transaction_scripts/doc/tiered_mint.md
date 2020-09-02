@@ -13,7 +13,10 @@
 
 ## Function `tiered_mint`
 
-Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+Mint
+<code>mint_amount</code> to
+<code>designated_dealer_address</code> for
+<code>tier_index</code> tier.
 Max valid tier index is 3 since there are max 4 tiers per DD.
 Sender should be treasury compliance account and receiver authorized DD.
 <code>sliding_nonce</code> is a unique nonce for operation, see sliding_nonce.move for details.
