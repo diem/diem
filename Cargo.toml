@@ -11,6 +11,7 @@ members = [
     "common/crash-handler",
     "common/datatest-stable",
     "common/debug-interface",
+    "common/error-with-context",
     "common/futures-semaphore",
     "common/lcs",
     "common/libradoc",

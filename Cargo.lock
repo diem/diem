@@ -2557,6 +2557,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-error-with-context"
+version = "0.1.0"
+dependencies = [
+ "backtrace 0.3.50 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-workspace-hack 0.1.0",
+ "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-fuzz"
 version = "0.1.0"
 dependencies = [
