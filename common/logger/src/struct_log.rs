@@ -30,6 +30,9 @@ use std::{
     time::Duration,
 };
 
+#[cfg(test)]
+mod tests;
+
 pub trait StructLogSink: Sync {
     fn send(&self, entry: StructuredLogEntry);
 }

@@ -185,9 +185,6 @@ mod text_log;
 pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
 pub mod counters;
 
-#[cfg(test)]
-mod tests;
-
 #[macro_export]
 macro_rules! struct_log_enabled {
     ($level:expr) => {

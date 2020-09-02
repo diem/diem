@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use super::{set_struct_logger, StructLogSink};
 use crate::{
-    prelude::*, set_struct_logger, struct_log::InitLoggerError, Key, LoggingField, Schema,
-    StructLogSink, StructuredLogEntry, Value, Visitor,
+    prelude::*, struct_log::InitLoggerError, Key, LoggingField, Schema, StructuredLogEntry, Value,
+    Visitor,
 };
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value as JsonValue};
@@ -110,12 +111,12 @@ fn test_structured_logs() {
     assert_eq!("name", map.string("name").as_str());
     assert_eq!("INFO", map.string("level").as_str());
     assert_eq!(
-        "libra_logger::tests::struct_log",
+        "libra_logger::struct_log::tests",
         map.string("module").as_str()
     );
     assert!(map
         .string("location")
-        .starts_with("common/logger/src/tests/struct_log.rs"));
+        .starts_with("common/logger/src/struct_log/tests.rs"));
     assert_eq!(log_message, map.string("message"));
 
     // Log time should be the time the structured log entry was created
