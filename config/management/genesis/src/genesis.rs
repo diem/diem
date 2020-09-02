@@ -45,14 +45,20 @@ impl Genesis {
         let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
+        let chain_id = self.config()?.chain_id;
+        let script_policy = if chain_id == ChainId::test() {
+            Some(libra_types::on_chain_config::VMPublishingOption::open())
+        } else {
+            None // allowlist containing only stdlib scripts
+        };
+
         let genesis = vm_genesis::encode_genesis_transaction(
             libra_root_key,
             treasury_compliance_key,
             &operator_assignments,
             &operator_registrations,
-            // TODO: swap back by 8/15
-            Some(libra_types::on_chain_config::VMPublishingOption::open()),
-            self.config()?.chain_id,
+            script_policy,
+            chain_id,
         );
 
         if let Some(path) = self.path {
