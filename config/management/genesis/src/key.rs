@@ -5,9 +5,17 @@ use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_management::{
     config::ConfigPath,
     error::Error,
-    secure_backend::{SharedBackend, ValidatorBackend},
+    secure_backend::{SecureBackend, SharedBackend},
 };
+use std::{convert::TryInto, fs, path::PathBuf};
 use structopt::StructOpt;
+
+libra_management::secure_backend!(
+    ValidatorBackend,
+    validator_backend,
+    "validator configuration",
+    "path-to-key"
+);
 
 #[derive(Debug, StructOpt)]
 struct Key {
@@ -17,6 +25,8 @@ struct Key {
     shared_backend: SharedBackend,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
+    #[structopt(long, help = "ed25519 public key in lcs or hex format")]
+    path_to_key: Option<PathBuf>,
 }
 
 impl Key {
@@ -31,18 +41,38 @@ impl Key {
             .override_shared_backend(&self.shared_backend.shared_backend)?
             .override_validator_backend(&self.validator_backend.validator_backend)?;
 
-        let mut validator_storage = config.validator_backend();
-        let key = validator_storage.ed25519_public_from_private(key_name)?;
+        let key = if let Some(path_to_key) = &self.path_to_key {
+            read_key_from_file(path_to_key)
+                .map_err(|e| Error::UnableToReadFile(format!("{:?}", path_to_key), e))?
+        } else {
+            let mut validator_storage = config.validator_backend();
+            let key = validator_storage.ed25519_public_from_private(key_name)?;
 
-        if let Some(account_name) = account_name {
-            let peer_id = libra_types::account_address::from_public_key(&key);
-            validator_storage.set(account_name, peer_id)?;
-        }
+            if let Some(account_name) = account_name {
+                let peer_id = libra_types::account_address::from_public_key(&key);
+                validator_storage.set(account_name, peer_id)?;
+            }
+            key
+        };
 
         let mut shared_storage = config.shared_backend();
         shared_storage.set(key_name, key.clone())?;
 
         Ok(key)
+    }
+}
+
+fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
+    let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let data = data.trim();
+    if let Ok(key) = lcs::from_bytes(data.as_bytes()) {
+        Ok(key)
+    } else {
+        let key_data = hex::decode(&data).map_err(|e| e.to_string())?;
+        key_data
+            .as_slice()
+            .try_into()
+            .map_err(|e: libra_crypto::CryptoMaterialError| e.to_string())
     }
 }
 

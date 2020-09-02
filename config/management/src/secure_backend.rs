@@ -127,13 +127,17 @@ impl TryInto<config::SecureBackend> for SecureBackend {
     }
 }
 
+#[macro_export]
 macro_rules! secure_backend {
     ($struct_name:ident, $field_name:ident, $purpose:literal) => {
+        secure_backend!($struct_name, $field_name, $purpose, "ignore");
+    };
+    ($struct_name:ident, $field_name:ident, $purpose:literal, $required:literal) => {
         #[derive(Clone, Debug, StructOpt)]
         pub struct $struct_name {
             #[structopt(long,
                 help = concat!("Backend for ", $purpose),
-                required_unless("config"),
+                required_unless_one(&["config", $required]),
                 long_help = concat!("Backend for ", $purpose, r#"
 
 Secure backends are represented as a semi-colon deliminted key value
@@ -149,7 +153,7 @@ pair: "k0=v0;k1=v1;...".  The current supported formats are:
             )]
             pub $field_name: Option<SecureBackend>,
         }
-    }
+    };
 }
 
 secure_backend!(
