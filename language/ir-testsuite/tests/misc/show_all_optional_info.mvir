@@ -1,0 +1,16 @@
+//! show-gas: true
+//! show-writeset: true
+//! show-events: true
+main() {
+    return;
+}
+
+
+//! new-transaction
+//! show-gas: true
+//! show-writeset: true
+//! show-events: true
+main() {
+    _ = 10 - 20;
+    return;
+}

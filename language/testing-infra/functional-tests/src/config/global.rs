@@ -165,10 +165,11 @@ pub struct Config {
     pub addresses: BTreeMap<String, Account>,
     /// The validator set after genesis
     pub validator_accounts: usize,
+    pub exp_mode: bool,
 }
 
 impl Config {
-    pub fn build(entries: &[Entry]) -> Result<Self> {
+    pub fn build(entries: &[Entry], exp_mode: bool) -> Result<Self> {
         let mut accounts = BTreeMap::new();
         let mut addresses = BTreeMap::new();
         let mut validator_accounts = entries.iter().filter(|entry| entry.is_validator()).count();
@@ -281,6 +282,7 @@ impl Config {
             addresses,
             genesis_accounts: make_genesis_accounts(),
             validator_accounts: total_validator_accounts,
+            exp_mode,
         })
     }
 

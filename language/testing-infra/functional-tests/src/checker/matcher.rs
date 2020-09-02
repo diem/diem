@@ -66,10 +66,7 @@
 //!
 //! The example above would fail with a negative match.
 
-use crate::{
-    checker::directives::Directive,
-    evaluator::{EvaluationLog, EvaluationOutput},
-};
+use crate::{checker::directives::Directive, evaluator::EvaluationLog};
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder};
 
 /// A group consisting of 0 or more negative directives followed by an optional positive directive.
@@ -271,14 +268,7 @@ where
     I: IntoIterator<Item = D>,
 {
     // Convert each entry of the evaluation log into a string, which will be later matched against.
-    let text: Vec<_> = log
-        .outputs
-        .iter()
-        .map(|output| match output {
-            EvaluationOutput::Error(e) => format!("{:?}", e.root_cause()),
-            _ => format!("{:?}", output),
-        })
-        .collect();
+    let text = log.to_text_for_matching();
 
     // Split directives into groups and build an Aho-Corasick automaton for each group.
     let groups = build_matcher_groups(directives);

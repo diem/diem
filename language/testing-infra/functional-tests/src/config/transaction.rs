@@ -30,6 +30,9 @@ pub enum Entry {
     SequenceNumber(u64),
     ExpirationTime(u64),
     ExecuteAs(String),
+    ShowGas(bool),
+    ShowWriteSet(bool),
+    ShowEvents(bool),
 }
 
 impl FromStr for Entry {
@@ -85,6 +88,15 @@ impl FromStr for Entry {
         if let Some(s) = strip(s, "execute-as:") {
             return Ok(Entry::ExecuteAs(s.to_ascii_lowercase()));
         }
+        if let Some(s) = strip(s, "show-gas:") {
+            return Ok(Entry::ShowGas(s.trim_end().parse()?));
+        }
+        if let Some(s) = strip(s, "show-writeset:") {
+            return Ok(Entry::ShowWriteSet(s.trim_end().parse()?));
+        }
+        if let Some(s) = strip(s, "show-events:") {
+            return Ok(Entry::ShowEvents(s.trim_end().parse()?));
+        }
 
         Err(ErrorKind::Other(format!(
             "failed to parse '{}' as transaction config entry",
@@ -127,6 +139,9 @@ pub struct Config<'a> {
     pub sequence_number: Option<u64>,
     pub expiration_timestamp_secs: Option<u64>,
     pub execute_as: Option<AccountAddress>,
+    pub show_gas: bool,
+    pub show_writeset: bool,
+    pub show_events: bool,
 }
 
 impl<'a> Config<'a> {
@@ -142,6 +157,9 @@ impl<'a> Config<'a> {
         let mut sequence_number = None;
         let mut expiration_timestamp_secs = None;
         let mut execute_as = None;
+        let mut show_gas = None;
+        let mut show_writeset = None;
+        let mut show_events = None;
 
         for entry in entries {
             match entry {
@@ -231,6 +249,24 @@ impl<'a> Config<'a> {
                         return Err(ErrorKind::Other("execute_as already set".to_string()).into())
                     }
                 },
+                Entry::ShowGas(b) => match show_gas {
+                    None => show_gas = Some(*b),
+                    Some(_) => {
+                        return Err(ErrorKind::Other("show-gas already set".to_string()).into())
+                    }
+                },
+                Entry::ShowWriteSet(b) => match show_writeset {
+                    None => show_writeset = Some(*b),
+                    Some(_) => {
+                        return Err(ErrorKind::Other("show-writeset already set".to_string()).into())
+                    }
+                },
+                Entry::ShowEvents(b) => match show_events {
+                    None => show_events = Some(*b),
+                    Some(_) => {
+                        return Err(ErrorKind::Other("show-events already set".to_string()).into())
+                    }
+                },
             }
         }
 
@@ -245,6 +281,9 @@ impl<'a> Config<'a> {
             sequence_number,
             expiration_timestamp_secs,
             execute_as,
+            show_gas: show_gas.unwrap_or_else(|| false),
+            show_writeset: show_writeset.unwrap_or_else(|| false),
+            show_events: show_events.unwrap_or_else(|| false),
         })
     }
 
