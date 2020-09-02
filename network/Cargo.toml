@@ -55,7 +55,7 @@ network-builder = {path = "../network/builder", version = "0.1.0"}
 proptest = { version = "0.10.1", default-features = true }
 proptest-derive = { version = "0.2.0" }
 rand_core = { version = "0.5.1" }
-serial_test = "0.4.0"
+serial_test = "0.5.0"
 socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.0" }
 
 [features]
