@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use libra_logger::{info, Logger};
+use libra_logger::{info, LibraLogger};
 use libra_trace::{
     trace::{random_node, trace_node},
     LibraTraceClient,
@@ -39,7 +39,7 @@ pub async fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "info");
     }
-    Logger::new().is_async(true).init();
+    LibraLogger::builder().is_async(true).build();
 
     let args = Args::from_args();
 

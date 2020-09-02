@@ -266,7 +266,7 @@ async fn expect_num_dials(
 
 #[test]
 fn connect_to_seeds_on_startup() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (seed_peer_id, _, _, seed_addr) = gen_peer();
     let seed_addrs: HashMap<_, _> = vec![(seed_peer_id, vec![seed_addr.clone()])]
@@ -377,7 +377,7 @@ fn connect_to_seeds_on_startup() {
 
 #[test]
 fn addr_change() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
@@ -492,7 +492,7 @@ fn addr_change() {
 
 #[test]
 fn lost_connection() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
@@ -566,7 +566,7 @@ fn lost_connection() {
 
 #[test]
 fn disconnect() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -648,7 +648,7 @@ fn disconnect() {
 // Tests that connectivity manager retries dials and disconnects on failure.
 #[test]
 fn retry_on_failure() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -767,7 +767,7 @@ fn retry_on_failure() {
 // Tests that if we dial an already connected peer or disconnect from an already disconnected
 // peer, connectivity manager does not send any additional dial or disconnect requests.
 fn no_op_requests() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
@@ -878,7 +878,7 @@ fn no_op_requests() {
 
 #[test]
 fn backoff_on_failure() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
@@ -963,7 +963,7 @@ fn backoff_on_failure() {
 // multiple listen addresses and some of them don't work.
 #[test]
 fn multiple_addrs_basic() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1038,7 +1038,7 @@ fn multiple_addrs_basic() {
 // retry more times than there are addresses.
 #[test]
 fn multiple_addrs_wrapping() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1127,7 +1127,7 @@ fn multiple_addrs_wrapping() {
 // multiple listen addrs and then that peer advertises a smaller number of addrs.
 #[test]
 fn multiple_addrs_shrinking() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let eligible_peers = vec![other_peer_id];
@@ -1221,7 +1221,7 @@ fn multiple_addrs_shrinking() {
 
 #[test]
 fn public_connection_limit() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let mut seed_addrs: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
     let mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();

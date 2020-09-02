@@ -254,7 +254,7 @@ mod tests {
     #[test]
     /// Verify that votes are properly aggregated to QC based on their LedgerInfo digest
     fn test_qc_aggregation() {
-        ::libra_logger::Logger::new().environment_only(true).init();
+        ::libra_logger::Logger::init_for_testing();
 
         // set up 4 validators
         let (signers, validator) = random_validator_verifier(4, Some(2), false);
@@ -320,7 +320,7 @@ mod tests {
     #[test]
     /// Verify that votes are properly aggregated to TC based on their rounds
     fn test_tc_aggregation() {
-        ::libra_logger::Logger::new().environment_only(true).init();
+        ::libra_logger::Logger::init_for_testing();
 
         // set up 4 validators
         let (signers, validator) = random_validator_verifier(4, Some(2), false);

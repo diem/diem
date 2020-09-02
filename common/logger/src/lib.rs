@@ -169,7 +169,9 @@ mod metadata;
 mod security;
 mod struct_log;
 
-pub use crate::libra_logger::{LibraLogger, LibraLoggerBuilder, Writer};
+pub use crate::libra_logger::{
+    LibraLogger, LibraLogger as Logger, LibraLoggerBuilder, Writer, CHANNEL_SIZE,
+};
 pub use event::Event;
 pub use metadata::{Level, Metadata};
 
@@ -181,8 +183,6 @@ pub use struct_log::{
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
 
-mod text_log;
-pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
 pub mod counters;
 
 #[macro_export]

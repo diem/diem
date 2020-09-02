@@ -151,7 +151,7 @@ fn create_network_response(request_id: RequestId, raw_response: Bytes) -> Networ
 #[test]
 #[serial]
 fn outbound_rpc_success() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
@@ -204,7 +204,7 @@ fn outbound_rpc_success() {
 #[test]
 #[serial]
 fn outbound_rpc_concurrent() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
@@ -292,7 +292,7 @@ fn outbound_rpc_concurrent() {
 #[test]
 #[serial]
 fn outbound_rpc_timeout() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -334,7 +334,7 @@ fn outbound_rpc_timeout() {
 #[test]
 #[serial]
 fn outbound_cancellation_before_send() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, _peer_notifs_tx) =
@@ -374,7 +374,7 @@ fn outbound_cancellation_before_send() {
 #[test]
 #[serial]
 fn outbound_cancellation_before_recv() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -420,7 +420,7 @@ fn outbound_cancellation_before_recv() {
 #[test]
 #[serial]
 fn outbound_rpc_failed_request_delivery() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
@@ -458,7 +458,7 @@ fn outbound_rpc_failed_request_delivery() {
 #[test]
 #[serial]
 fn inbound_rpc_success() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
@@ -504,7 +504,7 @@ fn inbound_rpc_success() {
 #[test]
 #[serial]
 fn inbound_rpc_concurrent() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
@@ -580,7 +580,7 @@ fn inbound_rpc_concurrent() {
 #[test]
 #[serial]
 fn inbound_rpc_timeout() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
@@ -614,7 +614,7 @@ fn inbound_rpc_timeout() {
 #[test]
 #[serial]
 fn inbound_rpc_failed_response_delivery() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
@@ -667,7 +667,7 @@ fn inbound_rpc_failed_response_delivery() {
 #[test]
 #[serial]
 fn inbound_rpc_failed_upstream_delivery() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (_rpc_requests_tx, rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
@@ -703,7 +703,7 @@ fn inbound_rpc_failed_upstream_delivery() {
 #[test]
 #[serial]
 fn concurrent_inbound_outbound() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
     let (mut rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =

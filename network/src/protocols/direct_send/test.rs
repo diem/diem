@@ -89,7 +89,7 @@ async fn expect_send_message_request(
 #[test]
 #[serial]
 fn test_inbound_msg() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (_ds_requests_tx, mut ds_notifs_rx, mut peer_notifs_tx, _peer_reqs_rx) =
@@ -169,7 +169,7 @@ fn test_outbound_msg() {
 #[test]
 #[serial]
 fn test_send_failure() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     let (mut ds_requests_tx, _ds_notifs_rx, _peer_notifs_tx, mut peer_reqs_rx) =

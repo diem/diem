@@ -151,7 +151,7 @@ fn list_accounts(db: &LibraDB) {
 }
 
 fn main() {
-    ::libra_logger::Logger::new().init();
+    ::libra_logger::LibraLogger::builder().build();
 
     let opt = Opt::from_args();
 

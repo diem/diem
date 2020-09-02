@@ -19,7 +19,7 @@ use std::{
     thread,
 };
 
-const CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
+pub const CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
 const NUM_SEND_RETRIES: u8 = 1;
 
 pub struct LibraLoggerBuilder {
@@ -37,7 +37,7 @@ impl LibraLoggerBuilder {
             channel_size: CHANNEL_SIZE,
             level: Level::Debug,
             address: None,
-            printer: None,
+            printer: Some(Box::new(StderrWriter)),
             is_async: false,
         }
     }
@@ -72,6 +72,10 @@ impl LibraLoggerBuilder {
     pub fn is_async(&mut self, is_async: bool) -> &mut Self {
         self.is_async = is_async;
         self
+    }
+
+    pub fn init(&mut self) {
+        self.build()
     }
 
     pub fn build(&mut self) {
@@ -113,6 +117,11 @@ pub struct LibraLogger {
 impl LibraLogger {
     pub fn builder() -> LibraLoggerBuilder {
         LibraLoggerBuilder::new()
+    }
+
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new() -> LibraLoggerBuilder {
+        Self::builder()
     }
 
     pub fn init_for_testing() {

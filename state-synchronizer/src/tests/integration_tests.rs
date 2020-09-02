@@ -95,7 +95,7 @@ impl SynchronizerEnv {
     }
 
     fn new(num_peers: usize) -> Self {
-        ::libra_logger::Logger::new().environment_only(true).init();
+        ::libra_logger::Logger::init_for_testing();
         let runtime = Runtime::new().unwrap();
         let (signers, public_keys, network_keys) = SynchronizerEnvHelper::initial_setup(num_peers);
         let peer_ids = signers.iter().map(|s| s.author()).collect::<Vec<PeerId>>();

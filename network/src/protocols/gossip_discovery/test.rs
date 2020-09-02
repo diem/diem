@@ -119,7 +119,7 @@ async fn expect_address_update(
 #[test]
 // Test behavior on receipt of an inbound DiscoveryMsg.
 fn inbound() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.
@@ -225,7 +225,7 @@ fn inbound() {
 #[test]
 // Test that discovery actor sends a DiscoveryMsg to a neighbor on receiving a clock tick.
 fn outbound() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self peer.
@@ -282,7 +282,7 @@ fn outbound() {
 
 #[test]
 fn old_note_higher_epoch() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self peer.
@@ -352,7 +352,7 @@ fn old_note_higher_epoch() {
 
 #[test]
 fn old_note_max_epoch() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
 
     // Setup self.

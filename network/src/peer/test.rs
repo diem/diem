@@ -159,7 +159,7 @@ async fn assert_peer_disconnected_event(
 
 #[test]
 fn peer_send_message() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         peer,
@@ -196,7 +196,7 @@ fn peer_send_message() {
 
 #[test]
 fn peer_recv_message() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         peer,
@@ -244,7 +244,7 @@ fn peer_recv_message() {
 // we won't deadlock.
 #[test]
 fn peer_open_substream_simultaneous() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         (
@@ -313,7 +313,7 @@ fn peer_open_substream_simultaneous() {
 
 #[test]
 fn peer_disconnect_request() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         peer,
@@ -339,7 +339,7 @@ fn peer_disconnect_request() {
 
 #[test]
 fn peer_disconnect_connection_lost() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         peer,
@@ -364,7 +364,7 @@ fn peer_disconnect_connection_lost() {
 
 #[test]
 fn peer_terminates_when_request_tx_has_dropped() {
-    ::libra_logger::Logger::new().environment_only(true).init();
+    ::libra_logger::Logger::init_for_testing();
     let mut rt = Runtime::new().unwrap();
     let (
         peer,
