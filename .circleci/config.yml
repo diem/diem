@@ -333,24 +333,6 @@ jobs:
       - run:
           name: cargo fmt
           command: $CARGO $CARGOFLAGS xfmt --check
-      - run:
-          name: cargo x generate-summaries
-          command: |
-            cargo x generate-summaries
-            set +e
-            failed=false
-            for s in $(ls summaries/*.toml) ; do
-              cmp --silent ${s} target/summaries/$(basename ${s})
-              status=$?
-              if [[ ${status} != 0 ]] ; then
-                echo "${s} not updated"
-                diff -u ${s} target/summaries/$(basename ${s})
-                failed=true
-              fi
-            done
-            if [[ "${failed}" == "true" ]] ; then
-              exit 1
-            fi
       - save_sccache
   build-dev:
     executor: build-executor

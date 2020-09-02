@@ -7,6 +7,3 @@
 /client/ @thefallentree @xli
 # Subscribe to LCS format changes
 /testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli
-# Subscribe to TCB dependency summary changes
-/summaries/summary-lsr.toml @davidiw
-/summaries/summary-lec.toml @davidiw

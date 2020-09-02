@@ -27,17 +27,23 @@ jobs:
       - name: generate new summaries
         run: |
           set +e
-          cargo run -p x -- generate-summaries
+          cargo x generate-summaries
+
+      - name: generate base summaries
+        run: |
+          set +e
+          cd libra-base
+          cargo x generate-summaries
 
       - name: diff LSR summary
         id: verify-lsr
         run: |
-          if [[ ! -e libra-base/summaries/summary-lsr.toml ]]; then
+          if [[ ! -e libra-base/target/summaries/summary-lsr.toml ]]; then
             # handle case of missing base summary by reporting no diff
             echo "::set-output name=diff::"
             exit 0
           fi
-          output="$(cargo run -p x -- diff-summary libra-base/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
+          output="$(cargo x diff-summary libra-base/target/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -46,12 +52,12 @@ jobs:
       - name: diff LEC summary
         id: verify-lec
         run: |
-          if [[ ! -e libra-base/summaries/summary-lec.toml ]]; then
+          if [[ ! -e libra-base/target/summaries/summary-lec.toml ]]; then
             # handle case of missing base summary by reporting no diff
             echo "::set-output name=diff::"
             exit 0
           fi
-          output="$(cargo run -p x -- diff-summary libra-base/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
+          output="$(cargo x diff-summary libra-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -60,12 +66,12 @@ jobs:
       - name: diff release summary
         id: verify-release
         run: |
-          if [[ ! -e libra-base/summaries/summary-release.toml ]]; then
+          if [[ ! -e libra-base/target/summaries/summary-release.toml ]]; then
             # handle case of missing base summary by reporting no diff
             echo "::set-output name=diff::"
             exit 0
           fi
-          output="$(cargo run -p x -- diff-summary libra-base/summaries/summary-release.toml target/summaries/summary-release.toml)"
+          output="$(cargo x diff-summary libra-base/target/summaries/summary-release.toml target/summaries/summary-release.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
           output="${output//$'\n'/'%0A'}"
@@ -105,26 +111,25 @@ jobs:
             ```
           tag: release-summary
           delete-older: true
+
       - name: label PR if TCB changed
         if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff }}
         uses: ./.github/actions/labels
         with:
           add: tcb-deps-changed
-      - name: label PR if release changed
+      - name: label PR if tracked deps changed
         if: ${{ steps.verify-lsr.outputs.diff || steps.verify-lec.outputs.diff || steps.verify-release.outputs.diff }}
         uses: ./.github/actions/labels
         with:
           add: deps-changed
 
-      - name: fail PR if summaries are not updated
-        run: |
-          lsr_diff="$(cargo run -p x -- diff-summary summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
-          lec_diff="$(cargo run -p x -- diff-summary summaries/summary-lec.toml target/summaries/summary-lec.toml)"
-          release_diff="$(cargo run -p x -- diff-summary summaries/summary-release.toml target/summaries/summary-release.toml)"
-
-          if [[ -n "${lsr_diff}" || -n "${lec_diff}" || -n "${release_diff}" ]]; then
-            echo "Summaryies are not updated. You can update summaries with:"
-            echo "'cargo run -p x -- generate-summaries' and copying the changed summaries"
-            echo "from target/summaries to summaries."
-            exit 1
-          fi
+      - name: unlabel PR if TCB changed
+        if: ${{ !steps.verify-lsr.outputs.diff && !steps.verify-lec.outputs.diff }}
+        uses: ./.github/actions/labels
+        with:
+          remove: tcb-deps-changed
+      - name: unlabel PR if tracked deps changed
+        if: ${{ !steps.verify-lsr.outputs.diff && !steps.verify-lec.outputs.diff && !steps.verify-release.outputs.diff }}
+        uses: ./.github/actions/labels
+        with:
+          remove: deps-changed
