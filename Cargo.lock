@@ -2501,7 +2501,7 @@ dependencies = [
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "ripemd160 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde-name 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde-name 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5197,7 +5197,7 @@ dependencies = [
 
 [[package]]
 name = "serde-name"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7137,7 +7137,7 @@ dependencies = [
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)" = "e54c9a88f2da7238af84b5101443f0c0d0a3bbdc455e34a5c9497b1903ed55d5"
 "checksum serde-generate 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e7da7bb1d64488b98875721546be3b734ed7bc23e8d2d80d4d29a7e429bf763c"
-"checksum serde-name 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "92bb32dbe1df50291d7d00b5e573acb2c70b783baf3d1bce2d19c86be11c709e"
+"checksum serde-name 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "87442b7a30baedc6e8875cb7156cb0e2cf41cdd9f13c34de73090c463f028bd8"
 "checksum serde-reflection 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "695ca48311bdeac687d09bbd558de507f0874a401c56cce52ee5665705f817f3"
 "checksum serde-value 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
 "checksum serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)" = "16ae07dd2f88a366f15bd0632ba725227018c69a1c8550a927324f8eb8368bb9"
