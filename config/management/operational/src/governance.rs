@@ -3,7 +3,9 @@
 
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_global_constants::LIBRA_ROOT_KEY;
-use libra_management::{config::Config, error::Error, transaction::build_raw_transaction};
+use libra_management::{
+    config::Config, error::ErrorWithContext, transaction::build_raw_transaction,
+};
 use libra_types::{account_address::AccountAddress, account_config::libra_root_address};
 use structopt::StructOpt;
 
@@ -19,7 +21,7 @@ struct RootValidatorOperation {
 }
 
 impl RootValidatorOperation {
-    fn config(&self) -> Result<Config, Error> {
+    fn config(&self) -> Result<Config, ErrorWithContext> {
         Ok(self
             .validator_config
             .config()?
@@ -34,7 +36,7 @@ pub struct AddValidator {
 }
 
 impl AddValidator {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(self) -> Result<TransactionContext, ErrorWithContext> {
         let config = self.input.config()?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
 
@@ -67,7 +69,7 @@ pub struct RemoveValidator {
 }
 
 impl RemoveValidator {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(self) -> Result<TransactionContext, ErrorWithContext> {
         let config = self.input.config()?;
         let client = JsonRpcClientWrapper::new(config.json_server.clone());
 

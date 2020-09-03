@@ -1,7 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use libra_management::{
+    config::ConfigPath,
+    error::{Error, ErrorWithContext},
+    secure_backend::ValidatorBackend,
+};
 use serde::Serialize;
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
@@ -27,7 +31,7 @@ pub struct ExtractPublicKey {
 }
 
 impl ExtractPublicKey {
-    pub fn execute(self) -> Result<(), Error> {
+    pub fn execute(self) -> Result<(), ErrorWithContext> {
         let config =
             self.extract_key.config.load()?.override_validator_backend(
                 &self.extract_key.validator_backend.validator_backend,
@@ -47,7 +51,7 @@ pub struct ExtractPrivateKey {
 }
 
 impl ExtractPrivateKey {
-    pub fn execute(self) -> Result<(), Error> {
+    pub fn execute(self) -> Result<(), ErrorWithContext> {
         let config =
             self.extract_key.config.load()?.override_validator_backend(
                 &self.extract_key.validator_backend.validator_backend,
@@ -60,7 +64,11 @@ impl ExtractPrivateKey {
     }
 }
 
-fn save_key<T: Serialize>(key: &T, key_name: &'static str, path: &PathBuf) -> Result<(), Error> {
+fn save_key<T: Serialize>(
+    key: &T,
+    key_name: &'static str,
+    path: &PathBuf,
+) -> Result<(), ErrorWithContext> {
     let encoded = lcs::to_bytes(key).map_err(|e| Error::LCS(key_name.to_string(), e))?;
     let mut file = File::create(path).map_err(|e| Error::IO(key_name.to_string(), e))?;
     file.write_all(&encoded)

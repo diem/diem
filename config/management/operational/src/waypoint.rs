@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_global_constants::WAYPOINT;
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use libra_management::{
+    config::ConfigPath, error::ErrorWithContext, secure_backend::ValidatorBackend,
+};
 use libra_types::waypoint::Waypoint;
 use structopt::StructOpt;
 
@@ -17,7 +19,7 @@ pub struct InsertWaypoint {
 }
 
 impl InsertWaypoint {
-    pub fn execute(self) -> Result<(), Error> {
+    pub fn execute(self) -> Result<(), ErrorWithContext> {
         let config = self
             .config
             .load()?

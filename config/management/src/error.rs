@@ -44,3 +44,5 @@ pub enum Error {
     #[error("Unexpected error: {0}")]
     UnexpectedError(String),
 }
+
+pub type ErrorWithContext = libra_error_with_context::ErrorWithContext<Error>;

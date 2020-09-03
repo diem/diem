@@ -6,7 +6,10 @@ use crate::{
     validator_set::DecryptedValidatorInfo, TransactionContext,
 };
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::{error::Error, execute_command};
+use libra_management::{
+    error::{Error, ErrorWithContext},
+    execute_command,
+};
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
@@ -137,7 +140,7 @@ impl Command {
     }
 
     /// Show the transaction status in a friendly way
-    fn print_transaction_status(result: Result<Option<VMStatusView>, Error>) -> String {
+    fn print_transaction_status(result: Result<Option<VMStatusView>, ErrorWithContext>) -> String {
         Self::pretty_print(result.map(|maybe_status| {
             maybe_status.map_or(String::from("Not yet executed"), |status| {
                 status.to_string()
@@ -146,34 +149,41 @@ impl Command {
     }
 
     /// Show the transaction context, dropping the related key
-    fn print_transaction_context<Key>(result: Result<(TransactionContext, Key), Error>) -> String {
+    fn print_transaction_context<Key>(
+        result: Result<(TransactionContext, Key), ErrorWithContext>,
+    ) -> String {
         Self::pretty_print(result.map(|(transaction, _)| transaction))
     }
 
     /// Show success or the error result
-    fn print_success(result: Result<(), Error>) -> String {
+    fn print_success(result: Result<(), ErrorWithContext>) -> String {
         Self::pretty_print(result.map(|()| "Success"))
     }
 
     /// For pretty printing outputs in JSON
-    fn pretty_print<T: Serialize>(result: Result<T, Error>) -> String {
-        let result = match result {
-            Ok(value) => ResultWrapper::Result(value),
-            Err(err) => ResultWrapper::Error(err.to_string()),
-        };
-
-        serde_json::to_string_pretty(&result).unwrap()
+    fn pretty_print<T: Serialize>(result: Result<T, ErrorWithContext>) -> String {
+        match result {
+            Ok(value) => {
+                let result = ResultWrapper::Result(value);
+                serde_json::to_string_pretty(&result).unwrap()
+            }
+            Err(err) => {
+                let result: ResultWrapper<String> = ResultWrapper::Error(err.error.to_string());
+                let printed_result = serde_json::to_string_pretty(&result).unwrap();
+                format!("{}\n{}", printed_result, err.format_context_no_error())
+            }
+        }
     }
 
-    pub fn account_resource(self) -> Result<SimplifiedAccountResource, Error> {
+    pub fn account_resource(self) -> Result<SimplifiedAccountResource, ErrorWithContext> {
         execute_command!(self, Command::AccountResource, CommandName::AccountResource)
     }
 
-    pub fn add_validator(self) -> Result<TransactionContext, Error> {
+    pub fn add_validator(self) -> Result<TransactionContext, ErrorWithContext> {
         execute_command!(self, Command::AddValidator, CommandName::AddValidator)
     }
 
-    pub fn extract_private_key(self) -> Result<(), Error> {
+    pub fn extract_private_key(self) -> Result<(), ErrorWithContext> {
         execute_command!(
             self,
             Command::ExtractPrivateKey,
@@ -181,7 +191,7 @@ impl Command {
         )
     }
 
-    pub fn extract_public_key(self) -> Result<(), Error> {
+    pub fn extract_public_key(self) -> Result<(), ErrorWithContext> {
         execute_command!(
             self,
             Command::ExtractPublicKey,
@@ -189,19 +199,21 @@ impl Command {
         )
     }
 
-    pub fn insert_waypoint(self) -> Result<(), Error> {
+    pub fn insert_waypoint(self) -> Result<(), ErrorWithContext> {
         execute_command!(self, Command::InsertWaypoint, CommandName::InsertWaypoint)
     }
 
-    pub fn print_account(self) -> Result<AccountAddress, Error> {
+    pub fn print_account(self) -> Result<AccountAddress, ErrorWithContext> {
         execute_command!(self, Command::PrintAccount, CommandName::PrintAccount)
     }
 
-    pub fn remove_validator(self) -> Result<TransactionContext, Error> {
+    pub fn remove_validator(self) -> Result<TransactionContext, ErrorWithContext> {
         execute_command!(self, Command::RemoveValidator, CommandName::RemoveValidator)
     }
 
-    pub fn rotate_consensus_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    pub fn rotate_consensus_key(
+        self,
+    ) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         execute_command!(
             self,
             Command::RotateConsensusKey,
@@ -209,7 +221,9 @@ impl Command {
         )
     }
 
-    pub fn rotate_operator_key(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    pub fn rotate_operator_key(
+        self,
+    ) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         execute_command!(
             self,
             Command::RotateOperatorKey,
@@ -219,7 +233,7 @@ impl Command {
 
     pub fn rotate_fullnode_network_key(
         self,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    ) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         execute_command!(
             self,
             Command::RotateFullNodeNetworkKey,
@@ -229,7 +243,7 @@ impl Command {
 
     pub fn rotate_validator_network_key(
         self,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    ) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         execute_command!(
             self,
             Command::RotateValidatorNetworkKey,
@@ -237,7 +251,7 @@ impl Command {
         )
     }
 
-    pub fn set_validator_config(self) -> Result<TransactionContext, Error> {
+    pub fn set_validator_config(self) -> Result<TransactionContext, ErrorWithContext> {
         execute_command!(
             self,
             Command::SetValidatorConfig,
@@ -245,7 +259,7 @@ impl Command {
         )
     }
 
-    pub fn validate_transaction(self) -> Result<Option<VMStatusView>, Error> {
+    pub fn validate_transaction(self) -> Result<Option<VMStatusView>, ErrorWithContext> {
         execute_command!(
             self,
             Command::ValidateTransaction,
@@ -253,11 +267,11 @@ impl Command {
         )
     }
 
-    pub fn validator_config(self) -> Result<DecryptedValidatorConfig, Error> {
+    pub fn validator_config(self) -> Result<DecryptedValidatorConfig, ErrorWithContext> {
         execute_command!(self, Command::ValidatorConfig, CommandName::ValidatorConfig)
     }
 
-    pub fn validator_set(self) -> Result<Vec<DecryptedValidatorInfo>, Error> {
+    pub fn validator_set(self) -> Result<Vec<DecryptedValidatorInfo>, ErrorWithContext> {
         execute_command!(self, Command::ValidatorSet, CommandName::ValidatorSet)
     }
 }

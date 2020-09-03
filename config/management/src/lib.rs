@@ -32,7 +32,8 @@ macro_rules! execute_command {
             Err(Error::UnexpectedCommand(
                 $expected_name.to_string(),
                 CommandName::from(&$obj).to_string(),
-            ))
+            )
+            .into())
         }
     };
 }

@@ -10,7 +10,10 @@ use crate::{
 };
 use libra_config::config;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_management::{error::Error, secure_backend::DISK};
+use libra_management::{
+    error::{Error, ErrorWithContext},
+    secure_backend::DISK,
+};
 use libra_network_address::NetworkAddress;
 use libra_secure_json_rpc::VMStatusView;
 use libra_types::{account_address::AccountAddress, chain_id::ChainId};
@@ -32,7 +35,7 @@ impl OperationalTool {
     pub fn account_resource(
         &self,
         account_address: AccountAddress,
-    ) -> Result<SimplifiedAccountResource, Error> {
+    ) -> Result<SimplifiedAccountResource, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -52,7 +55,7 @@ impl OperationalTool {
         &self,
         validator_address: Option<NetworkAddress>,
         fullnode_address: Option<NetworkAddress>,
-    ) -> Result<TransactionContext, Error> {
+    ) -> Result<TransactionContext, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -76,8 +79,8 @@ impl OperationalTool {
         &self,
         backend: &config::SecureBackend,
         name: CommandName,
-        execute: fn(Command) -> Result<T, Error>,
-    ) -> Result<T, Error> {
+        execute: fn(Command) -> Result<T, ErrorWithContext>,
+    ) -> Result<T, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -97,7 +100,7 @@ impl OperationalTool {
     pub fn rotate_consensus_key(
         &self,
         backend: &config::SecureBackend,
-    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    ) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         self.rotate_key(backend, CommandName::RotateConsensusKey, |cmd| {
             cmd.rotate_consensus_key()
         })
@@ -106,7 +109,7 @@ impl OperationalTool {
     pub fn rotate_operator_key(
         &self,
         backend: &config::SecureBackend,
-    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    ) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         self.rotate_key(backend, CommandName::RotateOperatorKey, |cmd| {
             cmd.rotate_operator_key()
         })
@@ -115,7 +118,7 @@ impl OperationalTool {
     pub fn rotate_validator_network_key(
         &self,
         backend: &config::SecureBackend,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    ) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         self.rotate_key(backend, CommandName::RotateValidatorNetworkKey, |cmd| {
             cmd.rotate_validator_network_key()
         })
@@ -124,7 +127,7 @@ impl OperationalTool {
     pub fn rotate_fullnode_network_key(
         &self,
         backend: &config::SecureBackend,
-    ) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    ) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         self.rotate_key(backend, CommandName::RotateFullNodeNetworkKey, |cmd| {
             cmd.rotate_fullnode_network_key()
         })
@@ -134,7 +137,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         sequence_number: u64,
-    ) -> Result<Option<VMStatusView>, Error> {
+    ) -> Result<Option<VMStatusView>, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -156,7 +159,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         backend: &config::SecureBackend,
-    ) -> Result<DecryptedValidatorConfig, Error> {
+    ) -> Result<DecryptedValidatorConfig, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -178,7 +181,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         backend: &config::SecureBackend,
-    ) -> Result<Vec<DecryptedValidatorInfo>, Error> {
+    ) -> Result<Vec<DecryptedValidatorInfo>, ErrorWithContext> {
         let args = format!(
             "
                 {command}
@@ -200,7 +203,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         backend: &config::SecureBackend,
-    ) -> Result<TransactionContext, Error> {
+    ) -> Result<TransactionContext, ErrorWithContext> {
         let args = format!(
             "
             {command}
@@ -223,7 +226,7 @@ impl OperationalTool {
         &self,
         account_address: AccountAddress,
         backend: &config::SecureBackend,
-    ) -> Result<TransactionContext, Error> {
+    ) -> Result<TransactionContext, ErrorWithContext> {
         let args = format!(
             "
             {command}
@@ -258,7 +261,7 @@ fn optional_arg<T: std::fmt::Display>(name: &'static str, maybe_value: Option<T>
 
 /// Extract on disk storage args
 /// TODO: Support other types of storage
-fn backend_args(backend: &config::SecureBackend) -> Result<String, Error> {
+fn backend_args(backend: &config::SecureBackend) -> Result<String, ErrorWithContext> {
     match backend {
         config::SecureBackend::OnDiskStorage(config) => Ok(format!(
             "backend={backend};\
@@ -268,6 +271,6 @@ fn backend_args(backend: &config::SecureBackend) -> Result<String, Error> {
             namespace = config.namespace.clone().unwrap(),
             path = config.path.to_str().unwrap(),
         )),
-        _ => Err(Error::UnexpectedError("Storage isn't on disk".to_string())),
+        _ => Err(Error::UnexpectedError("Storage isn't on disk".to_string()).into()),
     }
 }

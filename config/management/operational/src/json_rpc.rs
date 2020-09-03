@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::TransactionContext;
-use libra_management::error::Error;
+use libra_management::error::{Error, ErrorWithContext};
 use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
 use libra_types::{
     account_address::AccountAddress, account_config, account_config::AccountResource,
@@ -25,7 +25,7 @@ impl JsonRpcClientWrapper {
     pub fn submit_transaction(
         &self,
         transaction: SignedTransaction,
-    ) -> Result<TransactionContext, Error> {
+    ) -> Result<TransactionContext, ErrorWithContext> {
         self.client
             .submit_transaction(transaction.clone())
             .map_err(|e| Error::JsonRpcWriteError("transaction", e.to_string()))?;
@@ -35,19 +35,24 @@ impl JsonRpcClientWrapper {
         ))
     }
 
-    pub fn account_state(&self, account: AccountAddress) -> Result<AccountState, Error> {
+    pub fn account_state(&self, account: AccountAddress) -> Result<AccountState, ErrorWithContext> {
         self.client
             .get_account_state(account, None)
-            .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()))
+            .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()).into())
     }
 
-    pub fn validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error> {
+    pub fn validator_config(
+        &self,
+        account: AccountAddress,
+    ) -> Result<ValidatorConfig, ErrorWithContext> {
         resource(
             "validator-config-resource",
             self.account_state(account)?.get_validator_config_resource(),
         )?
         .validator_config
-        .ok_or_else(|| Error::JsonRpcReadError("validator-config", "not present".to_string()))
+        .ok_or_else(|| {
+            Error::JsonRpcReadError("validator-config", "not present".to_string()).into()
+        })
     }
 
     /// This method returns all validator infos currently registered in the validator set of the
@@ -56,7 +61,7 @@ impl JsonRpcClientWrapper {
     pub fn validator_set(
         &self,
         account: Option<AccountAddress>,
-    ) -> Result<Vec<ValidatorInfo>, Error> {
+    ) -> Result<Vec<ValidatorInfo>, ErrorWithContext> {
         let validator_set_account = account_config::validator_set_address();
         let validator_set = self
             .account_state(validator_set_account)?
@@ -78,24 +83,27 @@ impl JsonRpcClientWrapper {
                 if validator_infos.is_empty() {
                     return Err(Error::UnexpectedError(
                         "No validator sets were found!".to_string(),
-                    ));
+                    )
+                    .into());
                 }
                 Ok(validator_infos)
             }
-            Ok(None) => Err(Error::JsonRpcReadError(
-                "validator-set",
-                "not present".to_string(),
-            )),
-            Err(e) => Err(Error::JsonRpcReadError("validator-set", e.to_string())),
+            Ok(None) => {
+                Err(Error::JsonRpcReadError("validator-set", "not present".to_string()).into())
+            }
+            Err(e) => Err(Error::JsonRpcReadError("validator-set", e.to_string()).into()),
         }
     }
 
-    pub fn account_resource(&self, account: AccountAddress) -> Result<AccountResource, Error> {
+    pub fn account_resource(
+        &self,
+        account: AccountAddress,
+    ) -> Result<AccountResource, ErrorWithContext> {
         let account_state = self.account_state(account)?;
         resource("account-resource", account_state.get_account_resource())
     }
 
-    pub fn sequence_number(&self, account: AccountAddress) -> Result<u64, Error> {
+    pub fn sequence_number(&self, account: AccountAddress) -> Result<u64, ErrorWithContext> {
         Ok(self.account_resource(account)?.sequence_number())
     }
 
@@ -103,24 +111,21 @@ impl JsonRpcClientWrapper {
         &self,
         account: AccountAddress,
         sequence_number: u64,
-    ) -> Result<Option<VMStatusView>, Error> {
+    ) -> Result<Option<VMStatusView>, ErrorWithContext> {
         self.client
             .get_transaction_status(account, sequence_number)
             .map(|maybe_txn_status| maybe_txn_status.map(|status| status.vm_status))
-            .map_err(|e| Error::JsonRpcReadError("transaction-status", e.to_string()))
+            .map_err(|e| Error::JsonRpcReadError("transaction-status", e.to_string()).into())
     }
 }
 
 fn resource<T>(
     resource_name: &'static str,
     maybe_resource: Result<Option<T>, anyhow::Error>,
-) -> Result<T, Error> {
+) -> Result<T, ErrorWithContext> {
     match maybe_resource {
         Ok(Some(resource)) => Ok(resource),
-        Ok(None) => Err(Error::JsonRpcReadError(
-            resource_name,
-            "not present".to_string(),
-        )),
-        Err(e) => Err(Error::JsonRpcReadError(resource_name, e.to_string())),
+        Ok(None) => Err(Error::JsonRpcReadError(resource_name, "not present".to_string()).into()),
+        Err(e) => Err(Error::JsonRpcReadError(resource_name, e.to_string()).into()),
     }
 }

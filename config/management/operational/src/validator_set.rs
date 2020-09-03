@@ -3,7 +3,9 @@
 
 use crate::{json_rpc::JsonRpcClientWrapper, validator_config::DecryptedValidatorConfig};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use libra_management::{
+    config::ConfigPath, error::ErrorWithContext, secure_backend::ValidatorBackend,
+};
 use libra_network_address::NetworkAddress;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
@@ -23,7 +25,7 @@ pub struct ValidatorSet {
 }
 
 impl ValidatorSet {
-    pub fn execute(self) -> Result<Vec<DecryptedValidatorInfo>, Error> {
+    pub fn execute(self) -> Result<Vec<DecryptedValidatorInfo>, ErrorWithContext> {
         let config = self
             .config
             .load()?

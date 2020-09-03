@@ -4,7 +4,10 @@
 use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_management::{error::Error, transaction::build_raw_transaction};
+use libra_management::{
+    error::{Error, ErrorWithContext},
+    transaction::build_raw_transaction,
+};
 use libra_types::{
     account_address::AccountAddress,
     transaction::{authenticator::AuthenticationKey, Transaction},
@@ -25,7 +28,7 @@ pub struct AccountResource {
 }
 
 impl AccountResource {
-    pub fn execute(self) -> Result<SimplifiedAccountResource, Error> {
+    pub fn execute(self) -> Result<SimplifiedAccountResource, ErrorWithContext> {
         // Load the config and create a json rpc client
         let config = self.config.load()?.override_json_server(&self.json_server);
         let client = JsonRpcClientWrapper::new(config.json_server);
@@ -60,7 +63,7 @@ pub struct RotateOperatorKey {
 }
 
 impl RotateOperatorKey {
-    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         // Load the config, storage backend and create a json rpc client
         let config = self
             .validator_config
@@ -79,7 +82,8 @@ impl RotateOperatorKey {
                 return Err(Error::UnexpectedError(format!(
                     "Invalid authentication key found in account resource. Error: {}",
                     e.to_string()
-                )));
+                ))
+                .into());
             }
         };
         let mut current_storage_key = storage.ed25519_public_from_private(OPERATOR_KEY)?;

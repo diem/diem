@@ -326,8 +326,12 @@ impl GenesisHelper {
         );
 
         let command = OperationalCommand::from_iter(args.split_whitespace());
-        spawn_blocking(|| command.extract_private_key())
-            .await
-            .expect("tokio spawn_blocking runtime error")
+        spawn_blocking(|| {
+            command
+                .extract_private_key()
+                .map_err(|annotated_error| annotated_error.error)
+        })
+        .await
+        .expect("tokio spawn_blocking runtime error")
     }
 }

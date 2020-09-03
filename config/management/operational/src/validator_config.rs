@@ -6,7 +6,11 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
-use libra_management::{error::Error, secure_backend::ValidatorBackend, storage::to_x25519};
+use libra_management::{
+    error::{Error, ErrorWithContext},
+    secure_backend::ValidatorBackend,
+    storage::to_x25519,
+};
 use libra_network_address::{NetworkAddress, Protocol};
 use libra_network_address_encryption::Encryptor;
 use libra_types::account_address::AccountAddress;
@@ -37,7 +41,7 @@ pub struct SetValidatorConfig {
 }
 
 impl SetValidatorConfig {
-    pub fn execute(self) -> Result<TransactionContext, Error> {
+    pub fn execute(self) -> Result<TransactionContext, ErrorWithContext> {
         let config = self
             .validator_config
             .config
@@ -98,7 +102,7 @@ impl RotateKey {
     pub fn execute(
         self,
         key_name: &'static str,
-    ) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    ) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         // Load the config, storage backend and create a json rpc client.
         let config = self
             .validator_config
@@ -134,7 +138,8 @@ impl RotateKey {
             _ => {
                 return Err(Error::UnexpectedError(
                     "Rotate key was called with an unknown key name!".into(),
-                ));
+                )
+                .into());
             }
         };
         if keys_match {
@@ -161,7 +166,7 @@ pub struct RotateConsensusKey {
 }
 
 impl RotateConsensusKey {
-    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), Error> {
+    pub fn execute(self) -> Result<(TransactionContext, Ed25519PublicKey), ErrorWithContext> {
         self.rotate_key.execute(CONSENSUS_KEY)
     }
 }
@@ -173,7 +178,7 @@ pub struct RotateValidatorNetworkKey {
 }
 
 impl RotateValidatorNetworkKey {
-    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         let (txn_ctx, key) = self.rotate_key.execute(VALIDATOR_NETWORK_KEY)?;
         Ok((txn_ctx, to_x25519(key)?))
     }
@@ -186,7 +191,7 @@ pub struct RotateFullNodeNetworkKey {
 }
 
 impl RotateFullNodeNetworkKey {
-    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), Error> {
+    pub fn execute(self) -> Result<(TransactionContext, x25519::PublicKey), ErrorWithContext> {
         let (txn_ctx, key) = self.rotate_key.execute(FULLNODE_NETWORK_KEY)?;
         Ok((txn_ctx, to_x25519(key)?))
     }
@@ -226,7 +231,7 @@ pub struct ValidatorConfig {
 }
 
 impl ValidatorConfig {
-    pub fn execute(self) -> Result<DecryptedValidatorConfig, Error> {
+    pub fn execute(self) -> Result<DecryptedValidatorConfig, ErrorWithContext> {
         let config = self
             .config
             .load()?
@@ -258,7 +263,7 @@ impl DecryptedValidatorConfig {
         config: &libra_types::validator_config::ValidatorConfig,
         account_address: AccountAddress,
         encryptor: &Encryptor,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, ErrorWithContext> {
         let fullnode_network_addresses = config
             .fullnode_network_addresses()
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;

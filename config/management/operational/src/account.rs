@@ -1,7 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_management::{config::ConfigPath, error::Error, secure_backend::ValidatorBackend};
+use libra_management::{
+    config::ConfigPath, error::ErrorWithContext, secure_backend::ValidatorBackend,
+};
 use libra_types::account_address::AccountAddress;
 use structopt::StructOpt;
 
@@ -17,7 +19,7 @@ pub struct PrintAccount {
 }
 
 impl PrintAccount {
-    pub fn execute(self) -> Result<AccountAddress, Error> {
+    pub fn execute(self) -> Result<AccountAddress, ErrorWithContext> {
         let config = self
             .config
             .load()?
@@ -25,6 +27,6 @@ impl PrintAccount {
 
         let storage = config.validator_backend();
         let account_name = Box::leak(self.account_name.into_boxed_str());
-        storage.account_address(account_name)
+        Ok(storage.account_address(account_name)?)
     }
 }
