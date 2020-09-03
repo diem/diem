@@ -28,9 +28,10 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt,
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration};
+use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -63,6 +64,7 @@ where
     TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn start(
+        network_context: Arc<NetworkContext>,
         executor: Handle,
         connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
@@ -105,6 +107,7 @@ where
         );
         let peer_handle = PeerHandle::new(peer_id, peer_reqs_tx);
         let peer = Peer::new(
+            Arc::clone(&network_context),
             executor.clone(),
             connection,
             peer_reqs_rx,
@@ -127,6 +130,7 @@ where
                 .peer_gauge(&counters::PENDING_RPC_REQUESTS, &peer_id.short_str()),
         );
         let rpc = Rpc::new(
+            Arc::clone(&network_context),
             peer_handle.clone(),
             rpc_reqs_rx,
             peer_rpc_notifs_rx,
@@ -153,6 +157,7 @@ where
             ),
         );
         let ds = DirectSend::new(
+            network_context,
             peer_handle.clone(),
             ds_reqs_rx,
             ds_notifs_tx,

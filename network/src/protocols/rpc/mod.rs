@@ -63,10 +63,11 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
     task::Context,
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use serde::Serialize;
-use std::{collections::HashMap, fmt::Debug, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;
 
@@ -170,6 +171,8 @@ impl RequestIdGenerator {
 
 /// The rpc actor.
 pub struct Rpc {
+    /// The network instance this Rpc actor is running under.
+    _network_context: Arc<NetworkContext>,
     /// Channel to send requests to Peer.
     peer_handle: PeerHandle,
     /// Channel to receive requests from other upstream actors.
@@ -195,6 +198,7 @@ pub struct Rpc {
 impl Rpc {
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
+        network_context: Arc<NetworkContext>,
         peer_handle: PeerHandle,
         requests_rx: channel::Receiver<OutboundRpcRequest>,
         peer_notifs_rx: channel::Receiver<PeerNotification>,
@@ -204,6 +208,7 @@ impl Rpc {
         max_concurrent_inbound_rpcs: u32,
     ) -> Self {
         Self {
+            _network_context: network_context,
             request_id_gen: RequestIdGenerator::new(peer_handle.peer_id()),
             peer_handle,
             requests_rx,

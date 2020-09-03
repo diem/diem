@@ -12,6 +12,7 @@ use crate::{
     ProtocolId,
 };
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
+use libra_config::network_id::NetworkContext;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -55,6 +56,7 @@ fn build_test_peer(
     };
 
     let peer = Peer::new(
+        NetworkContext::mock(),
         executor,
         connection,
         peer_req_rx,

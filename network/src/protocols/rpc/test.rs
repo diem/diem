@@ -14,6 +14,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use futures::future::join;
+use libra_config::network_id::NetworkContext;
 use libra_types::PeerId;
 use serial_test::serial;
 use tokio::runtime::{Handle, Runtime};
@@ -41,6 +42,7 @@ fn start_rpc_actor(
     // Reset counters before starting actor.
     reset_counters();
     let rpc = Rpc::new(
+        NetworkContext::mock(),
         PeerHandle::new(PeerId::random(), peer_reqs_tx),
         rpc_requests_rx,
         peer_notifs_rx,

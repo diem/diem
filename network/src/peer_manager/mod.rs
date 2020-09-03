@@ -696,6 +696,7 @@ where
 
         // Initialize a new network stack for this connection.
         let (network_reqs_tx, network_notifs_rx) = NetworkProvider::start(
+            Arc::clone(&self.network_context),
             self.executor.clone(),
             connection,
             self.transport_notifs_tx.clone(),

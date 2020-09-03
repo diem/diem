@@ -13,6 +13,7 @@ use crate::{
 };
 use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
+use libra_config::network_id::NetworkContext;
 use libra_logger::debug;
 use libra_types::PeerId;
 use once_cell::sync::Lazy;
@@ -47,6 +48,7 @@ fn start_direct_send_actor(
     // Reset counters before starting actor.
     reset_counters();
     let direct_send = DirectSend::new(
+        NetworkContext::mock(),
         PeerHandle::new(PeerId::random(), peer_reqs_tx),
         ds_requests_rx,
         ds_notifs_tx,

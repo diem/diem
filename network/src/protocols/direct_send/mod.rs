@@ -27,9 +27,10 @@ use crate::{
 };
 use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use serde::Serialize;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 #[cfg(test)]
 mod test;
@@ -72,6 +73,8 @@ impl Debug for Message {
 
 /// The DirectSend actor.
 pub struct DirectSend {
+    /// The network instance this DirectSend actor is running under.
+    _network_context: Arc<NetworkContext>,
     /// Channel to send requests to Peer.
     peer_handle: PeerHandle,
     /// Channel to receive requests from other upstream actors.
@@ -84,12 +87,14 @@ pub struct DirectSend {
 
 impl DirectSend {
     pub fn new(
+        network_context: Arc<NetworkContext>,
         peer_handle: PeerHandle,
         ds_requests_rx: channel::Receiver<DirectSendRequest>,
         ds_notifs_tx: channel::Sender<DirectSendNotification>,
         peer_notifs_rx: channel::Receiver<PeerNotification>,
     ) -> Self {
         Self {
+            _network_context: network_context,
             peer_handle,
             ds_requests_rx,
             ds_notifs_tx,

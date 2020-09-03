@@ -19,11 +19,12 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt, TryFutureExt,
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
 use serde::{export::Formatter, Serialize};
-use std::{fmt::Debug, io, time::Duration};
+use std::{fmt::Debug, io, sync::Arc, time::Duration};
 use stream_ratelimiter::*;
 use tokio::runtime::Handle;
 use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
@@ -76,6 +77,8 @@ enum State {
 }
 
 pub struct Peer<TSocket> {
+    /// The network instance this Peer actor is running under.
+    _network_context: Arc<NetworkContext>,
     /// A handle to a tokio executor.
     executor: Handle,
     /// Connection specific information.
@@ -102,6 +105,7 @@ where
     TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn new(
+        network_context: Arc<NetworkContext>,
         executor: Handle,
         connection: Connection<TSocket>,
         requests_rx: channel::Receiver<PeerRequest>,
@@ -115,6 +119,7 @@ where
             socket,
         } = connection;
         Self {
+            _network_context: network_context,
             executor,
             connection_metadata,
             connection: Some(socket),
@@ -186,7 +191,7 @@ where
                                 Some(Err(err)) => {
                                     warn!("Failure in reading messages from socket from peer: {}. Error: {:?}",
                                         self_peer_id.short_str(), err);
-                                    self.close_connection( DisconnectReason::ConnectionLost).await;
+                                    self.close_connection(DisconnectReason::ConnectionLost).await;
                                 }
                                 None => {
                                     warn!("Received connection closed event for peer: {}",

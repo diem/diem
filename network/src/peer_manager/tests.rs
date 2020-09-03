@@ -18,10 +18,7 @@ use crate::{
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::oneshot, io::AsyncWriteExt, sink::SinkExt, stream::StreamExt};
-use libra_config::{
-    config::RoleType,
-    network_id::{NetworkContext, NetworkId},
-};
+use libra_config::network_id::NetworkContext;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -29,7 +26,7 @@ use netcore::{
     compat::IoCompat,
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
-use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize, sync::Arc};
+use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
@@ -96,11 +93,7 @@ fn build_test_peer_manager(
     let peer_manager = PeerManager::new(
         executor,
         build_test_transport(),
-        Arc::new(NetworkContext::new(
-            NetworkId::Validator,
-            RoleType::Validator,
-            peer_id,
-        )),
+        NetworkContext::mock_with_peer_id(peer_id),
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         connection_reqs_rx,
