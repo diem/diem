@@ -127,9 +127,7 @@ impl PersistentSafetyStorage {
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<(), Error> {
         self.internal_store.set(WAYPOINT, waypoint)?;
         info!(
-            logging::SafetyLogSchema::new(LogEntry::Waypoint, LogEvent::Update)
-                .waypoint(*waypoint)
-                .into_struct_log()
+            logging::SafetyLogSchema::new(LogEntry::Waypoint, LogEvent::Update).waypoint(*waypoint)
         );
         Ok(())
     }

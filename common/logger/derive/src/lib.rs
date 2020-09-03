@@ -93,10 +93,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl #impl_generics #name #ty_generics #where_clause {
             #(#setters)*
-
-            pub fn into_struct_log(self) -> ::libra_logger::StructuredLogEntry {
-                ::libra_logger::StructuredLogEntry::default().schema(self)
-            }
         }
 
         impl #impl_generics ::libra_logger::Schema for #name #ty_generics #where_clause {

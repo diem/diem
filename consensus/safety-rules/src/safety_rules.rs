@@ -150,7 +150,6 @@ impl SafetyRules {
                 info!(
                     SafetyLogSchema::new(LogEntry::PreferredRound, LogEvent::Update)
                         .preferred_round(safety_data.preferred_round)
-                        .into_struct_log()
                 );
                 true
             }
@@ -201,7 +200,6 @@ impl SafetyRules {
             info!(
                 SafetyLogSchema::new(LogEntry::LastVotedRound, LogEvent::Update)
                     .last_voted_round(safety_data.last_voted_round)
-                    .into_struct_log()
             );
             return Ok(());
         }
@@ -249,9 +247,8 @@ impl SafetyRules {
                     .ok()
                     .ok_or_else(|| {
                         error!(
-                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error)
-                                .into_struct_log()
-                                .message("Validator key not found".into())
+                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error),
+                            "Validator key not found",
                         );
 
                         self.validator_signer = None;
@@ -262,15 +259,13 @@ impl SafetyRules {
             }
 
             debug!(
-                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
-                    .into_struct_log()
-                    .message("in set".into())
+                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
+                "in set",
             );
         } else {
             debug!(
-                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success)
-                    .into_struct_log()
-                    .message("not in set".into())
+                SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
+                "not in set",
             );
             self.validator_signer = None;
         }
@@ -293,9 +288,7 @@ impl SafetyRules {
                 None,
             ))?;
 
-            info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update)
-                .epoch(epoch_state.epoch)
-                .into_struct_log());
+            info!(SafetyLogSchema::new(LogEntry::Epoch, LogEvent::Update).epoch(epoch_state.epoch));
         }
         self.epoch_state = Some(epoch_state);
 
@@ -448,18 +441,16 @@ where
     F: FnOnce() -> Result<R, Error>,
     L: for<'a> Fn(SafetyLogSchema<'a>) -> SafetyLogSchema<'a>,
 {
-    debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)).into_struct_log());
+    debug!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Request)));
     counters::increment_query(log_entry.as_str(), "request");
     callback()
         .map(|v| {
-            info!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Success)).into_struct_log());
+            info!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Success)));
             counters::increment_query(log_entry.as_str(), "success");
             v
         })
         .map_err(|err| {
-            error!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Error))
-                .error(&err)
-                .into_struct_log());
+            error!(log_cb(SafetyLogSchema::new(log_entry, LogEvent::Error)).error(&err));
             counters::increment_query(log_entry.as_str(), "error");
             err
         })

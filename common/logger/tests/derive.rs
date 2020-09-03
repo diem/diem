@@ -16,7 +16,7 @@ fn simple() {
         optional: None,
     };
 
-    t.required(1).optional(2).into_struct_log();
+    t.required(1).optional(2);
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn lifetime() {
 
     let t = Test::default();
 
-    t.s("foo").into_struct_log();
+    t.s("foo");
 }
 
 #[test]
@@ -40,7 +40,7 @@ fn generic() {
 
     let t = Test::default();
 
-    t.s(5).into_struct_log();
+    t.s(5);
 }
 
 #[test]
@@ -55,5 +55,5 @@ fn attrs() {
 
     let t = Test::default();
 
-    t.debug(vec![1, 2, 3]).display(4).into_struct_log();
+    t.debug(vec![1, 2, 3]).display(4);
 }
