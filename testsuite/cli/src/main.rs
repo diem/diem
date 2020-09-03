@@ -83,11 +83,12 @@ fn main() {
     crash_handler::setup_panic_handler();
     let args = Args::from_args();
 
+    let mut logger = ::libra_logger::Logger::new();
+
     if !args.verbose {
-        ::libra_logger::Logger::new()
-            .level(::libra_logger::Level::Warn)
-            .init();
+        logger.level(::libra_logger::Level::Warn);
     }
+    logger.init();
 
     let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
 
