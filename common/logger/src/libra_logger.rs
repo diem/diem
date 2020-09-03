@@ -104,7 +104,9 @@ impl LibraLoggerBuilder {
 
         crate::logger::set_global_logger(logger.clone());
         let logger = Box::leak(Box::new(logger));
-        crate::struct_log::set_struct_logger(logger).expect("Unable to setup structured logger");
+        if let Err(e) = crate::struct_log::set_struct_logger(logger) {
+            eprintln!("Unable to setup structured logger: {:?}", e);
+        }
     }
 }
 

@@ -31,8 +31,7 @@ pub(crate) fn enabled(metadata: &Metadata) -> bool {
 }
 
 pub fn set_global_logger(logger: Arc<dyn Logger>) {
-    LOGGER
-        .set(logger)
-        .map_err(|_| ())
-        .expect("Global logger has already been set");
+    if LOGGER.set(logger).is_err() {
+        eprintln!("Global logger has already been set");
+    }
 }
