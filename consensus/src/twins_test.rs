@@ -13,7 +13,10 @@ use crate::{
     util::time_service::ClockTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::{block::Block, common::Author};
+use consensus_types::{
+    block::Block,
+    common::{Author, Payload},
+};
 use futures::channel::mpsc;
 use libra_config::{
     config::{
@@ -42,6 +45,7 @@ struct SMRNode {
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage>,
     _shared_mempool: MockSharedMempool,
+    _state_sync: mpsc::UnboundedReceiver<Payload>,
 }
 
 impl SMRNode {
@@ -68,7 +72,7 @@ impl SMRNode {
 
         playground.add_node(twin_id, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
-        let (state_sync_client, _state_sync) = mpsc::unbounded();
+        let (state_sync_client, state_sync) = mpsc::unbounded();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
         let shared_mempool = MockSharedMempool::new(None);
         let consensus_to_mempool_sender = shared_mempool.consensus_sender.clone();
@@ -122,6 +126,7 @@ impl SMRNode {
             commit_cb_receiver,
             storage,
             _shared_mempool: shared_mempool,
+            _state_sync: state_sync,
         }
     }
 
