@@ -52,7 +52,11 @@ impl ValidatorSet {
                 }
             };
 
+            let config_resource = client.validator_config(*info.account_address())?;
+            let name = DecryptedValidatorConfig::human_name(&config_resource.human_name);
+
             let info = DecryptedValidatorInfo {
+                name,
                 account_address: *info.account_address(),
                 consensus_public_key: config.consensus_public_key,
                 fullnode_network_address: config.fullnode_network_address,
@@ -67,6 +71,7 @@ impl ValidatorSet {
 
 #[derive(Serialize)]
 pub struct DecryptedValidatorInfo {
+    pub name: String,
     pub account_address: AccountAddress,
     pub consensus_public_key: Ed25519PublicKey,
     pub fullnode_network_address: NetworkAddress,

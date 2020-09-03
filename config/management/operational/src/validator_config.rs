@@ -57,11 +57,12 @@ impl SetValidatorConfig {
 
         // Retrieve the current validator / fullnode addresses and update accordingly
         let vc = client.validator_config(owner_account)?;
-        let validator_config =
-            DecryptedValidatorConfig::from_validator_config(&vc, owner_account, &encryptor)
-                .map_err(|e| {
-                    Error::UnexpectedError(format!("Error parsing validator config: {}", e))
-                })?;
+        let validator_config = DecryptedValidatorConfig::from_validator_config_resource(
+            &vc,
+            owner_account,
+            &encryptor,
+        )
+        .map_err(|e| Error::UnexpectedError(format!("Error parsing validator config: {}", e)))?;
 
         let validator_address = if let Some(validator_address) = self.validator_address {
             validator_address
@@ -111,7 +112,7 @@ impl RotateKey {
         // Fetch the current on-chain validator config for the node
         let owner_account = storage.account_address(OWNER_ACCOUNT)?;
         let validator_config = client.validator_config(owner_account).and_then(|vc| {
-            DecryptedValidatorConfig::from_validator_config(&vc, owner_account, &encryptor)
+            DecryptedValidatorConfig::from_validator_config_resource(&vc, owner_account, &encryptor)
         })?;
 
         // Check that the key held in storage matches the key registered on-chain in the validator
@@ -237,7 +238,7 @@ impl ValidatorConfig {
         client
             .validator_config(self.account_address)
             .and_then(|vc| {
-                DecryptedValidatorConfig::from_validator_config(
+                DecryptedValidatorConfig::from_validator_config_resource(
                     &vc,
                     self.account_address,
                     &encryptor,
@@ -248,12 +249,27 @@ impl ValidatorConfig {
 
 #[derive(Serialize)]
 pub struct DecryptedValidatorConfig {
+    pub name: String,
     pub consensus_public_key: Ed25519PublicKey,
     pub validator_network_address: NetworkAddress,
     pub fullnode_network_address: NetworkAddress,
 }
 
 impl DecryptedValidatorConfig {
+    pub fn from_validator_config_resource(
+        config_resource: &libra_types::validator_config::ValidatorConfigResource,
+        account_address: AccountAddress,
+        encryptor: &Encryptor,
+    ) -> Result<Self, Error> {
+        let config = config_resource.validator_config.as_ref().ok_or_else(|| {
+            Error::JsonRpcReadError("validator-config", "not present".to_string())
+        })?;
+
+        let mut value = Self::from_validator_config(&config, account_address, encryptor)?;
+        value.name = Self::human_name(&config_resource.human_name);
+        Ok(value)
+    }
+
     pub fn from_validator_config(
         config: &libra_types::validator_config::ValidatorConfig,
         account_address: AccountAddress,
@@ -268,9 +284,16 @@ impl DecryptedValidatorConfig {
             .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?;
 
         Ok(DecryptedValidatorConfig {
+            name: "".to_string(),
             consensus_public_key: config.consensus_public_key.clone(),
             fullnode_network_address: fullnode_network_addresses[0].clone(),
             validator_network_address: validator_network_addresses[0].clone(),
         })
+    }
+
+    pub fn human_name(name: &[u8]) -> String {
+        std::str::from_utf8(name)
+            .map(|v| v.to_string())
+            .unwrap_or_else(|_| hex::encode(name))
     }
 }

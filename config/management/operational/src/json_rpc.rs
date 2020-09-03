@@ -6,8 +6,8 @@ use libra_management::error::Error;
 use libra_secure_json_rpc::{JsonRpcClient, VMStatusView};
 use libra_types::{
     account_address::AccountAddress, account_config, account_config::AccountResource,
-    account_state::AccountState, transaction::SignedTransaction, validator_config::ValidatorConfig,
-    validator_info::ValidatorInfo,
+    account_state::AccountState, transaction::SignedTransaction,
+    validator_config::ValidatorConfigResource, validator_info::ValidatorInfo,
 };
 
 /// A wrapper around JSON RPC for error handling
@@ -41,13 +41,14 @@ impl JsonRpcClientWrapper {
             .map_err(|e| Error::JsonRpcReadError("account-state", e.to_string()))
     }
 
-    pub fn validator_config(&self, account: AccountAddress) -> Result<ValidatorConfig, Error> {
+    pub fn validator_config(
+        &self,
+        account: AccountAddress,
+    ) -> Result<ValidatorConfigResource, Error> {
         resource(
             "validator-config-resource",
             self.account_state(account)?.get_validator_config_resource(),
-        )?
-        .validator_config
-        .ok_or_else(|| Error::JsonRpcReadError("validator-config", "not present".to_string()))
+        )
     }
 
     /// This method returns all validator infos currently registered in the validator set of the
