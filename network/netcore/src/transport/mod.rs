@@ -32,22 +32,24 @@ pub enum ConnectionOrigin {
     Outbound,
 }
 
+impl ConnectionOrigin {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ConnectionOrigin::Inbound => "inbound",
+            ConnectionOrigin::Outbound => "outbound",
+        }
+    }
+}
+
 impl fmt::Debug for ConnectionOrigin {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self)
+        f.write_str(self.as_str())
     }
 }
 
 impl fmt::Display for ConnectionOrigin {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ConnectionOrigin::Inbound => "Inbound",
-                ConnectionOrigin::Outbound => "Outbound",
-            }
-        )
+        f.write_str(self.as_str())
     }
 }
 

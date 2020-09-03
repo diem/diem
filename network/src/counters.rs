@@ -46,9 +46,9 @@ pub fn update_libra_connections(
     LIBRA_CONNECTIONS
         .with_label_values(&[
             network_context.role().as_str(),
-            network_context.network_id().to_string().as_str(),
+            network_context.network_id().as_str(),
             network_context.peer_id().short_str().as_str(),
-            origin.to_string().as_str(),
+            origin.as_str(),
         ])
         .set(num_connections as i64);
 }
