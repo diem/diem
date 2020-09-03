@@ -449,8 +449,8 @@ pub struct AccountData {
     account_role: AccountRole,
 }
 
-fn new_event_handle(count: u64) -> EventHandle {
-    EventHandle::random_handle(count)
+fn new_event_handle(count: u64, address: AccountAddress) -> EventHandle {
+    EventHandle::new_from_address(&address, count)
 }
 
 impl AccountData {
@@ -527,16 +527,17 @@ impl AccountData {
     ) -> Self {
         let mut balances = BTreeMap::new();
         balances.insert(balance_currency_code, Balance::new(balance));
+        let addr = *account.address();
         Self {
             account_role: AccountRole::new(*account.address(), account_specifier),
-            event_generator: EventHandleGenerator::new_with_event_count(*account.address(), 2),
-            withdrawal_capability: Some(WithdrawCapability::new(*account.address())),
-            key_rotation_capability: Some(KeyRotationCapability::new(*account.address())),
+            event_generator: EventHandleGenerator::new_with_event_count(addr, 2),
+            withdrawal_capability: Some(WithdrawCapability::new(addr)),
+            key_rotation_capability: Some(KeyRotationCapability::new(addr)),
             account,
             balances,
             sequence_number,
-            sent_events: new_event_handle(sent_events_count),
-            received_events: new_event_handle(received_events_count),
+            sent_events: new_event_handle(sent_events_count, addr),
+            received_events: new_event_handle(received_events_count, addr),
         }
     }
 
