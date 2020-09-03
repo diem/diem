@@ -13,7 +13,7 @@ use libra_types::{
 };
 use move_core_types::{
     account_address::AccountAddress,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::RemoteCache;
 use std::collections::btree_map::BTreeMap;
@@ -98,7 +98,7 @@ impl<'block> RemoteCache for StateViewCache<'block> {
     fn get_resource(
         &self,
         address: &AccountAddress,
-        tag: &TypeTag,
+        tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_resource(address, tag)
     }
@@ -135,13 +135,9 @@ impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
     fn get_resource(
         &self,
         address: &AccountAddress,
-        tag: &TypeTag,
+        struct_tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
-        let struct_tag = match tag {
-            TypeTag::Struct(struct_tag) => struct_tag.clone(),
-            _ => return Err(PartialVMError::new(StatusCode::VALUE_DESERIALIZATION_ERROR)),
-        };
-        let ap = create_access_path(*address, struct_tag);
+        let ap = create_access_path(*address, struct_tag.clone());
         self.get(&ap)
     }
 }

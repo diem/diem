@@ -6,7 +6,7 @@ use crate::loader::Loader;
 use libra_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
@@ -26,7 +26,7 @@ pub trait RemoteCache {
     fn get_resource(
         &self,
         address: &AccountAddress,
-        tag: &TypeTag,
+        tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>>;
 }
 
@@ -67,7 +67,7 @@ pub(crate) struct TransactionDataCache<'r, 'l, R> {
 pub struct TransactionEffects {
     pub resources: Vec<(
         AccountAddress,
-        Vec<(TypeTag, Option<(MoveTypeLayout, Value)>)>,
+        Vec<(StructTag, Option<(MoveTypeLayout, Value)>)>,
     )>,
     pub modules: Vec<(ModuleId, Vec<u8>)>,
     pub events: Vec<(Vec<u8>, u64, TypeTag, MoveTypeLayout, Value)>,
@@ -98,12 +98,20 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
                 match gv.into_effect()? {
                     GlobalValueEffect::None => (),
                     GlobalValueEffect::Deleted => {
-                        let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                        vals.push((ty_tag, None));
+                        if let TypeTag::Struct(s_tag) = self.loader.type_to_type_tag(&ty)? {
+                            vals.push((s_tag, None))
+                        } else {
+                            // non-struct top-level value; can't happen
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR));
+                        }
                     }
                     GlobalValueEffect::Changed(val) => {
-                        let ty_tag = self.loader.type_to_type_tag(&ty)?;
-                        vals.push((ty_tag, Some((ty_layout, val))));
+                        if let TypeTag::Struct(s_tag) = self.loader.type_to_type_tag(&ty)? {
+                            vals.push((s_tag, Some((ty_layout, val))))
+                        } else {
+                            // non-struct top-level value; can't happen
+                            return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR));
+                        }
                     }
                 }
             }
@@ -163,7 +171,14 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         });
 
         if !account_cache.data_map.contains_key(ty) {
-            let ty_tag = self.loader.type_to_type_tag(ty)?;
+            let ty_tag = match self.loader.type_to_type_tag(ty)? {
+                TypeTag::Struct(s_tag) => s_tag,
+                _ =>
+                // non-struct top-level value; can't happen
+                {
+                    return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR))
+                }
+            };
             let ty_layout = self.loader.type_to_type_layout(ty)?;
 
             let gv = match self.remote.get_resource(&addr, &ty_tag)? {

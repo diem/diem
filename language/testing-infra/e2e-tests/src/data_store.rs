@@ -16,7 +16,7 @@ use libra_types::{
 use libra_vm::data_cache::RemoteStorage;
 use move_core_types::{
     account_address::AccountAddress,
-    language_storage::{ModuleId, TypeTag},
+    language_storage::{ModuleId, StructTag},
 };
 use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
@@ -124,7 +124,7 @@ impl RemoteCache for FakeDataStore {
     fn get_resource(
         &self,
         address: &AccountAddress,
-        tag: &TypeTag,
+        tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_resource(address, tag)
     }

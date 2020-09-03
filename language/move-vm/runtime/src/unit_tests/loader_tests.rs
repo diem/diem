@@ -6,7 +6,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, TypeTag},
+    language_storage::{ModuleId, StructTag},
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
@@ -157,7 +157,7 @@ impl RemoteCache for DataStore {
     fn get_resource(
         &self,
         _address: &AccountAddress,
-        _tag: &TypeTag,
+        _tag: &StructTag,
     ) -> PartialVMResult<Option<Vec<u8>>> {
         Ok(None)
     }

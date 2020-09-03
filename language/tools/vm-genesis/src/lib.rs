@@ -160,11 +160,10 @@ pub fn encode_genesis_change_set(
     let type_mapping = effects
         .resources
         .iter()
-        .flat_map(|(_adddr, resources)| {
-            resources.iter().map(|(ty_tag, _)| match ty_tag {
-                TypeTag::Struct(struct_tag) => (struct_tag.access_vector(), struct_tag.clone()),
-                _ => panic!("not a struct"),
-            })
+        .flat_map(|(_addr, resources)| {
+            resources
+                .iter()
+                .map(|(struct_tag, _)| (struct_tag.access_vector(), struct_tag.clone()))
         })
         .collect();
     let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();

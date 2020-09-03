@@ -26,7 +26,6 @@ use libra_types::{
 use move_core_types::{
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::IdentStr,
-    language_storage::TypeTag,
 };
 
 use move_vm_runtime::{
@@ -428,11 +427,7 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
     let mut ops = vec![];
 
     for (addr, vals) in effects.resources {
-        for (ty_tag, val_opt) in vals {
-            let struct_tag = match ty_tag {
-                TypeTag::Struct(struct_tag) => struct_tag,
-                _ => return Err(VMStatus::Error(StatusCode::VALUE_SERIALIZATION_ERROR)),
-            };
+        for (struct_tag, val_opt) in vals {
             let ap = ap_cache.get_resource_path(addr, struct_tag);
             let op = match val_opt {
                 None => WriteOp::Deletion,
