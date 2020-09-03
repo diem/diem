@@ -308,3 +308,134 @@ fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
 
     Ok(w)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::LogEntry;
+    use crate::{
+        debug, error, info, logger::Logger, trace, warn, Event, Key, KeyValue, Level, Metadata,
+        Schema, Value, Visitor,
+    };
+    use chrono::{DateTime, Utc};
+    use serde_json::Value as JsonValue;
+    use std::sync::{
+        mpsc::{self, Receiver, SyncSender},
+        Arc,
+    };
+
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "snake_case")]
+    enum Enum {
+        FooBar,
+    }
+
+    struct TestSchema<'a> {
+        foo: usize,
+        bar: &'a Enum,
+    }
+
+    impl Schema for TestSchema<'_> {
+        fn visit(&self, visitor: &mut dyn Visitor) {
+            visitor.visit_pair(Key::new("foo"), Value::from_serde(&self.foo));
+            visitor.visit_pair(Key::new("bar"), Value::from_serde(&self.bar));
+        }
+    }
+
+    struct LogStream(SyncSender<LogEntry>);
+
+    impl LogStream {
+        fn new() -> (Self, Receiver<LogEntry>) {
+            let (sender, receiver) = mpsc::sync_channel(1024);
+            (Self(sender), receiver)
+        }
+    }
+
+    impl Logger for LogStream {
+        fn enabled(&self, metadata: &Metadata) -> bool {
+            metadata.level() <= Level::Debug
+        }
+
+        fn record(&self, event: &Event) {
+            self.0.send(LogEntry::new(event)).unwrap();
+        }
+    }
+
+    fn set_test_logger() -> Receiver<LogEntry> {
+        let (logger, receiver) = LogStream::new();
+        let logger = Arc::new(logger);
+        crate::logger::set_global_logger(logger);
+        receiver
+    }
+
+    // TODO: Find a better mechanism for testing that allows setting the logger not globally
+    #[test]
+    fn basic() {
+        let receiver = set_test_logger();
+        let number = 12345;
+
+        // Send an info log
+        let before = Utc::now();
+        info!(
+            TestSchema {
+                foo: 5,
+                bar: &Enum::FooBar
+            },
+            test = true,
+            category = "name",
+            KeyValue::new("display", Value::from_display(&number)),
+            "This is a log"
+        );
+        let after = Utc::now();
+
+        let entry = receiver.recv().unwrap();
+
+        // Ensure standard fields are filled
+        assert_eq!(entry.metadata.level(), Level::Info);
+        assert_eq!(
+            entry.metadata.target(),
+            module_path!().split("::").next().unwrap()
+        );
+        assert_eq!(entry.metadata.module_path(), module_path!());
+        assert_eq!(entry.metadata.file(), file!());
+        assert_eq!(entry.message.as_deref(), Some("This is a log"));
+
+        // Log time should be the time the structured log entry was created
+        let timestamp = DateTime::parse_from_rfc3339(&entry.timestamp).unwrap();
+        let timestamp: DateTime<Utc> = DateTime::from(timestamp);
+        assert!(before <= timestamp && timestamp <= after);
+
+        // Ensure data stored is the right type
+        assert_eq!(entry.data.get("foo").and_then(JsonValue::as_u64), Some(5));
+        assert_eq!(
+            entry.data.get("bar").and_then(JsonValue::as_str),
+            Some("foo_bar")
+        );
+        assert_eq!(
+            entry.data.get("display").and_then(JsonValue::as_str),
+            Some(format!("{}", number)).as_deref(),
+        );
+        assert_eq!(
+            entry.data.get("test").and_then(JsonValue::as_bool),
+            Some(true),
+        );
+        assert_eq!(
+            entry.data.get("category").and_then(JsonValue::as_str),
+            Some("name"),
+        );
+
+        // Test all log levels work properly
+        // Tracing should be skipped because the Logger was setup to skip Tracing events
+        trace!("trace");
+        debug!("debug");
+        info!("info");
+        warn!("warn");
+        error!("error");
+
+        let levels = &[Level::Debug, Level::Info, Level::Warn, Level::Error];
+
+        for level in levels {
+            let entry = receiver.recv().unwrap();
+            assert_eq!(entry.metadata.level(), *level);
+        }
+    }
+}
