@@ -11,8 +11,10 @@ use consensus_types::{
     vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
 use libra_crypto::{
-    ed25519::{Ed25519PublicKey, Ed25519Signature},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     hash::{HashValue, TransactionAccumulatorHasher},
+    test_utils::TEST_SEED,
+    traits::{SigningKey, Uniform},
 };
 use libra_types::{
     account_address::AccountAddress,
@@ -25,7 +27,8 @@ use libra_types::{
     validator_verifier::{ValidatorConsensusInfo, ValidatorVerifier},
 };
 use proptest::prelude::*;
-use std::convert::TryFrom;
+use rand::rngs::StdRng;
+use rand_core::SeedableRng;
 
 const MAX_BLOCK_SIZE: usize = 10000;
 const MAX_NUM_ADDR_TO_VALIDATOR_INFO: usize = 10;
@@ -57,8 +60,16 @@ prop_compose! {
     )(
         id in any::<HashValue>(),
         block_data in arb_block_data(),
-        signature in arb_ed25519_signature(),
+        include_signature in any::<bool>(),
     ) -> Block {
+        let signature = if include_signature {
+            let mut rng = StdRng::from_seed(TEST_SEED);
+            let private_key = Ed25519PrivateKey::generate(&mut rng);
+            let signature = private_key.sign(&block_data);
+            Some(signature)
+        } else {
+            None
+        };
         Block::new_for_testing(id, block_data, signature)
     }
 }
@@ -95,9 +106,21 @@ prop_compose! {
 prop_compose! {
     pub fn arb_maybe_signed_vote_proposal(
     )(
-        signature in arb_ed25519_signature(),
-        vote_proposal in arb_vote_proposal(),
+        accumulator_extension_proof in arb_accumulator_extension_proof(),
+        block in arb_block(),
+        next_epoch_state in arb_epoch_state(),
+        include_signature in any::<bool>(),
     ) -> MaybeSignedVoteProposal {
+        let vote_proposal = VoteProposal::new(accumulator_extension_proof, block, next_epoch_state);
+        let signature = if include_signature {
+            let mut rng = StdRng::from_seed(TEST_SEED);
+            let private_key = Ed25519PrivateKey::generate(&mut rng);
+            let signature = private_key.sign(&vote_proposal);
+            Some(signature)
+        } else {
+            None
+        };
+
         MaybeSignedVoteProposal {
             vote_proposal,
             signature
@@ -130,25 +153,6 @@ prop_compose! {
         round in any::<u64>(),
     ) -> Timeout {
         Timeout::new(epoch, round)
-    }
-}
-
-// This generates an arbitrary and optional Ed25519Signature.
-prop_compose! {
-    pub fn arb_ed25519_signature(
-    )(
-        include_signature in any::<bool>(),
-        signature_bytes in prop::collection::vec(any::<u8>(), 0..Ed25519Signature::LENGTH),
-    ) -> Option<Ed25519Signature> {
-        if include_signature {
-            if let Ok(signature) = Ed25519Signature::try_from(signature_bytes.as_slice()) {
-                Some(signature)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
     }
 }
 
@@ -216,18 +220,6 @@ prop_compose! {
         voting_power in any::<u64>(),
     ) -> ValidatorConsensusInfo {
         ValidatorConsensusInfo::new(public_key, voting_power)
-    }
-}
-
-// This generates an arbitrary VoteProposal.
-prop_compose! {
-    pub fn arb_vote_proposal(
-    )(
-        accumulator_extension_proof in arb_accumulator_extension_proof(),
-        block in arb_block(),
-        next_epoch_state in arb_epoch_state()
-    ) -> VoteProposal {
-        VoteProposal::new(accumulator_extension_proof, block, next_epoch_state)
     }
 }
 
