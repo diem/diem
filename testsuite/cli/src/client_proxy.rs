@@ -677,66 +677,6 @@ impl ClientProxy {
         }
     }
 
-    /// Remove an existing validator from Validator Set.
-    pub fn remove_validator(
-        &mut self,
-        space_delim_strings: &[&str],
-        is_blocking: bool,
-    ) -> Result<()> {
-        ensure!(
-            space_delim_strings[0] == "remove_validator",
-            "inconsistent command '{}' for remove_validator",
-            space_delim_strings[0]
-        );
-        ensure!(
-            space_delim_strings.len() == 2,
-            "Invalid number of arguments for removing validator"
-        );
-        let (account_address, _) =
-            self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_remove_validator_and_reconfigure_script(
-                        self.libra_root_account.as_ref().unwrap().sequence_number,
-                        vec![],
-                        account_address,
-                    ),
-                ),
-                is_blocking,
-            ),
-            None => unimplemented!(),
-        }
-    }
-
-    /// Add a new validator to the Validator Set.
-    pub fn add_validator(&mut self, space_delim_strings: &[&str], is_blocking: bool) -> Result<()> {
-        ensure!(
-            space_delim_strings[0] == "add_validator",
-            "inconsistent command '{}' for add_validator",
-            space_delim_strings[0]
-        );
-        ensure!(
-            space_delim_strings.len() == 2,
-            "Invalid number of arguments for adding validator"
-        );
-        let (account_address, _) =
-            self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.libra_root_account {
-            Some(_) => self.association_transaction_with_local_libra_root_account(
-                TransactionPayload::Script(
-                    transaction_builder::encode_add_validator_and_reconfigure_script(
-                        self.libra_root_account.as_ref().unwrap().sequence_number,
-                        vec![],
-                        account_address,
-                    ),
-                ),
-                is_blocking,
-            ),
-            None => unimplemented!(),
-        }
-    }
-
     /// Waits for the next transaction for a specific address and prints it
     pub fn wait_for_transaction(
         &mut self,
