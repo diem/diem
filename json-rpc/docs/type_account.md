@@ -9,6 +9,7 @@ A Libra account.
 
 | Name                              | Type                           | Description                                                                                 |
 |-----------------------------------|--------------------------------|---------------------------------------------------------------------------------------------|
+| address                           | string                         | the account address                                                                         |
 | sequence_number                   | unsigned int64                 | The next sequence number for the current account                                            |
 | authentication_key                | string                         | Hex-encoded authentication key for the account                                              |
 | delegated_key_rotation_capability | boolean                        | If true, another account has the ability to rotate the authentication key for this account. |

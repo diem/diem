@@ -690,6 +690,7 @@ fn test_json_rpc_protocol() {
                 "libra_ledger_timestampusec": timestamp,
                 "libra_ledger_version": version,
                 "result": {
+                    "address": libra_root_address().to_string(),
                     "authentication_key": "1304972f9242cbc3528a1e286323471ab891baa37e0053b85651693a79854a00",
                     "balances": [],
                     "delegated_key_rotation_capability": false,
@@ -712,6 +713,7 @@ fn test_json_rpc_protocol() {
                 "libra_ledger_timestampusec": timestamp,
                 "libra_ledger_version": version,
                 "result": {
+                    "address": testnet_dd_account_address().to_string(),
                     "authentication_key": "1304972f9242cbc3528a1e286323471ab891baa37e0053b85651693a79854a00",
                     "balances": [
                         {
@@ -892,6 +894,10 @@ fn test_get_account() {
         .iter()
         .map(|(_, bal_resource)| bal_resource.coin())
         .collect();
+    assert_eq!(
+        account.address.into_bytes().unwrap(),
+        first_account.to_vec()
+    );
     assert_eq!(account_balances, expected_resource_balances);
     assert_eq!(
         account.sequence_number,

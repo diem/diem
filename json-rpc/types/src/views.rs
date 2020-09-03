@@ -19,6 +19,7 @@ use libra_types::{
     vm_status::KeptVMStatus,
 };
 use move_core_types::{
+    account_address::AccountAddress,
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     move_resource::MoveResource,
@@ -78,6 +79,7 @@ pub enum AccountRoleView {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AccountView {
+    pub address: BytesView,
     pub balances: Vec<AmountView>,
     pub sequence_number: u64,
     pub authentication_key: BytesView,
@@ -91,12 +93,14 @@ pub struct AccountView {
 
 impl AccountView {
     pub fn new(
+        address: &AccountAddress,
         account: &AccountResource,
         balances: BTreeMap<Identifier, BalanceResource>,
         account_role: AccountRole,
         freezing_bit: FreezingBit,
     ) -> Self {
         Self {
+            address: BytesView::from(address.to_vec()),
             balances: balances
                 .iter()
                 .map(|(currency_code, balance)| {

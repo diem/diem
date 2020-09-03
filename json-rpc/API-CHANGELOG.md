@@ -13,6 +13,9 @@ Please add the API change in the following format:
 
 ```
 
+## 2020-09-02 Add `address` to `get_account` response.
+- Adding address field to get_account response.
+
 ## 2020-08-25 Add `BaseUrlRotation` and `ComplianceKeyRotation` events
 - Added two new event types, one is emitted when the public key used for dual
   attestation on chain is rotated, and the other is emitted when the base url
