@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Metadata {
     /// The level of verbosity of the event
     level: Level,

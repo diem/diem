@@ -6,10 +6,14 @@ use crate::{
         PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_PARSE_ERROR_COUNT,
         STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
     },
+    logger::Logger,
     struct_log::TcpWriter,
-    Level, StructuredLogEntry,
+    Event, Level, Metadata,
 };
+use chrono::{SecondsFormat, Utc};
+use serde::Serialize;
 use std::{
+    collections::HashMap,
     env, fmt,
     io::Write,
     sync::{
@@ -19,8 +23,54 @@ use std::{
     thread,
 };
 
-pub const CHANNEL_SIZE: usize = 10000; // MAX_LOG_LINE_SIZE * 10000 = max buffer size
+pub const CHANNEL_SIZE: usize = 10000;
 const NUM_SEND_RETRIES: u8 = 1;
+
+#[derive(Debug, Serialize)]
+pub struct LogEntry {
+    #[serde(flatten)]
+    metadata: Metadata,
+    timestamp: String,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    data: HashMap<&'static str, serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message: Option<String>,
+}
+
+impl LogEntry {
+    fn new(event: &Event) -> Self {
+        use crate::{Key, Value, Visitor};
+
+        struct JsonVisitor<'a>(&'a mut HashMap<&'static str, serde_json::Value>);
+
+        impl<'a> Visitor for JsonVisitor<'a> {
+            fn visit_pair(&mut self, key: Key, value: Value<'_>) {
+                let v = match value {
+                    Value::Debug(d) => serde_json::Value::String(format!("{:?}", d)),
+                    Value::Display(d) => serde_json::Value::String(d.to_string()),
+                    Value::Serde(s) => serde_json::to_value(s).unwrap(),
+                };
+
+                self.0.insert(key.as_str(), v);
+            }
+        }
+
+        let metadata = *event.metadata();
+        let message = event.message().map(fmt::format);
+
+        let mut data = HashMap::new();
+        for schema in event.keys_and_values() {
+            schema.visit(&mut JsonVisitor(&mut data));
+        }
+
+        Self {
+            metadata,
+            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
+            data,
+            message,
+        }
+    }
+}
 
 pub struct LibraLoggerBuilder {
     channel_size: usize,
@@ -107,7 +157,7 @@ impl LibraLoggerBuilder {
 }
 
 pub struct LibraLogger {
-    sender: Option<SyncSender<StructuredLogEntry>>,
+    sender: Option<SyncSender<LogEntry>>,
     printer: Option<Box<dyn Writer>>,
     level: Level,
 }
@@ -133,7 +183,7 @@ impl LibraLogger {
             .build()
     }
 
-    fn send_entry(&self, entry: StructuredLogEntry) {
+    fn send_entry(&self, entry: LogEntry) {
         if let Some(printer) = &self.printer {
             let s = format(&entry).expect("Unable to format");
             printer.write(s);
@@ -148,30 +198,20 @@ impl LibraLogger {
     }
 }
 
-impl crate::logger::Logger for LibraLogger {
-    fn enabled(&self, metadata: &crate::Metadata) -> bool {
+impl Logger for LibraLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= self.level
     }
 
-    fn record(&self, event: &crate::Event) {
-        let mut entry = StructuredLogEntry::default()
-            .level(event.metadata().level())
-            .schemas(event.keys_and_values());
-        entry
-            .add_category(event.metadata().target())
-            .add_module(event.metadata().module_path())
-            .add_location(event.metadata().location());
-
-        if let Some(message) = event.message() {
-            entry = entry.message(message.to_string());
-        }
+    fn record(&self, event: &Event) {
+        let entry = LogEntry::new(event);
 
         self.send_entry(entry)
     }
 }
 
 struct LoggerService {
-    receiver: Receiver<StructuredLogEntry>,
+    receiver: Receiver<LogEntry>,
     address: Option<String>,
     printer: Option<Box<dyn Writer>>,
 }
@@ -195,8 +235,8 @@ impl LoggerService {
     }
 
     /// Writes a log line into json_lines logstash format, which has a newline at the end
-    fn write_to_logstash(stream: &mut TcpWriter, entry: &StructuredLogEntry) {
-        let message = if let Ok(json) = entry.to_json_string() {
+    fn write_to_logstash(stream: &mut TcpWriter, entry: &LogEntry) {
+        let message = if let Ok(json) = serde_json::to_string(entry) {
             json
         } else {
             STRUCT_LOG_PARSE_ERROR_COUNT.inc();
@@ -250,22 +290,20 @@ impl Writer for StderrWriter {
 /// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
 /// Example:
 /// 2020-03-07 05:03:03 INFO common/libra-logger/src/lib.rs:261 Hello
-fn format(entry: &StructuredLogEntry) -> Result<String, fmt::Error> {
+fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
     use std::fmt::Write;
 
     let mut w = String::new();
-    if let Some(level) = &entry.level {
-        write!(w, "{} ", level)?;
-    }
-
-    write!(w, "{} ", entry.timestamp)?;
-
-    if let Some(location) = &entry.location {
-        write!(w, "{} ", location)?;
-    }
+    write!(
+        w,
+        "{} {} {}",
+        entry.metadata.level(),
+        entry.timestamp,
+        entry.metadata.location()
+    )?;
 
     if let Some(message) = &entry.message {
-        write!(w, "{}", message)?;
+        write!(w, " {}", message)?;
     }
 
     Ok(w)

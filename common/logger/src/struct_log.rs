@@ -20,20 +20,14 @@ use std::{
 #[cfg(test)]
 mod tests;
 
-// Size configurations
-const MAX_LOG_LINE_SIZE: usize = 10240; // 10KiB
-const LOG_INFO_OFFSET: usize = 256;
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
-
-// Fields to keep when over size
-static FIELDS_TO_KEEP: &[&str] = &["error"];
 
 #[derive(Debug, Serialize)]
 pub struct StructuredLogEntry {
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) message: Option<String>,
+    message: Option<String>,
     /// description of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
@@ -48,12 +42,12 @@ pub struct StructuredLogEntry {
     module: Option<&'static str>,
     /// filename + line (e.g. consensus/src/round_manager.rs:678)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) location: Option<&'static str>,
+    location: Option<&'static str>,
     /// time of the log
-    pub(crate) timestamp: String,
+    timestamp: String,
     /// Log level
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) level: Option<Level>,
+    level: Option<Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -99,66 +93,6 @@ impl StructuredLogEntry {
         ret.category = Some(category);
         ret.name = Some(name);
         ret
-    }
-
-    fn clone_without_data(&self) -> Self {
-        Self {
-            message: self.message.clone(),
-            pattern: self.pattern,
-            category: self.category,
-            name: self.name,
-            module: self.module,
-            location: self.location,
-            timestamp: self.timestamp.clone(),
-            level: self.level,
-            data: HashMap::new(),
-        }
-    }
-
-    fn to_json(&self) -> Result<Value, serde_json::Error> {
-        let value = serde_json::to_value(self);
-        if let Err(e) = &value {
-            log::error!("[Logging] Failed to serialize struct log entry: {}", e);
-        }
-        value
-    }
-
-    pub(crate) fn to_json_string(&self) -> Result<String, serde_json::Error> {
-        let json = self.to_json()?;
-
-        // If the message is too long, let's truncate the message and leave helpful info
-        let mut json_string = json.to_string();
-        if json_string.len() > MAX_LOG_LINE_SIZE {
-            log::error!(
-                "[Logging] Structured log is too long, shrinking below : {}",
-                MAX_LOG_LINE_SIZE
-            );
-
-            let mut entry = self.clone_without_data();
-            if let Some(mut message) = entry.message {
-                message.truncate(MAX_LOG_LINE_SIZE - LOG_INFO_OFFSET);
-                // Leave 128 bytes for all the other info
-                entry.message = Some(message);
-            }
-            entry = entry
-                .data(
-                    "StructLogError",
-                    format!("Message exceeded MAX_LOG_LINE_SIZE {}", MAX_LOG_LINE_SIZE),
-                )
-                .data("OriginalLength", json_string.len());
-
-            // Keep important values around
-            // TODO: We should work on decreasing log sizes, as this isn't sustainable
-            for field in FIELDS_TO_KEEP {
-                if let Some(value) = self.data.get(field) {
-                    entry = entry.json_data(field, value.clone());
-                }
-            }
-
-            json_string = entry.to_json()?.to_string();
-        }
-
-        Ok(json_string)
     }
 
     /// Sets the log level of the log
