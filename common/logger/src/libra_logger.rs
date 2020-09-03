@@ -102,11 +102,7 @@ impl LibraLoggerBuilder {
             })
         };
 
-        crate::logger::set_global_logger(logger.clone());
-        let logger = Box::leak(Box::new(logger));
-        if let Err(e) = crate::struct_log::set_struct_logger(logger) {
-            eprintln!("Unable to setup structured logger: {:?}", e);
-        }
+        crate::logger::set_global_logger(logger);
     }
 }
 
@@ -170,18 +166,6 @@ impl crate::logger::Logger for LibraLogger {
             entry = entry.message(message.to_string());
         }
 
-        self.send_entry(entry)
-    }
-}
-
-impl crate::struct_log::StructLogSink for LibraLogger {
-    fn send(&self, entry: StructuredLogEntry) {
-        self.send_entry(entry)
-    }
-}
-
-impl crate::struct_log::StructLogSink for Arc<LibraLogger> {
-    fn send(&self, entry: StructuredLogEntry) {
         self.send_entry(entry)
     }
 }

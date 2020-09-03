@@ -5,37 +5,20 @@ use crate::{
     Level,
 };
 use chrono::{SecondsFormat, Utc};
-use once_cell::sync::Lazy;
 use serde::Serialize;
 use serde_json::Value;
 use std::{
     collections::HashMap,
-    env,
     fmt::Display,
     io,
     io::Write,
     marker::PhantomData,
     net::{TcpStream, ToSocketAddrs},
-    str::FromStr,
-    sync::atomic::{AtomicUsize, Ordering},
     time::Duration,
 };
 
 #[cfg(test)]
 mod tests;
-
-pub trait StructLogSink: Sync {
-    fn send(&self, entry: StructuredLogEntry);
-}
-
-// This is poor's man AtomicReference from crossbeam
-// It have few unsafe lines, but does not require extra dependency
-static NOP: NopStructLog = NopStructLog {};
-static mut STRUCT_LOGGER: &'static dyn StructLogSink = &NOP;
-static STRUCT_LOGGER_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
-const UNINITIALIZED: usize = 0;
-const INITIALIZING: usize = 1;
-const INITIALIZED: usize = 2;
 
 // Size configurations
 const MAX_LOG_LINE_SIZE: usize = 10240; // 10KiB
@@ -299,12 +282,6 @@ impl StructuredLogEntry {
         );
         self
     }
-
-    // Use sl_level! macros instead of this method to populate extra meta information such as git rev and module name
-    #[doc(hidden)]
-    pub fn send(self) {
-        struct_logger().send(self);
-    }
 }
 
 /// Field is similar to .data but restricts type of the value to a specific type.
@@ -325,70 +302,6 @@ pub struct LoggingField<D>(&'static str, PhantomData<D>);
 impl<D> LoggingField<D> {
     pub const fn new(name: &'static str) -> Self {
         Self(name, PhantomData)
-    }
-}
-
-// This is exact copy of similar function in log crate
-/// Sets structured logger
-pub fn set_struct_logger(logger: &'static dyn StructLogSink) -> Result<(), InitLoggerError> {
-    unsafe {
-        match STRUCT_LOGGER_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst) {
-            UNINITIALIZED => {
-                STRUCT_LOGGER = logger;
-                STRUCT_LOGGER_STATE.store(INITIALIZED, Ordering::SeqCst);
-                Ok(())
-            }
-            INITIALIZING => {
-                while STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZING {}
-                Err(InitLoggerError::StructLoggerAlreadySet)
-            }
-            _ => Err(InitLoggerError::StructLoggerAlreadySet),
-        }
-    }
-}
-
-static STRUCT_LOG_LEVEL: Lazy<Level> = Lazy::new(|| {
-    let level = env::var("STRUCT_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
-    Level::from_str(&level).expect("Failed to parse log level")
-});
-
-/// Checks if structured logging is enabled for level
-pub fn struct_logger_enabled(level: Level) -> bool {
-    struct_logger_set() && level <= *STRUCT_LOG_LEVEL
-}
-
-/// Checks if structured logging is enabled
-pub fn struct_logger_set() -> bool {
-    STRUCT_LOGGER_STATE.load(Ordering::SeqCst) == INITIALIZED
-}
-
-#[derive(Debug)]
-pub enum InitLoggerError {
-    StructLoggerAlreadySet,
-}
-
-// This is exact copy of similar function in log crate
-fn struct_logger() -> &'static dyn StructLogSink {
-    unsafe {
-        if STRUCT_LOGGER_STATE.load(Ordering::SeqCst) != INITIALIZED {
-            &NOP
-        } else {
-            STRUCT_LOGGER
-        }
-    }
-}
-
-struct NopStructLog {}
-
-impl StructLogSink for NopStructLog {
-    fn send(&self, _entry: StructuredLogEntry) {}
-}
-
-struct PrintStructLog {}
-
-impl StructLogSink for PrintStructLog {
-    fn send(&self, entry: StructuredLogEntry) {
-        println!("{}", serde_json::to_string(&entry).unwrap());
     }
 }
 

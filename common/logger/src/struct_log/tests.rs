@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use super::StructLogSink;
-use crate::{
-    prelude::*, struct_log::InitLoggerError, Key, LoggingField, Schema, StructuredLogEntry, Value,
-    Visitor,
-};
+use crate::{prelude::*, Key, LoggingField, Schema, StructuredLogEntry, Value, Visitor};
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value as JsonValue};
 use std::sync::{
@@ -64,21 +60,11 @@ impl crate::logger::Logger for StreamStructLog {
     }
 }
 
-impl StructLogSink for StreamStructLog {
-    fn send(&self, entry: StructuredLogEntry) {
-        if let Err(e) = self.sender.send(entry) {
-            // Use log crate macro to avoid generation of structured log in this case
-            // Otherwise we will have infinite loop
-            log::error!("Failed to send structured log: {}", e);
-        }
-    }
-}
-
-fn set_test_struct_logger() -> Result<Receiver<StructuredLogEntry>, InitLoggerError> {
+fn set_test_struct_logger() -> Receiver<StructuredLogEntry> {
     let (logger, receiver) = StreamStructLog::start_new();
     let logger = Arc::new(logger);
     crate::logger::set_global_logger(logger);
-    Ok(receiver)
+    receiver
 }
 
 trait MapHelper {
@@ -112,7 +98,7 @@ fn test_structured_logs() {
     let log_message = String::from("This is a log");
     let number = 12345;
     let u64_field: &LoggingField<&u64> = &LoggingField::new("field");
-    let receiver = set_test_struct_logger().unwrap();
+    let receiver = set_test_struct_logger();
 
     // Send an info log
     let before = Utc::now();
