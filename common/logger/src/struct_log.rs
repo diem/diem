@@ -1,10 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use crate::{
-    counters::{STRUCT_LOG_CONNECT_ERROR_COUNT, STRUCT_LOG_TCP_CONNECT_COUNT},
-    Level,
-};
-use chrono::{SecondsFormat, Utc};
+use crate::counters::{STRUCT_LOG_CONNECT_ERROR_COUNT, STRUCT_LOG_TCP_CONNECT_COUNT};
 use serde::Serialize;
 use serde_json::Value;
 use std::{
@@ -17,9 +13,6 @@ use std::{
     time::Duration,
 };
 
-#[cfg(test)]
-mod tests;
-
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
 
@@ -28,26 +21,12 @@ pub struct StructuredLogEntry {
     /// log message set by macros like info!
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
-    /// description of the log
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pattern: Option<&'static str>,
     /// category of the event
     #[serde(skip_serializing_if = "Option::is_none")]
     category: Option<&'static str>,
     /// name of the event
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<&'static str>,
-    /// rust module (e.g. consensus::round_manager)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    module: Option<&'static str>,
-    /// filename + line (e.g. consensus/src/round_manager.rs:678)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    location: Option<&'static str>,
-    /// time of the log
-    timestamp: String,
-    /// Log level
-    #[serde(skip_serializing_if = "Option::is_none")]
-    level: Option<Level>,
     /// arbitrary data that can be logged
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     data: HashMap<&'static str, Value>,
@@ -57,13 +36,8 @@ impl Default for StructuredLogEntry {
     fn default() -> Self {
         Self {
             message: None,
-            pattern: None,
             category: None,
             name: None,
-            module: None,
-            location: None,
-            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
-            level: None,
             data: Default::default(),
         }
     }
@@ -80,13 +54,6 @@ impl crate::Schema for StructuredLogEntry {
 }
 
 impl StructuredLogEntry {
-    /// Specifically for text based conversion logs
-    pub fn new_text() -> Self {
-        let mut ret = Self::default();
-        ret.category = Some("text");
-        ret
-    }
-
     /// Creates a log with a category and a name.  This should be preferred
     pub fn new_named(category: &'static str, name: &'static str) -> Self {
         let mut ret = Self::default();
@@ -95,60 +62,8 @@ impl StructuredLogEntry {
         ret
     }
 
-    /// Sets the log level of the log
-    pub fn level(mut self, level: Level) -> Self {
-        self.level = Some(level);
-        self
-    }
-
-    pub(crate) fn json_data(mut self, key: &'static str, value: Value) -> Self {
+    fn json_data(mut self, key: &'static str, value: Value) -> Self {
         self.data.insert(key, value);
-        self
-    }
-
-    pub fn schema<S: crate::Schema>(mut self, schema: S) -> Self {
-        struct JsonVisitor<'a>(&'a mut HashMap<&'static str, serde_json::Value>);
-
-        impl<'a> crate::Visitor for JsonVisitor<'a> {
-            fn visit_pair(&mut self, key: crate::Key, value: crate::Value<'_>) {
-                use crate::Value;
-
-                let v = match value {
-                    Value::Debug(d) => serde_json::Value::String(format!("{:?}", d)),
-                    Value::Display(d) => serde_json::Value::String(d.to_string()),
-                    Value::Serde(s) => serde_json::to_value(s).unwrap(),
-                };
-
-                self.0.insert(key.as_str(), v);
-            }
-        }
-
-        schema.visit(&mut JsonVisitor(&mut self.data));
-
-        self
-    }
-
-    pub fn schemas(mut self, schemas: &[&dyn crate::Schema]) -> Self {
-        struct JsonVisitor<'a>(&'a mut HashMap<&'static str, serde_json::Value>);
-
-        impl<'a> crate::Visitor for JsonVisitor<'a> {
-            fn visit_pair(&mut self, key: crate::Key, value: crate::Value<'_>) {
-                use crate::Value;
-
-                let v = match value {
-                    Value::Debug(d) => serde_json::Value::String(format!("{:?}", d)),
-                    Value::Display(d) => serde_json::Value::String(d.to_string()),
-                    Value::Serde(s) => serde_json::to_value(s).unwrap(),
-                };
-
-                self.0.insert(key.as_str(), v);
-            }
-        }
-
-        for schema in schemas {
-            schema.visit(&mut JsonVisitor(&mut self.data));
-        }
-
         self
     }
 
@@ -173,47 +88,6 @@ impl StructuredLogEntry {
     /// Sets the context log line used for text logs.  This is useful for migration of text logs
     pub fn message(mut self, message: String) -> Self {
         self.message = Some(message);
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_message(&mut self, message: String) -> &mut Self {
-        self.message = Some(message);
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_category(&mut self, target: &'static str) -> &mut Self {
-        if self.category.is_none() {
-            self.category = Some(target);
-        }
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_pattern(&mut self, pattern: &'static str) -> &mut Self {
-        self.pattern = Some(pattern);
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_module(&mut self, module: &'static str) -> &mut Self {
-        self.module = Some(module);
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_location(&mut self, location: &'static str) -> &mut Self {
-        self.location = Some(location);
-        self
-    }
-
-    #[doc(hidden)] // set from macro
-    pub fn add_data<D: Serialize>(&mut self, key: &'static str, value: D) -> &mut Self {
-        self.data.insert(
-            key,
-            serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),
-        );
         self
     }
 }
