@@ -40,6 +40,9 @@ impl AddValidator {
 
         // Verify that this is a configured validator
         client.validator_config(self.input.account_address)?;
+        let name = client
+            .validator_config(self.input.account_address)?
+            .human_name;
 
         // Prepare a transaction to add them to the ValidatorSet
         let seq_num = client.sequence_number(libra_root_address())?;
@@ -49,7 +52,7 @@ impl AddValidator {
             seq_num,
             transaction_builder::encode_add_validator_and_reconfigure_script(
                 seq_num,
-                vec![],
+                name,
                 self.input.account_address,
             ),
         );
@@ -73,6 +76,9 @@ impl RemoveValidator {
 
         // Verify that this is a validator within the set
         client.validator_set(Some(self.input.account_address))?;
+        let name = client
+            .validator_config(self.input.account_address)?
+            .human_name;
 
         // Prepare a transaction to remove them from the ValidatorSet
         let seq_num = client.sequence_number(libra_root_address())?;
@@ -82,7 +88,7 @@ impl RemoveValidator {
             seq_num,
             transaction_builder::encode_remove_validator_and_reconfigure_script(
                 seq_num,
-                vec![],
+                name,
                 self.input.account_address,
             ),
         );

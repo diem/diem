@@ -1212,15 +1212,23 @@ fn test_client_waypoints() {
     );
 
     // Start next epoch
-    let peer_id = env
-        .get_validator(0)
-        .unwrap()
-        .validator_peer_id()
-        .unwrap()
-        .to_string();
+
+    // This ugly blob is to remove a validator, we can do better...
+    let peer_id = env.get_validator(0).unwrap().validator_peer_id().unwrap();
+    let node_configs: Vec<_> = env
+        .validator_swarm
+        .config
+        .config_files
+        .iter()
+        .map(|config_path| NodeConfig::load(config_path).unwrap())
+        .collect();
+    let op_tool = env.get_op_tool(1);
+    let libra_root = load_libra_root_storage(node_configs.first().unwrap());
+    let context = op_tool.remove_validator(peer_id, &libra_root).unwrap();
     client_proxy
-        .remove_validator(&["remove_validator", &peer_id], true)
+        .wait_for_transaction(context.address, context.sequence_number + 1)
         .unwrap();
+    // end ugly blob
     client_proxy
         .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
@@ -1868,13 +1876,20 @@ fn test_genesis_transaction_flow() {
         sleep(Duration::from_secs(1));
     }
     println!("5. kill all nodes and prepare a genesis txn to remove validator 0");
+    let validator_address = node_config.validator_network.as_ref().unwrap().peer_id();
+    let op_tool = env.get_op_tool(0);
+    let libra_root = load_libra_root_storage(&node_config);
+    let config = op_tool
+        .validator_config(validator_address, &libra_root)
+        .unwrap();
+    let name = config.name.as_bytes().to_vec();
+
     for index in 0..env.validator_swarm.nodes.len() {
         env.validator_swarm.kill_node(index);
     }
-    let validator_address = node_config.validator_network.as_ref().unwrap().peer_id();
     let genesis_transaction = Transaction::GenesisTransaction(WriteSetPayload::Script {
         execute_as: libra_root_address(),
-        script: encode_remove_validator_and_reconfigure_script(0, vec![], validator_address),
+        script: encode_remove_validator_and_reconfigure_script(0, name, validator_address),
     });
     let genesis_path = TempPath::new();
     genesis_path.create_as_file().unwrap();
