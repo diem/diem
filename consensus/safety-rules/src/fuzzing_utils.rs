@@ -263,7 +263,7 @@ pub mod fuzzing {
     use libra_types::epoch_change::EpochChangeProof;
 
     pub fn fuzz_initialize(proof: EpochChangeProof) -> Result<(), Error> {
-        let mut safety_rules = test_utils::test_safety_rules();
+        let mut safety_rules = test_utils::test_safety_rules_uninitialized();
         safety_rules.initialize(&proof)
     }
 

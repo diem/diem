@@ -3,6 +3,7 @@
 
 use crate::{
     persistent_safety_storage::PersistentSafetyStorage, serializer::SerializerService, SafetyRules,
+    TSafetyRules,
 };
 use consensus_types::{
     block::Block,
@@ -222,8 +223,19 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
     )
 }
 
-/// Returns a simple serializer for testing purposes.
+/// Returns a safety rules instance for testing purposes.
 pub fn test_safety_rules() -> SafetyRules {
+    let signer = ValidatorSigner::from_int(0);
+    let storage = test_storage(&signer);
+    let (epoch_change_proof, _) = make_genesis(&signer);
+
+    let mut safety_rules = SafetyRules::new(storage, true);
+    safety_rules.initialize(&epoch_change_proof).unwrap();
+    safety_rules
+}
+
+/// Returns a safety rules instance that has not been initialized for testing purposes.
+pub fn test_safety_rules_uninitialized() -> SafetyRules {
     let signer = ValidatorSigner::from_int(0);
     let storage = test_storage(&signer);
     SafetyRules::new(storage, true)
