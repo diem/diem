@@ -183,10 +183,3 @@ pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
 
 pub mod counters;
-
-#[macro_export]
-macro_rules! location {
-    () => {
-        concat!(file!(), ":", line!())
-    };
-}

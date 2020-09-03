@@ -21,7 +21,7 @@ pub struct Metadata {
     /// The line number in the source code file where the event occurred
     line: u32,
 
-    //TODO remove this once StructLogEntry is removed
+    /// The file name and line number together 'file:line'
     location: &'static str,
 }
 
