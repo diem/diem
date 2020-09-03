@@ -13,4 +13,4 @@ edition = "2018"
 ureq = { version = "1.3.0", features = ["json"] }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-prometheus = { version = "0.9.0", default-features = false }
+prometheus = { version = "0.10.0", default-features = false }
