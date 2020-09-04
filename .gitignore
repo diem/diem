@@ -48,3 +48,6 @@ move_build_output/
 # Docker incremental build temporary files and directories
 target-out-docker
 **/Dockerfile.tmp
+
+# Doc generation output
+*.md.old

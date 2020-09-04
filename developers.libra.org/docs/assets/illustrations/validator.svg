@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1050px" height="900px" viewBox="0 0 1050 900" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.6 (67491) - http://www.bohemiancoding.com/sketch -->
+    <title>validator</title>
+    <desc>Created with Sketch.</desc>
+    <g id="validator" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#FFFFFF" x="0" y="0" width="1050" height="900"></rect>
+        <path d="M354,167 L902,167 C959.989899,167 1007,214.010101 1007,272 L1007,769 C1007,826.989899 959.989899,874 902,874 L354,874 C296.010101,874 249,826.989899 249,769 L249,272 C249,214.010101 296.010101,167 354,167 Z" id="Rectangle" fill="#B3BCC3"></path>
+        <path id="Line" d="M526.5,287.983652 L474.5,287.983652 L473,287.983652 L473,284.983652 L474.5,284.983652 L526.5,284.983652 L526.5,276.983652 L545.5,286.483652 L526.5,295.983652 L526.5,287.983652 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M746,284.983652 L798,284.983652 L799.5,284.983652 L799.5,287.983652 L798,287.983652 L746,287.983652 L746,295.983652 L727,286.483652 L746,276.983652 L746,284.983652 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M889.316973,643.515752 L889.000073,611.498498 L888.985228,609.998571 L891.985081,609.968879 L891.999927,611.468806 L892.316826,643.48606 L900.316435,643.406882 L891.004949,662.499976 L881.317365,643.59493 L889.316973,643.515752 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M889.316973,409.515752 L889.000073,377.498498 L888.985228,375.998571 L891.985081,375.968879 L891.999927,377.468806 L892.316826,409.48606 L900.316435,409.406882 L891.004949,428.499976 L881.317365,409.59493 L889.316973,409.515752 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M749.5,523.5 L798,523.5 L799.5,523.5 L799.5,526.5 L798,526.5 L749.5,526.5 L749.5,534.5 L730.5,525 L749.5,515.5 L749.5,523.5 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M542.867663,462.903994 L381.896337,288.015838 L380.880498,286.912175 L383.087825,284.880498 L384.103663,285.984162 L545.074989,460.872317 L550.961192,455.454512 L556.838613,475.867888 L536.981459,468.321799 L542.867663,462.903994 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M799.496558,689.317897 L639.927254,526.048435 L638.878819,524.975688 L641.024312,522.878819 L642.072746,523.951565 L801.642051,687.221028 L807.363365,681.629376 L813.849478,701.857582 L793.775245,694.909549 L799.496558,689.317897 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M640.063514,552.118713 L606.142218,588.914695 L612.024168,594.337118 L592.161099,601.867622 L598.054537,581.458864 L603.936486,586.881287 L637.857782,550.085305 L631.975832,544.662882 L651.838901,537.132378 L645.945463,557.541136 L640.063514,552.118713 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M636.5,409.5 L636.5,376.483652 L636.5,374.983652 L639.5,374.983652 L639.5,376.483652 L639.5,409.5 L647.5,409.5 L638,428.5 L628.5,409.5 L636.5,409.5 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M888.31006,165.5173 L888.190051,147.516033 L876.190318,147.596031 L890.496667,118.500011 L905.189674,147.402702 L893.18994,147.4827 L893.309949,165.483967 L905.309682,165.403969 L891.003333,194.499989 L876.310326,165.597298 L888.31006,165.5173 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M635.31006,165.5173 L635.190051,147.516033 L623.190318,147.596031 L637.496667,118.500011 L652.189674,147.402702 L640.18994,147.4827 L640.309949,165.483967 L652.309682,165.403969 L638.003333,194.499989 L623.310326,165.597298 L635.31006,165.5173 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path d="M145.662951,211.162951 L194.837049,260.337049 C209.286448,274.786448 209.286448,298.213552 194.837049,312.662951 L145.662951,361.837049 C131.213552,376.286448 107.786448,376.286448 93.3370491,361.837049 L44.1629509,312.662951 C29.7135521,298.213552 29.7135521,274.786448 44.1629509,260.337049 L93.3370491,211.162951 C107.786448,196.713552 131.213552,196.713552 145.662951,211.162951 Z" id="Rectangle" fill="#000000"></path>
+        <g id="Group-3" transform="translate(353.000000, 328.000000)">
+            <path d="M0.02734375,-8.52651283e-14 C41.0017777,110.933744 102.082507,200.381177 183.269531,268.342298 C264.456556,336.303419 348.22153,381.525913 434.564453,404.00978" id="Path-2" stroke="#000000" stroke-width="3"></path>
+            <path id="Line" d="M446.97799,407.647937 L426.026779,411.154609 L431.601926,392.990971 L446.97799,407.647937 Z" fill="#000000" fill-rule="nonzero"></path>
+        </g>
+        <text id="Client" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" fill="#FFFFFF">
+            <tspan x="85.2770996" y="295">Client</tspan>
+        </text>
+        <g id="Group" transform="translate(291.000000, 194.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Admission-Control" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="33.8400879" y="86">Admission</tspan>
+                <tspan x="51.2045898" y="116">Control</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(545.000000, 194.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Mempool" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="40.0900879" y="100">Mempool</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(799.000000, 194.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Consensus" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="29.4633789" y="100">Consensus</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(799.000000, 428.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Execution" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="36.6049805" y="100">Execution</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(546.000000, 429.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Virtual-Machine" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="56.7888184" y="86">Virtual</tspan>
+                <tspan x="44.7526855" y="116">Machine</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(799.000000, 662.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Storage" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="48.2194824" y="100">Storage</tspan>
+            </text>
+        </g>
+        <path id="Line" d="M272.5,287.983652 L206.5,287.983652 L205,287.983652 L205,284.983652 L206.5,284.983652 L272.5,284.983652 L272.5,276.983652 L291.5,286.483652 L272.5,295.983652 L272.5,287.983652 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group-2" transform="translate(542.000000, 17.000000)">
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="0" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="30" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="60" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="90" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="120" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="150" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="180" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="210" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="240" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="270" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="300" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="330" y="0" width="105" height="105" rx="28"></rect>
+            <rect id="Rectangle" fill="#B3BCC3" opacity="0.75" x="360" y="0" width="105" height="105" rx="28"></rect>
+            <text id="Other-Validators" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="143.101807" y="61">Other Validators</tspan>
+            </text>
+        </g>
+        <text id="Validator" font-family="Helvetica" font-size="40" font-weight="normal" fill="#FFFFFF">
+            <tspan x="299" y="793">Validator</tspan>
+        </text>
+    </g>
+</svg>

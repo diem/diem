@@ -4,7 +4,6 @@ title: Storage
 custom_edit_url: https://github.com/libra/libra/edit/master/storage/README.md
 ---
 
-# Storage
 
 The storage module provides reliable and efficient persistent storage for the
 entire set of data on the Libra Blockchain, as well as the necessary data used

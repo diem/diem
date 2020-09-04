@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "examples": "docusaurus-examples",
+    "start": "docusaurus-start",
+    "build": "docusaurus-build",
+    "publish-gh-pages": "docusaurus-publish",
+    "write-translations": "docusaurus-write-translations",
+    "version": "docusaurus-version",
+    "rename-version": "docusaurus-rename-version"
+  },
+  "devDependencies": {
+    "dfuzr-docusaurus": "^1.14.12"
+  },
+  "dependencies": {
+    "remarkable": "^1.7.1",
+    "remarkable-katex": "^1.0.1"
+  }
+}

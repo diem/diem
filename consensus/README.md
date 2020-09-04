@@ -4,7 +4,6 @@ title: Consensus
 custom_edit_url: https://github.com/libra/libra/edit/master/consensus/README.md
 ---
 
-# Consensus
 
 The consensus component supports state machine replication using the LibraBFT consensus protocol.
 

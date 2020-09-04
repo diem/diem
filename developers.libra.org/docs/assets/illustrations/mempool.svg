@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="680px" viewBox="0 0 800 680" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.6 (67491) - http://www.bohemiancoding.com/sketch -->
+    <title>mempool</title>
+    <desc>Created with Sketch.</desc>
+    <g id="mempool" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#FFFFFF" x="0" y="0" width="800" height="680"></rect>
+        <path d="M10.7184754,-91.7011696 L189.699682,-109.079043 C225.430169,-112.548233 257.207785,-86.3952852 260.676975,-50.6647989 C260.879678,-48.5770925 260.981207,-46.4807981 260.981207,-44.3832743 L260.981207,149.3555 C260.981207,185.114876 289.865897,214.158412 325.624735,214.354523 L743.356472,216.645477 C779.11531,216.841588 808,245.885124 808,281.6445 L808,687 C808,722.898509 778.898509,752 743,752 L17,752 C-18.8985087,752 -48,722.898509 -48,687 L-48,-27.0054012 C-48,-60.4708986 -22.5903872,-88.4671027 10.7184754,-91.7011696 Z" id="Rectangle" fill="#B3BCC3"></path>
+        <path id="Line" d="M289.5,421.5 L238,421.5 L236.5,421.5 L236.5,418.5 L238,418.5 L289.5,418.5 L289.5,410.5 L308.5,420 L289.5,429.5 L289.5,421.5 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M508.360211,390.433183 L653.584416,348.558719 L655.025697,348.143135 L655.856865,351.025697 L654.415584,351.441281 L509.191379,393.315745 L511.407827,401.002575 L490.519573,397.138528 L506.143763,382.746353 L508.360211,390.433183 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M550.86551,505.864929 L399.31335,427.833609 L397.979742,427.146959 L399.353041,424.479742 L400.68665,425.166391 L552.238809,503.197711 L555.900941,496.085132 L568.444536,513.228883 L547.203378,512.977509 L550.86551,505.864929 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group" transform="translate(562.000000, 258.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Consensus" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="29.4633789" y="100">Consensus</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(54.000000, 328.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Admission-Control" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="33.8400879" y="84">Admission</tspan>
+                <tspan x="51.2045898" y="114">Control</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(308.000000, 328.000000)">
+            <circle id="Oval" fill="#221B62" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Mempool" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="40.0900879" y="100">Mempool</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(562.000000, 459.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Virtual-Machine" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="56.2888184" y="86">Virtual</tspan>
+                <tspan x="44.2526855" y="116">Machine</tspan>
+            </text>
+        </g>
+        <text id="MP.1" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="245.936523" y="400">MP.</tspan>
+            <tspan x="284.159668" y="400">1</tspan>
+        </text>
+        <text id="MP.3" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="488.936523" y="366">MP.</tspan>
+            <tspan x="527.159668" y="366">3</tspan>
+        </text>
+        <text id="MP.4" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="503.436523" y="466">MP.</tspan>
+            <tspan x="541.659668" y="466">4</tspan>
+        </text>
+        <text id="MP.2" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="336.936523" y="258">MP.</tspan>
+            <tspan x="375.159668" y="258">2</tspan>
+        </text>
+        <text id="Mempool" font-family="Helvetica" font-size="40" font-weight="normal" fill="#FFFFFF">
+            <tspan x="32" y="61">Mempool</tspan>
+        </text>
+        <path id="Line" d="M397.662895,299.48618 L398.337186,181.485249 L386.337382,181.416679 L401.002857,152.500008 L415.336909,181.58239 L403.337105,181.51382 L402.662814,299.514751 L414.662618,299.583321 L399.997143,328.499992 L385.663091,299.41761 L397.662895,299.48618 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group-2" transform="translate(316.000000, 22.000000)" fill="#B3BCC3" opacity="0.75">
+            <rect id="Rectangle" x="0" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="28" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="56" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="85" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="113" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="141" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="170" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="198" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="226" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="254" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="283" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="311" y="0" width="99" height="131" rx="28"></rect>
+            <rect id="Rectangle" x="339" y="0" width="99" height="131" rx="28"></rect>
+        </g>
+        <text id="Other-Validators" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+            <tspan x="446.101807" y="96">Other Validators</tspan>
+        </text>
+    </g>
+</svg>

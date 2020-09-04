@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="575px" viewBox="0 0 800 575" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.6 (67491) - http://www.bohemiancoding.com/sketch -->
+    <title>execution</title>
+    <desc>Created with Sketch.</desc>
+    <g id="execution" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#B3BCC3" x="0" y="0" width="800" height="575"></rect>
+        <path id="Line" d="M297.718502,266.070225 L145.251641,178.299984 L143.951657,177.551625 L145.448375,174.951657 L146.748359,175.700016 L299.21522,263.470256 L303.206467,256.537007 L314.933328,274.249453 L293.727255,273.003474 L297.718502,266.070225 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group" transform="translate(46.000000, 85.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Consensus" font-family="Helvetica" font-size="25" font-weight="normal" fill="#FFFFFF">
+                <tspan x="28.9633789" y="100">Consensus</tspan>
+            </text>
+        </g>
+        <text id="Execution" font-family="Helvetica" font-size="40" font-weight="normal" fill="#FFFFFF">
+            <tspan x="30" y="61">Execution</tspan>
+        </text>
+        <path id="Line" d="M552.740234,314.5 L485,314.5 L483.5,314.5 L483.5,311.5 L485,311.5 L552.740234,311.5 L552.740234,303.5 L571.740234,313 L552.740234,322.5 L552.740234,314.5 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M244.21252,401.366128 L399.242781,310.705156 L400.537625,309.947938 L402.052062,312.537625 L400.757219,313.294844 L245.726957,403.955815 L249.765456,410.861648 L228.568385,412.252406 L240.174021,394.460295 L244.21252,401.366128 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group" transform="translate(46.000000, 345.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Storage" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="48.2194824" y="101">Storage</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(573.000000, 221.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Virtual-Machine" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="56.2888184" y="86">Virtual</tspan>
+                <tspan x="44.2526855" y="116">Machine</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(308.000000, 221.000000)">
+            <circle id="Oval" fill="#2A227A" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Execution" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="37.1049805" y="100">Execution</tspan>
+            </text>
+        </g>
+        <text id="EX.2" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="505.900391" y="288">EX.</tspan>
+            <tspan x="543.195801" y="288">2</tspan>
+        </text>
+        <text id="EX.4" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="242.900391" y="360">EX.</tspan>
+            <tspan x="280.195801" y="360">4</tspan>
+        </text>
+        <text id="EX.1-&amp;-EX.3" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" line-spacing="30" letter-spacing="-1" fill="#15112C">
+            <tspan x="237.327881" y="215">EX.1 &amp; EX.</tspan>
+            <tspan x="353.768311" y="215">3</tspan>
+        </text>
+    </g>
+</svg>

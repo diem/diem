@@ -4,7 +4,6 @@ title: Move IR Compiler
 custom_edit_url: https://github.com/libra/libra/edit/master/language/compiler/README.md
 ---
 
-# Move IR Compiler
 
 ## Summary
 

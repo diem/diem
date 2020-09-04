@@ -3,7 +3,6 @@ id: mempool
 title: Mempool
 custom_edit_url: https://github.com/libra/libra/edit/master/mempool/README.md
 ---
-# Mempool
 
 Mempool is a memory-buffer that holds the transactions that are waiting to be executed.
 

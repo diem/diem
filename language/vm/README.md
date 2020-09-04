@@ -4,7 +4,6 @@ title: Virtual Machine
 custom_edit_url: https://github.com/libra/libra/edit/master/language/vm/README.md
 ---
 
-# MoveVM Core
 
 The MoveVM executes transactions expressed in the Move bytecode. There are
 two main crates: the core VM and the VM runtime. The VM core contains the low-level

@@ -1,4 +1,7 @@
-# Contributing to Libra
+---
+id: contributing
+title: Contributing to Libra
+---
 
 Our goal is to make contributing to the Libra project easy and transparent.
 
@@ -34,12 +37,12 @@ detailed guidance about how to contribute to the project.
 
 #### Documentation
 
-Libra's website is also open source (the code can be found in this
-[repository](https://github.com/libra/website/)).  It is built using
+Libra's developer website is also open source (the code can be found in this
+[repository](https://github.com/libra/developers.libra.org/website/)).  It is built using
 [Docusaurus](https://docusaurus.io/):
 
-If you know Markdown, you can already contribute! This lives in the [website
-repo](https://github.com/libra/website).
+If you know Markdown, you can already contribute! How to contribute can be found in the [website
+repo](https://github.com/libra/developers.libra.org/website/CONTRIBUTING.md).
 
 ## Developer Workflow
 

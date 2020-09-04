@@ -4,7 +4,6 @@ title: Executor
 custom_edit_url: https://github.com/libra/libra/edit/master/executor/README.md
 ---
 
-# Execution
 
 ## Overview
 

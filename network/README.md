@@ -4,7 +4,6 @@ title: Network
 custom_edit_url: https://github.com/libra/libra/edit/master/network/README.md
 ---
 
-# Network
 
 The network component provides peer-to-peer communication primitives to other
 components of a validator.

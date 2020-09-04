@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800px" height="575px" viewBox="0 0 800 575" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.6 (67491) - http://www.bohemiancoding.com/sketch -->
+    <title>virtual-machine</title>
+    <desc>Created with Sketch.</desc>
+    <g id="virtual-machine" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#B3BCC3" x="0" y="0" width="800" height="575"></rect>
+        <path id="Line" d="M549.669503,397.17476 L476.759742,355.804614 L475.455128,355.064355 L476.935645,352.455128 L478.240258,353.195386 L551.15002,394.565532 L555.098065,387.607591 L566.934871,405.246753 L545.721458,404.1327 L549.669503,397.17476 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M302.241931,369.307307 L204.187074,419.83339 L202.853684,420.520464 L201.479536,417.853684 L202.812926,417.16661 L300.867782,366.640527 L297.203386,359.529113 L318.444463,359.270975 L305.906327,376.41872 L302.241931,369.307307 Z" fill="#000000" fill-rule="nonzero"></path>
+        <path id="Line" d="M498.623807,257.980186 L651.294931,176.676037 L652.618894,175.970968 L654.029032,178.618894 L652.705069,179.323963 L500.033945,260.628112 L503.794313,267.689247 L482.558679,268.235023 L494.863439,250.919051 L498.623807,257.980186 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group" transform="translate(562.000000, 345.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Storage" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="48.2194824" y="101">Storage</tspan>
+            </text>
+        </g>
+        <path id="Line" d="M297.718502,266.070225 L145.251641,178.299984 L143.951657,177.551625 L145.448375,174.951657 L146.748359,175.700016 L299.21522,263.470256 L303.206467,256.537007 L314.933328,274.249453 L293.727255,273.003474 L297.718502,266.070225 Z" fill="#000000" fill-rule="nonzero"></path>
+        <g id="Group" transform="translate(562.000000, 85.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Execution" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="36.6049805" y="101">Execution</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(54.000000, 345.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Mempool" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="40.5900879" y="101">Mempool</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(54.000000, 85.000000)">
+            <circle id="Oval" fill="#5645F5" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Admission-Control" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="34.3400879" y="86">Admission</tspan>
+                <tspan x="51.7045898" y="116">Control</tspan>
+            </text>
+        </g>
+        <g id="Group" transform="translate(308.000000, 221.000000)">
+            <circle id="Oval" fill="#2A227A" cx="91.9332607" cy="91.9332607" r="91.9332607"></circle>
+            <text id="Virtual-Machine" font-family="Helvetica" font-size="25" font-weight="normal" line-spacing="30" fill="#FFFFFF">
+                <tspan x="56.7888184" y="86">Virtual</tspan>
+                <tspan x="44.7526855" y="116">Machine</tspan>
+            </text>
+        </g>
+        <text id="VM.1" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="250.825195" y="227">VM.</tspan>
+            <tspan x="292.270996" y="227">1</tspan>
+        </text>
+        <text id="VM.4" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="232.825195" y="356">VM.</tspan>
+            <tspan x="274.270996" y="356">4</tspan>
+        </text>
+        <text id="VM.3" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="484.825195" y="222">VM.</tspan>
+            <tspan x="526.270996" y="222">3</tspan>
+        </text>
+        <text id="VM.2" font-family="Helvetica-Bold, Helvetica" font-size="25" font-weight="bold" letter-spacing="-1" fill="#15112C">
+            <tspan x="504.825195" y="361">VM.</tspan>
+            <tspan x="546.270996" y="361">2</tspan>
+        </text>
+        <text id="Virtual-Machine" font-family="Helvetica" font-size="40" font-weight="normal" fill="#FFFFFF">
+            <tspan x="30" y="61">Virtual Machine</tspan>
+        </text>
+    </g>
+</svg>
