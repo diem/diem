@@ -41,10 +41,12 @@ const ERROR_NOT_FOUND: u16 = 404;
 const GENESIS_PATH: &str = "/tmp/genesis.blob";
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 
-// Config file names. Note we load these using macros to get around the
-// current limitations of the "include_str!" macro (which loads the file content
-// at compile time, rather than at runtime).
+// We use the macros below to get around the current limitations of the
+// "include_str!" macro (which loads the file content at compile time, rather
+// than at runtime).
 // TODO(joshlind): Remove me once we support runtime file loading.
+
+// Config file names.
 macro_rules! FULLNODE_CONFIG {
     () => {
         "configs/fullnode.yaml"
@@ -61,10 +63,19 @@ macro_rules! VALIDATOR_CONFIG {
     };
 }
 
-// Template file names. Note we load these using macros to get around the
-// current limitations of the "include_str!" macro (which loads the file content
-// at compile time, rather than at runtime).
-// TODO(joshlind): Remove me once we support runtime file loading.
+// Fluent bit file names.
+macro_rules! FLUENT_BIT_CONF {
+    () => {
+        "fluent-bit/fluent-bit.conf"
+    };
+}
+macro_rules! FLUENT_BIT_PARSERS_CONF {
+    () => {
+        "fluent-bit/parsers.conf"
+    };
+}
+
+// Template file names.
 macro_rules! JOB_TEMPLATE {
     () => {
         "templates/job_template.yaml"
@@ -696,9 +707,9 @@ impl ClusterSwarmKube {
     }
 
     async fn config_fluentbit(&self, input_tag: &str, pod_name: &str, node: &str) -> Result<()> {
-        let parsers_config = include_str!("fluent-bit/parsers.conf").to_string();
+        let parsers_config = include_str!(FLUENT_BIT_PARSERS_CONF!()).to_string();
         let fluentbit_config = format!(
-            include_str!("fluent-bit/fluent-bit.conf"),
+            include_str!(FLUENT_BIT_CONF!()),
             input_tag = input_tag,
             pod_name = pod_name
         );
