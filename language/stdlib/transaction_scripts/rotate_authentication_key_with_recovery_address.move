@@ -1,7 +1,7 @@
 script {
 use 0x1::RecoveryAddress;
 
-/// Rotate the authentication key of `account` to `new_key` using the `KeyRotationCapability`
+/// Rotate the authentication key of `to_recover` to `new_key` using the `KeyRotationCapability`
 /// stored under `recovery_address`.
 ///
 /// ## Aborts

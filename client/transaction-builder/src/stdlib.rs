@@ -306,7 +306,7 @@ pub enum ScriptCall {
     /// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
     RotateAuthenticationKeyWithNonceAdmin { sliding_nonce: u64, new_key: Bytes },
 
-    /// Rotate the authentication key of `account` to `new_key` using the `KeyRotationCapability`
+    /// Rotate the authentication key of `to_recover` to `new_key` using the `KeyRotationCapability`
     /// stored under `recovery_address`.
     ///
     /// ## Aborts
@@ -1115,7 +1115,7 @@ pub fn encode_rotate_authentication_key_with_nonce_admin_script(
     )
 }
 
-/// Rotate the authentication key of `account` to `new_key` using the `KeyRotationCapability`
+/// Rotate the authentication key of `to_recover` to `new_key` using the `KeyRotationCapability`
 /// stored under `recovery_address`.
 ///
 /// ## Aborts

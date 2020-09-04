@@ -15,7 +15,7 @@
 ## Function `rotate_authentication_key_with_recovery_address`
 
 Rotate the authentication key of
-<code>account</code> to
+<code>to_recover</code> to
 <code>new_key</code> using the
 <code>KeyRotationCapability</code>
 stored under
