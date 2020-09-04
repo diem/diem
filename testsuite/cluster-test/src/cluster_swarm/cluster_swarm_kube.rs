@@ -39,6 +39,7 @@ pub const CFG_SEED: &str = "1337133713371337133713371337133713371337133713371337
 const DEFAULT_NAMESPACE: &str = "default";
 const ERROR_NOT_FOUND: u16 = 404;
 const GENESIS_PATH: &str = "/tmp/genesis.blob";
+const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 
 // Config template file names. Note we load these using macros to get around the
 // current limitations of the "include_str!" macro (which loads the file content
@@ -97,16 +98,15 @@ impl ClusterSwarmKube {
             .spawn()?;
         libra_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move {
-                debug!("Running local kube pod healthcheck on http://127.0.0.1:8001");
-                reqwest::get("http://127.0.0.1:8001").await?.text().await?;
+                debug!("Running local kube pod healthcheck on {}", HEALTH_CHECK_URL);
+                reqwest::get(HEALTH_CHECK_URL).await?.text().await?;
                 info!("Local kube pod healthcheck passed");
                 Ok::<(), reqwest::Error>(())
             })
         })
         .await?;
         let config = Config::new(
-            reqwest::Url::parse("http://127.0.0.1:8001")
-                .expect("Failed to parse kubernetes endpoint url"),
+            reqwest::Url::parse(HEALTH_CHECK_URL).expect("Failed to parse kubernetes endpoint url"),
         );
         let client = Client::new(config);
         let credentials_provider = WebIdentityProvider::from_k8s_env();
