@@ -85,39 +85,25 @@ impl std::fmt::Display for CommandName {
 }
 
 impl Command {
-    pub fn execute(self) -> String {
+    pub fn execute(self) -> Result<String, Error> {
         match &self {
-            Command::CreateAndInsertWaypoint(_) => {
-                Self::print_waypoint(self.create_and_insert_waypoint())
+            Command::CreateAndInsertWaypoint(_) => self
+                .create_and_insert_waypoint()
+                .map(|w| format!("Waypoint: {}", w)),
+            Command::CreateWaypoint(_) => {
+                self.create_waypoint().map(|w| format!("Waypoint: {}", w))
             }
-            Command::CreateWaypoint(_) => Self::print_waypoint(self.create_waypoint()),
-            Command::Genesis(_) => Self::print(self.genesis()),
-            Command::LibraRootKey(_) => Self::print(self.libra_root_key()),
-            Command::OperatorKey(_) => Self::print(self.operator_key()),
-            Command::OwnerKey(_) => Self::print(self.owner_key()),
-            Command::SetLayout(_) => Self::print(self.set_layout()),
-            Command::SetOperator(_) => Self::print(self.set_operator()),
-            Command::TreasuryComplianceKey(_) => Self::print(self.treasury_compliance_key()),
-            Command::ValidatorConfig(_) => Self::print(self.validator_config()),
-            Command::Verify(_) => self.verify().unwrap(),
-        }
-    }
-
-    fn print<T>(result: Result<T, Error>) -> String {
-        match result {
-            Ok(_) => "Success!".to_string(),
-            Err(e) => Self::print_error(e),
-        }
-    }
-
-    fn print_error(error: Error) -> String {
-        format!("Operation unsuccessful: {}", error.to_string())
-    }
-
-    fn print_waypoint(result: Result<Waypoint, Error>) -> String {
-        match result {
-            Ok(waypoint) => format!("Waypoint value: {}", waypoint),
-            Err(e) => Self::print_error(e),
+            Command::Genesis(_) => self.genesis().map(|_| "Success!".to_string()),
+            Command::LibraRootKey(_) => self.libra_root_key().map(|_| "Success!".to_string()),
+            Command::OperatorKey(_) => self.operator_key().map(|_| "Success!".to_string()),
+            Command::OwnerKey(_) => self.owner_key().map(|_| "Success!".to_string()),
+            Command::SetLayout(_) => self.set_layout().map(|_| "Success!".to_string()),
+            Command::SetOperator(_) => self.set_operator().map(|_| "Success!".to_string()),
+            Command::TreasuryComplianceKey(_) => self
+                .treasury_compliance_key()
+                .map(|_| "Success!".to_string()),
+            Command::ValidatorConfig(_) => self.validator_config().map(|_| "Success!".to_string()),
+            Command::Verify(_) => self.verify(),
         }
     }
 

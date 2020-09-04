@@ -6,5 +6,11 @@ use libra_genesis_tool::command::Command;
 use structopt::StructOpt;
 
 fn main() {
-    println!("{}", Command::from_args().execute());
+    match Command::from_args().execute() {
+        Ok(output) => println!("{}", output),
+        Err(err) => {
+            println!("Operation unsuccessful: {}", err);
+            std::process::exit(1);
+        }
+    }
 }
