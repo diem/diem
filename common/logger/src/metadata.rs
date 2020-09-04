@@ -117,16 +117,16 @@ impl Level {
 }
 
 #[derive(Debug)]
-pub struct ParseLevelError;
+pub struct LevelParseError;
 
 impl FromStr for Level {
-    type Err = ParseLevelError;
+    type Err = LevelParseError;
     fn from_str(level: &str) -> Result<Level, Self::Err> {
         LOG_LEVEL_NAMES
             .iter()
             .position(|name| name.eq_ignore_ascii_case(level))
             .map(|idx| Level::from_usize(idx).unwrap())
-            .ok_or(ParseLevelError)
+            .ok_or(LevelParseError)
     }
 }
 
