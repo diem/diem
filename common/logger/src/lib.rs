@@ -1,71 +1,35 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-//! This crates provides an API for both structured and non-structured(text) logging.
+//! This crates provides an API for logging in libra.
 //!
-//! # Text logging
+//! # Instrumenting with Logs
 //!
-//! Text logging is configured via `RUST_LOG` environment variable and has exactly same facade as the rust log crate.
+//! A set of logging macros (`info!`, `error!`, `warn!`, `debug!`, and `trace!`) is provided for
+//! emitting logs at different levels. All of these macros support the addition of providing
+//! structured data along with a formatted text message.
 //!
-//! # Structured logging
+//! ```
+//! use libra_logger::info;
 //!
-//! This crate contains two types of APIs for structured logging.
+//! let world = "world!";
 //!
-//! 1) The `StructuredLogEntry` class and (`sl_info!`, `sl_error!`, ...) macros for directly composing structured logs.
-//! 2) A bridge between traditional `log!` macro and the structured logging API (which will be deprecated).
+//! // formatted message
+//! info!("hello {}", world);
 //!
-//! ## Configuration
+//! // structured data can be logged using the format 'key = value'
+//! // where value implements Serialize
+//! let value1 = 5;
+//! info!(key1 = value1);
 //!
-//! Structured logger has separate log levels that are configured with `STRUCT_LOG_LEVEL`.
-//! It is set to `DEBUG` by default, but executes if structured logger is initialized.
-//!
-//! Structured logger can be initialized manually with one of the `init_XXX_struct_log()` functions.
-//! The preferred way to initialize structured logging is by using `init_struct_log_from_env()`.
-//! In this case, the `STRUCT_LOG_FILE` environment variable is used to set the file name for structured logs.
-//!
-//! ## Direct API
-//!
-//! ```pseudo
-//! use std::collections::HashMap;
-//! use serde_json::Value;
-//!
-//! pub struct StructuredLogEntry {
-//!     log: Option<String>,
-//!     pattern: Option<&'static str>,
-//!     category: Option<&'static str>,
-//!     name: Option<&'static str>,
-//!     module: Option<&'static str>,
-//!     location: Option<&'static str>,
-//!     timestamp: String,
-//!     level: Option<log::Level>,
-//!     data: HashMap<&'static str, Value>,
-//! }
-//!
-//! impl StructuredLogEntry {
-//!     pub fn new_named(category: &'static str, name: &'static str) -> Self { /* ... */ }
-//!     /* ... Builder style setters for chained initialization such as
-//!         entry.data(a, b).data(x, y) ... */
-//! }
-//!
-//! // Usage:
-//! let logging_field: LoggingField<String> = LoggingField::new("String");
-//! let string = "test".to_string();
-//!
-//! info!(StructuredLogEntry::new_named("TransactionEvents", "Committed")
-//!    .data("block", &block)
-//!    .data_display("author", &author)
-//!    .field(&logging_field, &string)
-//!    .message(format!("Committed block: {:?} by {}", block, author))
+//! // You can even set multiple key/value pairs and a format message
+//! let value2 = false;
+//! info!(key1 = value1, key2 = value2, "hello {}", world);
 //! ```
 //!
-//! Arguments passed to `data()` will be serialized into JSON, and must implement `Serialize`.
-//! Arguments passed to `data_display()` will instead use display and must implement `Display`.
-//! Arguments passed to `field()` allows for typed fields for type checking, and must implement `Serialize`.
-//! Only static strings are allowed as field names.
+//! ### Note
 //!
-//! (`sl_info!`, `sl_error!`, etc.) should be used to send structured log entries based on log level.
-//! This macro populates the metadata such as code location and module, and skips the evaluation of
-//! `StructuredLogEntry` entirely if structured logging is disabled for the log level.
+//! Arguments used in a formatted message are **not** captured and included as structured data.
 //!
 //! ## Typed Schema's
 //!
@@ -73,8 +37,8 @@
 //! implemented by hand or derived using the `Schema` derive proc-macro, implementing the `Schema`
 //! trait for the struct as well as providing setters for all fields.
 //!
-//! ```rust
-//! use libra_logger::Schema;
+//! ```
+//! use libra_logger::{info, Schema};
 //!
 //! #[derive(Schema)]
 //! struct LogSchema<'a> {
@@ -87,69 +51,22 @@
 //!     #[schema(display)]
 //!     c: Option<&'a str>,
 //! }
+//!
+//! let log = LogSchema { a: 5, b: None, c: None };
+//!
+//! info!(log.c("radiant"));
 //! ```
 //!
-//! ## Log macro bridge
+//! # Configuration
 //!
-//! Crate owners are not required to rewrite their code right away to support new structured logging.
-//! Importing logger crate will automatically emit structured logs on every log(`debug!`, `info!`, etc.) macro invocation.
+//! In order for logs to be captured and emitted a Logger needs to be instantiated. This can be
+//! done by using the `Logger` type:
 //!
-//! So
-//! ```pseudo
-//! info!("Committing {}", block);
-//! // Will emit(in addition to regular text log) structured log such as
-//! // {
-//! //   level: "Info",
-//! //   pattern: "Committing {}",
-//! //   data: {
-//! //     block: "<id>"
-//! //   },
-//! //   ...metadata...
-//! // }
 //! ```
+//! use libra_logger::{Level, Logger};
 //!
-//! There are few caveats to automatic structured logging generation:
-//! 1) Argument values for structured logging will be serialized using `Debug` vs `Serialize`,
-//! regardless of what formatter is used for the text log. As a consequence, every log argument must
-//! implement `Debug`. This has led to unexpected large logs from the default `Debug` implementations.
-//!
-//! 2) Field names will be automatically evaluated if the expression is a single identifier, as in
-//! the example above, the field `block` will be named `block`. However, if a more complex expression
-//! is passed (e.g. `block.id()`), the field name will be based on the position of the argument: `_0`, `_1`, etc.
-//!
-//! ```pseudo
-//! info!("Committing {}", block.id());
-//! //->
-//! // {
-//! //  data: {
-//! //    "_0": "<id>"
-//! //  },
-//! //  ...metadata...
-//! // }
+//! Logger::builder().level(Level::Info).build();
 //! ```
-//! Another way to set the name for fields is to use named format arguments:
-//! ```pseudo
-//! info!("Committing {id}", id=block.id());
-//! //->
-//! // {
-//! //  data: {
-//! //    "id": "<id>"
-//! //  },
-//! //  ...metadata...
-//! // }
-//! ```
-//!
-//! ## Structured Log Sink
-//! The application must define implementation of the StructLogSink trait in order to direct structured
-//! logs emitted by `sl_info!` and other macros. The global sink can be only initialized once, by
-//! calling the `set_struct_logger()` function.
-//!
-//! Currently 4 implementations for StructLogSink exist:
-//!
-//! 1) `NopStructLog` ignores structured logs
-//! 2) `PrintStructLog` immediately prints structured logs to stdout
-//! 3) `FileStructLog` prints structured logs into a file. This logger separate thread for writing files asynchronously.
-//! 4) `TCPStructLog` sends structured logs to a TCP endpoint. This logger separate thread for sending logs asynchronously.
 
 #![forbid(unsafe_code)]
 
