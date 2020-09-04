@@ -18,7 +18,7 @@
 mod test;
 
 use crate::{
-    logging::{self, executor_log, LogEntry},
+    logging::{LogEntry, LogSchema},
     types::ProcessedVMOutput,
 };
 use anyhow::{format_err, Result};
@@ -96,9 +96,10 @@ impl Drop for SpeculationBlock {
             .unwrap()
             .remove(&self.id())
             .expect("Speculation block must exist in block_map before being dropped.");
-        debug!(executor_log(LogEntry::Cache)
-            .data(logging::EVENT, "Block dropped")
-            .data("block_id", self.id()));
+        debug!(
+            LogSchema::new(LogEntry::SpeculationCache).block_id(self.id()),
+            "Block dropped"
+        );
     }
 }
 
@@ -189,22 +190,19 @@ impl SpeculationCache {
             // Update the root block id with reconfig virtual block id, to be consistent
             // with the logic of Consensus.
             let id = Block::make_genesis_block_from_ledger_info(committed_ledger_info).id();
-            info!(executor_log(LogEntry::Cache)
-                .data(
-                    logging::EVENT,
-                    "Updated with a new root block as a virtual block of reconfiguration block"
-                )
-                .data("root_block_id", id)
-                .data(
-                    "original_reconfiguration_block_id",
-                    committed_ledger_info.consensus_block_id()
-                ));
+            info!(
+                LogSchema::new(LogEntry::SpeculationCache)
+                    .root_block_id(id)
+                    .original_reconfiguration_block_id(committed_ledger_info.consensus_block_id()),
+                "Updated with a new root block as a virtual block of reconfiguration block"
+            );
             id
         } else {
             let id = committed_ledger_info.consensus_block_id();
-            info!(executor_log(LogEntry::Cache)
-                .data(logging::EVENT, "Updated with a new root block")
-                .data("root_block_id", id));
+            info!(
+                LogSchema::new(LogEntry::SpeculationCache).root_block_id(id),
+                "Updated with a new root block",
+            );
             id
         };
         self.committed_block_id = new_root_block_id;

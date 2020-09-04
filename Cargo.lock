@@ -1467,6 +1467,7 @@ dependencies = [
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "scratchpad 0.1.0",
+ "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "transaction-builder 0.1.0",
