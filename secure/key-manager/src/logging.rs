@@ -1,13 +1,42 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_logger::StructuredLogEntry;
+use crate::Error;
+use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_logger::Schema;
+use serde::Serialize;
 
-pub fn key_manager_log(entry: LogEntry) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("key_manager", entry.as_str())
+// TODO: Fix the leveling of these logs individually. https://github.com/libra/libra/issues/5615
+#[derive(Schema)]
+pub struct LogSchema<'a> {
+    name: LogEntry,
+    event: Option<LogEvent>,
+    #[schema(display)]
+    consensus_key: Option<&'a Ed25519PublicKey>,
+    json_rpc_endpoint: Option<&'a str>,
+    #[schema(display)]
+    liveness_error: Option<&'a Error>,
+    sleep_duration: Option<u64>,
+    #[schema(display)]
+    unexpected_error: Option<&'a Error>,
 }
 
-#[derive(Clone, Copy)]
+impl<'a> LogSchema<'a> {
+    pub fn new(name: LogEntry) -> Self {
+        Self {
+            name,
+            event: None,
+            consensus_key: None,
+            json_rpc_endpoint: None,
+            liveness_error: None,
+            sleep_duration: None,
+            unexpected_error: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LogEntry {
     CheckKeyStatus,
     Initialized,
@@ -19,57 +48,10 @@ pub enum LogEntry {
     WaitForReconfiguration,
 }
 
-impl LogEntry {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LogEntry::CheckKeyStatus => "check_key_status",
-            LogEntry::Initialized => "initialized",
-            LogEntry::FullKeyRotation => "full_key_rotation",
-            LogEntry::KeyRotatedInStorage => "key_rotated_in_storage",
-            LogEntry::TransactionSubmission => "transaction_submission",
-            LogEntry::NoAction => "no_action",
-            LogEntry::Sleep => "sleep_called",
-            LogEntry::WaitForReconfiguration => "wait_for_reconfiguration",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum LogEvent {
     Error,
     Pending,
     Success,
-}
-
-impl LogEvent {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LogEvent::Error => "error",
-            LogEvent::Pending => "pending",
-            LogEvent::Success => "success",
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub enum LogField {
-    ConsensusKey,
-    Event,
-    JsonRpcEndpoint,
-    LivenessError,
-    SleepDuration,
-    UnexpectedError,
-}
-
-impl LogField {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            LogField::ConsensusKey => "consensus_public_key",
-            LogField::Event => "event",
-            LogField::JsonRpcEndpoint => "json_rpc_endpoint",
-            LogField::LivenessError => "liveness_error",
-            LogField::SleepDuration => "sleep_duration",
-            LogField::UnexpectedError => "unexpected_error",
-        }
-    }
 }

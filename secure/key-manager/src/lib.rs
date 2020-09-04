@@ -21,7 +21,7 @@
 
 use crate::{
     libra_interface::LibraInterface,
-    logging::{LogEntry, LogEvent, LogField},
+    logging::{LogEntry, LogEvent, LogSchema},
 };
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
@@ -130,28 +130,24 @@ where
     /// stop execution.
     pub fn execute(&mut self) -> Result<(), Error> {
         loop {
-            self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Pending), None);
+            info!(LogSchema::new(LogEntry::CheckKeyStatus).event(LogEvent::Pending));
 
             match self.execute_once() {
                 Ok(_) => {
-                    self.log(LogEntry::CheckKeyStatus, Some(LogEvent::Success), None);
+                    info!(LogSchema::new(LogEntry::CheckKeyStatus).event(LogEvent::Success));
                 }
                 Err(Error::LivenessError(last_value, current_value)) => {
                     // Log the liveness error and continue to execute.
-                    let error = Error::LivenessError(last_value, current_value).to_string();
-                    self.log(
-                        LogEntry::CheckKeyStatus,
-                        Some(LogEvent::Error),
-                        Some((LogField::LivenessError, error)),
-                    );
+                    let error = Error::LivenessError(last_value, current_value);
+                    info!(LogSchema::new(LogEntry::CheckKeyStatus)
+                        .event(LogEvent::Error)
+                        .liveness_error(&error));
                 }
                 Err(e) => {
                     // Log the unexpected error and continue to execute.
-                    self.log(
-                        LogEntry::CheckKeyStatus,
-                        Some(LogEvent::Error),
-                        Some((LogField::UnexpectedError, e.to_string())),
-                    );
+                    info!(LogSchema::new(LogEntry::CheckKeyStatus)
+                        .event(LogEvent::Error)
+                        .unexpected_error(&e));
                 }
             };
 
@@ -160,14 +156,12 @@ where
     }
 
     fn sleep(&self) {
-        self.log(
-            LogEntry::Sleep,
-            Some(LogEvent::Pending),
-            Some((LogField::SleepDuration, self.sleep_period_secs.to_string())),
-        );
+        info!(LogSchema::new(LogEntry::Sleep)
+            .event(LogEvent::Pending)
+            .sleep_duration(self.sleep_period_secs));
         self.time_service.sleep(self.sleep_period_secs);
 
-        self.log(LogEntry::Sleep, Some(LogEvent::Success), None);
+        info!(LogSchema::new(LogEntry::Sleep).event(LogEvent::Success));
     }
 
     /// Checks the current state of the validator keys and performs any actions that might be
@@ -227,11 +221,9 @@ where
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let consensus_key = self.storage.rotate_key(CONSENSUS_KEY)?;
-        self.log(
-            LogEntry::KeyRotatedInStorage,
-            Some(LogEvent::Success),
-            Some((LogField::ConsensusKey, consensus_key.to_string())),
-        );
+        info!(LogSchema::new(LogEntry::KeyRotatedInStorage)
+            .event(LogEvent::Success)
+            .consensus_key(&consensus_key));
         counters::increment_state("consensus_key", "complete");
         self.submit_key_rotation_transaction(consensus_key)
     }
@@ -265,11 +257,7 @@ where
 
         self.libra
             .submit_transaction(Transaction::UserTransaction(signed_txn))?;
-        self.log(
-            LogEntry::TransactionSubmission,
-            Some(LogEvent::Success),
-            None,
-        );
+        info!(LogSchema::new(LogEntry::TransactionSubmission).event(LogEvent::Success));
 
         Ok(consensus_key)
     }
@@ -301,7 +289,7 @@ where
 
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
-            self.log(LogEntry::WaitForReconfiguration, None, None);
+            info!(LogSchema::new(LogEntry::WaitForReconfiguration));
             counters::increment_state("consensus_key", "waiting_on_reconfiguration");
             return Ok(Action::NoAction);
         }
@@ -327,19 +315,15 @@ where
     pub fn perform_action(&mut self, action: Action) -> Result<(), Error> {
         match action {
             Action::FullKeyRotation => {
-                self.log(LogEntry::FullKeyRotation, Some(LogEvent::Pending), None);
+                info!(LogSchema::new(LogEntry::FullKeyRotation).event(LogEvent::Pending));
                 self.rotate_consensus_key().map(|_| ())
             }
             Action::SubmitKeyRotationTransaction => {
-                self.log(
-                    LogEntry::TransactionSubmission,
-                    Some(LogEvent::Pending),
-                    None,
-                );
+                info!(LogSchema::new(LogEntry::TransactionSubmission).event(LogEvent::Pending));
                 self.resubmit_consensus_key_transaction()
             }
             Action::NoAction => {
-                self.log(LogEntry::NoAction, None, None);
+                info!(LogSchema::new(LogEntry::NoAction));
                 counters::increment_state("consensus_key", "no_action");
                 Ok(())
             }
@@ -351,22 +335,6 @@ where
             .get::<AccountAddress>(account_name)
             .map(|v| v.value)
             .map_err(Error::MissingAccountAddress)
-    }
-
-    /// Logs to structured logging using the given log entry, event and data.
-    pub fn log(&self, entry: LogEntry, event: Option<LogEvent>, data: Option<(LogField, String)>) {
-        let mut log = logging::key_manager_log(entry);
-
-        // Append the specific event to the log
-        if let Some(event) = event {
-            log = log.data(LogField::Event.as_str(), event.as_str());
-        }
-        // Append the data field and data to the log
-        if let Some((field, data)) = data {
-            log = log.data(field.as_str(), data);
-        }
-        // TODO: Fix the leveling of these logs individually. https://github.com/libra/libra/issues/5615
-        info!(log);
     }
 }
 

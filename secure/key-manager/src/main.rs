@@ -8,9 +8,10 @@
 use libra_config::config::KeyManagerConfig;
 use libra_key_manager::{
     libra_interface::JsonRpcLibraInterface,
-    logging::{LogEntry, LogEvent, LogField},
+    logging::{LogEntry, LogEvent, LogSchema},
     Error, KeyManager,
 };
+use libra_logger::info;
 use libra_secure_push_metrics::MetricsPusher;
 use libra_secure_storage::Storage;
 use libra_secure_time::RealTimeService;
@@ -65,10 +66,8 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
         key_manager_config.chain_id,
     );
 
-    key_manager.log(
-        LogEntry::Initialized,
-        Some(LogEvent::Success),
-        Some((LogField::JsonRpcEndpoint, json_rpc_endpoint)),
-    );
+    info!(LogSchema::new(LogEntry::Initialized)
+        .event(LogEvent::Success)
+        .json_rpc_endpoint(&json_rpc_endpoint));
     key_manager.execute()
 }
