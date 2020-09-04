@@ -306,6 +306,10 @@ fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
         write!(w, " {}", message)?;
     }
 
+    if !entry.data.is_empty() {
+        write!(w, " {}", serde_json::to_string(&entry.data).unwrap())?;
+    }
+
     Ok(w)
 }
 
