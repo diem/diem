@@ -397,10 +397,13 @@ impl EpochManager {
                 .verify(&self.epoch_state().verifier)
                 .context("[EpochManager] Verify event")
                 .map_err(|err| {
-                    error!(security_log(security_events::CONSENSUS_INVALID_MESSAGE)
-                        .data("from_peer", &peer_id)
-                        .data_display("error", &err)
-                        .data("event", &unverified_event));
+                    error!(
+                        SecurityEvent::ConsensusInvalidMessage,
+                        StructuredLogEntry::default()
+                            .data("from_peer", &peer_id)
+                            .data_display("error", &err)
+                            .data("event", &unverified_event)
+                    );
                     err
                 })?;
 

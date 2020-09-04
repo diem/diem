@@ -188,9 +188,12 @@ async fn upgrade_inbound<T: TSocket>(
     // try authenticating via noise handshake
     let (mut socket, remote_peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
         // security logging
-        warn!(security_log(security_events::INVALID_NETWORK_PEER)
-            .data_display("error", &err)
-            .field(network_events::NETWORK_ADDRESS, &addr));
+        warn!(
+            SecurityEvent::InvalidNetworkPeer,
+            StructuredLogEntry::default()
+                .data_display("error", &err)
+                .field(network_events::NETWORK_ADDRESS, &addr),
+        );
         err
     })?;
     let remote_pubkey = socket.get_remote_static();
@@ -208,10 +211,13 @@ async fn upgrade_inbound<T: TSocket>(
     let (messaging_protocol, application_protocols) = handshake_msg
         .perform_handshake(&remote_handshake)
         .map_err(|err| {
-            warn!(security_log(security_events::INVALID_NETWORK_HANDSHAKE_MSG)
-                .data_display("error", &err)
-                .data("origin", "inbound")
-                .data("remote_peer", remote_peer_id));
+            warn!(
+                SecurityEvent::InvalidNetworkHandshakeMsg,
+                StructuredLogEntry::default()
+                    .data_display("error", &err)
+                    .data("origin", "inbound")
+                    .data("remote_peer", remote_peer_id)
+            );
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",
                 remote_peer_id, err

@@ -158,18 +158,20 @@ pub(crate) async fn coordinator<V>(
                                 };
                             }
                             Event::RpcRequest((peer_id, msg, res_tx)) => {
-                                error!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
-                                    .data("message", &msg)
-                                    .data("peer_id", &peer_id)
+                                error!(
+                                    SecurityEvent::InvalidNetworkEventMempool,
+                                    message = msg,
+                                    peer_id = peer_id,
                                 );
                                 debug_assert!(false, "Unexpected network event rpc request");
                             }
                         }
                     },
                     Err(e) => {
-                        error!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
-                            .data_display("error", &e)
-                    );
+                        error!(
+                            SecurityEvent::InvalidNetworkEventMempool,
+                            StructuredLogEntry::default().data_display("error", &e),
+                        );
                     }
                 };
             },

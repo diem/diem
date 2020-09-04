@@ -6,81 +6,80 @@
 //! logs to detect malicious behavior from other validators.
 //!
 //! ```
-//! use libra_logger::prelude::*;
+//! use libra_logger::{error, SecurityEvent};
 //!
 //! error!(
-//!   security_log(security_events::INVALID_RETRIEVED_BLOCK)
-//!     .data("some_data", "the data")
+//!     SecurityEvent::InvalidRetrievedBlock,
+//!     "some_key" = "some data",
 //! );
 //! ```
 //!
 
-use crate::StructuredLogEntry;
+use crate::{Key, Schema, Value, Visitor};
+use serde::{Deserialize, Serialize};
 
-/// helper function to create a security log
-pub fn security_log(name: &'static str) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("security", &name)
-}
-
-/// Security events that are possible
-pub mod security_events {
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SecurityEvent {
+    //
     // Mempool
-    // -------
-
+    //
     /// Mempool received a transaction from another peer with an invalid signature
-    pub const INVALID_TRANSACTION_MP: &str = "InvalidTransactionMP";
+    InvalidTransactionMempool,
 
     /// Mempool received an invalid network event
-    pub const INVALID_NETWORK_EVENT_MP: &str = "INVALID_NETWORK_EVENT_MP";
+    InvalidNetworkEventMempool,
 
     // Consensus
     // ---------
-
     /// Consensus received an invalid message (not well-formed or incorrect signature)
-    pub const CONSENSUS_INVALID_MESSAGE: &str = "ConsensusInvalidMessage";
+    ConsensusInvalidMessage,
 
     /// Consensus received an equivocating vote
-    pub const CONSENSUS_EQUIVOCATING_VOTE: &str = "ConsensusEquivocatingVote";
+    ConsensusEquivocatingVote,
 
     /// Consensus received an invalid proposal
-    pub const INVALID_CONSENSUS_PROPOSAL: &str = "InvalidConsensusProposal";
+    InvalidConsensusProposal,
 
     /// Consensus received an invalid vote
-    pub const INVALID_CONSENSUS_VOTE: &str = "InvalidConsensusVote";
+    InvalidConsensusVote,
 
     /// Consensus received an invalid new round message
-    pub const INVALID_CONSENSUS_ROUND: &str = "InvalidConsensusRound";
+    InvalidConsensusRound,
 
     /// Consensus received an invalid sync info message
-    pub const INVALID_SYNC_INFO_MSG: &str = "InvalidSyncInfoMsg";
+    InvalidSyncInfoMsg,
 
     /// A received block is invalid
-    pub const INVALID_RETRIEVED_BLOCK: &str = "InvalidRetrievedBlock";
+    InvalidRetrievedBlock,
 
     /// A block being committed or executed is invalid
-    pub const INVALID_BLOCK: &str = "InvalidBlock";
+    InvalidBlock,
 
     // State-Sync
     // ----------
-
     /// Invalid chunk of transactions received
-    pub const STATE_SYNC_INVALID_CHUNK: &str = "InvalidChunk";
+    StateSyncInvalidChunk,
 
     // Health Checker
     // --------------
-
     /// HealthChecker received an invalid network event
-    pub const INVALID_NETWORK_EVENT_HC: &str = "InvalidNetworkEventHC";
+    InvalidNetworkEventHC,
 
     /// HealthChecker received an invalid message
-    pub const INVALID_HEALTHCHECKER_MSG: &str = "InvalidHealthCheckerMsg";
+    InvalidHealthCheckerMsg,
 
     // Network
     // -------
-
     /// Network identified an invalid peer
-    pub const INVALID_NETWORK_PEER: &str = "InvalidNetworkPeer";
+    InvalidNetworkPeer,
 
     /// Network couldn't negotiate
-    pub const INVALID_NETWORK_HANDSHAKE_MSG: &str = "InvalidNetworkHandshakeMsg";
+    InvalidNetworkHandshakeMsg,
+}
+
+impl Schema for SecurityEvent {
+    fn visit(&self, visitor: &mut dyn Visitor) {
+        visitor.visit_pair(Key::new("security-event"), Value::from_serde(self))
+    }
 }

@@ -99,9 +99,12 @@ impl NetworkSender {
                 &self.validators,
             )
             .map_err(|e| {
-                error!(security_log(security_events::INVALID_RETRIEVED_BLOCK)
-                    .data("request_block_reponse", &response)
-                    .data_display("error", &e));
+                error!(
+                    SecurityEvent::InvalidRetrievedBlock,
+                    StructuredLogEntry::default()
+                        .data("request_block_reponse", &response)
+                        .data_display("error", &e)
+                );
                 e
             })?;
 

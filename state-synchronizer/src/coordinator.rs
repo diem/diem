@@ -332,10 +332,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     .await
                 {
                     // security log
-                    error!(security_log(security_events::STATE_SYNC_INVALID_CHUNK)
-                        .data("from_peer", &peer)
-                        .data_display("error", &err)
-                        .data("chunk", &response));
+                    error!(
+                        SecurityEvent::StateSyncInvalidChunk,
+                        StructuredLogEntry::default()
+                            .data("from_peer", &peer)
+                            .data_display("error", &err)
+                            .data("chunk", &response)
+                    );
 
                     // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
                     counters::APPLY_CHUNK_FAILURE

@@ -197,24 +197,31 @@ where
                             match msg {
                             HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
                             _ => {
-                                error!(security_log(security_events::INVALID_HEALTHCHECKER_MSG)
-                                    .data("error", "Unexpected rpc message")
-                                    .data("message", &msg)
-                                    .data("peer_id", &peer_id)
+                                error!(
+                                    SecurityEvent::InvalidHealthCheckerMsg,
+                                    StructuredLogEntry::default()
+                                        .data("error", "Unexpected rpc message")
+                                        .data("message", &msg)
+                                        .data("peer_id", &peer_id)
                                 );
                             },
                             };
                         }
                         Ok(Event::Message(msg)) => {
-                            error!(security_log(security_events::INVALID_NETWORK_EVENT_HC)
-                                .data("error", "Unexpected network event")
-                                .data("event_message", &msg)
+                            error!(
+                                SecurityEvent::InvalidNetworkEventHC,
+                                StructuredLogEntry::default()
+                                    .data("error", "Unexpected network event")
+                                    .data("event_message", &msg)
                             );
                             debug_assert!(false, "Unexpected network event");
                         },
                         Err(err) => {
-                            error!(security_log(security_events::INVALID_NETWORK_EVENT_HC)
-                            .data_display("error", &err));
+                            error!(
+                                SecurityEvent::InvalidNetworkEventHC,
+                                StructuredLogEntry::default()
+                                    .data_display("error", &err)
+                            );
 
                             debug_assert!(false, "Unexpected network error");
                         }
@@ -304,12 +311,15 @@ where
                             }
                         });
                 } else {
-                    error!(security_log(security_events::INVALID_HEALTHCHECKER_MSG)
-                        .data("error", "Pong nonce doesn't match our challenge Ping nonce")
-                        .data("req_nonce", &req_nonce)
-                        .data("peer_id", &peer_id)
-                        .data("pong", pong.0)
-                        .data("round", round));
+                    error!(
+                        SecurityEvent::InvalidHealthCheckerMsg,
+                        StructuredLogEntry::default()
+                            .data("error", "Pong nonce doesn't match our challenge Ping nonce")
+                            .data("req_nonce", &req_nonce)
+                            .data("peer_id", &peer_id)
+                            .data("pong", pong.0)
+                            .data("round", round)
+                    );
                     debug_assert!(false, "Pong nonce doesn't match our challenge Ping nonce");
                 }
             }

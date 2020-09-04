@@ -155,9 +155,7 @@
 
 pub mod prelude {
     pub use crate::{
-        debug, error, event, info,
-        security::{security_events, security_log},
-        trace, warn, StructuredLogEntry,
+        debug, error, event, info, security::SecurityEvent, trace, warn, StructuredLogEntry,
     };
 }
 pub mod json_log;
@@ -181,5 +179,6 @@ pub use struct_log::{LoggingField, StructuredLogEntry};
 
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
+pub use security::SecurityEvent;
 
 pub mod counters;
