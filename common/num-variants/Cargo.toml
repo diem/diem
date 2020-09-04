@@ -12,5 +12,5 @@ proc-macro = true
 [dependencies]
 syn = "1.0.39"
 quote = "1.0.7"
-proc-macro2 = "1.0.19"
+proc-macro2 = "1.0.20"
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
