@@ -40,6 +40,7 @@ const DEFAULT_NAMESPACE: &str = "default";
 const ERROR_NOT_FOUND: u16 = 404;
 const GENESIS_PATH: &str = "/tmp/genesis.blob";
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
+const KUBECTL_BIN: &str = "/usr/local/bin/kubectl";
 
 // We use the macros below to get around the current limitations of the
 // "include_str!" macro (which loads the file content at compile time, rather
@@ -124,7 +125,7 @@ impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
         let http_client = HttpClient::new();
         // This uses kubectl proxy locally to forward connections to kubernetes api server
-        Command::new("/usr/local/bin/kubectl")
+        Command::new(KUBECTL_BIN)
             .arg("proxy")
             .spawn()?;
         libra_retrier::retry_async(k8s_retry_strategy(), || {
