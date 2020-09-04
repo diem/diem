@@ -23,11 +23,15 @@
 //! );
 //! ```
 
-use crate::connectivity_manager::DiscoverySource;
+use crate::{
+    connectivity_manager::DiscoverySource,
+    transport::{ConnectionId, ConnectionMetadata},
+};
 use libra_config::network_id::NetworkContext;
 use libra_logger::{Schema, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
+use netcore::transport::ConnectionOrigin;
 
 /// A helper function to cut down on a bunch of repeated network struct log code
 pub fn network_log(label: &'static str, network_context: &NetworkContext) -> StructuredLogEntry {
@@ -37,6 +41,9 @@ pub fn network_log(label: &'static str, network_context: &NetworkContext) -> Str
 
 #[derive(Schema)]
 pub struct NetworkSchema<'a> {
+    connection_id: Option<&'a ConnectionId>,
+    #[schema(display)]
+    connection_origin: Option<&'a ConnectionOrigin>,
     #[schema(display)]
     discovery_source: Option<&'a DiscoverySource>,
     error: Option<String>,
@@ -50,12 +57,25 @@ pub struct NetworkSchema<'a> {
 impl<'a> NetworkSchema<'a> {
     pub fn new(network_context: &'a NetworkContext) -> Self {
         Self {
+            connection_id: None,
+            connection_origin: None,
             discovery_source: None,
             error: None,
             network_address: None,
             network_context,
             remote_peer: None,
         }
+    }
+
+    pub fn connection_metadata(self, metadata: &'a ConnectionMetadata) -> Self {
+        self.connection_id(&metadata.connection_id)
+            .connection_origin(&metadata.origin)
+            .network_address(&metadata.addr)
+            .remote_peer(&metadata.peer_id)
+    }
+
+    pub fn debug_error<Err: std::fmt::Debug>(self, error: &Err) -> Self {
+        self.error(format!("{:?}", error))
     }
 }
 
@@ -72,7 +92,6 @@ pub mod network_events {
 
     /// Labels
     pub const NOISE_UPGRADE: &str = "noise_upgrade";
-    pub const PEER_MANAGER_LOOP: &str = "peer_manager_loop";
     pub const TRANSPORT_EVENT: &str = "transport_event";
 
     /// Common terms
