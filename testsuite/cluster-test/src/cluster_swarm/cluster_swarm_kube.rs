@@ -41,43 +41,63 @@ const ERROR_NOT_FOUND: u16 = 404;
 const GENESIS_PATH: &str = "/tmp/genesis.blob";
 const HEALTH_CHECK_URL: &str = "http://127.0.0.1:8001";
 
-// Config template file names. Note we load these using macros to get around the
+// Config file names. Note we load these using macros to get around the
+// current limitations of the "include_str!" macro (which loads the file content
+// at compile time, rather than at runtime).
+// TODO(joshlind): Remove me once we support runtime file loading.
+macro_rules! FULLNODE_CONFIG {
+    () => {
+        "configs/fullnode.yaml"
+    };
+}
+macro_rules! SAFETY_RULES_CONFIG {
+    () => {
+        "configs/safetyrules.yaml"
+    };
+}
+macro_rules! VALIDATOR_CONFIG {
+    () => {
+        "configs/validator.yaml"
+    };
+}
+
+// Template file names. Note we load these using macros to get around the
 // current limitations of the "include_str!" macro (which loads the file content
 // at compile time, rather than at runtime).
 // TODO(joshlind): Remove me once we support runtime file loading.
 macro_rules! JOB_TEMPLATE {
     () => {
-        "job_template.yaml"
+        "templates/job_template.yaml"
     };
 }
 macro_rules! LIBRA_NODE_SERVICE_TEMPLATE {
     () => {
-        "libra_node_service_template.yaml"
+        "templates/libra_node_service_template.yaml"
     };
 }
 macro_rules! LIBRA_NODE_SPEC_TEMPLATE {
     () => {
-        "libra_node_spec_template.yaml"
+        "templates/libra_node_spec_template.yaml"
     };
 }
 macro_rules! LSR_SERVICE_TEMPLATE {
     () => {
-        "lsr_service_template.yaml"
+        "templates/lsr_service_template.yaml"
     };
 }
 macro_rules! LSR_SPEC_TEMPLATE {
     () => {
-        "lsr_spec_template.yaml"
+        "templates/lsr_spec_template.yaml"
     };
 }
 macro_rules! VAULT_SERVICE_TEMPLATE {
     () => {
-        "vault_service_template.yaml"
+        "templates/vault_service_template.yaml"
     };
 }
 macro_rules! VAULT_SPEC_TEMPLATE {
     () => {
-        "vault_spec_template.yaml"
+        "templates/vault_spec_template.yaml"
     };
 }
 
@@ -721,7 +741,7 @@ impl ClusterSwarmKube {
     ) -> Result<()> {
         let node_config = match &instance_config.application_config {
             Validator(validator_config) => Some(format!(
-                include_str!("configs/validator.yaml"),
+                include_str!(VALIDATOR_CONFIG!()),
                 vault_addr = validator_config
                     .vault_addr
                     .as_ref()
@@ -736,7 +756,7 @@ impl ClusterSwarmKube {
                     .unwrap_or(&"".to_string()),
             )),
             Fullnode(fullnode_config) => Some(format!(
-                include_str!("configs/fullnode.yaml"),
+                include_str!(FULLNODE_CONFIG!()),
                 vault_addr = fullnode_config
                     .vault_addr
                     .as_ref()
@@ -748,7 +768,7 @@ impl ClusterSwarmKube {
                 seed_peer_ip = fullnode_config.seed_peer_ip,
             )),
             LSR(lsr_config) => Some(format!(
-                include_str!("configs/safetyrules.yaml"),
+                include_str!(SAFETY_RULES_CONFIG!()),
                 vault_addr = lsr_config.vault_addr.as_ref().unwrap_or(&"".to_string()),
                 vault_ns = lsr_config
                     .vault_namespace
