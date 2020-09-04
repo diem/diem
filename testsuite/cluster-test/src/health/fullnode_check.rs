@@ -35,7 +35,7 @@ impl FullNodeHealthCheck {
 async fn get_version(instance: &Instance) -> (&Instance, i64) {
     let res = instance
         .debug_interface_client()
-        .get_node_metric("libra_state_sync_committed_version{}")
+        .get_node_metric("libra_state_sync_version{type=committed}")
         .await;
     let content = match res {
         Ok(res) => res.unwrap_or_default(),

@@ -97,6 +97,9 @@ pub static ACTIVE_UPSTREAM_PEERS: Lazy<IntGauge> = Lazy::new(|| {
     .unwrap()
 });
 
+/// Notice: this metric is used in CT full node health check
+/// ~/libra/testsuite/cluster-test/health/fullnode_check.rs
+/// please make corresponding changes if this field is updated
 pub static VERSION: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
         "libra_state_sync_version",
