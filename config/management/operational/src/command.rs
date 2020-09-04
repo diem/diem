@@ -112,7 +112,7 @@ impl std::fmt::Display for CommandName {
 }
 
 impl Command {
-    pub fn execute(self) -> String {
+    pub fn execute(self) -> Result<String, Error> {
         match self {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
@@ -137,7 +137,9 @@ impl Command {
     }
 
     /// Show the transaction status in a friendly way
-    fn print_transaction_status(result: Result<Option<VMStatusView>, Error>) -> String {
+    fn print_transaction_status(
+        result: Result<Option<VMStatusView>, Error>,
+    ) -> Result<String, Error> {
         Self::pretty_print(result.map(|maybe_status| {
             maybe_status.map_or(String::from("Not yet executed"), |status| {
                 status.to_string()
@@ -146,23 +148,20 @@ impl Command {
     }
 
     /// Show the transaction context, dropping the related key
-    fn print_transaction_context<Key>(result: Result<(TransactionContext, Key), Error>) -> String {
+    fn print_transaction_context<Key>(
+        result: Result<(TransactionContext, Key), Error>,
+    ) -> Result<String, Error> {
         Self::pretty_print(result.map(|(transaction, _)| transaction))
     }
 
     /// Show success or the error result
-    fn print_success(result: Result<(), Error>) -> String {
+    fn print_success(result: Result<(), Error>) -> Result<String, Error> {
         Self::pretty_print(result.map(|()| "Success"))
     }
 
     /// For pretty printing outputs in JSON
-    fn pretty_print<T: Serialize>(result: Result<T, Error>) -> String {
-        let result = match result {
-            Ok(value) => ResultWrapper::Result(value),
-            Err(err) => ResultWrapper::Error(err.to_string()),
-        };
-
-        serde_json::to_string_pretty(&result).unwrap()
+    fn pretty_print<T: Serialize>(result: Result<T, Error>) -> Result<String, Error> {
+        result.map(|val| serde_json::to_string_pretty(&ResultWrapper::Result(val)).unwrap())
     }
 
     pub fn account_resource(self) -> Result<SimplifiedAccountResource, Error> {
@@ -263,7 +262,7 @@ impl Command {
 }
 
 #[derive(Serialize)]
-enum ResultWrapper<T> {
+pub enum ResultWrapper<T> {
     Result(T),
     Error(String),
 }
