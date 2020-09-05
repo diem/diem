@@ -130,7 +130,6 @@ members = [
     "storage/storage-client",
     "storage/storage-interface",
     "storage/storage-service",
-    "testsuite",
     "testsuite/cli",
     "testsuite/cli/libra-wallet",
     "testsuite/cluster-test",
@@ -138,6 +137,7 @@ members = [
     "testsuite/libra-fuzzer",
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
+    "testsuite/smoke-test",
     "types",
     "vm-validator",
 ]

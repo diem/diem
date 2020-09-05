@@ -96,12 +96,12 @@ members = [
     "language/vm/serializer-tests",
     "network/memsocket",
     "network/socket-bench-server",
-    "testsuite",
     "testsuite/cluster-test",
     "testsuite/generate-format",
     "testsuite/libra-fuzzer",
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
+    "testsuite/smoke-test",
 ]
 
 # Interesting subsets of the workspace, These are used for generating and
