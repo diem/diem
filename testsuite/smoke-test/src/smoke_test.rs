@@ -337,7 +337,7 @@ fn test_execute_custom_module_and_script() {
 
     // Make a copy of module.move with "{{sender}}" substituted.
     let module_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/module.move");
+        .join("testsuite/smoke-test/src/dev_modules/module.move");
     let copied_module_path = copy_file_with_sender_address(&module_path, sender_account).unwrap();
     let unwrapped_module_path = copied_module_path.to_str().unwrap();
 
@@ -355,7 +355,7 @@ fn test_execute_custom_module_and_script() {
 
     // Make a copy of script.move with "{{sender}}" substituted.
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/script.move");
+        .join("testsuite/smoke-test/src/dev_modules/script.move");
     let copied_script_path = copy_file_with_sender_address(&script_path, sender_account).unwrap();
     let unwrapped_script_path = copied_script_path.to_str().unwrap();
 
@@ -1137,7 +1137,7 @@ fn test_e2e_modify_publishing_option() {
         client_proxy.get_balances(&["b", "0"]).unwrap(),
     ));
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.move");
+        .join("testsuite/smoke-test/src/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
     let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
@@ -1418,7 +1418,7 @@ fn test_malformed_script() {
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
-        .join("testsuite/tests/libratest/dev_modules/test_script.move");
+        .join("testsuite/smoke-test/src/dev_modules/test_script.move");
     let unwrapped_script_path = script_path.to_str().unwrap();
     let stdlib_source_dir = workspace_builder::workspace_root().join("language/stdlib/modules");
     let unwrapped_stdlib_dir = stdlib_source_dir.to_str().unwrap();
