@@ -88,11 +88,11 @@ async fn expect_ping(
         _ => panic!("Unexpected PeerManagerRequest: {:?}", req),
     };
 
-    let protocol = rpc_req.protocol;
+    let protocol_id = rpc_req.protocol_id;
     let req_data = rpc_req.data;
     let res_tx = rpc_req.res_tx;
 
-    assert_eq!(protocol, ProtocolId::HealthCheckerRpc,);
+    assert_eq!(protocol_id, ProtocolId::HealthCheckerRpc,);
 
     match lcs::from_bytes(&req_data).unwrap() {
         HealthCheckerMsg::Ping(ping) => (ping, res_tx),
@@ -129,13 +129,13 @@ async fn send_inbound_ping(
     ping: u32,
     network_notifs_tx: &mut libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
 ) -> oneshot::Receiver<Result<Bytes, RpcError>> {
-    let protocol = ProtocolId::HealthCheckerRpc;
+    let protocol_id = ProtocolId::HealthCheckerRpc;
     let data = lcs::to_bytes(&HealthCheckerMsg::Ping(Ping(ping)))
         .unwrap()
         .into();
     let (res_tx, res_rx) = oneshot::channel();
     let inbound_rpc_req = InboundRpcRequest {
-        protocol,
+        protocol_id,
         data,
         res_tx,
     };

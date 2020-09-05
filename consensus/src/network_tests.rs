@@ -149,7 +149,7 @@ impl NetworkPlayground {
                         .clone();
 
                     let inbound_req = InboundRpcRequest {
-                        protocol: outbound_req.protocol,
+                        protocol_id: outbound_req.protocol_id,
                         data: outbound_req.data,
                         res_tx: outbound_req.res_tx,
                     };

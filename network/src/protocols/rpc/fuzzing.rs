@@ -13,6 +13,7 @@ use futures::{
     future::{self, FutureExt},
     stream::StreamExt,
 };
+use libra_config::network_id::NetworkContext;
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::PeerId;
 use proptest::{arbitrary::any, collection::vec, prop_oneof, strategy::Strategy};
@@ -28,7 +29,7 @@ const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
 const MOCK_PEER_ID: PeerId = PeerId::ZERO;
-const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
+const MOCK_PROTOCOL_ID: ProtocolId = ProtocolId::ConsensusRpc;
 
 #[test]
 fn test_fuzzer() {
@@ -61,11 +62,12 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 
 // Fuzz the inbound rpc protocol.
 pub fn fuzzer(data: &[u8]) {
+    let network_context = NetworkContext::mock();
     let (notification_tx, mut notification_rx) = channel::new_test(8);
     let (peer_reqs_tx, mut peer_reqs_rx) = channel::new_test(8);
     let raw_request = Vec::from(data);
     let inbound_request = RpcRequest {
-        protocol_id: TEST_PROTOCOL,
+        protocol_id: MOCK_PROTOCOL_ID,
         request_id: 0,
         priority: 0,
         // write the fuzzer data into the in-memory substream
@@ -73,6 +75,7 @@ pub fn fuzzer(data: &[u8]) {
     };
     // run the rpc inbound protocol using the in-memory substream
     let f_handle_inbound = rpc::handle_inbound_request_inner(
+        &network_context,
         notification_tx,
         inbound_request,
         PeerHandle::new(MOCK_PEER_ID, peer_reqs_tx),
@@ -86,10 +89,10 @@ pub fn fuzzer(data: &[u8]) {
         let notif = notification_rx.next().await.unwrap();
         match notif {
             RpcNotification::RecvRpc(req) => {
-                let protocol = req.protocol;
+                let protocol_id = req.protocol_id;
                 let data = req.data;
                 let res_tx = req.res_tx;
-                assert_eq!(protocol, TEST_PROTOCOL);
+                assert_eq!(protocol_id, MOCK_PROTOCOL_ID);
                 let _ = res_tx.send(Ok(data));
             }
         }
@@ -102,11 +105,11 @@ pub fn fuzzer(data: &[u8]) {
         });
         if let Some(req) = peer_reqs_rx.next().await {
             match req {
-                PeerRequest::SendMessage(response_message, protocol, res_tx) => {
+                PeerRequest::SendMessage(response_message, protocol_id, res_tx) => {
                     // when testing, we only run the fuzzer with well-formed inputs, so we
                     // should successfully reach this point and read the same data back
                     if cfg!(test) {
-                        assert_eq!(protocol, TEST_PROTOCOL);
+                        assert_eq!(protocol_id, MOCK_PROTOCOL_ID);
                         assert_eq!(response_message, outbound_response);
                     }
                     res_tx.send(Ok(())).unwrap();

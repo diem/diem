@@ -270,7 +270,7 @@ where
         trace!("RpcNotification::{:?}", notif);
         match notif {
             RpcNotification::RecvRpc(req) => {
-                if let Err(e) = notifs_tx.push(req.protocol, NetworkNotification::RecvRpc(req)) {
+                if let Err(e) = notifs_tx.push(req.protocol_id, NetworkNotification::RecvRpc(req)) {
                     warn!("Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
                 }
             }

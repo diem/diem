@@ -13,6 +13,10 @@ pub struct NetworkContext {
     network_id: NetworkId,
     role: RoleType,
     peer_id: PeerId,
+
+    /// Cache rendering the short PeerId String
+    #[serde(skip)]
+    peer_id_short_str: String,
 }
 
 impl fmt::Debug for NetworkContext {
@@ -26,9 +30,7 @@ impl fmt::Display for NetworkContext {
         write!(
             formatter,
             "[{},{},{}]",
-            self.network_id,
-            self.role,
-            self.peer_id.short_str()
+            self.network_id, self.role, self.peer_id_short_str,
         )
     }
 }
@@ -39,6 +41,7 @@ impl NetworkContext {
             network_id,
             role,
             peer_id,
+            peer_id_short_str: peer_id.short_str(),
         }
     }
 
@@ -46,30 +49,34 @@ impl NetworkContext {
         &self.network_id
     }
 
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
-    }
-
     pub fn role(&self) -> RoleType {
         self.role
     }
 
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
+    }
+
+    pub fn peer_id_short_str(&self) -> &str {
+        self.peer_id_short_str.as_str()
+    }
+
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock_with_peer_id(peer_id: PeerId) -> std::sync::Arc<Self> {
-        std::sync::Arc::new(Self {
-            network_id: NetworkId::Validator,
-            role: RoleType::Validator,
+        std::sync::Arc::new(Self::new(
+            NetworkId::Validator,
+            RoleType::Validator,
             peer_id,
-        })
+        ))
     }
 
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock() -> std::sync::Arc<Self> {
-        std::sync::Arc::new(Self {
-            network_id: NetworkId::Validator,
-            role: RoleType::Validator,
-            peer_id: PeerId::random(),
-        })
+        std::sync::Arc::new(Self::new(
+            NetworkId::Validator,
+            RoleType::Validator,
+            PeerId::random(),
+        ))
     }
 }
 

@@ -192,19 +192,19 @@ impl PeerManagerRequestSender {
     pub async fn send_rpc(
         &mut self,
         peer_id: PeerId,
-        protocol: ProtocolId,
+        protocol_id: ProtocolId,
         req: Bytes,
         timeout: Duration,
     ) -> Result<Bytes, RpcError> {
         let (res_tx, res_rx) = oneshot::channel();
         let request = OutboundRpcRequest {
-            protocol,
+            protocol_id,
             data: req,
             res_tx,
             timeout,
         };
         self.inner.push(
-            (peer_id, protocol),
+            (peer_id, protocol_id),
             PeerManagerRequest::SendRpc(peer_id, request),
         )?;
         res_rx.await?
@@ -582,7 +582,7 @@ where
             }
             PeerManagerRequest::SendRpc(peer_id, req) => {
                 if let Some((_, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) = sender.push(req.protocol, NetworkRequest::SendRpc(req)) {
+                    if let Err(err) = sender.push(req.protocol_id, NetworkRequest::SendRpc(req)) {
                         info!(
                             NetworkSchema::new(&self.network_context),
                             "{} Failed to forward outbound rpc to downstream actor. Error:
@@ -802,20 +802,17 @@ where
                 }
             }
             NetworkNotification::RecvRpc(rpc_req) => {
-                let protocol = rpc_req.protocol;
-                if let Some(handler) = upstream_handlers.get_mut(&protocol) {
+                let protocol_id = rpc_req.protocol_id;
+                if let Some(handler) = upstream_handlers.get_mut(&protocol_id) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol),
+                        (peer_id, protocol_id),
                         PeerManagerNotification::RecvRpc(peer_id, rpc_req),
                     ) {
                         warn!(
                             NetworkSchema::new(&network_context).debug_error(&err),
-                            "{} Upstream handler unable to handle rpc for protocol: {}. Error:
-                              {:?}",
-                            network_context,
-                            protocol,
-                            err
+                            "{} Upstream handler unable to handle rpc for protocol: {}. Error: {:?}",
+                            network_context, protocol_id, err
                         );
                     }
                 } else {

@@ -3,8 +3,8 @@
 
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
-    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
-    IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, Histogram,
+    HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
 };
 use netcore::transport::ConnectionOrigin;
 use once_cell::sync::Lazy;
@@ -47,7 +47,7 @@ pub fn update_libra_connections(
         .with_label_values(&[
             network_context.role().as_str(),
             network_context.network_id().as_str(),
-            network_context.peer_id().short_str().as_str(),
+            network_context.peer_id_short_str(),
             origin.as_str(),
         ])
         .set(num_connections as i64);
@@ -66,28 +66,71 @@ pub static LIBRA_NETWORK_RPC_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_rpc_messages",
         "Number of RPC messages",
-        &["type", "state"]
+        &["role_type", "network_id", "peer_id", "type", "state"]
     )
     .unwrap()
 });
+
+pub fn rpc_messages(
+    network_context: &NetworkContext,
+    type_label: &'static str,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_RPC_MESSAGES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+        type_label,
+        state_label,
+    ])
+}
+
+// TODO(philiphayes): the default histogram buckets don't make sense for measuring
+// message sizes; we need to set these explicitly to something reasonable...
 
 pub static LIBRA_NETWORK_RPC_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_bytes",
         "Number of RPC bytes transferred",
-        &["type", "state"]
+        &["role_type", "network_id", "peer_id", "type", "state"]
     )
     .unwrap()
 });
+
+pub fn rpc_bytes(
+    network_context: &NetworkContext,
+    type_label: &'static str,
+    state_label: &'static str,
+) -> Histogram {
+    LIBRA_NETWORK_RPC_BYTES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+        type_label,
+        state_label,
+    ])
+}
+
+// TODO(philiphayes): specify that this is outbound rpc only
+// TODO(philiphayes): somehow get per-peer latency metrics without using a
+// separate peer_id label ==> cardinality explosion.
 
 pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_latency_seconds",
         "RPC request latency in seconds",
-        &["type", "protocol_id", "peer_id"]
+        &["role_type", "network_id", "peer_id"]
     )
     .unwrap()
 });
+
+pub fn rpc_latency(network_context: &NetworkContext) -> Histogram {
+    LIBRA_NETWORK_RPC_LATENCY.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+    ])
+}
 
 pub static LIBRA_NETWORK_DIRECT_SEND_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
