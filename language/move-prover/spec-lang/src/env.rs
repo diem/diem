@@ -2256,14 +2256,27 @@ impl<'env> FunctionEnv<'env> {
             .get_function_source_map(self.data.def_idx)
         {
             if let Some((ident, _)) = fmap.get_parameter_or_local_name(idx as u64) {
-                // The Move compiler produces temporay names of the form `<foo>%#<num>`.
-                // Ignore those names and use the idx-based repr instead.
-                if !ident.contains("%#") {
-                    return self.module_env.env.symbol_pool.make(ident.as_str());
-                }
+                // The Move compiler produces temporary names of the form `<foo>%#<num>`,
+                // where <num> seems to be generated non-deterministically.
+                // Substitute this by a deterministic name which the backend accepts.
+                let clean_ident = if ident.contains("%#") {
+                    format!("tmp#${}", idx)
+                } else {
+                    ident
+                };
+                return self.module_env.env.symbol_pool.make(clean_ident.as_str());
             }
         }
         self.module_env.env.symbol_pool.make(&format!("$t{}", idx))
+    }
+
+    /// Returns true if the index is for a temporary, not user declared local.
+    pub fn is_temporary(&self, idx: usize) -> bool {
+        if idx >= self.get_local_count() {
+            return true;
+        }
+        let name = self.get_local_name(idx);
+        self.symbol_pool().string(name).contains("tmp#$")
     }
 
     /// Gets the number of proper locals of this function. Those are locals which are declared

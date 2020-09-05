@@ -8,10 +8,8 @@ error: caller does not have permission for this resource modification
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:63:5: move_from_test_incorrect
     =         addr1 = <redacted>,
-    =         addr2 = <redacted>,
-    =         x0 = <redacted>
+    =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:64:21: move_from_test_incorrect
-    =     at tests/sources/functional/ModifiesErrorTest.move:65:17: move_from_test_incorrect
 
 error: caller does not have permission for this resource modification
 
@@ -22,10 +20,8 @@ error: caller does not have permission for this resource modification
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:50:5: move_to_test_incorrect
     =         account = <redacted>,
-    =         addr2 = <redacted>,
-    =         x0 = <redacted>
+    =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:51:21: move_to_test_incorrect
-    =     at tests/sources/functional/ModifiesErrorTest.move:52:20: move_to_test_incorrect
 
 error: caller does not have permission for this modify target
 
@@ -39,10 +35,8 @@ error: caller does not have permission for this modify target
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:77:5: mutate_S_test1_incorrect
     =         addr1 = <redacted>,
-    =         addr2 = <redacted>,
-    =         x0 = <redacted>
+    =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:78:21: mutate_S_test1_incorrect
-    =     at tests/sources/functional/ModifiesErrorTest.move:79:12: mutate_S_test1_incorrect
 
 error:  This assertion might not hold.
 
@@ -52,13 +46,10 @@ error:  This assertion might not hold.
     │             ^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:90:5: mutate_S_test2_incorrect
-    =         addr = <redacted>,
-    =         x0 = <redacted>,
-    =         x1 = <redacted>
+    =         addr = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:91:21: mutate_S_test2_incorrect
     =     at tests/sources/functional/ModifiesErrorTest.move:92:12: mutate_S_test2_incorrect
     =     at tests/sources/functional/ModifiesErrorTest.move:93:21: mutate_S_test2_incorrect
-    =     at tests/sources/functional/ModifiesErrorTest.move:95:13: mutate_S_test2_incorrect
 
 error: caller does not have permission for this resource modification
 
@@ -69,7 +60,5 @@ error: caller does not have permission for this resource modification
     │
     =     at tests/sources/functional/ModifiesErrorTest.move:36:5: mutate_at_test_incorrect
     =         addr1 = <redacted>,
-    =         addr2 = <redacted>,
-    =         x0 = <redacted>
+    =         addr2 = <redacted>
     =     at tests/sources/functional/ModifiesErrorTest.move:37:21: mutate_at_test_incorrect
-    =     at tests/sources/functional/ModifiesErrorTest.move:38:17: mutate_at_test_incorrect

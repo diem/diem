@@ -261,6 +261,8 @@ module LibraAccount {
 
     spec fun staple_lbr {
         pragma opaque;
+        // Verification of this function is unstable (butterfly effect).
+        pragma verify_duration_estimate = 100;
         modifies global<LibraAccount>(cap.account_address);
         modifies global<Balance<Coin1>>(cap.account_address);
         modifies global<Balance<Coin2>>(cap.account_address);

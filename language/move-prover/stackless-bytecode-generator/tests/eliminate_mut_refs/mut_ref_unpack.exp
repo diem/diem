@@ -1,0 +1,97 @@
+============ initial translation from Move ================
+
+pub fun TestMutRefs::unpack(r: &mut TestMutRefs::R): u64 {
+     var result: u64
+     var tmp#$2: &mut TestMutRefs::R
+     var value: &mut u64
+     var $t4: &mut TestMutRefs::R
+     var $t5: &mut TestMutRefs::R
+     var $t6: &mut u64
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: u64
+     var $t10: &mut u64
+     var $t11: u64
+  0: $t4 := move(r)
+  1: tmp#$2 := $t4
+  2: $t5 := move(tmp#$2)
+  3: $t6 := borrow_field<TestMutRefs::R>.value($t5)
+  4: value := $t6
+  5: $t7 := copy(value)
+  6: $t8 := read_ref($t7)
+  7: result := $t8
+  8: $t9 := 0
+  9: $t10 := move(value)
+ 10: write_ref($t10, $t9)
+ 11: $t11 := copy(result)
+ 12: return $t11
+}
+
+
+pub fun TestMutRefs::unpack_incorrect(r: &mut TestMutRefs::R): u64 {
+     var result: u64
+     var tmp#$2: &mut TestMutRefs::R
+     var value: &mut u64
+     var $t4: &mut TestMutRefs::R
+     var $t5: &mut TestMutRefs::R
+     var $t6: &mut u64
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: u64
+  0: $t4 := move(r)
+  1: tmp#$2 := $t4
+  2: $t5 := move(tmp#$2)
+  3: $t6 := borrow_field<TestMutRefs::R>.value($t5)
+  4: value := $t6
+  5: $t7 := move(value)
+  6: $t8 := read_ref($t7)
+  7: result := $t8
+  8: $t9 := copy(result)
+  9: return $t9
+}
+
+============ after pipeline `eliminate_mut_refs` ================
+
+pub fun TestMutRefs::unpack(r: TestMutRefs::R): (u64, TestMutRefs::R) {
+     var result: u64
+     var tmp#$2: &mut TestMutRefs::R
+     var value: &mut u64
+     var $t4: u64
+     var $t5: TestMutRefs::R
+     var $t6: &mut TestMutRefs::R
+  0: $t5 := move(r)
+  1: $t6 := borrow_local($t5)
+  2: UnpackRef($t6)
+  3: value := borrow_field<TestMutRefs::R>.value($t6)
+  4: LocalRoot($t5) <- $t6
+  5: UnpackRef(value)
+  6: result := read_ref(value)
+  7: $t4 := 0
+  8: write_ref(value, $t4)
+  9: LocalRoot($t5) <- value
+ 10: Reference($t6) <- value
+ 11: PackRef($t6)
+ 12: PackRef(value)
+ 13: return (result, $t5)
+}
+
+
+pub fun TestMutRefs::unpack_incorrect(r: TestMutRefs::R): (u64, TestMutRefs::R) {
+     var result: u64
+     var tmp#$2: &mut TestMutRefs::R
+     var value: &mut u64
+     var $t4: TestMutRefs::R
+     var $t5: &mut TestMutRefs::R
+  0: $t4 := move(r)
+  1: $t5 := borrow_local($t4)
+  2: UnpackRef($t5)
+  3: value := borrow_field<TestMutRefs::R>.value($t5)
+  4: LocalRoot($t4) <- $t5
+  5: UnpackRef(value)
+  6: result := read_ref(value)
+  7: LocalRoot($t4) <- value
+  8: Reference($t5) <- value
+  9: PackRef($t5)
+ 10: PackRef(value)
+ 11: return (result, $t4)
+}

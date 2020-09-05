@@ -129,6 +129,10 @@ impl FunctionTargetProcessor for UsageProcessor {
         data.annotations.set(annotation);
         data
     }
+
+    fn name(&self) -> String {
+        "usage_analysis".to_string()
+    }
 }
 
 impl UsageProcessor {

@@ -212,6 +212,11 @@ impl<'env> FunctionTarget<'env> {
         self.func_env.get_local_count()
     }
 
+    /// Returns true if the index is for a temporary, not user declared local.
+    pub fn is_temporary(&self, idx: usize) -> bool {
+        self.func_env.is_temporary(idx)
+    }
+
     /// Gets the type of the local at index. This must use an index in the range as determined by
     /// `get_local_count`.
     pub fn get_local_type(&self, idx: usize) -> &Type {
@@ -446,7 +451,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
         for i in self.get_parameter_count()..self.get_local_count() {
             writeln!(
                 f,
-                "    var {}: {}",
+                "     var {}: {}",
                 self.get_local_name(i).display(self.symbol_pool()),
                 self.get_local_type(i).display(&tctx)
             )?;
@@ -457,12 +462,12 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 .borrow()
                 .iter()
                 .filter_map(|f| f(self, offset as CodeOffset))
-                .map(|s| format!("    // {}", s))
+                .map(|s| format!("     // {}", s))
                 .join("\n");
             if !annotations.is_empty() {
                 writeln!(f, "{}", annotations)?;
             }
-            writeln!(f, "    {}", code.display(self))?;
+            writeln!(f, "{:>3}: {}", offset, code.display(self))?;
         }
         writeln!(f, "}}")?;
         Ok(())

@@ -185,6 +185,10 @@ impl FunctionTargetProcessor for PackrefAnalysisProcessor {
             .set::<PackrefAnnotation>(PackrefAnnotation(new_code));
         data
     }
+
+    fn name(&self) -> String {
+        "packref_analysis".to_string()
+    }
 }
 
 pub struct PackrefInstrumentation {

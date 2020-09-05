@@ -3,6 +3,9 @@
 
 #![forbid(unsafe_code)]
 
+use crate::function_target_pipeline::FunctionTargetsHolder;
+use spec_lang::env::GlobalEnv;
+
 pub mod annotations;
 pub mod borrow_analysis;
 pub mod dataflow_analysis;
@@ -24,3 +27,21 @@ pub mod writeback_analysis;
 
 #[cfg(test)]
 pub mod unit_tests;
+
+/// Print function targets for testing and debugging.
+pub fn print_targets_for_test(
+    env: &GlobalEnv,
+    header: &str,
+    targets: &FunctionTargetsHolder,
+) -> String {
+    let mut text = String::new();
+    text.push_str(&format!("============ {} ================\n", header));
+    for module_env in env.get_modules() {
+        for func_env in module_env.get_functions() {
+            let target = targets.get_target(&func_env);
+            target.register_annotation_formatters_for_test();
+            text += &format!("\n{}\n", target);
+        }
+    }
+    text
+}

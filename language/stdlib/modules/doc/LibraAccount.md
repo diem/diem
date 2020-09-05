@@ -2616,6 +2616,7 @@ After genesis, the
 
 
 <pre><code>pragma opaque;
+pragma verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(cap.account_address);

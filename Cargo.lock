@@ -5535,6 +5535,7 @@ dependencies = [
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "move-core-types 0.1.0",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spec-lang 0.1.0",

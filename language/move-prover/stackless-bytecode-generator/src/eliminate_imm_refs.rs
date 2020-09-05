@@ -51,6 +51,10 @@ impl FunctionTargetProcessor for EliminateImmRefsProcessor {
             .collect();
         data
     }
+
+    fn name(&self) -> String {
+        "eliminate_imm_refs".to_string()
+    }
 }
 
 pub struct EliminateImmRefs<'a> {

@@ -1,599 +1,509 @@
 ============ initial translation from Move ================
 
 fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var x_ref: &mut u64
-    var $t3: u64
-    var $t4: TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: &mut TestEliminateMutRefs::R
-    var $t7: &mut u64
-    var $t8: u64
-    var $t9: &mut u64
-    var $t10: TestEliminateMutRefs::R
-    $t3 := 3
-    $t4 := pack TestEliminateMutRefs::R($t3)
-    r := $t4
-    $t5 := borrow_local(r)
-    r_ref := $t5
-    $t6 := move(r_ref)
-    $t7 := borrow_field<TestEliminateMutRefs::R>.x($t6)
-    x_ref := $t7
-    $t8 := 0
-    $t9 := move(x_ref)
-    write_ref($t9, $t8)
-    $t10 := move(r)
-    return $t10
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var x_ref: &mut u64
+     var $t3: u64
+     var $t4: TestEliminateMutRefs::R
+     var $t5: &mut TestEliminateMutRefs::R
+     var $t6: &mut TestEliminateMutRefs::R
+     var $t7: &mut u64
+     var $t8: u64
+     var $t9: &mut u64
+     var $t10: TestEliminateMutRefs::R
+  0: $t3 := 3
+  1: $t4 := pack TestEliminateMutRefs::R($t3)
+  2: r := $t4
+  3: $t5 := borrow_local(r)
+  4: r_ref := $t5
+  5: $t6 := move(r_ref)
+  6: $t7 := borrow_field<TestEliminateMutRefs::R>.x($t6)
+  7: x_ref := $t7
+  8: $t8 := 0
+  9: $t9 := move(x_ref)
+ 10: write_ref($t9, $t8)
+ 11: $t10 := move(r)
+ 12: return $t10
 }
 
 
 fun TestEliminateMutRefs::test2(x_ref: &mut u64, v: u64) {
-    var $t2: u64
-    var $t3: &mut u64
-    $t2 := copy(v)
-    $t3 := move(x_ref)
-    write_ref($t3, $t2)
-    return ()
+     var $t2: u64
+     var $t3: &mut u64
+  0: $t2 := copy(v)
+  1: $t3 := move(x_ref)
+  2: write_ref($t3, $t2)
+  3: return ()
 }
 
 
 pub fun TestEliminateMutRefs::test3(r_ref: &mut TestEliminateMutRefs::R, v: u64) {
-    var x_ref: &mut u64
-    var $t3: &mut TestEliminateMutRefs::R
-    var $t4: &mut u64
-    var $t5: &mut u64
-    var $t6: u64
-    $t3 := move(r_ref)
-    $t4 := borrow_field<TestEliminateMutRefs::R>.x($t3)
-    x_ref := $t4
-    $t5 := move(x_ref)
-    $t6 := copy(v)
-    TestEliminateMutRefs::test2($t5, $t6)
-    return ()
+     var x_ref: &mut u64
+     var $t3: &mut TestEliminateMutRefs::R
+     var $t4: &mut u64
+     var $t5: &mut u64
+     var $t6: u64
+  0: $t3 := move(r_ref)
+  1: $t4 := borrow_field<TestEliminateMutRefs::R>.x($t3)
+  2: x_ref := $t4
+  3: $t5 := move(x_ref)
+  4: $t6 := copy(v)
+  5: TestEliminateMutRefs::test2($t5, $t6)
+  6: return ()
 }
 
 
 fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var $t2: u64
-    var $t3: TestEliminateMutRefs::R
-    var $t4: &mut TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    $t2 := 3
-    $t3 := pack TestEliminateMutRefs::R($t2)
-    r := $t3
-    $t4 := borrow_local(r)
-    r_ref := $t4
-    $t5 := move(r_ref)
-    $t6 := 0
-    TestEliminateMutRefs::test3($t5, $t6)
-    $t7 := move(r)
-    return $t7
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var $t2: u64
+     var $t3: TestEliminateMutRefs::R
+     var $t4: &mut TestEliminateMutRefs::R
+     var $t5: &mut TestEliminateMutRefs::R
+     var $t6: u64
+     var $t7: TestEliminateMutRefs::R
+  0: $t2 := 3
+  1: $t3 := pack TestEliminateMutRefs::R($t2)
+  2: r := $t3
+  3: $t4 := borrow_local(r)
+  4: r_ref := $t4
+  5: $t5 := move(r_ref)
+  6: $t6 := 0
+  7: TestEliminateMutRefs::test3($t5, $t6)
+  8: $t7 := move(r)
+  9: return $t7
 }
 
 
 pub fun TestEliminateMutRefs::test5(r_ref: &mut TestEliminateMutRefs::R): &mut u64 {
-    var $t1: &mut TestEliminateMutRefs::R
-    var $t2: &mut u64
-    $t1 := move(r_ref)
-    $t2 := borrow_field<TestEliminateMutRefs::R>.x($t1)
-    return $t2
+     var $t1: &mut TestEliminateMutRefs::R
+     var $t2: &mut u64
+  0: $t1 := move(r_ref)
+  1: $t2 := borrow_field<TestEliminateMutRefs::R>.x($t1)
+  2: return $t2
 }
 
 
 fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var x_ref: &mut u64
-    var $t3: u64
-    var $t4: TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: &mut TestEliminateMutRefs::R
-    var $t7: &mut u64
-    var $t8: &mut u64
-    var $t9: u64
-    var $t10: TestEliminateMutRefs::R
-    $t3 := 3
-    $t4 := pack TestEliminateMutRefs::R($t3)
-    r := $t4
-    $t5 := borrow_local(r)
-    r_ref := $t5
-    $t6 := move(r_ref)
-    $t7 := TestEliminateMutRefs::test5($t6)
-    x_ref := $t7
-    $t8 := move(x_ref)
-    $t9 := 0
-    TestEliminateMutRefs::test2($t8, $t9)
-    $t10 := move(r)
-    return $t10
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var x_ref: &mut u64
+     var $t3: u64
+     var $t4: TestEliminateMutRefs::R
+     var $t5: &mut TestEliminateMutRefs::R
+     var $t6: &mut TestEliminateMutRefs::R
+     var $t7: &mut u64
+     var $t8: &mut u64
+     var $t9: u64
+     var $t10: TestEliminateMutRefs::R
+  0: $t3 := 3
+  1: $t4 := pack TestEliminateMutRefs::R($t3)
+  2: r := $t4
+  3: $t5 := borrow_local(r)
+  4: r_ref := $t5
+  5: $t6 := move(r_ref)
+  6: $t7 := TestEliminateMutRefs::test5($t6)
+  7: x_ref := $t7
+  8: $t8 := move(x_ref)
+  9: $t9 := 0
+ 10: TestEliminateMutRefs::test2($t8, $t9)
+ 11: $t10 := move(r)
+ 12: return $t10
 }
 
 
 fun TestEliminateMutRefs::test7(b: bool) {
-    var r1: TestEliminateMutRefs::R
-    var r2: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var $t4: u64
-    var $t5: TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: &mut TestEliminateMutRefs::R
-    var $t9: bool
-    var $t10: &mut TestEliminateMutRefs::R
-    var $t11: &mut TestEliminateMutRefs::R
-    var $t12: &mut TestEliminateMutRefs::R
-    var $t13: u64
-    $t4 := 3
-    $t5 := pack TestEliminateMutRefs::R($t4)
-    r1 := $t5
-    $t6 := 4
-    $t7 := pack TestEliminateMutRefs::R($t6)
-    r2 := $t7
-    $t8 := borrow_local(r1)
-    r_ref := $t8
-    $t9 := copy(b)
-    if ($t9) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t10 := move(r_ref)
-    destroy($t10)
-    $t11 := borrow_local(r2)
-    r_ref := $t11
-    goto L2
-    L2:
-    $t12 := move(r_ref)
-    $t13 := 0
-    TestEliminateMutRefs::test3($t12, $t13)
-    return ()
+     var r1: TestEliminateMutRefs::R
+     var r2: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var $t4: u64
+     var $t5: TestEliminateMutRefs::R
+     var $t6: u64
+     var $t7: TestEliminateMutRefs::R
+     var $t8: &mut TestEliminateMutRefs::R
+     var $t9: bool
+     var $t10: &mut TestEliminateMutRefs::R
+     var $t11: &mut TestEliminateMutRefs::R
+     var $t12: &mut TestEliminateMutRefs::R
+     var $t13: u64
+  0: $t4 := 3
+  1: $t5 := pack TestEliminateMutRefs::R($t4)
+  2: r1 := $t5
+  3: $t6 := 4
+  4: $t7 := pack TestEliminateMutRefs::R($t6)
+  5: r2 := $t7
+  6: $t8 := borrow_local(r1)
+  7: r_ref := $t8
+  8: $t9 := copy(b)
+  9: if ($t9) goto L0 else goto L1
+ 10: L1:
+ 11: goto L2
+ 12: L0:
+ 13: $t10 := move(r_ref)
+ 14: destroy($t10)
+ 15: $t11 := borrow_local(r2)
+ 16: r_ref := $t11
+ 17: goto L2
+ 18: L2:
+ 19: $t12 := move(r_ref)
+ 20: $t13 := 0
+ 21: TestEliminateMutRefs::test3($t12, $t13)
+ 22: return ()
 }
 
 
 fun TestEliminateMutRefs::test8(b: bool, n: u64, r_ref: &mut TestEliminateMutRefs::R) {
-    var r1: TestEliminateMutRefs::R
-    var r2: TestEliminateMutRefs::R
-    var t_ref: &mut TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: u64
-    var $t9: TestEliminateMutRefs::R
-    var $t10: &mut TestEliminateMutRefs::R
-    var $t11: u64
-    var $t12: u64
-    var $t13: bool
-    var $t14: &mut TestEliminateMutRefs::R
-    var $t15: u64
-    var $t16: u64
-    var $t17: u64
-    var $t18: u64
-    var $t19: bool
-    var $t20: &mut TestEliminateMutRefs::R
-    var $t21: &mut TestEliminateMutRefs::R
-    var $t22: u64
-    var $t23: u64
-    var $t24: u64
-    var $t25: bool
-    var $t26: &mut TestEliminateMutRefs::R
-    var $t27: &mut TestEliminateMutRefs::R
-    var $t28: u64
-    var $t29: &mut TestEliminateMutRefs::R
-    var $t30: &mut TestEliminateMutRefs::R
-    var $t31: u64
-    $t6 := 3
-    $t7 := pack TestEliminateMutRefs::R($t6)
-    r1 := $t7
-    $t8 := 4
-    $t9 := pack TestEliminateMutRefs::R($t8)
-    r2 := $t9
-    $t10 := borrow_local(r2)
-    t_ref := $t10
-    goto L7
-    L7:
-    $t11 := 0
-    $t12 := copy(n)
-    $t13 := <($t11, $t12)
-    if ($t13) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t14 := move(t_ref)
-    destroy($t14)
-    $t15 := copy(n)
-    $t16 := 2
-    $t17 := /($t15, $t16)
-    $t18 := 0
-    $t19 := ==($t17, $t18)
-    if ($t19) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t20 := borrow_local(r1)
-    t_ref := $t20
-    goto L6
-    L5:
-    $t21 := borrow_local(r2)
-    t_ref := $t21
-    goto L6
-    L6:
-    $t22 := copy(n)
-    $t23 := 1
-    $t24 := -($t22, $t23)
-    n := $t24
-    goto L7
-    L2:
-    $t25 := copy(b)
-    if ($t25) goto L8 else goto L9
-    L9:
-    goto L10
-    L8:
-    $t26 := move(t_ref)
-    destroy($t26)
-    $t27 := move(r_ref)
-    $t28 := 0
-    TestEliminateMutRefs::test3($t27, $t28)
-    goto L11
-    L10:
-    $t29 := move(r_ref)
-    destroy($t29)
-    $t30 := move(t_ref)
-    $t31 := 0
-    TestEliminateMutRefs::test3($t30, $t31)
-    goto L11
-    L11:
-    return ()
+     var r1: TestEliminateMutRefs::R
+     var r2: TestEliminateMutRefs::R
+     var t_ref: &mut TestEliminateMutRefs::R
+     var $t6: u64
+     var $t7: TestEliminateMutRefs::R
+     var $t8: u64
+     var $t9: TestEliminateMutRefs::R
+     var $t10: &mut TestEliminateMutRefs::R
+     var $t11: u64
+     var $t12: u64
+     var $t13: bool
+     var $t14: &mut TestEliminateMutRefs::R
+     var $t15: u64
+     var $t16: u64
+     var $t17: u64
+     var $t18: u64
+     var $t19: bool
+     var $t20: &mut TestEliminateMutRefs::R
+     var $t21: &mut TestEliminateMutRefs::R
+     var $t22: u64
+     var $t23: u64
+     var $t24: u64
+     var $t25: bool
+     var $t26: &mut TestEliminateMutRefs::R
+     var $t27: &mut TestEliminateMutRefs::R
+     var $t28: u64
+     var $t29: &mut TestEliminateMutRefs::R
+     var $t30: &mut TestEliminateMutRefs::R
+     var $t31: u64
+  0: $t6 := 3
+  1: $t7 := pack TestEliminateMutRefs::R($t6)
+  2: r1 := $t7
+  3: $t8 := 4
+  4: $t9 := pack TestEliminateMutRefs::R($t8)
+  5: r2 := $t9
+  6: $t10 := borrow_local(r2)
+  7: t_ref := $t10
+  8: goto L7
+  9: L7:
+ 10: $t11 := 0
+ 11: $t12 := copy(n)
+ 12: $t13 := <($t11, $t12)
+ 13: if ($t13) goto L0 else goto L1
+ 14: L1:
+ 15: goto L2
+ 16: L0:
+ 17: $t14 := move(t_ref)
+ 18: destroy($t14)
+ 19: $t15 := copy(n)
+ 20: $t16 := 2
+ 21: $t17 := /($t15, $t16)
+ 22: $t18 := 0
+ 23: $t19 := ==($t17, $t18)
+ 24: if ($t19) goto L3 else goto L4
+ 25: L4:
+ 26: goto L5
+ 27: L3:
+ 28: $t20 := borrow_local(r1)
+ 29: t_ref := $t20
+ 30: goto L6
+ 31: L5:
+ 32: $t21 := borrow_local(r2)
+ 33: t_ref := $t21
+ 34: goto L6
+ 35: L6:
+ 36: $t22 := copy(n)
+ 37: $t23 := 1
+ 38: $t24 := -($t22, $t23)
+ 39: n := $t24
+ 40: goto L7
+ 41: L2:
+ 42: $t25 := copy(b)
+ 43: if ($t25) goto L8 else goto L9
+ 44: L9:
+ 45: goto L10
+ 46: L8:
+ 47: $t26 := move(t_ref)
+ 48: destroy($t26)
+ 49: $t27 := move(r_ref)
+ 50: $t28 := 0
+ 51: TestEliminateMutRefs::test3($t27, $t28)
+ 52: goto L11
+ 53: L10:
+ 54: $t29 := move(r_ref)
+ 55: destroy($t29)
+ 56: $t30 := move(t_ref)
+ 57: $t31 := 0
+ 58: TestEliminateMutRefs::test3($t30, $t31)
+ 59: goto L11
+ 60: L11:
+ 61: return ()
 }
 
 ============ after pipeline `eliminate_mut_refs` ================
 
 fun TestEliminateMutRefs::test1(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var x_ref: &mut u64
-    var $t3: u64
-    var $t4: TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: &mut TestEliminateMutRefs::R
-    var $t7: &mut u64
-    var $t8: u64
-    var $t9: &mut u64
-    var $t10: TestEliminateMutRefs::R
-    $t3 := 3
-    $t4 := pack TestEliminateMutRefs::R($t3)
-    r := $t4
-    $t5 := borrow_local(r)
-    UnpackRef($t5)
-    r_ref := $t5
-    $t6 := move(r_ref)
-    $t7 := borrow_field<TestEliminateMutRefs::R>.x($t6)
-    LocalRoot(r) <- $t6
-    UnpackRef($t7)
-    x_ref := $t7
-    $t8 := 0
-    $t9 := move(x_ref)
-    write_ref($t9, $t8)
-    LocalRoot(r) <- $t9
-    Reference($t6) <- $t9
-    PackRef($t6)
-    PackRef($t9)
-    $t10 := move(r)
-    return $t10
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var x_ref: &mut u64
+     var $t3: u64
+     var $t4: u64
+  0: $t3 := 3
+  1: r := pack TestEliminateMutRefs::R($t3)
+  2: r_ref := borrow_local(r)
+  3: UnpackRef(r_ref)
+  4: x_ref := borrow_field<TestEliminateMutRefs::R>.x(r_ref)
+  5: LocalRoot(r) <- r_ref
+  6: UnpackRef(x_ref)
+  7: $t4 := 0
+  8: write_ref(x_ref, $t4)
+  9: LocalRoot(r) <- x_ref
+ 10: Reference(r_ref) <- x_ref
+ 11: PackRef(r_ref)
+ 12: PackRef(x_ref)
+ 13: return r
 }
 
 
 fun TestEliminateMutRefs::test2(x_ref: u64, v: u64): u64 {
-    var $t2: u64
-    var $t3: &mut u64
-    var $t4: u64
-    var $t5: &mut u64
-    var $t6: u64
-    $t4 := move(x_ref)
-    $t6 := move(v)
-    $t5 := borrow_local($t4)
-    $t2 := copy($t6)
-    $t3 := move($t5)
-    write_ref($t3, $t2)
-    LocalRoot($t4) <- $t3
-    return $t4
+     var $t2: u64
+     var $t3: &mut u64
+     var $t4: u64
+  0: $t2 := move(x_ref)
+  1: $t4 := move(v)
+  2: $t3 := borrow_local($t2)
+  3: write_ref($t3, $t4)
+  4: LocalRoot($t2) <- $t3
+  5: return $t2
 }
 
 
 pub fun TestEliminateMutRefs::test3(r_ref: TestEliminateMutRefs::R, v: u64): TestEliminateMutRefs::R {
-    var x_ref: &mut u64
-    var $t3: &mut TestEliminateMutRefs::R
-    var $t4: &mut u64
-    var $t5: &mut u64
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: &mut TestEliminateMutRefs::R
-    var $t9: u64
-    var $t10: u64
-    $t7 := move(r_ref)
-    $t9 := move(v)
-    $t8 := borrow_local($t7)
-    UnpackRef($t8)
-    $t3 := move($t8)
-    $t4 := borrow_field<TestEliminateMutRefs::R>.x($t3)
-    LocalRoot($t7) <- $t3
-    UnpackRef($t4)
-    x_ref := $t4
-    $t5 := move(x_ref)
-    $t6 := copy($t9)
-    $t10 := read_ref($t5)
-    $t10 := TestEliminateMutRefs::test2($t10, $t6)
-    write_ref($t5, $t10)
-    LocalRoot($t7) <- $t5
-    Reference($t3) <- $t5
-    PackRef($t3)
-    PackRef($t5)
-    return $t7
+     var x_ref: &mut u64
+     var $t3: TestEliminateMutRefs::R
+     var $t4: &mut TestEliminateMutRefs::R
+     var $t5: u64
+     var $t6: u64
+  0: $t3 := move(r_ref)
+  1: $t5 := move(v)
+  2: $t4 := borrow_local($t3)
+  3: UnpackRef($t4)
+  4: x_ref := borrow_field<TestEliminateMutRefs::R>.x($t4)
+  5: LocalRoot($t3) <- $t4
+  6: UnpackRef(x_ref)
+  7: $t6 := read_ref(x_ref)
+  8: $t6 := TestEliminateMutRefs::test2($t6, $t5)
+  9: write_ref(x_ref, $t6)
+ 10: LocalRoot($t3) <- x_ref
+ 11: Reference($t4) <- x_ref
+ 12: PackRef($t4)
+ 13: PackRef(x_ref)
+ 14: return $t3
 }
 
 
 fun TestEliminateMutRefs::test4(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var $t2: u64
-    var $t3: TestEliminateMutRefs::R
-    var $t4: &mut TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: TestEliminateMutRefs::R
-    $t2 := 3
-    $t3 := pack TestEliminateMutRefs::R($t2)
-    r := $t3
-    $t4 := borrow_local(r)
-    UnpackRef($t4)
-    r_ref := $t4
-    $t5 := move(r_ref)
-    $t6 := 0
-    PackRef($t5)
-    $t8 := read_ref($t5)
-    $t8 := TestEliminateMutRefs::test3($t8, $t6)
-    write_ref($t5, $t8)
-    LocalRoot(r) <- $t5
-    UnpackRef($t5)
-    PackRef($t5)
-    $t7 := move(r)
-    return $t7
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var $t2: u64
+     var $t3: u64
+     var $t4: TestEliminateMutRefs::R
+  0: $t2 := 3
+  1: r := pack TestEliminateMutRefs::R($t2)
+  2: r_ref := borrow_local(r)
+  3: UnpackRef(r_ref)
+  4: $t3 := 0
+  5: PackRef(r_ref)
+  6: $t4 := read_ref(r_ref)
+  7: $t4 := TestEliminateMutRefs::test3($t4, $t3)
+  8: write_ref(r_ref, $t4)
+  9: LocalRoot(r) <- r_ref
+ 10: UnpackRef(r_ref)
+ 11: PackRef(r_ref)
+ 12: return r
 }
 
 
 pub fun TestEliminateMutRefs::test5(r_ref: TestEliminateMutRefs::R): (&mut u64, TestEliminateMutRefs::R) {
-    var $t1: &mut TestEliminateMutRefs::R
-    var $t2: &mut u64
-    var $t3: TestEliminateMutRefs::R
-    var $t4: &mut TestEliminateMutRefs::R
-    $t3 := move(r_ref)
-    $t4 := borrow_local($t3)
-    $t1 := move($t4)
-    $t2 := borrow_field<TestEliminateMutRefs::R>.x($t1)
-    LocalRoot($t3) <- $t1
-    UnpackRef($t2)
-    return ($t2, $t3)
+     var $t1: &mut u64
+     var $t2: TestEliminateMutRefs::R
+     var $t3: &mut TestEliminateMutRefs::R
+  0: $t2 := move(r_ref)
+  1: $t3 := borrow_local($t2)
+  2: $t1 := borrow_field<TestEliminateMutRefs::R>.x($t3)
+  3: LocalRoot($t2) <- $t3
+  4: UnpackRef($t1)
+  5: return ($t1, $t2)
 }
 
 
 fun TestEliminateMutRefs::test6(): TestEliminateMutRefs::R {
-    var r: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var x_ref: &mut u64
-    var $t3: u64
-    var $t4: TestEliminateMutRefs::R
-    var $t5: &mut TestEliminateMutRefs::R
-    var $t6: &mut TestEliminateMutRefs::R
-    var $t7: &mut u64
-    var $t8: &mut u64
-    var $t9: u64
-    var $t10: TestEliminateMutRefs::R
-    var $t11: u64
-    var $t12: TestEliminateMutRefs::R
-    $t3 := 3
-    $t4 := pack TestEliminateMutRefs::R($t3)
-    r := $t4
-    $t5 := borrow_local(r)
-    UnpackRef($t5)
-    r_ref := $t5
-    $t6 := move(r_ref)
-    $t12 := read_ref($t6)
-    ($t7, $t12) := TestEliminateMutRefs::test5($t12)
-    write_ref($t6, $t12)
-    $t7 ~- [0 -> $t6]
-    LocalRoot(r) <- $t6
-    x_ref := $t7
-    $t8 := move(x_ref)
-    $t9 := 0
-    $t11 := read_ref($t8)
-    $t11 := TestEliminateMutRefs::test2($t11, $t9)
-    write_ref($t8, $t11)
-    LocalRoot(r) <- $t8
-    Reference($t6) <- $t8
-    PackRef($t6)
-    PackRef($t8)
-    $t10 := move(r)
-    return $t10
+     var r: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var x_ref: &mut u64
+     var $t3: u64
+     var $t4: u64
+     var $t5: u64
+     var $t6: TestEliminateMutRefs::R
+  0: $t3 := 3
+  1: r := pack TestEliminateMutRefs::R($t3)
+  2: r_ref := borrow_local(r)
+  3: UnpackRef(r_ref)
+  4: $t6 := read_ref(r_ref)
+  5: (x_ref, $t6) := TestEliminateMutRefs::test5($t6)
+  6: write_ref(r_ref, $t6)
+  7: x_ref ~- [0 -> r_ref]
+  8: LocalRoot(r) <- r_ref
+  9: $t4 := 0
+ 10: $t5 := read_ref(x_ref)
+ 11: $t5 := TestEliminateMutRefs::test2($t5, $t4)
+ 12: write_ref(x_ref, $t5)
+ 13: LocalRoot(r) <- x_ref
+ 14: Reference(r_ref) <- x_ref
+ 15: PackRef(r_ref)
+ 16: PackRef(x_ref)
+ 17: return r
 }
 
 
 fun TestEliminateMutRefs::test7(b: bool) {
-    var r1: TestEliminateMutRefs::R
-    var r2: TestEliminateMutRefs::R
-    var r_ref: &mut TestEliminateMutRefs::R
-    var $t4: u64
-    var $t5: TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: &mut TestEliminateMutRefs::R
-    var $t9: bool
-    var $t10: &mut TestEliminateMutRefs::R
-    var $t11: &mut TestEliminateMutRefs::R
-    var $t12: &mut TestEliminateMutRefs::R
-    var $t13: u64
-    var $t14: bool
-    var $t15: TestEliminateMutRefs::R
-    $t14 := move(b)
-    $t4 := 3
-    $t5 := pack TestEliminateMutRefs::R($t4)
-    r1 := $t5
-    $t6 := 4
-    $t7 := pack TestEliminateMutRefs::R($t6)
-    r2 := $t7
-    $t8 := borrow_local(r1)
-    UnpackRef($t8)
-    r_ref := $t8
-    $t9 := copy($t14)
-    if ($t9) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t10 := move(r_ref)
-    destroy($t10)
-    LocalRoot(r1) <- $t10
-    PackRef($t10)
-    $t11 := borrow_local(r2)
-    UnpackRef($t11)
-    r_ref := $t11
-    goto L2
-    L2:
-    $t12 := move(r_ref)
-    $t13 := 0
-    PackRef($t12)
-    $t15 := read_ref($t12)
-    $t15 := TestEliminateMutRefs::test3($t15, $t13)
-    write_ref($t12, $t15)
-    LocalRoot(r1) <- $t12
-    LocalRoot(r2) <- $t12
-    UnpackRef($t12)
-    PackRef($t12)
-    return ()
+     var r1: TestEliminateMutRefs::R
+     var r2: TestEliminateMutRefs::R
+     var r_ref: &mut TestEliminateMutRefs::R
+     var $t4: u64
+     var $t5: u64
+     var $t6: u64
+     var $t7: bool
+     var $t8: TestEliminateMutRefs::R
+  0: $t7 := move(b)
+  1: $t4 := 3
+  2: r1 := pack TestEliminateMutRefs::R($t4)
+  3: $t5 := 4
+  4: r2 := pack TestEliminateMutRefs::R($t5)
+  5: r_ref := borrow_local(r1)
+  6: UnpackRef(r_ref)
+  7: if ($t7) goto L0 else goto L1
+  8: L1:
+  9: goto L2
+ 10: L0:
+ 11: destroy(r_ref)
+ 12: LocalRoot(r1) <- r_ref
+ 13: PackRef(r_ref)
+ 14: r_ref := borrow_local(r2)
+ 15: UnpackRef(r_ref)
+ 16: goto L2
+ 17: L2:
+ 18: $t6 := 0
+ 19: PackRef(r_ref)
+ 20: $t8 := read_ref(r_ref)
+ 21: $t8 := TestEliminateMutRefs::test3($t8, $t6)
+ 22: write_ref(r_ref, $t8)
+ 23: LocalRoot(r1) <- r_ref
+ 24: LocalRoot(r2) <- r_ref
+ 25: UnpackRef(r_ref)
+ 26: PackRef(r_ref)
+ 27: return ()
 }
 
 
 fun TestEliminateMutRefs::test8(b: bool, n: u64, r_ref: TestEliminateMutRefs::R): TestEliminateMutRefs::R {
-    var r1: TestEliminateMutRefs::R
-    var r2: TestEliminateMutRefs::R
-    var t_ref: &mut TestEliminateMutRefs::R
-    var $t6: u64
-    var $t7: TestEliminateMutRefs::R
-    var $t8: u64
-    var $t9: TestEliminateMutRefs::R
-    var $t10: &mut TestEliminateMutRefs::R
-    var $t11: u64
-    var $t12: u64
-    var $t13: bool
-    var $t14: &mut TestEliminateMutRefs::R
-    var $t15: u64
-    var $t16: u64
-    var $t17: u64
-    var $t18: u64
-    var $t19: bool
-    var $t20: &mut TestEliminateMutRefs::R
-    var $t21: &mut TestEliminateMutRefs::R
-    var $t22: u64
-    var $t23: u64
-    var $t24: u64
-    var $t25: bool
-    var $t26: &mut TestEliminateMutRefs::R
-    var $t27: &mut TestEliminateMutRefs::R
-    var $t28: u64
-    var $t29: &mut TestEliminateMutRefs::R
-    var $t30: &mut TestEliminateMutRefs::R
-    var $t31: u64
-    var $t32: bool
-    var $t33: u64
-    var $t34: TestEliminateMutRefs::R
-    var $t35: &mut TestEliminateMutRefs::R
-    var $t36: TestEliminateMutRefs::R
-    $t32 := move(b)
-    $t33 := move(n)
-    $t34 := move(r_ref)
-    $t35 := borrow_local($t34)
-    $t6 := 3
-    $t7 := pack TestEliminateMutRefs::R($t6)
-    r1 := $t7
-    $t8 := 4
-    $t9 := pack TestEliminateMutRefs::R($t8)
-    r2 := $t9
-    $t10 := borrow_local(r2)
-    UnpackRef($t10)
-    t_ref := $t10
-    goto L7
-    L7:
-    $t11 := 0
-    $t12 := copy($t33)
-    $t13 := <($t11, $t12)
-    if ($t13) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t14 := move(t_ref)
-    destroy($t14)
-    LocalRoot(r1) <- $t14
-    LocalRoot(r2) <- $t14
-    PackRef($t14)
-    $t15 := copy($t33)
-    $t16 := 2
-    $t17 := /($t15, $t16)
-    $t18 := 0
-    $t19 := ==($t17, $t18)
-    if ($t19) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t20 := borrow_local(r1)
-    UnpackRef($t20)
-    t_ref := $t20
-    goto L6
-    L5:
-    $t21 := borrow_local(r2)
-    UnpackRef($t21)
-    t_ref := $t21
-    goto L6
-    L6:
-    $t22 := copy($t33)
-    $t23 := 1
-    $t24 := -($t22, $t23)
-    $t33 := $t24
-    goto L7
-    L2:
-    $t25 := copy($t32)
-    if ($t25) goto L8 else goto L9
-    L9:
-    goto L10
-    L8:
-    $t26 := move(t_ref)
-    destroy($t26)
-    LocalRoot(r1) <- $t26
-    LocalRoot(r2) <- $t26
-    PackRef($t26)
-    $t27 := move($t35)
-    $t28 := 0
-    PackRef($t27)
-    $t36 := read_ref($t27)
-    $t36 := TestEliminateMutRefs::test3($t36, $t28)
-    write_ref($t27, $t36)
-    LocalRoot($t34) <- $t27
-    UnpackRef($t27)
-    goto L11
-    L10:
-    $t29 := move($t35)
-    destroy($t29)
-    LocalRoot($t34) <- $t29
-    $t30 := move(t_ref)
-    $t31 := 0
-    PackRef($t30)
-    $t36 := read_ref($t30)
-    $t36 := TestEliminateMutRefs::test3($t36, $t31)
-    write_ref($t30, $t36)
-    LocalRoot(r1) <- $t30
-    LocalRoot(r2) <- $t30
-    UnpackRef($t30)
-    PackRef($t30)
-    goto L11
-    L11:
-    return $t34
+     var r1: TestEliminateMutRefs::R
+     var r2: TestEliminateMutRefs::R
+     var t_ref: &mut TestEliminateMutRefs::R
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: bool
+     var $t10: u64
+     var $t11: u64
+     var $t12: u64
+     var $t13: bool
+     var $t14: u64
+     var $t15: u64
+     var $t16: u64
+     var $t17: bool
+     var $t18: u64
+     var $t19: TestEliminateMutRefs::R
+     var $t20: &mut TestEliminateMutRefs::R
+     var $t21: TestEliminateMutRefs::R
+  0: $t17 := move(b)
+  1: $t18 := move(n)
+  2: $t19 := move(r_ref)
+  3: $t20 := borrow_local($t19)
+  4: $t6 := 3
+  5: r1 := pack TestEliminateMutRefs::R($t6)
+  6: $t7 := 4
+  7: r2 := pack TestEliminateMutRefs::R($t7)
+  8: t_ref := borrow_local(r2)
+  9: UnpackRef(t_ref)
+ 10: goto L7
+ 11: L7:
+ 12: $t8 := 0
+ 13: $t9 := <($t8, $t18)
+ 14: if ($t9) goto L0 else goto L1
+ 15: L1:
+ 16: goto L2
+ 17: L0:
+ 18: destroy(t_ref)
+ 19: LocalRoot(r1) <- t_ref
+ 20: LocalRoot(r2) <- t_ref
+ 21: PackRef(t_ref)
+ 22: $t10 := 2
+ 23: $t11 := /($t18, $t10)
+ 24: $t12 := 0
+ 25: $t13 := ==($t11, $t12)
+ 26: if ($t13) goto L3 else goto L4
+ 27: L4:
+ 28: goto L5
+ 29: L3:
+ 30: t_ref := borrow_local(r1)
+ 31: UnpackRef(t_ref)
+ 32: goto L6
+ 33: L5:
+ 34: t_ref := borrow_local(r2)
+ 35: UnpackRef(t_ref)
+ 36: goto L6
+ 37: L6:
+ 38: $t14 := 1
+ 39: $t18 := -($t18, $t14)
+ 40: goto L7
+ 41: L2:
+ 42: if ($t17) goto L8 else goto L9
+ 43: L9:
+ 44: goto L10
+ 45: L8:
+ 46: destroy(t_ref)
+ 47: LocalRoot(r1) <- t_ref
+ 48: LocalRoot(r2) <- t_ref
+ 49: PackRef(t_ref)
+ 50: $t15 := 0
+ 51: PackRef($t20)
+ 52: $t21 := read_ref($t20)
+ 53: $t21 := TestEliminateMutRefs::test3($t21, $t15)
+ 54: write_ref($t20, $t21)
+ 55: LocalRoot($t19) <- $t20
+ 56: UnpackRef($t20)
+ 57: goto L11
+ 58: L10:
+ 59: destroy($t20)
+ 60: LocalRoot($t19) <- $t20
+ 61: $t16 := 0
+ 62: PackRef(t_ref)
+ 63: $t21 := read_ref(t_ref)
+ 64: $t21 := TestEliminateMutRefs::test3($t21, $t16)
+ 65: write_ref(t_ref, $t21)
+ 66: LocalRoot(r1) <- t_ref
+ 67: LocalRoot(r2) <- t_ref
+ 68: UnpackRef(t_ref)
+ 69: PackRef(t_ref)
+ 70: goto L11
+ 71: L11:
+ 72: return $t19
 }

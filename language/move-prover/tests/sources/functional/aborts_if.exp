@@ -60,8 +60,8 @@ error: function does not abort under this condition
      │
      =     at tests/sources/functional/aborts_if.move:145:5: abort_at_2_or_3_spec_incorrect
      =         x = <redacted>,
-     =         $t1 = <redacted>
-     =     at tests/sources/functional/aborts_if.move:146:38: abort_at_2_or_3_spec_incorrect
+     =         tmp#$1 = <redacted>
+     =     at tests/sources/functional/aborts_if.move:146:31: abort_at_2_or_3_spec_incorrect
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -73,12 +73,12 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  155 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `0x1`
+     │                               ------- abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:154:5: abort_at_2_or_3_strict_incorrect
      =         x = <redacted>,
-     =         $t1 = <redacted>
-     =     at tests/sources/functional/aborts_if.move:155:38: abort_at_2_or_3_strict_incorrect (ABORTED)
+     =         tmp#$1 = <redacted>
+     =     at tests/sources/functional/aborts_if.move:155:31: abort_at_2_or_3_strict_incorrect (ABORTED)
 
 error: abort not covered by any of the `aborts_if` clauses
 
@@ -90,12 +90,12 @@ error: abort not covered by any of the `aborts_if` clauses
      │ ╰─────^
      ·
  137 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `0x1`
+     │                               ------- abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:136:5: abort_at_2_or_3_total_incorrect
      =         x = <redacted>,
-     =         $t1 = <redacted>
-     =     at tests/sources/functional/aborts_if.move:137:38: abort_at_2_or_3_total_incorrect (ABORTED)
+     =         tmp#$1 = <redacted>
+     =     at tests/sources/functional/aborts_if.move:137:31: abort_at_2_or_3_total_incorrect (ABORTED)
 
 error: function does not abort under this condition
 
@@ -146,9 +146,9 @@ error: function does not succeed under this condition
      │         ^^^^^^^^^^^^^^^^^^^
      ·
  174 │         if (x == 2 || x == 3) abort 1;
-     │                                      - abort happened here with code `0x1`
+     │                               ------- abort happened here with code `0x1`
      │
      =     at tests/sources/functional/aborts_if.move:173:5: succeed_incorrect
      =         x = <redacted>,
-     =         $t1 = <redacted>
-     =     at tests/sources/functional/aborts_if.move:174:38: succeed_incorrect (ABORTED)
+     =         tmp#$1 = <redacted>
+     =     at tests/sources/functional/aborts_if.move:174:31: succeed_incorrect (ABORTED)

@@ -62,6 +62,10 @@ impl FunctionTargetProcessor for LifetimeAnalysisProcessor {
             .set::<LifetimeAnnotation>(offset_to_dead_refs);
         data
     }
+
+    fn name(&self) -> String {
+        "lifetime_analysis".to_string()
+    }
 }
 
 /// Represents a node in the borrow graph.

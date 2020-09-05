@@ -11,13 +11,11 @@ error: abort not covered by any of the `aborts_if` clauses
    =     at tests/sources/functional/script_incorrect.move:7:1: main
    =         account = <redacted>
    =     at tests/sources/functional/script_provider.move:17:5: register
-   =         account = <redacted>,
-   =         $t1 = <redacted>
-   =     at tests/sources/functional/script_provider.move:19:9: register
-   =     at tests/sources/functional/script_provider.move:18:24: register (ABORTED)
+   =         account = <redacted>
+   =     at tests/sources/functional/script_provider.move:19:17: register (ABORTED)
 
-    ┌── tests/sources/functional/script_provider.move:18:24 ───
+    ┌── tests/sources/functional/script_provider.move:19:17 ───
     │
- 18 │         assert(Signer::address_of(account) == 0x1, 1);
-    │                        ---------- abort happened here with code `0x1`
+ 19 │         move_to(account, Info<T>{})
+    │                 ------- abort happened here with execution failure
     │

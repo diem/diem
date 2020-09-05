@@ -302,7 +302,20 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 
     // Create processing pipeline and run it.
     let pipeline = create_bytecode_processing_pipeline(options);
-    pipeline.run(env, &mut targets);
+    let dump_file = if options.prover.dump_bytecode {
+        Some(
+            options
+                .move_sources
+                .iter()
+                .next()
+                .cloned()
+                .unwrap_or_else(|| "bytecode".to_string())
+                .replace(".move", ""),
+        )
+    } else {
+        None
+    };
+    pipeline.run(env, &mut targets, dump_file);
 
     targets
 }
@@ -312,8 +325,8 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
-    res.add_processor(ReachingDefProcessor::new());
     res.add_processor(EliminateImmRefsProcessor::new());
+    res.add_processor(ReachingDefProcessor::new());
     res.add_processor(LiveVarAnalysisProcessor::new());
     res.add_processor(BorrowAnalysisProcessor::new());
     res.add_processor(WritebackAnalysisProcessor::new());

@@ -47,6 +47,10 @@ impl FunctionTargetProcessor for WritebackAnalysisProcessor {
             .set::<WritebackAnnotation>(WritebackAnnotation(new_code));
         data
     }
+
+    fn name(&self) -> String {
+        "writeback_analysis".to_string()
+    }
 }
 
 // WriteBack instructions to be inserted right after a code offset

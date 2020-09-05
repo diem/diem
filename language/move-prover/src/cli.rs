@@ -130,6 +130,8 @@ pub struct ProverOptions {
     /// Report warnings. This is not on by default. We may turn it on if the warnings
     /// are better filtered, e.g. do not contain unused schemas intended for other modules.
     pub report_warnings: bool,
+    /// Whether to dump the transformed stackless bytecode to a file
+    pub dump_bytecode: bool,
 }
 
 impl Default for ProverOptions {
@@ -146,6 +148,7 @@ impl Default for ProverOptions {
             debug_trace: false,
             report_warnings: false,
             assume_invariant_on_access: false,
+            dump_bytecode: false,
         }
     }
 }
@@ -425,6 +428,11 @@ impl Options {
                     .validator(is_number)
                     .help("sets the lazy threshold for quantifier instantiation (default 100)")
             )
+            .arg(
+                Arg::with_name("dump-bytecode")
+                    .long("dump-bytecode")
+                    .help("whether to dump the transformed bytecode to a file")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -504,6 +512,9 @@ impl Options {
         }
         if matches.is_present("trace") {
             options.prover.debug_trace = true;
+        }
+        if matches.is_present("dump-bytecode") {
+            options.prover.dump_bytecode = true;
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;

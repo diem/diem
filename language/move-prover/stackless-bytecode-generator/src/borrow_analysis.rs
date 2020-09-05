@@ -98,6 +98,7 @@ impl BorrowAnnotation {
 
 #[derive(Debug, Clone)]
 struct PackError {
+    func_name: String,
     code_offset: CodeOffset,
     indices: Vec<TempIndex>,
 }
@@ -130,6 +131,10 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         data.annotations.set::<BorrowAnnotation>(borrow_annotation);
         data.annotations.remove::<LiveVarAnnotation>();
         data
+    }
+
+    fn name(&self) -> String {
+        "borrow_analysis".to_string()
     }
 }
 
@@ -387,6 +392,7 @@ impl<'a> BorrowAnalysis<'a> {
         indices = self.error_indices(&post, indices);
         if !indices.is_empty() {
             return Err(PackError {
+                func_name: self.current_fun_name(),
                 code_offset,
                 indices,
             });
@@ -442,6 +448,15 @@ impl<'a> BorrowAnalysis<'a> {
                         let dest_ref_id = RefID::new(dest);
                         let src = srcs[0];
                         let src_ref_id = RefID::new(src);
+                        assert!(
+                            post.borrow_graph.contains_id(src_ref_id),
+                            "in {} at {} for BorrowField({})",
+                            self.current_fun_name(),
+                            code_offset,
+                            self.func_target
+                                .get_local_name(src)
+                                .display(self.func_target.symbol_pool())
+                        );
                         post.borrow_graph.new_ref(dest_ref_id, true);
                         post.borrow_graph.add_strong_field_borrow(
                             (),
@@ -489,6 +504,7 @@ impl<'a> BorrowAnalysis<'a> {
             .livevar_annotation
             .get_live_var_info_at(code_offset)
             .ok_or_else(|| PackError {
+                func_name: self.current_fun_name(),
                 code_offset,
                 indices,
             })?;
@@ -558,6 +574,13 @@ impl<'a> BorrowAnalysis<'a> {
             }
         }
         (new_dead_edges, leaf_nodes)
+    }
+
+    fn current_fun_name(&self) -> String {
+        self.func_target
+            .symbol_pool()
+            .string(self.func_target.get_name())
+            .to_string()
     }
 }
 

@@ -41,6 +41,10 @@ impl FunctionTargetProcessor for TestInstrumenter {
         }
         data
     }
+
+    fn name(&self) -> String {
+        "test_instrumenter".to_string()
+    }
 }
 
 // ==============================================================================

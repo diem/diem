@@ -169,6 +169,10 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
         data.code = new_code;
         data
     }
+
+    fn name(&self) -> String {
+        "eliminate_mut_refs".to_string()
+    }
 }
 
 pub struct EliminateMutRefs<'a> {

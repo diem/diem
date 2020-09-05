@@ -1,37 +1,37 @@
 ============ initial translation from Move ================
 
 pub fun Vector::append<$tv0>(lhs: &mut vector<#0>, other: vector<#0>) {
-    var $t2: &mut vector<#0>
-    var $t3: &vector<#0>
-    var $t4: bool
-    var $t5: bool
-    var $t6: &mut vector<#0>
-    var $t7: &mut vector<#0>
-    var $t8: #0
-    var $t9: &mut vector<#0>
-    var $t10: vector<#0>
-    $t2 := borrow_local(other)
-    Vector::reverse<#0>($t2)
-    goto L3
-    L3:
-    $t3 := borrow_local(other)
-    $t4 := Vector::is_empty<#0>($t3)
-    $t5 := !($t4)
-    if ($t5) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t6 := copy(lhs)
-    $t7 := borrow_local(other)
-    $t8 := Vector::pop_back<#0>($t7)
-    Vector::push_back<#0>($t6, $t8)
-    goto L3
-    L2:
-    $t9 := move(lhs)
-    destroy($t9)
-    $t10 := move(other)
-    Vector::destroy_empty<#0>($t10)
-    return ()
+     var $t2: &mut vector<#0>
+     var $t3: &vector<#0>
+     var $t4: bool
+     var $t5: bool
+     var $t6: &mut vector<#0>
+     var $t7: &mut vector<#0>
+     var $t8: #0
+     var $t9: &mut vector<#0>
+     var $t10: vector<#0>
+  0: $t2 := borrow_local(other)
+  1: Vector::reverse<#0>($t2)
+  2: goto L3
+  3: L3:
+  4: $t3 := borrow_local(other)
+  5: $t4 := Vector::is_empty<#0>($t3)
+  6: $t5 := !($t4)
+  7: if ($t5) goto L0 else goto L1
+  8: L1:
+  9: goto L2
+ 10: L0:
+ 11: $t6 := copy(lhs)
+ 12: $t7 := borrow_local(other)
+ 13: $t8 := Vector::pop_back<#0>($t7)
+ 14: Vector::push_back<#0>($t6, $t8)
+ 15: goto L3
+ 16: L2:
+ 17: $t9 := move(lhs)
+ 18: destroy($t9)
+ 19: $t10 := move(other)
+ 20: Vector::destroy_empty<#0>($t10)
+ 21: return ()
 }
 
 
@@ -44,70 +44,70 @@ pub fun Vector::borrow_mut<$tv0>(v: &mut vector<#0>, i: u64): &mut #0 {
 
 
 pub fun Vector::contains<$tv0>(v: &vector<#0>, e: &#0): bool {
-    var i: u64
-    var len: u64
-    var $t4: u64
-    var $t5: &vector<#0>
-    var $t6: u64
-    var $t7: u64
-    var $t8: u64
-    var $t9: bool
-    var $t10: &vector<#0>
-    var $t11: u64
-    var $t12: &#0
-    var $t13: &#0
-    var $t14: bool
-    var $t15: &vector<#0>
-    var $t16: &#0
-    var $t17: bool
-    var $t18: u64
-    var $t19: u64
-    var $t20: u64
-    var $t21: &vector<#0>
-    var $t22: &#0
-    var $t23: bool
-    $t4 := 0
-    i := $t4
-    $t5 := copy(v)
-    $t6 := Vector::length<#0>($t5)
-    len := $t6
-    goto L6
-    L6:
-    $t7 := copy(i)
-    $t8 := copy(len)
-    $t9 := <($t7, $t8)
-    if ($t9) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t10 := copy(v)
-    $t11 := copy(i)
-    $t12 := Vector::borrow<#0>($t10, $t11)
-    $t13 := copy(e)
-    $t14 := ==($t12, $t13)
-    if ($t14) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t15 := move(v)
-    destroy($t15)
-    $t16 := move(e)
-    destroy($t16)
-    $t17 := true
-    return $t17
-    L5:
-    $t18 := copy(i)
-    $t19 := 1
-    $t20 := +($t18, $t19)
-    i := $t20
-    goto L6
-    L2:
-    $t21 := move(v)
-    destroy($t21)
-    $t22 := move(e)
-    destroy($t22)
-    $t23 := false
-    return $t23
+     var i: u64
+     var len: u64
+     var $t4: u64
+     var $t5: &vector<#0>
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: bool
+     var $t10: &vector<#0>
+     var $t11: u64
+     var $t12: &#0
+     var $t13: &#0
+     var $t14: bool
+     var $t15: &vector<#0>
+     var $t16: &#0
+     var $t17: bool
+     var $t18: u64
+     var $t19: u64
+     var $t20: u64
+     var $t21: &vector<#0>
+     var $t22: &#0
+     var $t23: bool
+  0: $t4 := 0
+  1: i := $t4
+  2: $t5 := copy(v)
+  3: $t6 := Vector::length<#0>($t5)
+  4: len := $t6
+  5: goto L6
+  6: L6:
+  7: $t7 := copy(i)
+  8: $t8 := copy(len)
+  9: $t9 := <($t7, $t8)
+ 10: if ($t9) goto L0 else goto L1
+ 11: L1:
+ 12: goto L2
+ 13: L0:
+ 14: $t10 := copy(v)
+ 15: $t11 := copy(i)
+ 16: $t12 := Vector::borrow<#0>($t10, $t11)
+ 17: $t13 := copy(e)
+ 18: $t14 := ==($t12, $t13)
+ 19: if ($t14) goto L3 else goto L4
+ 20: L4:
+ 21: goto L5
+ 22: L3:
+ 23: $t15 := move(v)
+ 24: destroy($t15)
+ 25: $t16 := move(e)
+ 26: destroy($t16)
+ 27: $t17 := true
+ 28: return $t17
+ 29: L5:
+ 30: $t18 := copy(i)
+ 31: $t19 := 1
+ 32: $t20 := +($t18, $t19)
+ 33: i := $t20
+ 34: goto L6
+ 35: L2:
+ 36: $t21 := move(v)
+ 37: destroy($t21)
+ 38: $t22 := move(e)
+ 39: destroy($t22)
+ 40: $t23 := false
+ 41: return $t23
 }
 
 
@@ -120,87 +120,87 @@ pub fun Vector::empty<$tv0>(): vector<#0> {
 
 
 pub fun Vector::index_of<$tv0>(v: &vector<#0>, e: &#0): (bool, u64) {
-    var i: u64
-    var len: u64
-    var $t4: u64
-    var $t5: &vector<#0>
-    var $t6: u64
-    var $t7: u64
-    var $t8: u64
-    var $t9: bool
-    var $t10: &vector<#0>
-    var $t11: u64
-    var $t12: &#0
-    var $t13: &#0
-    var $t14: bool
-    var $t15: &vector<#0>
-    var $t16: &#0
-    var $t17: bool
-    var $t18: u64
-    var $t19: u64
-    var $t20: u64
-    var $t21: u64
-    var $t22: &vector<#0>
-    var $t23: &#0
-    var $t24: bool
-    var $t25: u64
-    $t4 := 0
-    i := $t4
-    $t5 := copy(v)
-    $t6 := Vector::length<#0>($t5)
-    len := $t6
-    goto L6
-    L6:
-    $t7 := copy(i)
-    $t8 := copy(len)
-    $t9 := <($t7, $t8)
-    if ($t9) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t10 := copy(v)
-    $t11 := copy(i)
-    $t12 := Vector::borrow<#0>($t10, $t11)
-    $t13 := copy(e)
-    $t14 := ==($t12, $t13)
-    if ($t14) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t15 := move(v)
-    destroy($t15)
-    $t16 := move(e)
-    destroy($t16)
-    $t17 := true
-    $t18 := copy(i)
-    return ($t17, $t18)
-    L5:
-    $t19 := copy(i)
-    $t20 := 1
-    $t21 := +($t19, $t20)
-    i := $t21
-    goto L6
-    L2:
-    $t22 := move(v)
-    destroy($t22)
-    $t23 := move(e)
-    destroy($t23)
-    $t24 := false
-    $t25 := 0
-    return ($t24, $t25)
+     var i: u64
+     var len: u64
+     var $t4: u64
+     var $t5: &vector<#0>
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: bool
+     var $t10: &vector<#0>
+     var $t11: u64
+     var $t12: &#0
+     var $t13: &#0
+     var $t14: bool
+     var $t15: &vector<#0>
+     var $t16: &#0
+     var $t17: bool
+     var $t18: u64
+     var $t19: u64
+     var $t20: u64
+     var $t21: u64
+     var $t22: &vector<#0>
+     var $t23: &#0
+     var $t24: bool
+     var $t25: u64
+  0: $t4 := 0
+  1: i := $t4
+  2: $t5 := copy(v)
+  3: $t6 := Vector::length<#0>($t5)
+  4: len := $t6
+  5: goto L6
+  6: L6:
+  7: $t7 := copy(i)
+  8: $t8 := copy(len)
+  9: $t9 := <($t7, $t8)
+ 10: if ($t9) goto L0 else goto L1
+ 11: L1:
+ 12: goto L2
+ 13: L0:
+ 14: $t10 := copy(v)
+ 15: $t11 := copy(i)
+ 16: $t12 := Vector::borrow<#0>($t10, $t11)
+ 17: $t13 := copy(e)
+ 18: $t14 := ==($t12, $t13)
+ 19: if ($t14) goto L3 else goto L4
+ 20: L4:
+ 21: goto L5
+ 22: L3:
+ 23: $t15 := move(v)
+ 24: destroy($t15)
+ 25: $t16 := move(e)
+ 26: destroy($t16)
+ 27: $t17 := true
+ 28: $t18 := copy(i)
+ 29: return ($t17, $t18)
+ 30: L5:
+ 31: $t19 := copy(i)
+ 32: $t20 := 1
+ 33: $t21 := +($t19, $t20)
+ 34: i := $t21
+ 35: goto L6
+ 36: L2:
+ 37: $t22 := move(v)
+ 38: destroy($t22)
+ 39: $t23 := move(e)
+ 40: destroy($t23)
+ 41: $t24 := false
+ 42: $t25 := 0
+ 43: return ($t24, $t25)
 }
 
 
 pub fun Vector::is_empty<$tv0>(v: &vector<#0>): bool {
-    var $t1: &vector<#0>
-    var $t2: u64
-    var $t3: u64
-    var $t4: bool
-    $t1 := move(v)
-    $t2 := Vector::length<#0>($t1)
-    $t3 := 0
-    $t4 := ==($t2, $t3)
-    return $t4
+     var $t1: &vector<#0>
+     var $t2: u64
+     var $t3: u64
+     var $t4: bool
+  0: $t1 := move(v)
+  1: $t2 := Vector::length<#0>($t1)
+  2: $t3 := 0
+  3: $t4 := ==($t2, $t3)
+  4: return $t4
 }
 
 
@@ -217,173 +217,173 @@ pub fun Vector::push_back<$tv0>(v: &mut vector<#0>, e: #0) {
 
 
 pub fun Vector::remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
-    var len: u64
-    var $t3: u64
-    var $t4: &mut vector<#0>
-    var $t5: &mut vector<#0>
-    var $t6: &vector<#0>
-    var $t7: u64
-    var $t8: u64
-    var $t9: u64
-    var $t10: bool
-    var $t11: &mut vector<#0>
-    var $t12: u64
-    var $t13: u64
-    var $t14: u64
-    var $t15: u64
-    var $t16: u64
-    var $t17: u64
-    var $t18: bool
-    var $t19: &mut vector<#0>
-    var $t20: u64
-    var $t21: u64
-    var $t22: u64
-    var $t23: u64
-    var $t24: &mut vector<#0>
-    var $t25: u64
-    var $t26: u64
-    var $t27: &mut vector<#0>
-    var $t28: #0
-    $t5 := copy(v)
-    $t6 := freeze_ref($t5)
-    $t7 := Vector::length<#0>($t6)
-    len := $t7
-    $t8 := copy(i)
-    $t9 := copy(len)
-    $t10 := >=($t8, $t9)
-    if ($t10) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t11 := move(v)
-    destroy($t11)
-    $t12 := 0
-    abort($t12)
-    L2:
-    $t13 := copy(len)
-    $t14 := 1
-    $t15 := -($t13, $t14)
-    len := $t15
-    goto L6
-    L6:
-    $t16 := copy(i)
-    $t17 := copy(len)
-    $t18 := <($t16, $t17)
-    if ($t18) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t19 := copy(v)
-    $t4 := $t19
-    $t20 := copy(i)
-    $t3 := $t20
-    $t21 := copy(i)
-    $t22 := 1
-    $t23 := +($t21, $t22)
-    i := $t23
-    $t24 := move($t4)
-    $t25 := move($t3)
-    $t26 := copy(i)
-    Vector::swap<#0>($t24, $t25, $t26)
-    goto L6
-    L5:
-    $t27 := move(v)
-    $t28 := Vector::pop_back<#0>($t27)
-    return $t28
+     var len: u64
+     var tmp#$3: u64
+     var tmp#$4: &mut vector<#0>
+     var $t5: &mut vector<#0>
+     var $t6: &vector<#0>
+     var $t7: u64
+     var $t8: u64
+     var $t9: u64
+     var $t10: bool
+     var $t11: &mut vector<#0>
+     var $t12: u64
+     var $t13: u64
+     var $t14: u64
+     var $t15: u64
+     var $t16: u64
+     var $t17: u64
+     var $t18: bool
+     var $t19: &mut vector<#0>
+     var $t20: u64
+     var $t21: u64
+     var $t22: u64
+     var $t23: u64
+     var $t24: &mut vector<#0>
+     var $t25: u64
+     var $t26: u64
+     var $t27: &mut vector<#0>
+     var $t28: #0
+  0: $t5 := copy(v)
+  1: $t6 := freeze_ref($t5)
+  2: $t7 := Vector::length<#0>($t6)
+  3: len := $t7
+  4: $t8 := copy(i)
+  5: $t9 := copy(len)
+  6: $t10 := >=($t8, $t9)
+  7: if ($t10) goto L0 else goto L1
+  8: L1:
+  9: goto L2
+ 10: L0:
+ 11: $t11 := move(v)
+ 12: destroy($t11)
+ 13: $t12 := 0
+ 14: abort($t12)
+ 15: L2:
+ 16: $t13 := copy(len)
+ 17: $t14 := 1
+ 18: $t15 := -($t13, $t14)
+ 19: len := $t15
+ 20: goto L6
+ 21: L6:
+ 22: $t16 := copy(i)
+ 23: $t17 := copy(len)
+ 24: $t18 := <($t16, $t17)
+ 25: if ($t18) goto L3 else goto L4
+ 26: L4:
+ 27: goto L5
+ 28: L3:
+ 29: $t19 := copy(v)
+ 30: tmp#$4 := $t19
+ 31: $t20 := copy(i)
+ 32: tmp#$3 := $t20
+ 33: $t21 := copy(i)
+ 34: $t22 := 1
+ 35: $t23 := +($t21, $t22)
+ 36: i := $t23
+ 37: $t24 := move(tmp#$4)
+ 38: $t25 := move(tmp#$3)
+ 39: $t26 := copy(i)
+ 40: Vector::swap<#0>($t24, $t25, $t26)
+ 41: goto L6
+ 42: L5:
+ 43: $t27 := move(v)
+ 44: $t28 := Vector::pop_back<#0>($t27)
+ 45: return $t28
 }
 
 
 pub fun Vector::reverse<$tv0>(v: &mut vector<#0>) {
-    var back_index: u64
-    var front_index: u64
-    var len: u64
-    var $t4: &mut vector<#0>
-    var $t5: &vector<#0>
-    var $t6: u64
-    var $t7: u64
-    var $t8: u64
-    var $t9: bool
-    var $t10: &mut vector<#0>
-    var $t11: u64
-    var $t12: u64
-    var $t13: u64
-    var $t14: u64
-    var $t15: u64
-    var $t16: u64
-    var $t17: bool
-    var $t18: &mut vector<#0>
-    var $t19: u64
-    var $t20: u64
-    var $t21: u64
-    var $t22: u64
-    var $t23: u64
-    var $t24: u64
-    var $t25: u64
-    var $t26: u64
-    var $t27: &mut vector<#0>
-    $t4 := copy(v)
-    $t5 := freeze_ref($t4)
-    $t6 := Vector::length<#0>($t5)
-    len := $t6
-    $t7 := copy(len)
-    $t8 := 0
-    $t9 := ==($t7, $t8)
-    if ($t9) goto L0 else goto L1
-    L1:
-    goto L2
-    L0:
-    $t10 := move(v)
-    destroy($t10)
-    return ()
-    L2:
-    $t11 := 0
-    front_index := $t11
-    $t12 := copy(len)
-    $t13 := 1
-    $t14 := -($t12, $t13)
-    back_index := $t14
-    goto L6
-    L6:
-    $t15 := copy(front_index)
-    $t16 := copy(back_index)
-    $t17 := <($t15, $t16)
-    if ($t17) goto L3 else goto L4
-    L4:
-    goto L5
-    L3:
-    $t18 := copy(v)
-    $t19 := copy(front_index)
-    $t20 := copy(back_index)
-    Vector::swap<#0>($t18, $t19, $t20)
-    $t21 := copy(front_index)
-    $t22 := 1
-    $t23 := +($t21, $t22)
-    front_index := $t23
-    $t24 := copy(back_index)
-    $t25 := 1
-    $t26 := -($t24, $t25)
-    back_index := $t26
-    goto L6
-    L5:
-    $t27 := move(v)
-    destroy($t27)
-    return ()
+     var back_index: u64
+     var front_index: u64
+     var len: u64
+     var $t4: &mut vector<#0>
+     var $t5: &vector<#0>
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: bool
+     var $t10: &mut vector<#0>
+     var $t11: u64
+     var $t12: u64
+     var $t13: u64
+     var $t14: u64
+     var $t15: u64
+     var $t16: u64
+     var $t17: bool
+     var $t18: &mut vector<#0>
+     var $t19: u64
+     var $t20: u64
+     var $t21: u64
+     var $t22: u64
+     var $t23: u64
+     var $t24: u64
+     var $t25: u64
+     var $t26: u64
+     var $t27: &mut vector<#0>
+  0: $t4 := copy(v)
+  1: $t5 := freeze_ref($t4)
+  2: $t6 := Vector::length<#0>($t5)
+  3: len := $t6
+  4: $t7 := copy(len)
+  5: $t8 := 0
+  6: $t9 := ==($t7, $t8)
+  7: if ($t9) goto L0 else goto L1
+  8: L1:
+  9: goto L2
+ 10: L0:
+ 11: $t10 := move(v)
+ 12: destroy($t10)
+ 13: return ()
+ 14: L2:
+ 15: $t11 := 0
+ 16: front_index := $t11
+ 17: $t12 := copy(len)
+ 18: $t13 := 1
+ 19: $t14 := -($t12, $t13)
+ 20: back_index := $t14
+ 21: goto L6
+ 22: L6:
+ 23: $t15 := copy(front_index)
+ 24: $t16 := copy(back_index)
+ 25: $t17 := <($t15, $t16)
+ 26: if ($t17) goto L3 else goto L4
+ 27: L4:
+ 28: goto L5
+ 29: L3:
+ 30: $t18 := copy(v)
+ 31: $t19 := copy(front_index)
+ 32: $t20 := copy(back_index)
+ 33: Vector::swap<#0>($t18, $t19, $t20)
+ 34: $t21 := copy(front_index)
+ 35: $t22 := 1
+ 36: $t23 := +($t21, $t22)
+ 37: front_index := $t23
+ 38: $t24 := copy(back_index)
+ 39: $t25 := 1
+ 40: $t26 := -($t24, $t25)
+ 41: back_index := $t26
+ 42: goto L6
+ 43: L5:
+ 44: $t27 := move(v)
+ 45: destroy($t27)
+ 46: return ()
 }
 
 
 pub fun Vector::singleton<$tv0>(e: #0): vector<#0> {
-    var v: vector<#0>
-    var $t2: vector<#0>
-    var $t3: &mut vector<#0>
-    var $t4: #0
-    var $t5: vector<#0>
-    $t2 := Vector::empty<#0>()
-    v := $t2
-    $t3 := borrow_local(v)
-    $t4 := move(e)
-    Vector::push_back<#0>($t3, $t4)
-    $t5 := move(v)
-    return $t5
+     var v: vector<#0>
+     var $t2: vector<#0>
+     var $t3: &mut vector<#0>
+     var $t4: #0
+     var $t5: vector<#0>
+  0: $t2 := Vector::empty<#0>()
+  1: v := $t2
+  2: $t3 := borrow_local(v)
+  3: $t4 := move(e)
+  4: Vector::push_back<#0>($t3, $t4)
+  5: $t5 := move(v)
+  6: return $t5
 }
 
 
@@ -392,41 +392,41 @@ pub fun Vector::swap<$tv0>(v: &mut vector<#0>, i: u64, j: u64) {
 
 
 pub fun Vector::swap_remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
-    var last_idx: u64
-    var $t3: &mut vector<#0>
-    var $t4: &vector<#0>
-    var $t5: u64
-    var $t6: u64
-    var $t7: u64
-    var $t8: &mut vector<#0>
-    var $t9: u64
-    var $t10: u64
-    var $t11: &mut vector<#0>
-    var $t12: #0
-    $t3 := copy(v)
-    $t4 := freeze_ref($t3)
-    $t5 := Vector::length<#0>($t4)
-    $t6 := 1
-    $t7 := -($t5, $t6)
-    last_idx := $t7
-    $t8 := copy(v)
-    $t9 := copy(i)
-    $t10 := copy(last_idx)
-    Vector::swap<#0>($t8, $t9, $t10)
-    $t11 := move(v)
-    $t12 := Vector::pop_back<#0>($t11)
-    return $t12
+     var last_idx: u64
+     var $t3: &mut vector<#0>
+     var $t4: &vector<#0>
+     var $t5: u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: &mut vector<#0>
+     var $t9: u64
+     var $t10: u64
+     var $t11: &mut vector<#0>
+     var $t12: #0
+  0: $t3 := copy(v)
+  1: $t4 := freeze_ref($t3)
+  2: $t5 := Vector::length<#0>($t4)
+  3: $t6 := 1
+  4: $t7 := -($t5, $t6)
+  5: last_idx := $t7
+  6: $t8 := copy(v)
+  7: $t9 := copy(i)
+  8: $t10 := copy(last_idx)
+  9: Vector::swap<#0>($t8, $t9, $t10)
+ 10: $t11 := move(v)
+ 11: $t12 := Vector::pop_back<#0>($t11)
+ 12: return $t12
 }
 
 
 pub fun Signer::address_of(s: &signer): address {
-    var $t1: &signer
-    var $t2: &address
-    var $t3: address
-    $t1 := move(s)
-    $t2 := Signer::borrow_address($t1)
-    $t3 := read_ref($t2)
-    return $t3
+     var $t1: &signer
+     var $t2: &address
+     var $t3: address
+  0: $t1 := move(s)
+  1: $t2 := Signer::borrow_address($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
 }
 
 
@@ -435,90 +435,90 @@ pub fun Signer::borrow_address(s: &signer): &address {
 
 
 pub fun Libra::market_cap<$tv0>(): u128 {
-    var $t0: address
-    var $t1: &Libra::Info<#0>
-    var $t2: &u128
-    var $t3: u128
-    $t0 := 0xa550c18
-    $t1 := borrow_global<Libra::Info<#0>>($t0)
-    $t2 := borrow_field<Libra::Info<#0>>.total_value($t1)
-    $t3 := read_ref($t2)
-    return $t3
+     var $t0: address
+     var $t1: &Libra::Info<#0>
+     var $t2: &u128
+     var $t3: u128
+  0: $t0 := 0xa550c18
+  1: $t1 := borrow_global<Libra::Info<#0>>($t0)
+  2: $t2 := borrow_field<Libra::Info<#0>>.total_value($t1)
+  3: $t3 := read_ref($t2)
+  4: return $t3
 }
 
 
 pub fun Libra::preburn<$tv0>(preburn_ref: &mut Libra::Preburn<#0>, coin: Libra::T<#0>) {
-    var coin_value: u64
-    var market_cap: &mut Libra::Info<#0>
-    var $t4: &Libra::T<#0>
-    var $t5: u64
-    var $t6: &mut Libra::Preburn<#0>
-    var $t7: &mut vector<Libra::T<#0>>
-    var $t8: Libra::T<#0>
-    var $t9: address
-    var $t10: &mut Libra::Info<#0>
-    var $t11: &mut Libra::Info<#0>
-    var $t12: &u64
-    var $t13: u64
-    var $t14: u64
-    var $t15: u64
-    var $t16: &mut Libra::Info<#0>
-    var $t17: &mut u64
-    $t4 := borrow_local(coin)
-    $t5 := Libra::value<#0>($t4)
-    coin_value := $t5
-    $t6 := move(preburn_ref)
-    $t7 := borrow_field<Libra::Preburn<#0>>.requests($t6)
-    $t8 := move(coin)
-    Vector::push_back<Libra::T<#0>>($t7, $t8)
-    $t9 := 0xa550c18
-    $t10 := borrow_global<Libra::Info<#0>>($t9)
-    market_cap := $t10
-    $t11 := copy(market_cap)
-    $t12 := borrow_field<Libra::Info<#0>>.preburn_value($t11)
-    $t13 := read_ref($t12)
-    $t14 := copy(coin_value)
-    $t15 := +($t13, $t14)
-    $t16 := move(market_cap)
-    $t17 := borrow_field<Libra::Info<#0>>.preburn_value($t16)
-    write_ref($t17, $t15)
-    return ()
+     var coin_value: u64
+     var market_cap: &mut Libra::Info<#0>
+     var $t4: &Libra::T<#0>
+     var $t5: u64
+     var $t6: &mut Libra::Preburn<#0>
+     var $t7: &mut vector<Libra::T<#0>>
+     var $t8: Libra::T<#0>
+     var $t9: address
+     var $t10: &mut Libra::Info<#0>
+     var $t11: &mut Libra::Info<#0>
+     var $t12: &u64
+     var $t13: u64
+     var $t14: u64
+     var $t15: u64
+     var $t16: &mut Libra::Info<#0>
+     var $t17: &mut u64
+  0: $t4 := borrow_local(coin)
+  1: $t5 := Libra::value<#0>($t4)
+  2: coin_value := $t5
+  3: $t6 := move(preburn_ref)
+  4: $t7 := borrow_field<Libra::Preburn<#0>>.requests($t6)
+  5: $t8 := move(coin)
+  6: Vector::push_back<Libra::T<#0>>($t7, $t8)
+  7: $t9 := 0xa550c18
+  8: $t10 := borrow_global<Libra::Info<#0>>($t9)
+  9: market_cap := $t10
+ 10: $t11 := copy(market_cap)
+ 11: $t12 := borrow_field<Libra::Info<#0>>.preburn_value($t11)
+ 12: $t13 := read_ref($t12)
+ 13: $t14 := copy(coin_value)
+ 14: $t15 := +($t13, $t14)
+ 15: $t16 := move(market_cap)
+ 16: $t17 := borrow_field<Libra::Info<#0>>.preburn_value($t16)
+ 17: write_ref($t17, $t15)
+ 18: return ()
 }
 
 
 pub fun Libra::preburn_to<$tv0>(account: &signer, coin: Libra::T<#0>) {
-    var $t2: &signer
-    var $t3: address
-    var $t4: &mut Libra::Preburn<#0>
-    var $t5: Libra::T<#0>
-    $t2 := move(account)
-    $t3 := Signer::address_of($t2)
-    $t4 := borrow_global<Libra::Preburn<#0>>($t3)
-    $t5 := move(coin)
-    Libra::preburn<#0>($t4, $t5)
-    return ()
+     var $t2: &signer
+     var $t3: address
+     var $t4: &mut Libra::Preburn<#0>
+     var $t5: Libra::T<#0>
+  0: $t2 := move(account)
+  1: $t3 := Signer::address_of($t2)
+  2: $t4 := borrow_global<Libra::Preburn<#0>>($t3)
+  3: $t5 := move(coin)
+  4: Libra::preburn<#0>($t4, $t5)
+  5: return ()
 }
 
 
 pub fun Libra::preburn_value<$tv0>(): u64 {
-    var $t0: address
-    var $t1: &Libra::Info<#0>
-    var $t2: &u64
-    var $t3: u64
-    $t0 := 0xa550c18
-    $t1 := borrow_global<Libra::Info<#0>>($t0)
-    $t2 := borrow_field<Libra::Info<#0>>.preburn_value($t1)
-    $t3 := read_ref($t2)
-    return $t3
+     var $t0: address
+     var $t1: &Libra::Info<#0>
+     var $t2: &u64
+     var $t3: u64
+  0: $t0 := 0xa550c18
+  1: $t1 := borrow_global<Libra::Info<#0>>($t0)
+  2: $t2 := borrow_field<Libra::Info<#0>>.preburn_value($t1)
+  3: $t3 := read_ref($t2)
+  4: return $t3
 }
 
 
 pub fun Libra::value<$tv0>(coin_ref: &Libra::T<#0>): u64 {
-    var $t1: &Libra::T<#0>
-    var $t2: &u64
-    var $t3: u64
-    $t1 := move(coin_ref)
-    $t2 := borrow_field<Libra::T<#0>>.value($t1)
-    $t3 := read_ref($t2)
-    return $t3
+     var $t1: &Libra::T<#0>
+     var $t2: &u64
+     var $t3: u64
+  0: $t1 := move(coin_ref)
+  1: $t2 := borrow_field<Libra::T<#0>>.value($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
 }
