@@ -245,12 +245,6 @@ where
                 }
             }
             NetworkRequest::SendMessage(msg) => {
-                counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
-                    .with_label_values(&["sent"])
-                    .inc();
-                counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
-                    .with_label_values(&["sent"])
-                    .observe(msg.mdata.len() as f64);
                 if let Err(e) = ds_reqs_tx.send(DirectSendRequest::SendMessage(msg)).await {
                     error!(
                         "Failed to send DirectSend to peer: {}. Error: {:?}",
@@ -285,7 +279,8 @@ where
         trace!("DirectSendNotification::{:?}", notif);
         match notif {
             DirectSendNotification::RecvMessage(msg) => {
-                if let Err(e) = notifs_tx.push(msg.protocol, NetworkNotification::RecvMessage(msg))
+                if let Err(e) =
+                    notifs_tx.push(msg.protocol_id, NetworkNotification::RecvMessage(msg))
                 {
                     warn!("Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
                 }

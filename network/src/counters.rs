@@ -136,19 +136,40 @@ pub static LIBRA_NETWORK_DIRECT_SEND_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|
     register_int_counter_vec!(
         "libra_network_direct_send_messages",
         "Number of direct send messages",
-        &["state"]
+        &["role_type", "network_id", "peer_id", "state"]
     )
     .unwrap()
 });
+
+pub fn direct_send_messages(
+    network_context: &NetworkContext,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_DIRECT_SEND_MESSAGES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+        state_label,
+    ])
+}
 
 pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_direct_send_bytes",
         "Number of direct send bytes transferred",
-        &["state"]
+        &["role_type", "network_id", "peer_id", "state"]
     )
     .unwrap()
 });
+
+pub fn direct_send_bytes(network_context: &NetworkContext, state_label: &'static str) -> Histogram {
+    LIBRA_NETWORK_DIRECT_SEND_BYTES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+        state_label,
+    ])
+}
 
 /// Counters(queued,dequeued,dropped) related to inbound network notifications for RPCs and
 /// DirectSends.

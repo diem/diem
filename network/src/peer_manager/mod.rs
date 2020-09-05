@@ -147,12 +147,12 @@ impl PeerManagerRequestSender {
     pub fn send_to(
         &mut self,
         peer_id: PeerId,
-        protocol: ProtocolId,
+        protocol_id: ProtocolId,
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
         self.inner.push(
-            (peer_id, protocol),
-            PeerManagerRequest::SendMessage(peer_id, Message { protocol, mdata }),
+            (peer_id, protocol_id),
+            PeerManagerRequest::SendMessage(peer_id, Message { protocol_id, mdata }),
         )?;
         Ok(())
     }
@@ -171,17 +171,17 @@ impl PeerManagerRequestSender {
     pub fn send_to_many(
         &mut self,
         recipients: impl Iterator<Item = PeerId>,
-        protocol: ProtocolId,
+        protocol_id: ProtocolId,
         mdata: Bytes,
     ) -> Result<(), PeerManagerError> {
-        let msg = Message { protocol, mdata };
+        let msg = Message { protocol_id, mdata };
         for recipient in recipients {
             // We return `Err` early here if the send fails. Since sending will
             // only fail if the queue is unexpectedly shutdown (i.e., receiver
             // dropped early), we know that we can't make further progress if
             // this send fails.
             self.inner.push(
-                (recipient, protocol),
+                (recipient, protocol_id),
                 PeerManagerRequest::SendMessage(recipient, msg.clone()),
             )?;
         }
@@ -562,13 +562,12 @@ where
         match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 if let Some((_, sender)) = self.active_peers.get_mut(&peer_id) {
-                    if let Err(err) = sender.push(msg.protocol, NetworkRequest::SendMessage(msg)) {
+                    if let Err(err) = sender.push(msg.protocol_id, NetworkRequest::SendMessage(msg))
+                    {
                         info!(
                             NetworkSchema::new(&self.network_context).debug_error(&err),
-                            "{} Failed to forward outbound message to downstream actor. Error:
-                              {:?}",
-                            self.network_context,
-                            err
+                            "{} Failed to forward outbound message to downstream actor. Error: {:?}",
+                            self.network_context, err
                         );
                     }
                 } else {
@@ -585,8 +584,7 @@ where
                     if let Err(err) = sender.push(req.protocol_id, NetworkRequest::SendRpc(req)) {
                         info!(
                             NetworkSchema::new(&self.network_context),
-                            "{} Failed to forward outbound rpc to downstream actor. Error:
-                            {:?}",
+                            "{} Failed to forward outbound rpc to downstream actor. Error: {:?}",
                             self.network_context,
                             err
                         );
@@ -774,21 +772,18 @@ where
     ) {
         match inbound_event {
             NetworkNotification::RecvMessage(msg) => {
-                let protocol = msg.protocol;
-                if let Some(handler) = upstream_handlers.get_mut(&protocol) {
+                let protocol_id = msg.protocol_id;
+                if let Some(handler) = upstream_handlers.get_mut(&protocol_id) {
                     // Send over libra channel for fairness.
                     if let Err(err) = handler.push(
-                        (peer_id, protocol),
+                        (peer_id, protocol_id),
                         PeerManagerNotification::RecvMessage(peer_id, msg),
                     ) {
                         warn!(
                             NetworkSchema::new(&network_context).debug_error(&err),
-                            protocol = protocol,
-                            "{} Upstream handler unable to handle messages for protocol: {}. Error:
-                            {:?}",
-                            network_context,
-                            protocol,
-                            err
+                            protocol_id = protocol_id,
+                            "{} Upstream handler unable to handle messages for protocol: {}. Error: {:?}",
+                            network_context, protocol_id, err
                         );
                     }
                 } else {

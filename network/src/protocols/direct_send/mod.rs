@@ -20,7 +20,7 @@
 //! of messages received at the Peer actor should be sufficient for safe-guarding against malicious
 //! actors.
 use crate::{
-    counters,
+    counters::{self, FAILED_LABEL, RECEIVED_LABEL, SENT_LABEL},
     peer::{PeerHandle, PeerNotification},
     protocols::wire::messaging::v1::{DirectSendMsg, NetworkMessage, Priority},
     ProtocolId,
@@ -50,7 +50,7 @@ pub enum DirectSendNotification {
 #[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct Message {
     /// Message type.
-    pub protocol: ProtocolId,
+    pub protocol_id: ProtocolId,
     /// Serialized message data.
     #[serde(skip)]
     pub mdata: Bytes,
@@ -66,7 +66,7 @@ impl Debug for Message {
         write!(
             f,
             "Message {{ protocol: {:?}, mdata: {} }}",
-            self.protocol, mdata_str
+            self.protocol_id, mdata_str
         )
     }
 }
@@ -74,7 +74,7 @@ impl Debug for Message {
 /// The DirectSend actor.
 pub struct DirectSend {
     /// The network instance this DirectSend actor is running under.
-    _network_context: Arc<NetworkContext>,
+    network_context: Arc<NetworkContext>,
     /// Channel to send requests to Peer.
     peer_handle: PeerHandle,
     /// Channel to receive requests from other upstream actors.
@@ -94,7 +94,7 @@ impl DirectSend {
         peer_notifs_rx: channel::Receiver<PeerNotification>,
     ) -> Self {
         Self {
-            _network_context: network_context,
+            network_context,
             peer_handle,
             ds_requests_rx,
             ds_notifs_tx,
@@ -141,21 +141,18 @@ impl DirectSend {
             PeerNotification::NewMessage(message) => {
                 let peer_id = self.peer_handle.peer_id();
                 if let NetworkMessage::DirectSendMsg(message) = message {
-                    let protocol = message.protocol_id;
+                    let protocol_id = message.protocol_id;
                     trace!(
                         "DirectSend: Received inbound message from peer {} for protocol {:?}",
                         peer_id.short_str(),
-                        protocol
+                        protocol_id
                     );
                     let data = message.raw_msg;
-                    counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
-                        .with_label_values(&["received"])
-                        .inc();
-                    counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
-                        .with_label_values(&["received"])
+                    counters::direct_send_messages(&self.network_context, RECEIVED_LABEL).inc();
+                    counters::direct_send_bytes(&self.network_context, RECEIVED_LABEL)
                         .observe(data.len() as f64);
                     let notif = DirectSendNotification::RecvMessage(Message {
-                        protocol,
+                        protocol_id,
                         mdata: Bytes::from(data),
                     });
                     if let Err(err) = self.ds_notifs_tx.send(notif).await {
@@ -178,7 +175,7 @@ impl DirectSend {
         trace!("DirectSendRequest::{:?}", req);
         match req {
             DirectSendRequest::SendMessage(msg) => {
-                let protocol_id = msg.protocol;
+                let protocol_id = msg.protocol_id;
                 // If send to PeerHandle fails, simply drop the message on the floor;
                 let msg_len = msg.mdata.len();
                 let send_result = self
@@ -195,11 +192,8 @@ impl DirectSend {
                     .await;
                 match send_result {
                     Ok(()) => {
-                        counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
-                            .with_label_values(&["sent"])
-                            .inc();
-                        counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
-                            .with_label_values(&["sent"])
+                        counters::direct_send_messages(&self.network_context, SENT_LABEL).inc();
+                        counters::direct_send_bytes(&self.network_context, SENT_LABEL)
                             .observe(msg_len as f64);
                     }
                     Err(e) => {
@@ -209,9 +203,7 @@ impl DirectSend {
                             self.peer_handle.peer_id().short_str(),
                             e
                         );
-                        counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
-                            .with_label_values(&["failed"])
-                            .inc();
+                        counters::direct_send_messages(&self.network_context, FAILED_LABEL).inc();
                     }
                 }
             }
