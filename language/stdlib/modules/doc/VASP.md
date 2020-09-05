@@ -7,14 +7,11 @@
 
 -  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
--  [Resource `VASPOperationsResource`](#0x1_VASP_VASPOperationsResource)
--  [Const `EVASP_OPERATIONS_RESOURCE`](#0x1_VASP_EVASP_OPERATIONS_RESOURCE)
 -  [Const `EPARENT_OR_CHILD_VASP`](#0x1_VASP_EPARENT_OR_CHILD_VASP)
 -  [Const `ETOO_MANY_CHILDREN`](#0x1_VASP_ETOO_MANY_CHILDREN)
 -  [Const `ENOT_A_VASP`](#0x1_VASP_ENOT_A_VASP)
 -  [Const `ENOT_A_PARENT_VASP`](#0x1_VASP_ENOT_A_PARENT_VASP)
 -  [Const `MAX_CHILD_ACCOUNTS`](#0x1_VASP_MAX_CHILD_ACCOUNTS)
--  [Function `initialize`](#0x1_VASP_initialize)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
 -  [Function `has_account_limits`](#0x1_VASP_has_account_limits)
@@ -34,7 +31,6 @@
     -  [Function `is_same_vasp`](#0x1_VASP_Specification_is_same_vasp)
     -  [Function `num_children`](#0x1_VASP_Specification_num_children)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
-        -  [Post Genesis](#0x1_VASP_@Post_Genesis)
     -  [Existence of Parents](#0x1_VASP_@Existence_of_Parents)
         -  [Mutation](#0x1_VASP_@Mutation)
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
@@ -105,48 +101,6 @@ A resource that represents a child account of the parent VASP account at
 
 </details>
 
-<a name="0x1_VASP_VASPOperationsResource"></a>
-
-## Resource `VASPOperationsResource`
-
-A singleton resource allowing this module to publish limits definitions and accounting windows
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a></code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
-
-<a name="0x1_VASP_EVASP_OPERATIONS_RESOURCE"></a>
-
-## Const `EVASP_OPERATIONS_RESOURCE`
-
-The
-<code><a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a></code> was not in the required state
-
-
-<pre><code><b>const</b> EVASP_OPERATIONS_RESOURCE: u64 = 0;
-</code></pre>
-
-
-
 <a name="0x1_VASP_EPARENT_OR_CHILD_VASP"></a>
 
 ## Const `EPARENT_OR_CHILD_VASP`
@@ -156,7 +110,7 @@ The
 <code><a href="#0x1_VASP_ChildVASP">ChildVASP</a></code> resources are not in the required state
 
 
-<pre><code><b>const</b> EPARENT_OR_CHILD_VASP: u64 = 1;
+<pre><code><b>const</b> EPARENT_OR_CHILD_VASP: u64 = 0;
 </code></pre>
 
 
@@ -168,7 +122,7 @@ The
 The creation of a new Child VASP account would exceed the number of children permitted for a VASP
 
 
-<pre><code><b>const</b> ETOO_MANY_CHILDREN: u64 = 2;
+<pre><code><b>const</b> ETOO_MANY_CHILDREN: u64 = 1;
 </code></pre>
 
 
@@ -180,7 +134,7 @@ The creation of a new Child VASP account would exceed the number of children per
 The account must be a Parent or Child VASP account
 
 
-<pre><code><b>const</b> ENOT_A_VASP: u64 = 3;
+<pre><code><b>const</b> ENOT_A_VASP: u64 = 2;
 </code></pre>
 
 
@@ -192,7 +146,7 @@ The account must be a Parent or Child VASP account
 The creating account must be a Parent VASP account
 
 
-<pre><code><b>const</b> ENOT_A_PARENT_VASP: u64 = 4;
+<pre><code><b>const</b> ENOT_A_PARENT_VASP: u64 = 3;
 </code></pre>
 
 
@@ -208,38 +162,6 @@ Maximum number of child accounts that can be created by a single ParentVASP
 </code></pre>
 
 
-
-<a name="0x1_VASP_initialize"></a>
-
-## Function `initialize`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer) {
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
-    <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <b>assert</b>(
-        !exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EVASP_OPERATIONS_RESOURCE)
-    );
-    move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
-        limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(lr_account),
-    })
-}
-</code></pre>
-
-
-
-</details>
 
 <a name="0x1_VASP_publish_parent_vasp_credential"></a>
 
@@ -538,7 +460,7 @@ Aborts if
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: vasp};
-<a name="0x1_VASP_vasp_addr$14"></a>
+<a name="0x1_VASP_vasp_addr$13"></a>
 <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp);
 <b>aborts_if</b> <a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr) with Errors::ALREADY_PUBLISHED;
 <b>ensures</b> <a href="#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
@@ -563,9 +485,9 @@ reliably terminates.
 
 <pre><code>pragma verify_duration_estimate = 100;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
-<a name="0x1_VASP_parent_addr$15"></a>
+<a name="0x1_VASP_parent_addr$14"></a>
 <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
-<a name="0x1_VASP_child_addr$16"></a>
+<a name="0x1_VASP_child_addr$15"></a>
 <b>let</b> child_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child);
 <b>aborts_if</b> <a href="#0x1_VASP_is_vasp">is_vasp</a>(child_addr) with Errors::ALREADY_PUBLISHED;
 <b>aborts_if</b> !<a href="#0x1_VASP_is_parent">is_parent</a>(parent_addr) with Errors::INVALID_ARGUMENT;
@@ -747,22 +669,6 @@ condition.
 
 
 <pre><code>pragma verify;
-</code></pre>
-
-
-
-<a name="0x1_VASP_@Post_Genesis"></a>
-
-#### Post Genesis
-
-
-
-<code><a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a></code> is published under the LibraRoot address after genesis.
-
-
-<pre><code><b>invariant</b> [<b>global</b>, isolated]
-    <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
-        exists&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
 
 

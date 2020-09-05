@@ -45,7 +45,7 @@ fn valid_creator_already_vasp() {
         )
         .unwrap_err();
     if let VMStatus::MoveAbort(_, code) = err {
-        assert_eq!(code, 262);
+        assert_eq!(code, 6);
     } else {
         panic!("expected MoveAbort")
     }
@@ -109,7 +109,7 @@ fn max_child_accounts_for_vasp() {
     );
 
     if let Ok(KeptVMStatus::MoveAbort(_, code)) = output.status().status() {
-        assert_eq!(code, 520); // ETOO_MANY_CHILDREN
+        assert_eq!(code, 264); // ETOO_MANY_CHILDREN
     } else {
         panic!("expected MoveAbort")
     }

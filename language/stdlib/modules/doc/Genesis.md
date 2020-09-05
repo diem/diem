@@ -47,9 +47,8 @@
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(lr_account);
     <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(lr_account);
 
-    // Currency and <a href="VASP.md#0x1_VASP">VASP</a> setup
+    // Currency setup
     <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(lr_account);
-    <a href="VASP.md#0x1_VASP_initialize">VASP::initialize</a>(lr_account);
 
     // Currency setup
     <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(lr_account, tc_account);

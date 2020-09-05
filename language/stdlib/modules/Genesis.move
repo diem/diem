@@ -5,7 +5,6 @@
 address 0x1 {
 module Genesis {
     use 0x1::AccountFreezing;
-    use 0x1::VASP;
     use 0x1::ChainId;
     use 0x1::Coin1;
     use 0x1::Coin2;
@@ -49,9 +48,8 @@ module Genesis {
         Event::publish_generator(lr_account);
         LibraConfig::initialize(lr_account);
 
-        // Currency and VASP setup
+        // Currency setup
         Libra::initialize(lr_account);
-        VASP::initialize(lr_account);
 
         // Currency setup
         Coin1::initialize(lr_account, tc_account);

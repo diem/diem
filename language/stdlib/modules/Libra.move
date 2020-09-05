@@ -14,8 +14,6 @@ module Libra {
     use 0x1::Roles;
     use 0x1::LibraTimestamp;
 
-    resource struct RegisterNewCurrency {}
-
     /// The `Libra` resource defines the Libra coin for each currency in
     /// Libra. Each "coin" is coupled with a type `CoinType` specifying the
     /// currency of the coin, and a `value` field specifying the value
@@ -765,7 +763,7 @@ module Libra {
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Libra.
     /// The passed-in `lr_account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
-    /// `lr_account` must also have the correct `RegisterNewCurrency` capability.
+    /// `lr_account` must also have the correct `LibraRoot` account role.
     /// After the first registration of `CoinType` as a
     /// currency, additional attempts to register `CoinType` as a currency
     /// will abort.

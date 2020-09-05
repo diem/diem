@@ -5,7 +5,6 @@
 
 ### Table of Contents
 
--  [Resource `RegisterNewCurrency`](#0x1_Libra_RegisterNewCurrency)
 -  [Resource `Libra`](#0x1_Libra_Libra)
 -  [Resource `MintCapability`](#0x1_Libra_MintCapability)
 -  [Resource `BurnCapability`](#0x1_Libra_BurnCapability)
@@ -107,34 +106,6 @@ resource
 The module defines functions operating on coins as well as functionality like
 minting and burning of coins.
 
-
-<a name="0x1_Libra_RegisterNewCurrency"></a>
-
-## Resource `RegisterNewCurrency`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_Libra_Libra"></a>
 
@@ -1799,7 +1770,7 @@ The passed-in
 <code>lr_account</code> must be a specific address (
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>) and
 <code>lr_account</code> must also have the correct
-<code><a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a></code> capability.
+<code>LibraRoot</code> account role.
 After the first registration of
 <code>CoinType</code> as a
 currency, additional attempts to register
