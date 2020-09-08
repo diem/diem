@@ -18,7 +18,7 @@ use std::{
     io::Write,
     sync::{
         mpsc::{self, Receiver, SyncSender},
-        Arc,
+        Arc, RwLock,
     },
     thread,
 };
@@ -152,7 +152,7 @@ impl LibraLoggerBuilder {
             let logger = Arc::new(LibraLogger {
                 sender: Some(sender),
                 printer: None,
-                filter,
+                filter: RwLock::new(filter),
             });
 
             thread::spawn(move || service.run());
@@ -161,7 +161,7 @@ impl LibraLoggerBuilder {
             Arc::new(LibraLogger {
                 sender: None,
                 printer: self.printer.take(),
-                filter,
+                filter: RwLock::new(filter),
             })
         };
 
@@ -172,7 +172,7 @@ impl LibraLoggerBuilder {
 pub struct LibraLogger {
     sender: Option<SyncSender<LogEntry>>,
     printer: Option<Box<dyn Writer>>,
-    filter: Filter,
+    filter: RwLock<Filter>,
 }
 
 impl LibraLogger {
@@ -213,7 +213,7 @@ impl LibraLogger {
 
 impl Logger for LibraLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        self.filter.enabled(metadata)
+        self.filter.read().unwrap().enabled(metadata)
     }
 
     fn record(&self, event: &Event) {
