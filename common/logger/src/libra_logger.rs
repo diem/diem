@@ -8,7 +8,7 @@ use crate::{
     },
     logger::Logger,
     struct_log::TcpWriter,
-    Event, Level, Metadata,
+    Event, Filter, Level, Metadata,
 };
 use chrono::{SecondsFormat, Utc};
 use serde::Serialize;
@@ -23,6 +23,7 @@ use std::{
     thread,
 };
 
+const RUST_LOG: &str = "RUST_LOG";
 pub const CHANNEL_SIZE: usize = 10000;
 const NUM_SEND_RETRIES: u8 = 1;
 
@@ -129,6 +130,18 @@ impl LibraLoggerBuilder {
     }
 
     pub fn build(&mut self) {
+        let filter = {
+            let mut filter_builder = Filter::builder();
+
+            if env::var(RUST_LOG).is_ok() {
+                filter_builder.with_env(RUST_LOG);
+            } else {
+                filter_builder.filter_level(self.level.into());
+            }
+
+            filter_builder.build()
+        };
+
         let logger = if self.is_async {
             let (sender, receiver) = mpsc::sync_channel(self.channel_size);
             let service = LoggerService {
@@ -139,7 +152,7 @@ impl LibraLoggerBuilder {
             let logger = Arc::new(LibraLogger {
                 sender: Some(sender),
                 printer: None,
-                level: self.level,
+                filter,
             });
 
             thread::spawn(move || service.run());
@@ -148,7 +161,7 @@ impl LibraLoggerBuilder {
             Arc::new(LibraLogger {
                 sender: None,
                 printer: self.printer.take(),
-                level: self.level,
+                filter,
             })
         };
 
@@ -159,7 +172,7 @@ impl LibraLoggerBuilder {
 pub struct LibraLogger {
     sender: Option<SyncSender<LogEntry>>,
     printer: Option<Box<dyn Writer>>,
-    level: Level,
+    filter: Filter,
 }
 
 impl LibraLogger {
@@ -173,7 +186,7 @@ impl LibraLogger {
     }
 
     pub fn init_for_testing() {
-        if env::var("RUST_LOG").is_err() {
+        if env::var(RUST_LOG).is_err() {
             return;
         }
 
@@ -200,7 +213,7 @@ impl LibraLogger {
 
 impl Logger for LibraLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= self.level
+        self.filter.enabled(metadata)
     }
 
     fn record(&self, event: &Event) {
