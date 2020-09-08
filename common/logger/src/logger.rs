@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Event, Metadata};
+use crate::{counters::STRUCT_LOG_COUNT, Event, Metadata};
 
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -19,6 +19,7 @@ pub trait Logger: Sync + Send + 'static {
 
 pub(crate) fn dispatch(event: &Event) {
     if let Some(logger) = LOGGER.get() {
+        STRUCT_LOG_COUNT.inc();
         logger.record(event)
     }
 }
