@@ -100,4 +100,4 @@ pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
 pub use security::SecurityEvent;
 
-pub mod counters;
+mod counters;

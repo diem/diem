@@ -27,15 +27,6 @@ pub static SENT_STRUCT_LOG_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
-/// Count of logs failed to be submitted (but not by the queue)
-pub static DROPPED_STRUCT_LOG_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_struct_log_intentionally_dropped_count",
-        "Count of the intentionally dropped struct logs."
-    )
-    .unwrap()
-});
-
 /// Metric for when we connect the outbound TCP
 pub static STRUCT_LOG_TCP_CONNECT_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
