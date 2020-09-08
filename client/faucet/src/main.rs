@@ -65,8 +65,7 @@ async fn main() {
 fn routes(
     service: std::sync::Arc<mint::Service>,
 ) -> warp::filters::BoxedFilter<(impl warp::Reply,)> {
-    // POST /mint?amount=25&auth_key=xxx&currency_code=XXX
-    let mint = warp::path("mint")
+    let mint = warp::any()
         .and(warp::post())
         .and(warp::any().map(move || std::sync::Arc::clone(&service)))
         .and(warp::query().map(move |params: mint::MintParams| params))
@@ -85,8 +84,13 @@ fn routes(
             )
         }));
 
+    // POST /?amount=25&auth_key=xxx&currency_code=XXX
+    let route_root = warp::path::end().and(mint.clone());
+    // POST /mint?amount=25&auth_key=xxx&currency_code=XXX
+    let route_mint = warp::path::path("mint").and(warp::path::end()).and(mint);
+
     let health = warp::path!("-" / "healthy").map(|| "libra-faucet:ok");
-    health.or(mint).boxed()
+    health.or(route_mint.or(route_root)).boxed()
 }
 
 async fn handle(
@@ -179,20 +183,22 @@ mod tests {
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
-        let resp = rt.block_on(async {
-            warp::test::request()
-                .method("POST")
-                .path(
-                    format!(
-                        "/mint?auth_key={}&amount=1000000&currency_code=LBR",
-                        auth_key
+        for path in vec!["/", "/mint"] {
+            let resp = rt.block_on(async {
+                warp::test::request()
+                    .method("POST")
+                    .path(
+                        format!(
+                            "{}?auth_key={}&amount=1000000&currency_code=LBR",
+                            path, auth_key
+                        )
+                        .as_str(),
                     )
-                    .as_str(),
-                )
-                .reply(&filter)
-                .await
-        });
-        assert_eq!(resp.body(), "2389"); // 2388+1
+                    .reply(&filter)
+                    .await
+            });
+            assert_eq!(resp.body(), "2389"); // 2388+1
+        }
     }
 
     #[test]
