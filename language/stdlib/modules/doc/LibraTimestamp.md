@@ -54,7 +54,6 @@ A singleton resource holding the current Unix time in microseconds
 
 <dl>
 <dt>
-
 <code>microseconds: u64</code>
 </dt>
 <dd>
@@ -72,7 +71,7 @@ A singleton resource holding the current Unix time in microseconds
 Conversion factor between seconds and microseconds
 
 
-<pre><code><b>const</b> MICRO_CONVERSION_FACTOR: u64 = 1000000;
+<pre><code><b>const</b> <a href="#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>: u64 = 1000000;
 </code></pre>
 
 
@@ -84,7 +83,7 @@ Conversion factor between seconds and microseconds
 The blockchain is not in the genesis state anymore
 
 
-<pre><code><b>const</b> ENOT_GENESIS: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraTimestamp_ENOT_GENESIS">ENOT_GENESIS</a>: u64 = 0;
 </code></pre>
 
 
@@ -96,7 +95,7 @@ The blockchain is not in the genesis state anymore
 The blockchain is not in an operating state yet
 
 
-<pre><code><b>const</b> ENOT_OPERATING: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_LibraTimestamp_ENOT_OPERATING">ENOT_OPERATING</a>: u64 = 1;
 </code></pre>
 
 
@@ -108,7 +107,7 @@ The blockchain is not in an operating state yet
 An invalid timestamp was provided
 
 
-<pre><code><b>const</b> ETIMESTAMP: u64 = 2;
+<pre><code><b>const</b> <a href="#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a>: u64 = 2;
 </code></pre>
 
 
@@ -171,10 +170,10 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
     <b>let</b> now = global_timer.microseconds;
     <b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         // NIL block with null address <b>as</b> proposer. Timestamp must be equal.
-        <b>assert</b>(now == timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ETIMESTAMP));
+        <b>assert</b>(now == timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a>));
     } <b>else</b> {
         // Normal block. Time must advance
-        <b>assert</b>(now &lt; timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ETIMESTAMP));
+        <b>assert</b>(now &lt; timestamp, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTimestamp_ETIMESTAMP">ETIMESTAMP</a>));
     };
     global_timer.microseconds = timestamp;
 }
@@ -227,7 +226,7 @@ Gets the current time in seconds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_now_seconds">now_seconds</a>(): u64 <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() / MICRO_CONVERSION_FACTOR
+    <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() / <a href="#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
 }
 </code></pre>
 
@@ -277,7 +276,7 @@ Helper function to assert genesis state.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_genesis">assert_genesis</a>() {
-    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ENOT_GENESIS));
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="#0x1_LibraTimestamp_ENOT_GENESIS">ENOT_GENESIS</a>));
 }
 </code></pre>
 
@@ -289,11 +288,8 @@ Helper function to assert genesis state.
 
 ## Function `is_operating`
 
-Helper function to determine if Libra is operating. This is the same as
-<code>!<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code> and is provided
-for convenience. Testing
-<code><a href="#0x1_LibraTimestamp_is_operating">is_operating</a>()</code> is more frequent than
-<code><a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code>.
+Helper function to determine if Libra is operating. This is the same as <code>!<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code> and is provided
+for convenience. Testing <code><a href="#0x1_LibraTimestamp_is_operating">is_operating</a>()</code> is more frequent than <code><a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>()</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(): bool
@@ -331,7 +327,7 @@ Helper function to assert operating (!genesis) state.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_operating">assert_operating</a>() {
-    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ENOT_OPERATING));
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>(), <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="#0x1_LibraTimestamp_ENOT_OPERATING">ENOT_OPERATING</a>));
 }
 </code></pre>
 
@@ -351,8 +347,7 @@ Verify all functions in this module.
 </code></pre>
 
 
-All functions which do not have an
-<code><b>aborts_if</b></code> specification in this module are implicitly declared
+All functions which do not have an <code><b>aborts_if</b></code> specification in this module are implicitly declared
 to never abort.
 
 
@@ -410,7 +405,7 @@ After genesis, time progresses monotonically.
         now &gt;= timestamp
      }
     )
-    with Errors::INVALID_ARGUMENT;
+    with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == timestamp;
 </code></pre>
 
@@ -458,7 +453,7 @@ After genesis, time progresses monotonically.
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a>;
-<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() /  MICRO_CONVERSION_FACTOR;
+<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() /  <a href="#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>;
 </code></pre>
 
 
@@ -468,7 +463,7 @@ After genesis, time progresses monotonically.
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_seconds">spec_now_seconds</a>(): u64 {
-<b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds / MICRO_CONVERSION_FACTOR
+<b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).microseconds / <a href="#0x1_LibraTimestamp_MICRO_CONVERSION_FACTOR">MICRO_CONVERSION_FACTOR</a>
 }
 </code></pre>
 
@@ -497,7 +492,7 @@ Helper schema to specify that a function aborts if not in genesis.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_AbortsIfNotGenesis">AbortsIfNotGenesis</a> {
-    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>() with Errors::INVALID_STATE;
+    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>() with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>
 
@@ -526,6 +521,6 @@ Helper schema to specify that a function aborts if not operating.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_AbortsIfNotOperating">AbortsIfNotOperating</a> {
-    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>() with Errors::INVALID_STATE;
+    <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_is_operating">is_operating</a>() with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>

@@ -2,9 +2,37 @@ script {
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
 
-/// Rotate `account`'s authentication key to `new_key`.
-/// `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
-/// `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for details.
+/// # Summary
+/// Rotates the specified account's authentication key to the supplied new authentication key. May
+/// only be sent by the Libra Root account as a write set transaction.
+///
+/// # Technical Description
+/// Rotate the `account`'s `LibraAccount::LibraAccount` `authentication_key` field to `new_key`.
+/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+/// its `LibraAccount::KeyRotationCapability`.
+///
+/// # Parameters
+/// | Name            | Type         | Description                                                                                                  |
+/// | ------          | ------       | -------------                                                                                                |
+/// | `lr_account`    | `&signer`    | The signer reference of the sending account of the write set transaction. May only be the Libra Root signer. |
+/// | `account`       | `&signer`    | Signer reference of account specified in the `execute_as` field of the write set transaction.                |
+/// | `sliding_nonce` | `u64`        | The `sliding_nonce` (see: `SlidingNonce`) to be used for this transaction for Libra Root.                    |
+/// | `new_key`       | `vector<u8>` | New ed25519 public key to be used for `account`.                                                             |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                               | Description                                                                                                |
+/// | ----------------           | --------------                                             | -------------                                                                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_OLD`                             | The `sliding_nonce` in `lr_account` is too old and it's impossible to determine if it's duplicated or not. |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_TOO_NEW`                             | The `sliding_nonce` in `lr_account` is too far in the future.                                              |
+/// | `Errors::INVALID_ARGUMENT` | `SlidingNonce::ENONCE_ALREADY_RECORDED`                    | The `sliding_nonce` in` lr_account` has been previously recorded.                                          |
+/// | `Errors::INVALID_STATE`    | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `LibraAccount::KeyRotationCapability`.                       |
+/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                                           |
+///
+/// # Related Scripts
+/// * `Script::rotate_authentication_key`
+/// * `Script::rotate_authentication_key_with_nonce`
+/// * `Script::rotate_authentication_key_with_recovery_address`
+
 fun rotate_authentication_key_with_nonce_admin(lr_account: &signer, account: &signer, sliding_nonce: u64, new_key: vector<u8>) {
     SlidingNonce::record_nonce_or_abort(lr_account, sliding_nonce);
     let key_rotation_capability = LibraAccount::extract_key_rotation_capability(account);

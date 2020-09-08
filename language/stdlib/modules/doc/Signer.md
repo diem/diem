@@ -81,8 +81,7 @@
 
 
 
-Specification version of
-<code><a href="#0x1_Signer_address_of">Self::address_of</a></code>.
+Specification version of <code><a href="#0x1_Signer_address_of">Self::address_of</a></code>.
 
 
 <a name="0x1_Signer_spec_address_of"></a>

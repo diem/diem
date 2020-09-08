@@ -6,14 +6,12 @@
 ### Table of Contents
 
 -  [Function `mint_lbr`](#SCRIPT_mint_lbr)
-    -  [Events](#SCRIPT_@Events)
-    -  [Abort Conditions](#SCRIPT_@Abort_Conditions)
-        -  [Aborts Caused by Invalid Account State](#SCRIPT_@Aborts_Caused_by_Invalid_Account_State)
-        -  [Aborts Caused by Invalid LBR Minting State](#SCRIPT_@Aborts_Caused_by_Invalid_LBR_Minting_State)
-        -  [Other Aborts](#SCRIPT_@Other_Aborts)
-    -  [Post Conditions](#SCRIPT_@Post_Conditions)
-        -  [Changed States](#SCRIPT_@Changed_States)
-        -  [Unchanged States](#SCRIPT_@Unchanged_States)
+    -  [Summary](#SCRIPT_@Summary)
+    -  [Technical Description](#SCRIPT_@Technical_Description)
+        -  [Events](#SCRIPT_@Events)
+    -  [Parameters](#SCRIPT_@Parameters)
+    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
+    -  [Related Scripts](#SCRIPT_@Related_Scripts)
 -  [Specification](#SCRIPT_Specification)
     -  [Function `mint_lbr`](#SCRIPT_Specification_mint_lbr)
 
@@ -23,128 +21,69 @@
 
 ## Function `mint_lbr`
 
-Mint
-<code>amount_lbr</code> LBR from the sending account's constituent coins and deposits the
+
+<a name="SCRIPT_@Summary"></a>
+
+### Summary
+
+Mints LBR from the sending account's constituent coins by depositing in the
+on-chain LBR reserve. Deposits the newly-minted LBR into the sending
+account. Can be sent by any account that can hold balances for the constituent
+currencies for LBR and LBR.
+
+
+<a name="SCRIPT_@Technical_Description"></a>
+
+### Technical Description
+
+Mints <code>amount_lbr</code> LBR from the sending account's constituent coins and deposits the
 resulting LBR into the sending account.
 
 
 <a name="SCRIPT_@Events"></a>
 
-### Events
+#### Events
 
-When this script executes without aborting, it emits three events:
-<code>SentPaymentEvent { amount_coin1, currency_code = <a href="../../modules/doc/Coin1.md#0x1_Coin1">Coin1</a>, address_of(account), metadata = x"" }</code>
-<code>SentPaymentEvent { amount_coin2, currency_code = <a href="../../modules/doc/Coin2.md#0x1_Coin2">Coin2</a>, address_of(account), metadata = x"" }</code>
-on
-<code>account</code>'s
-<code>LibraAccount::sent_events</code> handle where
-<code>amount_coin1</code> and
-<code>amount_coin2</code>
-are the components amounts of
-<code>amount_lbr</code> LBR, and
-<code>ReceivedPaymentEvent { amount_lbr, currency_code = <a href="../../modules/doc/LBR.md#0x1_LBR">LBR</a>, address_of(account), metadata = x"" }</code>
-on
-<code>account</code>'s
-<code>LibraAccount::received_events</code> handle.
+Successful execution of this script emits three events:
+* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code> with the Coin1 currency code, and a
+<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code> with the Coin2 currency code on <code>account</code>'s
+<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>sent_events</code> handle with the <code>amounts</code> for each event being the
+components amounts of <code>amount_lbr</code> LBR; and
+* A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">LibraAccount::ReceivedPaymentEvent</a></code> on <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code>
+<code>received_events</code> handle with the LBR currency code and amount field equal to <code>amount_lbr</code>.
 
 
-<a name="SCRIPT_@Abort_Conditions"></a>
+<a name="SCRIPT_@Parameters"></a>
 
-### Abort Conditions
+### Parameters
 
-> TODO(emmazzz): the documentation below documents the reasons of abort, instead of the categories.
-> We might want to discuss about what the best approach is here.
-The following abort conditions have been formally specified and verified. See spec schema
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_StapleLBRAbortsIf">LibraAccount::StapleLBRAbortsIf</a></code> for the formal specifications.
-
-
-<a name="SCRIPT_@Aborts_Caused_by_Invalid_Account_State"></a>
-
-#### Aborts Caused by Invalid Account State
-
-* Aborts with
-<code>LibraAccount::EINSUFFICIENT_BALANCE</code> if
-<code>amount_coin1</code> is greater than sending
-<code>account</code>'s balance in
-<code><a href="../../modules/doc/Coin1.md#0x1_Coin1">Coin1</a></code> or if
-<code>amount_coin2</code> is greater than sending
-<code>account</code>'s balance in
-<code><a href="../../modules/doc/Coin2.md#0x1_Coin2">Coin2</a></code>.
-* Aborts with
-<code>LibraAccount::ECOIN_DEPOSIT_IS_ZERO</code> if
-<code>amount_lbr</code> is zero.
-* Aborts with
-<code>LibraAccount::EPAYEE_DOES_NOT_EXIST</code> if no LibraAccount exists at the address of
-<code>account</code>.
-* Aborts with
-<code>LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</code> if LibraAccount exists at
-<code>account</code>,
-but it does not accept payments in LBR.
+| Name         | Type      | Description                                      |
+| ------       | ------    | -------------                                    |
+| <code>account</code>    | <code>&signer</code> | The signer reference of the sending account.     |
+| <code>amount_lbr</code> | <code>u64</code>     | The amount of LBR (in microlibra) to be created. |
 
 
-<a name="SCRIPT_@Aborts_Caused_by_Invalid_LBR_Minting_State"></a>
+<a name="SCRIPT_@Common_Abort_Conditions"></a>
 
-#### Aborts Caused by Invalid LBR Minting State
+### Common Abort Conditions
 
-* Aborts with
-<code>Libra::EMINTING_NOT_ALLOWED</code> if minting LBR is not allowed according to the CurrencyInfo<LBR>
-stored at
-<code>CURRENCY_INFO_ADDRESS</code>.
-* Aborts with
-<code>Libra::ECURRENCY_INFO</code> if the total value of LBR would reach
-<code>MAX_U128</code> after
-<code>amount_lbr</code>
-LBR is minted.
-
-
-<a name="SCRIPT_@Other_Aborts"></a>
-
-#### Other Aborts
-
-These aborts should only happen when
-<code>account</code> has account limit restrictions or
-has been frozen by Libra administrators.
-* Aborts with
-<code>LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS</code> if
-<code>account</code> has exceeded their daily
-withdrawal limits for Coin1 or Coin2.
-* Aborts with
-<code>LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</code> if
-<code>account</code> has exceeded their daily
-deposit limits for LBR.
-* Aborts with
-<code>LibraAccount::EACCOUNT_FROZEN</code> if
-<code>account</code> is frozen.
+| Error Category             | Error Reason                                     | Description                                                                      |
+| ----------------           | --------------                                   | -------------                                                                    |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYER_DOESNT_HOLD_CURRENCY">LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY</a></code>      | <code>account</code> doesn't hold a balance in one of the backing currencies of LBR.        |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LBR.md#0x1_LBR_EZERO_LBR_MINT_NOT_ALLOWED">LBR::EZERO_LBR_MINT_NOT_ALLOWED</a></code>                | <code>amount_lbr</code> passed in was zero.                                                 |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LBR.md#0x1_LBR_ECOIN1">LBR::ECOIN1</a></code>                                    | The amount of <code><a href="../../modules/doc/Coin1.md#0x1_Coin1">Coin1</a></code> needed for the specified LBR would exceed <code><a href="../../modules/doc/LBR.md#0x1_LBR_MAX_U64">LBR::MAX_U64</a></code>.  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LBR.md#0x1_LBR_ECOIN2">LBR::ECOIN2</a></code>                                    | The amount of <code><a href="../../modules/doc/Coin2.md#0x1_Coin2">Coin2</a></code> needed for the specified LBR would exceed <code><a href="../../modules/doc/LBR.md#0x1_LBR_MAX_U64">LBR::MAX_U64</a></code>.  |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>    | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EMINTING_NOT_ALLOWED">Libra::EMINTING_NOT_ALLOWED</a></code>                    | Minting of LBR is not allowed currently.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | <code>account</code> doesn't hold a balance in LBR.                                         |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EWITHDRAWAL_EXCEEDS_LIMITS">LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS</a></code>       | <code>account</code> has exceeded its daily withdrawal limits for the backing coins of LBR. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EDEPOSIT_EXCEEDS_LIMITS">LibraAccount::EDEPOSIT_EXCEEDS_LIMITS</a></code>          | <code>account</code> has exceeded its daily deposit limits for LBR.                         |
 
 
-<a name="SCRIPT_@Post_Conditions"></a>
+<a name="SCRIPT_@Related_Scripts"></a>
 
-### Post Conditions
+### Related Scripts
 
-The following post conditions have been formally specified and verified. See spec schema
-<code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_StapleLBREnsures">LibraAccount::StapleLBREnsures</a></code> for the formal specifications.
-
-
-<a name="SCRIPT_@Changed_States"></a>
-
-#### Changed States
-
-* The reserve backing for Coin1 and Coin2 increase by the right amounts as specified by the component ratio.
-* Coin1 and Coin2 balances at the address of sending
-<code>account</code> decrease by the right amounts as specified by
-the component ratio.
-* The total value of LBR increases by
-<code>amount_lbr</code>.
-* LBR balance at the address of sending
-<code>account</code> increases by
-<code>amount_lbr</code>.
-
-
-<a name="SCRIPT_@Unchanged_States"></a>
-
-#### Unchanged States
-
-* The total values of Coin1 and Coin2 stay the same.
+* <code>Script::unmint_lbr</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_mint_lbr">mint_lbr</a>(account: &signer, amount_lbr: u64)

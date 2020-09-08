@@ -31,19 +31,14 @@
 
 ## Resource `RecoveryAddress`
 
-A resource that holds the
-<code>KeyRotationCapability</code>s for several accounts belonging to the
-same VASP. A VASP account that delegates its
-<code>KeyRotationCapability</code> to
-but also allows the account that stores the
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource to rotate its
+A resource that holds the <code>KeyRotationCapability</code>s for several accounts belonging to the
+same VASP. A VASP account that delegates its <code>KeyRotationCapability</code> to
+but also allows the account that stores the <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource to rotate its
 authentication key.
 This is useful as an account recovery mechanism: VASP accounts can all delegate their
-rotation capabilities to a single
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource stored under address A.
+rotation capabilities to a single <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource stored under address A.
 The authentication key for A can be "buried in the mountain" and dug up only if the need to
-recover one of accounts in
-<code>rotation_caps</code> arises.
+recover one of accounts in <code>rotation_caps</code> arises.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a>
@@ -57,7 +52,6 @@ recover one of accounts in
 
 <dl>
 <dt>
-
 <code>rotation_caps: vector&lt;<a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>&gt;</code>
 </dt>
 <dd>
@@ -75,7 +69,7 @@ recover one of accounts in
 Only VASPs can create a recovery address
 
 
-<pre><code><b>const</b> ENOT_A_VASP: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_ENOT_A_VASP">ENOT_A_VASP</a>: u64 = 0;
 </code></pre>
 
 
@@ -87,7 +81,7 @@ Only VASPs can create a recovery address
 A cycle would have been created would be created
 
 
-<pre><code><b>const</b> EKEY_ROTATION_DEPENDENCY_CYCLE: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">EKEY_ROTATION_DEPENDENCY_CYCLE</a>: u64 = 1;
 </code></pre>
 
 
@@ -99,7 +93,7 @@ A cycle would have been created would be created
 The signer doesn't have the appropriate privileges to rotate the account's key
 
 
-<pre><code><b>const</b> ECANNOT_ROTATE_KEY: u64 = 2;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">ECANNOT_ROTATE_KEY</a>: u64 = 2;
 </code></pre>
 
 
@@ -111,7 +105,7 @@ The signer doesn't have the appropriate privileges to rotate the account's key
 Only accounts belonging to the same VASP can delegate their key rotation capability
 
 
-<pre><code><b>const</b> EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">EINVALID_KEY_ROTATION_DELEGATION</a>: u64 = 3;
 </code></pre>
 
 
@@ -123,7 +117,7 @@ Only accounts belonging to the same VASP can delegate their key rotation capabil
 The account address couldn't be found in the account recovery resource
 
 
-<pre><code><b>const</b> EACCOUNT_NOT_RECOVERABLE: u64 = 4;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">EACCOUNT_NOT_RECOVERABLE</a>: u64 = 4;
 </code></pre>
 
 
@@ -132,11 +126,10 @@ The account address couldn't be found in the account recovery resource
 
 ## Const `ERECOVERY_ADDRESS`
 
-A
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource was in an unexpected state
+A <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource was in an unexpected state
 
 
-<pre><code><b>const</b> ERECOVERY_ADDRESS: u64 = 5;
+<pre><code><b>const</b> <a href="#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a>: u64 = 5;
 </code></pre>
 
 
@@ -145,14 +138,9 @@ A
 
 ## Function `publish`
 
-Extract the
-<code>KeyRotationCapability</code> for
-<code>recovery_account</code> and publish it in a
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under
-<code>recovery_account</code>.
-Aborts if
-<code>recovery_account</code> has delegated its
-<code>KeyRotationCapability</code>, already has a
+Extract the <code>KeyRotationCapability</code> for <code>recovery_account</code> and publish it in a
+<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under  <code>recovery_account</code>.
+Aborts if <code>recovery_account</code> has delegated its <code>KeyRotationCapability</code>, already has a
 <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource, or is not a VASP.
 
 
@@ -168,7 +156,7 @@ Aborts if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer, rotation_cap: KeyRotationCapability) {
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account);
     // Only VASPs can create a recovery address
-    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ENOT_A_VASP));
+    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RecoveryAddress_ENOT_A_VASP">ENOT_A_VASP</a>));
     // put the rotation capability for the recovery account itself in `rotation_caps`. This
     // <b>ensures</b> two things:
     // (1) It's not possible <b>to</b> get into a "recovery cycle" where A is the recovery account for
@@ -176,9 +164,9 @@ Aborts if
     // (2) rotation_caps is always nonempty
     <b>assert</b>(
         *<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&rotation_cap) == addr,
-         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EKEY_ROTATION_DEPENDENCY_CYCLE)
+         <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RecoveryAddress_EKEY_ROTATION_DEPENDENCY_CYCLE">EKEY_ROTATION_DEPENDENCY_CYCLE</a>)
     );
-    <b>assert</b>(!exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ERECOVERY_ADDRESS));
+    <b>assert</b>(!exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a>));
     move_to(
         recovery_account,
         <a href="#0x1_RecoveryAddress">RecoveryAddress</a> { rotation_caps: <a href="Vector.md#0x1_Vector_singleton">Vector::singleton</a>(rotation_cap) }
@@ -194,15 +182,9 @@ Aborts if
 
 ## Function `rotate_authentication_key`
 
-Rotate the authentication key of
-<code>to_recover</code> to
-<code>new_key</code>. Can be invoked by either
-<code>recovery_address</code> or
-<code>to_recover</code>.
-Aborts if
-<code>recovery_address</code> does not have the
-<code>KeyRotationCapability</code> for
-<code>to_recover</code>.
+Rotate the authentication key of <code>to_recover</code> to <code>new_key</code>. Can be invoked by either
+<code>recovery_address</code> or <code>to_recover</code>.
+Aborts if <code>recovery_address</code> does not have the <code>KeyRotationCapability</code> for <code>to_recover</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_rotate_authentication_key">rotate_authentication_key</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
@@ -221,14 +203,14 @@ Aborts if
     new_key: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a> {
     // Check that `recovery_address` has a `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b>
-    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ERECOVERY_ADDRESS));
+    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a>));
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(
         // The original owner of a key rotation capability can rotate its own key
         sender == to_recover ||
         // The owner of the `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b> can rotate any key
         sender == recovery_address,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ECANNOT_ROTATE_KEY)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RecoveryAddress_ECANNOT_ROTATE_KEY">ECANNOT_ROTATE_KEY</a>)
     );
 
     <b>let</b> caps = &borrow_global&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
@@ -254,7 +236,7 @@ Aborts if
         <b>assert</b> forall j in 0..len: caps[j].account_address != to_recover;
     };
     // Couldn't find `to_recover` in the account recovery <b>resource</b>; <b>abort</b>
-    <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EACCOUNT_NOT_RECOVERABLE)
+    <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RecoveryAddress_EACCOUNT_NOT_RECOVERABLE">EACCOUNT_NOT_RECOVERABLE</a>)
 }
 </code></pre>
 
@@ -266,15 +248,9 @@ Aborts if
 
 ## Function `add_rotation_capability`
 
-Add
-<code>to_recover</code> to the
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under
-<code>recovery_address</code>.
-Aborts if
-<code>to_recover.address</code> and
-<code>recovery_address belong <b>to</b> different VASPs, or <b>if</b>
-</code>recovery_address
-<code> does not have a </code>RecoveryAddress` resource.
+Add <code>to_recover</code> to the <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource under <code>recovery_address</code>.
+Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>to</b> different VASPs, or <b>if</b>
+</code>recovery_address<code> does not have a </code>RecoveryAddress` resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>, recovery_address: address)
@@ -289,12 +265,12 @@ Aborts if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover: KeyRotationCapability, recovery_address: address)
 <b>acquires</b> <a href="#0x1_RecoveryAddress">RecoveryAddress</a> {
     // Check that `recovery_address` has a `<a href="#0x1_RecoveryAddress">RecoveryAddress</a>` <b>resource</b>
-    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ERECOVERY_ADDRESS));
+    <b>assert</b>(exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_RecoveryAddress_ERECOVERY_ADDRESS">ERECOVERY_ADDRESS</a>));
     // Only accept the rotation capability <b>if</b> both accounts belong <b>to</b> the same <a href="VASP.md#0x1_VASP">VASP</a>
     <b>let</b> to_recover_address = *<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&to_recover);
     <b>assert</b>(
         <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(recovery_address) == <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(to_recover_address),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_KEY_ROTATION_DELEGATION)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RecoveryAddress_EINVALID_KEY_ROTATION_DELEGATION">EINVALID_KEY_ROTATION_DELEGATION</a>)
     );
 
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(
@@ -328,10 +304,10 @@ Aborts if
 
 
 <pre><code><b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr) with Errors::INVALID_ARGUMENT;
-<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr) with Errors::ALREADY_PUBLISHED;
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(rotation_cap) != addr
-    with Errors::INVALID_ARGUMENT;
+    with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
 </code></pre>
 
@@ -363,8 +339,8 @@ Aborts if
     recovery_address: address;
     to_recover: address;
     new_key: vector&lt;u8&gt;;
-    <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
-    <b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>aborts_if</b> len(new_key) != 32;
     <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
     <b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
@@ -398,13 +374,13 @@ Aborts if
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
+<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 <a name="0x1_RecoveryAddress_to_recover_address$7"></a>
 <b>let</b> to_recover_address = <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(to_recover);
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_address) with Errors::INVALID_ARGUMENT;
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(to_recover_address) with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(to_recover_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(to_recover_address)
-    with Errors::INVALID_ARGUMENT;
+    with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[
     len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1] == to_recover;
 </code></pre>
@@ -422,8 +398,7 @@ Aborts if
 
 
 
-Returns true if
-<code>addr</code> is a recovery address.
+Returns true if <code>addr</code> is a recovery address.
 
 
 <a name="0x1_RecoveryAddress_spec_is_recovery_address"></a>
@@ -436,9 +411,7 @@ Returns true if
 </code></pre>
 
 
-Returns all the
-<code>KeyRotationCapability</code>s held at
-<code>recovery_address</code>.
+Returns all the <code>KeyRotationCapability</code>s held at <code>recovery_address</code>.
 
 
 <a name="0x1_RecoveryAddress_spec_get_rotation_caps"></a>
@@ -452,10 +425,8 @@ Returns all the
 </code></pre>
 
 
-Returns true if
-<code>recovery_address</code> holds the
-<code>KeyRotationCapability</code> for
-<code>addr</code>.
+Returns true if <code>recovery_address</code> holds the
+<code>KeyRotationCapability</code> for <code>addr</code>.
 
 
 <a name="0x1_RecoveryAddress_spec_holds_key_rotation_cap_for"></a>

@@ -32,7 +32,6 @@
 
 <dl>
 <dt>
-
 <code>major: u64</code>
 </dt>
 <dd>
@@ -50,7 +49,7 @@
 Tried to set an invalid major version for the VM. Major versions must be strictly increasing
 
 
-<pre><code><b>const</b> EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a>: u64 = 0;
 </code></pre>
 
 
@@ -110,7 +109,7 @@ Tried to set an invalid major version for the VM. Major versions must be strictl
 
     <b>assert</b>(
         old_config.major &lt; major,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_MAJOR_VERSION_NUMBER)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">EINVALID_MAJOR_VERSION_NUMBER</a>)
     );
 
     <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;(
@@ -173,7 +172,7 @@ Must abort if the signer does not have the LibraRoot role [B19].
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
-<b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;().major &gt;= major with Errors::INVALID_ARGUMENT;
+<b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;().major &gt;= major with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetAbortsIf">LibraConfig::SetAbortsIf</a>&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;{account: lr_account};
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_SetEnsures">LibraConfig::SetEnsures</a>&lt;<a href="#0x1_LibraVersion">LibraVersion</a>&gt;{payload: <a href="#0x1_LibraVersion">LibraVersion</a> { major }};
 </code></pre>

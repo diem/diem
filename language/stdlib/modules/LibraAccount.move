@@ -630,7 +630,9 @@ module LibraAccount {
     /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
     /// resource under `dd`.
     public fun preburn<Token>(
-        dd: &signer, cap: &WithdrawCapability, amount: u64
+        dd: &signer,
+        cap: &WithdrawCapability,
+        amount: u64
     ) acquires Balance, AccountOperationsCapability, LibraAccount {
         LibraTimestamp::assert_operating();
         Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))

@@ -889,13 +889,6 @@ impl<'env> Docgen<'env> {
                 continue;
             }
             r += &text[at..at + m.start()];
-            // If the current text does not start on a newline, we need to add one.
-            // Some markdown processors won't recognize a <code> if its not on a new
-            // line. However, if we insert a blank line, we get a paragraph break, so we
-            // need to avoid this.
-            if !r.trim_end_matches(' ').ends_with('\n') {
-                r += "\n";
-            }
             r += &format!(
                 "<code>{}</code>",
                 &self.decorate_code(module_env, &m.as_str()[1..&m.as_str().len() - 1])
@@ -1000,26 +993,29 @@ impl<'env> Docgen<'env> {
         } else {
             None
         };
-        let try_func_or_struct = |module: &ModuleEnv<'_>, name: Symbol, is_qualified: bool| {
-            // Below we only resolve a simple name to a function if it is followed by a ( or <.
-            // Otherwise we get too many false positives where names are resolved to functions
-            // but are actually fields.
-            if module.find_struct(name).is_some()
-                || module.find_spec_var(name).is_some()
-                || self
-                    .declared_schemas
-                    .get(&module.get_id())
-                    .map(|s| s.contains(&name))
-                    .unwrap_or(false)
-                || ((is_qualified || is_followed_by_open)
-                    && (module.find_function(name).is_some()
-                        || module.get_spec_funs_of_name(name).next().is_some()))
-            {
-                Some(self.ref_for_module_item(&module, name))
-            } else {
-                None
-            }
-        };
+        let try_func_struct_or_const =
+            |module: &ModuleEnv<'_>, name: Symbol, is_qualified: bool| {
+                // Below we only resolve a simple name to a hyperref if it is followed by a ( or <,
+                // or if it is a named constant in the module.
+                // Otherwise we get too many false positives where names are resolved to functions
+                // but are actually fields.
+                if module.find_struct(name).is_some()
+                    || module.find_named_constant(name).is_some()
+                    || module.find_spec_var(name).is_some()
+                    || self
+                        .declared_schemas
+                        .get(&module.get_id())
+                        .map(|s| s.contains(&name))
+                        .unwrap_or(false)
+                    || ((is_qualified || is_followed_by_open)
+                        && (module.find_function(name).is_some()
+                            || module.get_spec_funs_of_name(name).next().is_some()))
+                {
+                    Some(self.ref_for_module_item(&module, name))
+                } else {
+                    None
+                }
+            };
         let parts_sym = parts
             .iter()
             .map(|p| self.env.symbol_pool().make(p))
@@ -1027,14 +1023,14 @@ impl<'env> Docgen<'env> {
 
         match (module_opt, parts_sym.len()) {
             (Some(module), 0) => Some(self.ref_for_module(&module)),
-            (Some(module), 1) => try_func_or_struct(&module, parts_sym[0], true),
+            (Some(module), 1) => try_func_struct_or_const(&module, parts_sym[0], true),
             (None, 0) => None,
             (None, 1) => {
                 // A simple name. Resolve either to module or to item in current module.
                 if let Some(module) = self.env.find_module_by_name(parts_sym[0]) {
                     Some(self.ref_for_module(&module))
                 } else {
-                    try_func_or_struct(module_env, parts_sym[0], false)
+                    try_func_struct_or_const(module_env, parts_sym[0], false)
                 }
             }
             (None, 2) => {
@@ -1046,7 +1042,7 @@ impl<'env> Docgen<'env> {
                     self.env.find_module_by_name(parts_sym[0])
                 };
                 if let Some(module) = module_opt {
-                    try_func_or_struct(&module, parts_sym[1], true)
+                    try_func_struct_or_const(&module, parts_sym[1], true)
                 } else {
                     None
                 }

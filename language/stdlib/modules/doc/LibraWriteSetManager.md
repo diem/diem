@@ -38,7 +38,6 @@
 
 <dl>
 <dt>
-
 <code>upgrade_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_LibraWriteSetManager_UpgradeEvent">LibraWriteSetManager::UpgradeEvent</a>&gt;</code>
 </dt>
 <dd>
@@ -66,7 +65,6 @@
 
 <dl>
 <dt>
-
 <code>writeset_payload: vector&lt;u8&gt;</code>
 </dt>
 <dd>
@@ -81,11 +79,10 @@
 
 ## Const `ELIBRA_WRITE_SET_MANAGER`
 
-The
-<code><a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a></code> was not in the required state
+The <code><a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a></code> was not in the required state
 
 
-<pre><code><b>const</b> ELIBRA_WRITE_SET_MANAGER: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraWriteSetManager_ELIBRA_WRITE_SET_MANAGER">ELIBRA_WRITE_SET_MANAGER</a>: u64 = 0;
 </code></pre>
 
 
@@ -96,7 +93,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_EINVALID_WRITESET_SENDER: u64 = 1033;
+<pre><code><b>const</b> <a href="#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_WRITESET_SENDER">PROLOGUE_EINVALID_WRITESET_SENDER</a>: u64 = 1033;
 </code></pre>
 
 
@@ -107,7 +104,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY: u64 = 1001;
+<pre><code><b>const</b> <a href="#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY">PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY</a>: u64 = 1001;
 </code></pre>
 
 
@@ -118,7 +115,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD: u64 = 1002;
+<pre><code><b>const</b> <a href="#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>: u64 = 1002;
 </code></pre>
 
 
@@ -129,7 +126,7 @@ The
 
 
 
-<pre><code><b>const</b> PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW: u64 = 1011;
+<pre><code><b>const</b> <a href="#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>: u64 = 1011;
 </code></pre>
 
 
@@ -156,7 +153,7 @@ The
 
     <b>assert</b>(
         !exists&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ELIBRA_WRITE_SET_MANAGER)
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_LibraWriteSetManager_ELIBRA_WRITE_SET_MANAGER">ELIBRA_WRITE_SET_MANAGER</a>)
     );
     move_to(
         account,
@@ -195,25 +192,25 @@ The
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(
         sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EINVALID_WRITESET_SENDER)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_WRITESET_SENDER">PROLOGUE_EINVALID_WRITESET_SENDER</a>)
     );
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account), PROLOGUE_EINVALID_WRITESET_SENDER);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account), <a href="#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_WRITESET_SENDER">PROLOGUE_EINVALID_WRITESET_SENDER</a>);
 
     <b>let</b> lr_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
     <b>assert</b>(
         writeset_sequence_number &gt;= sequence_number,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD">PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD</a>)
     );
 
     <b>assert</b>(
         writeset_sequence_number == sequence_number,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraWriteSetManager_PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW">PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW</a>)
     );
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == lr_auth_key,
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraWriteSetManager_PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY">PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY</a>)
     );
 }
 </code></pre>
@@ -277,7 +274,7 @@ The
 
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
-<b>aborts_if</b> exists&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with Errors::ALREADY_PUBLISHED;
+<b>aborts_if</b> exists&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 </code></pre>
 
 

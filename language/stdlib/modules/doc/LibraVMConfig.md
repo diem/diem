@@ -31,7 +31,6 @@
 
 <dl>
 <dt>
-
 <code>gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">LibraVMConfig::GasSchedule</a></code>
 </dt>
 <dd>
@@ -59,21 +58,18 @@
 
 <dl>
 <dt>
-
 <code>instruction_schedule: vector&lt;u8&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>native_schedule: vector&lt;u8&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>gas_constants: <a href="#0x1_LibraVMConfig_GasConstants">LibraVMConfig::GasConstants</a></code>
 </dt>
 <dd>
@@ -101,21 +97,18 @@
 
 <dl>
 <dt>
-
 <code>global_memory_per_byte_cost: u64</code>
 </dt>
 <dd>
  The cost per-byte written to global storage.
 </dd>
 <dt>
-
 <code>global_memory_per_byte_write_cost: u64</code>
 </dt>
 <dd>
  The cost per-byte written to storage.
 </dd>
 <dt>
-
 <code>min_transaction_gas_units: u64</code>
 </dt>
 <dd>
@@ -123,24 +116,19 @@
  Charged at the start of execution.
 </dd>
 <dt>
-
 <code>large_transaction_cutoff: u64</code>
 </dt>
 <dd>
  Any transaction over this size will be charged an additional amount per byte.
 </dd>
 <dt>
-
 <code>intrinsic_gas_per_byte: u64</code>
 </dt>
 <dd>
- The units of gas that to be charged per byte over the
-<code>large_transaction_cutoff</code> in addition to
- <code>min_transaction_gas_units</code> for transactions whose size exceeds
-<code>large_transaction_cutoff</code>.
+ The units of gas that to be charged per byte over the <code>large_transaction_cutoff</code> in addition to
+ <code>min_transaction_gas_units</code> for transactions whose size exceeds <code>large_transaction_cutoff</code>.
 </dd>
 <dt>
-
 <code>maximum_number_of_gas_units: u64</code>
 </dt>
 <dd>
@@ -152,35 +140,30 @@
  and vetted senders.
 </dd>
 <dt>
-
 <code>min_price_per_gas_unit: u64</code>
 </dt>
 <dd>
  The minimum gas price that a transaction can be submitted with.
 </dd>
 <dt>
-
 <code>max_price_per_gas_unit: u64</code>
 </dt>
 <dd>
  The maximum gas unit price that a transaction can be submitted with.
 </dd>
 <dt>
-
 <code>max_transaction_size_in_bytes: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>gas_unit_scaling_factor: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>default_account_size: u64</code>
 </dt>
 <dd>

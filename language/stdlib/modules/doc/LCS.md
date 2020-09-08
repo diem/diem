@@ -18,8 +18,7 @@ details on LCS.
 
 ## Function `to_bytes`
 
-Return the binary representation of
-<code>v</code> in LCS (Libra Canonical Serialization) format
+Return the binary representation of <code>v</code> in LCS (Libra Canonical Serialization) format
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LCS_to_bytes">to_bytes</a>&lt;MoveValue&gt;(v: &MoveValue): vector&lt;u8&gt;

@@ -61,7 +61,6 @@ the operations can mutate account states.
 
 <dl>
 <dt>
-
 <code>dummy_field: bool</code>
 </dt>
 <dd>
@@ -77,8 +76,7 @@ the operations can mutate account states.
 ## Resource `LimitsDefinition`
 
 A resource specifying the account limits per-currency. There is a default
-"unlimited"
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource for accounts published at
+"unlimited" <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource for accounts published at
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()</code>, but other accounts may have
 different account limit definitons. In such cases, they will have a
 <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> published under their (root) account.
@@ -95,28 +93,24 @@ different account limit definitons. In such cases, they will have a
 
 <dl>
 <dt>
-
 <code>max_inflow: u64</code>
 </dt>
 <dd>
  The maximum inflow allowed during the specified time period.
 </dd>
 <dt>
-
 <code>max_outflow: u64</code>
 </dt>
 <dd>
  The maximum outflow allowed during the specified time period.
 </dd>
 <dt>
-
 <code>time_period: u64</code>
 </dt>
 <dd>
  Time period, specified in microseconds
 </dd>
 <dt>
-
 <code>max_holding: u64</code>
 </dt>
 <dd>
@@ -132,11 +126,8 @@ different account limit definitons. In such cases, they will have a
 ## Resource `Window`
 
 A struct holding account transaction information for the time window
-starting at
-<code>window_start</code> and lasting for the
-<code>time_period</code> specified
-in the limits definition at
-<code>limit_address</code>.
+starting at <code>window_start</code> and lasting for the <code>time_period</code> specified
+in the limits definition at <code>limit_address</code>.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;
@@ -150,35 +141,30 @@ in the limits definition at
 
 <dl>
 <dt>
-
 <code>window_start: u64</code>
 </dt>
 <dd>
  Time window start in microseconds
 </dd>
 <dt>
-
 <code>window_inflow: u64</code>
 </dt>
 <dd>
  The inflow during this time window
 </dd>
 <dt>
-
 <code>window_outflow: u64</code>
 </dt>
 <dd>
  The inflow during this time window
 </dd>
 <dt>
-
 <code>tracked_balance: u64</code>
 </dt>
 <dd>
  The balance that this account has held during this time period.
 </dd>
 <dt>
-
 <code>limit_address: address</code>
 </dt>
 <dd>
@@ -193,11 +179,10 @@ in the limits definition at
 
 ## Const `ELIMITS_DEFINITION`
 
-The
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource is in an invalid state
+The <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> ELIMITS_DEFINITION: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>: u64 = 0;
 </code></pre>
 
 
@@ -206,11 +191,10 @@ The
 
 ## Const `EWINDOW`
 
-The
-<code><a href="#0x1_AccountLimits_Window">Window</a></code> resource is in an invalid state
+The <code><a href="#0x1_AccountLimits_Window">Window</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> EWINDOW: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_AccountLimits_EWINDOW">EWINDOW</a>: u64 = 1;
 </code></pre>
 
 
@@ -222,7 +206,7 @@ The
 24 hours in microseconds
 
 
-<pre><code><b>const</b> ONE_DAY: u64 = 86400000000;
+<pre><code><b>const</b> <a href="#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>: u64 = 86400000000;
 </code></pre>
 
 
@@ -233,7 +217,7 @@ The
 
 
 
-<pre><code><b>const</b> U64_MAX: u64 = 18446744073709551615;
+<pre><code><b>const</b> <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a>: u64 = 18446744073709551615;
 </code></pre>
 
 
@@ -270,11 +254,8 @@ need to be a unique capability.
 
 ## Function `update_deposit_limits`
 
-Determines if depositing
-<code>amount</code> of
-<code>CoinType</code> coins into the
-account at
-<code>addr</code> is amenable with their account limits.
+Determines if depositing <code>amount</code> of <code>CoinType</code> coins into the
+account at <code>addr</code> is amenable with their account limits.
 Returns false if this deposit violates the account limits. Effectful.
 
 
@@ -292,7 +273,7 @@ Returns false if this deposit violates the account limits. Effectful.
     addr: address,
     _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EWINDOW));
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <a href="#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
@@ -308,13 +289,9 @@ Returns false if this deposit violates the account limits. Effectful.
 
 ## Function `update_withdrawal_limits`
 
-Determine if withdrawing
-<code>amount</code> of
-<code>CoinType</code> coins from
-the account at
-<code>addr</code> would violate the account limits for that account.
-Returns
-<code><b>false</b></code> if this withdrawal violates account limits. Effectful.
+Determine if withdrawing <code>amount</code> of <code>CoinType</code> coins from
+the account at <code>addr</code> would violate the account limits for that account.
+Returns <code><b>false</b></code> if this withdrawal violates account limits. Effectful.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
@@ -331,7 +308,7 @@ Returns
     addr: address,
     _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EWINDOW));
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <a href="#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr),
@@ -368,11 +345,11 @@ their root/parent account.
     limit_address: address,
 ) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIMITS_DEFINITION));
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <a href="Roles.md#0x1_Roles_assert_parent_vasp_or_child_vasp">Roles::assert_parent_vasp_or_child_vasp</a>(to_limit);
     <b>assert</b>(
         !exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_limit)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EWINDOW)
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_AccountLimits_EWINDOW">EWINDOW</a>)
     );
     move_to(
         to_limit,
@@ -396,11 +373,9 @@ their root/parent account.
 ## Function `publish_unrestricted_limits`
 
 Unrestricted limits are represented by setting all fields in the
-limits definition to
-<code>U64_MAX</code>. Anyone can publish an unrestricted
+limits definition to <code><a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a></code>. Anyone can publish an unrestricted
 limits since no windows will point to this limits definition unless the
-TC account, or a caller with access to a
-<code>&<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a></code> points a
+TC account, or a caller with access to a <code>&<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a></code> points a
 window to it. Additionally, the TC controls the values held within this
 resource once it's published.
 
@@ -417,15 +392,15 @@ resource once it's published.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(publish_account: &signer) {
     <b>assert</b>(
         !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(publish_account)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ELIMITS_DEFINITION)
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>)
     );
     move_to(
         publish_account,
         <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
-            max_inflow: U64_MAX,
-            max_outflow: U64_MAX,
-            max_holding: U64_MAX,
-            time_period: ONE_DAY,
+            max_inflow: <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
+            max_outflow: <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
+            max_holding: <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
+            time_period: <a href="#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>,
         }
     )
 }
@@ -439,11 +414,8 @@ resource once it's published.
 
 ## Function `update_limits_definition`
 
-Updates the
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;</code> resource at
-<code>limit_address</code>.
-If any of the field arguments is
-<code>0</code> the corresponding field is not updated.
+Updates the <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;</code> resource at <code>limit_address</code>.
+If any of the field arguments is <code>0</code> the corresponding field is not updated.
 
 TODO(wrwg): specify
 
@@ -468,7 +440,7 @@ TODO(wrwg): specify
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     // As we don't have Optionals for txn scripts, in update_account_limit_definition.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
-    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIMITS_DEFINITION));
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_def = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address);
     <b>if</b> (new_max_inflow &gt; 0) { limits_def.max_inflow = new_max_inflow };
     <b>if</b> (new_max_outflow &gt; 0) { limits_def.max_outflow = new_max_outflow };
@@ -485,25 +457,16 @@ TODO(wrwg): specify
 
 ## Function `update_window_info`
 
-Update either the
-<code>tracked_balance</code> or
-<code>limit_address</code> fields of the
-<code><a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> stored under
-<code>window_address</code>.
+Update either the <code>tracked_balance</code> or <code>limit_address</code> fields of the
+<code><a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> stored under <code>window_address</code>.
 * Since we don't track balances of accounts before they are limited, once
-they do become limited the approximate balance in
-<code>CointType</code> held by
+they do become limited the approximate balance in <code>CointType</code> held by
 the entity across all of its accounts will need to be set by the association.
-if
-<code>aggregate_balance</code> is set to zero the field is not updated.
-* This updates the
-<code>limit_address</code> in the window resource to a new limits definition at
-<code>new_limit_address</code>. If the
-<code>aggregate_balance</code> needs to be updated
-but the
-<code>limit_address</code> should remain the same, the current
-<code>limit_address</code> needs to be passed in for
-<code>new_limit_address</code>.
+if <code>aggregate_balance</code> is set to zero the field is not updated.
+* This updates the <code>limit_address</code> in the window resource to a new limits definition at
+<code>new_limit_address</code>. If the <code>aggregate_balance</code> needs to be updated
+but the <code>limit_address</code> should remain the same, the current
+<code>limit_address</code> needs to be passed in for <code>new_limit_address</code>.
 TODO(wrwg): specify
 
 
@@ -525,7 +488,7 @@ TODO(wrwg): specify
     <a href="Roles.md#0x1_Roles_assert_treasury_compliance">Roles::assert_treasury_compliance</a>(tc_account);
     <b>let</b> window = borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(window_address);
     <b>if</b> (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
-    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(new_limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIMITS_DEFINITION));
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(new_limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     window.limit_address = new_limit_address;
 }
 </code></pre>
@@ -538,8 +501,7 @@ TODO(wrwg): specify
 
 ## Function `reset_window`
 
-If the time window starting at
-<code>window.window_start</code> and lasting for
+If the time window starting at <code>window.window_start</code> and lasting for
 <code>limits_definition.time_period</code> has elapsed, resets the window and
 the inflow and outflow records.
 
@@ -571,12 +533,9 @@ the inflow and outflow records.
 
 ## Function `can_receive`
 
-Verify that the receiving account tracked by the
-<code>receiving</code> window
-can receive
-<code>amount</code> funds without violating requirements
-specified the
-<code>limits_definition</code> passed in.
+Verify that the receiving account tracked by the <code>receiving</code> window
+can receive <code>amount</code> funds without violating requirements
+specified the <code>limits_definition</code> passed in.
 
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
@@ -619,12 +578,9 @@ specified the
 
 ## Function `can_withdraw`
 
-Verify that
-<code>amount</code> can be withdrawn from the account tracked
-by the
-<code>sending</code> window without violating any limits specified
-in its
-<code>limits_definition</code>.
+Verify that <code>amount</code> can be withdrawn from the account tracked
+by the <code>sending</code> window without violating any limits specified
+in its <code>limits_definition</code>.
 
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(amount: u64, sending: &<b>mut</b> <a href="#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
@@ -665,8 +621,7 @@ in its
 
 ## Function `is_unrestricted`
 
-Return whether the
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resoure is unrestricted or not.
+Return whether the <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resoure is unrestricted or not.
 
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType&gt;(limits_def: &<a href="#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;): bool
@@ -679,10 +634,10 @@ Return whether the
 
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType&gt;(limits_def: &<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;): bool {
-    limits_def.max_inflow == U64_MAX &&
-    limits_def.max_outflow == U64_MAX &&
-    limits_def.max_holding == U64_MAX &&
-    limits_def.time_period == ONE_DAY
+    limits_def.max_inflow == <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
+    limits_def.max_outflow == <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
+    limits_def.max_holding == <a href="#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
+    limits_def.time_period == <a href="#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>
 }
 </code></pre>
 
@@ -809,28 +764,24 @@ Return whether the
 
 <dl>
 <dt>
-
 <code>max_inflow: u64</code>
 </dt>
 <dd>
  The maximum inflow allowed during the specified time period.
 </dd>
 <dt>
-
 <code>max_outflow: u64</code>
 </dt>
 <dd>
  The maximum outflow allowed during the specified time period.
 </dd>
 <dt>
-
 <code>time_period: u64</code>
 </dt>
 <dd>
  Time period, specified in microseconds
 </dd>
 <dt>
-
 <code>max_holding: u64</code>
 </dt>
 <dd>
@@ -847,9 +798,7 @@ Return whether the
 </code></pre>
 
 
-Invariant that
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> exists if a
-<code><a href="#0x1_AccountLimits_Window">Window</a></code> exists.
+Invariant that <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> exists if a <code><a href="#0x1_AccountLimits_Window">Window</a></code> exists.
 
 
 <a name="0x1_AccountLimits_Specification_grant_mutation_capability"></a>
@@ -908,7 +857,7 @@ Invariant that
 
 <pre><code><b>schema</b> <a href="#0x1_AccountLimits_AbortsIfNoWindow">AbortsIfNoWindow</a>&lt;CoinType&gt; {
     addr: address;
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -995,8 +944,8 @@ Invariant that
     limit_address: address;
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
     <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrChildVasp">Roles::AbortsIfNotParentVaspOrChildVasp</a>{account: to_limit};
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) with Errors::NOT_PUBLISHED;
-    <b>aborts_if</b> exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) with Errors::ALREADY_PUBLISHED;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_limit)) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -1014,7 +963,7 @@ Invariant that
 
 
 <pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(publish_account))
-    with Errors::ALREADY_PUBLISHED;
+    with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 </code></pre>
 
 

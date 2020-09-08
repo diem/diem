@@ -16,12 +16,9 @@
 -  [Specification](#0x1_Event_Specification)
 
 
-The Event module defines an
-<code><a href="#0x1_Event_EventHandleGenerator">EventHandleGenerator</a></code> that is used to create
+The Event module defines an <code><a href="#0x1_Event_EventHandleGenerator">EventHandleGenerator</a></code> that is used to create
 <code><a href="#0x1_Event_EventHandle">EventHandle</a></code>s with unique GUIDs. It contains a counter for the number
-of
-<code><a href="#0x1_Event_EventHandle">EventHandle</a></code>s it generates. An
-<code><a href="#0x1_Event_EventHandle">EventHandle</a></code> is used to count the number of
+of <code><a href="#0x1_Event_EventHandle">EventHandle</a></code>s it generates. An <code><a href="#0x1_Event_EventHandle">EventHandle</a></code> is used to count the number of
 events emitted to a handle and emit events to the event store.
 
 
@@ -42,14 +39,12 @@ events emitted to a handle and emit events to the event store.
 
 <dl>
 <dt>
-
 <code>counter: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>addr: address</code>
 </dt>
 <dd>
@@ -77,14 +72,12 @@ events emitted to a handle and emit events to the event store.
 
 <dl>
 <dt>
-
 <code>counter: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>guid: vector&lt;u8&gt;</code>
 </dt>
 <dd>

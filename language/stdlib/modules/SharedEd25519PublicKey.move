@@ -1,8 +1,8 @@
-// Each address that holds a `SharedEd25519PublicKey` resource can rotate the public key stored in
-// this resource, but the account's authentication key will be updated in lockstep. This ensures
-// that the two keys always stay in sync.
-
 address 0x1 {
+
+/// Each address that holds a `SharedEd25519PublicKey` resource can rotate the public key stored in
+/// this resource, but the account's authentication key will be updated in lockstep. This ensures
+/// that the two keys always stay in sync.
 module SharedEd25519PublicKey {
     use 0x1::Authenticator;
     use 0x1::Errors;
@@ -10,12 +10,12 @@ module SharedEd25519PublicKey {
     use 0x1::Signature;
     use 0x1::Signer;
 
-    // A resource that forces the account associated with `rotation_cap` to use a ed25519
-    // authentication key derived from `key`
+    /// A resource that forces the account associated with `rotation_cap` to use a ed25519
+    /// authentication key derived from `key`
     resource struct SharedEd25519PublicKey {
-        // 32 byte ed25519 public key
+        /// 32 byte ed25519 public key
         key: vector<u8>,
-        // rotation capability for an account whose authentication key is always derived from `key`
+        /// rotation capability for an account whose authentication key is always derived from `key`
         rotation_cap: LibraAccount::KeyRotationCapability,
     }
 
@@ -24,11 +24,11 @@ module SharedEd25519PublicKey {
     /// A shared ed25519 public key resource was not in the required state
     const ESHARED_KEY: u64 = 1;
 
-    // (1) Rotate the authentication key of the sender to `key`
-    // (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
-    //     of the sender under the `account`'s address.
-    // Aborts if the sender already has a `SharedEd25519PublicKey` resource.
-    // Aborts if the length of `new_public_key` is not 32.
+    /// (1) Rotate the authentication key of the sender to `key`
+    /// (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
+    ///     of the sender under the `account`'s address.
+    /// Aborts if the sender already has a `SharedEd25519PublicKey` resource.
+    /// Aborts if the length of `new_public_key` is not 32.
     public fun publish(account: &signer, key: vector<u8>) {
         let t = SharedEd25519PublicKey {
             key: x"",
@@ -52,24 +52,26 @@ module SharedEd25519PublicKey {
         shared_key.key = new_public_key;
     }
 
-    // (1) rotate the public key stored `account`'s `SharedEd25519PublicKey` resource to
-    // `new_public_key`
-    // (2) rotate the authentication key using the capability stored in the `account`'s
-    // `SharedEd25519PublicKey` to a new value derived from `new_public_key`
-    // Aborts if the sender does not have a `SharedEd25519PublicKey` resource.
-    // Aborts if the length of `new_public_key` is not 32.
+    /// (1) rotate the public key stored `account`'s `SharedEd25519PublicKey` resource to
+    /// `new_public_key`
+    /// (2) rotate the authentication key using the capability stored in the `account`'s
+    /// `SharedEd25519PublicKey` to a new value derived from `new_public_key`
+    /// Aborts if the sender does not have a `SharedEd25519PublicKey` resource.
+    /// Aborts if the length of `new_public_key` is not 32.
     public fun rotate_key(account: &signer, new_public_key: vector<u8>) acquires SharedEd25519PublicKey {
-        rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(Signer::address_of(account)), new_public_key);
+        let addr = Signer::address_of(account);
+        assert(exists<SharedEd25519PublicKey>(addr), Errors::not_published(ESHARED_KEY));
+        rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(addr), new_public_key);
     }
 
-    // Return the public key stored under `addr`.
-    // Aborts if `addr` does not hold a `SharedEd25519PublicKey` resource.
+    /// Return the public key stored under `addr`.
+    /// Aborts if `addr` does not hold a `SharedEd25519PublicKey` resource.
     public fun key(addr: address): vector<u8> acquires SharedEd25519PublicKey {
         assert(exists<SharedEd25519PublicKey>(addr), Errors::not_published(ESHARED_KEY));
         *&borrow_global<SharedEd25519PublicKey>(addr).key
     }
 
-    // Returns true if `addr` holds a `SharedEd25519PublicKey` resource.
+    /// Returns true if `addr` holds a `SharedEd25519PublicKey` resource.
     public fun exists_at(addr: address): bool {
         exists<SharedEd25519PublicKey>(addr)
     }

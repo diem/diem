@@ -6,6 +6,11 @@
 ### Table of Contents
 
 -  [Function `set_validator_operator`](#SCRIPT_set_validator_operator)
+    -  [Summary](#SCRIPT_@Summary)
+    -  [Technical Description](#SCRIPT_@Technical_Description)
+    -  [Parameters](#SCRIPT_@Parameters)
+    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
+    -  [Related Scripts](#SCRIPT_@Related_Scripts)
 
 
 
@@ -13,7 +18,64 @@
 
 ## Function `set_validator_operator`
 
-Set validator's operator
+
+<a name="SCRIPT_@Summary"></a>
+
+### Summary
+
+Sets the validator operator for a validator in the validator's configuration resource "locally"
+and does not reconfigure the system. Changes from this transaction will not picked up by the
+system until a reconfiguration of the system is triggered. May only be sent by an account with
+Validator role.
+
+
+<a name="SCRIPT_@Technical_Description"></a>
+
+### Technical Description
+
+Sets the account at <code>operator_account</code> address and with the specified <code>human_name</code> as an
+operator for the sending validator account. The account at <code>operator_account</code> address must have
+a Validator Operator role and have a <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code>
+resource published under it. The sending <code>account</code> must be a Validator and have a
+<code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> resource published under it. This script does not emit a
+<code>LibraConfig::NewEpochEvent</code> and no reconfiguration of the system is initiated by this script.
+
+
+<a name="SCRIPT_@Parameters"></a>
+
+### Parameters
+
+| Name               | Type         | Description                                                                                  |
+| ------             | ------       | -------------                                                                                |
+| <code>account</code>          | <code>&signer</code>    | The signer reference of the sending account of the transaction.                              |
+| <code>operator_name</code>    | <code>vector&lt;u8&gt;</code> | Validator operator's human name.                                                             |
+| <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator. |
+
+
+<a name="SCRIPT_@Common_Abort_Conditions"></a>
+
+### Common Abort Conditions
+
+| Error Category             | Error Reason                                          | Description                                                                                                                                                  |
+| ----------------           | --------------                                        | -------------                                                                                                                                                |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">ValidatorOperatorConfig::EVALIDATOR_OPERATOR_CONFIG</a></code> | The <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource is not published under <code>operator_account</code>.                                                   |
+| EMPTY                      | 0                                                     | The <code>human_name</code> field of the <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource under <code>operator_account</code> does not match the provided <code>human_name</code>. |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a></code>    | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EVALIDATOR">Roles::EVALIDATOR</a></code>                                   | <code>account</code> does not have a Validator account role.                                                                                                            |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ENOT_A_VALIDATOR_OPERATOR">ValidatorConfig::ENOT_A_VALIDATOR_OPERATOR</a></code>          | The account at <code>operator_account</code> does not have a <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_ValidatorOperatorConfig">ValidatorOperatorConfig::ValidatorOperatorConfig</a></code> resource.                                               |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
+
+
+<a name="SCRIPT_@Related_Scripts"></a>
+
+### Related Scripts
+
+* <code>Script::create_validator_account</code>
+* <code>Script::create_validator_operator_account</code>
+* <code>Script::register_validator_config</code>
+* <code>Script::remove_validator_and_reconfigure</code>
+* <code>Script::add_validator_and_reconfigure</code>
+* <code>Script::set_validator_operator_with_nonce_admin</code>
+* <code>Script::set_validator_config_and_reconfigure</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_operator">set_validator_operator</a>(account: &signer, operator_name: vector&lt;u8&gt;, operator_account: address)
