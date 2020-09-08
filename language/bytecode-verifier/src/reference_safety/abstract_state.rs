@@ -98,7 +98,10 @@ impl AbstractState {
 
         for (param_idx, param_ty) in function_view.parameters().0.iter().enumerate() {
             let value = if param_ty.is_reference() {
-                let id = state.new_ref(param_ty.is_mutable_reference());
+                let id = RefID::new(param_idx);
+                state
+                    .borrow_graph
+                    .new_ref(id, param_ty.is_mutable_reference());
                 AbstractValue::Reference(id)
             } else {
                 AbstractValue::NonReference
@@ -106,6 +109,8 @@ impl AbstractState {
             state.locals.insert(param_idx as LocalIndex, value);
         }
         state.borrow_graph.new_ref(state.frame_root(), true);
+
+        checked_verify!(state.is_canonical());
         state
     }
 
@@ -650,6 +655,7 @@ impl AbstractDomain for AbstractState {
     /// attempts to join state to self and returns the result
     fn join(&mut self, state: &AbstractState) -> JoinResult {
         let joined = Self::join_(self, state);
+        checked_verify!(joined.is_canonical());
         checked_verify!(self.num_locals == joined.num_locals);
         let locals_unchanged = self
             .iter_locals()
