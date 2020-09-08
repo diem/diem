@@ -752,6 +752,37 @@ jobs:
                 command: |
                   scripts/dockerhub_prune.sh -u "${DOCKERHUB_USERNAME}"" -p ${DOCKERHUB_PASSWORD}" -x
 
+  docker-update-base-images:
+    executor: vm-medium-executor
+    steps:
+      - checkout
+      - run:
+          name: Define relevant files
+          command: |
+            grep --include=\*Dockerfile -r '.' -e 'FROM debian:' | sed 's/:.*//g' | sed 's/\.\///g' | sort | uniq > /tmp/ci_docker_files
+      - halt_if_no_relevant_files_changed_since_last_evaluation:
+          cache_key_part: docker_base_image
+          file_of_relevant_git_files: /tmp/ci_docker_files
+      - setup_aws
+      - run:
+          name: Push base images to ecr if needed for cluster test.
+          command: |
+            # We are using debian buster for our base images.   Get all debian tags in a unique sorted list.
+            BUSTER_TAGS=`grep --include=\*Dockerfile -rh '.' -e 'FROM debian:' | sed 's/FROM debian://g' | sed 's/[ ]*[a|A][s|S] .*$//g' | sort | uniq`
+            echo "$BUSTER_TAGS" | while IFS= read -r tag ; do
+              docker pull debian:$tag
+            done
+            #login to docker aws ecr account
+            aws ecr get-login-password --region ${AWS_REGION} | \
+            docker login --username AWS --password-stdin "${AWS_ECR_ACCOUNT_URL}"
+            #push all base docker images to aws.
+            set -x
+            echo "$BUSTER_TAGS" | while IFS= read -r tag ; do
+              tag_no_sha=`echo $tag | sed 's/@.*//'`
+              docker tag debian:$tag ${AWS_ECR_ACCOUNT_URL}/library/debian:${tag_no_sha}
+              docker push ${AWS_ECR_ACCOUNT_URL}/library/debian:${tag_no_sha}
+            done
+
   ######################################################################################################
   # Publish docker artifacts for prs targeting release branches built in "auto" by bors.               #
   # Disabled for now, until bors pipeline more configurable.                                           #
@@ -913,6 +944,12 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
+      - docker-update-base-images:
+          context: docker
+          filters:
+            branches:
+              only:
+                - master
 
   ######################################################################################################################
   # Updates documentation when code is committed to master, and checks for breaking changes.
