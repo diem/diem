@@ -257,6 +257,7 @@ sed -e "s/{pod_name}/${pod_name}/g" \
     ${DIR}/cluster_test_pod_template.yaml > ${specfile}
 
 echo "Using cluster : ${WORKSPACE}"
+echo 'If connection aborts, use "kubectl logs ${WORKSPACE}" to fetch logs'
 context=${K8S_CONTEXT_PATTERN/CLUSTERNAME/${WORKSPACE}}
 kubectl --context=${context} apply -f ${specfile} || (echo "Failed to create cluster-test pod"; exit 1)
 kube_wait_pod ${pod_name} ${context}
