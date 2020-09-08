@@ -24,22 +24,17 @@ struct Args {
     #[structopt(short = "s", long, default_value = "https://testnet.libra.org/v1")]
     pub server_url: String,
     /// Path to the private key for creating test account and minting coins.
+    /// To keep Testnet simple, we used one private key for both treasury compliance account and testnet
+    /// designated dealer account, hence here we only accept one private key.
     /// To manually generate a keypair, use generate-key:
     /// `cargo run -p generate-keypair -- -o <output_file_path>`
     #[structopt(short = "m", long, default_value = "/opt/libra/etc/mint.key")]
     pub mint_key_file_path: String,
-    /// Chain ID of the network this client is connecting to
-    #[structopt(
-        short = "c",
-        long,
-        default_value = "2",
-        help = "\
-            Explicitly specify the chain ID of the network the CLI is connecting to: e.g.,
-            for mainnet: \"MAINNET\" or 1, testnet: \"TESTNET\" or 2, devnet: \"DEVNET\" or 3, \
-            local swarm: \"TESTING\" or 4
-            Note: Chain ID of 0 is not allowed
-        "
-    )]
+    /// Chain ID of the network this client is connecting to.
+    /// For mainnet: \"MAINNET\" or 1, testnet: \"TESTNET\" or 2, devnet: \"DEVNET\" or 3, \
+    /// local swarm: \"TESTING\" or 4
+    /// Note: Chain ID of 0 is not allowed; Use number if chain id is not predefined.
+    #[structopt(short = "c", long, default_value = "2")]
     pub chain_id: libra_types::chain_id::ChainId,
 }
 

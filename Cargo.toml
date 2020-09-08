@@ -1,11 +1,11 @@
 [workspace]
 
 members = [
+    "client/faucet",
     "client/json-rpc",
     "client/libra-dev",
     "client/swiss-knife",
     "client/transaction-builder",
-    "client/faucet",
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",
@@ -153,6 +153,7 @@ default-members = [
     "config/management/operational",
     "config/seed-peer-generator",
     "consensus/safety-rules",
+    "client/faucet",
     "client/libra-dev",
     "client/swiss-knife",
     "execution/db-bootstrapper",

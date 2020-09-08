@@ -2585,6 +2585,7 @@ dependencies = [
  "libra-json-rpc-client 0.1.0",
  "libra-logger 0.1.0",
  "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "reqwest 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.115 (registry+https://github.com/rust-lang/crates.io-index)",
