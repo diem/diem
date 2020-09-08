@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: fetch base ref
         id: fetch-base-ref
         uses: ./.github/actions/pr-base-ref
