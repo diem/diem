@@ -79,16 +79,14 @@ struct Args {
 }
 
 fn main() {
-    ::libra_logger::Logger::new().init();
-    crash_handler::setup_panic_handler();
     let args = Args::from_args();
 
     let mut logger = ::libra_logger::Logger::new();
-
     if !args.verbose {
         logger.level(::libra_logger::Level::Warn);
     }
     logger.init();
+    crash_handler::setup_panic_handler();
 
     let (commands, alias_to_cmd) = get_commands(args.faucet_account_file.is_some());
 
