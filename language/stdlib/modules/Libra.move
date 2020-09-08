@@ -36,11 +36,6 @@ module Libra {
     /// and the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
-    /// The `CurrencyRegistrationCapability` is a singleton resource
-    /// published under the `CoreAddresses::LIBRA_ROOT_ADDRESS()` and grants
-    /// the capability to the `0x1::Libra` module to add currencies to the
-    /// `0x1::RegisteredCurrencies` on-chain config.
-
     /// A `MintEvent` is emitted every time a Libra coin is minted. This
     /// contains the `amount` minted (in base units of the currency being
     /// minted) along with the `currency_code` for the coin(s) being
@@ -219,31 +214,29 @@ module Libra {
     /// Publishes the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
     /// must be a registered currency type. The caller must pass a treasury compliance account.
     public fun publish_burn_capability<CoinType>(
-        account: &signer,
-        cap: BurnCapability<CoinType>,
         tc_account: &signer,
+        cap: BurnCapability<CoinType>,
     ) {
         Roles::assert_treasury_compliance(tc_account);
         assert_is_currency<CoinType>();
         assert(
-            !exists<BurnCapability<CoinType>>(Signer::address_of(account)),
+            !exists<BurnCapability<CoinType>>(Signer::address_of(tc_account)),
             Errors::already_published(EBURN_CAPABILITY)
         );
-        move_to(account, cap)
+        move_to(tc_account, cap)
     }
     spec fun publish_burn_capability {
         aborts_if !spec_is_currency<CoinType>();
         include PublishBurnCapAbortsIfs<CoinType>;
     }
     spec schema PublishBurnCapAbortsIfs<CoinType> {
-        account: &signer;
         tc_account: &signer;
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
-        aborts_if exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
+        aborts_if exists<BurnCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
     }
-    /// Returns true if a BurnCapability for CoinType exists at addr.
-    spec define spec_has_burn_cap<CoinType>(addr: address): bool {
-        exists<BurnCapability<CoinType>>(addr)
+    spec schema PublishBurnCapEnsures<CoinType> {
+        tc_account: &signer;
+        ensures exists<BurnCapability<CoinType>>(Signer::spec_address_of(tc_account));
     }
 
     /// Mints `amount` coins. The `account` must hold a
@@ -445,11 +438,17 @@ module Libra {
     }
     spec fun publish_preburn_to_account {
         modifies global<Preburn<CoinType>>(Signer::spec_address_of(account));
+        /// The premission "PreburnCurrency" is granted to DesignatedDealer [B13].
+        /// Must abort if the account does not have the DesignatedDealer role.
         include Roles::AbortsIfNotDesignatedDealer;
+        /// Preburn is published under the DesignatedDealer account.
+        ensures exists<Preburn<CoinType>>(Signer::spec_address_of(account));
+
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
         include AbortsIfNoCurrency<CoinType>;
         aborts_if is_synthetic_currency<CoinType>() with Errors::INVALID_ARGUMENT;
         aborts_if exists<Preburn<CoinType>>(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
+
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -859,13 +858,17 @@ module Libra {
             Errors::already_published(EMINT_CAPABILITY)
         );
         move_to(tc_account, mint_cap);
-        publish_burn_capability<CoinType>(tc_account, burn_cap, tc_account);
+        publish_burn_capability<CoinType>(tc_account, burn_cap);
     }
 
     spec fun register_SCS_currency {
+        /// Must abort if tc_account does not have the TreasuryCompliance role.
+        /// Only an account with the TreasuryCompliance role can have the MintCapability [B11].
+        include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+
         aborts_if exists<MintCapability<CoinType>>(Signer::spec_address_of(tc_account)) with Errors::ALREADY_PUBLISHED;
         include RegisterCurrencyAbortsIf<CoinType>;
-        include PublishBurnCapAbortsIfs<CoinType>{account: tc_account};
+        include PublishBurnCapAbortsIfs<CoinType>;
         ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
     }
 
@@ -982,7 +985,9 @@ module Libra {
         );
     }
     spec fun update_lbr_exchange_rate {
+        /// Must abort if the account does not have the TreasuryCompliance Role [B14].
         include Roles::AbortsIfNotTreasuryCompliance{account: tc_account};
+
         include AbortsIfNoCurrency<FromCoinType>;
         ensures spec_currency_info<FromCoinType>().to_lbr_exchange_rate == lbr_exchange_rate;
     }
@@ -1078,47 +1083,10 @@ module Libra {
             exists<MintCapability<CoinType>>(addr1)
         }
 
-    }
-
-    /// ## Minting
-
-    /// For an SCS coin, the mint capability cannot move or disappear.
-    /// TODO: Specify that they're published at the one true treasurycompliance address?
-
-    spec module {
-
-        /// If an address has a mint capability, it is an SCS currency.
-        invariant [global]
-            forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
-                spec_is_SCS_currency<coin_type>();
-
-        /// If there is a pending offer for a mint capability, the coin_type is an SCS currency and
-        /// there are no published Mint Capabilities. (This is the state after register_SCS_currency_start)
-        /// > TODO: this invariant seems to be broken, as it has no premise regarding pending offers.
-        invariant [global, deactivated]
-            forall coin_type: type :
-                spec_is_SCS_currency<coin_type>()
-                && (forall addr3: address : !spec_has_mint_capability<coin_type>(addr3));
-
-        // At most one address has a mint capability for SCS CoinType
-        invariant [global, isolated]
-            forall coin_type: type where spec_is_SCS_currency<coin_type>():
-                forall addr1: address, addr2: address
-                     where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
-                          addr1 == addr2;
-
-        // Once a MintCapability appears at an address, it stays there.
-        invariant update [global]
-            forall coin_type: type:
-                forall addr1: address where old(exists<MintCapability<coin_type>>(addr1)):
-                    exists<MintCapability<coin_type>>(addr1);
-
-        // If address has a mint capability, it has the treasury compliance role
-        invariant [global]
-            forall coin_type: type:
-                forall addr1: address where exists<MintCapability<coin_type>>(addr1):
-                     Roles::spec_has_treasury_compliance_role_addr(addr1);
-
+        /// Returns true if a BurnCapability for CoinType exists at addr.
+        define spec_has_burn_capability<CoinType>(addr: address): bool {
+            exists<BurnCapability<CoinType>>(addr)
+        }
     }
 
     /// ## Conservation of currency
@@ -1156,73 +1124,182 @@ module Libra {
     /// aggregate value exceeds the CoinInfo.total_value.  However, that property involves summations over
     /// all resources and is beyond the capabilities of the specification logic or the prover, currently.
 
-    spec module {
-        /// The permission "MintCurrency(type)" is granted to TreasuryCompliance [B11].
-        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
 
-        /// The permission "BurnCurrency(type)" is granted to TreasuryCompliance [B12].
-        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
-
-        /// The permission "PreburnCurrency(type)" is granted to DesignatedDealer [B13].
-        apply Roles::AbortsIfNotDesignatedDealer to publish_preburn_to_account<CoinType>;
-
-        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [B14].
-        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to update_lbr_exchange_rate<FromCoinType>;
-    }
+    /// ## Minting
 
     spec schema TotalValueNotIncrease<CoinType> {
         /// The total amount of currency does not increase.
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().total_value <= old(spec_currency_info<CoinType>().total_value);
     }
+    spec schema PreserveMintCapExistence<CoinType> {
+        /// The existence of MintCapability is preserved.
+        ensures forall addr: address:
+            old(exists<MintCapability<CoinType>>(addr)) ==>
+                exists<MintCapability<CoinType>>(addr);
+    }
+    spec schema PreserveMintCapAbsence<CoinType> {
+        /// The absence of MintCapability is preserved.
+        ensures forall addr: address:
+            old(!exists<MintCapability<CoinType>>(addr)) ==>
+                !exists<MintCapability<CoinType>>(addr);
+    }
     spec module {
         /// Only mint functions can increase the total amount of currency [B11].
         apply TotalValueNotIncrease<CoinType> to *<CoinType>
             except mint<CoinType>, mint_with_capability<CoinType>;
+
+        /// In order to successfully call `mint` and `mint_with_capability`, MintCapability is
+        /// required. MintCapability must be only granted to a TreasuryCompliance account [B11].
+        /// Only `register_SCS_currency` creates MintCapability, which must abort if the account
+        /// does not have the TreasuryCompliance role [B17].
+        // TODO(jkpark): This kind of spec needs to be rewritten later. The problem of this spec is
+        // that it is in the form of the schema application, so verified against all the functions
+        // only in this module. Even though this is verified, there might be a function in an other
+        // module that violates this property (by obtaining a MintCapability from `register_currency`
+        // and publishing it somewhere inappropriate).
+        apply PreserveMintCapAbsence<CoinType> to *<CoinType> except register_SCS_currency<CoinType>;
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
+
+        /// Only TreasuryCompliance can have MintCapability [B11].
+        /// If an account has MintCapability, it is a TreasuryCompliance account.
+        invariant [global] forall coin_type: type:
+            forall addr: address:
+                exists<MintCapability<coin_type>>(addr) ==>
+                    Roles::spec_has_treasury_compliance_role_addr(addr);
+
+        /// MintCapability is not transferrable [D11].
+        apply PreserveMintCapExistence<CoinType> to *<CoinType>;
+
+        /// The permission "MintCurrency" is unique per currency [C11].
+        /// At most one address has a mint capability for SCS CoinType
+        invariant [global, isolated]
+            forall coin_type: type where spec_is_SCS_currency<coin_type>():
+                forall addr1: address, addr2: address
+                     where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
+                          addr1 == addr2;
+        /// If an address has a mint capability, it is an SCS currency.
+        invariant [global]
+            forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):
+                spec_is_SCS_currency<coin_type>();
     }
+
+
+    /// ## Burning
 
     spec schema TotalValueNotDecrease<CoinType> {
         /// The total amount of currency does not decrease.
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().total_value >= old(spec_currency_info<CoinType>().total_value);
     }
+    spec schema PreserveBurnCapExistence<CoinType> {
+        /// The existence of BurnCapability is preserved.
+        ensures forall addr: address:
+            old(exists<BurnCapability<CoinType>>(addr)) ==>
+                exists<BurnCapability<CoinType>>(addr);
+    }
+    spec schema PreserveBurnCapAbsence<CoinType> {
+        /// The absence of BurnCapability is preserved.
+        ensures forall addr: address:
+            old(!exists<BurnCapability<CoinType>>(addr)) ==>
+                !exists<BurnCapability<CoinType>>(addr);
+    }
     spec module {
         /// Only burn functions can decrease the total amount of currency [B12].
         apply TotalValueNotDecrease<CoinType> to *<CoinType>
             except burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>,
             burn_now<CoinType>;
+
+        /// In order to successfully call the burn functions, BurnCapability is required.
+        /// BurnCapability must be only granted to a TreasuryCompliance account [B12].
+        /// Only `register_SCS_currency` and `publish_burn_capability` publish BurnCapability,
+        /// which must abort if the account does not have the TreasuryCompliance role [B17].
+        apply PreserveBurnCapAbsence<CoinType> to *<CoinType> except register_SCS_currency<CoinType>, publish_burn_capability<CoinType>;
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
+
+        /// Only TreasuryCompliance can have BurnCapability [B12].
+        /// If an account has BurnCapability, it is a TreasuryCompliance account.
+        invariant [global] forall coin_type: type:
+            forall addr1: address:
+                exists<BurnCapability<coin_type>>(addr1) ==>
+                    Roles::spec_has_treasury_compliance_role_addr(addr1);
+
+        /// BurnCapability is not transferrable [D12]. BurnCapability can be extracted from an
+        /// account, but is always moved back to the original account. This is the case in
+        /// `TransactionFee::burn_fees` which is the only user of `remove_burn_capability` and
+        /// `publish_burn_capability`.
+        apply PreserveBurnCapExistence<CoinType> to *<CoinType> except remove_burn_capability<CoinType>;
+
+        // The permission "BurnCurrency" is unique per currency [C12]. At most one BurnCapability
+        // can exist for each SCS CoinType. It is because when a new CoinType is registered in
+        // `register_currency`, BurnCapability<CoinType> is packed (i.e., its instance is created)
+        // only one time.
     }
 
-    /// Only burn functions can decrease the preburn value of currency [B12].
+
+    /// ## Preburning
+
     spec schema PreburnValueNotIncrease<CoinType> {
         /// The preburn value of currency does not increase.
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().preburn_value <= old(spec_currency_info<CoinType>().preburn_value);
     }
-    spec module {
-        apply PreburnValueNotDecrease<CoinType> to *<CoinType>
-            except burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>,
-            burn_now<CoinType>, cancel_burn<CoinType>, cancel_burn_with_capability<CoinType>;
-    }
-
-    /// Only preburn functions can increase the preburn value of currency [B13].
     spec schema PreburnValueNotDecrease<CoinType> {
         /// The the preburn value of currency does not decrease.
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().preburn_value >= old(spec_currency_info<CoinType>().preburn_value);
     }
-    spec module {
-        apply PreburnValueNotIncrease<CoinType> to *<CoinType>
-            except preburn_to<CoinType>, preburn_with_resource<CoinType>;
+    spec schema PreservePreburnExistence<CoinType> {
+        /// The existence of Preburn is preserved.
+        ensures forall addr: address:
+            old(exists<Preburn<CoinType>>(addr)) ==>
+                exists<Preburn<CoinType>>(addr);
+    }
+    spec schema PreservePreburnAbsence<CoinType> {
+        /// The absence of Preburn is preserved.
+        ensures forall addr: address:
+            old(!exists<Preburn<CoinType>>(addr)) ==>
+                !exists<Preburn<CoinType>>(addr);
     }
 
-    /// Only update_lbr_exchange_rate can change the exchange rate [B14].
+    spec module {
+        /// Only burn functions can decrease the preburn value of currency [B13].
+        apply PreburnValueNotDecrease<CoinType> to *<CoinType>
+            except burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>,
+            burn_now<CoinType>, cancel_burn<CoinType>, cancel_burn_with_capability<CoinType>;
+
+        /// Only preburn functions can increase the preburn value of currency [B13].
+        apply PreburnValueNotIncrease<CoinType> to *<CoinType>
+            except preburn_to<CoinType>, preburn_with_resource<CoinType>;
+
+        /// In order to successfully call the preburn functions, Preburn is required. Preburn must
+        /// be only granted to a DesignatedDealer account [B13]. Only `publish_preburn_to_account`
+        /// publishes Preburn, which must abort if the account does not have the DesignatedDealer role [B13].
+        apply Roles::AbortsIfNotDesignatedDealer to publish_preburn_to_account<CoinType>;
+        apply PreservePreburnAbsence<CoinType> to *<CoinType> except publish_preburn_to_account<CoinType>;
+
+        /// Only DesignatedDealer can have Preburn [B12].
+        /// If an account has Preburn, it is a DesignatedDealer account.
+        invariant [global] forall coin_type: type:
+            forall addr1: address:
+                exists<Preburn<coin_type>>(addr1) ==>
+                    Roles::spec_has_designated_dealer_role_addr(addr1);
+
+        /// Preburn is not transferrable [D13].
+        apply PreservePreburnExistence<CoinType> to *<CoinType>;
+    }
+
+
     spec schema ExchangeRateRemainsSame<CoinType> {
         /// The exchange rate to LBR stays constant.
         ensures old(spec_is_currency<CoinType>())
             ==> spec_currency_info<CoinType>().to_lbr_exchange_rate == old(spec_currency_info<CoinType>().to_lbr_exchange_rate);
     }
     spec module {
+        /// The permission "UpdateExchangeRate(type)" is granted to TreasuryCompliance [B14].
+        apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to update_lbr_exchange_rate<FromCoinType>;
+
+        /// Only update_lbr_exchange_rate can change the exchange rate [B14].
         apply ExchangeRateRemainsSame<CoinType> to *<CoinType>
             except update_lbr_exchange_rate<CoinType>;
     }

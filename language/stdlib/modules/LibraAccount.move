@@ -260,6 +260,7 @@ module LibraAccount {
     }
 
     spec fun staple_lbr {
+        pragma verify=false; // TODO: disabled due to timeout
         pragma opaque;
         // Verification of this function is unstable (butterfly effect).
         pragma verify_duration_estimate = 100;
@@ -1267,32 +1268,58 @@ module LibraAccount {
 
     spec schema EnsuresHasKeyRotationCap {
         account: signer;
-        ensures spec_has_key_rotation_cap(Signer::spec_address_of(account));
+        let addr = Signer::spec_address_of(account);
+        ensures spec_has_key_rotation_cap(addr);
+        ensures Option::spec_get(spec_get_key_rotation_cap(addr)).account_address == addr;
+    }
+    spec schema PreserveKeyRotationCapAbsence {
+        /// The absence of KeyRotationCap is preserved.
+        ensures forall addr1: address:
+            old(!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).key_rotation_capability)) ==>
+                (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).key_rotation_capability));
+    }
+    spec module {
+        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
+        /// When an account is created, its KeyRotationCapability is granted to the account.
+        apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
+
+        /// Only `make_account` creates KeyRotationCap [B26][C26]. `create_*_account` only calls
+        /// `make_account`, and does not pack KeyRotationCap by itself.
+        /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
+        apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account, restore_key_rotation_capability;
+
+        /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
+        /// or the key rotation capability for addr itself [B26].
+        invariant [global, isolated] forall addr1: address where exists_at(addr1):
+            delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
     spec schema EnsuresWithdrawalCap {
         account: signer;
-        ensures spec_has_withdraw_cap(Signer::spec_address_of(account));
+        let addr = Signer::spec_address_of(account);
+        ensures spec_has_withdraw_cap(addr);
+        ensures Option::spec_get(spec_get_withdraw_cap(addr)).account_address == addr;
     }
-
+    spec schema PreserveWithdrawCapAbsence {
+        /// The absence of WithdrawCap is preserved.
+        ensures forall addr1: address:
+            old(!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability)) ==>
+                (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).withdrawal_capability));
+    }
     spec module {
-        /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
-        apply EnsuresHasKeyRotationCap{account: new_account} to make_account;
-
         /// the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
+        /// When an account is created, its WithdrawCapability is granted to the account.
         apply EnsuresWithdrawalCap{account: new_account} to make_account;
-    }
 
-    spec module {
-        /// The LibraAccount under addr holds either no withdraw capability
-        /// (withdraw cap has been delegated) or the withdraw capability for addr itself.
+        /// Only `make_account` creates WithdrawCap [B27][C27]. `create_*_account` only calls
+        /// `make_account`, and does not pack KeyRotationCap by itself.
+        /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
+        apply PreserveWithdrawCapAbsence to * except make_account, create_*_account, restore_withdraw_capability;
+
+        /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
+        /// or the withdraw capability for addr itself [B27].
         invariant [global] forall addr1: address where exists_at(addr1):
             delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
-
-        /// The LibraAccount under addr holds either no key rotation capability
-        /// (key rotation cap has been delegated) or the key rotation capability for addr itself.
-        invariant [global, isolated] forall addr1: address where exists_at(addr1):
-            delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
     /// only rotate_authentication_key can rotate authentication_key [B26].

@@ -958,13 +958,19 @@ The permission "RotateDualAttestationInfo" is granted to ParentVASP and Designat
 
 
 <pre><code><b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+</code></pre>
+
+
+Must abort if the account does not have the resource Credential [B25].
+
+
+<pre><code><b>include</b> <a href="#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: sender};
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
-<b>include</b> <a href="#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: sender};
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).base_url == new_url;
 </code></pre>
 
 
-The sender can only rotates its own base url [B25].
+The sender can only rotate its own base url [B25].
 
 
 <pre><code><b>ensures</b> forall addr:address where addr != sender:
@@ -996,10 +1002,18 @@ The sender can only rotates its own base url [B25].
 
 
 
-<pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <a name="0x1_DualAttestation_sender$24"></a>
-<b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>include</b> <a href="#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: sender};
+
+
+<pre><code><b>let</b> sender = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+</code></pre>
+
+
+Must abort if the account does not have the resource Credential [B25].
+
+
+<pre><code><b>include</b> <a href="#0x1_DualAttestation_AbortsIfNoCredential">AbortsIfNoCredential</a>{addr: sender};
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(new_key) with Errors::INVALID_ARGUMENT;
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(sender).compliance_public_key == new_key;
 </code></pre>

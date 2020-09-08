@@ -280,8 +280,8 @@ underlying fiat.
             tc_address,
             &coin2_burn_cap
         );
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin1_burn_cap, tc_account);
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin2_burn_cap, tc_account);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin1_burn_cap);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin2_burn_cap);
     } <b>else</b> {
         // extract fees
         <b>let</b> fees = borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(fee_address);
@@ -294,7 +294,7 @@ underlying fiat.
             tc_address,
             &burn_cap
         );
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, burn_cap, tc_account);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, burn_cap);
     }
 }
 </code></pre>
@@ -397,8 +397,14 @@ borrow_global&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt
 
 
 <pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+Must abort if the account does not have the TreasuryCompliance role [B12].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>aborts_if</b> !<a href="#0x1_TransactionFee_is_coin_initialized">is_coin_initialized</a>&lt;CoinType&gt;() with Errors::NOT_PUBLISHED;
 <b>include</b> <b>if</b> (<a href="LBR.md#0x1_LBR_spec_is_lbr">LBR::spec_is_lbr</a>&lt;CoinType&gt;()) <a href="#0x1_TransactionFee_BurnFeesLBR">BurnFeesLBR</a> <b>else</b> <a href="#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt;;
 </code></pre>
@@ -454,10 +460,27 @@ Specification of the case where burn type is not LBR.
 
 <pre><code><b>schema</b> <a href="#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
     tc_account: signer;
+}
+</code></pre>
+
+
+Must abort if the account does not have BurnCapability [B12].
+
+
+<pre><code><b>schema</b> <a href="#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoBurnCapability">Libra::AbortsIfNoBurnCapability</a>&lt;CoinType&gt;{account: tc_account};
     <a name="0x1_TransactionFee_fees$12"></a>
     <b>let</b> fees = <a href="#0x1_TransactionFee_transaction_fee">transaction_fee</a>&lt;CoinType&gt;();
     <b>include</b> <a href="Libra.md#0x1_Libra_BurnNowAbortsIf">Libra::BurnNowAbortsIf</a>&lt;CoinType&gt;{coin: fees.balance, preburn: fees.preburn};
+}
+</code></pre>
+
+
+tc_account retrieves BurnCapability [B12]. BurnCapability is not transferrable [D12].
+
+
+<pre><code><b>schema</b> <a href="#0x1_TransactionFee_BurnFeesNotLBR">BurnFeesNotLBR</a>&lt;CoinType&gt; {
+    <b>ensures</b> exists&lt;<a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
 }
 </code></pre>
 

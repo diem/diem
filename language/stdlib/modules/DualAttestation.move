@@ -130,11 +130,14 @@ module DualAttestation {
     }
     spec fun rotate_base_url {
         let sender = Signer::spec_address_of(account);
-        include LibraTimestamp::AbortsIfNotOperating;
+
+        /// Must abort if the account does not have the resource Credential [B25].
         include AbortsIfNoCredential{addr: sender};
+
+        include LibraTimestamp::AbortsIfNotOperating;
         ensures global<Credential>(sender).base_url == new_url;
 
-        /// The sender can only rotates its own base url [B25].
+        /// The sender can only rotate its own base url [B25].
         ensures forall addr:address where addr != sender:
             global<Credential>(addr).base_url == old(global<Credential>(addr).base_url);
     }
@@ -160,9 +163,12 @@ module DualAttestation {
 
     }
     spec fun rotate_compliance_public_key {
-        include LibraTimestamp::AbortsIfNotOperating;
         let sender = Signer::spec_address_of(account);
+
+        /// Must abort if the account does not have the resource Credential [B25].
         include AbortsIfNoCredential{addr: sender};
+
+        include LibraTimestamp::AbortsIfNotOperating;
         aborts_if !Signature::ed25519_validate_pubkey(new_key) with Errors::INVALID_ARGUMENT;
         ensures global<Credential>(sender).compliance_public_key == new_key;
         /// The sender only rotates its own compliance_public_key [B25].

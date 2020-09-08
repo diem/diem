@@ -2615,7 +2615,8 @@ After genesis, the
 
 
 
-<pre><code>pragma opaque;
+<pre><code>pragma verify=<b>false</b>;
+pragma opaque;
 pragma verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address);
@@ -2875,7 +2876,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_payer$67"></a>
+<a name="0x1_LibraAccount_payer$69"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
@@ -2921,7 +2922,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_sender_addr$68"></a>
+<a name="0x1_LibraAccount_sender_addr$70"></a>
 <b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
 <b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
@@ -2959,7 +2960,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_cap_addr$69"></a>
+<a name="0x1_LibraAccount_cap_addr$71"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap_addr) with Errors::NOT_PUBLISHED;
@@ -3030,7 +3031,7 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_account_addr$70"></a>
+<a name="0x1_LibraAccount_account_addr$72"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -3200,8 +3201,55 @@ Returns true if the LibraAccount at
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a> {
     account: signer;
-    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+    <a name="0x1_LibraAccount_addr$67"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr);
+    <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address == addr;
 }
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_PreserveKeyRotationCapAbsence"></a>
+
+The absence of KeyRotationCap is preserved.
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_PreserveKeyRotationCapAbsence">PreserveKeyRotationCapAbsence</a> {
+    <b>ensures</b> forall addr1: address:
+        <b>old</b>(!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).key_rotation_capability)) ==&gt;
+            (!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).key_rotation_capability));
+}
+</code></pre>
+
+
+
+the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
+When an account is created, its KeyRotationCapability is granted to the account.
+
+
+<pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a>{account: new_account} <b>to</b> make_account;
+</code></pre>
+
+
+Only
+<code>make_account</code> creates KeyRotationCap [B26][C26].
+<code>create_*_account</code> only calls
+<code>make_account</code>, and does not pack KeyRotationCap by itself.
+<code>restore_key_rotation_capability</code> restores KeyRotationCap, and does not create new one.
+
+
+<pre><code><b>apply</b> <a href="#0x1_LibraAccount_PreserveKeyRotationCapAbsence">PreserveKeyRotationCapAbsence</a> <b>to</b> * <b>except</b> make_account, create_*_account, restore_key_rotation_capability;
+</code></pre>
+
+
+Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
+or the key rotation capability for addr itself [B26].
+
+
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
+    <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
 </code></pre>
 
 
@@ -3212,42 +3260,55 @@ Returns true if the LibraAccount at
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a> {
     account: signer;
-    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+    <a name="0x1_LibraAccount_addr$68"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr);
+    <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address == addr;
 }
 </code></pre>
 
 
 
-the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
+
+<a name="0x1_LibraAccount_PreserveWithdrawCapAbsence"></a>
+
+The absence of WithdrawCap is preserved.
 
 
-<pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a>{account: new_account} <b>to</b> make_account;
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_PreserveWithdrawCapAbsence">PreserveWithdrawCapAbsence</a> {
+    <b>ensures</b> forall addr1: address:
+        <b>old</b>(!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).withdrawal_capability)) ==&gt;
+            (!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).withdrawal_capability));
+}
 </code></pre>
 
 
+
 the permission "WithdrawalCapability(addr)" is granted to the account at addr [B27].
+When an account is created, its WithdrawCapability is granted to the account.
 
 
 <pre><code><b>apply</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a>{account: new_account} <b>to</b> make_account;
 </code></pre>
 
 
+Only
+<code>make_account</code> creates WithdrawCap [B27][C27].
+<code>create_*_account</code> only calls
+<code>make_account</code>, and does not pack KeyRotationCap by itself.
+<code>restore_withdraw_capability</code> restores WithdrawCap, and does not create new one.
 
-The LibraAccount under addr holds either no withdraw capability
-(withdraw cap has been delegated) or the withdraw capability for addr itself.
+
+<pre><code><b>apply</b> <a href="#0x1_LibraAccount_PreserveWithdrawCapAbsence">PreserveWithdrawCapAbsence</a> <b>to</b> * <b>except</b> make_account, create_*_account, restore_withdraw_capability;
+</code></pre>
+
+
+Every account holds either no withdraw capability (because withdraw cap has been delegated)
+or the withdraw capability for addr itself [B27].
 
 
 <pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr1);
-</code></pre>
-
-
-The LibraAccount under addr holds either no key rotation capability
-(key rotation cap has been delegated) or the key rotation capability for addr itself.
-
-
-<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
-    <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
 </code></pre>
 
 

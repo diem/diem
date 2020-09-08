@@ -133,7 +133,7 @@ fun main(account: &signer) {
     let (mint_cap, burn_cap) = Libra::register_currency<u64>(
         account, FixedPoint32::create_from_rational(1, 1), true, 10, 10, b"wat"
     );
-    Libra::publish_burn_capability(account, burn_cap, account);
+    Libra::publish_burn_capability(account, burn_cap);
     Holder::hold(account, mint_cap);
 }
 }
