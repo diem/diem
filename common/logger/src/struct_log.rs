@@ -145,7 +145,7 @@ impl TcpWriter {
                     return;
                 }
                 Err(e) => {
-                    log::error!("[Logging] Failed to connect: {}", e);
+                    eprintln!("[Logging] Failed to connect: {}", e);
                     STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
                 }
             }
@@ -173,7 +173,7 @@ impl TcpWriter {
                         stream.set_write_timeout(Some(Duration::from_millis(WRITE_TIMEOUT_MS)))
                     {
                         STRUCT_LOG_CONNECT_ERROR_COUNT.inc();
-                        log::error!("[Logging] Failed to set write timeout: {}", err);
+                        eprintln!("[Logging] Failed to set write timeout: {}", err);
                         continue;
                     }
                     return Ok(stream);
