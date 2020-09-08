@@ -127,13 +127,11 @@ mod tests {
     use std::{collections::HashMap, sync::Arc};
     use warp::Filter;
 
-    fn setup() -> (tokio::runtime::Runtime, Arc<mint::Service>) {
+    fn setup() -> Arc<mint::Service> {
         setup_with_accounts(genesis_accounts())
     }
 
-    fn setup_with_accounts(
-        accounts: HashMap<String, serde_json::Value>,
-    ) -> (tokio::runtime::Runtime, Arc<mint::Service>) {
+    fn setup_with_accounts(accounts: HashMap<String, serde_json::Value>) -> Arc<mint::Service> {
         let f = tempfile::NamedTempFile::new()
             .unwrap()
             .into_temp_path()
@@ -141,7 +139,6 @@ mod tests {
         generate_key::generate_and_save_key(&f);
 
         let chain_id = libra_types::chain_id::ChainId::test();
-        let rt = tokio::runtime::Runtime::new().unwrap();
 
         let accounts_arc = Arc::new(accounts);
         let stub = warp::any()
@@ -151,97 +148,89 @@ mod tests {
                 Ok(warp::reply::json(&resp))
             });
         let port = libra_config::utils::get_available_port();
-        let server = rt.enter(move || warp::serve(stub).bind(([127, 0, 0, 1], port)));
-        rt.handle().spawn(server);
+        let future = warp::serve(stub).bind(([127, 0, 0, 1], port));
+        tokio::task::spawn(async move { future.await });
 
         let service = mint::Service::new(
             format!("http://localhost:{}/v1", port),
             chain_id,
             f.to_str().unwrap().to_owned(),
         );
-        (rt, Arc::new(service))
+        Arc::new(service)
     }
 
-    #[test]
-    fn test_healthy() {
-        let (mut rt, service) = setup();
+    #[tokio::test]
+    async fn test_healthy() {
+        let service = setup();
         let filter = routes(service);
-        let resp = rt.block_on(async {
-            warp::test::request()
-                .method("GET")
-                .path("/-/healthy")
-                .reply(&filter)
-                .await
-        });
+        let resp = warp::test::request()
+            .method("GET")
+            .path("/-/healthy")
+            .reply(&filter)
+            .await;
         assert_eq!(resp.status(), 200);
         assert_eq!(resp.body(), "libra-faucet:ok");
     }
 
-    #[test]
-    fn test_mint() {
-        let (mut rt, service) = setup();
+    #[tokio::test]
+    async fn test_mint() {
+        let service = setup();
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
         for path in vec!["/", "/mint"] {
-            let resp = rt.block_on(async {
-                warp::test::request()
-                    .method("POST")
-                    .path(
-                        format!(
-                            "{}?auth_key={}&amount=1000000&currency_code=LBR",
-                            path, auth_key
-                        )
-                        .as_str(),
+            let resp = warp::test::request()
+                .method("POST")
+                .path(
+                    format!(
+                        "{}?auth_key={}&amount=1000000&currency_code=LBR",
+                        path, auth_key
                     )
-                    .reply(&filter)
-                    .await
-            });
+                    .as_str(),
+                )
+                .reply(&filter)
+                .await;
             assert_eq!(resp.body(), "2389"); // 2388+1
         }
     }
 
-    #[test]
-    fn test_mint_invalid_auth_key() {
-        let (mut rt, service) = setup();
+    #[tokio::test]
+    async fn test_mint_invalid_auth_key() {
+        let service = setup();
         let filter = routes(service);
 
         let auth_key = "invalid-auth-key";
-        let resp = rt.block_on(async {
-            warp::test::request()
-                .method("POST")
-                .path(
-                    format!(
-                        "/mint?auth_key={}&amount=1000000&currency_code=LBR",
-                        auth_key
-                    )
-                    .as_str(),
+        let resp = warp::test::request()
+            .method("POST")
+            .path(
+                format!(
+                    "/mint?auth_key={}&amount=1000000&currency_code=LBR",
+                    auth_key
                 )
-                .reply(&filter)
-                .await
-        });
+                .as_str(),
+            )
+            .reply(&filter)
+            .await;
         assert_eq!(resp.body(), "Invalid query string");
     }
 
-    #[test]
-    fn test_mint_fullnode_error() {
-        let (mut rt, service) = setup_with_accounts(HashMap::new());
+    #[tokio::test]
+    async fn test_mint_fullnode_error() {
+        let service = setup_with_accounts(HashMap::new());
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
-        let resp = rt.block_on(async {
-            warp::test::request()
-                .method("POST")
-                .path(
-                    format!(
-                        "/mint?auth_key={}&amount=1000000&currency_code=LBR",
-                        auth_key
-                    )
-                    .as_str(),
+        let resp = warp::test::request()
+            .method("POST")
+            .path(
+                format!(
+                    "/mint?auth_key={}&amount=1000000&currency_code=LBR",
+                    auth_key
                 )
-                .reply(&filter)
-                .await
-        });
+                .as_str(),
+            )
+            .reply(&filter)
+            .await;
         assert_eq!(
             resp.body(),
             "Unhandled rejection: ServerInternalError(\"treasury compliance account not found\")"
