@@ -1,0 +1,4 @@
+* better error message when request params is invalid
+* check account existence to decide whether submit creating account transaction
+* return submitted transaction bytes instead of dd account next seq number, client can wait for transaction to know whether the transactions are succeed. wait for account seq number is a bad example of waiting for transaction executed.
+* add create dd account endpoint

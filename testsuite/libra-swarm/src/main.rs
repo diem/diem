@@ -5,7 +5,7 @@
 
 use libra_config::config::NodeConfig;
 use libra_genesis_tool::config_builder::FullnodeType;
-use libra_swarm::{client, swarm::LibraSwarm};
+use libra_swarm::{client, faucet, swarm::LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::chain_id::ChainId;
 use std::path::Path;
@@ -32,6 +32,10 @@ struct Args {
     /// swarm.
     #[structopt(short = "f", long, default_value = "0")]
     pub num_full_nodes: usize,
+    /// Start with faucet service for minting coins, this flag disables cli's dev commands.
+    /// Used for manual testing faucet service integration.
+    #[structopt(short = "m", long)]
+    pub start_faucet: bool,
 }
 
 fn main() {
@@ -125,17 +129,36 @@ fn main() {
         );
     }
 
+    let faucet = if args.start_faucet {
+        let faucet_port = libra_config::utils::get_available_port();
+        let server_port = validator_swarm.get_client_port(0);
+        println!("Starting faucet service at port: {}", faucet_port);
+        let process =
+            faucet::Process::start(faucet_port, server_port, Path::new(&libra_root_key_path));
+        println!("Waiting for faucet connectivity");
+        process
+            .wait_for_connectivity()
+            .expect("Failed to start Faucet");
+        Some(process)
+    } else {
+        None
+    };
+
     if args.start_client {
         let tmp_mnemonic_file = TempPath::new();
         tmp_mnemonic_file.create_as_file().unwrap();
 
         let port = validator_swarm.get_client_port(0);
-        let client = client::InteractiveClient::new_with_inherit_io(
-            port,
-            Path::new(&libra_root_key_path),
-            &tmp_mnemonic_file.path(),
-            waypoint,
-        );
+        let client = if let Some(ref f) = faucet {
+            client::InteractiveClient::new_with_inherit_io_faucet(port, f.mint_url(), waypoint)
+        } else {
+            client::InteractiveClient::new_with_inherit_io(
+                port,
+                Path::new(&libra_root_key_path),
+                &tmp_mnemonic_file.path(),
+                waypoint,
+            )
+        };
         println!("Loading client...");
         let _output = client.output().expect("Failed to wait on child");
         println!("Exit client.");

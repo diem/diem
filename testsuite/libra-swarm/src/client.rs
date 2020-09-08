@@ -81,6 +81,28 @@ impl InteractiveClient {
         }
     }
 
+    pub fn new_with_inherit_io_faucet(port: u16, faucet_url: String, waypoint: Waypoint) -> Self {
+        Self {
+            client: Some(
+                Command::new(workspace_builder::get_bin("cli"))
+                    .current_dir(workspace_builder::workspace_root())
+                    .arg("-u")
+                    .arg(format!("http://localhost:{}", port))
+                    .arg("-f")
+                    .arg(faucet_url)
+                    .arg("--waypoint")
+                    .arg(waypoint.to_string())
+                    .arg("-c")
+                    .arg(ChainId::test().id().to_string())
+                    .stdin(Stdio::inherit())
+                    .stdout(Stdio::inherit())
+                    .stderr(Stdio::inherit())
+                    .spawn()
+                    .expect("Failed to spawn client process"),
+            ),
+        }
+    }
+
     pub fn output(mut self) -> io::Result<Output> {
         self.client.take().unwrap().wait_with_output()
     }
