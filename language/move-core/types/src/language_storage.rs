@@ -10,6 +10,7 @@ use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::convert::From;
 use std::fmt::{Display, Formatter};
 
 pub const CODE_TAG: u8 = 0;
@@ -137,6 +138,12 @@ impl ModuleId {
 impl Display for ModuleId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}::{}", self.address, self.name)
+    }
+}
+
+impl From<ModuleId> for (AccountAddress, Identifier) {
+    fn from(module_id: ModuleId) -> Self {
+        (module_id.address, module_id.name)
     }
 }
 

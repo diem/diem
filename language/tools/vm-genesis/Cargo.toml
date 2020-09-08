@@ -29,6 +29,7 @@ compiled-stdlib = { path = "../../stdlib/compiled",  version = "0.1.0" }
 transaction-builder = { path = "../../transaction-builder", version = "0.1.0"}
 vm = { path = "../../vm", version = "0.1.0" }
 libra-vm = { path = "../../libra-vm", version = "0.1.0" }
+genesis-builder = { path = "../genesis-builder", version = "0.1.0" }
 
 [dev-dependencies]
 proptest = "0.10.1"

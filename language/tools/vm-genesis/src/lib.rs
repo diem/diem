@@ -3,11 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-mod genesis_context;
 mod genesis_gas_schedule;
 
-use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
+use crate::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
+use genesis_builder::build_genesis_simple;
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -26,14 +26,14 @@ use libra_types::{
         WriteSetPayload,
     },
 };
-use libra_vm::{convert_changeset_and_events, data_cache::StateViewCache};
+use libra_vm::convert_changeset_and_events;
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use move_vm_runtime::{move_vm::MoveVM, session::Session};
+use move_vm_runtime::{data_cache::RemoteCache, session::Session};
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
@@ -99,58 +99,51 @@ pub fn encode_genesis_change_set(
     vm_publishing_option: VMPublishingOption,
     chain_id: ChainId,
 ) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>) {
-    // create a data view for move_vm
-    let mut state_view = GenesisStateView::new();
-    for module in stdlib_modules {
-        let module_id = module.self_id();
-        state_view.add_module(&module_id, &module);
-    }
-    let data_cache = StateViewCache::new(&state_view);
+    let (genesis_modules, stdlib_modules) = serialize_stdlib_modules(stdlib_modules);
 
-    let move_vm = MoveVM::new();
-    let mut session = move_vm.new_session(&data_cache);
+    let (changeset, events) = build_genesis_simple(genesis_modules, |session| {
+        for (module_id, blob) in stdlib_modules {
+            session
+                .publish_module(
+                    blob,
+                    *module_id.address(),
+                    &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+                )
+                .unwrap_or_else(|e| panic!("Failure publishing module {:?}: {:?}", module_id, e));
+        }
 
-    let lbr_ty = TypeTag::Struct(StructTag {
-        address: *account_config::LBR_MODULE.address(),
-        module: account_config::LBR_MODULE.name().to_owned(),
-        name: account_config::LBR_STRUCT_NAME.to_owned(),
-        type_params: vec![],
-    });
+        let lbr_ty = TypeTag::Struct(StructTag {
+            address: *account_config::LBR_MODULE.address(),
+            module: account_config::LBR_MODULE.name().to_owned(),
+            name: account_config::LBR_STRUCT_NAME.to_owned(),
+            type_params: vec![],
+        });
 
-    create_and_initialize_main_accounts(
-        &mut session,
-        &libra_root_key,
-        &treasury_compliance_key,
-        vm_publishing_option,
-        &lbr_ty,
-        chain_id,
-    );
-    // generate the genesis WriteSet
-    create_and_initialize_owners_operators(
-        &mut session,
-        &operator_assignments,
-        &operator_registrations,
-    );
-    reconfigure(&mut session);
+        create_and_initialize_main_accounts(
+            session,
+            &libra_root_key,
+            &treasury_compliance_key,
+            vm_publishing_option,
+            &lbr_ty,
+            chain_id,
+        );
+        // generate the genesis WriteSet
+        create_and_initialize_owners_operators(
+            session,
+            &operator_assignments,
+            &operator_registrations,
+        );
+        reconfigure(session);
 
-    // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut session, &treasury_compliance_key);
+        // XXX/TODO: for testnet only
+        create_and_initialize_testnet_minting(session, &treasury_compliance_key);
 
-    let (mut changeset1, mut events1) = session.finish().unwrap();
-
-    let state_view = GenesisStateView::new();
-    let data_cache = StateViewCache::new(&state_view);
-    let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, stdlib_modules);
-    let (changeset2, events2) = session.finish().unwrap();
-
-    changeset1
-        .squash(changeset2)
-        .expect("changesets should merge");
-    events1.extend(events2);
+        Ok(())
+    })
+    .unwrap();
 
     // REVIEW: Performance & caching.
-    let type_mapping = changeset1
+    let type_mapping = changeset
         .accounts
         .iter()
         .flat_map(|(_, account_changeset)| {
@@ -161,7 +154,7 @@ pub fn encode_genesis_change_set(
         })
         .collect();
 
-    let (write_set, events) = convert_changeset_and_events(changeset1, events1).unwrap();
+    let (write_set, events) = convert_changeset_and_events(changeset, events).unwrap();
 
     assert!(!write_set.iter().any(|(_, op)| op.is_deletion()));
     verify_genesis_write_set(&events);
@@ -183,7 +176,7 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
 }
 
 fn exec_function(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<impl RemoteCache>,
     sender: AccountAddress,
     module_name: &str,
     function_name: &str,
@@ -206,7 +199,7 @@ fn exec_function(
         .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e))
 }
 
-fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, script: &Script) {
+fn exec_script(session: &mut Session<impl RemoteCache>, sender: AccountAddress, script: &Script) {
     session
         .execute_script(
             script.code().to_vec(),
@@ -220,7 +213,7 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
 
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<impl RemoteCache>,
     libra_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
@@ -283,7 +276,7 @@ fn create_and_initialize_main_accounts(
 }
 
 fn create_and_initialize_testnet_minting(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<impl RemoteCache>,
     public_key: &Ed25519PublicKey,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
@@ -388,7 +381,7 @@ fn create_and_initialize_testnet_minting(
 /// the required accounts, sets the validator operators for each validator owner, and sets the
 /// validator config on-chain.
 fn create_and_initialize_owners_operators(
-    session: &mut Session<StateViewCache>,
+    session: &mut Session<impl RemoteCache>,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
 ) {
@@ -467,32 +460,29 @@ fn create_and_initialize_owners_operators(
     }
 }
 
-fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &CompiledModule> {
-    stdlib_modules
-        .iter()
-        .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
-}
+fn serialize_stdlib_modules(
+    stdlib: &[CompiledModule],
+) -> (Vec<(ModuleId, Vec<u8>)>, Vec<(ModuleId, Vec<u8>)>) {
+    let mut genesis_modules = vec![];
+    let mut stdlib_modules = vec![];
 
-/// Publish the standard library.
-fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: &[CompiledModule]) {
-    for module in remove_genesis(stdlib) {
-        assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
-        let mut module_vec = vec![];
-        module.serialize(&mut module_vec).unwrap();
-        session
-            .publish_module(
-                module_vec,
-                *module.self_id().address(),
-                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
-            )
-            .unwrap_or_else(|e| {
-                panic!("Failure publishing module {:?}, {:?}", module.self_id(), e)
-            });
+    for module in stdlib {
+        let module_id = module.self_id();
+        let mut blob = vec![];
+        module.serialize(&mut blob).unwrap();
+
+        if module.self_id().name().as_str() == GENESIS_MODULE_NAME {
+            genesis_modules.push((module_id, blob));
+        } else {
+            stdlib_modules.push((module_id, blob));
+        }
     }
+
+    (genesis_modules, stdlib_modules)
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
-fn reconfigure(session: &mut Session<StateViewCache>) {
+fn reconfigure(session: &mut Session<impl RemoteCache>) {
     exec_function(
         session,
         account_config::libra_root_address(),
