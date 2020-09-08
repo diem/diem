@@ -57,3 +57,35 @@ fn attrs() {
 
     t.debug(vec![1, 2, 3]).display(4);
 }
+
+#[test]
+fn error_trait_object() {
+    use std::fmt;
+
+    #[derive(Default, Schema)]
+    pub struct Test<'a> {
+        #[schema(debug)]
+        debug_error: Option<&'a dyn ::std::error::Error>,
+        #[schema(display)]
+        display_error: Option<&'a dyn ::std::error::Error>,
+    }
+
+    #[derive(Debug)]
+    struct OurError;
+
+    impl fmt::Display for OurError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "Custom Error")
+        }
+    }
+
+    impl ::std::error::Error for OurError {};
+
+    let debug_error = ::std::io::Error::new(::std::io::ErrorKind::Other, "This is an error");
+    let display_error = OurError;
+    let t = Test::default()
+        .debug_error(&debug_error)
+        .display_error(&display_error);
+
+    ::libra_logger::info!(t);
+}
