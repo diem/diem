@@ -258,8 +258,8 @@ fn basic_start_test() {
 /// Setup:
 ///
 /// 4 honest nodes (n0, n1, n2, n3), and 0 twins.
-/// Create two partitions p1=[n1], and p2=[n0, n2, n3] with
-/// a proposer in p2.
+/// Create two partitions p1=[n2], and p2=[n0, n1, n3] with
+/// a proposer (n1) in p2.
 ///
 /// Test:
 ///
@@ -284,7 +284,8 @@ fn drop_config_test() {
     let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
     let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
     let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
-    assert!(playground.split_network(vec![n1_twin_id], vec![n0_twin_id, n2_twin_id, n3_twin_id]));
+
+    assert!(playground.split_network(vec![n2_twin_id], vec![n0_twin_id, n1_twin_id, n3_twin_id]));
 
     timed_block_on(&mut runtime, async {
         playground
@@ -305,10 +306,10 @@ fn drop_config_test() {
         }
         assert!(commit_seen);
 
-        // Check that the commit log for n1 is empty
+        // Check that the commit log for n2 is empty
         commit_seen = false;
-        nodes[1].commit_cb_receiver.close();
-        if let Ok(Some(_node_commit)) = nodes[1].commit_cb_receiver.try_next() {
+        nodes[2].commit_cb_receiver.close();
+        if let Ok(Some(_node_commit)) = nodes[2].commit_cb_receiver.try_next() {
             commit_seen = true;
         }
         assert!(!commit_seen);
