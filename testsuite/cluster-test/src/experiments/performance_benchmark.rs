@@ -16,7 +16,7 @@ use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
 use libra_time::duration_since_epoch;
 use libra_trace::{
-    trace::{random_node, trace_node},
+    trace::{find_peer_with_stage, random_node, trace_node},
     LibraTraceClient,
 };
 use rand::{rngs::ThreadRng, seq::SliceRandom};
@@ -39,6 +39,8 @@ pub struct PerformanceBenchmarkParams {
     pub percent_nodes_down: usize,
     #[structopt(long, help = "Whether benchmark should perform trace")]
     pub trace: bool,
+    #[structopt(long, help = "Whether benchmark should trace only one libra node")]
+    pub trace_single: bool,
     #[structopt(
         long,
         help = "Whether benchmark should perform trace from elastic search logs"
@@ -66,6 +68,7 @@ pub struct PerformanceBenchmark {
     percent_nodes_down: usize,
     duration: Duration,
     trace: bool,
+    trace_single: bool,
     tps: Option<u64>,
     use_logs_for_trace: bool,
     backup: bool,
@@ -79,6 +82,7 @@ impl PerformanceBenchmarkParams {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
+            trace_single: false,
             tps: None,
             use_logs_for_trace: false,
             backup: false,
@@ -90,6 +94,7 @@ impl PerformanceBenchmarkParams {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
+            trace_single: false,
             tps: Some(fixed_tps),
             use_logs_for_trace: false,
             backup: false,
@@ -126,6 +131,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             percent_nodes_down: self.percent_nodes_down,
             duration: Duration::from_secs(self.duration),
             trace: self.trace,
+            trace_single: self.trace_single,
             tps: self.tps,
             use_logs_for_trace: self.use_logs_for_trace,
             backup: self.backup,
@@ -202,6 +208,25 @@ impl Experiment for PerformanceBenchmark {
             let node =
                 random_node(&events[..], "json-rpc::submit", "txn::").expect("No trace node found");
             info!("Tracing {}", node);
+            if self.trace_single {
+                let filter_peer =
+                    find_peer_with_stage(&events[..], &node, "libra_vm::execute_block_impl")
+                        .expect("Can not find peer with libra_vm::execute_block_impl")
+                        .to_string();
+                events = events
+                    .into_iter()
+                    .filter(|node| {
+                        node.json
+                            .as_object()
+                            .unwrap()
+                            .get("peer")
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            == filter_peer
+                    })
+                    .collect();
+            }
             trace_node(&events[..], &node);
         }
 

@@ -208,7 +208,7 @@ pub fn random_node(entries: &[JsonLogEntry], f_stage: &str, prefix: &str) -> Opt
     None
 }
 
-pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
+pub fn collect_all_nodes<'a>(entries: &'a [JsonLogEntry], node_name: &'a str) -> Vec<&'a str> {
     let mut nodes = vec![];
     nodes.push(node_name);
     for entry in entries {
@@ -231,6 +231,48 @@ pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
             nodes.push(node_to);
         }
     }
+    nodes
+}
+
+pub fn find_peer_with_stage<'a>(
+    entries: &'a [JsonLogEntry],
+    node_name: &str,
+    f_stage: &str,
+) -> Option<&'a str> {
+    let nodes = collect_all_nodes(entries, node_name);
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.name.starts_with("trace_"))
+    {
+        let node = entry
+            .json
+            .get("node")
+            .expect("TRACE_EVENT::node not found")
+            .as_str()
+            .expect("TRACE_EVENT::node is not a string");
+        if !nodes.contains(&node) {
+            continue;
+        }
+        let stage = entry
+            .json
+            .get("stage")
+            .expect("::stage not found")
+            .as_str()
+            .expect("::stage is not a string");
+        if stage == f_stage {
+            let peer = entry
+                .json
+                .get("peer")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            return Some(peer);
+        }
+    }
+    None
+}
+
+pub fn trace_node(entries: &[JsonLogEntry], node_name: &str) {
+    let nodes = collect_all_nodes(entries, node_name);
     let mut start_time = None;
     for entry in entries
         .iter()
