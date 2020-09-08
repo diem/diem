@@ -38,19 +38,13 @@ pub static LIBRA_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub fn update_libra_connections(
-    network_context: &NetworkContext,
-    origin: ConnectionOrigin,
-    num_connections: usize,
-) {
-    LIBRA_CONNECTIONS
-        .with_label_values(&[
-            network_context.role().as_str(),
-            network_context.network_id().as_str(),
-            network_context.peer_id_short_str(),
-            origin.as_str(),
-        ])
-        .set(num_connections as i64);
+pub fn connections(network_context: &NetworkContext, origin: ConnectionOrigin) -> IntGauge {
+    LIBRA_CONNECTIONS.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id_short_str(),
+        origin.as_str(),
+    ])
 }
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {

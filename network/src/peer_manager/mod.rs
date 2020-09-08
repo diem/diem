@@ -361,20 +361,14 @@ where
             .count();
         let outbound = total.saturating_sub(inbound);
         let role = self.network_context.role().as_str();
+
         counters::LIBRA_NETWORK_PEERS
             .with_label_values(&[role, "connected"])
             .set(total as i64);
 
-        counters::update_libra_connections(
-            &self.network_context,
-            ConnectionOrigin::Inbound,
-            inbound,
-        );
-        counters::update_libra_connections(
-            &self.network_context,
-            ConnectionOrigin::Outbound,
-            outbound,
-        );
+        counters::connections(&self.network_context, ConnectionOrigin::Inbound).set(inbound as i64);
+        counters::connections(&self.network_context, ConnectionOrigin::Outbound)
+            .set(outbound as i64);
     }
 
     /// Get the [`NetworkAddress`] we're listening for incoming connections on
