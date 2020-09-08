@@ -40,11 +40,6 @@ jobs:
       - name: diff LSR summary
         id: verify-lsr
         run: |
-          if [[ ! -e libra-base/target/summaries/summary-lsr.toml ]]; then
-            # handle case of missing base summary by reporting no diff
-            echo "::set-output name=diff::"
-            exit 0
-          fi
           output="$(cargo x diff-summary libra-base/target/summaries/summary-lsr.toml target/summaries/summary-lsr.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
@@ -54,11 +49,6 @@ jobs:
       - name: diff LEC summary
         id: verify-lec
         run: |
-          if [[ ! -e libra-base/target/summaries/summary-lec.toml ]]; then
-            # handle case of missing base summary by reporting no diff
-            echo "::set-output name=diff::"
-            exit 0
-          fi
           output="$(cargo x diff-summary libra-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
@@ -68,11 +58,6 @@ jobs:
       - name: diff release summary
         id: verify-release
         run: |
-          if [[ ! -e libra-base/target/summaries/summary-release.toml ]]; then
-            # handle case of missing base summary by reporting no diff
-            echo "::set-output name=diff::"
-            exit 0
-          fi
           output="$(cargo x diff-summary libra-base/target/summaries/summary-release.toml target/summaries/summary-release.toml)"
           echo "${output}"
           output="${output//'%'/'%25'}"
