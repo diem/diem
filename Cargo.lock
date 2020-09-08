@@ -2597,6 +2597,7 @@ dependencies = [
  "language-e2e-tests 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-jellyfish-merkle 0.1.0",
  "libra-json-rpc 0.1.0",
  "libra-mempool 0.1.0",
  "libra-proptest-helpers 0.1.0",

@@ -73,6 +73,9 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         // Storage
         // Box::new(storage::StorageSaveBlocks::default()),
         Box::new(storage::StorageSchemaDecode::default()),
+        Box::new(storage::JellyfishGetWithProof::default()),
+        Box::new(storage::JellyfishGetWithProofWithDistinctLastNibble::default()),
+        Box::new(storage::JellyfishGetRangeProof::default()),
         // Transaction
         Box::new(transaction::LanguageTransactionExecution::default()),
         Box::new(transaction::SignedTransactionTarget::default()),

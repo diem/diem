@@ -71,13 +71,13 @@
 pub mod iterator;
 #[cfg(test)]
 mod jellyfish_merkle_test;
-#[cfg(test)]
+#[cfg(any(test, feature = "fuzzing"))]
 mod mock_tree_store;
 mod nibble_path;
 pub mod node_type;
 pub mod restore;
-#[cfg(test)]
-mod test_helper;
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod test_helper;
 mod tree_cache;
 
 use anyhow::{bail, ensure, format_err, Result};
@@ -166,7 +166,7 @@ where
     /// This is a convenient function that calls
     /// [`put_blob_sets`](struct.JellyfishMerkleTree.html#method.put_blob_sets) with a single
     /// `keyed_blob_set`.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn put_blob_set(
         &self,
         blob_set: Vec<(HashValue, AccountStateBlob)>,
