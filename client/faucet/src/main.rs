@@ -108,7 +108,7 @@ struct OptFmt<T>(Option<T>);
 
 impl<T: fmt::Display> fmt::Display for OptFmt<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref t) = self.0 {
+        if let Some(t) = &self.0 {
             fmt::Display::fmt(t, f)
         } else {
             f.write_str("-")
