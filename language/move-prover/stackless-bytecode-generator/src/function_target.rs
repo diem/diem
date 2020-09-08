@@ -462,7 +462,7 @@ impl<'env> fmt::Display for FunctionTarget<'env> {
                 .borrow()
                 .iter()
                 .filter_map(|f| f(self, offset as CodeOffset))
-                .map(|s| format!("     // {}", s))
+                .map(|s| format!("     // {}", s.replace("\n", "\n     // ")))
                 .join("\n");
             if !annotations.is_empty() {
                 writeln!(f, "{}", annotations)?;

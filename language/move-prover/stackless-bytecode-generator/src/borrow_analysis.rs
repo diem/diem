@@ -30,6 +30,7 @@ pub struct BorrowInfo {
     pub live_refs: BTreeSet<TempIndex>,
     pub borrowed_by: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
     pub borrows_from: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    pub dirty_nodes: BTreeSet<BorrowNode>,
 }
 
 impl BorrowInfo {
@@ -46,19 +47,28 @@ impl BorrowInfo {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.live_refs.is_empty() && self.borrowed_by.is_empty() && self.borrows_from.is_empty()
+        self.live_refs.is_empty()
+            && self.borrowed_by.is_empty()
+            && self.borrows_from.is_empty()
+            && self.dirty_nodes.is_empty()
     }
 
     pub fn borrow_info_str(&self, func_target: &FunctionTarget<'_>) -> String {
-        let live_refs_str = format!(
-            "live_refs: {}",
+        let mut parts = vec![];
+        let mut add = |name: &str, value: String| {
+            if !value.is_empty() {
+                parts.push(format!("{}: {}", name, value));
+            }
+        };
+        add(
+            "live_refs",
             self.live_refs
                 .iter()
                 .map(|idx| {
                     let name = func_target.get_local_name(*idx);
                     format!("{}", name.display(func_target.symbol_pool()),)
                 })
-                .join(", ")
+                .join(", "),
         );
         let borrows_str = |(node, borrows): (&BorrowNode, &BTreeSet<BorrowNode>)| {
             format!(
@@ -70,15 +80,22 @@ impl BorrowInfo {
                     .join(", ")
             )
         };
-        let borrowed_by_str = format!(
-            "borrowed_by: {}",
-            self.borrowed_by.iter().map(borrows_str).join(", ")
+        add(
+            "borrowed_by",
+            self.borrowed_by.iter().map(borrows_str).join(", "),
         );
-        let borrows_from_str = format!(
-            "borrows_from: {}",
-            self.borrows_from.iter().map(borrows_str).join(", ")
+        add(
+            "borrows_from",
+            self.borrows_from.iter().map(borrows_str).join(", "),
         );
-        format!("{} {} {}", live_refs_str, borrowed_by_str, borrows_from_str)
+        add(
+            "dirty_nodes",
+            self.dirty_nodes
+                .iter()
+                .map(|borrow| borrow.display(func_target))
+                .join(", "),
+        );
+        parts.iter().join("\n")
     }
 }
 
@@ -142,9 +159,8 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
 struct BorrowState {
     borrow_graph: BorrowGraph,
     dead_edges: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    dirty_nodes: BTreeSet<BorrowNode>,
 }
-
-impl BorrowState {}
 
 struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
@@ -227,6 +243,7 @@ impl<'a> BorrowAnalysis<'a> {
         let initial_state = BorrowState {
             borrow_graph,
             dead_edges: BTreeMap::new(),
+            dirty_nodes: BTreeSet::new(),
         };
         let state_map = self.analyze_function(initial_state, instrs, &cfg);
         self.post_process(&cfg, instrs, state_map)
@@ -291,6 +308,7 @@ impl<'a> BorrowAnalysis<'a> {
             live_refs,
             borrowed_by,
             borrows_from,
+            dirty_nodes: borrow_state.dirty_nodes.clone(),
         }
     }
 
@@ -410,6 +428,11 @@ impl<'a> BorrowAnalysis<'a> {
                             id_map.insert(src_ref_id, dest_ref_id);
                             post.borrow_graph.remap_refs(&id_map);
                             self.remap_edges(&mut post.dead_edges, &id_map);
+                            post.dirty_nodes = post
+                                .dirty_nodes
+                                .iter()
+                                .map(|n| self.remap_borrow_node(n, &id_map))
+                                .collect();
                         }
                         AssignKind::Copy => {
                             post.borrow_graph.new_ref(dest_ref_id, true);
@@ -486,10 +509,16 @@ impl<'a> BorrowAnalysis<'a> {
                                 post.borrow_graph
                                     .add_weak_borrow((), src_ref_id, dest_ref_id);
                             }
+                            // Conservative assumption that function writes to reference.
+                            self.mark_dirty(&mut post, src_ref_id);
                         }
                     }
+                    WriteRef => {
+                        let src_ref_id = RefID::new(srcs[0]);
+                        self.mark_dirty(&mut post, src_ref_id);
+                    }
                     _ => {
-                        // Other operations do not create references
+                        // Other operations do not create references or write to them.
                     }
                 }
             }
@@ -561,6 +590,34 @@ impl<'a> BorrowAnalysis<'a> {
         Ok(post)
     }
 
+    fn mark_dirty(&self, state: &mut BorrowState, ref_id: RefID) {
+        if let Some(node) = self.ref_id_to_borrow_node.get(&ref_id).cloned() {
+            // We could stop if the node is already in the set, but the graph can change as we
+            // currently do not clean the dirty set if a variable is assigned multiple times.
+            state.dirty_nodes.insert(node.clone());
+
+            // Recursively mark source of incoming edges as dirty.
+            let mut parents = BTreeSet::new();
+            if state.borrow_graph.all_refs().contains(&ref_id) {
+                for (_, parent_id, _, _) in state.borrow_graph.in_edges(ref_id) {
+                    parents.insert(parent_id);
+                }
+            }
+
+            // Also need to process dead edges, since they might not be written back yet.
+            for (src, dests) in state.dead_edges.clone() {
+                if let Some(src_ref_id) = self.borrow_node_to_ref_id.get(&src) {
+                    if dests.contains(&node) {
+                        parents.insert(*src_ref_id);
+                    }
+                }
+            }
+            for parent in parents {
+                self.mark_dirty(state, parent);
+            }
+        }
+    }
+
     fn remove_leaves(
         dead_edges: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
     ) -> (BTreeMap<BorrowNode, BTreeSet<BorrowNode>>, Vec<BorrowNode>) {
@@ -616,7 +673,12 @@ impl AbstractDomain for BorrowState {
         if !dead_edges_unchanged {
             BorrowAnalysis::add_edges(&mut self.dead_edges, &other.dead_edges);
         }
-        if dead_edges_unchanged && borrow_graph_unchanged {
+        let old_dirty_count = self.dirty_nodes.len();
+        self.dirty_nodes.extend(other.dirty_nodes.iter().cloned());
+        if dead_edges_unchanged
+            && borrow_graph_unchanged
+            && old_dirty_count == self.dirty_nodes.len()
+        {
             JoinResult::Unchanged
         } else {
             JoinResult::Changed

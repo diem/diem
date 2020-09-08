@@ -63,7 +63,7 @@ error: data invariant does not hold
     =         result = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:73:27: private_decrement
-    =     at tests/sources/functional/mut_ref_accross_modules.move:75:25: private_decrement
+    =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:74:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:75:23: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:72:9: private_decrement

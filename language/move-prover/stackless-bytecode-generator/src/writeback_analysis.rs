@@ -144,13 +144,15 @@ impl<'a> WritebackAnalysis<'a> {
         for idx in dfs_order.into_iter().rev() {
             if writeback_refs.contains(&idx) {
                 let node = BorrowNode::Reference(idx);
-                if let Some(borrows_from) = before.borrows_from.get(&node) {
-                    for n in borrows_from {
-                        instrumented_bytecodes.push(Bytecode::WriteBack(
-                            self.new_attr_id(),
-                            n.clone(),
-                            idx,
-                        ));
+                if after.dirty_nodes.contains(&node) {
+                    if let Some(borrows_from) = before.borrows_from.get(&node) {
+                        for n in borrows_from {
+                            instrumented_bytecodes.push(Bytecode::WriteBack(
+                                self.new_attr_id(),
+                                n.clone(),
+                                idx,
+                            ));
+                        }
                     }
                 }
             }

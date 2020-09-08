@@ -1380,9 +1380,12 @@ pub fun Vector::singleton<$tv0>(e: #0): vector<#0> {
      var $t2: &mut vector<#0>
   0: v := Vector::empty<#0>()
   1: $t2 := borrow_local(v)
-     // live_refs: $t2 borrowed_by: LocalRoot(v) -> {Reference($t2)} borrows_from: Reference($t2) -> {LocalRoot(v)}
+     // live_refs: $t2
+     // borrowed_by: LocalRoot(v) -> {Reference($t2)}
+     // borrows_from: Reference($t2) -> {LocalRoot(v)}
      // LocalRoot(v) <- $t2
   2: Vector::push_back<#0>($t2, e)
+     // dirty_nodes: LocalRoot(v), Reference($t2)
   3: return v
 }
 
@@ -1473,38 +1476,74 @@ pub fun Libra::burn_with_capability<$tv0>(preburn_address: address, _capability:
      var $t14: u64
      var $t15: &mut u64
   0: preburn := borrow_global<Libra::Preburn<#0>>(preburn_address)
-     // live_refs: preburn borrowed_by: Libra::Preburn -> {Reference(preburn)} borrows_from: Reference(preburn) -> {Libra::Preburn}
-     // Libra::Preburn <- preburn
+     // live_refs: preburn
+     // borrowed_by: Libra::Preburn -> {Reference(preburn)}
+     // borrows_from: Reference(preburn) -> {Libra::Preburn}
   1: $t5 := borrow_field<Libra::Preburn<#0>>.requests(preburn)
-     // live_refs: $t5 borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)} borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
+     // live_refs: $t5
+     // borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)}
+     // borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
   2: $t6 := 0
-     // live_refs: $t5 borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)} borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
+     // live_refs: $t5
+     // borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)}
+     // borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
      // Libra::Preburn <- $t5, Reference(preburn) <- $t5
   3: $t7 := Vector::remove<Libra::T<#0>>($t5, $t6)
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   4: value := unpack Libra::T<#0>($t7)
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   5: $t8 := 0xa550c18
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   6: market_cap := borrow_global<Libra::Info<#0>>($t8)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   7: $t9 := get_field<Libra::Info<#0>>.total_value(market_cap)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   8: $t10 := (u128)(value)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   9: $t11 := -($t9, $t10)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
  10: $t12 := borrow_field<Libra::Info<#0>>.total_value(market_cap)
-     // live_refs: market_cap, $t12 borrowed_by: Libra::Info -> {Reference(market_cap)}, Reference(market_cap) -> {Reference($t12)} borrows_from: Reference(market_cap) -> {Libra::Info}, Reference($t12) -> {Reference(market_cap)}
+     // live_refs: market_cap, $t12
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}, Reference(market_cap) -> {Reference($t12)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}, Reference($t12) -> {Reference(market_cap)}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
      // Reference(market_cap) <- $t12
  11: write_ref($t12, $t11)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t12)
  12: $t13 := get_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t12)
  13: $t14 := -($t13, value)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t12)
      // Libra::Info <- market_cap
  14: $t15 := borrow_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: $t15 borrowed_by: Libra::Info -> {Reference($t15)}, Reference(market_cap) -> {Reference($t15)} borrows_from: Reference($t15) -> {Libra::Info, Reference(market_cap)}
+     // live_refs: $t15
+     // borrowed_by: Libra::Info -> {Reference($t15)}, Reference(market_cap) -> {Reference($t15)}
+     // borrows_from: Reference($t15) -> {Libra::Info, Reference(market_cap)}
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t12)
      // Libra::Info <- $t15, Reference(market_cap) <- $t15
  15: write_ref($t15, $t14)
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t12), Reference($t15)
  16: return ()
 }
 
@@ -1532,28 +1571,50 @@ pub fun Libra::cancel_burn_with_capability<$tv0>(preburn_address: address, _capa
      var $t10: u64
      var $t11: &mut u64
   0: preburn := borrow_global<Libra::Preburn<#0>>(preburn_address)
-     // live_refs: preburn borrowed_by: Libra::Preburn -> {Reference(preburn)} borrows_from: Reference(preburn) -> {Libra::Preburn}
-     // Libra::Preburn <- preburn
+     // live_refs: preburn
+     // borrowed_by: Libra::Preburn -> {Reference(preburn)}
+     // borrows_from: Reference(preburn) -> {Libra::Preburn}
   1: $t5 := borrow_field<Libra::Preburn<#0>>.requests(preburn)
-     // live_refs: $t5 borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)} borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
+     // live_refs: $t5
+     // borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)}
+     // borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
   2: $t6 := 0
-     // live_refs: $t5 borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)} borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
+     // live_refs: $t5
+     // borrowed_by: Libra::Preburn -> {Reference($t5)}, Reference(preburn) -> {Reference($t5)}
+     // borrows_from: Reference($t5) -> {Libra::Preburn, Reference(preburn)}
      // Libra::Preburn <- $t5, Reference(preburn) <- $t5
   3: coin := Vector::remove<Libra::T<#0>>($t5, $t6)
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   4: $t7 := 0xa550c18
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   5: market_cap := borrow_global<Libra::Info<#0>>($t7)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   6: $t8 := get_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   7: $t9 := Libra::value<#0>(coin)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   8: $t10 := -($t8, $t9)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-     // Libra::Info <- market_cap
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
   9: $t11 := borrow_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: $t11 borrowed_by: Libra::Info -> {Reference($t11)}, Reference(market_cap) -> {Reference($t11)} borrows_from: Reference($t11) -> {Libra::Info, Reference(market_cap)}
+     // live_refs: $t11
+     // borrowed_by: Libra::Info -> {Reference($t11)}, Reference(market_cap) -> {Reference($t11)}
+     // borrows_from: Reference($t11) -> {Libra::Info, Reference(market_cap)}
+     // dirty_nodes: Libra::Preburn, Reference(preburn), Reference($t5)
      // Libra::Info <- $t11, Reference(market_cap) <- $t11
  10: write_ref($t11, $t10)
+     // dirty_nodes: Libra::Info, Libra::Preburn, Reference(market_cap), Reference(preburn), Reference($t5), Reference($t11)
  11: return coin
 }
 
@@ -1563,18 +1624,28 @@ pub fun Libra::deposit<$tv0>(coin_ref: &mut Libra::T<#0>, check: Libra::T<#0>) {
      var $t3: u64
      var $t4: u64
      var $t5: &mut u64
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   0: value := unpack Libra::T<#0>(check)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   1: $t3 := get_field<Libra::T<#0>>.value(coin_ref)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   2: $t4 := +($t3, value)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
-     // LocalRoot(coin_ref) <- coin_ref
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   3: $t5 := borrow_field<Libra::T<#0>>.value(coin_ref)
-     // live_refs: $t5 borrowed_by: LocalRoot(coin_ref) -> {Reference($t5)}, Reference(coin_ref) -> {Reference($t5)} borrows_from: Reference($t5) -> {LocalRoot(coin_ref), Reference(coin_ref)}
+     // live_refs: $t5
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference($t5)}, Reference(coin_ref) -> {Reference($t5)}
+     // borrows_from: Reference($t5) -> {LocalRoot(coin_ref), Reference(coin_ref)}
      // LocalRoot(coin_ref) <- $t5, Reference(coin_ref) <- $t5
   4: write_ref($t5, $t4)
+     // dirty_nodes: LocalRoot(coin_ref), Reference(coin_ref), Reference($t5)
   5: return ()
 }
 
@@ -1599,26 +1670,45 @@ pub fun Libra::preburn<$tv0>(preburn_ref: &mut Libra::Preburn<#0>, coin: Libra::
      var $t6: u64
      var $t7: u64
      var $t8: &mut u64
-     // live_refs: preburn_ref borrowed_by: LocalRoot(preburn_ref) -> {Reference(preburn_ref)} borrows_from: Reference(preburn_ref) -> {LocalRoot(preburn_ref)}
+     // live_refs: preburn_ref
+     // borrowed_by: LocalRoot(preburn_ref) -> {Reference(preburn_ref)}
+     // borrows_from: Reference(preburn_ref) -> {LocalRoot(preburn_ref)}
   0: coin_value := Libra::value<#0>(coin)
-     // live_refs: preburn_ref borrowed_by: LocalRoot(preburn_ref) -> {Reference(preburn_ref)} borrows_from: Reference(preburn_ref) -> {LocalRoot(preburn_ref)}
-     // LocalRoot(preburn_ref) <- preburn_ref
+     // live_refs: preburn_ref
+     // borrowed_by: LocalRoot(preburn_ref) -> {Reference(preburn_ref)}
+     // borrows_from: Reference(preburn_ref) -> {LocalRoot(preburn_ref)}
   1: $t4 := borrow_field<Libra::Preburn<#0>>.requests(preburn_ref)
-     // live_refs: $t4 borrowed_by: LocalRoot(preburn_ref) -> {Reference($t4)}, Reference(preburn_ref) -> {Reference($t4)} borrows_from: Reference($t4) -> {LocalRoot(preburn_ref), Reference(preburn_ref)}
+     // live_refs: $t4
+     // borrowed_by: LocalRoot(preburn_ref) -> {Reference($t4)}, Reference(preburn_ref) -> {Reference($t4)}
+     // borrows_from: Reference($t4) -> {LocalRoot(preburn_ref), Reference(preburn_ref)}
      // LocalRoot(preburn_ref) <- $t4, Reference(preburn_ref) <- $t4
   2: Vector::push_back<Libra::T<#0>>($t4, coin)
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
   3: $t5 := 0xa550c18
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
   4: market_cap := borrow_global<Libra::Info<#0>>($t5)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
   5: $t6 := get_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
   6: $t7 := +($t6, coin_value)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-     // Libra::Info <- market_cap
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
   7: $t8 := borrow_field<Libra::Info<#0>>.preburn_value(market_cap)
-     // live_refs: $t8 borrowed_by: Libra::Info -> {Reference($t8)}, Reference(market_cap) -> {Reference($t8)} borrows_from: Reference($t8) -> {Libra::Info, Reference(market_cap)}
+     // live_refs: $t8
+     // borrowed_by: Libra::Info -> {Reference($t8)}, Reference(market_cap) -> {Reference($t8)}
+     // borrows_from: Reference($t8) -> {Libra::Info, Reference(market_cap)}
+     // dirty_nodes: LocalRoot(preburn_ref), Reference(preburn_ref), Reference($t4)
      // Libra::Info <- $t8, Reference(market_cap) <- $t8
   8: write_ref($t8, $t7)
+     // dirty_nodes: Libra::Info, LocalRoot(preburn_ref), Reference(preburn_ref), Reference(market_cap), Reference($t4), Reference($t8)
   9: return ()
 }
 
@@ -1645,9 +1735,12 @@ pub fun Libra::destroy_zero<$tv0>(coin: Libra::T<#0>) {
 pub fun Libra::join<$tv0>(coin1: Libra::T<#0>, coin2: Libra::T<#0>): Libra::T<#0> {
      var $t2: &mut Libra::T<#0>
   0: $t2 := borrow_local(coin1)
-     // live_refs: $t2 borrowed_by: LocalRoot(coin1) -> {Reference($t2)} borrows_from: Reference($t2) -> {LocalRoot(coin1)}
+     // live_refs: $t2
+     // borrowed_by: LocalRoot(coin1) -> {Reference($t2)}
+     // borrows_from: Reference($t2) -> {LocalRoot(coin1)}
      // LocalRoot(coin1) <- $t2
   1: Libra::deposit<#0>($t2, coin2)
+     // dirty_nodes: LocalRoot(coin1), Reference($t2)
   2: return coin1
 }
 
@@ -1697,19 +1790,30 @@ pub fun Libra::mint_with_capability<$tv0>(value: u64, _capability: Libra::MintCa
   7: L0:
   8: $t8 := 0xa550c18
   9: market_cap := borrow_global<Libra::Info<#0>>($t8)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
  10: $t9 := get_field<Libra::Info<#0>>.total_value(market_cap)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
  11: $t10 := (u128)(value)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
  12: $t11 := +($t9, $t10)
-     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-     // Libra::Info <- market_cap
+     // live_refs: market_cap
+     // borrowed_by: Libra::Info -> {Reference(market_cap)}
+     // borrows_from: Reference(market_cap) -> {Libra::Info}
  13: $t12 := borrow_field<Libra::Info<#0>>.total_value(market_cap)
-     // live_refs: $t12 borrowed_by: Libra::Info -> {Reference($t12)}, Reference(market_cap) -> {Reference($t12)} borrows_from: Reference($t12) -> {Libra::Info, Reference(market_cap)}
+     // live_refs: $t12
+     // borrowed_by: Libra::Info -> {Reference($t12)}, Reference(market_cap) -> {Reference($t12)}
+     // borrows_from: Reference($t12) -> {Libra::Info, Reference(market_cap)}
      // Libra::Info <- $t12, Reference(market_cap) <- $t12
  14: write_ref($t12, $t11)
+     // dirty_nodes: Libra::Info, Reference(market_cap), Reference($t12)
  15: $t13 := pack Libra::T<#0>(value)
+     // dirty_nodes: Libra::Info, Reference(market_cap), Reference($t12)
  16: return $t13
 }
 
@@ -1738,9 +1842,12 @@ pub fun Libra::preburn_to<$tv0>(account: signer, coin: Libra::T<#0>) {
      var $t3: &mut Libra::Preburn<#0>
   0: sender := Signer::address_of(account)
   1: $t3 := borrow_global<Libra::Preburn<#0>>(sender)
-     // live_refs: $t3 borrowed_by: Libra::Preburn -> {Reference($t3)} borrows_from: Reference($t3) -> {Libra::Preburn}
+     // live_refs: $t3
+     // borrowed_by: Libra::Preburn -> {Reference($t3)}
+     // borrows_from: Reference($t3) -> {Libra::Preburn}
      // Libra::Preburn <- $t3
   2: Libra::preburn<#0>($t3, coin)
+     // dirty_nodes: Libra::Preburn, Reference($t3)
   3: return ()
 }
 
@@ -1822,9 +1929,12 @@ pub fun Libra::split<$tv0>(coin: Libra::T<#0>, amount: u64): (Libra::T<#0>, Libr
      var other: Libra::T<#0>
      var $t3: &mut Libra::T<#0>
   0: $t3 := borrow_local(coin)
-     // live_refs: $t3 borrowed_by: LocalRoot(coin) -> {Reference($t3)} borrows_from: Reference($t3) -> {LocalRoot(coin)}
+     // live_refs: $t3
+     // borrowed_by: LocalRoot(coin) -> {Reference($t3)}
+     // borrows_from: Reference($t3) -> {LocalRoot(coin)}
      // LocalRoot(coin) <- $t3
   1: other := Libra::withdraw<#0>($t3, amount)
+     // dirty_nodes: LocalRoot(coin), Reference($t3)
   2: return (coin, other)
 }
 
@@ -1839,32 +1949,52 @@ pub fun Libra::withdraw<$tv0>(coin_ref: &mut Libra::T<#0>, value: u64): Libra::T
      var $t8: u64
      var $t9: &mut u64
      var $t10: Libra::T<#0>
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   0: $t4 := get_field<Libra::T<#0>>.value(coin_ref)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   1: $t5 := >=($t4, value)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   2: if ($t5) goto L0 else goto L1
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   3: L1:
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
-     // LocalRoot(coin_ref) <- coin_ref
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   4: destroy(coin_ref)
   5: $t6 := 10
   6: abort($t6)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   7: L0:
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   8: $t7 := get_field<Libra::T<#0>>.value(coin_ref)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
   9: $t8 := -($t7, value)
-     // live_refs: coin_ref borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)} borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
-     // LocalRoot(coin_ref) <- coin_ref
+     // live_refs: coin_ref
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference(coin_ref)}
+     // borrows_from: Reference(coin_ref) -> {LocalRoot(coin_ref)}
  10: $t9 := borrow_field<Libra::T<#0>>.value(coin_ref)
-     // live_refs: $t9 borrowed_by: LocalRoot(coin_ref) -> {Reference($t9)}, Reference(coin_ref) -> {Reference($t9)} borrows_from: Reference($t9) -> {LocalRoot(coin_ref), Reference(coin_ref)}
+     // live_refs: $t9
+     // borrowed_by: LocalRoot(coin_ref) -> {Reference($t9)}, Reference(coin_ref) -> {Reference($t9)}
+     // borrows_from: Reference($t9) -> {LocalRoot(coin_ref), Reference(coin_ref)}
      // LocalRoot(coin_ref) <- $t9, Reference(coin_ref) <- $t9
  11: write_ref($t9, $t8)
+     // dirty_nodes: LocalRoot(coin_ref), Reference(coin_ref), Reference($t9)
  12: $t10 := pack Libra::T<#0>(value)
+     // dirty_nodes: LocalRoot(coin_ref), Reference(coin_ref), Reference($t9)
  13: return $t10
 }
 

@@ -12,7 +12,7 @@ error: post-condition does not hold
      =     at tests/sources/functional/global_vars.move:112:17: combi_incorrect
      =     at tests/sources/functional/global_vars.move:113:17: combi_incorrect
      =     at tests/sources/functional/global_vars.move:114:9: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:115:19: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:115:13: combi_incorrect
 
 error: post-condition does not hold
 

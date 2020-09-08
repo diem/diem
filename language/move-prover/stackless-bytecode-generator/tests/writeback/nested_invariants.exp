@@ -145,24 +145,42 @@ fun TestNestedInvariants::mutate() {
   2: $t4 := pack TestNestedInvariants::Nested($t3)
   3: o := pack TestNestedInvariants::Outer($t2, $t4)
   4: r := borrow_local(o)
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   5: $t5 := 2
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   6: $t6 := borrow_field<TestNestedInvariants::Outer>.y(r)
-     // live_refs: r, $t6 borrowed_by: LocalRoot(o) -> {Reference(r)}, Reference(r) -> {Reference($t6)} borrows_from: Reference(r) -> {LocalRoot(o)}, Reference($t6) -> {Reference(r)}
+     // live_refs: r, $t6
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}, Reference(r) -> {Reference($t6)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}, Reference($t6) -> {Reference(r)}
      // Reference(r) <- $t6
   7: write_ref($t6, $t5)
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6)
   8: $t7 := 1
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6)
      // LocalRoot(o) <- r
   9: $t8 := borrow_field<TestNestedInvariants::Outer>.n(r)
-     // live_refs: $t8 borrowed_by: LocalRoot(o) -> {Reference($t8)}, Reference(r) -> {Reference($t8)} borrows_from: Reference($t8) -> {LocalRoot(o), Reference(r)}
-     // LocalRoot(o) <- $t8, Reference(r) <- $t8
+     // live_refs: $t8
+     // borrowed_by: LocalRoot(o) -> {Reference($t8)}, Reference(r) -> {Reference($t8)}
+     // borrows_from: Reference($t8) -> {LocalRoot(o), Reference(r)}
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6)
  10: $t9 := borrow_field<TestNestedInvariants::Nested>.x($t8)
-     // live_refs: $t9 borrowed_by: LocalRoot(o) -> {Reference($t9)}, Reference(r) -> {Reference($t8)}, Reference($t8) -> {Reference($t9)} borrows_from: Reference($t8) -> {Reference(r)}, Reference($t9) -> {LocalRoot(o), Reference($t8)}
+     // live_refs: $t9
+     // borrowed_by: LocalRoot(o) -> {Reference($t9)}, Reference(r) -> {Reference($t8)}, Reference($t8) -> {Reference($t9)}
+     // borrows_from: Reference($t8) -> {Reference(r)}, Reference($t9) -> {LocalRoot(o), Reference($t8)}
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6)
      // LocalRoot(o) <- $t9, Reference($t8) <- $t9, Reference(r) <- $t8
  11: write_ref($t9, $t7)
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6), Reference($t8), Reference($t9)
  12: return ()
 }
 
@@ -181,17 +199,24 @@ fun TestNestedInvariants::mutate_inner_data_invariant_invalid() {
   2: $t4 := pack TestNestedInvariants::Nested($t3)
   3: o := pack TestNestedInvariants::Outer($t2, $t4)
   4: r := borrow_local(o)
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   5: $t5 := 0
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
-     // LocalRoot(o) <- r
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   6: $t6 := borrow_field<TestNestedInvariants::Outer>.n(r)
-     // live_refs: $t6 borrowed_by: LocalRoot(o) -> {Reference($t6)}, Reference(r) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(o), Reference(r)}
-     // LocalRoot(o) <- $t6, Reference(r) <- $t6
+     // live_refs: $t6
+     // borrowed_by: LocalRoot(o) -> {Reference($t6)}, Reference(r) -> {Reference($t6)}
+     // borrows_from: Reference($t6) -> {LocalRoot(o), Reference(r)}
   7: $t7 := borrow_field<TestNestedInvariants::Nested>.x($t6)
-     // live_refs: $t7 borrowed_by: LocalRoot(o) -> {Reference($t7)}, Reference(r) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)} borrows_from: Reference($t6) -> {Reference(r)}, Reference($t7) -> {LocalRoot(o), Reference($t6)}
+     // live_refs: $t7
+     // borrowed_by: LocalRoot(o) -> {Reference($t7)}, Reference(r) -> {Reference($t6)}, Reference($t6) -> {Reference($t7)}
+     // borrows_from: Reference($t6) -> {Reference(r)}, Reference($t7) -> {LocalRoot(o), Reference($t6)}
      // LocalRoot(o) <- $t7, Reference($t6) <- $t7, Reference(r) <- $t6
   8: write_ref($t7, $t5)
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6), Reference($t7)
   9: return ()
 }
 
@@ -209,14 +234,20 @@ fun TestNestedInvariants::mutate_outer_data_invariant_invalid() {
   2: $t4 := pack TestNestedInvariants::Nested($t3)
   3: o := pack TestNestedInvariants::Outer($t2, $t4)
   4: r := borrow_local(o)
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   5: $t5 := 2
-     // live_refs: r borrowed_by: LocalRoot(o) -> {Reference(r)} borrows_from: Reference(r) -> {LocalRoot(o)}
-     // LocalRoot(o) <- r
+     // live_refs: r
+     // borrowed_by: LocalRoot(o) -> {Reference(r)}
+     // borrows_from: Reference(r) -> {LocalRoot(o)}
   6: $t6 := borrow_field<TestNestedInvariants::Outer>.y(r)
-     // live_refs: $t6 borrowed_by: LocalRoot(o) -> {Reference($t6)}, Reference(r) -> {Reference($t6)} borrows_from: Reference($t6) -> {LocalRoot(o), Reference(r)}
+     // live_refs: $t6
+     // borrowed_by: LocalRoot(o) -> {Reference($t6)}, Reference(r) -> {Reference($t6)}
+     // borrows_from: Reference($t6) -> {LocalRoot(o), Reference(r)}
      // LocalRoot(o) <- $t6, Reference(r) <- $t6
   7: write_ref($t6, $t5)
+     // dirty_nodes: LocalRoot(o), Reference(r), Reference($t6)
   8: return ()
 }
 

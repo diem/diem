@@ -63,16 +63,15 @@ pub fun TestMutRefs::unpack(r: TestMutRefs::R): (u64, TestMutRefs::R) {
   1: $t6 := borrow_local($t5)
   2: UnpackRef($t6)
   3: value := borrow_field<TestMutRefs::R>.value($t6)
-  4: LocalRoot($t5) <- $t6
-  5: UnpackRef(value)
-  6: result := read_ref(value)
-  7: $t4 := 0
-  8: write_ref(value, $t4)
-  9: LocalRoot($t5) <- value
- 10: Reference($t6) <- value
- 11: PackRef($t6)
- 12: PackRef(value)
- 13: return (result, $t5)
+  4: UnpackRef(value)
+  5: result := read_ref(value)
+  6: $t4 := 0
+  7: write_ref(value, $t4)
+  8: LocalRoot($t5) <- value
+  9: Reference($t6) <- value
+ 10: PackRef($t6)
+ 11: PackRef(value)
+ 12: return (result, $t5)
 }
 
 
@@ -86,12 +85,9 @@ pub fun TestMutRefs::unpack_incorrect(r: TestMutRefs::R): (u64, TestMutRefs::R) 
   1: $t5 := borrow_local($t4)
   2: UnpackRef($t5)
   3: value := borrow_field<TestMutRefs::R>.value($t5)
-  4: LocalRoot($t4) <- $t5
-  5: UnpackRef(value)
-  6: result := read_ref(value)
-  7: LocalRoot($t4) <- value
-  8: Reference($t5) <- value
-  9: PackRef($t5)
- 10: PackRef(value)
- 11: return (result, $t4)
+  4: UnpackRef(value)
+  5: result := read_ref(value)
+  6: PackRef($t5)
+  7: PackRef(value)
+  8: return (result, $t4)
 }

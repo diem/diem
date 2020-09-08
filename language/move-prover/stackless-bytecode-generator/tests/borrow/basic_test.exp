@@ -258,29 +258,44 @@ fun TestBorrow::test1(): TestBorrow::R {
   0: $t3 := 3
   1: r := pack TestBorrow::R($t3)
   2: r_ref := borrow_local(r)
-     // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
   3: x_ref := borrow_field<TestBorrow::R>.x(r_ref)
-     // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
   4: $t4 := 0
-     // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
   5: write_ref(x_ref, $t4)
+     // dirty_nodes: LocalRoot(r), Reference(r_ref), Reference(x_ref)
   6: return r
 }
 
 
 fun TestBorrow::test2(x_ref: &mut u64, v: u64) {
-     // live_refs: x_ref borrowed_by: LocalRoot(x_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(x_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(x_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(x_ref)}
   0: write_ref(x_ref, v)
+     // dirty_nodes: LocalRoot(x_ref), Reference(x_ref)
   1: return ()
 }
 
 
 pub fun TestBorrow::test3(r_ref: &mut TestBorrow::R, v: u64) {
      var x_ref: &mut u64
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   0: x_ref := borrow_field<TestBorrow::R>.x(r_ref)
-     // live_refs: x_ref borrowed_by: LocalRoot(r_ref) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r_ref), Reference(r_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(r_ref), Reference(r_ref)}
   1: TestBorrow::test2(x_ref, v)
+     // dirty_nodes: LocalRoot(r_ref), Reference(r_ref), Reference(x_ref)
   2: return ()
 }
 
@@ -293,19 +308,28 @@ fun TestBorrow::test4(): TestBorrow::R {
   0: $t2 := 3
   1: r := pack TestBorrow::R($t2)
   2: r_ref := borrow_local(r)
-     // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
   3: $t3 := 0
-     // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
   4: TestBorrow::test3(r_ref, $t3)
+     // dirty_nodes: LocalRoot(r), Reference(r_ref)
   5: return r
 }
 
 
 pub fun TestBorrow::test5(r_ref: &mut TestBorrow::R): &mut u64 {
      var $t1: &mut u64
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   0: $t1 := borrow_field<TestBorrow::R>.x(r_ref)
-     // live_refs: $t1 borrowed_by: LocalRoot(r_ref) -> {Reference($t1)}, Reference(r_ref) -> {Reference($t1)} borrows_from: Reference($t1) -> {LocalRoot(r_ref), Reference(r_ref)}
+     // live_refs: $t1
+     // borrowed_by: LocalRoot(r_ref) -> {Reference($t1)}, Reference(r_ref) -> {Reference($t1)}
+     // borrows_from: Reference($t1) -> {LocalRoot(r_ref), Reference(r_ref)}
   1: return $t1
 }
 
@@ -319,12 +343,21 @@ fun TestBorrow::test6(): TestBorrow::R {
   0: $t3 := 3
   1: r := pack TestBorrow::R($t3)
   2: r_ref := borrow_local(r)
-     // live_refs: r_ref borrowed_by: LocalRoot(r) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r)}
   3: x_ref := TestBorrow::test5(r_ref)
-     // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // dirty_nodes: LocalRoot(r), Reference(r_ref)
   4: $t4 := 0
-     // live_refs: x_ref borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)} borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // live_refs: x_ref
+     // borrowed_by: LocalRoot(r) -> {Reference(x_ref)}, Reference(r_ref) -> {Reference(x_ref)}
+     // borrows_from: Reference(x_ref) -> {LocalRoot(r), Reference(r_ref)}
+     // dirty_nodes: LocalRoot(r), Reference(r_ref)
   5: TestBorrow::test2(x_ref, $t4)
+     // dirty_nodes: LocalRoot(r), Reference(r_ref), Reference(x_ref)
   6: return r
 }
 
@@ -341,25 +374,44 @@ fun TestBorrow::test7(b: bool) {
   2: $t5 := 4
   3: r2 := pack TestBorrow::R($t5)
   4: r_ref := borrow_local(r1)
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
   5: if (b) goto L0 else goto L1
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
   6: L1:
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
   7: goto L2
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
   8: L0:
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1)}
   9: destroy(r_ref)
  10: r_ref := borrow_local(r2)
-     // live_refs: r_ref borrowed_by: LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r2)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r2) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r2)}
  11: goto L2
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  12: L2:
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  13: $t6 := 0
-     // live_refs: r_ref borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  14: TestBorrow::test3(r_ref, $t6)
+     // dirty_nodes: LocalRoot(r1), LocalRoot(r2), Reference(r_ref)
  15: return ()
 }
 
@@ -379,94 +431,184 @@ fun TestBorrow::test8(b: bool, n: u64, r_ref: &mut TestBorrow::R) {
      var $t14: u64
      var $t15: u64
      var $t16: u64
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   0: $t6 := 3
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   1: r1 := pack TestBorrow::R($t6)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   2: $t7 := 4
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   3: r2 := pack TestBorrow::R($t7)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
   4: t_ref := borrow_local(r2)
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r2)}
   5: goto L7
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
   6: L7:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
   7: $t8 := 0
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
   8: $t9 := <($t8, n)
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
   9: if ($t9) goto L0 else goto L1
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  10: L1:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  11: goto L2
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  12: L0:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  13: destroy(t_ref)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  14: $t10 := 2
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  15: $t11 := /(n, $t10)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  16: $t12 := 0
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  17: $t13 := ==($t11, $t12)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  18: if ($t13) goto L3 else goto L4
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  19: L4:
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  20: goto L5
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  21: L3:
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  22: t_ref := borrow_local(r1)
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1)}
  23: goto L6
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  24: L5:
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  25: t_ref := borrow_local(r2)
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r2)}
  26: goto L6
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  27: L6:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  28: $t14 := 1
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  29: n := -(n, $t14)
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  30: goto L7
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  31: L2:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  32: if (b) goto L8 else goto L9
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  33: L9:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  34: goto L10
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  35: L8:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  36: destroy(t_ref)
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  37: $t15 := 0
-     // live_refs: r_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
+     // live_refs: r_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}
  38: TestBorrow::test3(r_ref, $t15)
+     // dirty_nodes: LocalRoot(r_ref), Reference(r_ref)
  39: goto L11
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  40: L10:
-     // live_refs: r_ref, t_ref borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: r_ref, t_ref
+     // borrowed_by: LocalRoot(r_ref) -> {Reference(r_ref)}, LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(r_ref) -> {LocalRoot(r_ref)}, Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  41: destroy(r_ref)
-     // live_refs: t_ref borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: t_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  42: $t16 := 0
-     // live_refs: t_ref borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)} borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
+     // live_refs: t_ref
+     // borrowed_by: LocalRoot(r1) -> {Reference(t_ref)}, LocalRoot(r2) -> {Reference(t_ref)}
+     // borrows_from: Reference(t_ref) -> {LocalRoot(r1), LocalRoot(r2)}
  43: TestBorrow::test3(t_ref, $t16)
+     // dirty_nodes: LocalRoot(r1), LocalRoot(r2), Reference(t_ref)
  44: goto L11
+     // dirty_nodes: LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2), Reference(r_ref), Reference(t_ref)
  45: L11:
+     // dirty_nodes: LocalRoot(r_ref), LocalRoot(r1), LocalRoot(r2), Reference(r_ref), Reference(t_ref)
  46: return ()
 }
