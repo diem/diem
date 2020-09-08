@@ -86,7 +86,7 @@ impl LibraLoggerBuilder {
     pub fn new() -> Self {
         Self {
             channel_size: CHANNEL_SIZE,
-            level: Level::Debug,
+            level: Level::Info,
             address: None,
             printer: Some(Box::new(StderrWriter)),
             is_async: false,
