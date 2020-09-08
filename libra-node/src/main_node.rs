@@ -13,7 +13,7 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
-use libra_logger::prelude::*;
+use libra_logger::{prelude::*, Logger};
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
 use libra_types::{
@@ -67,7 +67,7 @@ fn setup_chunk_executor(db: DbReaderWriter) -> Box<dyn ChunkExecutor> {
     Box::new(Executor::<LibraVM>::new(db))
 }
 
-fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
+fn setup_debug_interface(config: &NodeConfig, logger: Option<Arc<Logger>>) -> NodeDebugService {
     let addr = format!(
         "{}:{}",
         config.debug_interface.address, config.debug_interface.admission_control_node_debug_port,
@@ -80,10 +80,12 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     libra_trace::set_libra_trace(&config.debug_interface.libra_trace.sampling)
         .expect("Failed to set libra trace sampling rate.");
 
-    NodeDebugService::new(addr)
+    NodeDebugService::new(addr, logger)
 }
 
-pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
+pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) -> LibraHandle {
+    let debug_if = setup_debug_interface(&node_config, logger);
+
     let metrics_port = node_config.debug_interface.metrics_server_port;
     let metric_host = node_config.debug_interface.address.clone();
     thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
@@ -295,8 +297,6 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
         ));
         debug!("Consensus started in {} ms", instant.elapsed().as_millis());
     }
-
-    let debug_if = setup_debug_interface(&node_config);
 
     LibraHandle {
         _network_runtimes: network_runtimes,

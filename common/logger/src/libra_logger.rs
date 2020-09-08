@@ -126,10 +126,10 @@ impl LibraLoggerBuilder {
     }
 
     pub fn init(&mut self) {
-        self.build()
+        self.build();
     }
 
-    pub fn build(&mut self) {
+    pub fn build(&mut self) -> Arc<LibraLogger> {
         let filter = {
             let mut filter_builder = Filter::builder();
 
@@ -165,7 +165,8 @@ impl LibraLoggerBuilder {
             })
         };
 
-        crate::logger::set_global_logger(logger);
+        crate::logger::set_global_logger(logger.clone());
+        logger
     }
 }
 
@@ -193,7 +194,11 @@ impl LibraLogger {
         Self::builder()
             .is_async(false)
             .printer(Box::new(StderrWriter))
-            .build()
+            .build();
+    }
+
+    pub fn set_filter(&self, filter: Filter) {
+        *self.filter.write().unwrap() = filter;
     }
 
     fn send_entry(&self, entry: LogEntry) {

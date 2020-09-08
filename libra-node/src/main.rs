@@ -36,17 +36,21 @@ fn main() {
     println!("Using node config {:?}", &config);
     crash_handler::setup_panic_handler();
 
-    if !args.no_logging {
-        libra_logger::Logger::new()
-            .channel_size(config.logger.chan_size)
-            .is_async(config.logger.is_async)
-            .level(config.logger.level)
-            .read_env()
-            .init();
+    let logger = if !args.no_logging {
+        Some(
+            libra_logger::Logger::new()
+                .channel_size(config.logger.chan_size)
+                .is_async(config.logger.is_async)
+                .level(config.logger.level)
+                .read_env()
+                .build(),
+        )
+    } else {
+        None
+    };
 
-        // Let's now log some important information, since the logger is set up
-        info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
-    }
+    // Let's now log some important information, since the logger is set up
+    info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
 
     if config.metrics.enabled {
         for network in &config.full_node_networks {
@@ -70,7 +74,7 @@ fn main() {
         warn!("failpoints is set in config, but the binary doesn't compile with this feature");
     }
 
-    let _node_handle = libra_node::main_node::setup_environment(&config);
+    let _node_handle = libra_node::main_node::setup_environment(&config, logger);
     let term = Arc::new(AtomicBool::new(false));
 
     while !term.load(Ordering::Acquire) {

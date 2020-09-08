@@ -1150,6 +1150,7 @@ name = "debug-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-workspace-hack 0.1.0",
