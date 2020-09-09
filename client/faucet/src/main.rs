@@ -178,7 +178,7 @@ mod tests {
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
-        for path in vec!["/", "/mint"] {
+        for path in &vec!["/", "/mint"] {
             let resp = warp::test::request()
                 .method("POST")
                 .path(
