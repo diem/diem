@@ -50,66 +50,66 @@ const KUBECTL_BIN: &str = "/usr/local/bin/kubectl";
 // Config file names.
 macro_rules! FULLNODE_CONFIG {
     () => {
-        include_str!("configs/fullnode.yaml")
+        "configs/fullnode.yaml"
     };
 }
 macro_rules! SAFETY_RULES_CONFIG {
     () => {
-        include_str!("configs/safetyrules.yaml")
+        "configs/safetyrules.yaml"
     };
 }
 macro_rules! VALIDATOR_CONFIG {
     () => {
-        include_str!("configs/validator.yaml")
+        "configs/validator.yaml"
     };
 }
 
 // Fluent bit file names.
 macro_rules! FLUENT_BIT_CONF {
     () => {
-        include_str!("fluent-bit/fluent-bit.conf")
+        "fluent-bit/fluent-bit.conf"
     };
 }
 macro_rules! FLUENT_BIT_PARSERS_CONF {
     () => {
-        include_str!("fluent-bit/parsers.conf")
+        "fluent-bit/parsers.conf"
     };
 }
 
 // Template file names.
 macro_rules! JOB_TEMPLATE {
     () => {
-        include_str!("templates/job_template.yaml")
+        "templates/job_template.yaml"
     };
 }
 macro_rules! LIBRA_NODE_SERVICE_TEMPLATE {
     () => {
-        include_str!("templates/libra_node_service_template.yaml")
+        "templates/libra_node_service_template.yaml"
     };
 }
 macro_rules! LIBRA_NODE_SPEC_TEMPLATE {
     () => {
-        include_str!("templates/libra_node_spec_template.yaml")
+        "templates/libra_node_spec_template.yaml"
     };
 }
 macro_rules! LSR_SERVICE_TEMPLATE {
     () => {
-        include_str!("templates/lsr_service_template.yaml")
+        "templates/lsr_service_template.yaml"
     };
 }
 macro_rules! LSR_SPEC_TEMPLATE {
     () => {
-        include_str!("templates/lsr_spec_template.yaml")
+        "templates/lsr_spec_template.yaml"
     };
 }
 macro_rules! VAULT_SERVICE_TEMPLATE {
     () => {
-        include_str!("templates/vault_service_template.yaml")
+        "templates/vault_service_template.yaml"
     };
 }
 macro_rules! VAULT_SPEC_TEMPLATE {
     () => {
-        include_str!("templates/vault_spec_template.yaml")
+        "templates/vault_spec_template.yaml"
     };
 }
 
@@ -125,9 +125,7 @@ impl ClusterSwarmKube {
     pub async fn new() -> Result<Self> {
         let http_client = HttpClient::new();
         // This uses kubectl proxy locally to forward connections to kubernetes api server
-        Command::new(KUBECTL_BIN)
-            .arg("proxy")
-            .spawn()?;
+        Command::new(KUBECTL_BIN).arg("proxy").spawn()?;
         libra_retrier::retry_async(k8s_retry_strategy(), || {
             Box::pin(async move {
                 debug!("Running local kube pod healthcheck on {}", HEALTH_CHECK_URL);
@@ -155,20 +153,23 @@ impl ClusterSwarmKube {
     }
 
     fn service_spec(&self, peer_id: String) -> Result<Service> {
-        let service_yaml = format!(LIBRA_NODE_SERVICE_TEMPLATE!(), peer_id = &peer_id);
+        let service_yaml = format!(
+            include_str!(LIBRA_NODE_SERVICE_TEMPLATE!()),
+            peer_id = &peer_id
+        );
         get_spec_instance_from_template(service_yaml)
     }
 
     fn lsr_spec(&self, pod_name: &str, node_name: &str, image_tag: &str) -> Result<(Pod, Service)> {
         let pod_yaml = format!(
-            LSR_SPEC_TEMPLATE!(),
+            include_str!(LSR_SPEC_TEMPLATE!()),
             pod_name = pod_name,
             image_tag = image_tag,
             node_name = node_name,
         );
         let pod_spec = get_spec_instance_from_template(pod_yaml)?;
 
-        let service_yaml = format!(LSR_SERVICE_TEMPLATE!(), pod_name = pod_name,);
+        let service_yaml = format!(include_str!(LSR_SERVICE_TEMPLATE!()), pod_name = pod_name,);
         let service_spec = get_spec_instance_from_template(service_yaml)?;
 
         Ok((pod_spec, service_spec))
@@ -176,13 +177,16 @@ impl ClusterSwarmKube {
 
     fn vault_spec(&self, validator_index: u32, node_name: &str) -> Result<(Pod, Service)> {
         let pod_yaml = format!(
-            VAULT_SPEC_TEMPLATE!(),
+            include_str!(VAULT_SPEC_TEMPLATE!()),
             validator_index = validator_index,
             node_name = node_name,
         );
         let pod_spec = get_spec_instance_from_template(pod_yaml)?;
 
-        let service_yaml = format!(VAULT_SERVICE_TEMPLATE!(), validator_index = validator_index,);
+        let service_yaml = format!(
+            include_str!(VAULT_SERVICE_TEMPLATE!()),
+            validator_index = validator_index,
+        );
         let service_spec = get_spec_instance_from_template(service_yaml)?;
 
         Ok((pod_spec, service_spec))
@@ -196,7 +200,7 @@ impl ClusterSwarmKube {
         image_tag: &str,
     ) -> Result<Pod> {
         let pod_yaml = format!(
-            LIBRA_NODE_SPEC_TEMPLATE!(),
+            include_str!(LIBRA_NODE_SPEC_TEMPLATE!()),
             pod_app = pod_app,
             pod_name = pod_name,
             image_tag = image_tag,
@@ -221,7 +225,7 @@ impl ClusterSwarmKube {
         let job_full_name = format!("{}-{}", job_name, suffix);
 
         let job_yaml = format!(
-            JOB_TEMPLATE!(),
+            include_str!(JOB_TEMPLATE!()),
             name = &job_full_name,
             label = job_name,
             image = docker_image,
@@ -412,7 +416,7 @@ impl ClusterSwarmKube {
                     .to_ascii_lowercase();
                 let job_name = format!("remove-network-effects-{}", suffix);
                 let job_yaml = format!(
-                    JOB_TEMPLATE!(),
+                    include_str!(JOB_TEMPLATE!()),
                     name = &job_name,
                     label = "remove-network-effects",
                     image = "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
@@ -702,9 +706,9 @@ impl ClusterSwarmKube {
     }
 
     async fn config_fluentbit(&self, input_tag: &str, pod_name: &str, node: &str) -> Result<()> {
-        let parsers_config = FLUENT_BIT_PARSERS_CONF!().to_string();
+        let parsers_config = include_str!(FLUENT_BIT_PARSERS_CONF!()).to_string();
         let fluentbit_config = format!(
-            FLUENT_BIT_CONF!(),
+            include_str!(FLUENT_BIT_CONF!()),
             input_tag = input_tag,
             pod_name = pod_name
         );
@@ -747,7 +751,7 @@ impl ClusterSwarmKube {
     ) -> Result<()> {
         let node_config = match &instance_config.application_config {
             Validator(validator_config) => Some(format!(
-                VALIDATOR_CONFIG!(),
+                include_str!(VALIDATOR_CONFIG!()),
                 vault_addr = validator_config
                     .vault_addr
                     .as_ref()
@@ -762,7 +766,7 @@ impl ClusterSwarmKube {
                     .unwrap_or(&"".to_string()),
             )),
             Fullnode(fullnode_config) => Some(format!(
-                FULLNODE_CONFIG!(),
+                include_str!(FULLNODE_CONFIG!()),
                 vault_addr = fullnode_config
                     .vault_addr
                     .as_ref()
@@ -774,7 +778,7 @@ impl ClusterSwarmKube {
                 seed_peer_ip = fullnode_config.seed_peer_ip,
             )),
             LSR(lsr_config) => Some(format!(
-                SAFETY_RULES_CONFIG!(),
+                include_str!(SAFETY_RULES_CONFIG!()),
                 vault_addr = lsr_config.vault_addr.as_ref().unwrap_or(&"".to_string()),
                 vault_ns = lsr_config
                     .vault_namespace
