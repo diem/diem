@@ -511,7 +511,7 @@ async fn handle_outbound_rpc_inner(
 
     // Collect counters for requests sent.
     counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
-    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).observe(req_len as f64);
+    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len as i64);
 
     // Wait for listener's response.
     trace!(
@@ -534,7 +534,7 @@ async fn handle_outbound_rpc_inner(
     let res_data = response.raw_response;
     counters::rpc_messages(network_context, RESPONSE_LABEL, RECEIVED_LABEL).inc();
     counters::rpc_bytes(network_context, RESPONSE_LABEL, RECEIVED_LABEL)
-        .observe(res_data.len() as f64);
+        .inc_by(res_data.len() as i64);
     Ok(Bytes::from(res_data))
 }
 
@@ -556,7 +556,7 @@ async fn handle_inbound_request_inner(
     // Collect counters for received request.
     counters::rpc_messages(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc();
     counters::rpc_bytes(network_context, REQUEST_LABEL, RECEIVED_LABEL)
-        .observe(req_data.len() as f64);
+        .inc_by(req_data.len() as i64);
 
     // Forward request to upper layer.
     let (res_tx, res_rx) = oneshot::channel();
@@ -593,6 +593,6 @@ async fn handle_inbound_request_inner(
 
     // Collect counters for sent response.
     counters::rpc_messages(network_context, RESPONSE_LABEL, SENT_LABEL).inc();
-    counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).observe(res_len as f64);
+    counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).inc_by(res_len as i64);
     Ok(())
 }
