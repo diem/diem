@@ -124,14 +124,15 @@ impl warp::reject::Reject for ServerInternalError {}
 mod tests {
     use crate::routes;
     use libra_faucet::mint;
-    use std::{collections::HashMap, sync::Arc};
+    use libra_types::transaction::TransactionPayload::Script;
+    use std::{
+        collections::HashMap,
+        sync::{Arc, RwLock},
+    };
+    use transaction_builder_generated::stdlib::ScriptCall;
     use warp::Filter;
 
-    fn setup() -> Arc<mint::Service> {
-        setup_with_accounts(genesis_accounts())
-    }
-
-    fn setup_with_accounts(accounts: HashMap<String, serde_json::Value>) -> Arc<mint::Service> {
+    fn setup(accounts: Arc<RwLock<HashMap<String, serde_json::Value>>>) -> Arc<mint::Service> {
         let f = tempfile::NamedTempFile::new()
             .unwrap()
             .into_temp_path()
@@ -140,11 +141,10 @@ mod tests {
 
         let chain_id = libra_types::chain_id::ChainId::test();
 
-        let accounts_arc = Arc::new(accounts);
         let stub = warp::any()
             .and(warp::body::json())
             .map(move |req: serde_json::Value| {
-                let resp = handle_request(req, chain_id, Arc::clone(&accounts_arc));
+                let resp = handle_request(req, chain_id, Arc::clone(&accounts));
                 Ok(warp::reply::json(&resp))
             });
         let port = libra_config::utils::get_available_port();
@@ -161,7 +161,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_healthy() {
-        let service = setup();
+        let accounts = genesis_accounts();
+        let service = setup(accounts);
         let filter = routes(service);
         let resp = warp::test::request()
             .method("GET")
@@ -174,29 +175,37 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint() {
-        let service = setup();
+        let accounts = genesis_accounts();
+        let service = setup(accounts.clone());
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
+        let amount = 13345;
         for path in &vec!["/", "/mint"] {
             let resp = warp::test::request()
                 .method("POST")
                 .path(
                     format!(
-                        "{}?auth_key={}&amount=1000000&currency_code=LBR",
-                        path, auth_key
+                        "{}?auth_key={}&amount={}&currency_code=LBR",
+                        path, auth_key, amount
                     )
                     .as_str(),
                 )
                 .reply(&filter)
                 .await;
             assert_eq!(resp.body(), "2389"); // 2388+1
+            let reader = accounts.read().unwrap();
+            let account = reader
+                .get("a74fd7c46952c497e75afb0a7932586d")
+                .expect("account should be created");
+            assert_eq!(account["balances"][0]["amount"], amount);
         }
     }
 
     #[tokio::test]
     async fn test_mint_invalid_auth_key() {
-        let service = setup();
+        let accounts = genesis_accounts();
+        let service = setup(accounts);
         let filter = routes(service);
 
         let auth_key = "invalid-auth-key";
@@ -216,7 +225,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mint_fullnode_error() {
-        let service = setup_with_accounts(HashMap::new());
+        let accounts = Arc::new(RwLock::new(HashMap::new()));
+        let service = setup(accounts);
         let filter = routes(service);
 
         let auth_key = "459c77a38803bd53f3adee52703810e3a74fd7c46952c497e75afb0a7932586d";
@@ -240,38 +250,94 @@ mod tests {
     fn handle_request(
         req: serde_json::Value,
         chain_id: libra_types::chain_id::ChainId,
-        accounts: Arc<HashMap<String, serde_json::Value>>,
+        accounts: Arc<RwLock<HashMap<String, serde_json::Value>>>,
     ) -> serde_json::Value {
         if let serde_json::Value::Array(reqs) = req {
-            reqs.iter()
+            return reqs
+                .iter()
                 .map(move |req| handle_request(req.clone(), chain_id, Arc::clone(&accounts)))
-                .collect()
-        } else {
-            serde_json::json!({
-                "id": req["id"],
-                "jsonrpc": "2.0",
-                "libra_chain_id": chain_id.id(),
-                "libra_ledger_timestampusec": 1599587372,
-                "libra_ledger_version": 2052770,
-                "result":match req["method"].as_str() {
-                    Some("submit") => {
-                        let raw: &str = req["params"][0].as_str().unwrap();
-                        let txn: libra_types::transaction::SignedTransaction =
-                            lcs::from_bytes(&hex::decode(raw).unwrap()).unwrap();
-                        assert_eq!(txn.chain_id(), chain_id);
-                        None
+                .collect();
+        }
+        match req["method"].as_str() {
+            Some("submit") => {
+                let raw: &str = req["params"][0].as_str().unwrap();
+                let txn: libra_types::transaction::SignedTransaction =
+                    lcs::from_bytes(&hex::decode(raw).unwrap()).unwrap();
+                assert_eq!(txn.chain_id(), chain_id);
+                if let Script(script) = txn.payload() {
+                    match ScriptCall::decode(script) {
+                        Some(ScriptCall::CreateParentVaspAccount {
+                            new_account_address: address,
+                            ..
+                        }) => {
+                            let mut writer = accounts.write().unwrap();
+                            writer.insert(
+                                address.to_string(),
+                                create_vasp_account(address.to_string(), 0),
+                            );
+                        }
+                        Some(ScriptCall::PeerToPeerWithMetadata { payee, amount, .. }) => {
+                            let mut writer = accounts.write().unwrap();
+                            let account = writer
+                                .get_mut(&payee.to_string())
+                                .expect("account should be created");
+                            *account = create_vasp_account(payee.to_string(), amount);
+                        }
+                        _ => panic!("unexpected type of script"),
                     }
-                    Some("get_account") => {
-                        let address: &str = req["params"][0].as_str().unwrap();
-                        accounts.get(address)
-                    }
-                    _ => panic!("unexpected method"),
                 }
-            })
+                create_response(&req["id"], chain_id.id(), None)
+            }
+            Some("get_account") => {
+                let address: &str = req["params"][0].as_str().unwrap();
+                let reader = accounts.read().unwrap();
+                create_response(&req["id"], chain_id.id(), reader.get(address))
+            }
+            _ => panic!("unexpected method"),
         }
     }
 
-    fn genesis_accounts() -> HashMap<String, serde_json::Value> {
+    fn create_response(
+        id: &serde_json::Value,
+        chain_id: u8,
+        result: Option<&serde_json::Value>,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "id": id,
+            "jsonrpc": "2.0",
+            "libra_chain_id": chain_id,
+            "libra_ledger_timestampusec": 1599587372,
+            "libra_ledger_version": 2052770,
+            "result": result
+        })
+    }
+
+    fn create_vasp_account(address: String, amount: u64) -> serde_json::Value {
+        serde_json::json!({
+            "balances": [{
+                "amount": amount,
+                "currency": "LBR",
+            }],
+            "sequence_number": 0,
+            "authentication_key": format!("{}{}", address, address),
+            "sent_events_key": format!("0300000000000000{}", address),
+            "received_events_key": format!("0200000000000000{}", address),
+            "delegated_key_rotation_capability": false,
+            "delegated_withdrawal_capability": false,
+            "is_frozen": false,
+            "role": {
+                "human_name": "No. 0",
+                "base_url": "",
+                "expiration_time": 18446744,
+                "compliance_key": "",
+                "num_children": 0,
+                "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
+                "base_url_rotation_events_key": format!("0100000000000000{}", address),
+            }
+        })
+    }
+
+    fn genesis_accounts() -> Arc<RwLock<HashMap<String, serde_json::Value>>> {
         let mut accounts: HashMap<String, serde_json::Value> = HashMap::new();
         accounts.insert("0000000000000000000000000b1e55ed".to_owned(), serde_json::json!({
             "authentication_key": "47aee3951cfcffe581112185e1699ea0e6f1565495c581dfac665239a414eafc",
@@ -287,7 +353,7 @@ mod tests {
             "sequence_number": 0
         }));
         accounts.insert("000000000000000000000000000000dd".to_owned(), serde_json::json!({
-            "authentication_key": "47aee3951cfcffe581112185e1699ea0e6f1565495c581dfac665239a414eafc",
+            "authentication_key": "b64377181aa367435848428976194c877c3cc62c86e4e94a1be9891401c77587",
             "balances": [
                 {
                     "amount": 461168581,
@@ -329,6 +395,6 @@ mod tests {
             "sent_events_key": "0200000000000000000000000000000000000000000000dd",
             "sequence_number": 2388
         }));
-        accounts
+        Arc::new(RwLock::new(accounts))
     }
 }
