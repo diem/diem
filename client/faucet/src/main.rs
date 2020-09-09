@@ -306,7 +306,7 @@ mod tests {
             "id": id,
             "jsonrpc": "2.0",
             "libra_chain_id": chain_id,
-            "libra_ledger_timestampusec": 1599587372,
+            "libra_ledger_timestampusec": 1599670083580598u64,
             "libra_ledger_version": 2052770,
             "result": result
         })
@@ -341,7 +341,7 @@ mod tests {
             serde_json::json!({
                 "human_name": "No. 0",
                 "base_url": "",
-                "expiration_time": 18446744,
+                "expiration_time": 18446744073709551615u64,
                 "compliance_key": "",
                 "num_children": 0,
                 "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
@@ -354,13 +354,13 @@ mod tests {
         create_account(
             address,
             serde_json::json!([{
-                "amount": 2147483648u64,
+                "amount": 4611685774556657903u64,
                 "currency": "LBR",
             }]),
             serde_json::json!({
                 "base_url": "",
                 "compliance_key": "",
-                "expiration_time": 1999587372,
+                "expiration_time": 18446744073709551615u64,
                 "human_name": "moneybags",
                 "preburn_balances": [{
                     "amount": 0,
