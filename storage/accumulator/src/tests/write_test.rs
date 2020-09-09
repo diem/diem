@@ -2,9 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
+use crate::test_helpers::{
+    arb_hash_batch, arb_list_of_hash_batches, test_append_empty_impl, test_append_many_impl,
+    MockHashStore, TestAccumulator,
+};
 use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
 use libra_types::proof::definition::LeafCount;
-use proptest::{collection::vec, prelude::*};
 
 #[test]
 fn test_append_empty_on_empty() {
@@ -38,34 +41,12 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
 
     #[test]
-    fn test_append_many(batches in vec(vec(any::<HashValue>(), 10), 10)) {
-        let mut store = MockHashStore::new();
-
-        let mut leaves: Vec<HashValue> = Vec::new();
-        let mut num_leaves = 0;
-        for hashes in batches.iter() {
-            let (root_hash, writes) =
-                TestAccumulator::append(&store, num_leaves, &hashes).unwrap();
-            store.put_many(&writes);
-
-            num_leaves += hashes.len() as LeafCount;
-            leaves.extend(hashes.iter());
-            let expected_root_hash = store.verify(&leaves).unwrap();
-            assert_eq!(root_hash, expected_root_hash)
-        }
+    fn test_append_many(batches in arb_list_of_hash_batches(10, 10)) {
+        test_append_many_impl(batches);
     }
 
     #[test]
-    fn test_append_empty(leaves in vec(any::<HashValue>(), 100)) {
-        let mut store = MockHashStore::new();
-
-        let (root_hash, writes) = TestAccumulator::append(&store, 0, &leaves).unwrap();
-        store.put_many(&writes);
-
-        let (root_hash2, writes2) =
-            TestAccumulator::append(&store, leaves.len() as LeafCount, &[]).unwrap();
-
-        assert_eq!(root_hash, root_hash2);
-        assert!(writes2.is_empty());
+    fn test_append_empty(leaves in arb_hash_batch(100)) {
+        test_append_empty_impl(leaves)
     }
 }
