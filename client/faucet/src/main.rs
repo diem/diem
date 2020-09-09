@@ -193,7 +193,7 @@ mod tests {
                 )
                 .reply(&filter)
                 .await;
-            assert_eq!(resp.body(), "2389"); // 2388+1
+            assert_eq!(resp.body(), "1"); // 0+1
             let reader = accounts.read().unwrap();
             let account = reader
                 .get("a74fd7c46952c497e75afb0a7932586d")
@@ -273,7 +273,7 @@ mod tests {
                             let mut writer = accounts.write().unwrap();
                             writer.insert(
                                 address.to_string(),
-                                create_vasp_account(address.to_string(), 0),
+                                create_vasp_account(address.to_string().as_str(), 0),
                             );
                         }
                         Some(ScriptCall::PeerToPeerWithMetadata { payee, amount, .. }) => {
@@ -281,7 +281,7 @@ mod tests {
                             let account = writer
                                 .get_mut(&payee.to_string())
                                 .expect("account should be created");
-                            *account = create_vasp_account(payee.to_string(), amount);
+                            *account = create_vasp_account(payee.to_string().as_str(), amount);
                         }
                         _ => panic!("unexpected type of script"),
                     }
@@ -312,89 +312,84 @@ mod tests {
         })
     }
 
-    fn create_vasp_account(address: String, amount: u64) -> serde_json::Value {
-        serde_json::json!({
-            "balances": [{
+    fn genesis_accounts() -> Arc<RwLock<HashMap<String, serde_json::Value>>> {
+        let mut accounts: HashMap<String, serde_json::Value> = HashMap::new();
+        accounts.insert(
+            "0000000000000000000000000b1e55ed".to_owned(),
+            create_account(
+                "0000000000000000000000000b1e55ed",
+                serde_json::json!([]),
+                serde_json::json!({
+                    "type": "unknown"
+                }),
+            ),
+        );
+        accounts.insert(
+            "000000000000000000000000000000dd".to_owned(),
+            create_dd_account("000000000000000000000000000000dd"),
+        );
+        Arc::new(RwLock::new(accounts))
+    }
+
+    fn create_vasp_account(address: &str, amount: u64) -> serde_json::Value {
+        create_account(
+            address,
+            serde_json::json!([{
                 "amount": amount,
-                "currency": "LBR",
-            }],
-            "sequence_number": 0,
-            "authentication_key": format!("{}{}", address, address),
-            "sent_events_key": format!("0300000000000000{}", address),
-            "received_events_key": format!("0200000000000000{}", address),
-            "delegated_key_rotation_capability": false,
-            "delegated_withdrawal_capability": false,
-            "is_frozen": false,
-            "role": {
+                "currency": "LBR"
+            }]),
+            serde_json::json!({
                 "human_name": "No. 0",
                 "base_url": "",
                 "expiration_time": 18446744,
                 "compliance_key": "",
                 "num_children": 0,
-                "compliance_key_rotation_events_key": format!("0000000000000000{}", address),
-                "base_url_rotation_events_key": format!("0100000000000000{}", address),
-            }
-        })
+                "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
+                "base_url_rotation_events_key": format!("0300000000000000{}", address)
+            }),
+        )
     }
 
-    fn genesis_accounts() -> Arc<RwLock<HashMap<String, serde_json::Value>>> {
-        let mut accounts: HashMap<String, serde_json::Value> = HashMap::new();
-        accounts.insert("0000000000000000000000000b1e55ed".to_owned(), serde_json::json!({
-            "authentication_key": "47aee3951cfcffe581112185e1699ea0e6f1565495c581dfac665239a414eafc",
-            "balances": [],
-            "delegated_key_rotation_capability": false,
-            "delegated_withdrawal_capability": false,
-            "is_frozen": false,
-            "received_events_key": "00000000000000000000000000000000000000000b1e55ed",
-            "role": {
-                "type": "unknown"
-            },
-            "sent_events_key": "01000000000000000000000000000000000000000b1e55ed",
-            "sequence_number": 0
-        }));
-        accounts.insert("000000000000000000000000000000dd".to_owned(), serde_json::json!({
-            "authentication_key": "b64377181aa367435848428976194c877c3cc62c86e4e94a1be9891401c77587",
-            "balances": [
-                {
-                    "amount": 461168581,
-                    "currency": "Coin1"
-                },
-                {
-                    "amount": 461168581,
-                    "currency": "Coin2"
-                },
-                {
-                    "amount": 922135149,
-                    "currency": "LBR"
-                }
-            ],
-            "delegated_key_rotation_capability": false,
-            "delegated_withdrawal_capability": false,
-            "is_frozen": false,
-            "received_events_key": "0100000000000000000000000000000000000000000000dd",
-            "role": {
+    fn create_dd_account(address: &str) -> serde_json::Value {
+        create_account(
+            address,
+            serde_json::json!([{
+                "amount": 2147483648u64,
+                "currency": "LBR",
+            }]),
+            serde_json::json!({
                 "base_url": "",
                 "compliance_key": "",
                 "expiration_time": 1999587372,
                 "human_name": "moneybags",
-                "preburn_balances": [
-                    {
-                        "amount": 0,
-                        "currency": "Coin1"
-                    },
-                    {
-                        "amount": 0,
-                        "currency": "Coin2"
-                    }
-                ],
-                "compliance_key_rotation_events_key": "0200000000000000000000000000000000000000000000dd",
-                "base_url_rotation_events_key": "0300000000000000000000000000000000000000000000dd",
-                "received_mint_events_key": "0000000000000000000000000000000000000000000000dd",
-                "type": "designated_dealer"
-            },
-            "sent_events_key": "0200000000000000000000000000000000000000000000dd",
-            "sequence_number": 2388
-        }));
-        Arc::new(RwLock::new(accounts))
+                "preburn_balances": [{
+                    "amount": 0,
+                    "currency": "LBR"
+                }],
+                "type": "designated_dealer",
+                "compliance_key_rotation_events_key": format!("0200000000000000{}", address),
+                "base_url_rotation_events_key": format!("0300000000000000{}", address),
+                "received_mint_events_key": format!("0400000000000000{}", address)
+            }),
+        )
+    }
+
+    fn create_account(
+        address: &str,
+        balances: serde_json::Value,
+        role: serde_json::Value,
+    ) -> serde_json::Value {
+        serde_json::json!({
+            "address": address,
+            "balances": balances,
+            "role": role,
+            "authentication_key": format!("{}{}", address, address),
+            "sent_events_key": format!("0000000000000000{}", address),
+            "received_events_key": format!("0100000000000000{}", address),
+            "delegated_key_rotation_capability": false,
+            "delegated_withdrawal_capability": false,
+            "is_frozen": false,
+            "sequence_number": 0
+        })
     }
 }
