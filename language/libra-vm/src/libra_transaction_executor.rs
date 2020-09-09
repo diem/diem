@@ -89,6 +89,12 @@ impl LibraVM {
         let mut session = self.0.new_session(remote_cache);
         match TransactionStatus::from(error_code.clone()) {
             TransactionStatus::Keep(status) => {
+                // The transaction should be charged for gas, so run the epilogue to do that.
+                // This is running in a new session that drops any side effects from the
+                // attempted transaction (e.g., spending funds that were needed to pay for gas),
+                // so even if the previous failure occurred while running the epilogue, it
+                // should not fail now. If it somehow fails here, there is no choice but to
+                // discard the transaction.
                 if let Err(e) = self.0.run_failure_epilogue(
                     &mut session,
                     &mut cost_strategy,
