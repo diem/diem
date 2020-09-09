@@ -6,6 +6,7 @@ use anyhow::Result;
 use consensus_types::block::Block;
 use execution_correctness::ExecutionCorrectness;
 use executor_types::{Error, StateComputeResult};
+use fail::fail_point;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
@@ -44,6 +45,11 @@ impl StateComputer for ExecutionProxy {
         // The parent block id.
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
+        fail_point!("consensus::compute", |_| {
+            Err(Error::InternalError {
+                error: "Injected error in compute".into(),
+            })
+        });
         debug!(
             "Executing block {:x}. Parent: {:x}.",
             block.id(),
@@ -86,6 +92,9 @@ impl StateComputer for ExecutionProxy {
 
     /// Synchronize to a commit that not present locally.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
+        fail_point!("consensus::sync_to", |_| {
+            Err(anyhow::anyhow!("Injected error in sync_to"))
+        });
         // Here to start to do state synchronization where ChunkExecutor inside will
         // process chunks and commit to Storage. However, after block execution and
         // commitments, the the sync state of ChunkExecutor may be not up to date so

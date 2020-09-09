@@ -53,4 +53,10 @@ storage:
 
 # this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
 failpoints:
-  process_proposal: 5%return
+  consensus::process_proposal_msg: 5%return
+  consensus::process_sync_info_msg: 5%return
+  consensus::process_vote_msg: 5%return
+  consensus::process_block_retrieval: 5%return
+  consensus::sync_to: 1%return
+  consensus::compute: 1%return
+  consensus::pull_txn: 1%return

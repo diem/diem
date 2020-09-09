@@ -282,6 +282,9 @@ impl RoundManager {
     /// 1. ensure after processing sync info, we're at the same round as the proposal
     /// 2. execute and decide whether to vode for the proposal
     pub async fn process_proposal_msg(&mut self, proposal_msg: ProposalMsg) -> anyhow::Result<()> {
+        fail_point!("consensus::process_proposal_msg", |_| {
+            Err(anyhow::anyhow!("Injected error in process_proposal_msg"))
+        });
         trace_event!("round_manager::pre_process_proposal", {"block", proposal_msg.proposal().id()});
         if self
             .ensure_round_and_sync_up(
@@ -386,6 +389,9 @@ impl RoundManager {
         sync_info: SyncInfo,
         peer: Author,
     ) -> anyhow::Result<()> {
+        fail_point!("consensus::process_sync_info_msg", |_| {
+            Err(anyhow::anyhow!("Injected error in process_sync_info_msg"))
+        });
         debug!("Received a sync info msg: {}", sync_info);
         // To avoid a ping-pong cycle between two peers that move forward together.
         self.ensure_round_and_sync_up(sync_info.highest_round() + 1, &sync_info, peer, false)
@@ -467,9 +473,6 @@ impl RoundManager {
     /// 4. In case a validator chooses to vote, send the vote to the representatives at the next
     /// round.
     async fn process_proposal(&mut self, proposal: Block) -> Result<()> {
-        fail_point!("process_proposal", |_| {
-            Err(anyhow::anyhow!("Injected error in process_proposal"))
-        });
         ensure!(
             self.proposer_election.is_valid_proposal(&proposal),
             "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
@@ -574,6 +577,9 @@ impl RoundManager {
     /// 2. Add the vote to the pending votes and check whether it finishes a QC.
     /// 3. Once the QC/TC successfully formed, notify the RoundState.
     pub async fn process_vote_msg(&mut self, vote_msg: VoteMsg) -> anyhow::Result<()> {
+        fail_point!("consensus::process_vote_msg", |_| {
+            Err(anyhow::anyhow!("Injected error in process_vote_msg"))
+        });
         trace_code_block!("round_manager::process_vote", {"block", vote_msg.proposed_block_id()});
         // Check whether this validator is a valid recipient of the vote.
         if self
@@ -674,6 +680,9 @@ impl RoundManager {
         &self,
         request: IncomingBlockRetrievalRequest,
     ) -> anyhow::Result<()> {
+        fail_point!("consensus::process_block_retrieval", |_| {
+            Err(anyhow::anyhow!("Injected error in process_block_retrieval"))
+        });
         let mut blocks = vec![];
         let mut status = BlockRetrievalStatus::Succeeded;
         let mut id = request.req.block_id();

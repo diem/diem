@@ -5,6 +5,7 @@ use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
 use executor_types::StateComputeResult;
+use fail::fail_point;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
 use libra_mempool::{
@@ -33,6 +34,9 @@ impl MempoolProxy {
 #[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
     async fn pull_txns(&self, max_size: u64, exclude_payloads: Vec<&Payload>) -> Result<Payload> {
+        fail_point!("consensus::pull_txns", |_| {
+            Err(anyhow::anyhow!("Injected error in pull_txns"))
+        });
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
             for transaction in payload {
