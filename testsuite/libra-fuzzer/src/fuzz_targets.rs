@@ -13,7 +13,6 @@ mod json_rpc_service;
 mod mempool;
 mod move_vm;
 mod network;
-mod network_noise;
 mod safety_rules;
 mod secure_json_rpc_client;
 mod secure_storage_vault;
