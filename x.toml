@@ -1,5 +1,5 @@
 [system-tests]
-testsuite = { path = "testsuite" }
+smoke-test = { path = "smoke-test" }
 
 [cargo]
 toolchain = "nightly-2020-07-08"
