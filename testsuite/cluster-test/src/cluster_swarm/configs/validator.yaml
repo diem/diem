@@ -50,3 +50,7 @@ metrics:
 
 storage:
   prune_window: 50000
+
+# this is only enabled when the binary is compiled with failpoints feature, otherwise no-op
+failpoints:
+  process_proposal: 5%return
