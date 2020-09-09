@@ -89,9 +89,9 @@ if [[ -n "$USERSET_PREVIOUS_GITHASH" ]] && git merge-base --is-ancestor "$USERSE
 fi
 
 #If we can find the PR number it overrides any user input git hash.
-#if we are on the "auto" branch use the commit message to determine bor's target branch.
-# Bor's target branch -- use bors commit message as source of truth.
-if [[ "${BORS}" == "true" ]] && [[ "${BRANCH}" == "auto" ]]; then
+#if we are on the "auto"/"canary" branch use the commit message to determine bor's target branch.
+#Bor's target branch -- use bors commit message as source of truth.
+if [[ "$BORS" == "true" ]] &&  [[ "$BRANCH" == "auto" || "$BRANCH" == "canary" ]] ; then
   commit_message=$(git log -1 --pretty=%B)
   PR_NUMBER=$(echo "${commit_message}" | tail -1 | sed 's/Closes: #//')
 else
