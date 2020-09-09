@@ -598,11 +598,11 @@ jobs:
       - run:
           name: Lint DockerFile changes
           command: |
-            eval `.circleci/get_pr_info.sh -b`
-            CHANGED_DOCKER_FILES=`cat "$CHANGED_FILE_OUTPUTFILE" | grep Dockerfile | tr '\n' ' '`
-            if [[ ! -z "$CHANGED_DOCKER_FILES" ]]; then
-              hadolint -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
-            fi
+            #eval `.circleci/get_pr_info.sh -b`
+            #if  [[ -n "$BASE_GITHASH" ]] && [[ -n "$CHANGED_FILE_OUTPUTFILE" ]] && [[ "wc -l < $CHANGED_FILE_OUTPUTFILE" != 0 ]]; then
+            #  CHANGED_DOCKER_FILES=$(cat "$CHANGED_FILE_OUTPUTFILE" | grep Dockerfile | tr '\n' ' ')
+            #  hadolint -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
+            #fi
       - fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256
   check-breaking-change:
     executor: audit-executor
