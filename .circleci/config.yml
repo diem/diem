@@ -578,18 +578,6 @@ jobs:
               --ignore RUSTSEC-2019-0031 \
               --ignore RUSTSEC-2020-0016
       - build_teardown
-  terraform:
-    executor: small-executor
-    steps:
-      - checkout
-      - run:
-          name: Terraform init
-          command: terraform init
-          working_directory: terraform/
-      - run:
-          name: Terraform validate
-          command: terraform validate
-          working_directory: terraform/
   lint-docker:
     executor: audit-executor
     description: Lint changed Dockerfiles
@@ -957,8 +945,6 @@ workflows:
     jobs:
       - lint-docker:
           filters: *filter-only-auto-canary
-      - terraform:
-          filters: *filter-only-auto-canary
       - prefetch-crates:
           filters: *filter-only-auto-canary
       - lint:
@@ -1004,8 +990,6 @@ workflows:
   pull-request-workflow:
     jobs:
       - lint-docker:
-          filters: *filter-only-prs-dependabot
-      - terraform:
           filters: *filter-only-prs-dependabot
       - prefetch-crates:
           filters: *filter-only-prs-dependabot
