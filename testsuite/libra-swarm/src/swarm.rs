@@ -236,7 +236,7 @@ pub enum SwarmLaunchFailure {
     /// Timeout while waiting for the nodes to report that they're all interconnected
     #[error("Node connectivity check timeout")]
     ConnectivityTimeout,
-    #[error("IO Error")]
+    #[error("IO Error: {0}")]
     IoError(#[from] io::Error),
 }
 
