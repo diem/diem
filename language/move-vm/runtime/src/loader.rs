@@ -20,7 +20,7 @@ use move_vm_types::{
     loaded_data::runtime_types::{StructType, Type},
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Debug,
     hash::Hash,
     sync::{Arc, Mutex},
@@ -407,7 +407,6 @@ pub(crate) struct Loader {
 
 impl Loader {
     pub(crate) fn new() -> Self {
-        //println!("new loader");
         Self {
             scripts: Mutex::new(ScriptCache::new()),
             module_cache: Mutex::new(ModuleCache::new()),
@@ -485,8 +484,9 @@ impl Loader {
             Ok(_) => {
                 // verify dependencies
                 let deps = script_dependencies(&script);
+                let mut visited_deps = HashSet::new();
                 let loaded_deps =
-                    self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?;
+                    self.load_dependencies(deps, &mut visited_deps, data_store, true)?;
                 self.verify_script_dependencies(&script, loaded_deps)?;
                 Ok(script)
             }
@@ -537,7 +537,9 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-        self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
+        let mut visited_deps = HashSet::new();
+        visited_deps.insert(module_id.clone());
+        self.load_module(module_id, data_store, &mut visited_deps, false)?;
         let idx = self
             .module_cache
             .lock()
@@ -561,29 +563,60 @@ impl Loader {
     // A module to be published must be loadable.
     // This step performs all verification steps to load the module without loading it.
     // The module is not added to the code cache. It is simply published to the data cache.
-    // See `verify_script()` for script verification steps.
-    pub(crate) fn verify_module_verify_no_missing_dependencies(
+    // (See `verify_script()` for script verification steps)
+    pub(crate) fn verify_module_for_publishing(
         &self,
         module: &CompiledModule,
         data_store: &mut impl DataStore,
     ) -> VMResult<()> {
-        self.verify_module(module, data_store, true)
+        self.verify_module(module)?;
+
+        let deps = module_dependencies(&module);
+        let mut compiled_modules = vec![];
+        let mut modules = vec![];
+        // for each dependency get the loaded `Module` if it was loaded already, otherwise
+        // get the `CompiledModule` from the data store with no verification or loading
+        for dep in deps {
+            let loaded_module = self.module_cache.lock().unwrap().module_at(&dep);
+            match loaded_module {
+                Some(module) => modules.push(module),
+                None => {
+                    let bytes = match data_store.load_module(&dep) {
+                        Ok(bytes) => bytes,
+                        Err(err) => return Err(err),
+                    };
+                    compiled_modules.push(CompiledModule::deserialize(&bytes).map_err(|_| {
+                        PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                            .finish(Location::Undefined)
+                    })?);
+                }
+            }
+        }
+        let mut module_refs = vec![];
+        for comp_module_dep in &compiled_modules {
+            module_refs.push(comp_module_dep);
+        }
+        for module_dep in &modules {
+            module_refs.push(module_dep.module());
+        }
+        DependencyChecker::verify_module(&module, module_refs)
     }
 
-    fn verify_module_expect_no_missing_dependencies(
+    fn verify_module_and_dependencies(
         &self,
         module: &CompiledModule,
         data_store: &mut impl DataStore,
+        visited_deps: &mut HashSet<ModuleId>,
+        verification_error: bool,
     ) -> VMResult<()> {
-        self.verify_module(module, data_store, false)
+        self.verify_module(module)?;
+        let deps = module_dependencies(&module);
+        let loaded_deps =
+            self.load_dependencies(deps, visited_deps, data_store, verification_error)?;
+        self.verify_module_dependencies(module, loaded_deps)
     }
 
-    fn verify_module(
-        &self,
-        module: &CompiledModule,
-        data_store: &mut impl DataStore,
-        verify_no_missing_modules: bool,
-    ) -> VMResult<()> {
+    fn verify_module(&self, module: &CompiledModule) -> VMResult<()> {
         DuplicationChecker::verify_module(&module)?;
         SignatureChecker::verify_module(&module)?;
         InstructionConsistency::verify_module(&module)?;
@@ -592,16 +625,7 @@ impl Loader {
         RecursiveStructDefChecker::verify_module(&module)?;
         InstantiationLoopChecker::verify_module(&module)?;
         CodeUnitVerifier::verify_module(&module)?;
-        Self::check_natives(&module)?;
-
-        let deps = module_dependencies(&module);
-        let loaded_deps = if verify_no_missing_modules {
-            self.load_dependencies_verify_no_missing_dependencies(deps, data_store)?
-        } else {
-            self.load_dependencies_expect_no_missing_dependencies(deps, data_store)?
-        };
-
-        self.verify_module_dependencies(module, loaded_deps)
+        Self::check_natives(&module)
     }
 
     fn verify_module_dependencies(
@@ -671,7 +695,9 @@ impl Loader {
             TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
             TypeTag::Struct(struct_tag) => {
                 let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module_verify_no_missing_dependencies(&module_id, data_store)?;
+                let mut visited_deps = HashSet::new();
+                visited_deps.insert(module_id.clone());
+                self.load_module(&module_id, data_store, &mut visited_deps, true)?;
                 let (idx, struct_type) = self
                     .module_cache
                     .lock()
@@ -711,7 +737,8 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &mut impl DataStore,
-        verify_no_missing_modules: bool,
+        visited_deps: &mut HashSet<ModuleId>,
+        verification_error: bool,
     ) -> VMResult<Arc<Module>> {
         // kept private to `load_module` to prevent verification errors from leaking
         // and not being marked as invariant violations
@@ -719,12 +746,19 @@ impl Loader {
             loader: &Loader,
             bytes: Vec<u8>,
             data_store: &mut impl DataStore,
+            visited_deps: &mut HashSet<ModuleId>,
+            verification_error: bool,
         ) -> VMResult<CompiledModule> {
             let module = CompiledModule::deserialize(&bytes).map_err(|_| {
                 PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
                     .finish(Location::Undefined)
             })?;
-            loader.verify_module_expect_no_missing_dependencies(&module, data_store)?;
+            loader.verify_module_and_dependencies(
+                &module,
+                data_store,
+                visited_deps,
+                verification_error,
+            )?;
             Ok(module)
         }
 
@@ -734,55 +768,44 @@ impl Loader {
 
         let bytes = match data_store.load_module(id) {
             Ok(bytes) => bytes,
-            Err(err) if verify_no_missing_modules => return Err(err),
+            // if `verification_error` we are at the top level and report a user error,
+            // otherwise it's an internal error and an invariant violation
+            Err(err) if verification_error => return Err(err),
             Err(err) => {
                 error!("[VM] Error fetching module with id {:?}", id);
                 return Err(expect_no_verification_errors(err));
             }
         };
 
-        let module = deserialize_and_verify_module(self, bytes, data_store)
-            .map_err(expect_no_verification_errors)?;
+        let module = deserialize_and_verify_module(
+            self,
+            bytes,
+            data_store,
+            visited_deps,
+            verification_error,
+        )
+        .map_err(expect_no_verification_errors)?;
         self.module_cache.lock().unwrap().insert(id.clone(), module)
     }
 
-    // Returns a verifier error if the module does not exist
-    fn load_module_verify_no_missing_dependencies(
-        &self,
-        id: &ModuleId,
-        data_store: &mut impl DataStore,
-    ) -> VMResult<Arc<Module>> {
-        self.load_module(id, data_store, true)
-    }
-
-    // Expects all modules to be on chain. Gives an invariant violation if it is not found
-    fn load_module_expect_no_missing_dependencies(
-        &self,
-        id: &ModuleId,
-        data_store: &mut impl DataStore,
-    ) -> VMResult<Arc<Module>> {
-        self.load_module(id, data_store, false)
-    }
-
-    // Returns a verifier error if the module does not exist
-    fn load_dependencies_verify_no_missing_dependencies(
+    fn load_dependencies(
         &self,
         deps: Vec<ModuleId>,
+        visited_deps: &mut HashSet<ModuleId>,
         data_store: &mut impl DataStore,
+        verification_error: bool,
     ) -> VMResult<Vec<Arc<Module>>> {
         deps.into_iter()
-            .map(|dep| self.load_module_verify_no_missing_dependencies(&dep, data_store))
-            .collect()
-    }
-
-    // Expects all modules to be on chain. Gives an invariant violation if it is not found
-    fn load_dependencies_expect_no_missing_dependencies(
-        &self,
-        deps: Vec<ModuleId>,
-        data_store: &mut impl DataStore,
-    ) -> VMResult<Vec<Arc<Module>>> {
-        deps.into_iter()
-            .map(|dep| self.load_module_expect_no_missing_dependencies(&dep, data_store))
+            .map(|dep| {
+                if visited_deps.insert(dep.clone()) {
+                    let res = self.load_module(&dep, data_store, visited_deps, verification_error);
+                    visited_deps.remove(&dep);
+                    res
+                } else {
+                    Err(PartialVMError::new(StatusCode::CIRCULAR_DEPENDENCY)
+                        .finish(Location::Undefined))
+                }
+            })
             .collect()
     }
 

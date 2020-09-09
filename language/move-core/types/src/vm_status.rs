@@ -564,6 +564,7 @@ pub enum StatusCode {
     // The sender is trying to publish a module named `M`, but the sender's account already
     // contains a module with this name.
     DUPLICATE_MODULE_NAME = 1095,
+    CIRCULAR_DEPENDENCY = 1096,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

@@ -720,7 +720,64 @@ fn test_script_dependency_fails_verification() {
 }
 
 #[test]
-fn test_module_dependency_fails_verification() {
+fn test_script_missing_dependency() {
+    let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
+
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
+
+    let module_code = "
+    module Test {
+        public bar() {
+            return;
+        }
+    }
+    ";
+
+    let compiler = Compiler {
+        address: account_config::CORE_CODE_ADDRESS,
+        extra_deps: vec![],
+        ..Compiler::default()
+    };
+    let module = compiler
+        .into_compiled_module("file_name", module_code)
+        .expect("Failed to compile");
+
+    let script_code = "
+    import 0x1.Test;
+
+    main() {
+        Test.bar();
+        return;
+    }
+    ";
+
+    let compiler = Compiler {
+        address: *sender.address(),
+        // This is OK because we *know* the module is unverified.
+        extra_deps: vec![module],
+        ..Compiler::default()
+    };
+    let script = compiler
+        .into_script_blob("file_name", script_code)
+        .expect("Failed to compile");
+    let txn = sender
+        .account()
+        .transaction()
+        .script(Script::new(script, vec![], vec![]))
+        .sequence_number(10)
+        .max_gas_amount(100_000)
+        .gas_unit_price(1)
+        .sign();
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(KeptVMStatus::MiscellaneousError)
+    );
+}
+
+#[test]
+fn test_module_publishing_ok_with_error_in_dependency() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
 
     // Get a module that fails verification into the store.
@@ -745,15 +802,14 @@ fn test_module_dependency_fails_verification() {
         .max_gas_amount(100_000)
         .gas_unit_price(1)
         .sign();
-    // As of now, we verify module/script dependencies. This will result in an
-    // invariant violation as we try to load `Test`
+    // As of now, we verify module published and their dependencies but not transitively.
+    // This will result in the module to be published, even though somewhere in the
+    // dependency graph there is a problem
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
-    match executor.execute_transaction(txn).status() {
-        TransactionStatus::Discard(status) => {
-            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
-        }
-        _ => panic!("Kept transaction with an invariant violation!"),
-    }
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
 }
 
 #[test]
@@ -865,7 +921,7 @@ fn test_script_transitive_dependency_fails_verification() {
 }
 
 #[test]
-fn test_module_transitive_dependency_fails_verification() {
+fn test_module_publishing_ok_with_error_in_transitive_dependency() {
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::open());
 
     // Get a module that fails verification into the store.
@@ -910,15 +966,13 @@ fn test_module_transitive_dependency_fails_verification() {
         .max_gas_amount(100_000)
         .gas_unit_price(1)
         .sign();
-    // As of now, we verify module/script dependencies. This will result in an
-    // invariant violation as we try to load `Test`
+    // We do not verify dependency recursively when publishing. We only verify the module
+    // and its dependencies, so publishing will not report an error
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
-    match executor.execute_transaction(txn).status() {
-        TransactionStatus::Discard(status) => {
-            assert_eq!(status, &StatusCode::UNEXPECTED_VERIFIER_ERROR);
-        }
-        _ => panic!("Kept transaction with an invariant violation!"),
-    }
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(KeptVMStatus::Executed)
+    );
 }
 
 #[test]

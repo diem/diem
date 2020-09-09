@@ -1,11 +1,11 @@
 address 0x2 {
 
 // Dependency graph of the modules in this file
+// E -> F
 // F -> A
 // A -> B, C
-// D -> B, C
-// E -> B, C
 // B -> C
+// D -> C
 // C
 
 module A {
@@ -54,6 +54,12 @@ module B {
         (val1, val2)
     }
 
+    public fun entry_b() {
+        let b = new(20, 100);
+        let c = 0x2::C::new(0x42, true);
+        b_and_c(&b, c);
+    }
+
     public fun b_and_c(b: &S, c: 0x2::C::S): S {
         let _ = 0x2::C::destroy(c);
         let another_b = S {
@@ -82,7 +88,7 @@ module C {
         v1
     }
 
-    public fun just_c() {
+    public fun entry_c() {
         let i = 0;
         while (i < 10) {
             let c = new(0x0, false);
@@ -95,26 +101,21 @@ module C {
 
 module D {
     struct S {
-        f1: 0x2::B::S,
+        f1: bool,
     }
 
     public fun new(): 0x2::D::S {
         Self::S {
-            f1: 0x2::B::new(20, 100),
+            f1: true,
         }
     }
 
     public fun entry_d() {
         let i = 0;
-        while (i < 10) {
-            let b = 0x2::B::new(20, 100);
-            let c = 0x2::C::new(0x45, false);
-            let another_b = 0x2::B::b_and_c(&b, c);
-            let (_, _) = 0x2::B::destroy(another_b);
-            let another_c = 0x2::C::new(0x46, true);
-            0x2::C::destroy(another_c);
-            i = i + 1;
-        }
+        let _ = 0x2::C::new(0x45, false);
+        let another_c = 0x2::C::new(0x46, true);
+        0x2::C::destroy(another_c);
+        _ = i + 1;
     }
 }
 
@@ -126,16 +127,7 @@ module E {
     public fun new(): 0x2::E::S { Self::S { f1: 20 } }
 
     public fun entry_e() {
-        let i = 0;
-        while (i < 10) {
-            let b = 0x2::B::new(20, 100);
-            let c = 0x2::C::new(0x100, false);
-            let another_b = 0x2::B::b_and_c(&b, c);
-            let (_, _) = 0x2::B::destroy(another_b);
-            let another_c = 0x2::C::new(0x101, true);
-            0x2::C::destroy(another_c);
-            i = i + 1;
-        };
+        0x2::F::entry_f();
     }
 }
 
