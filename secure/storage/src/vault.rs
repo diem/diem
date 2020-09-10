@@ -170,7 +170,7 @@ impl VaultStorage {
         let pubkeys = self.client().read_ed25519_key(name)?;
         let pubkey = pubkeys.iter().find(|pubkey| version == &pubkey.value);
         Ok(pubkey
-            .ok_or_else(|| Error::KeyVersionNotFound(name.into()))?
+            .ok_or_else(|| Error::KeyVersionNotFound(name.into(), version.to_string()))?
             .version)
     }
 
@@ -308,11 +308,11 @@ impl CryptoStorage for VaultStorage {
             Some(version) => {
                 let pubkey = pubkeys.iter().find(|pubkey| pubkey.version == version - 1);
                 Ok(pubkey
-                    .ok_or_else(|| Error::KeyVersionNotFound(name))?
+                    .ok_or_else(|| Error::KeyVersionNotFound(name, "previous version".into()))?
                     .value
                     .clone())
             }
-            None => Err(Error::KeyVersionNotFound(name)),
+            None => Err(Error::KeyVersionNotFound(name, "previous version".into())),
         }
     }
 

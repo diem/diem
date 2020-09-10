@@ -19,8 +19,8 @@ pub enum Error {
     PermissionDenied,
     #[error("Serialization error: {0}")]
     SerializationError(String),
-    #[error("Key version not found: {0}")]
-    KeyVersionNotFound(String),
+    #[error("Key version not found, key name: {0}, version: {1}")]
+    KeyVersionNotFound(String, String),
 }
 
 impl From<base64::DecodeError> for Error {
