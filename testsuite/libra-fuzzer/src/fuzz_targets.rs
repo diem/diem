@@ -93,6 +93,8 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         // Transaction
         Box::new(transaction::LanguageTransactionExecution::default()),
         Box::new(transaction::SignedTransactionTarget::default()),
+        Box::new(transaction::MutatedSignedTransaction::default()),
+        Box::new(transaction::TwoSignedTransactions::default()),
         // VM
         Box::new(vm::CompiledModuleTarget::default()),
     ];
