@@ -6,12 +6,10 @@
 //!
 //! ```
 //! use libra_config::network_id::NetworkContext;
-//! use libra_logger::prelude::*;
-//! use network::logging::*;
-//! use network::connectivity_manager::DiscoverySource;
-//! use futures::io::ErrorKind;
+//! use libra_logger::info;
 //! use libra_network_address::NetworkAddress;
 //! use libra_types::PeerId;
+//! use network::logging::NetworkSchema;
 //!
 //! info!(
 //!   NetworkSchema::new(&NetworkContext::mock())
@@ -28,16 +26,10 @@ use crate::{
     transport::{ConnectionId, ConnectionMetadata},
 };
 use libra_config::network_id::NetworkContext;
-use libra_logger::{Schema, StructuredLogEntry};
+use libra_logger::Schema;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
-
-/// A helper function to cut down on a bunch of repeated network struct log code
-pub fn network_log(label: &'static str, network_context: &NetworkContext) -> StructuredLogEntry {
-    StructuredLogEntry::new_named("network", label)
-        .field(network_events::NETWORK_CONTEXT, network_context)
-}
 
 #[derive(Schema)]
 pub struct NetworkSchema<'a> {
@@ -77,40 +69,4 @@ impl<'a> NetworkSchema<'a> {
     pub fn debug_error<Err: std::fmt::Debug>(self, error: &Err) -> Self {
         self.error(format!("{:?}", error))
     }
-}
-
-/// This module is to ensure no conflicts with already existing constants
-pub mod network_events {
-    use crate::{
-        peer_manager::{ConnectionRequest, PeerManagerRequest},
-        transport::ConnectionMetadata,
-    };
-    use libra_config::network_id::NetworkContext;
-    use libra_logger::LoggingField;
-    use libra_network_address::NetworkAddress;
-    use libra_types::PeerId;
-
-    /// Labels
-    pub const NOISE_UPGRADE: &str = "noise_upgrade";
-    pub const TRANSPORT_EVENT: &str = "transport_event";
-
-    /// Common terms
-    pub const TYPE: &str = "type";
-    pub const START: &str = "start";
-    pub const TERMINATION: &str = "termination";
-    pub const EVENT: &str = "event";
-
-    /// Specific fields for logging
-    pub const NETWORK_CONTEXT: &LoggingField<&NetworkContext> =
-        &LoggingField::new("network_context");
-    pub const EVENT_ID: &LoggingField<&u32> = &LoggingField::new("event_id");
-    pub const REMOTE_PEER: &LoggingField<&PeerId> = &LoggingField::new("remote_peer");
-    pub const CONNECTION_REQUEST: &LoggingField<&ConnectionRequest> =
-        &LoggingField::new("connection_request");
-    pub const PEER_MANAGER_REQUEST: &LoggingField<&PeerManagerRequest> =
-        &LoggingField::new("peer_manager_request");
-    pub const NETWORK_ADDRESS: &LoggingField<&NetworkAddress> =
-        &LoggingField::new("network_address");
-    pub const CONNECTION_METADATA: &LoggingField<&ConnectionMetadata> =
-        &LoggingField::new("connection_metadata");
 }

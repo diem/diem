@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    logging::network_events,
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
@@ -190,9 +189,11 @@ async fn upgrade_inbound<T: TSocket>(
         // security logging
         warn!(
             SecurityEvent::InvalidNetworkPeer,
-            StructuredLogEntry::default()
-                .data_display("error", &err)
-                .field(network_events::NETWORK_ADDRESS, &addr),
+            error = err.to_string(),
+            network_address = addr,
+            "security: InvalidNetworkPeer {}: '{}'",
+            addr,
+            err
         );
         err
     })?;
