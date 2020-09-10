@@ -68,9 +68,12 @@ impl Adapter {
                 .publish_module(binary, WORKING_ACCOUNT, &mut cost_strategy)
                 .unwrap_or_else(|_| panic!("failure publishing module: {:#?}", module));
         }
-        let data = session.finish().expect("failure getting write set");
-        for (module_id, module) in data.modules {
-            self.store.add_module(module_id, module);
+        let (changeset, _events) = session.finish().expect("failure getting write set");
+        for (addr, account_changeset) in changeset.accounts {
+            for (name, module) in account_changeset.modules {
+                self.store
+                    .add_module(ModuleId::new(addr, name), module.unwrap());
+            }
         }
     }
 

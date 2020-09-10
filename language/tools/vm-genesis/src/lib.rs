@@ -26,14 +26,14 @@ use libra_types::{
         WriteSetPayload,
     },
 };
-use libra_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
+use libra_vm::{convert_changeset_and_events, data_cache::StateViewCache};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{move_vm::MoveVM, session::Session};
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
@@ -90,16 +90,6 @@ pub fn encode_genesis_transaction(
     ))
 }
 
-fn merge_txn_effects(
-    mut effects_1: TransactionEffects,
-    effects_2: TransactionEffects,
-) -> TransactionEffects {
-    effects_1.resources.extend(effects_2.resources);
-    effects_1.modules.extend(effects_2.modules);
-    effects_1.events.extend(effects_2.events);
-    effects_1
-}
-
 pub fn encode_genesis_change_set(
     libra_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
@@ -146,27 +136,32 @@ pub fn encode_genesis_change_set(
     // XXX/TODO: for testnet only
     create_and_initialize_testnet_minting(&mut session, &treasury_compliance_key);
 
-    let effects_1 = session.finish().unwrap();
+    let (mut changeset1, mut events1) = session.finish().unwrap();
 
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
     publish_stdlib(&mut session, stdlib_modules);
-    let effects_2 = session.finish().unwrap();
+    let (changeset2, events2) = session.finish().unwrap();
 
-    let effects = merge_txn_effects(effects_1, effects_2);
+    changeset1
+        .squash(changeset2)
+        .expect("changesets should merge");
+    events1.extend(events2);
 
     // REVIEW: Performance & caching.
-    let type_mapping = effects
-        .resources
+    let type_mapping = changeset1
+        .accounts
         .iter()
-        .flat_map(|(_addr, resources)| {
-            resources
+        .flat_map(|(_, account_changeset)| {
+            account_changeset
+                .resources
                 .iter()
                 .map(|(struct_tag, _)| (struct_tag.access_vector(), struct_tag.clone()))
         })
         .collect();
-    let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();
+
+    let (write_set, events) = convert_changeset_and_events(changeset1, events1).unwrap();
 
     assert!(!write_set.iter().any(|(_, op)| op.is_deletion()));
     verify_genesis_write_set(&events);

@@ -24,15 +24,13 @@ use libra_types::{
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
+    effects::{ChangeSet as MoveChangeSet, Event as MoveEvent},
     gas_schedule::{CostTable, GasAlgebra, GasUnits},
     identifier::IdentStr,
+    language_storage::ModuleId,
 };
 
-use move_vm_runtime::{
-    data_cache::{RemoteCache, TransactionEffects},
-    move_vm::MoveVM,
-    session::Session,
-};
+use move_vm_runtime::{data_cache::RemoteCache, move_vm::MoveVM, session::Session};
 use move_vm_types::{
     gas_schedule::{calculate_intrinsic_gas, zero_cost_schedule, CostStrategy},
     values::Value,
@@ -419,48 +417,45 @@ impl<'a> LibraVMInternals<'a> {
     }
 }
 
-pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
+pub fn convert_changeset_and_events_cached<C: AccessPathCache>(
     ap_cache: &mut C,
-    effects: TransactionEffects,
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
 
-    for (addr, vals) in effects.resources {
-        for (struct_tag, val_opt) in vals {
+    for (addr, account_changeset) in changeset.accounts {
+        for (struct_tag, blob_opt) in account_changeset.resources {
             let ap = ap_cache.get_resource_path(addr, struct_tag);
-            let op = match val_opt {
+            let op = match blob_opt {
                 None => WriteOp::Deletion,
-                Some((ty_layout, val)) => {
-                    let blob = val
-                        .simple_serialize(&ty_layout)
-                        .ok_or_else(|| VMStatus::Error(StatusCode::VALUE_SERIALIZATION_ERROR))?;
-
-                    WriteOp::Value(blob)
-                }
+                Some(blob) => WriteOp::Value(blob),
             };
             ops.push((ap, op))
         }
-    }
 
-    for (module_id, blob) in effects.modules {
-        ops.push((ap_cache.get_module_path(module_id), WriteOp::Value(blob)))
+        for (name, blob_opt) in account_changeset.modules {
+            let ap = ap_cache.get_module_path(ModuleId::new(addr, name));
+            let op = match blob_opt {
+                None => WriteOp::Deletion,
+                Some(blob) => WriteOp::Value(blob),
+            };
+
+            ops.push((ap, op))
+        }
     }
 
     let ws = WriteSetMut::new(ops)
         .freeze()
         .map_err(|_| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
 
-    let events = effects
-        .events
+    let events = events
         .into_iter()
-        .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
-            let msg = val
-                .simple_serialize(&ty_layout)
-                .ok_or_else(|| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
+        .map(|(guid, seq_num, ty_tag, blob)| {
             let key = EventKey::try_from(guid.as_slice())
                 .map_err(|_| VMStatus::Error(StatusCode::EVENT_KEY_MISMATCH))?;
-            Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
+            Ok(ContractEvent::new(key, seq_num, ty_tag, blob))
         })
         .collect::<Result<Vec<_>, VMStatus>>()?;
 
@@ -500,8 +495,8 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
         .sub(cost_strategy.remaining_gas())
         .get();
 
-    let effects = session.finish().map_err(|e| e.into_vm_status())?;
-    let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
+    let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+    let (write_set, events) = convert_changeset_and_events_cached(ap_cache, changeset, events)?;
 
     Ok(TransactionOutput::new(
         write_set,
@@ -511,10 +506,11 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
     ))
 }
 
-pub fn txn_effects_to_writeset_and_events(
-    effects: TransactionEffects,
+pub fn convert_changeset_and_events(
+    changeset: MoveChangeSet,
+    events: Vec<MoveEvent>,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
-    txn_effects_to_writeset_and_events_cached(&mut (), effects)
+    convert_changeset_and_events_cached(&mut (), changeset, events)
 }
 
 #[test]

@@ -9,9 +9,7 @@ use libra_types::{
     account_state::AccountState,
     transaction::{ChangeSet, Transaction, TransactionOutput, Version},
 };
-use libra_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor,
-};
+use libra_vm::{convert_changeset_and_events, data_cache::RemoteStorage, LibraVM, VMExecutor};
 use move_core_types::gas_schedule::{GasAlgebra, GasUnits};
 use move_lang::{compiled_unit::CompiledUnit, move_compile_no_report, shared::Address};
 use move_vm_runtime::{move_vm::MoveVM, session::Session};
@@ -145,10 +143,10 @@ impl LibraDebugger {
         let remote_storage = RemoteStorage::new(&state_view);
         let mut session = move_vm.new_session(&remote_storage);
         f(&mut session).map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
-        let txn_effect = session
+        let (changeset, events) = session
             .finish()
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
-        let (write_set, events) = txn_effects_to_writeset_and_events(txn_effect)
+        let (write_set, events) = convert_changeset_and_events(changeset, events)
             .map_err(|err| format_err!("Unexpected VM Error: {:?}", err))?;
         Ok(ChangeSet::new(write_set, events))
     }

@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    data_cache::{RemoteCache, TransactionDataCache, TransactionEffects},
+    data_cache::{RemoteCache, TransactionDataCache},
     runtime::VMRuntime,
 };
 use move_core_types::{
     account_address::AccountAddress,
+    effects::{ChangeSet, Event},
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
     vm_status::VMStatus,
@@ -74,7 +75,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         self.data_cache.num_mutated_accounts()
     }
 
-    pub fn finish(self) -> VMResult<TransactionEffects> {
+    pub fn finish(self) -> VMResult<(ChangeSet, Vec<Event>)> {
         self.data_cache
             .into_effects()
             .map_err(|e| e.finish(Location::Undefined))

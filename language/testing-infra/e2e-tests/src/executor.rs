@@ -24,8 +24,8 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, LibraVMValidator,
-    VMExecutor, VMValidator,
+    convert_changeset_and_events, data_cache::RemoteStorage, LibraVM, LibraVMValidator, VMExecutor,
+    VMValidator,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -341,9 +341,9 @@ impl FakeExecutor {
                 .unwrap_or_else(|e| {
                     panic!("Error calling {}.{}: {}", module_name, function_name, e)
                 });
-            let effects = session.finish().expect("Failed to generate txn effects");
-            let (writeset, _events) =
-                txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            let (changeset, events) = session.finish().expect("Failed to generate txn effects");
+            let (writeset, _events) = convert_changeset_and_events(changeset, events)
+                .expect("Failed to generate writeset");
             writeset
         };
         self.data_store.add_write_set(&write_set);
@@ -371,9 +371,9 @@ impl FakeExecutor {
             &mut cost_strategy,
             |e| e,
         )?;
-        let effects = session.finish().expect("Failed to generate txn effects");
+        let (changeset, events) = session.finish().expect("Failed to generate txn effects");
         let (writeset, _events) =
-            txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            convert_changeset_and_events(changeset, events).expect("Failed to generate writeset");
         Ok(writeset)
     }
 }
