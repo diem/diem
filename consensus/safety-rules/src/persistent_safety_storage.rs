@@ -16,7 +16,14 @@ use libra_types::waypoint::Waypoint;
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
 /// Any set function is expected to sync to the remote system before returning.
+///
+/// Note: cached_safety_data is a local in-memory copy of SafetyData. As SafetyData should
+/// only ever be used by safety rules, we maintain an in-memory copy to avoid issuing reads
+/// to the internal storage if the SafetyData hasn't changed. On writes, we update the
+/// cache and internal storage.
 pub struct PersistentSafetyStorage {
+    enable_cached_safety_data: bool,
+    cached_safety_data: Option<SafetyData>,
     internal_store: Storage,
 }
 
@@ -29,20 +36,28 @@ impl PersistentSafetyStorage {
         consensus_private_key: Ed25519PrivateKey,
         execution_private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
+        enable_cached_safety_data: bool,
     ) -> Self {
+        let safety_data = SafetyData::new(1, 0, 0, None);
         Self::initialize_(
             &mut internal_store,
+            safety_data.clone(),
             author,
             consensus_private_key,
             execution_private_key,
             waypoint,
         )
         .expect("Unable to initialize backend storage");
-        Self { internal_store }
+        Self {
+            enable_cached_safety_data,
+            cached_safety_data: Some(safety_data),
+            internal_store,
+        }
     }
 
     fn initialize_(
         internal_store: &mut Storage,
+        safety_data: SafetyData,
         author: Author,
         consensus_private_key: Ed25519PrivateKey,
         execution_private_key: Ed25519PrivateKey,
@@ -60,7 +75,7 @@ impl PersistentSafetyStorage {
         }
 
         internal_store.import_private_key(EXECUTION_KEY, execution_private_key)?;
-        internal_store.set(SAFETY_DATA, SafetyData::new(1, 0, 0, None))?;
+        internal_store.set(SAFETY_DATA, safety_data)?;
         internal_store.set(OWNER_ACCOUNT, author)?;
         internal_store.set(WAYPOINT, waypoint)?;
         Ok(())
@@ -68,8 +83,12 @@ impl PersistentSafetyStorage {
 
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
     /// for constructed environments.
-    pub fn new(internal_store: Storage) -> Self {
-        Self { internal_store }
+    pub fn new(internal_store: Storage, enable_cached_safety_data: bool) -> Self {
+        Self {
+            enable_cached_safety_data,
+            cached_safety_data: None,
+            internal_store,
+        }
     }
 
     pub fn author(&self) -> Result<Author, Error> {
@@ -92,16 +111,35 @@ impl PersistentSafetyStorage {
             .map(|r| r.public_key)?)
     }
 
-    pub fn safety_data(&self) -> Result<SafetyData, Error> {
-        Ok(self.internal_store.get(SAFETY_DATA).map(|v| v.value)?)
+    pub fn safety_data(&mut self) -> Result<SafetyData, Error> {
+        if !self.enable_cached_safety_data {
+            return self.internal_store.get(SAFETY_DATA).map(|v| v.value)?;
+        }
+
+        if let Some(cached_safety_data) = self.cached_safety_data.clone() {
+            Ok(cached_safety_data)
+        } else {
+            let safety_data: SafetyData = self.internal_store.get(SAFETY_DATA).map(|v| v.value)?;
+            self.cached_safety_data = Some(safety_data.clone());
+            Ok(safety_data)
+        }
     }
 
     pub fn set_safety_data(&mut self, data: SafetyData) -> Result<(), Error> {
         counters::set_state("epoch", data.epoch as i64);
         counters::set_state("last_voted_round", data.last_voted_round as i64);
         counters::set_state("preferred_round", data.preferred_round as i64);
-        self.internal_store.set(SAFETY_DATA, data)?;
-        Ok(())
+
+        match self.internal_store.set(SAFETY_DATA, data.clone()) {
+            Ok(_) => {
+                self.cached_safety_data = Some(data);
+                Ok(())
+            }
+            Err(error) => {
+                self.cached_safety_data = None;
+                Err(Error::SecureStorageError(error.to_string()))
+            }
+        }
     }
 
     pub fn waypoint(&self) -> Result<Waypoint, Error> {
@@ -139,6 +177,7 @@ mod tests {
             consensus_private_key,
             Ed25519PrivateKey::generate_for_testing(),
             Waypoint::default(),
+            true,
         );
 
         let safety_data = safety_storage.safety_data().unwrap();

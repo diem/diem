@@ -40,6 +40,7 @@ fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
             signer.private_key().clone(),
             Ed25519PrivateKey::generate_for_testing(),
             waypoint,
+            true,
         );
         let safety_rules_manager =
             SafetyRulesManager::new_local(storage, verify_vote_proposal_signature);

@@ -105,6 +105,7 @@ impl NodeSetup {
                 signer.private_key().clone(),
                 Ed25519PrivateKey::generate_for_testing(),
                 waypoint,
+                true,
             );
             let safety_rules_manager = SafetyRulesManager::new_local(safety_storage, false);
 
@@ -868,6 +869,7 @@ fn safety_rules_crash() {
             node.signer.private_key().clone(),
             Ed25519PrivateKey::generate_for_testing(),
             node.round_manager.consensus_state().waypoint(),
+            true,
         );
 
         node.safety_rules_manager = SafetyRulesManager::new_local(safety_storage, false);
