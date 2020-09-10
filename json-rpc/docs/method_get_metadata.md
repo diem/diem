@@ -31,7 +31,7 @@ curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","metho
   "result": {
     "timestamp": 1596680521771648,
     "version": 3253133,
-    "chain_id": 4,
+    "chain_id": 4
   }
 }
 ```
