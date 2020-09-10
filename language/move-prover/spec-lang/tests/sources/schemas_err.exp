@@ -1,0 +1,111 @@
+error: undeclared `M::x`
+
+   ┌── tests/sources/schemas_err.move:4:17 ───
+   │
+ 4 │         ensures x > 0;
+   │                 ^
+   │
+
+error: schema `M::Undeclared` undeclared
+
+   ┌── tests/sources/schemas_err.move:8:17 ───
+   │
+ 8 │         include Undeclared;
+   │                 ^^^^^^^^^^
+   │
+
+error: wrong number of type arguments (expected 1, got 2)
+
+    ┌── tests/sources/schemas_err.move:12:17 ───
+    │
+ 12 │         include WrongTypeArgsIncluded<num, num>;
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: `wrong` not declared in schema
+
+    ┌── tests/sources/schemas_err.move:19:44 ───
+    │
+ 19 │         include WrongTypeArgsIncluded<num>{wrong: 1};
+    │                                            ^^^^^
+    │
+
+error: expected `num` but found `bool` in name expression
+
+    ┌── tests/sources/schemas_err.move:24:47 ───
+    │
+ 24 │         include WrongTypeArgsIncluded<num>{x: y};
+    │                                               ^
+    │
+
+error: expected `bool` but found `num` in expression
+
+    ┌── tests/sources/schemas_err.move:28:48 ───
+    │
+ 28 │         include WrongTypeArgsIncluded<bool>{x: 1 + 2};
+    │                                                ^^^^^
+    │
+
+error: expected `bool` but found `num` for `x` included from schema
+
+    ┌── tests/sources/schemas_err.move:33:17 ───
+    │
+ 33 │         include WronglyTypedVarIncluded;
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: expected `bool` but found `num` for `x` included from schema
+
+    ┌── tests/sources/schemas_err.move:41:17 ───
+    │
+ 41 │         include WronglyTypedInstantiationIncluded<num>;
+    │                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: cyclic schema dependency: Cycle1 -> Cycle2 -> Cycle3 -> Cycle1
+
+    ┌── tests/sources/schemas_err.move:80:17 ───
+    │
+ 80 │         include Cycle1;
+    │                 ^^^^^^
+    │
+
+error: expected `bool` but found `u128` in expression
+
+    ┌── tests/sources/schemas_err.move:84:17 ───
+    │
+ 84 │         include 22 ==> Condition;
+    │                 ^^
+    │
+
+error: expression construct not supported for schemas
+
+    ┌── tests/sources/schemas_err.move:85:26 ───
+    │
+ 85 │         include true ==> 23;
+    │                          ^^
+    │
+
+error: expression construct not supported for schemas
+
+    ┌── tests/sources/schemas_err.move:86:17 ───
+    │
+ 86 │         include Condition || Condition;
+    │                 ^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: `y` cannot be matched to an existing name in inclusion context
+
+    ┌── tests/sources/schemas_err.move:52:17 ───
+    │
+ 52 │         include UndeclaredVarInInclude;
+    │                 ^^^^^^^^^^^^^^^^^^^^^^
+    │
+
+error: `requires` not allowed in struct context (included from schema)
+
+    ┌── tests/sources/schemas_err.move:70:9 ───
+    │
+ 70 │         include Condition;
+    │         ^^^^^^^^^^^^^^^^^^
+    │

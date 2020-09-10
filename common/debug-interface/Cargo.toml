@@ -1,0 +1,21 @@
+[package]
+name = "debug-interface"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra debug interface"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.32"
+bytes = "0.5"
+tokio = { version = "0.2.22", features = ["full"] }
+reqwest = { version = "0.10.8", features = ["blocking", "json"], default_features = false }
+warp = "0.2.5"
+
+libra-logger = { path = "../logger", version = "0.1.0" }
+libra-metrics = { path = "../metrics", version = "0.1.0" }
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }

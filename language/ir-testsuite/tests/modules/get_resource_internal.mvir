@@ -1,0 +1,23 @@
+// check: Missing struct definition for T
+
+module Token {
+    resource T { b: bool }
+    public new(): Self.T {
+        return T{ b: true };
+    }
+}
+
+//! new-transaction
+
+import 0x1.Signer;
+import {{default}}.Token;
+
+main(account: &signer) {
+    let sender: address;
+    let yes: &mut Token.T;
+
+    sender = Signer.address_of(move(account));
+    yes = borrow_global_mut<T>(copy(sender));
+    _ = move(yes);
+    return;
+}

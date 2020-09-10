@@ -1,0 +1,30 @@
+module A {
+import 0x1.LBR;
+    import 0x1.Libra;
+    resource A { c: Libra.Libra<LBR.LBR> }
+    public new(c: Libra.Libra<LBR.LBR>): Self.A {
+        return A { c: move(c) };
+    }
+    public destroy_a(a: Self.A) {
+        let c: Libra.Libra<LBR.LBR>;
+        A { c } = move(a);
+        Libra.destroy_zero<LBR.LBR>(move(c));
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.A;
+import 0x1.LBR;
+import 0x1.Libra;
+
+main() {
+    let zero_resource: Libra.Libra<LBR.LBR>;
+    let s: A.A;
+    zero_resource = Libra.zero<LBR.LBR>();
+    s = A.new(move(zero_resource));
+    A.destroy_a(move(s));
+
+    return;
+}

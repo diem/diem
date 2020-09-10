@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_missing.move:5:10 ───
+   │
+ 5 │         &s.g;
+   │          ^^^ Unbound field 'g' in '0x8675309::M::S'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/borrow_field_missing.move:6:10 ───
+   │
+ 6 │         &s_mut.h;
+   │          ^^^^^^^ Unbound field 'h' in '0x8675309::M::S'
+   │
+

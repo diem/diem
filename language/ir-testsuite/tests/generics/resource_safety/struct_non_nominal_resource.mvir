@@ -1,0 +1,12 @@
+module M {
+    resource R { b: bool }
+    struct Box<T> { x: T }
+
+    foo(x: Self.Box<Self.R>): Self.Box<Self.R> {
+        let y: Self.Box<Self.R>;
+        y = copy(x);
+        return move(y);
+    }
+}
+
+// check: COPYLOC_RESOURCE_ERROR

@@ -1,0 +1,10 @@
+module A {
+    resource T1{v: u64}
+
+    public test() acquires T1 {
+        return;
+    }
+
+}
+
+// check: EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR

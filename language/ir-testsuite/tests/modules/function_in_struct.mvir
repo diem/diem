@@ -1,0 +1,10 @@
+// check: Invalid Token
+
+module M {
+    struct T{
+        x: u64,
+        no() {
+            return;
+        }
+    }
+}

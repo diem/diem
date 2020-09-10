@@ -1,3 +1,8 @@
-.git/
+*~
+*.swp
 **/.terraform/
 target/
+!target/libra-node-builder/libra-node
+**/*Dockerfile
+.circleci/config.yml
+docker/update_or_build.sh

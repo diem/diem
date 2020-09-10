@@ -1,0 +1,22 @@
+error: 
+
+    ┌── tests/move_check/borrows/copy_field_invalid.move:13:9 ───
+    │
+ 13 │         copy s;
+    │         ^^^^^^ Invalid copy of local 's'
+    ·
+ 12 │         let f = &mut s.f;
+    │                 -------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/copy_field_invalid.move:19:9 ───
+    │
+ 19 │         copy s;
+    │         ^^^^^^ Invalid copy of local 's'
+    ·
+ 18 │         let f = id_mut(&mut s.f);
+    │                 ---------------- It is still being mutably borrowed by this reference
+    │
+

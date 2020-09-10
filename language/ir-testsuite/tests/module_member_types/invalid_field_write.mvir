@@ -1,0 +1,15 @@
+module Test {
+    struct T{fr: bool}
+
+    public new(): Self.T {
+        return T{fr: false};
+    }
+
+    public no(this: &mut Self.T) {
+        let x: &mut bool;
+        x = &mut move(this).fr;
+        *move(x) = 0;
+        return;
+    }
+}
+// check: WRITEREF_TYPE_MISMATCH_ERROR

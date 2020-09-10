@@ -1,0 +1,55 @@
+module LibraAccount {
+    import 0x1.LibraAccount;
+    import 0x1.Signer;
+
+    resource T{sequence_number: u64}
+
+    public new(m: u64): Self.T {
+        return T{sequence_number: move(m)};
+    }
+
+    public sequence_number(this: &Self.T): u64 {
+        let ref: &u64;
+        ref = &copy(this).sequence_number;
+        _ = move(this);
+        return *move(ref);
+    }
+
+    public publish(account: &signer, r: Self.T) {
+        move_to<T>(copy(account), move(r));
+        return;
+    }
+
+    public test(account: &signer) acquires T {
+        let c1: Self.T;
+        let sender: address;
+        let sequence_number: u64;
+        let fake_ref: &mut Self.T;
+        let fake_ref_frozen: &Self.T;
+        let fake_value: u64;
+
+        c1 = Self.new(112);
+        Self.publish(copy(account), move(c1));
+
+        sender = Signer.address_of(copy(account));
+
+        sequence_number = LibraAccount.sequence_number(copy(sender));
+        assert(copy(sequence_number) == 1, 42);
+
+        fake_ref = borrow_global_mut<T>(copy(sender));
+        fake_ref_frozen = freeze(move(fake_ref));
+        fake_value = Self.sequence_number(move(fake_ref_frozen));
+        assert(copy(fake_value) == 112, 43);
+
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.LibraAccount as MyAccount;
+
+main(account: &signer) {
+  MyAccount.test(move(account));
+  return;
+}

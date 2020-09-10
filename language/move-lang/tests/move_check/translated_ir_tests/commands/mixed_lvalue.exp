@@ -1,0 +1,16 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/mixed_lvalue.move:14:19 ───
+    │
+ 14 │         (_, _, _, s.f) = four();
+    │                   ^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/mixed_lvalue.move:15:19 ───
+    │
+ 15 │         (_, _, _, *r_ref) = four();
+    │                   ^^^^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+    │
+

@@ -1,0 +1,13 @@
+module Tester {
+    t() {
+        let x: u64;
+        let r1: &mut u64;
+
+        x = 0;
+        r1 = &mut x;
+        _ = copy(x);
+        return;
+    }
+}
+
+// check: COPYLOC_EXISTS_BORROW_ERROR

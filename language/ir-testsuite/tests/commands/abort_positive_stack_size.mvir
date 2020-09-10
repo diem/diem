@@ -1,0 +1,18 @@
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
+
+module M {
+
+    public foo(): u64 {
+        return 0;
+    }
+
+}
+
+//! new-transaction
+
+import {{default}}.M;
+
+main() {
+    M.foo();
+    abort 0;
+}

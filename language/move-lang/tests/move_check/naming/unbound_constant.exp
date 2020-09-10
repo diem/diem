@@ -1,0 +1,64 @@
+error: 
+
+   ┌── tests/move_check/naming/unbound_constant.move:4:17 ───
+   │
+ 4 │         let x = CONSTANT;
+   │                 ^^^^^^^^ Unbound constant 'CONSTANT'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_constant.move:5:17 ───
+   │
+ 5 │         let y = Self::CONSTANT;
+   │                 ^^^^^^^^^^^^^^ Invalid module access. Unbound constant 'CONSTANT' in module '0x42::M'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_constant.move:6:13 ───
+   │
+ 6 │         0 + CONSTANT + Self::CONSTANT;
+   │             ^^^^^^^^ Unbound constant 'CONSTANT'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_constant.move:6:24 ───
+   │
+ 6 │         0 + CONSTANT + Self::CONSTANT;
+   │                        ^^^^^^^^^^^^^^ Invalid module access. Unbound constant 'CONSTANT' in module '0x42::M'
+   │
+
+error: 
+
+    ┌── tests/move_check/naming/unbound_constant.move:13:17 ───
+    │
+ 13 │         let x = CONSTANT;
+    │                 ^^^^^^^^ Unbound constant 'CONSTANT'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/unbound_constant.move:14:17 ───
+    │
+ 14 │         let y = Self::CONSTANT;
+    │                 ^^^^ Unbound module alias 'Self'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/unbound_constant.move:15:13 ───
+    │
+ 15 │         0 + CONSTANT + Self::CONSTANT;
+    │             ^^^^^^^^ Unbound constant 'CONSTANT'
+    │
+
+error: 
+
+    ┌── tests/move_check/naming/unbound_constant.move:15:24 ───
+    │
+ 15 │         0 + CONSTANT + Self::CONSTANT;
+    │                        ^^^^ Unbound module alias 'Self'
+    │
+

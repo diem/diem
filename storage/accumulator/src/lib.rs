@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! This module provides algorithms for accessing and updating a Merkle Accumulator structure
 //! persisted in a key-value store. Note that this doesn't write to the storage directly, rather,
 //! it reads from it via the `HashReader` trait and yields writes via an in memory `HashMap`.
@@ -55,11 +57,14 @@
 //!
 //! # Position and Physical Representation
 //! As a Merkle Accumulator tree expands to the right and upwards, we number newly frozen nodes
-//! monotonically. (One way to do it is simply to use in-order index of nodes.) We call the
-//! stated numbers identifying nodes below simply "Position".
+//! monotonically. One way to do it is simply to use in-order index of nodes, and this is what
+//! we do for the in-memory representation. We call the stated numbers identifying nodes below
+//! simply "Position", and unless otherwise stated, this is the in-order position.
 //!
-//! And with that we can map a Merkle Accumulator into a key-value storage: key is the position of a
-//! node, value is hash value it carries.
+//! For writing to disk however, we write all the children of a node before the parent.
+//! Thus for disk write order, it is more convenient to use the post-order position as an index.
+//! And with that we can map a Merkle Accumulator into a key-value storage: key is the post-order
+//! position of a node, and the value is hash value it carries.
 //!
 //! We store only Frozen nodes, and generate non-Frozen nodes on the fly when accessing the tree.
 //! This way, the physical representation of the tree is append-only, i.e. once written to physical
@@ -68,42 +73,45 @@
 //! Here is what we persist for the logical tree in the above example:
 //!
 //! ```text
-//!          Fzn2(3)
+//!          Fzn2(6)
 //!         /      \
 //!        /        \
-//!    Fzn1(1)       Fzn3(5)
+//!    Fzn1(2)       Fzn3(5)
 //!   /     \       /     \
-//!  L0(0)  L1(2)  L2(4)  L3(6)  L4(8)
+//!  L0(0)  L1(1)  L2(3)  L3(4)  L4(7)
 //! ```
 //!
 //! When the next leaf node is persisted, the physical representation will be:
 //!
 //! ```text
-//!          Fzn2(3)
+//!          Fzn2(6)
 //!         /      \
 //!        /        \
-//!    Fzn1(1)       Fzn3(5)       Fzn4(9)
+//!    Fzn1(2)       Fzn3(5)       Fzn4(9)
 //!   /     \       /     \       /      \
-//!  L0(0)  L1(2)  L2(4)  L3(6)  L4(8)   L5(10)
+//!  L0(0)  L1(1)  L2(3)  L3(4)  L4(7)   L5(8)
 //! ```
 //!
-//! The numbering corresponds to the in-order traversal of the tree.
+//! The numbering corresponds to the post-order traversal of the tree.
 //!
 //! To think in key-value pairs:
 //! ```text
 //! |<-key->|<--value-->|
 //! |   0   | hash_L0   |
-//! |   1   | hash_Fzn1 |
-//! |   2   | hash_L1   |
+//! |   1   | hash_L1   |
+//! |   2   | hash_Fzn1 |
 //! |  ...  |   ...     |
 //! ```
 
-use crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
-use failure::prelude::*;
-use std::marker::PhantomData;
-use types::proof::{
-    position::Position, treebits::NodeDirection, AccumulatorProof, MerkleTreeInternalNode,
+use anyhow::{ensure, format_err, Result};
+use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
+use libra_types::proof::{
+    definition::{LeafCount, MAX_ACCUMULATOR_PROOF_DEPTH},
+    position::{FrozenSubTreeIterator, FrozenSubtreeSiblingIterator, Position},
+    AccumulatorConsistencyProof, AccumulatorProof, AccumulatorRangeProof, MerkleTreeInternalNode,
 };
+use mirai_annotations::*;
+use std::marker::PhantomData;
 
 /// Defines the interface between `MerkleAccumulator` and underlying storage.
 pub trait HashReader {
@@ -130,7 +138,7 @@ where
     /// returns the result root hash and new nodes to be frozen.
     pub fn append(
         reader: &R,
-        num_existing_leaves: u64,
+        num_existing_leaves: LeafCount,
         new_leaves: &[HashValue],
     ) -> Result<(HashValue, Vec<Node>)> {
         MerkleAccumulatorView::<R, H>::new(reader, num_existing_leaves).append(new_leaves)
@@ -140,9 +148,67 @@ where
     /// `num_leaves` leaves in total. Siblings are read via `reader` (or generated dynamically
     /// if they are non-frozen).
     ///
-    /// See [`types::proof::AccumulatorProof`] for proof format.
-    pub fn get_proof(reader: &R, num_leaves: u64, leaf_index: u64) -> Result<AccumulatorProof> {
+    /// See [`libra_types::proof::AccumulatorProof`] for proof format.
+    pub fn get_proof(
+        reader: &R,
+        num_leaves: LeafCount,
+        leaf_index: u64,
+    ) -> Result<AccumulatorProof<H>> {
         MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_proof(leaf_index)
+    }
+
+    /// Gets a proof that shows the full accumulator is consistent with a smaller accumulator.
+    ///
+    /// See [`libra_types::proof::AccumulatorConsistencyProof`] for proof format.
+    pub fn get_consistency_proof(
+        reader: &R,
+        full_acc_leaves: LeafCount,
+        sub_acc_leaves: LeafCount,
+    ) -> Result<AccumulatorConsistencyProof> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_consistency_proof(sub_acc_leaves)
+    }
+
+    /// Gets a proof that shows a range of leaves are part of the accumulator.
+    ///
+    /// See [`libra_types::proof::AccumulatorRangeProof`] for proof format.
+    pub fn get_range_proof(
+        reader: &R,
+        full_acc_leaves: LeafCount,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<AccumulatorRangeProof<H>> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_range_proof(first_leaf_index, num_leaves)
+    }
+
+    /// See `get_range_proof`. This is the version of it that returns `Position`s only.
+    pub fn get_range_proof_positions(
+        reader: &R,
+        full_acc_leaves: LeafCount,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<(Vec<Position>, Vec<Position>)> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_range_proof_positions(first_leaf_index, num_leaves)
+    }
+
+    /// From left to right, gets frozen subtree root hashes of the accumulator. For example, if the
+    /// accumulator has 5 leaves, `x` and `e` are returned.
+    /// ```text
+    ///                 root
+    ///                /    \
+    ///              /        \
+    ///            /            \
+    ///           x              o
+    ///         /   \           / \
+    ///        /     \         /   \
+    ///       o       o       o     placeholder
+    ///      / \     / \     / \
+    ///     a   b   c   d   e   placeholder
+    /// ```
+    pub fn get_frozen_subtree_hashes(reader: &R, num_leaves: LeafCount) -> Result<Vec<HashValue>> {
+        MerkleAccumulatorView::<R, H>::new(reader, num_leaves).get_frozen_subtree_hashes()
     }
 }
 
@@ -150,7 +216,7 @@ where
 /// `num_leaves` on an instance for convenience
 struct MerkleAccumulatorView<'a, R, H> {
     reader: &'a R,
-    num_leaves: u64,
+    num_leaves: LeafCount,
     hasher: PhantomData<H>,
 }
 
@@ -159,7 +225,7 @@ where
     R: HashReader,
     H: CryptoHasher,
 {
-    fn new(reader: &'a R, num_leaves: u64) -> Self {
+    fn new(reader: &'a R, num_leaves: LeafCount) -> Self {
         Self {
             reader,
             num_leaves,
@@ -174,40 +240,68 @@ where
             if self.num_leaves == 0 {
                 return Ok((*ACCUMULATOR_PLACEHOLDER_HASH, Vec::new()));
             } else {
-                let root_hash = self.get_hash(Position::get_root_position(self.num_leaves - 1))?;
+                let root_hash = self.get_hash(Position::root_from_leaf_count(self.num_leaves))?;
                 return Ok((root_hash, Vec::new()));
             }
         }
 
         let num_new_leaves = new_leaves.len();
-        let last_new_leaf_idx = self.num_leaves + num_new_leaves as u64 - 1;
-        let root_level = Position::get_root_position(last_new_leaf_idx).get_level() as usize;
+        let last_new_leaf_count = self.num_leaves + num_new_leaves as LeafCount;
+        let root_level = Position::root_level_from_leaf_count(last_new_leaf_count);
         let mut to_freeze = Vec::with_capacity(Self::max_to_freeze(num_new_leaves, root_level));
 
-        // create one new node for each new leaf hash
-        let mut current_level = self.gen_leaf_level(new_leaves);
-        Self::record_to_freeze(
-            &mut to_freeze,
-            &current_level,
-            false, /* has_non_frozen */
-        );
-
-        // loop starting from leaf level, upwards till root_level - 1,
-        // making new nodes of parent level and recording frozen ones.
-        let mut has_non_frozen = false;
-        for _ in 0..root_level {
-            let (parent_level, placeholder_used) = self.gen_parent_level(&current_level)?;
-
-            // If a placeholder node is used to generate the right most node of a certain level,
-            // such level and all its parent levels have a non-frozen right most node.
-            has_non_frozen |= placeholder_used;
-            Self::record_to_freeze(&mut to_freeze, &parent_level, has_non_frozen);
-
-            current_level = parent_level;
+        // Iterate over the new leaves, adding them to to_freeze and then adding any frozen parents
+        // when right children are encountered.  This has the effect of creating frozen nodes in
+        // perfect post-order, which can be used as a strictly increasing append only index for
+        // the underlying storage.
+        //
+        // We will track newly created left siblings while iterating so we can pair them with their
+        // right sibling, if and when it becomes frozen.  If the frozen left sibling is not created
+        // in this iteration, it must already exist in storage.
+        let mut left_siblings: Vec<(_, _)> = Vec::new();
+        for (leaf_offset, leaf) in new_leaves.iter().enumerate() {
+            let leaf_pos = Position::from_leaf_index(self.num_leaves + leaf_offset as LeafCount);
+            let mut hash = *leaf;
+            to_freeze.push((leaf_pos, hash));
+            let mut pos = leaf_pos;
+            while pos.is_right_child() {
+                let sibling = pos.sibling();
+                hash = match left_siblings.pop() {
+                    Some((x, left_hash)) => {
+                        assert_eq!(x, sibling);
+                        Self::hash_internal_node(left_hash, hash)
+                    }
+                    None => Self::hash_internal_node(self.reader.get(sibling)?, hash),
+                };
+                pos = pos.parent();
+                to_freeze.push((pos, hash));
+            }
+            // The node remaining must be a left child, possibly the root of a complete binary tree.
+            left_siblings.push((pos, hash));
         }
 
-        assert_eq!(current_level.len(), 1, "must conclude in single root node");
-        Ok((current_level.first().expect("unexpected None").1, to_freeze))
+        // Now reconstruct the final root hash by walking up to root level and adding
+        // placeholder hash nodes as needed on the right, and left siblings that have either
+        // been newly created or read from storage.
+        let (mut pos, mut hash) = left_siblings.pop().expect("Must have at least one node");
+        for _ in pos.level()..root_level as u32 {
+            hash = if pos.is_left_child() {
+                Self::hash_internal_node(hash, *ACCUMULATOR_PLACEHOLDER_HASH)
+            } else {
+                let sibling = pos.sibling();
+                match left_siblings.pop() {
+                    Some((x, left_hash)) => {
+                        assert_eq!(x, sibling);
+                        Self::hash_internal_node(left_hash, hash)
+                    }
+                    None => Self::hash_internal_node(self.reader.get(sibling)?, hash),
+                }
+            };
+            pos = pos.parent();
+        }
+        assert!(left_siblings.is_empty());
+
+        Ok((hash, to_freeze))
     }
 
     /// upper bound of num of frozen nodes:
@@ -215,105 +309,148 @@ where
     ///         num_new_leaves * 2 - 1 < num_new_leaves * 2
     ///     and the full route from root of that subtree to the accumulator root turns frozen
     ///         height - (log2(num_new_leaves) + 1) < height - 1 = root_level
-    fn max_to_freeze(num_new_leaves: usize, root_level: usize) -> usize {
-        num_new_leaves * 2 + root_level
+    fn max_to_freeze(num_new_leaves: usize, root_level: u32) -> usize {
+        precondition!(root_level as usize <= MAX_ACCUMULATOR_PROOF_DEPTH);
+        precondition!(num_new_leaves < (usize::max_value() / 2));
+        precondition!(num_new_leaves * 2 <= usize::max_value() - root_level as usize);
+        num_new_leaves * 2 + root_level as usize
     }
 
     fn hash_internal_node(left: HashValue, right: HashValue) -> HashValue {
         MerkleTreeInternalNode::<H>::new(left, right).hash()
     }
 
-    /// Given leaf level hashes, create leaf level nodes
-    fn gen_leaf_level(&self, new_leaves: &[HashValue]) -> Vec<Node> {
-        new_leaves
-            .iter()
-            .enumerate()
-            .map(|(i, hash)| (Position::from_leaf_index(self.num_leaves + i as u64), *hash))
-            .collect()
-    }
-
-    /// Given a level of new nodes (frozen or not), return new nodes on its parent level, and
-    /// a boolean value indicating whether a placeholder node is used to construct the last node
-    fn gen_parent_level(&self, current_level: &[Node]) -> Result<((Vec<Node>, bool))> {
-        let mut parent_level: Vec<Node> = Vec::with_capacity(current_level.len() / 2 + 1);
-        let mut iter = current_level.iter().peekable();
-
-        // first node may be a right child, in that case pair it with its existing sibling
-        let (first_pos, first_hash) = iter.peek().expect("Current level is empty");
-        if first_pos.get_direction_for_self() == NodeDirection::Right {
-            parent_level.push((
-                first_pos.get_parent(),
-                Self::hash_internal_node(self.reader.get(first_pos.get_sibling())?, *first_hash),
-            ));
-            iter.next();
-        }
-
-        // walk through in pairs of siblings, use placeholder as last right sibling if necessary
-        let mut placeholder_used = false;
-        while let Some((left_pos, left_hash)) = iter.next() {
-            let right_hash = match iter.next() {
-                Some((_, h)) => h,
-                None => {
-                    placeholder_used = true;
-                    &ACCUMULATOR_PLACEHOLDER_HASH
-                }
-            };
-
-            parent_level.push((
-                left_pos.get_parent(),
-                Self::hash_internal_node(*left_hash, *right_hash),
-            ));
-        }
-
-        Ok((parent_level, placeholder_used))
-    }
-
-    /// append a level of new nodes into output vector, skip the last one if it's a non-frozen node
-    fn record_to_freeze(to_freeze: &mut Vec<Node>, level: &[Node], has_non_frozen: bool) {
-        to_freeze.extend(
-            level
-                .iter()
-                .take(level.len() - has_non_frozen as usize)
-                .cloned(),
-        )
+    fn rightmost_leaf_index(&self) -> u64 {
+        (self.num_leaves - 1) as u64
     }
 
     fn get_hash(&self, position: Position) -> Result<HashValue> {
-        if position.is_placeholder(self.num_leaves - 1) {
+        let idx = self.rightmost_leaf_index();
+        if position.is_placeholder(idx) {
             Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
-        } else if position.is_freezable(self.num_leaves - 1) {
+        } else if position.is_freezable(idx) {
             self.reader.get(position)
         } else {
             // non-frozen non-placeholder node
             Ok(Self::hash_internal_node(
-                self.get_hash(position.get_left_child())?,
-                self.get_hash(position.get_right_child())?,
+                self.get_hash(position.left_child())?,
+                self.get_hash(position.right_child())?,
             ))
         }
     }
 
+    fn get_hashes(&self, positions: &[Position]) -> Result<Vec<HashValue>> {
+        positions.iter().map(|p| self.get_hash(*p)).collect()
+    }
+
     /// implementation for pub interface `MerkleAccumulator::get_proof`
-    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof> {
+    fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof<H>> {
         ensure!(
-            leaf_index < self.num_leaves,
+            leaf_index < self.num_leaves as u64,
             "invalid leaf_index {}, num_leaves {}",
             leaf_index,
             self.num_leaves
         );
 
-        let leaf_pos = Position::from_leaf_index(leaf_index);
-        let root_pos = Position::get_root_position(self.num_leaves - 1);
-
-        let siblings: Vec<HashValue> = leaf_pos
-            .iter_ancestor_sibling()
-            .take(root_pos.get_level() as usize)
-            .map(|p| self.get_hash(p))
-            .collect::<Result<Vec<HashValue>>>()?
-            .into_iter()
-            .rev()
-            .collect();
-
+        let siblings = self.get_siblings(leaf_index, |_p| true)?;
         Ok(AccumulatorProof::new(siblings))
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_consistency_proof`.
+    fn get_consistency_proof(
+        &self,
+        sub_acc_leaves: LeafCount,
+    ) -> Result<AccumulatorConsistencyProof> {
+        ensure!(
+            sub_acc_leaves <= self.num_leaves,
+            "The other accumulator is bigger than this one. self.num_leaves: {}. \
+             sub_acc_leaves: {}.",
+            self.num_leaves,
+            sub_acc_leaves,
+        );
+
+        let subtrees = FrozenSubtreeSiblingIterator::new(sub_acc_leaves, self.num_leaves)
+            .map(|p| self.reader.get(p))
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(AccumulatorConsistencyProof::new(subtrees))
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_range_proof`.
+    fn get_range_proof(
+        &self,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<AccumulatorRangeProof<H>> {
+        let (left_siblings, right_siblings) =
+            self.get_range_proof_positions(first_leaf_index, num_leaves)?;
+        Ok(AccumulatorRangeProof::new(
+            self.get_hashes(&left_siblings)?,
+            self.get_hashes(&right_siblings)?,
+        ))
+    }
+
+    fn get_range_proof_positions(
+        &self,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<(Vec<Position>, Vec<Position>)> {
+        if first_leaf_index.is_none() {
+            ensure!(
+                num_leaves == 0,
+                "num_leaves is not zero while first_leaf_index is None.",
+            );
+            return Ok((Vec::new(), Vec::new()));
+        }
+
+        let first_leaf_index = first_leaf_index.expect("first_leaf_index should not be None.");
+        ensure!(
+            num_leaves > 0,
+            "num_leaves is zero while first_leaf_index is not None.",
+        );
+        let last_leaf_index = first_leaf_index
+            .checked_add(num_leaves - 1)
+            .ok_or_else(|| format_err!("Requesting too many leaves."))?;
+        ensure!(
+            last_leaf_index < self.num_leaves as u64,
+            "Invalid last_leaf_index: {}, num_leaves: {}",
+            last_leaf_index,
+            self.num_leaves,
+        );
+
+        let left_siblings = self.get_sibling_positions(first_leaf_index, |p| p.is_left_child());
+        let right_siblings = self.get_sibling_positions(last_leaf_index, |p| p.is_right_child());
+        Ok((left_siblings, right_siblings))
+    }
+
+    fn get_siblings(
+        &self,
+        leaf_index: u64,
+        filter: impl Fn(Position) -> bool,
+    ) -> Result<Vec<HashValue>> {
+        self.get_hashes(&self.get_sibling_positions(leaf_index, filter))
+    }
+
+    /// Helper function to get siblings on the path from the given leaf to the root. An additional
+    /// filter function can be applied to filter out certain siblings.
+    fn get_sibling_positions(
+        &self,
+        leaf_index: u64,
+        filter: impl Fn(Position) -> bool,
+    ) -> Vec<Position> {
+        let root_pos = Position::root_from_leaf_count(self.num_leaves);
+        Position::from_leaf_index(leaf_index)
+            .iter_ancestor_sibling()
+            .take(root_pos.level() as usize)
+            .filter(|p| filter(*p))
+            .collect()
+    }
+
+    /// Implementation for public interface `MerkleAccumulator::get_frozen_subtree_hashes`.
+    fn get_frozen_subtree_hashes(&self) -> Result<Vec<HashValue>> {
+        FrozenSubTreeIterator::new(self.num_leaves)
+            .map(|p| self.reader.get(p))
+            .collect::<Result<Vec<_>>>()
     }
 }
 

@@ -1,0 +1,23 @@
+
+module M {
+    resource R { f: bool }
+    t0(s: &signer, a: address) {
+        (copy(s));
+        (R { f: false });
+        (move(a));
+        (move_to<R>());
+        return;
+    }
+}
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
+
+//! new-transaction
+
+module N {
+    resource R<T> { f: T }
+    t0(s: &signer, a: address) {
+        move_to<R<bool>>(copy(a), copy(s), copy(a), R<bool> { f: false });
+        return;
+    }
+}
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END

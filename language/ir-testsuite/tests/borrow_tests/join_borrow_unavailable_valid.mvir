@@ -1,0 +1,18 @@
+module M {
+    struct S { f: u64 }
+
+    t1(root: &mut Self.S, cond: bool) {
+        let u: u64;
+        let x: &u64;
+
+        u = 0;
+
+        if (move(cond)) {
+            x = &u;
+        } else {
+            _ = move(u);
+            x = &move(root).f;
+        }
+        return;
+    }
+}

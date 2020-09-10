@@ -1,0 +1,12 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/regression/type_param_bug_200228.move:12:5 ───
+    │
+ 12 │     ensures old(exists<Balance<Tok_1>>(addr)) ==> old(exists<Balance<Tok_2>>(addr)); // original bug: proved by Prover, but should not be.
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/type_param_bug_200228.move:6:3: type_param_bug
+    =         addr = <redacted>,
+    =         result = <redacted>
+    =     at tests/sources/regression/type_param_bug_200228.move:7:5: type_param_bug

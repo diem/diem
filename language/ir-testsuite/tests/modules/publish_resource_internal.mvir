@@ -1,0 +1,22 @@
+// check: Missing struct definition for Token
+
+module Token {
+    resource T { b: bool }
+    public new(): Self.T {
+        return T{ b: true };
+    }
+}
+
+//! new-transaction
+
+import {{default}}.Token;
+import 0x1.Signer;
+
+main(account: &signer) {
+    let addr1: address;
+    let t: Token.T;
+    addr1 = Signer.address_of(copy(account));
+    t = Token.new();
+    move_to<Token>(copy(account), move(t));
+    return;
+}

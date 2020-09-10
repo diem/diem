@@ -1,0 +1,12 @@
+module A {
+    import 0x1.Signer;
+    resource T1{v: u64}
+
+    public test(account: &signer) acquires T1, T1 {
+        _ = borrow_global_mut<T1>(Signer.address_of(move(account)));
+        return;
+    }
+
+}
+
+// check: DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR

@@ -1,0 +1,41 @@
+[package]
+name = "execution-correctness"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.32"
+rand = { version = "0.7.3", default-features = false }
+
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false }
+executor = { path = "../executor", version = "0.1.0" }
+executor-types = { path = "../executor-types", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-secure-net = { path = "../../secure/net", version = "0.1.0" }
+libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
+libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+serde = { version = "1.0.115", default-features = false }
+storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
+thiserror = "1.0.20"
+# this is actually a dev-dependency (see "Conditional compilation of tests" in coding_guidelines.md)
+executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0", optional = true }
+
+[dev-dependencies]
+config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", default-features = false, features = ["fuzzing"] }
+executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
+libra-config = { path = "../../config", version = "0.1.0" , features = ["fuzzing"] }
+transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
+
+[features]
+fuzzing = ["libra-config/fuzzing", "consensus-types/fuzzing"]

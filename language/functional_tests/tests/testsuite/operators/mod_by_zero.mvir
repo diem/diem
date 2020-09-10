@@ -1,8 +1,0 @@
-main() {
-    let x: u64;
-    x = 514 % 0;
-    return;
-}
-
-// check: ArithmeticError
-// TODO: check for division by zero once vm errors are improved

@@ -1,0 +1,8 @@
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/commands/unpack_extra_binding.move:11:13 ───
+    │
+ 11 │         let T { i, x, b: flag } = t;
+    │             ^^^^^^^^^^^^^^^^^^^ Unbound field 'b' in '0x8675309::Test::T'
+    │
+

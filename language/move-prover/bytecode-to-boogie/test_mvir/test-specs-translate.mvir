@@ -1,0 +1,77 @@
+module TestSpecs {
+
+    // Note the specs below maybe wrong because we do not provide an implementation. This is mostly for verifying
+    // translation issues, and tested with verification off.
+
+    struct S {
+      a: address
+    }
+
+    resource R {
+      x: u64,
+      s: Self.S
+    }
+
+    public div(x1: u64, x2: u64): u64
+      requires x2 > 0
+      succeeds_if x1 > 1
+      aborts_if x1 <= 0
+      ensures RET == x1 * x2
+    {
+        let r: u64;
+        r = move(x1) / move(x2);
+        return move(r);
+    }
+
+    public create_resource()
+      aborts_if global_exists<Self.R>(0x1)
+      ensures global_exists<Self.R>(0x1)
+    {
+      return;
+    }
+
+    public select_from_global_resource()
+      requires global<Self.R>(0x1).x > 0
+    {
+      return;
+    }
+
+    public select_from_resource(r: Self.R): Self.R
+      requires r.x > 0
+    {
+      return move(r);
+    }
+
+    public select_from_resource_nested(r: Self.R): Self.R
+      requires r.s.a == 0x1
+    {
+      return move(r);
+    }
+
+    public select_from_global_resource_dynamic_address(r: Self.R): Self.R
+      requires global<Self.R>(r.s.a).x > 0
+    {
+      return move(r);
+    }
+
+    public select_from_reference(r: &Self.R)
+        requires r.s.a == 0x1
+        ensures r.s.a == old(r.s.a)
+    {
+      return;
+    }
+
+    public ret_values(): u64 * bool * u64
+      ensures RET(0) == 7
+      ensures RET(1) == false
+      ensures RET(2) == 10
+    {
+        return (7, false, 10);
+    }
+
+    public helper_function(x: u64): u64
+      ensures number_in_range(x) && x < max_u64()
+    {
+        return move(x);
+    }
+}

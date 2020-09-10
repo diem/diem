@@ -1,0 +1,22 @@
+error: 
+
+   ┌── tests/move_check/typing/mutable_eq_and_neq_invalid.move:7:20 ───
+   │
+ 7 │         let comp = (&mut p.b1) == (&mut p.b2);
+   │                    ^^^^^^^^^^^ Invalid freeze.
+   ·
+ 6 │         let f = &mut p.b1.f;
+   │                 ----------- Field 'f' is still being mutably borrowed by this reference
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_eq_and_neq_invalid.move:13:20 ───
+    │
+ 13 │         let comp = (&mut p.b1) != (&mut p.b2);
+    │                    ^^^^^^^^^^^ Invalid freeze.
+    ·
+ 12 │         let f = &mut p.b1.f;
+    │                 ----------- Field 'f' is still being mutably borrowed by this reference
+    │
+

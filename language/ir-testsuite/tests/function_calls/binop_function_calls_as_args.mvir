@@ -1,0 +1,27 @@
+module A {
+    public div_by_two(v: u64): bool {
+        if (move(v) % 2 == 0) { return true;}
+        else { return false;}
+    }
+
+    public div_by_three(k: u64): bool {
+        if (move(k) % 3 == 0) { return true;}
+        else { return false;}
+    }
+
+    public div_by_six(b: bool): bool {
+        return move(b);
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let x: u64;
+    let y: bool;
+    x = 42;
+    y = A.div_by_six(A.div_by_two(copy(x)) && A.div_by_three(move(x)));
+    assert(move(y) == true, 42);
+    return;
+}

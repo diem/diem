@@ -1,0 +1,21 @@
+module Token {
+    resource T{value: u64}
+    public new(m: u64): Self.T {
+        return T{value: copy(m)};
+    }
+    public destroy(t: Self.T) {
+        let value: u64;
+        T {value} = move(t);
+        return;
+    }
+
+    public bump_value(this: &mut Self.T) {
+        let val: &mut u64;
+        let x: u64;
+        val = &mut move(this).value;
+        x = *move(val) + 1;
+        *move(val) = copy(x);
+        return;
+    }
+}
+// check: MOVELOC_UNAVAILABLE_ERROR

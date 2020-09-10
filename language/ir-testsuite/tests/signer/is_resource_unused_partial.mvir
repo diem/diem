@@ -1,0 +1,15 @@
+module M {
+    consume(s: signer) {
+        Self.consume(move(s));
+        return;
+    }
+
+    t(cond: bool, s: signer) {
+        if (move(cond)) {
+            Self.consume(move(s));
+        }
+        return;
+    }
+}
+
+// check: UNSAFE_RET_UNUSED_RESOURCES

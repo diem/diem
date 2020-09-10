@@ -1,0 +1,22 @@
+//! new-transaction
+//! args: 0x0
+import {{default}}.M;
+main(s: signer) {
+    move_to<signer>(&s, move(s));
+    return;
+}
+// check: ParserError
+
+//! new-transaction
+//! args: 0x0
+main(s: &signer) {
+    return;
+}
+// check: TYPE_MISMATCH
+
+//! new-transaction
+//! args: 0x0
+main(s: &signer, s2: &signer) {
+    return;
+}
+// check: TYPE_MISMATCH

@@ -1,0 +1,48 @@
+module M {
+    resource R { flag: bool }
+
+    // Type checking is done before memory safety checks
+    t1(): bool {
+        let c: Self.R;
+        c = R { flag: false };
+        return 0;
+    }
+}
+// check: RET_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M2 {
+    // Type checking is done before memory safety checks
+    t2(): bool {
+        let u: u64;
+        let r: &u64;
+        u = 0;
+        r = &u;
+        return move(r);
+    }
+}
+// check: RET_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+module M {
+    resource R { flag: bool }
+
+    t1(): u64 {
+        let c: Self.R;
+        c = R { flag: false };
+        return 0;
+    }
+}
+// check: UNSAFE_RET_UNUSED_RESOURCES
+
+//! new-transaction
+module M2 {
+    t2(): &u64 {
+        let u: u64;
+        let r: &u64;
+        u = 0;
+        r = &u;
+        return move(r);
+    }
+}
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED

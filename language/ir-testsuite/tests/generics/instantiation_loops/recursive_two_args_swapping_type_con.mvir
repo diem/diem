@@ -1,0 +1,13 @@
+// Similar to the case with one argument, but swaps the two type parameters.
+// f<T1, T2> => f<S<T2>, T1> => f<S<T1>, S<T2>> => f<S<S<T2>>, S<T1>> => ...
+
+module M {
+    struct S<T> { x: T }
+
+    f<T1, T2>(a: T1, b: T2) {
+        Self.f<Self.S<T2>, T1>(S<T2> { x: move(b) }, move(a));
+        return;
+    }
+}
+
+// check: LOOP_IN_INSTANTIATION_GRAPH

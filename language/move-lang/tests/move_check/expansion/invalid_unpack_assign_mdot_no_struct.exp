@@ -1,0 +1,16 @@
+error: 
+
+   ┌── tests/move_check/expansion/invalid_unpack_assign_mdot_no_struct.move:3:9 ───
+   │
+ 3 │         Self::f {} = 0;
+   │         ^^^^^^^ Invalid module access. Unbound struct 'f' in module '0x8675309::M'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/invalid_unpack_assign_mdot_no_struct.move:4:9 ───
+   │
+ 4 │         Self::f() = 0;
+   │         ^^^^^^^^^ Invalid assignment lvalue. Expected: a local, a field write, or a deconstructing assignment
+   │
+

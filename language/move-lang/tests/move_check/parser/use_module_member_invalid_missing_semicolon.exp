@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/use_module_member_invalid_missing_semicolon.move:5:1 ───
+   │
+ 5 │ }
+   │ ^ Unexpected '}'
+   ·
+ 5 │ }
+   │ - Expected ';'
+   │
+

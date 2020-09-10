@@ -1,0 +1,26 @@
+[package]
+name = "libra-bitvec"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra safe bitvec implementation"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
+proptest = { version = "0.10.1", default-features = true, optional = true }
+proptest-derive = { version = "0.2.0", optional = true }
+serde = { version = "1.0.115", features = ["derive"] }
+serde_bytes = "0.11.5"
+
+[dev-dependencies]
+lcs = { path = "../lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-proptest-helpers = { path = "../proptest-helpers", version = "0.1.0"}
+proptest = { version = "0.10.1", default-features = true }
+proptest-derive = { version = "0.2.0" }
+
+[features]
+fuzzing = ["proptest-derive", "proptest"]

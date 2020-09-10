@@ -2,10 +2,13 @@
 	<img width="200" src="./.assets/libra.png" alt="Libra Logo" />
 </a>
 
-<hr/>
+---
 
+[![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://libra.github.io/libra/)
 [![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
-[![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
+[![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.libra.org/coverage/unit-coverage/latest/index.html)
+[![codecov](https://codecov.io/gh/libra/libra/branch/master/graph/badge.svg)](https://codecov.io/gh/libra/libra)
 
 Libra Core implements a decentralized, programmable database which provides a financial infrastructure that can empower billions of people.
 
@@ -16,7 +19,7 @@ Libra Core implements a decentralized, programmable database which provides a fi
 
 ## Contributing
 
-Read our [Contributing guide](https://developers.libra.org/docs/community/contributing). Find out what’s coming on our [blog](https://developers.libra.org/blog/2019/06/18/the-path-forward).
+To begin contributing, [sign the CLA](https://libra.org/en-US/cla-sign/). You can learn more about contributing to the Libra project by reading our [Contribution Guide](https://developers.libra.org/docs/community/contributing) and by viewing our [Code of Conduct](https://developers.libra.org/docs/policies/code-of-conduct).
 
 ## Getting Started
 
@@ -24,6 +27,7 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 * [Welcome](https://developers.libra.org/docs/welcome-to-libra)
 * [Libra Protocol: Key Concepts](https://developers.libra.org/docs/libra-protocol)
 * [Life of a Transaction](https://developers.libra.org/docs/life-of-a-transaction)
+* [JSON-RPC SPEC](json-rpc/json-rpc-spec.md)
 
 ### Try Libra Core
 * [My First Transaction](https://developers.libra.org/docs/my-first-transaction)
@@ -56,6 +60,7 @@ Read our [Contributing guide](https://developers.libra.org/docs/community/contri
 ## Community
 
 * Join us on the [Libra Discourse](https://community.libra.org).
+* Ask a question on [Stack Overflow](https://stackoverflow.com/questions/tagged/libra).
 * Get the latest updates to our project by signing up for our [newsletter](https://developers.libra.org/newsletter_form).
 
 ## License

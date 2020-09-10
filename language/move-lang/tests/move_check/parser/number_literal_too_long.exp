@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/number_literal_too_long.move:3:9 ───
+   │
+ 3 │         340282366920938463463374607431768211456;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid number literal. The given literal is too large to fit into the largest number type 'u128'
+   │
+

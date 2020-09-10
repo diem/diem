@@ -1,0 +1,7 @@
+module M {
+    foo(signer: address) {
+        return;
+    }
+}
+
+// check: ParserError: Invalid Token

@@ -1,0 +1,34 @@
+[package]
+name = "generate-format"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra types"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+rand = "0.7.3"
+serde = { version = "1.0.115", features = ["derive"] }
+serde-reflection = "0.3.2"
+serde_yaml = "0.8.13"
+structopt = "0.3.17"
+
+consensus = { path = "../../consensus", version = "0.1.0", features=["fuzzing"] }
+consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0", features=["fuzzing"] }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../../config", version = "0.1.0" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features=["fuzzing"] }
+libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0"}
+libra-types = { path = "../../types", version = "0.1.0", features=["fuzzing"] }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0" }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0", features=["fuzzing"] }
+move-core-types = { path = "../../language/move-core/types", version = "0.1.0", features=["fuzzing"] }
+
+[[bin]]
+name = "compute"
+path = "src/compute.rs"
+test = false

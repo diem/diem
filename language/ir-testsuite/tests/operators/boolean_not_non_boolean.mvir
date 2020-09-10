@@ -1,0 +1,7 @@
+main() {
+    let x: bool;
+    x = !0;
+    return;
+}
+
+// check: BOOLEAN_OP_TYPE_MISMATCH_ERROR

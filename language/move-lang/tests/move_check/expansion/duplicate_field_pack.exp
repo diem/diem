@@ -1,0 +1,14 @@
+error: 
+
+   ┌── tests/move_check/expansion/duplicate_field_pack.move:4:9 ───
+   │
+ 4 │         S { f: 0, f: 0 };
+   │         ^^^^^^^^^^^^^^^^ Invalid construction
+   ·
+ 4 │         S { f: 0, f: 0 };
+   │                   - Duplicate argument given for field 'f'
+   ·
+ 4 │         S { f: 0, f: 0 };
+   │             - Previously defined here
+   │
+

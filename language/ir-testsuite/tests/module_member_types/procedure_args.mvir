@@ -1,0 +1,16 @@
+// check: CALL_TYPE_MISMATCH_ERROR
+
+module Test {
+    public t(fr: u64) {
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.Test;
+
+main() {
+    Test.t(true);
+    return;
+}

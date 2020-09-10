@@ -1,9 +1,8 @@
 #!/bin/sh
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 set -e
 
-PROXY=""
-if [ "$https_proxy" ]; then
-    PROXY=" --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy"
-fi
+DIR="$( cd "$( dirname "$0" )" && pwd )"
 
-docker build -f docker/mint/mint.Dockerfile . --tag libra_mint  --build-arg GIT_REV=$(git rev-parse HEAD) --build-arg GIT_UPSTREAM=$(git merge-base --fork-point origin/master) --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" $PROXY
+$DIR/../libra-build.sh $DIR/Dockerfile libra_mint "$@"

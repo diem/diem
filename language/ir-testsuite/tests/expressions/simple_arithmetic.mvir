@@ -1,0 +1,9 @@
+main() {
+    let a: u64;
+    let b: u64;
+    a = 2 + 3;
+    assert(copy(a) == 5, 42);
+    b = copy(a) - 1;
+    assert(copy(b) == 4, 42);
+    return;
+}

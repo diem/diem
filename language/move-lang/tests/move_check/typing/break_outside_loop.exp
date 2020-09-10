@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/typing/break_outside_loop.move:6:9 ───
+   │
+ 6 │         break
+   │         ^^^^^ Invalid usage of 'break'. 'break' can only be used inside a loop body
+   │
+

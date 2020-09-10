@@ -1,0 +1,10 @@
+module M {
+    struct S<T> { s: T }
+    t(s: signer): Self.S<signer> {
+        let x: Self.S<signer>;
+        x = S<signer> { s: move(s) };
+        return copy(x);
+    }
+}
+
+// check: COPYLOC_RESOURCE_ERROR

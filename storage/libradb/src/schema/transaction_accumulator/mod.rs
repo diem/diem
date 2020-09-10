@@ -6,20 +6,20 @@
 //! A hash value is stored on each position.
 //! See `storage/accumulator/lib.rs` for details.
 //! ```text
-//! |<---key--->|<-value->|
-//! | position  |  hash   |
+//! |<----------key--------->|<-value->|
+//! | position in post order |   hash  |
 //! ```
 
 use crate::schema::{ensure_slice_len_eq, TRANSACTION_ACCUMULATOR_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
-use crypto::HashValue;
-use failure::prelude::*;
+use libra_crypto::HashValue;
+use libra_types::proof::position::Position;
 use schemadb::{
     define_schema,
     schema::{KeyCodec, ValueCodec},
 };
 use std::mem::size_of;
-use types::proof::position::Position;
 
 define_schema!(
     TransactionAccumulatorSchema,
@@ -30,14 +30,13 @@ define_schema!(
 
 impl KeyCodec<TransactionAccumulatorSchema> for Position {
     fn encode_key(&self) -> Result<Vec<u8>> {
-        Ok(self.to_inorder_index().to_be_bytes().to_vec())
+        Ok(self.to_postorder_index().to_be_bytes().to_vec())
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
         ensure_slice_len_eq(data, size_of::<u64>())?;
-        Ok(Position::from_inorder_index(
-            (&data[..]).read_u64::<BigEndian>()?,
-        ))
+        let index = (&data[..]).read_u64::<BigEndian>()?;
+        Ok(Position::from_postorder_index(index)?)
     }
 }
 

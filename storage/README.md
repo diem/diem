@@ -90,10 +90,9 @@ Patricia tree.
           └── libradb          # Implementation of LibraDB.
           └── schemadb         # Schematized wrapper on top of RocksDB.
           └── scratchpad       # In-memory representation of Libra core data structures used by execution.
-          └── sparse_merkle    # Implementation of sparse Merkle tree.
+          └── jellyfish-merkle # Implementation of sparse Merkle tree.
           └── state_view       # An abstraction layer representing a snapshot of state where the Move VM reads data.
           └── storage_client   # A Rust wrapper on top of GRPC clients.
           └── storage_proto    # All interfaces provided by the storage module.
           └── storage_service  # Storage module as a GRPC service.
 ```
-

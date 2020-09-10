@@ -1,0 +1,24 @@
+module Test {
+    struct T { b: bool }
+
+    public new_t(): Self.T {
+        return T { b: true };
+    }
+
+}
+
+//! new-transaction
+
+import {{default}}.Test;
+
+main() {
+    let t: Test.T;
+    let b: bool;
+
+    t = Test.new_t();
+    T { b } = move(t);
+
+    return;
+}
+
+// check: Missing struct definition for T

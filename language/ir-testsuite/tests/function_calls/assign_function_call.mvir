@@ -1,0 +1,23 @@
+module A {
+    public ones_tens(f: u64): u64 * u64 {
+        let k: u64;
+        let m: u64;
+        k = copy(f) % 10;
+        m = (move(f) % 100) - copy(k);
+        return move(k), move(m);
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let x: u64;
+    let y: u64;
+    let z: u64;
+    x = 143;
+    y, z = A.ones_tens(move(x));
+    assert(move(y) == 3, 42);
+    assert(move(z) == 40, 42);
+    return;
+}

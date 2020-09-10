@@ -1,0 +1,32 @@
+error: 
+
+   ┌── tests/move_check/naming/unbound_module_name.move:7:17 ───
+   │
+ 7 │         let x = N::c;
+   │                 ^^^^ Invalid module access. Unbound constant 'c' in module '0x42::N'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_module_name.move:8:17 ───
+   │
+ 8 │         let y = Self::c;
+   │                 ^^^^^^^ Invalid module access. Unbound constant 'c' in module '0x42::M'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_module_name.move:9:13 ───
+   │
+ 9 │         0 + N::c + Self::c;
+   │             ^^^^ Invalid module access. Unbound constant 'c' in module '0x42::N'
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/unbound_module_name.move:9:20 ───
+   │
+ 9 │         0 + N::c + Self::c;
+   │                    ^^^^^^^ Invalid module access. Unbound constant 'c' in module '0x42::M'
+   │
+

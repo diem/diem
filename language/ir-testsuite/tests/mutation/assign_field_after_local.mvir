@@ -1,0 +1,20 @@
+module Tester {
+    struct T{v: u64}
+
+    public new(v: u64): Self.T  {
+        return T{v: move(v)};
+    }
+
+    public replace(t: &mut Self.T) {
+        let t_v: &mut u64;
+        let new_t: Self.T;
+
+        t_v = &mut copy(t).v;
+        new_t = Self.new(1);
+        *move(t) = move(new_t);
+
+        *move(t_v) = 10000;
+        return;
+    }
+}
+// check: WRITEREF_EXISTS_BORROW_ERROR

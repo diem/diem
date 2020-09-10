@@ -1,6 +1,0 @@
-// check: VerificationError { kind: FunctionDefinition, idx: 0, err: StLocTypeMismatchError(1) }
-main() {
-    let x: u64;
-    x = false;
-    return;
-}

@@ -1,0 +1,20 @@
+module M {
+    import 0x1.Vector;
+    public foo(v: vector<u64>) {
+        return;
+    }
+}
+
+//! new-transaction
+import 0x1.Vector;
+import {{default}}.M;
+main() {
+    let v: vector<u64>;
+    let contents_ref: &mut u64;
+    v = Vector.empty<u64>();
+    Vector.push_back<u64>(&mut v, 7);
+    contents_ref = Vector.borrow_mut<u64>(&mut v, 0);
+    M.foo(move(v)); // should be rejected
+    return;
+}
+// check: MOVELOC_EXISTS_BORROW_ERROR

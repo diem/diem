@@ -3,46 +3,61 @@
 
 //! Errors that originate from the PeerManager module
 
-use failure::Fail;
-use futures::channel::oneshot;
-use parity_multiaddr::Multiaddr;
-use types::PeerId;
+use futures::channel::{mpsc, oneshot};
+use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PeerManagerError {
-    #[fail(display = "IO error: {}", _0)]
-    IoError(#[fail(cause)] ::std::io::Error),
+    #[error("Error: {0:?}")]
+    Error(#[from] anyhow::Error),
 
-    #[fail(display = "Transport error: {}", _0)]
-    TransportError(#[fail(cause)] ::failure::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] ::std::io::Error),
 
-    #[fail(display = "Shutting down Peer")]
+    #[error("Transport error: {0}")]
+    TransportError(::anyhow::Error),
+
+    #[error("Shutting down Peer")]
     ShuttingDownPeer,
 
-    #[fail(display = "Not connected with Peer {}", _0)]
+    #[error("Not connected with Peer {0}")]
     NotConnected(PeerId),
 
-    #[fail(display = "Already connected at {}", _0)]
-    AlreadyConnected(Multiaddr),
+    #[error("Already connected at {0}")]
+    AlreadyConnected(NetworkAddress),
 
-    #[fail(display = "Sending end of oneshot dropped")]
+    #[error("Sending end of oneshot dropped")]
     OneshotSenderDropped,
+
+    #[error("Failed to send on mpsc: {0}")]
+    MpscSendError(mpsc::SendError),
+
+    #[error("Serialization error {0}")]
+    LcsError(lcs::Error),
 }
 
 impl PeerManagerError {
-    pub fn from_transport_error<E: Into<::failure::Error>>(error: E) -> Self {
+    pub fn from_transport_error<E: Into<::anyhow::Error>>(error: E) -> Self {
         PeerManagerError::TransportError(error.into())
-    }
-}
-
-impl From<::std::io::Error> for PeerManagerError {
-    fn from(error: ::std::io::Error) -> Self {
-        PeerManagerError::IoError(error)
     }
 }
 
 impl From<oneshot::Canceled> for PeerManagerError {
     fn from(_: oneshot::Canceled) -> Self {
         PeerManagerError::OneshotSenderDropped
+    }
+}
+
+impl From<lcs::Error> for PeerManagerError {
+    fn from(e: lcs::Error) -> Self {
+        PeerManagerError::LcsError(e)
+    }
+}
+
+impl From<mpsc::SendError> for PeerManagerError {
+    fn from(e: mpsc::SendError) -> Self {
+        PeerManagerError::MpscSendError(e)
     }
 }

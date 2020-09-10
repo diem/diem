@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/liveness/copy_after_move.move:5:9 ───
+   │
+ 5 │         copy x;
+   │         ^^^^^^ Invalid usage of local 'x'
+   ·
+ 4 │         move x;
+   │         ------ The local does not have a value due to this position. The local must be assigned a value before being used
+   │
+

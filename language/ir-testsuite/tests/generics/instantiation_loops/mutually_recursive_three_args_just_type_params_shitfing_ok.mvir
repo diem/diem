@@ -1,0 +1,16 @@
+module M {
+    f<T1, T2, T3>() {
+        Self.g<T2, T3, T1>();
+        return;
+    }
+
+    g<T1, T2, T3>() {
+        Self.h<T1, T2, T3>();
+        return;
+    }
+
+    h<T1, T2, T3>() {
+        Self.f<T1, T2, T3>();
+        return;
+    }
+}

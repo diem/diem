@@ -1,0 +1,8 @@
+//! account: default, 10000, 10
+
+//! sequence-number: 17
+main() {
+    return;
+}
+
+// check: SEQUENCE_NUMBER_TOO_NEW

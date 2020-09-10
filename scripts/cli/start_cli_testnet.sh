@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) The Libra Core Contributors
+# SPDX-License-Identifier: Apache-2.0
 
 print_help()
 {
@@ -11,18 +13,29 @@ source "$HOME/.cargo/env"
 
 SCRIPT_PATH="$(dirname $0)"
 
-RUN_PARAMS="--host ac.testnet.libra.org --port 80 -s $SCRIPT_PATH/trusted_peers.config.toml"
+RUN_PARAMS="--url https://testnet.libra.org/v1 --faucet-url https://testnet.libra.org/mint --waypoint_url https://testnet.libra.org/waypoint.txt --chain-id TESTNET"
+RELEASE=""
 
-case $1 in
-    -h | --help)
-        print_help;exit 0;;
-    -r | --release)
-        echo "Building and running client in release mode."
-        cargo run -p client --release -- $RUN_PARAMS
-        ;;
-    '')
-        echo "Building and running client in debug mode."
-        cargo run -p client -- $RUN_PARAMS
-        ;;
-    *) echo "Invalid option"; print_help; exit 0;
-esac
+while [[ ! -z "$1" ]]; do
+	case "$1" in
+		-h | --help)
+			print_help;exit 0;;
+		-r | --release)
+			RELEASE="--release"
+			;;
+		--)
+			shift
+			break
+			;;
+		*) echo "Invalid option"; print_help; exit 0;
+	esac
+	shift
+done
+
+if [ -z "$RELEASE" ]; then
+	echo "Building and running client in debug mode."
+else
+	echo "Building and running client in release mode."
+fi
+
+cargo run -p cli $RELEASE -- $RUN_PARAMS "$@"

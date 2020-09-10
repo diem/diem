@@ -2,17 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::HashValue;
+use libra_types::transaction::{TransactionInfo, Version};
+use proptest::prelude::*;
 use schemadb::schema::assert_encode_decode;
-use types::transaction::TransactionInfo;
 
-#[test]
-fn test_encode_decode() {
-    let txn_info = TransactionInfo::new(
-        HashValue::random(),
-        HashValue::random(),
-        HashValue::random(),
-        7,
-    );
-    assert_encode_decode::<TransactionInfoSchema>(&0u64, &txn_info);
+proptest! {
+    #[test]
+    fn test_encode_decode(version in any::<Version>(), txn_info in any::<TransactionInfo>()) {
+        assert_encode_decode::<TransactionInfoSchema>(&version, &txn_info);
+    }
 }

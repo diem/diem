@@ -1,0 +1,8 @@
+module M {
+    t(sref: &mut signer, s: signer) {
+        *copy(sref) = move(s);
+        return;
+    }
+}
+
+// check: WRITEREF_RESOURCE_ERROR

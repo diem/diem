@@ -1,0 +1,27 @@
+// Tests for parsing invariants in specifications
+
+// Test parsing invariants and synthetics, parsing only.
+//! no-run: runtime
+module TestInvariants {
+
+  synthetic all_values: u128;
+
+  resource SingleInvariant {
+    i: u64,
+    invariant i > 0
+  }
+
+  resource TwoInvariants {
+    i: u64,
+    j: u64,
+    invariant i > 0,
+    invariant j > i
+  }
+
+  resource InvariantWithModifier {
+    i: u64,
+    invariant {update} old(i) < i && all_values == old(old_values) - old(i) + i,
+    invariant {unpack} all_values == old(old_values) - old(i),
+    invariant {pack}   all_values == old(old_values) + i,
+  }
+}

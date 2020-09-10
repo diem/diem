@@ -1,0 +1,24 @@
+module M {
+    public id3(a: u64, b: bool, c: address): u64 * bool * address {
+        return move(a), move(b), move(c);
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let a: u64;
+    let b: bool;
+    let c: address;
+
+    a = 10;
+    b = false;
+    c = 0x0;
+
+    a, b, c = M.id3(move(a), move(b), move(c));
+    assert(move(a) == 10, 42);
+    assert(move(b) == false, 43);
+    assert(move(c) == 0x0, 44);
+    return;
+}

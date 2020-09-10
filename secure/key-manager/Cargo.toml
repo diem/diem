@@ -1,0 +1,49 @@
+[package]
+name = "libra-key-manager"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra Key Manager"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+once_cell = "1.4.1"
+serde = { version = "1.0.115", features = ["rc"], default-features = false }
+thiserror = "1.0.20"
+
+libra-config = { path = "../../config", version = "0.1.0"}
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
+libra-logger = { path = "../../common/logger", version = "0.1.0" }
+libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
+libra-secure-json-rpc = { path = "../../secure/json-rpc", version = "0.1.0" }
+libra-secure-push-metrics = { path = "../../secure/push-metrics", version = "0.1.0" }
+libra-secure-storage = { path = "../../secure/storage", version = "0.1.0" }
+libra-secure-time = { path = "../../secure/time", version = "0.1.0" }
+libra-types = { path = "../../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+transaction-builder-generated = { path = "../../client/transaction-builder", version = "0.1.0" }
+
+[dev-dependencies]
+anyhow = "1.0.32"
+futures = "0.3.5"
+rand = "0.7.3"
+tokio = { version = "0.2.22", features = ["full"] }
+
+config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+executor = { path = "../../execution/executor", version = "0.1.0" }
+executor-test-helpers = { path = "../../execution/executor-test-helpers", version = "0.1.0" }
+executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
+libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }
+vm-validator = { path = "../../vm-validator", version = "0.1.0" }
+
+[features]
+testing = [ "libra-secure-storage/testing" ]
+fuzzing = ["libradb/fuzzing", "libra-json-rpc/fuzzing", "libra-config/fuzzing" ]

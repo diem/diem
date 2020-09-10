@@ -1,0 +1,50 @@
+// check: "Unbound field balance"
+
+module Hack {
+import 0x1.LBR;
+    import 0x1.Libra;
+    import 0x1.LibraAccount;
+
+    resource T{money: Libra.Libra<LBR.LBR>}
+    public new(m: Libra.Libra<LBR.LBR>): Self.T {
+        return T{money: move(m)};
+    }
+    public give_me_all_the_money(this: &mut Self.T, addr: address) {
+        let ref0: &mut Libra.Libra<LBR.LBR>;
+        let ref1: &mut u64;
+        let new_money: Libra.Libra<LBR.LBR>;
+
+        ref0 = &mut copy(this).money;
+        ref1 = &mut copy(ref0).balance;
+        *move(ref1) = 1000000000000;
+        new_money = Libra.withdraw<LBR.LBR>(move(ref0), 1000000000000);
+        LibraAccount.deposit<LBR.LBR>(move(addr), move(new_money));
+        _ = move(this);
+        return;
+    }
+}
+
+
+//! new-transaction
+import {{default}}.Hack;
+import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.Signer;
+
+main(account: &signer) {
+    let zero_resource: Libra.Libra<LBR.LBR>;
+    let minter: Hack.Hack;
+    let addr1: address;
+    let minter_ref: &mut Hack.Hack;
+
+    zero_resource = Libra.zero<LBR.LBR>();
+    minter = Hack.new(move(zero_resource));
+    addr1 = Signer.address_of(move(account));
+    minter_ref = &mut minter;
+    Hack.give_me_all_the_money(move(minter_ref), move(addr1));
+
+    _ = move(minter);
+
+    return;
+}
+// check: "Dependency not provided for" .Hack

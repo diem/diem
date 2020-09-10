@@ -1,0 +1,35 @@
+module M {
+    import 0x1.Signer;
+
+    resource Foo {
+        x: u64,
+    }
+
+    public foo(account: &signer) {
+        move_to<Foo>(move(account), Foo {x: 100u64});
+        return;
+    }
+
+    public bar(account: &signer): u64 acquires Foo {
+        let x: u64;
+        Foo { x } = move_from<Foo>(Signer.address_of(move(account)));
+        return move(x);
+    }
+}
+
+
+//! new-transaction
+import {{default}}.M;
+
+main(account: &signer) {
+    M.foo(move(account));
+    return;
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main(account: &signer) {
+    assert(M.bar(move(account)) == 100u64, 42);
+    return;
+}

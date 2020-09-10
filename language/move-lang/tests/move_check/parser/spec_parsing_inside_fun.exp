@@ -1,0 +1,75 @@
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:9 ───
+    │
+ 32 │         spec {} + 1;
+    │         ^^^^^^^ Invalid argument to '+'
+    ·
+ 32 │         spec {} + 1;
+    │         ------- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:19 ───
+    │
+ 32 │         spec {} + 1;
+    │                   ^ Incompatible arguments to '+'
+    ·
+ 32 │         spec {} + 1;
+    │                   - The type: integer
+    ·
+ 32 │         spec {} + 1;
+    │         ------- Is not compatible with: '()'
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:32:19 ───
+    │
+ 32 │         spec {} + 1;
+    │                   ^ Invalid argument to '+'
+    ·
+ 32 │         spec {} + 1;
+    │         ------- Found: '()'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:33:9 ───
+    │
+ 33 │         spec {} && spec {};
+    │         ^^^^^^^ Incompatible arguments to '&&'
+    ·
+ 33 │         spec {} && spec {};
+    │         ------- The type: '()'
+    ·
+ 33 │         spec {} && spec {};
+    │         ------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:33:20 ───
+    │
+ 33 │         spec {} && spec {};
+    │                    ^^^^^^^ Incompatible arguments to '&&'
+    ·
+ 33 │         spec {} && spec {};
+    │                    ------- The type: '()'
+    ·
+ 33 │         spec {} && spec {};
+    │         ------- Is not compatible with: 'bool'
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/spec_parsing_inside_fun.move:34:9 ───
+    │
+ 34 │         &mut spec {};
+    │         ^^^^^^^^^^^^ Invalid borrow
+    ·
+ 34 │         &mut spec {};
+    │              ------- Expected a single non-reference type, but found: '()'
+    │
+

@@ -1,0 +1,48 @@
+//! account: alice
+//! account: bob
+
+//! sender: alice
+module M {
+    public foo(x: u64): u64 {
+        return move(x)*2;
+    }
+
+    public bar(x: u64, y: u64): u64 {
+        return move(x) + move(y);
+    }
+}
+
+//! new-transaction
+//! sender: alice
+
+main() {
+    return;
+}
+
+
+
+//! new-transaction
+//! sender: alice
+
+import {{alice}}.M;
+
+main() {
+    let x: u64;
+    x = M.foo(3);
+    assert(move(x) == 6, 42);
+    return;
+}
+
+
+
+//! new-transaction
+//! sender: bob
+
+import {{alice}}.M;
+
+main() {
+    let x: u64;
+    x = M.bar(1, 2);
+    assert(move(x) == 3, 42);
+    return;
+}

@@ -1,8 +1,0 @@
-main() {
-    let x: u64;
-    x = 18446744073709551615 + 1;
-    return;
-}
-
-// check: ArithmeticError
-// TODO: check for overflow once vm errors are improved

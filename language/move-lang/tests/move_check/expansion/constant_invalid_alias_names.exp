@@ -1,0 +1,24 @@
+error: 
+
+   ┌── tests/move_check/expansion/constant_invalid_alias_names.move:8:24 ───
+   │
+ 8 │     use 0x42::N::{C as c1, C as _C1, C as Self};
+   │                        ^^ Invalid constant alias name 'c1'. Constant alias names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/constant_invalid_alias_names.move:8:33 ───
+   │
+ 8 │     use 0x42::N::{C as c1, C as _C1, C as Self};
+   │                                 ^^^ Invalid constant alias name '_C1'. Constant alias names must start with 'A'..'Z'
+   │
+
+error: 
+
+   ┌── tests/move_check/expansion/constant_invalid_alias_names.move:8:43 ───
+   │
+ 8 │     use 0x42::N::{C as c1, C as _C1, C as Self};
+   │                                           ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
+   │
+

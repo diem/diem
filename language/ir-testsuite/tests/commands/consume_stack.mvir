@@ -1,0 +1,22 @@
+module M {
+    resource R { data: vector<u8> }
+
+    is_ok_(addr: &address, data: &vector<u8>): bool {
+        return true;
+    }
+
+    public is_ok(addr: address): bool acquires R {
+        (&addr);
+        (0x1D8);
+        (&borrow_global<R>().data);
+        Self.is_ok_();
+        return;
+    }
+
+    // ImmBorrowLoc(0),
+    // LdAddr(1),
+    // ImmBorrowGlobal(StructDefinitionIndex(4)),
+    // ImmBorrowField(FieldHandleIndex(0)),
+    // Call(45),
+    // Ret,
+}

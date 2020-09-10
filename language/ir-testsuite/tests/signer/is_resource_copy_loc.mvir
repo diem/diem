@@ -1,0 +1,7 @@
+module M {
+    t(s: signer): signer {
+        return copy(s);
+    }
+}
+
+// check: COPYLOC_RESOURCE_ERROR

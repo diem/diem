@@ -1,0 +1,26 @@
+module A {
+    public push_u64(): u64  {
+        return 42;
+    }
+
+    public parity(u: u64): bool {
+        return (move(u) % 2 == 0);
+    }
+
+    public foo(u: u64, b: bool): u64 {
+        if (move(b)) { return move(u) + 1;}
+        else { return 0;}
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let k: u64;
+    let ans: u64;
+    k = 101;
+    (A.push_u64());
+    ans = A.foo(A.parity(move(k)));
+    return;
+}

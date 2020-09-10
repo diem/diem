@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_unused_partial.move:7:9 ───
+   │
+ 7 │         if (cond) consume(s)
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid return
+   ·
+ 6 │     fun t(cond: bool, s: signer) {
+   │                       - The parameter 's' might still contain a resource value. The resource must be consumed before the function returns
+   │
+

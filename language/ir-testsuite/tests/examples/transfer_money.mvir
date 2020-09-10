@@ -1,0 +1,17 @@
+//! account: Alice, 1000000
+//! account: Bob, 1000000
+
+//! sender: Alice
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
+
+main(account: &signer) {
+    let with_cap: LibraAccount.WithdrawCapability;
+
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{bob}}, 42, h"", h"");
+    LibraAccount.restore_withdraw_capability(move(with_cap));
+
+    return;
+}

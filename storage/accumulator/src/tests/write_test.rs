@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use super::*;
-use crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_crypto::hash::ACCUMULATOR_PLACEHOLDER_HASH;
+use libra_types::proof::definition::LeafCount;
 use proptest::{collection::vec, prelude::*};
 
 #[test]
@@ -23,7 +24,7 @@ fn test_append_one() {
     for _ in 0..100 {
         let hash = HashValue::random();
         let (root_hash, writes) =
-            TestAccumulator::append(&store, leaves.len() as u64, &[hash]).unwrap();
+            TestAccumulator::append(&store, leaves.len() as LeafCount, &[hash]).unwrap();
         store.put_many(&writes);
 
         leaves.push(hash);
@@ -47,7 +48,7 @@ proptest! {
                 TestAccumulator::append(&store, num_leaves, &hashes).unwrap();
             store.put_many(&writes);
 
-            num_leaves += hashes.len() as u64;
+            num_leaves += hashes.len() as LeafCount;
             leaves.extend(hashes.iter());
             let expected_root_hash = store.verify(&leaves).unwrap();
             assert_eq!(root_hash, expected_root_hash)
@@ -62,7 +63,7 @@ proptest! {
         store.put_many(&writes);
 
         let (root_hash2, writes2) =
-            TestAccumulator::append(&store, leaves.len() as u64, &[]).unwrap();
+            TestAccumulator::append(&store, leaves.len() as LeafCount, &[]).unwrap();
 
         assert_eq!(root_hash, root_hash2);
         assert!(writes2.is_empty());

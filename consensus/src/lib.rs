@@ -1,39 +1,43 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#![forbid(unsafe_code)]
+
 //! Consensus for the Libra Core blockchain
 //!
-//! Encapsulates public consensus traits and any implementations of those traits.
-//! Currently, the only consensus protocol supported is LibraBFT (based on
+//! The consensus protocol implemented is LibraBFT (based on
 //! [HotStuff](https://arxiv.org/pdf/1803.05069.pdf)).
 
-#![deny(missing_docs)]
-#![feature(async_await, slice_patterns)]
-#![feature(drain_filter)]
-#![feature(checked_duration_since)]
-#![feature(crate_visibility_modifier)]
-#![recursion_limit = "128"]
-#[macro_use]
-extern crate failure;
+#![cfg_attr(not(feature = "fuzzing"), deny(missing_docs))]
+#![cfg_attr(feature = "fuzzing", allow(dead_code))]
+#![recursion_limit = "512"]
 
-mod chained_bft;
-
-/// Defines the public consensus provider traits to implement for
-/// use in the Libra Core blockchain.
-pub mod consensus_provider;
-
+mod block_storage;
+mod consensusdb;
 mod counters;
-
+mod epoch_manager;
+mod liveness;
+mod metrics_safety_rules;
+mod network;
+#[cfg(test)]
+mod network_tests;
+mod pending_votes;
+mod persistent_liveness_storage;
+mod round_manager;
 mod state_computer;
 mod state_replication;
-mod state_synchronizer;
-mod stream_utils;
-mod time_service;
+#[cfg(any(test, feature = "fuzzing"))]
+mod test_utils;
+#[cfg(test)]
+mod twins_test;
 mod txn_manager;
+mod util;
 
-#[cfg(test)]
-mod mock_time_service;
-#[cfg(test)]
-mod stream_utils_test;
-#[cfg(test)]
-mod time_service_test;
+/// LibraBFT implementation
+pub mod consensus_provider;
+/// LibraNet interface.
+pub mod network_interface;
+
+#[cfg(feature = "fuzzing")]
+pub use round_manager::round_manager_fuzzing;
+pub use util::config_subscription::gen_consensus_reconfig_subscription;

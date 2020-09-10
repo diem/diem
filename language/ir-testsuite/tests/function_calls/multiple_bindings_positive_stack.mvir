@@ -1,0 +1,8 @@
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
+
+main() {
+    let x: u64;
+    let y: u64;
+    x, y = (1, 2, 4);
+    return;
+}

@@ -1,0 +1,13 @@
+import 0x1.Vector;
+import {{default}}.M;
+main() {
+    let v: vector<u64>;
+    let contents_ref: &u64;
+    let contents_val: u64;
+    v = Vector.empty<u64>();
+    Vector.push_back<u64>(&mut v, 7);
+    contents_ref = Vector.borrow<u64>(&v, 0);
+    contents_val = Vector.pop_back<u64>(&mut v); // should be rejected
+    return;
+}
+// check: CALL_BORROWED_MUTABLE_REFERENCE_ERROR

@@ -1,0 +1,21 @@
+module M {
+    struct R { f: bool }
+    t0(s: &signer) {
+        (copy(s));
+        (R { f: false });
+        (move_to<R>());
+        return;
+    }
+}
+// check: MOVETO_NO_RESOURCE_ERROR
+
+//! new-transaction
+
+module N {
+    struct R<T> { f: T }
+    t0(s: &signer) {
+        move_to<R<bool>>(copy(s), R<bool> { f: false });
+        return;
+    }
+}
+// check: MOVETO_NO_RESOURCE_ERROR

@@ -1,0 +1,20 @@
+module M {
+    resource R { f: bool }
+    t0(s: &signer) {
+        (copy(s));
+        (move_to<R>());
+        return;
+    }
+}
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK
+
+//! new-transaction
+
+module N {
+    resource R<T> { f: T }
+    t0(s: &signer) {
+        move_to<R<bool>>(copy(s));
+        return;
+    }
+}
+// check: NEGATIVE_STACK_SIZE_WITHIN_BLOCK

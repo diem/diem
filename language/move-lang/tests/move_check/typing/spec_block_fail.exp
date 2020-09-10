@@ -1,0 +1,42 @@
+error: 
+
+   ┌── tests/move_check/typing/spec_block_fail.move:3:19 ───
+   │
+ 3 │         (spec {}: u64);
+   │                   ^^^ Invalid type annotation
+   ·
+ 3 │         (spec {}: u64);
+   │          ------- The type: '()'
+   ·
+ 3 │         (spec {}: u64);
+   │                   --- Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/spec_block_fail.move:4:19 ───
+   │
+ 4 │         (spec {}: &u64);
+   │                   ^^^^ Invalid type annotation
+   ·
+ 4 │         (spec {}: &u64);
+   │          ------- The type: '()'
+   ·
+ 4 │         (spec {}: &u64);
+   │                   ---- Is not compatible with: '&u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/spec_block_fail.move:5:19 ───
+   │
+ 5 │         (spec {}: (u64, u64));
+   │                   ^^^^^^^^^^ Invalid type annotation
+   ·
+ 5 │         (spec {}: (u64, u64));
+   │          ------- The type: '()'
+   ·
+ 5 │         (spec {}: (u64, u64));
+   │                   ---------- Is not compatible with: '(u64, u64)'
+   │
+

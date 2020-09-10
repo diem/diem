@@ -1,0 +1,34 @@
+// check: UNSAFE_RET_UNUSED_RESOURCES
+
+module A {
+import 0x1.LBR;
+    import 0x1.Libra;
+
+    resource T{g: Libra.Libra<LBR.LBR>}
+
+    public new(g: Libra.Libra<LBR.LBR>): Self.T {
+        return T{g: move(g)};
+    }
+
+    public destroy(a: Self.T) {
+        let c: Libra.Libra<LBR.LBR>;
+        T{g: c} = move(a);
+        Libra.destroy_zero<LBR.LBR>(move(c));
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.A;
+import 0x1.LBR;
+import 0x1.Libra;
+
+main() {
+    let zero_resource: Libra.Libra<LBR.LBR>;
+    let s: A.T;
+    zero_resource = Libra.zero<LBR.LBR>();
+    s = A.new(move(zero_resource));
+
+    return;
+}

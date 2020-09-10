@@ -1,0 +1,11 @@
+module A {
+    resource T1{ b: bool }
+
+    public test(addr: address) {
+        _ = borrow_global<T1>(move(addr));
+        return;
+    }
+
+}
+
+// check: MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR

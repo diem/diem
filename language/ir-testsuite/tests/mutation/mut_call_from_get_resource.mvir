@@ -1,0 +1,67 @@
+module Token {
+    import 0x1.Signer;
+
+    resource T {balance: u64}
+
+    public new(balance: u64): Self.T  {
+        return T{balance: copy(balance)};
+    }
+
+    public value(this: &Self.T): u64 {
+        let b: u64;
+        let b_ref: &u64;
+        b_ref = &move(this).balance;
+        b = *move(b_ref);
+        return move(b);
+    }
+
+    public bump(this: &mut Self.T) {
+        let val: &mut u64;
+        let x: u64;
+        val = &mut move(this).balance;
+        x = *copy(val) + 1;
+        *move(val) = copy(x);
+        return;
+    }
+
+    public publish(account: &signer, t: Self.T) {
+        move_to<T>(move(account), move(t));
+        return;
+    }
+
+    public test(account: &signer) acquires T {
+        let z: Self.T;
+        let addr1: address;
+        let struct1: &mut Self.T;
+        let imm_struct1: &Self.T;
+        let struct1_original_balance: u64;
+        let struct1_new_balance: u64;
+
+        z = Self.new(0);
+        Self.publish(copy(account), move(z));
+
+        addr1 = Signer.address_of(move(account));
+        struct1 = borrow_global_mut<T>(copy(addr1));
+
+        imm_struct1 = freeze(copy(struct1));
+        struct1_original_balance = Self.value(move(imm_struct1));
+        if (move(struct1_original_balance) != 0) { abort 42; }
+
+        Self.bump(copy(struct1));
+
+        imm_struct1 = freeze(move(struct1));
+        struct1_new_balance = Self.value(move(imm_struct1));
+        if (move(struct1_new_balance) != 1) { abort 42; }
+
+        return;
+    }
+}
+
+//! new-transaction
+
+import {{default}}.Token;
+
+main(account: &signer) {
+    Token.test(move(account));
+    return;
+}

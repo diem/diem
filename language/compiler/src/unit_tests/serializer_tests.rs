@@ -1,9 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-mod testutils;
-use super::*;
-use testutils::compile_script_string;
+use crate::unit_tests::testutils::compile_script_string;
 
 #[test]
 fn serialize_script_ret() {

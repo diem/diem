@@ -1,0 +1,18 @@
+module M {
+    struct G { v: u64 }
+    struct S { g: Self.G }
+
+    t1(root: &mut Self.S, cond: bool) {
+        let v_mut: &mut u64;
+        let g_mut: &mut Self.G;
+
+        v_mut = &mut (&mut copy(root).g).v;
+        g_mut = &mut copy(root).g;
+
+        // INVALID
+        *move(g_mut) = G { v: 0 };
+        return;
+    }
+}
+
+// check: WRITEREF_EXISTS_BORROW_ERROR

@@ -1,0 +1,58 @@
+\section{Alternatives} \label{alternatives}
+In this section we briefly discuss some other approaches we considered for the problem and the trade offs.
+
+\subsection{Quorum Compatible}
+As we mentioned in \ref{safety}, we give up the pipeline of \LBFT to preserve safety. Here we consider an alternative that preserves
+both safety and pipeline.
+
+\paragraph{Condition}
+
+Consider a reconfiguration transaction that changes from validators \rust{N1} to validators \rust{N2} and $f1=\lceil|N1|/3\rceil-1$,
+$f2=\lceil|N2|/3\rceil-1$ malicious power, $|N1|-f1$,  $|N2|-f2$ as quorum size respectively. We only allow reconfiguration if
+
+\begin{equation}
+|N1 \cap N2| > f1 + f2 + max(f1, f2)
+\end{equation}
+
+\paragraph{Analysis}
+We have an important lemma in \LBFT for safety: Under BFT assumption, for every two quorums of nodes, there exists an honest node that
+belongs to both quorums.
+
+With this approach, we restrict the changes between two configurations and we can prove quorums are interchangeable in both configurations,
+so that we implicitly maintain the safety property.
+
+\subsection{Pipelined Configuration}
+This is one step further on top of the quorum compatible approach. Instead of implicit compatible quorums, we require explicit two quorums
+to commit the reconfiguration transaction. We preserve the same safety lemma as above but doing it in a more explicit way.
+
+One way to think about this is pipelining the reconfiguration like we pipeline blocks, reconfiguration $A\rightarrow B$ takes effect
+(the next blocks on this branch need B’s quorum) right after the block and until a commit of another reconfiguration $B\rightarrow X$.
+
+\subsection{Comparison}
+We assemble a comparison table for the three approaches we describe.
+\begin{table*}[h]
+\begin{tabular}{|c|c|c|c|}
+
+\hline
+& Pipelining & Implementation Complexity & Flexibility\\
+\hline \hline
+Basic & No & Small & Most\\
+Quorum Compatible & Yes & Medium & Least\\
+Pipelined Configuration & Yes & Big & Medium\\
+\hline
+
+\end{tabular}
+\end{table*}
+
+Basic mechanim gives up pipelining/performance while provides more flexible configuration changes like protocol change, it also provides better
+isolation between different configurations.
+
+Quorum Compatible enables us with pipelining and is almost seamless to \LBFT by strictly limit how configuration can change.
+
+Pipelined configuration provides pipelining the same as Quorum Compatible with more flexible reconfiguration by supporting explicit multi quorums.
+
+Also regardless of implicit or explicit quorums, to support pipelining configuration, we need to track configuraiton per block tree branch which
+adds complexity compared to one configuration per whole block tree in basic mechanism.
+
+We chose the approach considered all above and think the performance gain of pipelining can not justify the added complexity and
+lost flexibility for now, but could leave for future work.

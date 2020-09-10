@@ -1,0 +1,12 @@
+import 0x1.LBR;
+import 0x1.Libra;
+
+main(account: &signer) {
+    let coin: Libra.Libra<LBR.LBR>;
+    coin = Libra.zero<LBR.LBR>();
+    _ = move(coin);
+
+    return;
+}
+
+// check: POP_RESOURCE_ERROR

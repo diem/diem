@@ -1,0 +1,9 @@
+// (u64, address) args to main(u64, address) is good - with assert not firing
+
+//! args: 10, {{default}}
+
+main(val: u64, addr: address) {
+    assert(copy(val) == 10, 42);
+    assert(copy(addr) == {{default}}, 42);
+    return;
+}

@@ -1,0 +1,69 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{fullpage}
+\usepackage{authblk}
+\usepackage{abstract}
+\usepackage{appendix}
+\usepackage{subcaption}
+\usepackage{xspace}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{url}
+%\usepackage{algorithm}
+
+% algorithm stuff
+\usepackage[noend]{algpseudocode}
+\usepackage[ruled, vlined]{algorithm2e}
+\newcommand{\myalgorithm}{
+\SetKwProg{Procedure}{Procedure}{}{}
+\SetKwProg{Function}{Function}{}{}
+\SetKwProg{Iblock}{}{}{}
+\DontPrintSemicolon
+}
+\newcommand\mycommfont[1]{\footnotesize\ttfamily\textcolor{blue}{#1}}
+\SetCommentSty{mycommfont}
+
+
+\makeatletter
+\renewcommand\AB@affilsepx{, \protect\Affilfont}
+\makeatother
+
+\newtheorem{property}{Property}
+
+
+\newcommand{\LBFT}{LBFT\xspace}
+\newcommand{\PP}{\ensuremath{\mathbb{P}}\xspace}
+\input{setup}
+
+\begin{document}
+\title{Reconfiguration of the Libra Blockchain by Self-Reflecting Transactions}
+\author{The LibraBFT Team}
+\date{}
+\maketitle
+
+% **********************************************************************
+
+\newcommand{\myomit}[1]{}
+
+\begin{abstract}
+This report describes reconfiguration of LibraBFT - an extension to \LBFT to support reconfigure itself
+ by embedding configuration-change transactions in the sequence.
+\LBFT addresses the fundamental consensus problem of the libra blockchain with fixed configuration setup,
+think of validator set, consensus keys, VM features, software version etc.
+Those are all like configuration of one \LBFT protocol instance. we want to support those configuration changes
+without human intervention which could be excessive work and error prone. Instead we present
+a protocol to handle reconfiguration just like a normal transaction.
+\end{abstract}
+
+\input{introduction}
+\input{mechanism}
+\input{alternatives}
+\input{correctness}
+
+% **********************************************************************
+\begingroup
+\bibliographystyle{plain}
+\bibliography{citations}
+\endgroup
+
+\end{document}

@@ -1,0 +1,8 @@
+module Test {
+    struct T{fint: u64}
+
+    public t1(): Self.T {
+        return T{fint: false};
+    }
+}
+// check: PACK_TYPE_MISMATCH_ERROR

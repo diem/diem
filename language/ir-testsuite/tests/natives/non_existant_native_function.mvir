@@ -1,0 +1,5 @@
+module No {
+    native public made_up(x: u64): u64;
+}
+
+// check: MISSING_DEPENDENCY

@@ -1,0 +1,66 @@
+error: undeclared `M::x`
+
+    ┌── tests/sources/expressions_err.move:12:7 ───
+    │
+ 12 │       x
+    │       ^
+    │
+
+error: no function named `not_declared` found
+
+    ┌── tests/sources/expressions_err.move:17:7 ───
+    │
+ 17 │       not_declared()
+    │       ^^^^^^^^^^^^^^
+    │
+
+error: expected `num` but found `bool` in expression
+
+    ┌── tests/sources/expressions_err.move:22:7 ───
+    │
+ 22 │       false
+    │       ^^^^^
+    │
+
+error: no matching declaration of `>`
+
+    ┌── tests/sources/expressions_err.move:27:7 ───
+    │
+ 27 │       x > y
+    │       ^^^^^
+    │
+    = outruled candidate `>(num, num): bool` (expected `num` but found `vector<num>` for argument 1)
+
+error: expected `(num, bool)` but found `bool` in expression
+
+    ┌── tests/sources/expressions_err.move:32:7 ───
+    │
+ 32 │       false
+    │       ^^^^^
+    │
+
+error: no matching declaration of `M::wrongly_typed_callee`
+
+    ┌── tests/sources/expressions_err.move:37:42 ───
+    │
+ 37 │     define wrongly_typed_caller(): num { wrongly_typed_callee(1, 1) }
+    │                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = outruled candidate `M::wrongly_typed_callee(num, bool): num` (expected `bool` but found `u128` for argument 2)
+
+error: expected `num` but found `bool` in expression
+
+    ┌── tests/sources/expressions_err.move:41:83 ───
+    │
+ 41 │     define wrongly_typed_fun_arg_caller(): num { wrongly_typed_fun_arg_callee(|x| false) }
+    │                                                                                   ^^^^^
+    │
+
+error: no matching declaration of `M::wrong_instantiation`
+
+    ┌── tests/sources/expressions_err.move:46:7 ───
+    │
+ 46 │       wrong_instantiation<u64>(x)
+    │       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    = outruled candidate `M::wrong_instantiation(#0): #0` (generic count mismatch (expected 2 but found 1))

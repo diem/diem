@@ -1,0 +1,13 @@
+module M {
+    t1() {
+        let x: u64;
+        let y: &u64;
+        x = 0;
+        y = &x;
+        x = 0;
+        return;
+    }
+
+}
+
+// check: STLOC_UNSAFE_TO_DESTROY_ERROR

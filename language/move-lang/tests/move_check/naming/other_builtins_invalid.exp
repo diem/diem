@@ -1,0 +1,44 @@
+error: 
+
+   ┌── tests/move_check/naming/other_builtins_invalid.move:3:9 ───
+   │
+ 3 │         freeze<u64, bool>(x);
+   │         ^^^^^^ Invalid call to builtin function: 'freeze'
+   ·
+ 3 │         freeze<u64, bool>(x);
+   │         -------------------- Expected 1 type arguments but got 2
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/other_builtins_invalid.move:4:9 ───
+   │
+ 4 │         freeze<>(x);
+   │         ^^^^^^ Invalid call to builtin function: 'freeze'
+   ·
+ 4 │         freeze<>(x);
+   │         ----------- Expected 1 type arguments but got 0
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/other_builtins_invalid.move:5:9 ───
+   │
+ 5 │         assert<u64>(true, 42);
+   │         ^^^^^^ Invalid call to builtin function: 'assert'
+   ·
+ 5 │         assert<u64>(true, 42);
+   │         --------------------- Expected 0 type arguments but got 1
+   │
+
+error: 
+
+   ┌── tests/move_check/naming/other_builtins_invalid.move:6:9 ───
+   │
+ 6 │         assert<u64, bool>(true, 42);
+   │         ^^^^^^ Invalid call to builtin function: 'assert'
+   ·
+ 6 │         assert<u64, bool>(true, 42);
+   │         --------------------------- Expected 0 type arguments but got 2
+   │
+

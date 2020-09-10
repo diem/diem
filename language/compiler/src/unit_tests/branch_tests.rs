@@ -1,10 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#[macro_use]
-mod testutils;
-use super::*;
-use testutils::compile_script_string;
+use crate::unit_tests::testutils::compile_script_string;
 use vm::file_format::Bytecode::*;
 
 #[test]

@@ -1,0 +1,24 @@
+// check: POSITIVE_STACK_SIZE_AT_BLOCK_END
+
+module A {
+    public parity(u: u64): u64 * bool {
+        return copy(u), (move(u) % 2 == 0);
+    }
+
+    public takes_bool(b: bool): u64 {
+        if (move(b)) { return 1;}
+        else { return 0;}
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let k: u64;
+    let ans: u64;
+    k = 100;
+    ans = A.takes_bool(A.parity(move(k)));
+    assert(move(ans) == true, 42);
+    return;
+}

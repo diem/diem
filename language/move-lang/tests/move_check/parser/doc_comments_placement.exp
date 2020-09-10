@@ -1,0 +1,40 @@
+error: 
+
+   ┌── tests/move_check/parser/doc_comments_placement.move:6:5 ───
+   │
+ 6 │     /** There can be no doc comment on uses. */
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ documentation comment cannot be matched to a language item
+   │
+
+error: 
+
+    ┌── tests/move_check/parser/doc_comments_placement.move:16:9 ───
+    │
+ 16 │         /// There can be no doc comment after last field.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ documentation comment cannot be matched to a language item
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/doc_comments_placement.move:23:9 ───
+    │
+ 23 │         /// There can be no doc comment after last block member.
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ documentation comment cannot be matched to a language item
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/doc_comments_placement.move:26:5 ───
+    │
+ 26 │     /// There can be no doc comment after last module item.
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ documentation comment cannot be matched to a language item
+    │
+
+error: 
+
+    ┌── tests/move_check/parser/doc_comments_placement.move:29:1 ───
+    │
+ 29 │ /// There can be no doc comment at end of file.
+    │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ documentation comment cannot be matched to a language item
+    │
+

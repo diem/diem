@@ -1,0 +1,5 @@
+//! type-args: bool
+main<T: resource>() {
+    return;
+}
+// check: CONSTRAINT_KIND_MISMATCH

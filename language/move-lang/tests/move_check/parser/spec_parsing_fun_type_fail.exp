@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/spec_parsing_fun_type_fail.move:2:29 ───
+   │
+ 2 │     fun fun_type_in_prog(p: |u64|u64) {
+   │                             ^^^^^^^^ `|_|_` function type only allowed in specifications
+   │
+

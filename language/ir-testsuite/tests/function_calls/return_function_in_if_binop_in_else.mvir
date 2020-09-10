@@ -1,0 +1,33 @@
+module A {
+    public foo(t: u64): u64 * u64 {
+       return (copy(t), 2 * move(t));
+    }
+
+    public bar(k: u64): u64 * u64 {
+        if (copy(k) != 1) {
+            return Self.foo(copy(k));
+        } else {
+            return 3 * Self.foo(move(k));
+        }
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let x: u64;
+    let y: u64;
+
+    let u: u64;
+    let v: u64;
+
+    x, y = A.bar(10);
+    u, v = A.bar(1);
+
+    assert(move(x) == 10, 42);
+    assert(move(y) == 20, 42);
+    assert(move(u) == 3, 42);
+    assert(move(v) == 2, 42);
+    return;
+}

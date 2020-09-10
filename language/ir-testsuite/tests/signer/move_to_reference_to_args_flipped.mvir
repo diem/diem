@@ -1,0 +1,21 @@
+module M {
+    resource R { f: bool }
+    t0(s: &signer) {
+        (R { f: false });
+        (copy(s));
+        (move_to<R>());
+        return;
+    }
+}
+// check: MOVETO_TYPE_MISMATCH_ERROR
+
+//! new-transaction
+
+module N {
+    resource R<T> { f: T }
+    t0(s: &signer) {
+        move_to<R<bool>>(R<bool> { f: false }, copy(s));
+        return;
+    }
+}
+// check: MOVETO_TYPE_MISMATCH_ERROR

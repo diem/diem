@@ -1,0 +1,42 @@
+module A {
+    struct T {value: u64, even: bool}
+
+    public new(): Self.T {
+        return T {value: 0, even: true};
+    }
+
+    public get_value(this: &mut Self.T): u64 {
+        let v: &u64;
+        v = &move(this).value;
+        return *move(v);
+    }
+
+    public get_parity(this: &mut Self.T): bool {
+        let b: &bool;
+        b = &move(this).even;
+        return *move(b);
+    }
+
+    public change_parity(number: u64, parity: bool): u64 * bool {
+        let n: u64;
+        let p: bool;
+        n = move(number) + 1;
+        if (move(parity)) { p = false; }
+        else { p = true; }
+        return move(n), move(p);
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let x: A.T;
+    let y: u64;
+    let z: bool;
+    x = A.new();
+    y, z = A.change_parity(A.get_value(&mut x), A.get_parity(&mut x));
+    assert(move(y) == 1, 42);
+    assert(move(z) == false, 42);
+    return;
+}

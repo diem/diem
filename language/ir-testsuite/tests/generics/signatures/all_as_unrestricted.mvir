@@ -1,0 +1,10 @@
+module M {
+    struct S<T: copyable> { b: bool }
+
+    foo<T>() {
+        let x: Self.S<T>;
+        return;
+    }
+}
+
+// check: CONSTRAINT_KIND_MISMATCH

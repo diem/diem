@@ -1,0 +1,11 @@
+module A {
+    struct T1{v: u64}
+
+    public test() acquires T1 {
+        Self.test();
+        return;
+    }
+
+}
+
+// check: INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR

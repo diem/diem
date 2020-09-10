@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/invalid_character.move:1:12 ───
+   │
+ 1 │ address 0x1~
+   │            ^ Invalid character: '~'
+   │
+

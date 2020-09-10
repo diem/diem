@@ -1,0 +1,27 @@
+module M {
+    public foo(u: u64): u64 * u64 * u64 {
+        let twice: u64;
+        let quadruple: u64;
+        twice = 2 * copy(u);
+        quadruple = 4 * copy(u);
+        return move(u), move(twice), move(quadruple);
+    }
+
+    public bar(): u64 {
+        return 2;
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let x: u64;
+    let y: u64;
+    let z: u64;
+    x, y, z = M.foo(5) + M.bar();
+    assert(move(x) == 5, 42);
+    assert(move(y) == 10, 42);
+    assert(move(z) == 22, 42);
+    return;
+}

@@ -1,0 +1,25 @@
+module A {
+import 0x1.LBR;
+    import 0x1.Libra;
+    resource A { c: Libra.Libra<LBR.LBR> }
+    public new(c: Libra.Libra<LBR.LBR>): Self.A {
+        return A { c: move(c) };
+    }
+    public destroy_a(a: Self.A) {
+        let c: Libra.Libra<LBR.LBR>;
+        A { c } = move(a);
+        Libra.destroy_zero<LBR.LBR>(move(c));
+        return;
+    }
+    public mutate(a_ref: &mut Self.A) {
+        let ref: &mut Libra.Libra<LBR.LBR>;
+        let zero: Libra.Libra<LBR.LBR>;
+
+        ref = &mut move(a_ref).c;
+        zero = Libra.zero<LBR.LBR>();
+        *move(ref) = move(zero);
+
+        return;
+    }
+}
+// check: WRITEREF_RESOURCE_ERROR

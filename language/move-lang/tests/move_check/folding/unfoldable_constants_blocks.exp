@@ -1,0 +1,160 @@
+error: 
+
+   ┌── tests/move_check/folding/unfoldable_constants_blocks.move:4:9 ───
+   │
+ 4 │         (1: u8) << 8;
+   │         ^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+   │
+
+error: 
+
+   ┌── tests/move_check/folding/unfoldable_constants_blocks.move:5:9 ───
+   │
+ 5 │         (1: u64) << 64;
+   │         ^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+   │
+
+error: 
+
+   ┌── tests/move_check/folding/unfoldable_constants_blocks.move:6:9 ───
+   │
+ 6 │         (1: u128) << 128;
+   │         ^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+   │
+
+error: 
+
+   ┌── tests/move_check/folding/unfoldable_constants_blocks.move:8:9 ───
+   │
+ 8 │         (0: u8) >> 8;
+   │         ^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+   │
+
+error: 
+
+   ┌── tests/move_check/folding/unfoldable_constants_blocks.move:9:9 ───
+   │
+ 9 │         (0: u64) >> 64;
+   │         ^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+   │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:10:9 ───
+    │
+ 10 │         (0: u128) >> 128;
+    │         ^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:12:9 ───
+    │
+ 12 │         (1: u8) / 0;
+    │         ^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:13:9 ───
+    │
+ 13 │         (1: u64) / 0;
+    │         ^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:14:9 ───
+    │
+ 14 │         (1: u128) / 0;
+    │         ^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:16:9 ───
+    │
+ 16 │         (1: u8) % 0;
+    │         ^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:17:9 ───
+    │
+ 17 │         (1: u64) % 0;
+    │         ^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:18:9 ───
+    │
+ 18 │         (1: u128) % 0;
+    │         ^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:20:9 ───
+    │
+ 20 │         (255: u8) + 255;
+    │         ^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:21:9 ───
+    │
+ 21 │         (18446744073709551615: u64) + 18446744073709551615;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:22:9 ───
+    │
+ 22 │         (340282366920938463463374607431768211450: u128) + 340282366920938463463374607431768211450;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:24:9 ───
+    │
+ 24 │         (0: u8) - 1;
+    │         ^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:25:9 ───
+    │
+ 25 │         (0: u64) - 1;
+    │         ^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:26:9 ───
+    │
+ 26 │         (0: u128) - 1;
+    │         ^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:28:9 ───
+    │
+ 28 │         ((256: u64) as u8);
+    │         ^^^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+
+error: 
+
+    ┌── tests/move_check/folding/unfoldable_constants_blocks.move:29:9 ───
+    │
+ 29 │         ((340282366920938463463374607431768211450: u128) as u64);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid expression in 'const'. This expression could not be evaluated to a value
+    │
+

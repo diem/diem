@@ -1,0 +1,9 @@
+# Subscribe to crypto crate changing PRs
+/crypto @kchalkias @huitseeker @valerini
+# Subscribe to potential JSON API changing PRs
+/json-rpc/json-rpc-spec.md @thefallentree @xli
+/json-rpc/types/ @thefallentree @xli
+/json-rpc/src/methods.rs @thefallentree @xli
+/client/ @thefallentree @xli
+# Subscribe to LCS format changes
+/testsuite/generate-format/tests/staged/libra.yaml @thefallentree @matbd @xli

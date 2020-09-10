@@ -1,0 +1,15 @@
+main() {
+    assert(false, 42);
+    return;
+}
+
+// check: "Keep(ABORTED { code: 42,"
+
+
+//! new-transaction
+main() {
+    assert(false, 43);
+    return;
+}
+
+// check: "Keep(ABORTED { code: 43,"

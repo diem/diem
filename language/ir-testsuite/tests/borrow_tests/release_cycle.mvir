@@ -1,0 +1,19 @@
+module M {
+    t0(cond: bool) {
+        let v: u64;
+        let x: &u64;
+        let y: &u64;
+
+        v = 0;
+        if (move(cond)) {
+            x = &v;
+            y = copy(x);
+        } else {
+            y = &v;
+            x = copy(y);
+        }
+        _ = move(x);
+        _ = move(y);
+        return;
+    }
+}

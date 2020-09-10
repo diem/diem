@@ -1,0 +1,14 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_copy_loc_transitive.move:5:9 ───
+   │
+ 5 │         copy x
+   │         ^^^^^^ Invalid 'copy' of owned resource value
+   ·
+ 4 │         let x = S<signer> { s };
+   │                 --------------- The type: '0x8675309::M::S<signer>'
+   ·
+ 4 │         let x = S<signer> { s };
+   │                   ------ Is found to be a non-copyable type here
+   │
+

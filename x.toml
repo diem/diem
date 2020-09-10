@@ -1,0 +1,131 @@
+[system-tests]
+testsuite = { path = "testsuite" }
+
+[cargo]
+toolchain = "nightly-2020-07-08"
+flags = "-Zfeatures=all"
+
+[fix]
+
+[clippy]
+allowed = [
+    # Deriving Arbitrary often causes this warning to show up.
+    "clippy::unit_arg",
+    # Known to have false positive at the moment,
+    "clippy::mutable_key_type",
+    "clippy::eval-order-dependence",
+]
+warn = [
+    "clippy::wildcard_dependencies",
+]
+
+# This follows the same syntax as CargoOptionsSummary in guppy.
+[summaries.default]
+version = "v2"
+include-dev = false
+proc-macros-on-target = false
+
+[summaries.default.target-platform]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "all"
+
+[summaries.default.host-platform]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "all"
+
+[[summaries.default.omitted-packages]]
+name = "libra-workspace-hack"
+version = "0.1.0"
+workspace-path = "common/workspace-hack"
+
+[summaries.full]
+version = "v2"
+include-dev = true
+proc-macros-on-target = false
+# Don't set target or host platforms, or omitted packages, for the full set.
+
+[workspace.enforced-attributes]
+authors = ["Libra Association <opensource@libra.org>"]
+license = "Apache-2.0"
+
+[workspace.banned-deps.direct]
+lazy_static = "use once_cell::sync::Lazy instead"
+
+[workspace.banned-deps.default-build]
+criterion = "criterion is only for benchmarks"
+proptest = "proptest is only for testing and fuzzing"
+
+[workspace.overlay]
+features = ["fuzzing"]
+
+# This is a list of test-only members. These are workspace members that do not form part of the main
+# Libra production codebase, and are only used to verify correctness and/or performance.
+#
+# *** IMPORTANT ***
+#
+# Published developer tools (e.g. Move compiler) ARE part of the production Libra codebase.
+# They should be listed in the root Cargo.toml's default-members, not here!
+#
+# Before adding a new crate to this list, ensure that it is *actually* test-only. If not, add it
+# (or a crate that depends on it) to the root Cargo.toml's default-members list!
+#
+# For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
+[workspace.test-only]
+members = [
+    "common/libradoc",
+    "common/proptest-helpers",
+    "common/retrier",
+    "common/workspace-builder",
+    "devtools/x",
+    "devtools/x-core",
+    "devtools/x-lint",
+    "execution/executor-benchmark",
+    "execution/executor-test-helpers",
+    "language/benchmarks",
+    "language/bytecode-verifier/bytecode-verifier-tests",
+    "language/bytecode-verifier/invalid-mutations",
+    "language/e2e-testsuite",
+    "language/testing-infra/e2e-tests",
+    "language/testing-infra/functional-tests",
+    "language/testing-infra/test-generation",
+    "language/testing-infra/module-generation",
+    "language/ir-testsuite",
+    "language/move-lang/functional-tests",
+    "language/move-prover/test-utils",
+    "language/vm/serializer-tests",
+    "network/memsocket",
+    "network/socket-bench-server",
+    "testsuite",
+    "testsuite/cluster-test",
+    "testsuite/generate-format",
+    "testsuite/libra-fuzzer",
+    "testsuite/libra-fuzzer/fuzz",
+    "testsuite/libra-swarm",
+]
+
+# Interesting subsets of the workspace, These are used for generating and
+# checking dependency summaries.
+
+[workspace.subsets.lsr]
+# The Libra safety rules TCB.
+members = [
+    "consensus/safety-rules",
+]
+
+[workspace.subsets.lec]
+# The Libra execution correctness TCB.
+members = [
+    "execution/execution-correctness",
+]
+
+[workspace.subsets.release]
+# The Libra release binaries
+members = [
+    "config/config-builder",
+    "config/management/genesis",
+    "consensus/safety-rules",
+    "execution/db-bootstrapper",
+    "libra-node",
+    "secure/key-manager",
+    "storage/backup/backup-cli",
+]

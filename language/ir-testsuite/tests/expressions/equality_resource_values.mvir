@@ -1,0 +1,10 @@
+module Token {
+    resource T { b: bool }
+
+    public test() {
+        let no: bool;
+        no = T{ b: true } == T{ b: true };
+        return;
+    }
+}
+// check: EQUALITY_OP_TYPE_MISMATCH_ERROR

@@ -1,0 +1,29 @@
+module A {
+    struct T {value: u64}
+
+    public new(v: u64): Self.T {
+        return T{value: move(v)};
+    }
+
+    public add_one(this: &mut Self.T): u64 {
+        let b: &u64;
+        b = &move(this).value;
+        return *move(b) + 1;
+    }
+
+    public add_two(v: u64): u64 {
+        return move(v) + 2;
+    }
+}
+
+//! new-transaction
+import {{default}}.A;
+
+main() {
+    let z: u64;
+    let x: A.T;
+    x = A.new(5);
+    z = A.add_two(A.add_two(A.add_one(&mut x)));
+    assert(move(z) == 10, 42);
+    return;
+}

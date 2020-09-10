@@ -1,0 +1,326 @@
+error: 
+
+   ┌── tests/move_check/typing/constant_unsupported_exps.move:8:9 ───
+   │
+ 8 │         let x = 0;
+   │         ^^^^^^^^^ 'let' declarations are not supported in constants
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/constant_unsupported_exps.move:9:9 ───
+   │
+ 9 │         let s: signer = abort 0;
+   │         ^^^^^^^^^^^^^^^^^^^^^^^ 'let' declarations are not supported in constants
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/constant_unsupported_exps.move:9:25 ───
+   │
+ 9 │         let s: signer = abort 0;
+   │                         ^^^^^^^ 'abort' expressions are not supported in constants
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:10:9 ───
+    │
+ 10 │         let b = B { f: 0 };
+    │         ^^^^^^^^^^^^^^^^^^ 'let' declarations are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:10:17 ───
+    │
+ 10 │         let b = B { f: 0 };
+    │                 ^^^^^^^^^^ Structs are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:11:9 ───
+    │
+ 11 │         spec { };
+    │         ^^^^^^^^ Spec blocks are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:12:9 ───
+    │
+ 12 │         &x;
+    │         ^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:13:9 ───
+    │
+ 13 │         &mut x;
+    │         ^^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:14:9 ───
+    │
+ 14 │         foo();
+    │         ^^^^^ Module calls are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:15:9 ───
+    │
+ 15 │         borrow_global<R>(0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:16:9 ───
+    │
+ 16 │         borrow_global_mut<R>(0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ 'borrow_global_mut' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:17:9 ───
+    │
+ 17 │         move_to(s, R{});
+    │         ^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '0'
+    ·
+  9 │         let s: signer = abort 0;
+    │                ------ The type: 'signer'
+    ·
+ 17 │         move_to(s, R{});
+    │         ------- Is not compatible with: '&signer'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:17:9 ───
+    │
+ 17 │         move_to(s, R{});
+    │         ^^^^^^^^^^^^^^^ 'move_to' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:17:16 ───
+    │
+ 17 │         move_to(s, R{});
+    │                ^^^^^^^^ Expression lists are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:17:20 ───
+    │
+ 17 │         move_to(s, R{});
+    │                    ^^^ Structs are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:18:9 ───
+    │
+ 18 │         R{} = move_from(0x42);
+    │         ^^^^^^^^^^^^^^^^^^^^^ Assignments are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:18:15 ───
+    │
+ 18 │         R{} = move_from(0x42);
+    │               ^^^^^^^^^^^^^^^ 'move_from' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:19:9 ───
+    │
+ 19 │         freeze(&mut x);
+    │         ^^^^^^^^^^^^^^ 'freeze' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:19:16 ───
+    │
+ 19 │         freeze(&mut x);
+    │                ^^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:20:9 ───
+    │
+ 20 │         assert(true, 42);
+    │         ^^^^^^^^^^^^^^^^ 'assert' is not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:20:15 ───
+    │
+ 20 │         assert(true, 42);
+    │               ^^^^^^^^^^ Expression lists are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:21:9 ───
+    │
+ 21 │         if (true) 0 else 1;
+    │         ^^^^^^^^^^^^^^^^^^ 'if' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:22:9 ───
+    │
+ 22 │         loop ();
+    │         ^^^^^^^ 'loop' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:23:9 ───
+    │
+ 23 │         loop { break; continue; };
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^ 'loop' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:24:9 ───
+    │
+ 24 │         while (true) ();
+    │         ^^^^^^^^^^^^^^^ 'while' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:25:9 ───
+    │
+ 25 │         x = 1;
+    │         ^^^^^ Assignments are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:26:9 ───
+    │
+ 26 │         return 0;
+    │         ^^^^^^^^ 'return' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:27:9 ───
+    │
+ 27 │         abort 0;
+    │         ^^^^^^^ 'abort' expressions are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:28:9 ───
+    │
+ 28 │         *(&mut 0) = 0;
+    │         ^^^^^^^^^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:28:10 ───
+    │
+ 28 │         *(&mut 0) = 0;
+    │          ^^^^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:29:9 ───
+    │
+ 29 │         b.f = 0;
+    │         ^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:29:9 ───
+    │
+ 29 │         b.f = 0;
+    │         ^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:29:9 ───
+    │
+ 29 │         b.f = 0;
+    │         ^^^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:30:9 ───
+    │
+ 30 │         b.f;
+    │         ^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:30:9 ───
+    │
+ 30 │         b.f;
+    │         ^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:31:9 ───
+    │
+ 31 │         *&b.f;
+    │         ^^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:31:10 ───
+    │
+ 31 │         *&b.f;
+    │          ^^^^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:31:11 ───
+    │
+ 31 │         *&b.f;
+    │           ^ References (and reference operations) are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:32:9 ───
+    │
+ 32 │         (0, 1);
+    │         ^^^^^^ Expression lists are not supported in constants
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/constant_unsupported_exps.move:33:9 ───
+    │
+ 33 │         FLAG;
+    │         ^^^^ Other constants are not supported in constants
+    │
+

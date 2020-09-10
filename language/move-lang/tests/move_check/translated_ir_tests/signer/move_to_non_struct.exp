@@ -1,0 +1,25 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/move_to_non_struct.move:3:9 ───
+   │
+ 3 │         move_to<u64>(s, 0)
+   │         ^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
+   ·
+ 3 │         move_to<u64>(s, 0)
+   │                 --- Expected a nominal resource. Found the type: 'u64'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/signer/move_to_non_struct.move:13:9 ───
+    │
+ 13 │         move_to<R<u64>>(s, 0)
+    │         ^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'move_to'. Invalid argument for parameter '1'
+    ·
+ 13 │         move_to<R<u64>>(s, 0)
+    │                            - The type: integer
+    ·
+ 13 │         move_to<R<u64>>(s, 0)
+    │                 ------ Is not compatible with: '0x8675309::N::R<u64>'
+    │
+

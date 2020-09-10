@@ -1,0 +1,16 @@
+module M {
+    struct M { b: bool }
+    public new(): Self.M {
+        return M{ b: true };
+    }
+}
+
+//! new-transaction
+
+import {{default}}.M;
+
+main() {
+    let x: M.M;
+    x = M.new();
+    return;
+}

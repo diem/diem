@@ -1,0 +1,5 @@
+//! type-args: 0x1::LibraAccount::Balance<0x1::LibraAccount::Balance<bool>>
+main<T>() {
+    return;
+}
+// check: "Keep(EXECUTED)"

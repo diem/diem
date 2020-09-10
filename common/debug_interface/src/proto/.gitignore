@@ -1,3 +1,0 @@
-# Ignore all the generated files.
-node_debug_interface.rs
-node_debug_interface_grpc.rs

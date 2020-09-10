@@ -1,0 +1,21 @@
+module M {
+    public case(a: u64, b: bool): u64 {
+        if (copy(b)) {
+            return copy(a);
+        } else {
+            return 42;
+        }
+        return 112;
+    }
+}
+
+//! new-transaction
+import {{default}}.M;
+
+main() {
+    let a: u64;
+    a = 10;
+    a = M.case(move(a), false);
+    assert(copy(a) == 42, 41);
+    return;
+}

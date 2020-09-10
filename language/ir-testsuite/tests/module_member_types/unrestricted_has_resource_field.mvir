@@ -1,0 +1,11 @@
+// check: INVALID_RESOURCE_FIELD
+
+module Test {
+import 0x1.LBR;
+    import 0x1.Libra;
+
+    struct T{
+        fc: Libra.Libra<LBR.LBR>,
+        fint: u64,
+    }
+}

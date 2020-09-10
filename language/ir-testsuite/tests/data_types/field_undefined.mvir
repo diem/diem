@@ -1,0 +1,10 @@
+// check: Unbound field
+
+module M {
+    struct T {
+        x: u64
+    }
+    public new(): Self.T {
+        return T { y: 1 };
+    }
+}

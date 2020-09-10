@@ -1,0 +1,21 @@
+[package]
+name = "libra-crypto-derive"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra custom derives for `libra-crypto`"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+syn = { version = "1.0.40", features = ["derive"] }
+quote = "1.0.7"
+proc-macro2 = "1.0.21"
+
+[dev-dependencies]
+anyhow = "1.0.32"

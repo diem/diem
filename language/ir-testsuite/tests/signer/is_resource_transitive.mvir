@@ -1,0 +1,13 @@
+module M {
+    struct S<T> {
+        f: T,
+    }
+
+    t(s: signer) {
+        let x: Self.S<signer>;
+        x = S<signer> { f: move(s) };
+        return;
+    }
+}
+
+// check: UNSAFE_RET_UNUSED_RESOURCES

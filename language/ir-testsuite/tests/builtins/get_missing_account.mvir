@@ -1,0 +1,15 @@
+import 0x1.LibraAccount;
+import 0x1.LBR;
+
+main() {
+    let addr: address;
+    let account_exists: bool;
+    let account_balance: u64;
+
+    addr = 0x011111111111111110;
+    account_exists = LibraAccount.exists_at(copy(addr));
+    account_balance = LibraAccount.balance<LBR.LBR>(move(addr));
+    return;
+}
+
+// check: MISSING_DATA

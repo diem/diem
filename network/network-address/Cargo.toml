@@ -1,0 +1,35 @@
+[package]
+name = "libra-network-address"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra types"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+[dependencies]
+aes-gcm = "0.6.0"
+proptest = { version = "0.10.1", optional = true }
+proptest-derive = { version = "0.2.0", optional = true }
+serde = { version = "1.0.115", default-features = false }
+serde_bytes = "0.11.5"
+static_assertions = "1.1.0"
+thiserror = "1.0.20"
+
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
+libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
+
+[dev-dependencies]
+anyhow = "1.0.32"
+proptest = "0.10.1"
+proptest-derive = "0.2.0"
+
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+
+[features]
+default = []
+fuzzing = ["proptest", "proptest-derive", "libra-crypto/fuzzing"]

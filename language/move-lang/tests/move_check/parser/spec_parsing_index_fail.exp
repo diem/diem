@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/parser/spec_parsing_index_fail.move:3:15 ───
+   │
+ 3 │       let _ = x[1];
+   │               ^^^^ `_[_]` index operator only allowed in specifications
+   │
+

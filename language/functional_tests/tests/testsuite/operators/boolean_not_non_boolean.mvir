@@ -1,8 +1,0 @@
-main() {
-    let x: bool;
-    x = !0;
-    return;
-}
-
-// check: VerificationError
-// check: BooleanOpTypeMismatchError

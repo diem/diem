@@ -1,0 +1,154 @@
+---
+ChainId:
+  NEWTYPESTRUCT: U8
+DirectSendMsg:
+  STRUCT:
+    - protocol_id:
+        TYPENAME: ProtocolId
+    - priority: U8
+    - raw_msg: BYTES
+DnsName:
+  NEWTYPESTRUCT: STR
+EncNetworkAddress:
+  STRUCT:
+    - key_version: U32
+    - seq_num: U64
+    - enc_addr: BYTES
+ErrorCode:
+  ENUM:
+    0:
+      ParsingError:
+        NEWTYPE:
+          TYPENAME: ParsingErrorType
+    1:
+      NotSupported:
+        NEWTYPE:
+          TYPENAME: NotSupportedType
+HandshakeMsg:
+  STRUCT:
+    - supported_protocols:
+        MAP:
+          KEY:
+            TYPENAME: MessagingProtocolVersion
+          VALUE:
+            TYPENAME: SupportedProtocols
+    - chain_id:
+        TYPENAME: ChainId
+    - network_id:
+        TYPENAME: NetworkId
+MessagingProtocolVersion:
+  ENUM:
+    0:
+      V1: UNIT
+NetworkAddress:
+  NEWTYPESTRUCT: BYTES
+NetworkId:
+  ENUM:
+    0:
+      validator: UNIT
+    1:
+      public: UNIT
+    2:
+      private:
+        NEWTYPE: STR
+NetworkMessage:
+  ENUM:
+    0:
+      Error:
+        NEWTYPE:
+          TYPENAME: ErrorCode
+    1:
+      RpcRequest:
+        NEWTYPE:
+          TYPENAME: RpcRequest
+    2:
+      RpcResponse:
+        NEWTYPE:
+          TYPENAME: RpcResponse
+    3:
+      DirectSendMsg:
+        NEWTYPE:
+          TYPENAME: DirectSendMsg
+NotSupportedType:
+  ENUM:
+    0:
+      RpcRequest:
+        NEWTYPE:
+          TYPENAME: ProtocolId
+    1:
+      DirectSendMsg:
+        NEWTYPE:
+          TYPENAME: ProtocolId
+ParsingErrorType:
+  STRUCT:
+    - message: U8
+    - protocol: U8
+Protocol:
+  ENUM:
+    0:
+      Ip4:
+        NEWTYPE:
+          TUPLEARRAY:
+            CONTENT: U8
+            SIZE: 4
+    1:
+      Ip6:
+        NEWTYPE:
+          TUPLEARRAY:
+            CONTENT: U8
+            SIZE: 16
+    2:
+      Dns:
+        NEWTYPE:
+          TYPENAME: DnsName
+    3:
+      Dns4:
+        NEWTYPE:
+          TYPENAME: DnsName
+    4:
+      Dns6:
+        NEWTYPE:
+          TYPENAME: DnsName
+    5:
+      Tcp:
+        NEWTYPE: U16
+    6:
+      Memory:
+        NEWTYPE: U16
+    7:
+      NoiseIK:
+        NEWTYPE:
+          TYPENAME: PublicKey
+    8:
+      Handshake:
+        NEWTYPE: U8
+ProtocolId:
+  ENUM:
+    0:
+      ConsensusRpc: UNIT
+    1:
+      ConsensusDirectSend: UNIT
+    2:
+      MempoolDirectSend: UNIT
+    3:
+      StateSynchronizerDirectSend: UNIT
+    4:
+      DiscoveryDirectSend: UNIT
+    5:
+      HealthCheckerRpc: UNIT
+PublicKey:
+  NEWTYPESTRUCT: BYTES
+RpcRequest:
+  STRUCT:
+    - protocol_id:
+        TYPENAME: ProtocolId
+    - request_id: U32
+    - priority: U8
+    - raw_request: BYTES
+RpcResponse:
+  STRUCT:
+    - request_id: U32
+    - priority: U8
+    - raw_response: BYTES
+SupportedProtocols:
+  NEWTYPESTRUCT: BYTES

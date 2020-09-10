@@ -1,0 +1,11 @@
+module Tester {
+    public no(): &u64 {
+        let x: u64;
+        let x_ref: &u64;
+        x = 5;
+        x_ref = &x;
+        return move(x_ref);
+    }
+
+}
+// check: UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED

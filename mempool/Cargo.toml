@@ -1,41 +1,53 @@
 [package]
-name = "mempool"
+name = "libra-mempool"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra mempool"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-chrono = "0.4.6"
-futures = "0.1.25"
-futures-preview = { version = "=0.3.0-alpha.16", package = "futures-preview", features = ["compat"] }
-grpcio = "0.4.3"
-grpcio-sys = "0.4.4"
-lazy_static = "1.3.0"
-lru-cache = "0.1.1"
-protobuf = "2.6"
-tokio = "0.1.16"
-ttl_cache = "0.4.2"
+anyhow = "1.0.32"
+futures = "0.3.5"
+itertools = "0.9.0"
+once_cell = "1.4.1"
+proptest = { version = "0.10.1", optional = true }
+serde = { version = "1.0.115", default-features = false }
+tokio = { version = "0.2.22", features = ["full"] }
 
-config = { path = "../config" }
-crypto = { path = "../crypto/legacy_crypto" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-grpc_helpers = { path = "../common/grpc_helpers" }
-logger = { path = "../common/logger" }
-metrics = { path = "../common/metrics" }
-network = {path = "../network"}
-proto_conv = { path = "../common/proto_conv" }
-storage_client = { path = "../storage/storage_client" }
-types = { path = "../types" }
-vm_validator = {path = "../vm_validator"}
+bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }
+channel = { path = "../common/channel", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-config = { path = "../config", version = "0.1.0" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-metrics = { path = "../common/metrics", version = "0.1.0" }
+libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+libra-time = { path = "../common/time", version = "0.1.0" }
+libra-trace = { path = "../common/trace", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+mirai-annotations = "1.10.1"
+network = { path = "../network", version = "0.1.0" }
+rand = "0.7.3"
+netcore = { path = "../network/netcore", version = "0.1.0" }
+serde_json = "1.0.57"
+storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
+subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
+vm-validator = { path = "../vm-validator", version = "0.1.0" }
+
+storage-service = { path = "../storage/storage-service", version = "0.1.0", optional = true }
 
 [dev-dependencies]
-rand = "0.6.5"
-tempfile = "3.0.6"
-channel = { path = "../common/channel" }
+proptest = "0.10.1"
 
-storage_service = { path = "../storage/storage_service" }
+libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
+libra-network-address = { path = "../network/network-address", version = "0.1.0" }
+storage-interface = { path = "../storage/storage-interface", version = "0.1.0", features = ["fuzzing"] }
 
-[build-dependencies]
-build_helpers = { path = "../common/build_helpers" }
+[features]
+default = []
+fuzzing = ["proptest", "libra-types/fuzzing", "storage-interface/fuzzing", "libra-config/fuzzing",]

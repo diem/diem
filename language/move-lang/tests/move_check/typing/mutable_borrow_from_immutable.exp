@@ -1,0 +1,74 @@
+error: 
+
+   ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:6:9 ───
+   │
+ 6 │         &mut (&s).v;
+   │         ^^^^^^^^^^^ Invalid mutable borrow from an immutable reference
+   ·
+ 6 │         &mut (&s).v;
+   │              ---- Immutable because of this position
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:7:9 ───
+   │
+ 7 │         &mut (&s.x).f;
+   │         ^^^^^^^^^^^^^ Invalid mutable borrow from an immutable reference
+   ·
+ 7 │         &mut (&s.x).f;
+   │              ------ Immutable because of this position
+   │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:10:9 ───
+    │
+ 10 │         &mut sref.v;
+    │         ^^^^^^^^^^^ Invalid mutable borrow from an immutable reference
+    ·
+  8 │         let sref = &s;
+    │                    -- Immutable because of this position
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:11:9 ───
+    │
+ 11 │         &mut xref.v;
+    │         ^^^^^^^^^^^ Invalid mutable borrow from an immutable reference
+    ·
+  9 │         let xref = &s.x;
+    │                    ---- Immutable because of this position
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:11:14 ───
+    │
+ 11 │         &mut xref.v;
+    │              ^^^^^^ Unbound field 'v' in '0x8675309::M::X'
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:15:9 ───
+    │
+ 15 │         x.f = x.f + 1;
+    │         ^^^ Invalid mutable borrow from an immutable reference
+    ·
+ 14 │     fun t2(s: &S, x: &X) {
+    │                      -- Immutable because of this position
+    │
+
+error: 
+
+    ┌── tests/move_check/typing/mutable_borrow_from_immutable.move:16:9 ───
+    │
+ 16 │         s.x.f = s.x.f + 1
+    │         ^^^^^ Invalid mutable borrow from an immutable reference
+    ·
+ 14 │     fun t2(s: &S, x: &X) {
+    │               -- Immutable because of this position
+    │
+

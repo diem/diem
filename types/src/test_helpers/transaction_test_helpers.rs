@@ -3,83 +3,124 @@
 
 use crate::{
     account_address::AccountAddress,
-    proto::transaction::{
-        RawTransaction as ProtoRawTransaction, SignedTransaction as ProtoSignedTransaction,
-        SignedTransactionsBlock,
-    },
-    transaction::{Program, RawTransaction, RawTransactionBytes, SignedTransaction},
-    transaction_helpers::get_signed_transactions_digest,
+    account_config::LBR_NAME,
+    chain_id::ChainId,
+    transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
-use crypto::{hash::CryptoHash, signing::sign_message, PrivateKey, PublicKey};
-use proto_conv::{FromProto, IntoProto};
-use protobuf::Message;
-use std::time::{SystemTime, UNIX_EPOCH};
+use libra_crypto::{ed25519::*, traits::*};
 
-static PLACEHOLDER_SCRIPT: &[u8] = include_bytes!("fixtures/scripts/placeholder_script.mvbin");
+const MAX_GAS_AMOUNT: u64 = 1_000_000;
+const TEST_GAS_PRICE: u64 = 0;
 
-const MAX_GAS_AMOUNT: u64 = 10_000;
-const MAX_GAS_PRICE: u64 = 1;
+static EMPTY_SCRIPT: &[u8] = include_bytes!("empty_script.mv");
+
+// Test helper for transaction creation
+pub fn get_test_signed_module_publishing_transaction(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    module: Module,
+) -> SignedTransaction {
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10;
+    let raw_txn = RawTransaction::new_module(
+        sender,
+        sequence_number,
+        module,
+        MAX_GAS_AMOUNT,
+        TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
+        expiration_time,
+        ChainId::test(),
+    );
+
+    let signature = private_key.sign(&raw_txn);
+
+    SignedTransaction::new(raw_txn, public_key, signature)
+}
 
 // Test helper for transaction creation
 pub fn get_test_signed_transaction(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
-    program: Option<Program>,
-    expiration_time: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
+    expiration_timestamp_secs: u64,
     gas_unit_price: u64,
-    max_gas_amount: Option<u64>,
-) -> ProtoSignedTransaction {
-    let mut raw_txn = ProtoRawTransaction::new();
-    raw_txn.set_sender_account(sender.as_ref().to_vec());
-    raw_txn.set_sequence_number(sequence_number);
-    raw_txn.set_program(program.unwrap_or_else(placeholder_script).into_proto());
-    raw_txn.set_expiration_time(expiration_time);
-    raw_txn.set_max_gas_amount(max_gas_amount.unwrap_or(MAX_GAS_AMOUNT));
-    raw_txn.set_gas_unit_price(gas_unit_price);
-
-    let bytes = raw_txn.write_to_bytes().unwrap();
-    let hash = RawTransactionBytes(&bytes).hash();
-    let signature = sign_message(hash, &private_key).unwrap();
-
-    let mut signed_txn = ProtoSignedTransaction::new();
-    signed_txn.set_raw_txn_bytes(bytes);
-    signed_txn.set_sender_public_key(public_key.to_slice().to_vec());
-    signed_txn.set_sender_signature(signature.to_compact().to_vec());
-    signed_txn
-}
-
-// from_proto does checking on the transaction's signature -- which we want to be able to turn off
-// if we want to make sure that the VM is testing this.
-pub fn get_unverified_test_signed_transaction(
-    sender: AccountAddress,
-    sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
-    program: Option<Program>,
-    expiration_time: u64,
-    gas_unit_price: u64,
+    gas_currency_code: String,
     max_gas_amount: Option<u64>,
 ) -> SignedTransaction {
-    let mut raw_txn = ProtoRawTransaction::new();
-    raw_txn.set_sender_account(sender.as_ref().to_vec());
-    raw_txn.set_sequence_number(sequence_number);
-    raw_txn.set_program(program.unwrap_or_else(placeholder_script).into_proto());
-    raw_txn.set_expiration_time(expiration_time);
-    raw_txn.set_max_gas_amount(max_gas_amount.unwrap_or(MAX_GAS_AMOUNT));
-    raw_txn.set_gas_unit_price(gas_unit_price);
+    let raw_txn = RawTransaction::new_script(
+        sender,
+        sequence_number,
+        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
+        max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+        gas_unit_price,
+        gas_currency_code,
+        expiration_timestamp_secs,
+        ChainId::test(),
+    );
 
-    let bytes = raw_txn.write_to_bytes().unwrap();
-    let hash = RawTransactionBytes(&bytes).hash();
-    let signature = sign_message(hash, &private_key).unwrap();
+    let signature = private_key.sign(&raw_txn);
 
-    SignedTransaction::new_for_test(
-        RawTransaction::from_proto(raw_txn).unwrap(),
+    SignedTransaction::new(raw_txn, public_key, signature)
+}
+
+// Test helper for creating transactions for which the signature hasn't been checked.
+pub fn get_test_unchecked_transaction(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
+    expiration_time: u64,
+    gas_unit_price: u64,
+    gas_currency_code: String,
+    max_gas_amount: Option<u64>,
+) -> SignedTransaction {
+    get_test_unchecked_transaction_(
+        sender,
+        sequence_number,
+        private_key,
         public_key,
-        signature,
+        script,
+        expiration_time,
+        gas_unit_price,
+        gas_currency_code,
+        max_gas_amount,
+        ChainId::test(),
     )
+}
+
+// Test helper for creating transactions for which the signature hasn't been checked.
+fn get_test_unchecked_transaction_(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
+    expiration_timestamp_secs: u64,
+    gas_unit_price: u64,
+    gas_currency_code: String,
+    max_gas_amount: Option<u64>,
+    chain_id: ChainId,
+) -> SignedTransaction {
+    let raw_txn = RawTransaction::new_script(
+        sender,
+        sequence_number,
+        script.unwrap_or_else(|| Script::new(EMPTY_SCRIPT.to_vec(), vec![], Vec::new())),
+        max_gas_amount.unwrap_or(MAX_GAS_AMOUNT),
+        gas_unit_price,
+        gas_currency_code,
+        expiration_timestamp_secs,
+        chain_id,
+    );
+
+    let signature = private_key.sign(&raw_txn);
+
+    SignedTransaction::new(raw_txn, public_key, signature)
 }
 
 // Test helper for transaction creation. Short version for get_test_signed_transaction
@@ -87,94 +128,76 @@ pub fn get_unverified_test_signed_transaction(
 pub fn get_test_signed_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
-    program: Option<Program>,
-) -> ProtoSignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10; // 10 seconds from now.
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
+) -> SignedTransaction {
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
     get_test_signed_transaction(
         sender,
         sequence_number,
         private_key,
         public_key,
-        program,
+        script,
         expiration_time,
-        MAX_GAS_PRICE,
+        TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
         None,
     )
 }
 
-pub fn get_unverified_test_signed_txn(
+pub fn get_test_unchecked_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
-    program: Option<Program>,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    script: Option<Script>,
 ) -> SignedTransaction {
-    let expiration_time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
-        + 10; // 10 seconds from now.
-    get_unverified_test_signed_transaction(
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
+    get_test_unchecked_transaction(
         sender,
         sequence_number,
         private_key,
         public_key,
-        program,
+        script,
         expiration_time,
-        MAX_GAS_PRICE,
+        TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
         None,
     )
 }
 
-pub fn placeholder_script() -> Program {
-    Program::new(PLACEHOLDER_SCRIPT.to_vec(), vec![], vec![])
+pub fn get_test_txn_with_chain_id(
+    sender: AccountAddress,
+    sequence_number: u64,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
+    chain_id: ChainId,
+) -> SignedTransaction {
+    let expiration_time = libra_time::duration_since_epoch().as_secs() + 10; // 10 seconds from now.
+    get_test_unchecked_transaction_(
+        sender,
+        sequence_number,
+        private_key,
+        public_key,
+        None,
+        expiration_time,
+        TEST_GAS_PRICE,
+        LBR_NAME.to_owned(),
+        None,
+        chain_id,
+    )
 }
 
 pub fn get_write_set_txn(
     sender: AccountAddress,
     sequence_number: u64,
-    private_key: PrivateKey,
-    public_key: PublicKey,
+    private_key: &Ed25519PrivateKey,
+    public_key: Ed25519PublicKey,
     write_set: Option<WriteSet>,
-) -> SignedTransaction {
+) -> SignatureCheckedTransaction {
     let write_set = write_set.unwrap_or_default();
-    RawTransaction::new_write_set(sender, sequence_number, write_set)
+    RawTransaction::new_write_set(sender, sequence_number, write_set, ChainId::test())
         .sign(&private_key, public_key)
         .unwrap()
-}
-
-// Test helper for transaction block creation
-pub fn create_signed_transactions_block(
-    sender: AccountAddress,
-    starting_sequence_number: u64,
-    num_transactions_in_block: u64,
-    priv_key: &PrivateKey,
-    pub_key: &PublicKey,
-    validator_priv_key: &PrivateKey,
-    validator_pub_key: &PublicKey,
-) -> SignedTransactionsBlock {
-    let mut signed_txns_block = SignedTransactionsBlock::new();
-    for i in starting_sequence_number..(starting_sequence_number + num_transactions_in_block) {
-        // Add some transactions to the block
-        signed_txns_block.transactions.push(get_test_signed_txn(
-            sender,
-            i, /* seq_number */
-            priv_key.clone(),
-            *pub_key,
-            None,
-        ));
-    }
-
-    let message = get_signed_transactions_digest(&signed_txns_block.transactions);
-    let signature = sign_message(message, &validator_priv_key).unwrap();
-    signed_txns_block.set_validator_signature(signature.to_compact().to_vec());
-    signed_txns_block.set_validator_public_key(validator_pub_key.to_slice().to_vec());
-
-    signed_txns_block
 }

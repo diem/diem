@@ -1,0 +1,11 @@
+error: 
+
+    ┌── tests/move_check/dependencies/cycle_3.move:95:16 ───
+    │
+ 95 │     fun foo(): 0x4::C::S {
+    │                ^^^^^^^^^ Invalid use of module '0x4::C' in module '0x4::B'.
+    ·
+ 95 │     fun foo(): 0x4::C::S {
+    │                --------- Using this module creates a dependency cycle: '0x4::C' uses '0x4::A' uses '0x4::B' uses '0x4::C'
+    │
+

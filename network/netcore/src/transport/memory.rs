@@ -3,8 +3,9 @@
 
 use crate::transport::Transport;
 use futures::{future, stream::Stream};
+use libra_network_address::{parse_memory, NetworkAddress, Protocol};
+use libra_types::PeerId;
 use memsocket::{MemoryListener, MemorySocket};
-use parity_multiaddr::{Multiaddr, Protocol};
 use std::{
     io,
     pin::Pin,
@@ -12,7 +13,7 @@ use std::{
 };
 
 /// Transport to build in-memory connections
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MemoryTransport;
 
 impl Transport for MemoryTransport {
@@ -22,43 +23,46 @@ impl Transport for MemoryTransport {
     type Inbound = future::Ready<Result<Self::Output, Self::Error>>;
     type Outbound = future::Ready<Result<Self::Output, Self::Error>>;
 
-    fn listen_on(&self, addr: Multiaddr) -> Result<(Self::Listener, Multiaddr), Self::Error> {
-        let port = parse_addr(&addr)?;
+    fn listen_on(
+        &self,
+        addr: NetworkAddress,
+    ) -> Result<(Self::Listener, NetworkAddress), Self::Error> {
+        let port = match addr.as_slice() {
+            [Protocol::Memory(port)] => *port,
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    format!(
+                        "Unexpected listening network address: '{}', \
+                         expected format: '/memory/<port>'",
+                        addr
+                    ),
+                ))
+            }
+        };
+
         let listener = MemoryListener::bind(port)?;
         let actual_port = listener.local_addr();
-        let mut actual_addr = Multiaddr::empty();
-        actual_addr.push(Protocol::Memory(u64::from(actual_port)));
+        let listen_addr = NetworkAddress::from(Protocol::Memory(actual_port));
 
-        Ok((Listener { inner: listener }, actual_addr))
+        Ok((Listener::new(listener), listen_addr))
     }
 
-    fn dial(&self, addr: Multiaddr) -> Result<Self::Outbound, Self::Error> {
-        let port = parse_addr(&addr)?;
+    fn dial(&self, _peer_id: PeerId, addr: NetworkAddress) -> Result<Self::Outbound, Self::Error> {
+        let (port, _addr_suffix) = parse_memory(addr.as_slice()).ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "Unexpected dialing network address: '{}', \
+                     expected format: '/memory/<port>/..'",
+                    addr
+                ),
+            )
+        })?;
+        // TODO(philiphayes): base memory transport should not allow trailing protocols
         let socket = MemorySocket::connect(port)?;
         Ok(future::ready(Ok(socket)))
     }
-}
-
-fn parse_addr(addr: &Multiaddr) -> io::Result<u16> {
-    let mut iter = addr.iter();
-
-    let port = if let Some(Protocol::Memory(port)) = iter.next() {
-        port
-    } else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
-        ));
-    };
-
-    if iter.next().is_some() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("Invalid Multiaddr '{:?}'", addr),
-        ));
-    }
-
-    Ok(port as u16)
 }
 
 #[must_use = "streams do nothing unless polled"]
@@ -67,8 +71,14 @@ pub struct Listener {
     inner: MemoryListener,
 }
 
+impl Listener {
+    pub fn new(inner: MemoryListener) -> Self {
+        Listener { inner }
+    }
+}
+
 impl Stream for Listener {
-    type Item = io::Result<(future::Ready<io::Result<MemorySocket>>, Multiaddr)>;
+    type Item = io::Result<(future::Ready<io::Result<MemorySocket>>, NetworkAddress)>;
 
     fn poll_next(mut self: Pin<&mut Self>, context: &mut Context) -> Poll<Option<Self::Item>> {
         let mut incoming = self.inner.incoming();
@@ -76,7 +86,7 @@ impl Stream for Listener {
             Poll::Ready(Some(Ok(socket))) => {
                 // Dialer addresses for MemoryTransport don't make a ton of sense,
                 // so use port 0 to ensure they aren't used as an address to dial.
-                let dialer_addr = Protocol::Memory(0).into();
+                let dialer_addr = NetworkAddress::from(Protocol::Memory(0));
                 Poll::Ready(Some(Ok((future::ready(Ok(socket)), dialer_addr))))
             }
             Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(e))),
@@ -95,6 +105,7 @@ mod test {
         io::{AsyncReadExt, AsyncWriteExt},
         stream::StreamExt,
     };
+    use libra_types::PeerId;
 
     #[test]
     fn simple_listen_and_dial() -> Result<(), ::std::io::Error> {
@@ -111,7 +122,8 @@ mod test {
             socket.read_to_end(&mut buf).await.unwrap();
             assert_eq!(buf, b"hello world");
         };
-        let outbound = t.dial(addr)?;
+        let peer_id = PeerId::random();
+        let outbound = t.dial(peer_id, addr)?;
 
         let dialer = async move {
             let mut socket = outbound.await.unwrap();
@@ -130,7 +142,8 @@ mod test {
         let result = t.listen_on("/ip4/127.0.0.1/tcp/0".parse().unwrap());
         assert!(result.is_err());
 
-        let result = t.dial("/ip4/127.0.0.1/tcp/22".parse().unwrap());
+        let peer_id = PeerId::random();
+        let result = t.dial(peer_id, "/ip4/127.0.0.1/tcp/22".parse().unwrap());
         assert!(result.is_err());
     }
 }

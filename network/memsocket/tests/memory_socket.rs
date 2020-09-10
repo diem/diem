@@ -90,7 +90,7 @@ fn read_zero_bytes() -> Result<()> {
     block_on(a.flush())?;
 
     let mut buf = [0; 12];
-    block_on(b.read_exact(&mut buf[0..0]))?;
+    block_on(b.read_exact(&mut buf[..0]))?;
     assert_eq!(buf, [0; 12]);
     block_on(b.read_exact(&mut buf))?;
     assert_eq!(&buf, b"way of kings");
@@ -108,7 +108,7 @@ fn read_bytes_with_large_buffer() -> Result<()> {
     let mut buf = [0; 20];
     let bytes_read = block_on(b.read(&mut buf))?;
     assert_eq!(bytes_read, 12);
-    assert_eq!(&buf[0..12], b"way of kings");
+    assert_eq!(&buf[..12], b"way of kings");
 
     Ok(())
 }

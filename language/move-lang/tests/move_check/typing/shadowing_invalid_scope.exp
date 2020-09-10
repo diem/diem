@@ -1,0 +1,8 @@
+error: 
+
+   ┌── tests/move_check/typing/shadowing_invalid_scope.move:5:10 ───
+   │
+ 5 │         (x: bool);
+   │          ^ Invalid local usage. Unbound local 'x'
+   │
+

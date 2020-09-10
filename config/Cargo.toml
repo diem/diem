@@ -1,23 +1,40 @@
 [package]
-name = "config"
+name = "libra-config"
 version = "0.1.0"
 authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra libra-config"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
 license = "Apache-2.0"
 publish = false
 edition = "2018"
 
 [dependencies]
-clap = "2.32"
-get_if_addrs = "0.5.3"
-hex = "0.3.2"
-parity-multiaddr = "0.4.0"
-rand = "0.6.5"
-serde = { version = "1.0.89", features = ["derive"] }
-tempfile = "3.0.6"
-toml = "0.4"
+get_if_addrs = { version = "0.5.3", default-features = false }
+log = { version = "0.4.11", features = ["serde"] }
+mirai-annotations = "1.10.1"
+rand = "0.7.3"
+serde = { version = "1.0.115", features = ["rc"], default-features = false }
+serde_yaml = "0.8.13"
+thiserror = "1.0.20"
 
-crypto = { path = "../crypto/legacy_crypto" }
-proto_conv = { path = "../common/proto_conv" }
-logger = { path = "../common/logger" }
-failure = { path = "../common/failure_ext", package = "failure_ext" }
-types = { path = "../types" }
+
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+libra-global-constants = { path = "../config/global-constants", version = "0.1.0"}
+libra-logger = { path = "../common/logger", version = "0.1.0" }
+libra-network-address = { path = "../network/network-address", version = "0.1.0" }
+libra-network-address-encryption = { path = "management/network-address-encryption", version = "0.1.0" }
+libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
+libra-temppath = { path = "../common/temppath", version = "0.1.0" }
+libra-types = { path = "../types", version = "0.1.0" }
+libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
+
+[dev-dependencies]
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+
+[features]
+default = []
+fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]
+testing = []

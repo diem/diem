@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {peer_id}
+  labels:
+    app: libra-validator
+    libra-node: "true"
+    peer_id: {peer_id}
+spec:
+  type: ClusterIP
+  selector:
+    app: libra-validator
+    libra-node: "true"
+    peer_id: {peer_id}
+  ports:
+    - name: "port6180"
+      protocol: TCP
+      port: 6180
+    - name: "port6181"
+      protocol: TCP
+      port: 6181
+    - name: "port8000"
+      protocol: TCP
+      port: 8000
+    - name: "port9101"
+      protocol: TCP
+      port: 9101
+    - name: "port6191"
+      protocol: TCP
+      port: 6191

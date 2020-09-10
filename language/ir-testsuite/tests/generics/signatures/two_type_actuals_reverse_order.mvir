@@ -1,0 +1,21 @@
+module M {
+    struct S<T1: resource, T2: copyable> { b: bool }
+
+    foo() {
+        let x: Self.S<bool, bool>;
+        return;
+    }
+}
+// check: CONSTRAINT_KIND_MISMATCH
+
+//! new-transaction
+module M2 {
+    resource R { b: bool }
+    struct S<T1: resource, T2: copyable> { b: bool }
+
+    foo() {
+        let x: Self.S<bool, Self.R>;
+        return;
+    }
+}
+// check: CONSTRAINT_KIND_MISMATCH

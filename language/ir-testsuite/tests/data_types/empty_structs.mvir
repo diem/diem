@@ -1,0 +1,24 @@
+module Test {
+  struct NonEmpty1 { f1: u64, f2: bool }
+
+  resource NonEmpty2 { f1: bool, f2: u64 }
+}
+
+// check: "Keep(EXECUTED)"
+
+//! new-transaction
+module EmptyStruct {
+  struct Empty { }
+
+}
+
+// check: VerificationError
+// check: ZERO_SIZED_STRUCT
+
+//! new-transaction
+module EmptyResource {
+  resource Empty { }
+}
+
+// check: VerificationError
+// check: ZERO_SIZED_STRUCT

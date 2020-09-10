@@ -24,7 +24,7 @@ then
    cargo install cargo-edit
 fi
 
-for upgrade in $(cargo outdated | awk 'NF >2 && $2 ~ /[0-9\.]+/ && $3 ~ /[0-9\.]+/ {print $1"@"$3}' | uniq |tr '\n' " ")
+for upgrade in $(cargo outdated | awk 'NF >2 && $2 ~ /[0-9\.]+/ && $4 ~ /[0-9\.]+/ {print $1"@"$4}' | uniq |tr '\n' " ")
 do
     echo $upgrade
     cargo -q upgrade $upgrade --all > /dev/null

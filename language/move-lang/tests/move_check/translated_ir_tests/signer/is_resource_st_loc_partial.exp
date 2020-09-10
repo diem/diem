@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/signer/is_resource_st_loc_partial.move:8:9 ───
+   │
+ 8 │         s1 = s2;
+   │         ^^ Invalid assignment to local 's1'
+   ·
+ 6 │     fun t(cond: bool, s1: signer, s2: signer) {
+   │                       -- The local might contain a resource value due to this assignment. The resource must be used before you assign to this local again
+   │
+

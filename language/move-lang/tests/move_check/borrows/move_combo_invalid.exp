@@ -1,0 +1,55 @@
+error: 
+
+    ┌── tests/move_check/borrows/move_combo_invalid.move:14:9 ───
+    │
+ 14 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
+    ·
+ 13 │         if (cond) f = &s.f else f = &s.g;
+    │                                     ---- It is still being borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/move_combo_invalid.move:22:9 ───
+    │
+ 22 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
+    ·
+ 21 │         if (cond) f = &mut s.f else f = &mut other.f;
+    │                       -------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/move_combo_invalid.move:30:9 ───
+    │
+ 30 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
+    ·
+ 29 │         if (cond) f = &mut s else f = other;
+    │                       ------ It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/move_combo_invalid.move:38:9 ───
+    │
+ 38 │         move s;
+    │         ^^^^^^ Invalid move of local 's'
+    ·
+ 37 │         if (cond) f = id_mut(&mut s) else f = other;
+    │                       -------------- It is still being mutably borrowed by this reference
+    │
+
+error: 
+
+    ┌── tests/move_check/borrows/move_combo_invalid.move:45:21 ───
+    │
+ 45 │         if (cond) { move s; };
+    │                     ^^^^^^ Invalid move of local 's'
+    ·
+ 44 │         let f = &s.f;
+    │                 ---- It is still being borrowed by this reference
+    │
+

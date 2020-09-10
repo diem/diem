@@ -1,0 +1,34 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model_invalid.move:22:9 ───
+    │
+ 22 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1
+    =         v1 = <redacted>,
+    =         v2 = <redacted>,
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model_invalid.move:14:33: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:13:24: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:14:24: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:15:9: hash_test1
+
+error: post-condition does not hold
+
+    ┌── tests/sources/functional/hash_model_invalid.move:35:9 ───
+    │
+ 35 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2
+    =         v1 = <redacted>,
+    =         v2 = <redacted>,
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model_invalid.move:29:33: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:28:24: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:29:24: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:30:9: hash_test2

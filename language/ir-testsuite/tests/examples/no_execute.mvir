@@ -1,0 +1,6 @@
+//! no-run: runtime
+
+main() {
+    assert(false, 42);
+    return;
+}

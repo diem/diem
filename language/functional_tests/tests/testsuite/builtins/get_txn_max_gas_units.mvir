@@ -1,7 +1,0 @@
-main() {
-    let gas_units: u64;
-    gas_units = get_txn_max_gas_units();
-    assert(copy(gas_units) > 0, 42);
-
-    return;
-}

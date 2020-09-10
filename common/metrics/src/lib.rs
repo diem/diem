@@ -1,37 +1,76 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! # Metrics
+//!
+//! ## Counters
+//!
+//! Used to measure values that are added to over time, rates
+//! can then be used to check how quickly it changes in graphs.
+//! An example would be to add every time an incoming message occurs.
+//! ```
+//! use prometheus::register_int_counter_vec;
+//!
+//! register_int_counter_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+//!
+//! ## Gauges
+//! Used to measure values that change level over time.  An example
+//! would be to set the number of connected peers.
+//! ```
+//! use prometheus::register_int_gauge_vec;
+//!
+//! register_int_gauge_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+//!
+//! ## Histograms
+//! Used to measure histogram values.  An example is network
+//! connection latency.
+//! ```
+//! use prometheus::register_histogram_vec;
+//!
+//! register_histogram_vec!(
+//!     "name",
+//!     "description",
+//!     &["dimension_1", "dimension_2"]
+//! );
+//! ```
+
+#![forbid(unsafe_code)]
 #![recursion_limit = "128"]
 
-#[macro_use]
-extern crate prometheus;
-
-pub mod counters;
 mod json_encoder;
+mod json_metrics;
 pub mod metric_server;
-
-mod service_metrics;
-pub use service_metrics::ServiceMetrics;
+mod public_metrics;
 
 mod op_counters;
-pub use op_counters::OpMetrics;
+pub use op_counters::{DurationHistogram, OpMetrics};
 
 #[cfg(test)]
 mod unit_tests;
 
 // Re-export counter types from prometheus crate
-pub use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec};
-
-use failure::Result;
-use logger::prelude::*;
-use prometheus::{
-    core::{Collector, Metric},
-    Encoder, TextEncoder,
+pub use prometheus::{
+    register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
+    register_int_gauge, register_int_gauge_vec, Histogram, HistogramVec, IntCounter, IntCounterVec,
+    IntGauge, IntGaugeVec,
 };
+
+use anyhow::Result;
+use libra_logger::prelude::*;
+use prometheus::{proto::MetricType, Encoder, TextEncoder};
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File, OpenOptions},
-    hash::BuildHasher,
     io::Write,
     path::Path,
     thread, time,
@@ -66,59 +105,41 @@ pub fn get_all_metrics() -> HashMap<String, String> {
     let all_metric_families = prometheus::gather();
     let mut all_metrics = HashMap::new();
     for metric_family in all_metric_families {
-        let metrics = metric_family.get_metric();
-        for metric in metrics {
-            let v = if metric.has_counter() {
-                metric.get_counter().get_value().to_string()
-            } else if metric.has_gauge() {
-                metric.get_gauge().get_value().to_string()
-            } else if metric.has_histogram() {
-                metric.get_histogram().get_sample_count().to_string()
-            } else {
-                panic!("Unknown counter {}", metric_family.get_name())
-            };
-            let mut metric_name = metric_family.get_name().to_owned();
-            let labels = metric.get_label();
-            if !labels.is_empty() {
-                let label_strings: Vec<String> = labels
-                    .iter()
-                    .map(|l| format!("{}={}", l.get_name(), l.get_value()))
-                    .collect();
-                let labels_string = format!("{{{}}}", label_strings.join(","));
-                metric_name.push_str(&labels_string);
-            }
+        let values: Vec<_> = match metric_family.get_field_type() {
+            MetricType::COUNTER => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_counter().get_value().to_string())
+                .collect(),
+            MetricType::GAUGE => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_gauge().get_value().to_string())
+                .collect(),
+            MetricType::SUMMARY => panic!("Unsupported Metric 'SUMMARY'"),
+            MetricType::UNTYPED => panic!("Unsupported Metric 'UNTYPED'"),
+            MetricType::HISTOGRAM => metric_family
+                .get_metric()
+                .iter()
+                .map(|m| m.get_histogram().get_sample_count().to_string())
+                .collect(),
+        };
+        let metric_names = metric_family.get_metric().iter().map(|m| {
+            let label_strings: Vec<String> = m
+                .get_label()
+                .iter()
+                .map(|l| format!("{}={}", l.get_name(), l.get_value()))
+                .collect();
+            let labels_string = format!("{{{}}}", label_strings.join(","));
+            format!("{}{}", metric_family.get_name(), labels_string)
+        });
 
-            all_metrics.insert(metric_name, v);
+        for (name, value) in metric_names.zip(values.into_iter()) {
+            all_metrics.insert(name, value);
         }
     }
 
     all_metrics
-}
-
-// Launches a background thread which will periodically collect metrics
-// every interval and push them to Pushgateway hosted at `address`
-pub fn push_all_metrics_to_pushgateway_periodically(
-    job: &str,
-    address: &str,
-    peer_id: &str,
-    interval: u64,
-) {
-    info!("Start pushing metrics to {}", address);
-    let job = job.to_owned();
-    let addr = address.to_owned();
-    let peer_id = peer_id.to_owned();
-    thread::spawn(move || loop {
-        let res = prometheus::push_metrics(
-            &job,
-            labels! {"instance".to_owned() => peer_id.clone(), },
-            &addr,
-            prometheus::gather(),
-        );
-        if let Err(e) = res {
-            error!("Fail to push metrics: {}", e);
-        }
-        thread::sleep(time::Duration::from_millis(interval));
-    });
 }
 
 // Launches a background thread which will periodically collect metrics
@@ -139,21 +160,18 @@ pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
     });
 }
 
-pub fn export_counter<M, S>(col: &mut HashMap<String, String, S>, counter: &M)
-where
-    M: Metric,
-    S: BuildHasher,
-{
-    let c = counter.metric();
-    col.insert(
-        c.get_label()[0].get_name().to_string(),
-        c.get_counter().get_value().to_string(),
-    );
-}
-
-pub fn get_metric_name<M>(metric: &M) -> String
-where
-    M: Collector,
-{
-    metric.collect()[0].get_name().to_string()
+/// Helper function to record metrics for external calls.
+/// Include call counts, time, and whether it's inside or not (1 or 0).
+/// It assumes a OpMetrics defined as OP_COUNTERS in crate::counters;
+#[macro_export]
+macro_rules! monitor {
+    ( $name:literal, $fn:expr ) => {{
+        use crate::counters::OP_COUNTERS;
+        let _timer = OP_COUNTERS.timer($name);
+        let gauge = OP_COUNTERS.gauge(concat!($name, "_running"));
+        gauge.inc();
+        let result = $fn;
+        gauge.dec();
+        result
+    }};
 }

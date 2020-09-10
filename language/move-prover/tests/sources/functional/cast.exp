@@ -1,0 +1,32 @@
+Move prover returns: exiting with boogie verification errors
+error: abort not covered by any of the `aborts_if` clauses
+
+    ┌── tests/sources/functional/cast.move:44:5 ───
+    │
+ 44 │ ╭     fun aborting_u64_cast_incorrect(x: u128): u64 {
+ 45 │ │         (x as u64)
+ 46 │ │     }
+    │ ╰─────^
+    ·
+ 45 │         (x as u64)
+    │         ---------- abort happened here with execution failure
+    │
+    =     at tests/sources/functional/cast.move:44:5: aborting_u64_cast_incorrect
+    =         x = <redacted>
+    =     at tests/sources/functional/cast.move:45:9: aborting_u64_cast_incorrect (ABORTED)
+
+error: abort not covered by any of the `aborts_if` clauses
+
+    ┌── tests/sources/functional/cast.move:30:5 ───
+    │
+ 30 │ ╭     fun aborting_u8_cast_incorrect(x: u64): u8 {
+ 31 │ │         (x as u8)
+ 32 │ │     }
+    │ ╰─────^
+    ·
+ 31 │         (x as u8)
+    │         --------- abort happened here with execution failure
+    │
+    =     at tests/sources/functional/cast.move:30:5: aborting_u8_cast_incorrect
+    =         x = <redacted>
+    =     at tests/sources/functional/cast.move:31:9: aborting_u8_cast_incorrect (ABORTED)
