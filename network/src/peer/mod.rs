@@ -132,15 +132,15 @@ where
         }
     }
 
-    fn peer_id(&self) -> PeerId {
+    fn remote_peer_id(&self) -> PeerId {
         self.connection_metadata.remote_peer_id
     }
 
     pub async fn start(mut self) {
-        let self_peer_id = self.peer_id();
+        let remote_peer_id = self.remote_peer_id();
         info!(
             "Starting Peer actor for peer: {:?}",
-            self_peer_id.short_str()
+            remote_peer_id.short_str()
         );
 
         // Split the connection into a ReadHalf and a WriteHalf.
@@ -165,7 +165,7 @@ where
         // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.
         // `close_tx`: Instruction to close the underlying connection.
         let (write_reqs_tx, close_tx) =
-            Self::start_writer_task(&self.executor, self_peer_id, writer);
+            Self::start_writer_task(&self.executor, remote_peer_id, writer);
         // Start main Peer event loop.
         loop {
             match self.state {
@@ -185,17 +185,17 @@ where
                                 Some(Ok(message)) =>  {
                                     if let Err(err) = self.handle_inbound_message(message, write_reqs_tx.clone()).await {
                                         warn!("Error in handling inbound message from peer: {}. Error: {:?}",
-                                            self_peer_id.short_str(), err);
+                                            remote_peer_id.short_str(), err);
                                     }
                                 },
                                 Some(Err(err)) => {
                                     warn!("Failure in reading messages from socket from peer: {}. Error: {:?}",
-                                        self_peer_id.short_str(), err);
+                                        remote_peer_id.short_str(), err);
                                     self.close_connection(DisconnectReason::ConnectionLost).await;
                                 }
                                 None => {
                                     warn!("Received connection closed event for peer: {}",
-                                        self_peer_id.short_str());
+                                        remote_peer_id.short_str());
                                     self.close_connection(DisconnectReason::ConnectionLost).await;
                                 }
                             }
@@ -222,11 +222,14 @@ where
                     {
                         warn!(
                             "Failed to notify upstream about disconnection of peer: {}; error: {:?}",
-                            self.peer_id().short_str(),
+                            self.remote_peer_id().short_str(),
                             e
                         );
                     }
-                    debug!("Peer actor '{}' shutdown", self.peer_id().short_str());
+                    debug!(
+                        "Peer actor '{}' shutdown",
+                        self.remote_peer_id().short_str()
+                    );
                     break;
                 }
             }
@@ -242,7 +245,7 @@ where
     // them and immediately closes the connection.
     fn start_writer_task<T: tokio::io::AsyncWrite + Send + Unpin + 'static>(
         executor: &Handle,
-        self_peer_id: PeerId,
+        remote_peer_id: PeerId,
         mut writer: FramedWrite<T, LengthDelimitedCodec>,
     ) -> (
         channel::Sender<(
@@ -275,7 +278,7 @@ where
                         {
                             warn!(
                                 "Error in sending message to peer: {}. Error: {:?}",
-                                self_peer_id.short_str(),
+                                remote_peer_id.short_str(),
                                 e
                             );
                             break;
@@ -286,7 +289,7 @@ where
                     }
                 }
             }
-            info!("Closing connection to peer: {}", self_peer_id.short_str());
+            info!("Closing connection to peer: {}", remote_peer_id.short_str());
             let flush_and_close = async move {
                 writer.flush().await?;
                 writer.close().await?;
@@ -296,18 +299,18 @@ where
                 Err(_) => {
                     info!(
                         "Timeout in flush/close of connection to peer: {}",
-                        self_peer_id.short_str()
+                        remote_peer_id.short_str()
                     );
                 }
                 Ok(Err(e)) => {
                     info!(
                         "Failure in flush/close of connection to peer: {}. Error: {:?}",
-                        self_peer_id.short_str(),
+                        remote_peer_id.short_str(),
                         e
                     );
                 }
                 Ok(Ok(())) => {
-                    info!("Closed connection to peer: {}", self_peer_id.short_str());
+                    info!("Closed connection to peer: {}", remote_peer_id.short_str());
                 }
             }
         };
@@ -323,7 +326,10 @@ where
             oneshot::Sender<Result<(), PeerManagerError>>,
         )>,
     ) -> Result<(), PeerManagerError> {
-        trace!("Received message from Peer {}", self.peer_id().short_str());
+        trace!(
+            "Received message from Peer {}",
+            self.remote_peer_id().short_str()
+        );
         // Read inbound message from stream.
         let message = message.freeze();
         let message = match lcs::from_bytes(&message) {
@@ -356,7 +362,7 @@ where
             NetworkMessage::Error(error) => {
                 warn!(
                     "Peer {} sent an error message: {:?}",
-                    self.peer_id().short_str(),
+                    self.remote_peer_id().short_str(),
                     error,
                 );
             }
@@ -381,7 +387,7 @@ where
     ) {
         trace!(
             "Peer {} PeerRequest::{:?}",
-            self.peer_id().short_str(),
+            self.remote_peer_id().short_str(),
             request
         );
         match request {
@@ -390,7 +396,7 @@ where
                     error!(
                         "Failed to send message for protocol {} to peer: {}. Error: {:?}",
                         protocol,
-                        self.peer_id().short_str(),
+                        self.remote_peer_id().short_str(),
                         e
                     );
                 }
