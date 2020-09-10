@@ -434,6 +434,11 @@ mod test {
         NodeConfig::default_for_validator();
         NodeConfig::default_for_validator_full_node();
 
+        let docker_public_full_node =
+            std::include_str!("../../../docker/compose/public_full_node/public_full_node.yaml");
+        // Only verify it is in the correct format as the values cannot be loaded for this config
+        NodeConfig::parse(docker_public_full_node).unwrap();
+
         let contents = std::include_str!("test_data/safety_rules.yaml");
         SafetyRulesConfig::parse(&contents)
             .unwrap_or_else(|e| panic!("Error in safety_rules.yaml: {}", e));

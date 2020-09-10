@@ -13,14 +13,12 @@ execution:
     # corresponding genesis, the file location should be an empty path.
     genesis_file_location: "/full/path/to/genesis"
 
-
 full_node_networks:
     - discovery_method: "onchain"
       # The network must have a listen address to specify protocols. This runs it locally to
       # prevent remote, incoming connections.
       listen_address: "/ip4/127.0.0.1/tcp/6180"
       network_id: "public"
-
 
 rpc:
     # This specifies your JSON-RPC endpoint. This runs locally to prevent remote queries, setting

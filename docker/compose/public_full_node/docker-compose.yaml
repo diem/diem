@@ -1,0 +1,56 @@
+# This compose file defines a Public Fullnode docker compose wrapper around libra-node.
+#
+# In order to use, place a copy of the proper genesis.blob and waypoint.txt in this directory.
+#
+# Note this compose comes with a pre-configured node.config for fullnodes, see
+# public_full_node.yaml. The config is pretty well documented and aligns with instructions herein.
+# It is intended for use with testnet but can be easily modified for other systems.
+#
+# Testnet genesis and waypoint can be acquired at the following URLs:
+# * https://testnet.libra.org/genesis.blob
+# * https://testnet.libra.org/waypoint.txt
+# Testnet's genesis does not support onchain discovery and also requires a seed_addrs to be added
+# to the full_node_networks and the discovery method to be set to "none" (this step has been
+# completed):
+#     discovery_method: "none"
+#     seed_addrs:
+#         4223dd0eeb0b0d78720a8990700955e1:
+#             - "/dns4/fn.testnet.libra.org/tcp/6182/ln-noise-ik/b6fd31624af370085cc3f872437bb4d9384b31a11b33b9591ddfaaed5a28b613/ln-handshake/0"
+#
+# TODO:
+#   * Directions on the correct image
+#   * Connecting to the local testnet
+#
+# Additional information:
+# * If you use this compose for different Libra Networks, you will need remove the db volume first.
+# * Libra's testnet produces approximately 3 GB worth of chain data per day, so be patient while
+# starting for the first time. As a sanity check, enter the container and check the increasing size
+# of the db:
+#   * `docker exec -it $CONTAINER_ID /bin/bash`
+#   * `du -csm /opt/libra/data``
+version: "3.8"
+services:
+    fullnode:
+        # @TODO, this must be manually updated on testnet releases.
+        image: libra/validator:release-0.21_0102f6f8
+        volumes:
+            - type: volume
+              source: db
+              target: /opt/libra/data
+            - type: bind
+              source: ./genesis.blob
+              target: /opt/libra/etc/genesis.blob
+              read_only: true
+            - type: bind
+              source: ./public_full_node.yaml
+              target: /opt/libra/etc/node.yaml
+              read_only: true
+            - type: bind
+              source: ./waypoint.txt
+              target: /opt/libra/etc/waypoint.txt
+              read_only: true
+        command: ["/opt/libra/bin/libra-node", "-f", "/opt/libra/etc/node.yaml"]
+        ports:
+            - "8080:8080"
+volumes:
+    db:
