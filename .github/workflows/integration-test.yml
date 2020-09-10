@@ -1,0 +1,128 @@
+---
+name: Integration Test
+
+on:
+  push:
+    branches:
+      - master
+      - canary
+  schedule:
+    - cron:  '15 */4 * * *'
+
+
+jobs:
+  run-cluster-test:
+    name: Run the pre-release suite of Cluster Test
+    runs-on: self-hosted
+    # The pre-release suite run time varies 1~1.5 hr.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v1
+      - name: setup_env
+        run: |
+          HEAD_GIT_REV=$(git rev-parse --short=8 HEAD)
+          echo "::set-env name=HEAD_GIT_REV::$HEAD_GIT_REV"
+      - name: find_last_tested_commit
+        # Find the commit hash of the last tested tag in ECR
+        env:
+          AWS_REGION: us-west-2
+        run: |
+          set -x
+          get_img_rev() {
+            _tag=$1
+            _rev=$(aws ecr describe-images \
+              --region $AWS_REGION  \
+              --filter tagStatus=TAGGED \
+              --repository-name libra_e2e \
+              --image-ids=imageTag=$_tag | \
+              jq -r '.imageDetails[0].imageTags|map(select(any(.; test("^master_"))))|@tsv' | \
+              sed 's/master_//;' || echo "")
+            echo $_rev
+          }
+          echo "Try with shadow tag"
+          img_rev=$(get_img_rev "shadow")
+          if [ -z "$img_rev" ] ; then
+            echo "Re-try with devnet tag"
+            img_rev=$(get_img_rev "devnet")
+            if [ -z "$img_rev" ] ; then
+              echo "Default to current HEAD"
+              img_rev=$GIT_REV
+            fi
+          fi
+          echo $img_rev
+          echo "::set-env name=LAST_TESTED_GIT_REV::$img_rev"
+      - name: Check trigger - run test if the image hasn't ben tested
+        id: check_trigger
+        run: |
+          if [ "$HEAD_GIT_REV" == "$LAST_TESTED_GIT_REV" ]; then \
+            echo "::set-output name=should_run::false"
+            echo "Job will halt."
+          else
+            echo "::set-output name=should_run::true"
+            echo "Job will continue."
+          fi
+      - name: Run Cluster Test
+        if: steps.check_trigger.outputs.should_run == 'true'
+        run: |
+          set -x
+          date
+          ./scripts/cti \
+            --tag master_$HEAD_GIT_REV \
+            --timeout-secs 7200 \
+            --env SLACK_CHANGELOG_URL=${{ secrets.WEBHOOK_CHANGELOG }} \
+            --changelog $LAST_TESTED_GIT_REV $HEAD_GIT_REV \
+            --suite pre_release
+      - name: Push alert
+        if: ${{ failure() }}
+        run: |
+          jq -n \
+            --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed. " \
+            --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+          curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_PUSH }}
+      - name: Retag images
+        if: steps.check_trigger.outputs.should_run == 'true'
+        env:
+          AWS_REGION: us-west-2
+          REPOS: "libra_e2e libra_validator libra_init libra_safety_rules libra_faucet libra_client libra_cluster_test libra_tools"
+        run: |
+          set -x
+
+          retag_image() {
+            ecr_repo=$1
+            old_tag=$2
+            new_tag=$3
+            MANIFEST=$(aws ecr batch-get-image \
+              --region $AWS_REGION \
+              --repository-name $ecr_repo \
+              --image-ids imageTag=$old_tag \
+              --query 'images[].imageManifest' \
+              --output text)
+            aws ecr put-image --repository-name $ecr_repo \
+              --region $AWS_REGION \
+              --image-tag $new_tag \
+              --image-manifest "$MANIFEST"
+            if [[ -z $(aws ecr describe-images --repository-name $ecr_repo \
+              --region $AWS_REGION \
+              --image-ids=imageTag=$new_tag) ]]; then
+              echo "Failed to re-tag $ecr_repo:$old_tag with $new_tag"
+              exit 123
+            fi
+          }
+
+          for repo in $REPOS; do
+            retag_image $repo "master_$HEAD_GIT_REV" "shadow"
+          done
