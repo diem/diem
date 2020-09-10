@@ -244,15 +244,18 @@ impl SafetyRules {
                 let consensus_key = self
                     .persistent_storage
                     .consensus_key_for_version(expected_key)
-                    .ok()
-                    .ok_or_else(|| {
+                    .map_err(|e| {
+                        let error = Error::InternalError(format!(
+                            "Validator key not found: {:?}",
+                            e.to_string()
+                        ));
                         error!(
-                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error),
-                            "Validator key not found",
+                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error)
+                                .error(&error),
                         );
 
                         self.validator_signer = None;
-                        Error::InternalError("Validator key not found".into())
+                        error
                     })?;
 
                 self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
