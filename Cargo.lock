@@ -1363,7 +1363,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "enum_dispatch"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3124,7 +3124,7 @@ dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "consensus-types 0.1.0",
- "enum_dispatch 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "enum_dispatch 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-crypto-derive 0.1.0",
@@ -6993,7 +6993,7 @@ dependencies = [
 "checksum encode_unicode 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 "checksum encoding_rs 0.8.24 (registry+https://github.com/rust-lang/crates.io-index)" = "a51b8cf747471cb9499b6d59e59b0444f4c90eba8968c4e44874e92b5b64ace2"
 "checksum endian-type 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
-"checksum enum_dispatch 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "43c1e2ec35d0a83f4b4864eb8a81cdf2faba4026877cf75187d04784a200cfea"
+"checksum enum_dispatch 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "9d2984c9b91ef2cd76b29bbc4b6f123b146e73a4bae7dbde490bd5115f6f8f7d"
 "checksum env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 "checksum erased-serde 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)" = "6ca8b296792113e1500fd935ae487be6e00ce318952a6880555554824d6ebf38"
 "checksum fail 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3be3c61c59fdc91f5dbc3ea31ee8623122ce80057058be560654c5d410d181a6"
