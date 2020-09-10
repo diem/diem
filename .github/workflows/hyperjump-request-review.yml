@@ -1,0 +1,20 @@
+name: (hyperjump) request-review
+
+on:
+  repository_dispatch:
+    types: [request-review]
+
+jobs:
+  labels:
+    runs-on: ubuntu-latest
+    name: (hyperjump) request-review
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: request review
+        uses: ./.github/actions/hyperjump-request-review
+        with:
+          github-token: ${{ secrets.HYPERJUMP_TOKEN }}
+          number: ${{ github.event.client_payload.number }}
+          users: ${{ join(github.event.client_payload.users) }}
+          teams: ${{ join(github.event.client_payload.teams) }}

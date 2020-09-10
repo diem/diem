@@ -14,7 +14,7 @@ jobs:
       - name: labels
         uses: ./.github/actions/hyperjump-labels
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.HYPERJUMP_TOKEN }}
           number: ${{ github.event.client_payload.number }}
           add: ${{ join(github.event.client_payload.add) }}
           remove: ${{ join(github.event.client_payload.remove) }}
