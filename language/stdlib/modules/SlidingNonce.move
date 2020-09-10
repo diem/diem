@@ -15,6 +15,8 @@ module SlidingNonce {
         nonce_mask: u128,
     }
 
+    /// The `SlidingNonce` resource is in an invalid state
+    const ESLIDING_NONCE: u64 = 0;
     /// The nonce is too old and impossible to ensure whether it's duplicated or not
     const ENONCE_TOO_OLD: u64 = 1;
     /// The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
@@ -31,12 +33,24 @@ module SlidingNonce {
         assert(code == 0, Errors::invalid_argument(code));
     }
 
+    spec fun record_nonce_or_abort {
+        include RecordNonceAbortsIf;
+    }
+
+    spec schema RecordNonceAbortsIf {
+        account: signer;
+        seq_nonce: u64;
+        aborts_if !exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+        aborts_if spec_try_record_nonce(account, seq_nonce) != 0 with Errors::INVALID_ARGUMENT;
+    }
+
     /// Tries to record this nonce in the account.
     /// Returns 0 if a nonce was recorded and non-0 otherwise
     public fun try_record_nonce(account: &signer, seq_nonce: u64): u64 acquires SlidingNonce {
         if (seq_nonce == 0) {
             return 0
         };
+        assert(exists<SlidingNonce>(Signer::address_of(account)), Errors::not_published(ESLIDING_NONCE));
         let t = borrow_global_mut<SlidingNonce>(Signer::address_of(account));
         if (t.min_nonce > seq_nonce) {
             return ENONCE_TOO_OLD
@@ -65,6 +79,16 @@ module SlidingNonce {
         0
     }
 
+    spec fun try_record_nonce {
+        /// > TODO: turn verify on when we are ready to specify this function.
+        pragma opaque, verify = false;
+        ensures result == spec_try_record_nonce(account, seq_nonce);
+        aborts_if !exists<SlidingNonce>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+    }
+
+    /// Specification version of `Self::try_record_nonce`.
+    spec define spec_try_record_nonce(account: signer, seq_nonce: u64): u64;
+
     /// Publishes nonce resource for `account`
     /// This is required before other functions in this module can be called for `account
     public fun publish(account: &signer) {
@@ -84,5 +108,6 @@ module SlidingNonce {
         };
         move_to(account, new_resource)
     }
+
 }
 }

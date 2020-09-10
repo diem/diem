@@ -133,6 +133,8 @@ module LibraAccount {
     const EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED: u64 = 9;
     /// An account cannot be created at the reserved VM address of 0x0
     const ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
+    /// The `WithdrawCapability` for this account is not extracted
+    const EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED: u64 = 11;
     /// Tried to add a balance in a currency that this account already has
     const EADD_EXISTING_CURRENCY: u64 = 15;
     /// Attempted to send funds to an account that does not exist
@@ -469,6 +471,35 @@ module LibraAccount {
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
     }
 
+    spec fun tiered_mint {
+        pragma opaque;
+        modifies global<Balance<Token>>(designated_dealer_address);
+        modifies global<Libra::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        include TieredMintAbortsIf<Token>;
+        include TieredMintEnsures<Token>;
+    }
+
+    spec schema TieredMintAbortsIf<Token> {
+        tc_account: signer;
+        designated_dealer_address: address;
+        mint_amount: u64;
+        tier_index: u64;
+        include DesignatedDealer::TieredMintAbortsIf<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
+        include DepositAbortsIf<Token>{payer: CoreAddresses::VM_RESERVED_ADDRESS(),
+            payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
+    }
+
+    spec schema TieredMintEnsures<Token> {
+        designated_dealer_address: address;
+        mint_amount: u64;
+        let dealer_balance = global<Balance<Token>>(designated_dealer_address).coin.value;
+        let currency_info = global<Libra::CurrencyInfo<Token>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        /// Total value of the currency increases by `amount`.
+        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + mint_amount);
+        /// The balance of designated dealer increases by `amount`.
+        ensures dealer_balance == old(dealer_balance) + mint_amount;
+    }
+
     // Cancel the burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
@@ -642,6 +673,12 @@ module LibraAccount {
     public fun restore_withdraw_capability(cap: WithdrawCapability)
     acquires LibraAccount {
         assert(exists_at(cap.account_address), Errors::not_published(EACCOUNT));
+        // Abort if the withdraw capability for this account is not extracted,
+        // indicating that the withdraw capability is not unique.
+        assert(
+            delegated_withdraw_capability(cap.account_address),
+            Errors::invalid_state(EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED)
+        );
         let account = borrow_global_mut<LibraAccount>(cap.account_address);
         Option::fill(&mut account.withdrawal_capability, cap)
     }
@@ -651,7 +688,7 @@ module LibraAccount {
         let cap_addr = cap.account_address;
         modifies global<LibraAccount>(cap_addr);
         aborts_if !exists_at(cap_addr) with Errors::NOT_PUBLISHED;
-        aborts_if !delegated_withdraw_capability(cap_addr);
+        aborts_if !delegated_withdraw_capability(cap_addr) with Errors::INVALID_STATE;
         ensures spec_holds_own_withdraw_cap(cap_addr);
     }
 

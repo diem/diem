@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Const `ESLIDING_NONCE`](#0x1_SlidingNonce_ESLIDING_NONCE)
 -  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
 -  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
 -  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
@@ -14,6 +15,9 @@
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
+-  [Specification](#0x1_SlidingNonce_Specification)
+    -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_Specification_record_nonce_or_abort)
+    -  [Function `try_record_nonce`](#0x1_SlidingNonce_Specification_try_record_nonce)
 
 
 
@@ -57,6 +61,19 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 
 </details>
+
+<a name="0x1_SlidingNonce_ESLIDING_NONCE"></a>
+
+## Const `ESLIDING_NONCE`
+
+The
+<code><a href="#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
+
+
+<pre><code><b>const</b> ESLIDING_NONCE: u64 = 0;
+</code></pre>
+
+
 
 <a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
 
@@ -153,6 +170,7 @@ Returns 0 if a nonce was recorded and non-0 otherwise
     <b>if</b> (seq_nonce == 0) {
         <b>return</b> 0
     };
+    <b>assert</b>(exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ESLIDING_NONCE));
     <b>let</b> t = borrow_global_mut&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
     <b>if</b> (t.min_nonce &gt; seq_nonce) {
         <b>return</b> ENONCE_TOO_OLD
@@ -246,3 +264,67 @@ Only the libra root account can create this resource for different accounts
 
 
 </details>
+
+<a name="0x1_SlidingNonce_Specification"></a>
+
+## Specification
+
+Specification version of
+<code><a href="#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
+
+
+<a name="0x1_SlidingNonce_spec_try_record_nonce"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_Specification_record_nonce_or_abort"></a>
+
+### Function `record_nonce_or_abort`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SlidingNonce_RecordNonceAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a> {
+    account: signer;
+    seq_nonce: u64;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce) != 0 with Errors::INVALID_ARGUMENT;
+}
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_Specification_try_record_nonce"></a>
+
+### Function `try_record_nonce`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
+</code></pre>
+
+
+
+> TODO: turn verify on when we are ready to specify this function.
+
+
+<pre><code>pragma opaque, verify = <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with Errors::NOT_PUBLISHED;
+</code></pre>

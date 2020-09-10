@@ -2504,6 +2504,12 @@ currency would be the LBR.
 
 
 
+
+<pre><code><b>modifies</b> <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<b>ensures</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+</code></pre>
+
+
 Must abort if the account does not have the MintCapability [B11].
 
 
@@ -2571,6 +2577,7 @@ aborts_with Errors::NOT_PUBLISHED, Errors::LIMIT_EXCEEDED;
 
 <pre><code>pragma opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<b>ensures</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <a name="0x1_Libra_currency_info$54"></a>
 <b>let</b> currency_info = <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;

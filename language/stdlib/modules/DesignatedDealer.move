@@ -289,15 +289,19 @@ module DesignatedDealer {
         Libra::mint<CoinType>(tc_account, amount)
     }
     spec fun tiered_mint {
+        use 0x1::CoreAddresses;
         pragma opaque;
 
         include TieredMintAbortsIf<CoinType>;
 
+        modifies global<Libra::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<Libra::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         modifies global<TierInfo<CoinType>>(dd_addr);
         ensures exists<TierInfo<CoinType>>(dd_addr);
         ensures global<TierInfo<CoinType>>(dd_addr).tiers == old(global<TierInfo<CoinType>>(dd_addr).tiers);
         let dealer = global<TierInfo<CoinType>>(dd_addr);
         let current_time = LibraTimestamp::spec_now_microseconds();
+        let currency_info = global<Libra::CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         ensures old(dealer.window_start) <= dealer.window_start;
         ensures
             dealer.window_start == current_time && dealer.window_inflow == amount ||
@@ -305,6 +309,8 @@ module DesignatedDealer {
                 dealer.window_inflow == old(dealer.window_inflow) + amount);
         ensures tier_index < len(old(dealer).tiers);
         ensures dealer.window_inflow <= old(dealer).tiers[tier_index];
+        ensures result.value == amount;
+        ensures currency_info == update_field(old(currency_info), total_value, old(currency_info.total_value) + amount);
     }
     spec schema TieredMintAbortsIf<CoinType> {
         tc_account: signer;

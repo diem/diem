@@ -252,6 +252,8 @@ module Libra {
         )
     }
     spec fun mint {
+        modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         /// Must abort if the account does not have the MintCapability [B11].
         aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
 
@@ -336,6 +338,7 @@ module Libra {
     spec fun mint_with_capability {
         pragma opaque;
         modifies global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
+        ensures exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         let currency_info = global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;

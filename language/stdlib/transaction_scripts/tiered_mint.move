@@ -18,4 +18,10 @@ fun tiered_mint<CoinType>(
         tc_account, designated_dealer_address, mint_amount, tier_index
     );
 }
+
+spec fun tiered_mint {
+    include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
+    include LibraAccount::TieredMintAbortsIf<CoinType>;
+    include LibraAccount::TieredMintEnsures<CoinType>;
+}
 }

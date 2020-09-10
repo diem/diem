@@ -6,6 +6,8 @@
 ### Table of Contents
 
 -  [Function `tiered_mint`](#SCRIPT_tiered_mint)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `tiered_mint`](#SCRIPT_Specification_tiered_mint)
 
 
 
@@ -48,3 +50,24 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_tiered_mint"></a>
+
+### Function `tiered_mint`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{account: tc_account, seq_nonce: sliding_nonce};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintAbortsIf">LibraAccount::TieredMintAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintEnsures">LibraAccount::TieredMintEnsures</a>&lt;CoinType&gt;;
+</code></pre>

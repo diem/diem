@@ -24,6 +24,7 @@
 -  [Const `EMALFORMED_AUTHENTICATION_KEY`](#0x1_LibraAccount_EMALFORMED_AUTHENTICATION_KEY)
 -  [Const `EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED`](#0x1_LibraAccount_EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED)
 -  [Const `ECANNOT_CREATE_AT_VM_RESERVED`](#0x1_LibraAccount_ECANNOT_CREATE_AT_VM_RESERVED)
+-  [Const `EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED`](#0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED)
 -  [Const `EADD_EXISTING_CURRENCY`](#0x1_LibraAccount_EADD_EXISTING_CURRENCY)
 -  [Const `EPAYEE_DOES_NOT_EXIST`](#0x1_LibraAccount_EPAYEE_DOES_NOT_EXIST)
 -  [Const `EPAYEE_CANT_ACCEPT_CURRENCY_TYPE`](#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE)
@@ -93,6 +94,7 @@
     -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
     -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
+    -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `withdraw_from`](#0x1_LibraAccount_Specification_withdraw_from)
     -  [Function `extract_withdraw_capability`](#0x1_LibraAccount_Specification_extract_withdraw_capability)
@@ -546,6 +548,19 @@ An account cannot be created at the reserved VM address of 0x0
 
 
 <pre><code><b>const</b> ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED"></a>
+
+## Const `EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED`
+
+The
+<code><a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a></code> for this account is not extracted
+
+
+<pre><code><b>const</b> EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED: u64 = 11;
 </code></pre>
 
 
@@ -1303,6 +1318,12 @@ Return the withdraw capability to the account it originally came from
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_restore_withdraw_capability">restore_withdraw_capability</a>(cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>)
 <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a> {
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(EACCOUNT));
+    // Abort <b>if</b> the withdraw capability for this account is not extracted,
+    // indicating that the withdraw capability is not unique.
+    <b>assert</b>(
+        <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(cap.account_address),
+        <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EWITHDRAWAL_CAPABILITY_NOT_EXTRACTED)
+    );
     <b>let</b> account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
     <a href="Option.md#0x1_Option_fill">Option::fill</a>(&<b>mut</b> account.withdrawal_capability, cap)
 }
@@ -2732,6 +2753,79 @@ pragma verify_duration_estimate = 100;
 
 
 
+<a name="0x1_LibraAccount_Specification_tiered_mint"></a>
+
+### Function `tiered_mint`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque;
+<b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(designated_dealer_address);
+<b>modifies</b> <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+<b>include</b> <a href="#0x1_LibraAccount_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x1_LibraAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_TieredMintAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_TieredMintAbortsIf">TieredMintAbortsIf</a>&lt;Token&gt; {
+    tc_account: signer;
+    designated_dealer_address: address;
+    mint_amount: u64;
+    tier_index: u64;
+    <b>include</b> <a href="DesignatedDealer.md#0x1_DesignatedDealer_TieredMintAbortsIf">DesignatedDealer::TieredMintAbortsIf</a>&lt;Token&gt;{dd_addr: designated_dealer_address, amount: mint_amount};
+    <b>include</b> <a href="#0x1_LibraAccount_DepositAbortsIf">DepositAbortsIf</a>&lt;Token&gt;{payer: <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(),
+        payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_TieredMintEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt; {
+    designated_dealer_address: address;
+    mint_amount: u64;
+    <a name="0x1_LibraAccount_dealer_balance$65"></a>
+    <b>let</b> dealer_balance = <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(designated_dealer_address).coin.value;
+    <a name="0x1_LibraAccount_currency_info$66"></a>
+    <b>let</b> currency_info = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
+}
+</code></pre>
+
+
+Total value of the currency increases by
+<code>amount</code>.
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt; {
+    <b>ensures</b> currency_info == update_field(<b>old</b>(currency_info), total_value, <b>old</b>(currency_info.total_value) + mint_amount);
+}
+</code></pre>
+
+
+The balance of designated dealer increases by
+<code>amount</code>.
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt; {
+    <b>ensures</b> dealer_balance == <b>old</b>(dealer_balance) + mint_amount;
+}
+</code></pre>
+
+
+
 <a name="0x1_LibraAccount_Specification_withdraw_from_balance"></a>
 
 ### Function `withdraw_from_balance`
@@ -2815,7 +2909,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_payer$67"></a>
+<a name="0x1_LibraAccount_payer$69"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
@@ -2861,7 +2955,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_sender_addr$68"></a>
+<a name="0x1_LibraAccount_sender_addr$70"></a>
 <b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
 <b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
@@ -2899,11 +2993,11 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_cap_addr$69"></a>
+<a name="0x1_LibraAccount_cap_addr$71"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap_addr) with Errors::NOT_PUBLISHED;
-<b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(cap_addr);
+<b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(cap_addr) with Errors::INVALID_STATE;
 <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(cap_addr);
 </code></pre>
 
@@ -2970,7 +3064,7 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_account_addr$70"></a>
+<a name="0x1_LibraAccount_account_addr$72"></a>
 
 
 <pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
@@ -3140,7 +3234,7 @@ Returns true if the LibraAccount at
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$65"></a>
+    <a name="0x1_LibraAccount_addr$67"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr);
     <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address == addr;
@@ -3199,7 +3293,7 @@ or the key rotation capability for addr itself [B26].
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$66"></a>
+    <a name="0x1_LibraAccount_addr$68"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
     <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr);
     <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address == addr;
