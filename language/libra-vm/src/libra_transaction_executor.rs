@@ -2,16 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    convert_changeset_and_events,
     counters::*,
     data_cache::StateViewCache,
     errors::expect_only_successful_execution,
     libra_vm::{
-        charge_global_write_gas_usage, get_currency_info, get_transaction_output,
-        txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
+        charge_global_write_gas_usage, get_currency_info, get_transaction_output, LibraVMImpl,
+        LibraVMInternals,
     },
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
-    txn_effects_to_writeset_and_events, VMExecutor,
+    VMExecutor,
 };
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
@@ -343,9 +344,9 @@ impl LibraVM {
                     .and_then(|_| tmp_session.finish())
                     .map_err(|e| e.into_vm_status());
                 match execution_result {
-                    Ok(effect) => {
+                    Ok((changeset, events)) => {
                         let (cs, events) =
-                            txn_effects_to_writeset_and_events(effect).map_err(Err)?;
+                            convert_changeset_and_events(changeset, events).map_err(Err)?;
                         ChangeSet::new(cs, events)
                     }
                     Err(e) => {
@@ -489,9 +490,8 @@ impl LibraVM {
             return Ok((e, discard_error_output(StatusCode::INVALID_WRITE_SET)));
         };
 
-        let effects = session.finish().map_err(|e| e.into_vm_status())?;
-        let (epilogue_writeset, epilogue_events) =
-            txn_effects_to_writeset_and_events_cached(&mut (), effects)?;
+        let (changeset, events) = session.finish().map_err(|e| e.into_vm_status())?;
+        let (epilogue_writeset, epilogue_events) = convert_changeset_and_events(changeset, events)?;
 
         // Make sure epilogue WriteSet doesn't intersect with the writeset in TransactionPayload.
         if !epilogue_writeset
