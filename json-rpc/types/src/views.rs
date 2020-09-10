@@ -28,10 +28,6 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryFrom};
 use transaction_builder::get_transaction_name;
 
-pub const JSONRPC_LIBRA_CHAIN_ID: &str = "libra_chain_id";
-pub const JSONRPC_LIBRA_LEDGER_VERSION: &str = "libra_ledger_version";
-pub const JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS: &str = "libra_ledger_timestampusec";
-
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct AmountView {
     pub amount: u64,
