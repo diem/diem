@@ -7,7 +7,7 @@ module TestModuleInvariants {
 
 
     // Some structure.
-    struct S {}
+    resource struct S {}
 
     // A resource tracking how many instances of S exist.
     resource struct SCounter {

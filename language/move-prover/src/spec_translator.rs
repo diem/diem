@@ -16,7 +16,7 @@ use log::{debug, info, warn};
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_caller_resource_memory_domain_name, boogie_declare_global,
-        boogie_field_name, boogie_global_declarator, boogie_local_type,
+        boogie_field_name, boogie_global_declarator, boogie_inv_expr, boogie_local_type,
         boogie_resource_memory_name, boogie_saved_resource_memory_name,
         boogie_self_resource_memory_domain_name, boogie_spec_fun_name, boogie_spec_var_name,
         boogie_struct_name, boogie_type_value, boogie_type_value_array,
@@ -52,6 +52,8 @@ const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` cl
 const WRONG_ABORTS_CODE: &str = "function does not abort with any of the expected codes";
 const SUCCEEDS_IF_FAILS_MESSAGE: &str = "function does not succeed under this condition";
 const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
+const INVARIANT_FAILS_FOR_REF_MESSAGE: &str =
+    "data invariant does not hold for value extracted from reference";
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
 const MODIFY_TARGET_FAILS_MESSAGE: &str = "caller does not have permission for this modify target";
 
@@ -848,12 +850,16 @@ impl<'env> SpecTranslator<'env> {
         {
             for (i, ty) in func_target.get_return_types().iter().enumerate() {
                 let result_name = format!("$ret{}", i);
-                let check = boogie_well_formed_expr(
-                    self.global_env(),
-                    &result_name,
-                    ty,
-                    WellFormedMode::Default,
-                );
+                let mode = if func_target.is_public()
+                    || func_target.get_input_for_return_index(i).is_none()
+                {
+                    WellFormedMode::WithInvariant
+                } else {
+                    // This is input for a former &mut parameter of a private function.
+                    // The invariant is not guaranteed to hold.
+                    WellFormedMode::WithoutInvariant
+                };
+                let check = boogie_well_formed_expr(self.global_env(), &result_name, ty, mode);
                 if !check.is_empty() {
                     emitln!(self.writer, "ensures {};", check)
                 }
@@ -977,7 +983,7 @@ impl<'env> SpecTranslator<'env> {
             self.writer.indent();
             emitln!(
                 self.writer,
-                "{}_is_well_formed({})",
+                "{}_$is_well_formed({})",
                 boogie_struct_name(&struct_env),
                 get_resource,
             );
@@ -1067,8 +1073,10 @@ impl<'env> SpecTranslator<'env> {
     /// Emits functions and procedures needed for invariants.
     pub fn translate_invariant_functions(&self) {
         self.translate_assume_well_formed();
-        self.translate_before_update_invariant();
-        self.translate_after_update_invariant();
+        self.translate_unpack_ref(true);
+        self.translate_unpack_ref(false);
+        self.translate_pack_ref(true);
+        self.translate_pack_ref(false);
     }
 
     /// Generates functions which assumes the struct to be well-formed. The first function
@@ -1077,67 +1085,104 @@ impl<'env> SpecTranslator<'env> {
     /// the struct is not mutated.
     fn translate_assume_well_formed(&self) {
         let struct_env = self.struct_env();
-        let emit_field_checks = |mode: WellFormedMode| {
-            emitln!(self.writer, "$Vector_is_well_formed($this)");
-            emitln!(
-                self.writer,
-                "&& $vlen($this) == {}",
-                struct_env.get_fields().count()
-            );
+        let emit_field_checks = |with_types: bool, mode: WellFormedMode| -> bool {
+            let mut empty = true;
+            if with_types {
+                emitln!(self.writer, "$Vector_$is_well_formed($this)");
+                emitln!(
+                    self.writer,
+                    "&& $vlen($this) == {}",
+                    struct_env.get_fields().count()
+                );
+                empty = false;
+            }
             for field in struct_env.get_fields() {
                 let select = format!("$SelectField($this, {})", boogie_field_name(&field));
-                let type_check = boogie_well_formed_expr(
-                    struct_env.module_env.env,
-                    &select,
-                    &field.get_type(),
-                    mode,
-                );
-                if !type_check.is_empty() {
-                    emitln!(self.writer, "  && {}", type_check);
+                let check = if with_types {
+                    boogie_well_formed_expr(
+                        struct_env.module_env.env,
+                        &select,
+                        &field.get_type(),
+                        mode,
+                    )
+                } else {
+                    boogie_inv_expr(struct_env.module_env.env, &select, &field.get_type())
+                };
+                if !check.is_empty() {
+                    if !empty {
+                        emit!(self.writer, "  && ");
+                    }
+                    emitln!(self.writer, "{}", check);
+                    empty = false;
                 }
             }
+            empty
         };
         emitln!(
             self.writer,
-            "function {{:inline}} {}_is_well_formed_types($this: $Value): bool {{",
+            "function {{:inline}} {}_$is_well_typed($this: $Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
-        emit_field_checks(WellFormedMode::WithoutInvariant);
+        emit_field_checks(true, WellFormedMode::WithoutInvariant);
         self.writer.unindent();
         emitln!(self.writer, "}");
 
         emitln!(
             self.writer,
-            "function {{:inline}} {}_is_well_formed($this: $Value): bool {{",
+            "function {{:inline}} {}_$invariant_holds($this: $Value): bool {{",
             boogie_struct_name(struct_env),
         );
         self.writer.indent();
-        emit_field_checks(WellFormedMode::WithInvariant);
+        let mut empty = emit_field_checks(false, WellFormedMode::WithInvariant);
         for inv in struct_env.get_spec().filter_kind(ConditionKind::Invariant) {
-            emit!(self.writer, "  && b#$Boolean(");
+            if !empty {
+                emit!(self.writer, "  && ");
+            }
+            emit!(self.writer, "b#$Boolean(");
             self.with_invariant_target("$this", "", || self.translate_exp(&inv.exp));
             emitln!(self.writer, ")");
+            empty = false;
         }
+        if empty {
+            emitln!(self.writer, "true");
+        }
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+        emitln!(self.writer);
+
+        emitln!(
+            self.writer,
+            "function {{:inline}} {}_$is_well_formed($this: $Value): bool {{",
+            boogie_struct_name(struct_env),
+        );
+        self.writer.indent();
+        // emit_field_checks(true, WellFormedMode::WithInvariant);
+        emit!(
+            self.writer,
+            "{}_$is_well_typed($this) && {}_$invariant_holds($this)",
+            boogie_struct_name(struct_env),
+            boogie_struct_name(struct_env)
+        );
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
     }
 
     /// Determines whether a before-update invariant is generated for this struct.
-    pub fn has_before_update_invariant(struct_env: &StructEnv<'_>) -> bool {
+    pub fn has_unpack_ref(struct_env: &StructEnv<'_>) -> bool {
         use ConditionKind::*;
         struct_env.get_spec().any(|c| matches!(c.kind, VarUpdate(..)|VarUnpack(..)|Invariant))
                 // If any of the fields has it, it inherits to the struct.
                 || struct_env.get_fields().any(|fe| {
-                    Self::has_before_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+                    Self::has_unpack_ref_ty(struct_env.module_env.env, &fe.get_type())
                 })
     }
 
     /// Determines whether a before-update invariant is generated for this type.
-    pub fn has_before_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+    pub fn has_unpack_ref_ty(env: &GlobalEnv, ty: &Type) -> bool {
         if let Some((struct_env, _)) = ty.get_struct(env) {
-            Self::has_before_update_invariant(&struct_env)
+            Self::has_unpack_ref(&struct_env)
         } else {
             // TODO: vectors
             false
@@ -1152,15 +1197,16 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates a procedure which asserts the before-update invariants of the struct.
-    pub fn translate_before_update_invariant(&self) {
+    pub fn translate_unpack_ref(&self, deep: bool) {
         let struct_env = self.struct_env();
-        if !Self::has_before_update_invariant(struct_env) {
+        if !Self::has_unpack_ref(struct_env) {
             return;
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_before_update_inv({}) {{",
+            "procedure {{:inline 1}} {}_$unpack_ref{}({}) {{",
             boogie_struct_name(struct_env),
+            if deep { "_deep" } else { "" },
             Self::translate_type_parameters(struct_env)
                 .into_iter()
                 .chain(vec!["$before: $Value".to_string()])
@@ -1168,35 +1214,37 @@ impl<'env> SpecTranslator<'env> {
         );
         self.writer.indent();
 
-        // Emit call to before update invariant procedure for all fields which have one by their own.
-        for fe in struct_env.get_fields() {
-            if let Some((nested_struct_env, ty_args)) =
-                fe.get_type().get_struct(struct_env.module_env.env)
-            {
-                if Self::has_before_update_invariant(&nested_struct_env) {
-                    let field_name = boogie_field_name(&fe);
-                    let args = ty_args
-                        .iter()
-                        .map(|ty| self.translate_type(ty))
-                        .chain(vec![format!("$SelectField($before, {})", field_name)].into_iter())
-                        .join(", ");
-                    emitln!(
-                        self.writer,
-                        "call {}_before_update_inv({});",
-                        boogie_struct_name(&nested_struct_env),
-                        args,
-                    );
+        if deep {
+            // Emit call to before update invariant procedure for all fields which have one by their own.
+            for fe in struct_env.get_fields() {
+                if let Some((nested_struct_env, ty_args)) =
+                    fe.get_type().get_struct(struct_env.module_env.env)
+                {
+                    if Self::has_unpack_ref(&nested_struct_env) {
+                        let field_name = boogie_field_name(&fe);
+                        let args = ty_args
+                            .iter()
+                            .map(|ty| self.translate_type(ty))
+                            .chain(
+                                vec![format!("$SelectField($before, {})", field_name)].into_iter(),
+                            )
+                            .join(", ");
+                        emitln!(
+                            self.writer,
+                            "call {}_$unpack_ref({});",
+                            boogie_struct_name(&nested_struct_env),
+                            args,
+                        );
+                    }
                 }
             }
         }
 
         // Emit data invariants for this struct.
-        let spec = struct_env.get_spec();
-        self.emit_invariants_assume_or_assert(
-            "$before",
-            "",
-            true,
-            spec.filter_kind(ConditionKind::Invariant),
+        emitln!(
+            self.writer,
+            "assume {}_$invariant_holds($before);",
+            boogie_struct_name(struct_env)
         );
 
         // Emit call to spec var updates via unpack invariants.
@@ -1214,19 +1262,19 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Determines whether a after-update invariant is generated for this struct.
-    pub fn has_after_update_invariant(struct_env: &StructEnv<'_>) -> bool {
+    pub fn pack_ref(struct_env: &StructEnv<'_>) -> bool {
         use ConditionKind::*;
         struct_env.get_spec().any(|c| matches!(c.kind, VarUpdate(..)|VarPack(..)|Invariant))
             // If any of the fields has it, it inherits to the struct.
             || struct_env.get_fields().any(|fe| {
-                Self::has_after_update_invariant_ty(struct_env.module_env.env, &fe.get_type())
+                Self::has_pack_ref_ty(struct_env.module_env.env, &fe.get_type())
             })
     }
 
     /// Determines whether a after-update invariant is generated for this type.
-    pub fn has_after_update_invariant_ty(env: &GlobalEnv, ty: &Type) -> bool {
+    pub fn has_pack_ref_ty(env: &GlobalEnv, ty: &Type) -> bool {
         if let Some((struct_env, _)) = ty.get_struct(env) {
-            Self::has_after_update_invariant(&struct_env)
+            Self::pack_ref(&struct_env)
         } else {
             // TODO: vectors
             false
@@ -1234,15 +1282,16 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates a procedure which asserts the after-update invariants of the struct.
-    pub fn translate_after_update_invariant(&self) {
+    pub fn translate_pack_ref(&self, deep: bool) {
         let struct_env = self.struct_env();
-        if !Self::has_after_update_invariant(struct_env) {
+        if !Self::pack_ref(struct_env) {
             return;
         }
         emitln!(
             self.writer,
-            "procedure {{:inline 1}} {}_after_update_inv({}) {{",
+            "procedure {{:inline 1}} {}_$pack_ref{}({}) {{",
             boogie_struct_name(struct_env),
+            if deep { "_deep" } else { "" },
             Self::translate_type_parameters(struct_env)
                 .into_iter()
                 .chain(vec!["$after: $Value".to_string()])
@@ -1250,29 +1299,36 @@ impl<'env> SpecTranslator<'env> {
         );
         self.writer.indent();
 
-        // Emit call to after update invariant procedure for all fields which have one by their own.
-        for fe in struct_env.get_fields() {
-            if let Some((nested_struct_env, ty_args)) =
-                fe.get_type().get_struct(struct_env.module_env.env)
-            {
-                if Self::has_after_update_invariant(&nested_struct_env) {
-                    let field_name = boogie_field_name(&fe);
-                    let args = ty_args
-                        .iter()
-                        .map(|ty| self.translate_type(ty))
-                        .chain(vec![format!("$SelectField($after, {})", field_name)].into_iter())
-                        .join(", ");
-                    emitln!(
-                        self.writer,
-                        "call {}_after_update_inv({});",
-                        boogie_struct_name(&nested_struct_env),
-                        args
-                    );
+        if deep {
+            // Emit call to after update invariant procedure for all fields which have
+            // one by their own.
+            for fe in struct_env.get_fields() {
+                if let Some((nested_struct_env, ty_args)) =
+                    fe.get_type().get_struct(struct_env.module_env.env)
+                {
+                    if Self::pack_ref(&nested_struct_env) {
+                        let field_name = boogie_field_name(&fe);
+                        let args = ty_args
+                            .iter()
+                            .map(|ty| self.translate_type(ty))
+                            .chain(
+                                vec![format!("$SelectField($after, {})", field_name)].into_iter(),
+                            )
+                            .join(", ");
+                        emitln!(
+                            self.writer,
+                            "call {}_$pack_ref({});",
+                            boogie_struct_name(&nested_struct_env),
+                            args
+                        );
+                    }
                 }
             }
         }
 
-        // Emit data invariants for this struct.
+        // Emit asserts for data invariants for this struct. We emit each in a single assert
+        // statement for better error diagnosis instead of calling the invariant_holds function
+        // of the struct.
         let spec = struct_env.get_spec();
         self.emit_invariants_assume_or_assert(
             "$after",
@@ -1555,6 +1611,15 @@ impl<'env> SpecTranslator<'env> {
             emitln!(self.writer, ");")
         }
     }
+
+    /// Emit an assert of the data invariant for the given type.
+    pub fn emit_data_invariant_assert_for_ref_read(&self, loc: &Loc, ty: &Type, dest: &str) {
+        let inv_check = boogie_inv_expr(self.global_env(), dest, ty);
+        if !inv_check.is_empty() {
+            self.set_condition_info(loc, ConditionTag::Ensures, INVARIANT_FAILS_FOR_REF_MESSAGE);
+            emitln!(self.writer, "assert {};", inv_check);
+        }
+    }
 }
 
 // Types
@@ -1712,11 +1777,12 @@ impl<'env> SpecTranslator<'env> {
                     // and needs to be fixed.
                     if let Some(local_index) = func_target.get_local_index(name) {
                         if *self.in_assert_or_assume.borrow() {
-                            if let Some(proxy_index) = if ty.is_reference() {
+                            let proxy = if ty.is_reference() {
                                 func_target.get_ref_proxy_index(*local_index)
                             } else {
                                 func_target.get_proxy_index(*local_index)
-                            } {
+                            };
+                            if let Some(proxy_index) = proxy {
                                 var_name = func_target
                                     .symbol_pool()
                                     .string(func_target.get_local_name(*proxy_index));
@@ -2042,7 +2108,7 @@ impl<'env> SpecTranslator<'env> {
                         self.global_env(),
                         &var_name,
                         &domain_ty,
-                        WellFormedMode::Default,
+                        WellFormedMode::WithInvariant,
                     );
                     if type_check.is_empty() {
                         let tctx = TypeDisplayContext::WithEnv {

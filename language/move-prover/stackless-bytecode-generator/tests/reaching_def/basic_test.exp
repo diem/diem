@@ -49,29 +49,35 @@ fun ReachingDefTest::basic(a: u64, b: u64): u64 {
      var $t8: u64
      var $t9: u64
      var $t10: u64
-  0: $t3 := copy(a)
-  1: $t4 := copy(b)
-  2: $t5 := +(a, b)
-  3: $t6 := copy(a)
-  4: $t7 := /($t5, a)
-  5: x := $t7
-  6: $t8 := copy(x)
-  7: $t9 := 1
-  8: $t10 := +(x, $t9)
-  9: return $t10
+     var $t11: u64
+     var $t12: u64
+  0: $t11 := move(a)
+  1: $t12 := move(b)
+  2: $t3 := copy($t11)
+  3: $t4 := copy($t12)
+  4: $t5 := +($t11, $t12)
+  5: $t6 := copy($t11)
+  6: $t7 := /($t5, $t11)
+  7: x := $t7
+  8: $t8 := copy(x)
+  9: $t9 := 1
+ 10: $t10 := +(x, $t9)
+ 11: return $t10
 }
 
 
-fun ReachingDefTest::create_resource(sender: &signer) {
+fun ReachingDefTest::create_resource(sender: signer) {
      var r: ReachingDefTest::R
-     var $t2: &signer
+     var $t2: signer
      var $t3: u64
      var $t4: bool
      var $t5: ReachingDefTest::R
-  0: $t2 := move(sender)
-  1: $t3 := 1
-  2: $t4 := false
-  3: $t5 := pack ReachingDefTest::R($t3, $t4)
-  4: move_to<ReachingDefTest::R>($t5, sender)
-  5: return ()
+     var $t6: signer
+  0: $t6 := move(sender)
+  1: $t2 := move($t6)
+  2: $t3 := 1
+  3: $t4 := false
+  4: $t5 := pack ReachingDefTest::R($t3, $t4)
+  5: move_to<ReachingDefTest::R>($t5, $t6)
+  6: return ()
 }

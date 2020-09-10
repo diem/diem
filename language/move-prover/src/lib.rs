@@ -24,16 +24,16 @@ use regex::Regex;
 use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
 use stackless_bytecode_generator::{
     borrow_analysis::BorrowAnalysisProcessor,
+    clean_and_optimize::CleanAndOptimizeProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnalysisProcessor,
-    packref_analysis::PackrefAnalysisProcessor,
+    memory_instrumentation::MemoryInstrumentationProcessor,
     reaching_def_analysis::ReachingDefProcessor,
     stackless_bytecode::{Bytecode, Operation},
     test_instrumenter::TestInstrumenter,
     usage_analysis::{self, UsageProcessor},
-    writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -88,11 +88,13 @@ pub fn run_move_prover<W: WriteColor>(
     if options.run_errmapgen {
         return run_errmapgen(&env, &options, now);
     }
+
     let targets = create_and_process_bytecode(&options, &env);
     if env.has_errors() {
         env.report_errors(error_writer);
         return Err(anyhow!("exiting with transformation errors"));
     }
+
     if options.run_packed_types_gen {
         return run_packed_types_gen(&env, &targets, now);
     }
@@ -327,12 +329,12 @@ fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipel
 
     // Add processors in order they are executed.
     res.add_processor(EliminateImmRefsProcessor::new());
+    res.add_processor(EliminateMutRefsProcessor::new());
     res.add_processor(ReachingDefProcessor::new());
     res.add_processor(LiveVarAnalysisProcessor::new());
     res.add_processor(BorrowAnalysisProcessor::new());
-    res.add_processor(WritebackAnalysisProcessor::new());
-    res.add_processor(PackrefAnalysisProcessor::new());
-    res.add_processor(EliminateMutRefsProcessor::new());
+    res.add_processor(MemoryInstrumentationProcessor::new());
+    res.add_processor(CleanAndOptimizeProcessor::new());
     res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
     res.add_processor(UsageProcessor::new());
 

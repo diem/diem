@@ -10,19 +10,18 @@ use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, Constant, TempIndex},
-    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    stackless_bytecode::{Bytecode, TempIndex},
+    stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
 use spec_lang::env::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-/// The reaching definitions we are capturing. Currently we only capture constants
-/// and aliases (assignment).
+/// The reaching definitions we are capturing. Currently we only
+/// aliases (assignment).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Def {
-    Const(Constant),
     Alias(TempIndex),
 }
 
@@ -31,13 +30,13 @@ pub enum Def {
 #[derive(Default)]
 pub struct ReachingDefAnnotation(BTreeMap<CodeOffset, BTreeMap<TempIndex, BTreeSet<Def>>>);
 
-pub struct ReachingDefProcessor();
+pub struct ReachingDefProcessor {}
 
 type DefMap = BTreeMap<TempIndex, BTreeSet<Def>>;
 
 impl ReachingDefProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(ReachingDefProcessor())
+        Box::new(ReachingDefProcessor {})
     }
 
     /// Returns Some(temp, def) if temp has a unique reaching definition and None otherwise.
@@ -45,10 +44,8 @@ impl ReachingDefProcessor {
         if defs.len() != 1 {
             return None;
         }
-        if let Def::Alias(def) = defs.iter().next().unwrap() {
-            return Some((temp, *def));
-        }
-        None
+        let Def::Alias(def) = defs.iter().next().unwrap();
+        Some((temp, *def))
     }
 
     /// Gets the propagated local resolving aliases using the reaching definitions.
@@ -74,38 +71,20 @@ impl ReachingDefProcessor {
     }
 
     /// Perform copy propagation based on reaching definitions analysis results.
-    pub fn copy_propagation(code: &[Bytecode], defs: &ReachingDefAnnotation) -> Vec<Bytecode> {
+    pub fn copy_propagation(code: Vec<Bytecode>, defs: &ReachingDefAnnotation) -> Vec<Bytecode> {
         use Bytecode::*;
         let mut res = vec![];
-        for (pc, bytecode) in code.iter().enumerate() {
+        for (pc, bytecode) in code.into_iter().enumerate() {
             let no_defs = BTreeMap::new();
             let reaching_defs = defs.0.get(&(pc as CodeOffset)).unwrap_or(&no_defs);
-            let propagate = |local| Self::get_propagated_local(local, reaching_defs);
+            let mut propagate = |local| Self::get_propagated_local(local, reaching_defs);
             match bytecode {
-                Assign(attr, dest, src, a_kind) => {
-                    let src = propagate(*src);
-                    res.push(Assign(*attr, *dest, src, *a_kind));
+                Assign(attr, dest, src, kind) => {
+                    // For assign, override the generic treatment, as we do not want to
+                    // propagate to the destination.
+                    res.push(Assign(attr, dest, propagate(src), kind));
                 }
-                Call(attr, dests, op, srcs) => {
-                    let transformed_dests = dests.iter().map(|d| propagate(*d)).collect();
-                    let transformed_srcs = srcs.iter().map(|s| propagate(*s)).collect();
-                    res.push(Call(*attr, transformed_dests, op.clone(), transformed_srcs));
-                }
-                Ret(attr, rets) => {
-                    let transformed_rets = rets.iter().map(|r| propagate(*r)).collect();
-                    res.push(Ret(*attr, transformed_rets));
-                }
-
-                Branch(attr, if_label, else_label, cond) => {
-                    res.push(Branch(*attr, *if_label, *else_label, propagate(*cond)));
-                }
-
-                Abort(attr, cond) => {
-                    res.push(Abort(*attr, propagate(*cond)));
-                }
-                _ => {
-                    res.push(bytecode.clone());
-                }
+                _ => res.push(bytecode.remap_vars(&mut propagate)),
             }
         }
         res
@@ -137,28 +116,21 @@ impl FunctionTargetProcessor for ReachingDefProcessor {
             let mut analyzer = ReachingDefAnalysis {
                 target: FunctionTarget::new(func_env, &data),
             };
-            let mut block_state_map = analyzer.analyze_function(
+            let block_state_map = analyzer.analyze_function(
                 ReachingDefState {
                     map: BTreeMap::new(),
                 },
                 &data.code,
                 &cfg,
             );
-            // Convert the block state map into a map for each code offset. We achieve this by
-            // replaying execution of the instructions of each individual block, based on the pre
-            // state. Because the analyzes converged to a fixpoint, the result is sound.
-            let mut defs = BTreeMap::new();
-            for block_id in cfg.blocks() {
-                let mut state = block_state_map.remove(&block_id).expect("basic block").pre;
-                for code_offset in cfg.instr_indexes(block_id) {
-                    defs.insert(code_offset, state.map.clone());
-                    state = analyzer.execute(state, &data.code[code_offset as usize], code_offset);
-                }
-            }
+            let defs =
+                analyzer.state_per_instruction(block_state_map, &data.code, &cfg, |before, _| {
+                    before.map.clone()
+                });
 
             // Run copy propagation transformation.
             let annotations = ReachingDefAnnotation(defs);
-            data.code = Self::copy_propagation(&data.code, &annotations);
+            data.code = Self::copy_propagation(data.code, &annotations);
 
             // Currently we do not need reaching defs after this phase. If so in the future, we
             // need to uncomment this statement.
@@ -181,54 +153,40 @@ struct ReachingDefState {
     map: BTreeMap<TempIndex, BTreeSet<Def>>,
 }
 
-impl<'a> ReachingDefAnalysis<'a> {
+impl<'a> ReachingDefAnalysis<'a> {}
+
+impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
+    type State = ReachingDefState;
+    type AnalysisError = ();
+    const BACKWARD: bool = false;
+
     fn execute(
-        &mut self,
+        &self,
         pre: ReachingDefState,
         instr: &Bytecode,
-        _idx: CodeOffset,
-    ) -> ReachingDefState {
+        _offset: CodeOffset,
+    ) -> Result<ReachingDefState, ()> {
         use Bytecode::*;
         let mut post = pre;
         match instr {
             Assign(_, dst, src, _) => {
                 // Only define aliases for temporaries. We want to keep names for user
-                // declared variables for better debugging.
-                if self.target.is_temporary(*dst) {
+                // declared variables for better debugging. Also don't skip assigns
+                // from proxied parameters. The later is currently needed because the
+                // Boogie backend does not allow to write to such values, which happens via
+                // WriteBack instructions.
+                // TODO(remove): this restriction should be handled in the backend instead of here.
+                if self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none() {
                     post.def_alias(*dst, *src);
                 }
             }
-            Load(_, dst, cons) => {
-                post.def_const(*dst, cons.clone());
-            }
-            Call(_, dsts, ..) => {
-                for dst in dsts {
-                    post.kill(*dst);
+            _ => {
+                for dst in instr.modifies() {
+                    post.kill(dst);
                 }
             }
-            _ => {}
         }
-        post
-    }
-}
-
-impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
-    type State = ReachingDefState;
-    type AnalysisError = ();
-
-    fn execute_block(
-        &mut self,
-        block_id: BlockId,
-        pre_state: Self::State,
-        instrs: &[Bytecode],
-        cfg: &StacklessControlFlowGraph,
-    ) -> Result<Self::State, Self::AnalysisError> {
-        let mut state = pre_state;
-        for offset in cfg.instr_indexes(block_id) {
-            let instr = &instrs[offset as usize];
-            state = self.execute(state, instr, offset);
-        }
-        Ok(state)
+        Ok(post)
     }
 }
 
@@ -262,13 +220,6 @@ impl ReachingDefState {
         set.insert(Def::Alias(src));
     }
 
-    fn def_const(&mut self, dest: TempIndex, cons: Constant) {
-        let set = self.map.entry(dest).or_insert_with(BTreeSet::new);
-        // Kill previous definitions.
-        set.clear();
-        set.insert(Def::Const(cons));
-    }
-
     fn kill(&mut self, dest: TempIndex) {
         self.map.remove(&dest);
     }
@@ -300,7 +251,6 @@ pub fn format_reaching_def_annotation(
                                         "{}",
                                         target.get_local_name(*a).display(target.symbol_pool())
                                     ),
-                                    Def::Const(c) => format!("{}", c),
                                 }
                             })
                             .join(", ")

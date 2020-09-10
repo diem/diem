@@ -52,32 +52,44 @@ pub fun TestMutRefs::unpack_incorrect(r: &mut TestMutRefs::R): u64 {
 
 ============ after pipeline `livevar` ================
 
-pub fun TestMutRefs::unpack(r: &mut TestMutRefs::R): u64 {
+pub fun TestMutRefs::unpack(r: TestMutRefs::R): (u64, TestMutRefs::R) {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R
      var value: &mut u64
-     var $t4: u64
+     var $t4: TestMutRefs::R
+     var $t5: &mut TestMutRefs::R
+     var $t6: u64
      // live vars: r
-  0: value := borrow_field<TestMutRefs::R>.value(r)
-     // live vars: value
-  1: result := read_ref(value)
-     // live vars: result, value
-  2: $t4 := 0
+  0: $t4 := move(r)
+     // live vars: $t4
+  1: $t5 := borrow_local($t4)
+     // live vars: $t4, $t5
+  2: value := borrow_field<TestMutRefs::R>.value($t5)
+     // live vars: value, $t4
+  3: result := read_ref(value)
      // live vars: result, value, $t4
-  3: write_ref(value, $t4)
-     // live vars: result
-  4: return result
+  4: $t6 := 0
+     // live vars: result, value, $t4, $t6
+  5: write_ref(value, $t6)
+     // live vars: result, $t4
+  6: return (result, $t4)
 }
 
 
-pub fun TestMutRefs::unpack_incorrect(r: &mut TestMutRefs::R): u64 {
+pub fun TestMutRefs::unpack_incorrect(r: TestMutRefs::R): (u64, TestMutRefs::R) {
      var result: u64
      var tmp#$2: &mut TestMutRefs::R
      var value: &mut u64
+     var $t4: TestMutRefs::R
+     var $t5: &mut TestMutRefs::R
      // live vars: r
-  0: value := borrow_field<TestMutRefs::R>.value(r)
-     // live vars: value
-  1: result := read_ref(value)
-     // live vars: result
-  2: return result
+  0: $t4 := move(r)
+     // live vars: $t4
+  1: $t5 := borrow_local($t4)
+     // live vars: $t4, $t5
+  2: value := borrow_field<TestMutRefs::R>.value($t5)
+     // live vars: value, $t4
+  3: result := read_ref(value)
+     // live vars: result, $t4
+  4: return (result, $t4)
 }

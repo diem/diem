@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    borrow_analysis::BorrowAnnotation,
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    packref_analysis::{PackrefAnnotation, PackrefInstrumentation},
     stackless_bytecode::{
         AssignKind, AttrId, BorrowNode,
         Bytecode::{self, *},
+        Operation,
         Operation::*,
         TempIndex,
     },
-    writeback_analysis::WritebackAnnotation,
 };
-use spec_lang::{env::FunctionEnv, ty::Type};
+use spec_lang::{
+    env::{FunctionEnv, Loc},
+    ty::Type,
+};
 use std::collections::BTreeMap;
-use vm::file_format::CodeOffset;
 
 pub struct EliminateMutRefsProcessor {}
 
@@ -36,6 +36,7 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
         if func_env.is_native() {
             return data;
         }
+        let mut next_attr_id = data.next_free_attr_index();
         let local_types = &mut data.local_types;
         let return_types = &mut data.return_types;
 
@@ -90,7 +91,6 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
         }
 
         // move inputs into the temporaries
-        let mut next_attr_id = data.code.len();
         let mut new_code = vec![];
         for idx in 0..func_env.get_parameter_count() {
             new_code.push(Bytecode::Assign(
@@ -131,17 +131,6 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
             .collect();
 
         // transform original code
-        data.annotations
-            .remove::<BorrowAnnotation>()
-            .expect("borrow annotation");
-        let writeback_annotation = *data
-            .annotations
-            .remove::<WritebackAnnotation>()
-            .expect("writeback annotation");
-        let packref_annotation = *data
-            .annotations
-            .remove::<PackrefAnnotation>()
-            .expect("packref annotation");
         let code = std::mem::take(&mut data.code);
         let func_target = FunctionTarget::new(func_env, &data);
         let mut elim_mut_refs = EliminateMutRefs::new(
@@ -151,22 +140,12 @@ impl FunctionTargetProcessor for EliminateMutRefsProcessor {
             ref_param_inout_proxy_map,
             next_attr_id,
         );
-        for (code_offset, bytecode) in code.into_iter().enumerate() {
-            let PackrefInstrumentation {
-                before: packref_instrs_before,
-                after: packref_instrs_after,
-            } = packref_annotation
-                .get_packref_instrumentation_at(code_offset as CodeOffset)
-                .unwrap();
-            let writeback_instrs = writeback_annotation
-                .get_writeback_instrs_at(code_offset as CodeOffset)
-                .unwrap();
-            new_code.append(&mut elim_mut_refs.transform_bytecodes(packref_instrs_before));
+        for bytecode in code {
             new_code.append(&mut elim_mut_refs.transform_bytecode(bytecode));
-            new_code.append(&mut elim_mut_refs.transform_bytecodes(writeback_instrs));
-            new_code.append(&mut elim_mut_refs.transform_bytecodes(packref_instrs_after));
         }
+        let new_locations = std::mem::take(&mut elim_mut_refs.new_locations);
         data.code = new_code;
+        data.locations.extend(new_locations.into_iter());
         data
     }
 
@@ -181,6 +160,7 @@ pub struct EliminateMutRefs<'a> {
     ref_param_proxy_map: BTreeMap<TempIndex, TempIndex>,
     ref_param_inout_proxy_map: BTreeMap<Type, TempIndex>,
     next_attr_id: usize,
+    new_locations: BTreeMap<AttrId, Loc>,
 }
 
 impl<'a> EliminateMutRefs<'a> {
@@ -197,6 +177,7 @@ impl<'a> EliminateMutRefs<'a> {
             ref_param_proxy_map,
             ref_param_inout_proxy_map,
             next_attr_id,
+            new_locations: BTreeMap::new(),
         }
     }
 
@@ -234,48 +215,40 @@ impl<'a> EliminateMutRefs<'a> {
     }
 
     fn transform_bytecode_indices(&self, bytecode: Bytecode) -> Bytecode {
-        use BorrowNode::*;
-        match bytecode {
-            Assign(attr_id, dest, src, kind) => Assign(
-                attr_id,
-                self.transform_index(dest),
-                self.transform_index(src),
-                kind,
-            ),
-            Call(attr_id, dests, op, srcs) => Call(
+        if let Call(attr_id, dests, op, srcs) = bytecode {
+            Call(
                 attr_id,
                 self.transform_indices(dests),
-                op,
+                self.transform_operation(op),
                 self.transform_indices(srcs),
-            ),
-            Ret(attr_id, srcs) => Ret(attr_id, self.transform_indices(srcs)),
-            Load(attr_id, dest, c) => Load(attr_id, self.transform_index(dest), c),
-            Branch(attr_id, then_label, else_label, src) => {
-                Branch(attr_id, then_label, else_label, self.transform_index(src))
-            }
-            WriteBack(attr_id, GlobalRoot(struct_decl), src) => {
-                WriteBack(attr_id, GlobalRoot(struct_decl), self.transform_index(src))
-            }
-            WriteBack(attr_id, LocalRoot(dest), src) => WriteBack(
-                attr_id,
-                LocalRoot(self.transform_index_for_local_root(dest)),
-                self.transform_index(src),
-            ),
-            WriteBack(attr_id, Reference(dest), src) => WriteBack(
-                attr_id,
-                Reference(self.transform_index(dest)),
-                self.transform_index(src),
-            ),
-            UnpackRef(attr_id, src) => UnpackRef(attr_id, self.transform_index(src)),
-            PackRef(attr_id, src) => PackRef(attr_id, self.transform_index(src)),
-            _ => bytecode,
+            )
+        } else {
+            bytecode.remap_vars(&mut |idx| self.transform_index(idx))
         }
     }
 
-    fn new_attr_id(&mut self) -> AttrId {
+    fn transform_operation(&self, oper: Operation) -> Operation {
+        use BorrowNode::*;
+        use Operation::*;
+        match oper {
+            WriteBack(LocalRoot(dest)) => {
+                WriteBack(LocalRoot(self.transform_index_for_local_root(dest)))
+            }
+            WriteBack(Reference(dest)) => WriteBack(Reference(self.transform_index(dest))),
+            _ => oper,
+        }
+    }
+
+    fn new_attr_id(&mut self, loc: Loc) -> AttrId {
         let attr_id = AttrId::new(self.next_attr_id);
         self.next_attr_id += 1;
+        self.new_locations.insert(attr_id, loc);
         attr_id
+    }
+
+    fn clone_attr(&mut self, id: AttrId) -> AttrId {
+        let loc = self.func_target.get_bytecode_loc(id);
+        self.new_attr_id(loc)
     }
 
     fn transform_bytecode(&mut self, bytecode: Bytecode) -> Vec<Bytecode> {
@@ -298,13 +271,13 @@ impl<'a> EliminateMutRefs<'a> {
                         dests.push(read_ref_dest_idx);
                         *ref_param_count += 1;
                         read_ref_bytecodes.push(Call(
-                            self.new_attr_id(),
+                            self.clone_attr(attr_id),
                             vec![read_ref_dest_idx],
                             ReadRef,
                             vec![idx],
                         ));
                         write_ref_bytecodes.push(Call(
-                            self.new_attr_id(),
+                            self.clone_attr(attr_id),
                             vec![],
                             WriteRef,
                             vec![idx, read_ref_dest_idx],
@@ -318,7 +291,12 @@ impl<'a> EliminateMutRefs<'a> {
                 for idx in &dests {
                     let ty = self.func_target.get_local_type(*idx);
                     if ty.is_reference() {
-                        splice_bytecodes.push(Splice(self.new_attr_id(), *idx, splice_map.clone()));
+                        splice_bytecodes.push(Call(
+                            self.clone_attr(attr_id),
+                            vec![],
+                            Splice(splice_map.clone()),
+                            vec![*idx],
+                        ))
                     }
                 }
 
@@ -337,13 +315,5 @@ impl<'a> EliminateMutRefs<'a> {
             }
             _ => vec![bytecode],
         }
-    }
-
-    fn transform_bytecodes(&mut self, instrs: &[Bytecode]) -> Vec<Bytecode> {
-        instrs
-            .iter()
-            .map(|bytecode| self.transform_bytecode(bytecode.clone()))
-            .flatten()
-            .collect()
     }
 }

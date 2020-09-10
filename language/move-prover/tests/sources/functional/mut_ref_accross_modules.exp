@@ -9,7 +9,6 @@ error: data invariant does not hold
     =     at tests/sources/functional/mut_ref_accross_modules.move:64:5: decrement_invalid
     =         x = <redacted>,
     =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:67:17: decrement_invalid
     =     at tests/sources/functional/mut_ref_accross_modules.move:65:27: decrement_invalid
 
 error: post-condition does not hold
@@ -22,21 +21,17 @@ error: post-condition does not hold
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:59:9: increment_invalid
+    =     at tests/sources/functional/mut_ref_accross_modules.move:59:27: increment_invalid
 
-error: precondition does not hold at this call
+error:  This assertion might not hold.
 
-    ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
+    ┌── tests/sources/functional/mut_ref_accross_modules.move:88:13 ───
     │
- 30 │         invariant global<TSum>(0x0).sum == spec_sum;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ·
- 51 │     public fun increment(x: &mut T) acquires TSum {
-    │                --------- called function
+ 88 │             assert x.value > 0;
+    │             ^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:86:5: private_data_invariant_invalid
+    =         x = <redacted>
 
 error: data invariant does not hold
 
@@ -46,11 +41,9 @@ error: data invariant does not hold
     │         ^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:111:6: private_to_public_caller_invalid_data_invariant
-    =         r = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:34:5: new (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:36:9: new
-    =         x = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:35:17: new
+    =         x = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:36:23: new
     =         r = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:37:9: new
@@ -61,10 +54,7 @@ error: data invariant does not hold
     =         r = <redacted>,
     =         r = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:73:27: private_decrement
-    =     at tests/sources/functional/mut_ref_accross_modules.move:75:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:74:17: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:75:23: private_decrement
     =     at tests/sources/functional/mut_ref_accross_modules.move:72:9: private_decrement
-    =     at tests/sources/functional/mut_ref_accross_modules.move:122:22: private_to_public_caller_invalid_data_invariant

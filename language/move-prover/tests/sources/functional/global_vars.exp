@@ -6,38 +6,39 @@ error: post-condition does not hold
  118 │         ensures sum_of_T == old(sum_of_T) + 2;
      │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/global_vars.move:110:5: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:109:5: combi_incorrect
      =         r = <redacted>,
-     =         s = <redacted>
+     =         s = <redacted>,
+     =         result = <redacted>
+     =     at tests/sources/functional/global_vars.move:111:17: combi_incorrect
      =     at tests/sources/functional/global_vars.move:112:17: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:113:17: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:114:9: combi_incorrect
-     =     at tests/sources/functional/global_vars.move:115:13: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:113:9: combi_incorrect
+     =     at tests/sources/functional/global_vars.move:115:9: combi_incorrect
 
 error: post-condition does not hold
 
-    ┌── tests/sources/functional/global_vars.move:34:9 ───
+    ┌── tests/sources/functional/global_vars.move:33:9 ───
     │
- 34 │         ensures sum_of_T == old(sum_of_T) + 1;
+ 33 │         ensures sum_of_T == old(sum_of_T) + 1;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:30:5: pack_incorrect
+    =     at tests/sources/functional/global_vars.move:29:5: pack_incorrect
     =         result = <redacted>
-    =     at tests/sources/functional/global_vars.move:31:9: pack_incorrect
+    =     at tests/sources/functional/global_vars.move:30:9: pack_incorrect
 
 error: post-condition does not hold
 
-    ┌── tests/sources/functional/global_vars.move:57:9 ───
+    ┌── tests/sources/functional/global_vars.move:56:9 ───
     │
- 57 │         ensures sum_of_T == old(sum_of_T);
+ 56 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:52:5: unpack_incorrect
+    =     at tests/sources/functional/global_vars.move:51:5: unpack_incorrect
     =         t = <redacted>,
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/global_vars.move:53:13: unpack_incorrect
-    =     at tests/sources/functional/global_vars.move:54:9: unpack_incorrect
+    =     at tests/sources/functional/global_vars.move:52:13: unpack_incorrect
+    =     at tests/sources/functional/global_vars.move:53:9: unpack_incorrect
 
 error: post-condition does not hold
 
@@ -57,18 +58,19 @@ error: post-condition does not hold
 
 error: post-condition does not hold
 
-    ┌── tests/sources/functional/global_vars.move:91:9 ───
+    ┌── tests/sources/functional/global_vars.move:89:9 ───
     │
- 91 │         ensures sum_of_T == old(sum_of_T);
+ 89 │         ensures sum_of_T == old(sum_of_T);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/global_vars.move:84:5: update_incorrect
+    =     at tests/sources/functional/global_vars.move:82:5: update_incorrect
     =         t = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/global_vars.move:85:17: update_incorrect
-    =     at tests/sources/functional/global_vars.move:66:5: update_valid_still_mutating
+    =     at tests/sources/functional/global_vars.move:83:17: update_incorrect
+    =     at tests/sources/functional/global_vars.move:84:37: update_incorrect
+    =     at tests/sources/functional/global_vars.move:64:5: update_valid_still_mutating
     =         t = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/global_vars.move:67:9: update_valid_still_mutating
-    =     at tests/sources/functional/global_vars.move:66:9: update_valid_still_mutating
-    =     at tests/sources/functional/global_vars.move:87:9: update_incorrect
+    =     at tests/sources/functional/global_vars.move:65:19: update_valid_still_mutating
+    =     at tests/sources/functional/global_vars.move:64:9: update_valid_still_mutating
+    =     at tests/sources/functional/global_vars.move:85:9: update_incorrect

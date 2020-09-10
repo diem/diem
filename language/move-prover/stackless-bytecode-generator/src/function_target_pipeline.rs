@@ -129,19 +129,22 @@ impl FunctionTargetPipeline {
         }
 
         // Now that we determined the topological order, run each processor on it, breadth-first.
-        for processor in &self.processors {
-            for func_env in &topological_order {
-                targets.process(func_env, processor.as_ref());
-            }
+        let dump_to_file = |step_count: usize, name: &str, targets: &FunctionTargetsHolder| {
             // Dump result to file if requested
             if let Some(base_name) = &dump_to_file {
-                let name = processor.name();
                 let dump =
                     print_targets_for_test(env, &format!("after processor `{}`", name), targets);
-                let file_name = format!("{}.{}", base_name, name);
+                let file_name = format!("{}_{}_{}.bytecode", base_name, step_count, name);
                 debug!("dumping bytecode to `{}`", file_name);
                 fs::write(&file_name, &dump).expect("dumping bytecode");
             }
+        };
+        dump_to_file(0, "stackless", targets);
+        for (step_count, processor) in self.processors.iter().enumerate() {
+            for func_env in &topological_order {
+                targets.process(func_env, processor.as_ref());
+            }
+            dump_to_file(step_count + 1, &processor.name(), targets);
         }
     }
 }

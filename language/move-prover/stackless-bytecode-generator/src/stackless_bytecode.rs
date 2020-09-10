@@ -112,6 +112,14 @@ pub enum Operation {
     WriteRef,
     FreezeRef,
 
+    // Memory model
+    WriteBack(BorrowNode),
+    Splice(BTreeMap<usize, TempIndex>),
+    UnpackRef,
+    PackRef,
+    UnpackRefDeep,
+    PackRefDeep,
+
     // Unary
     CastU8,
     CastU64,
@@ -150,6 +158,16 @@ pub enum BorrowNode {
     GlobalRoot(StructDecl),
     LocalRoot(TempIndex),
     Reference(TempIndex),
+}
+
+impl BorrowNode {
+    pub fn get_ref(&self) -> Option<TempIndex> {
+        if let BorrowNode::Reference(idx) = self {
+            Some(*idx)
+        } else {
+            None
+        }
+    }
 }
 
 /// A display object for a borrow node.
@@ -221,12 +239,6 @@ pub enum Bytecode {
     Label(AttrId, Label),
     Abort(AttrId, TempIndex),
     Nop(AttrId),
-
-    WriteBack(AttrId, BorrowNode, TempIndex),
-    Splice(AttrId, TempIndex, BTreeMap<usize, TempIndex>),
-
-    UnpackRef(AttrId, TempIndex),
-    PackRef(AttrId, TempIndex),
 }
 
 impl Bytecode {
@@ -242,11 +254,7 @@ impl Bytecode {
             | Jump(id, ..)
             | Label(id, ..)
             | Abort(id, ..)
-            | Nop(id)
-            | WriteBack(id, ..)
-            | UnpackRef(id, ..)
-            | PackRef(id, ..)
-            | Splice(id, ..) => *id,
+            | Nop(id) => *id,
         }
     }
 
@@ -301,7 +309,7 @@ impl Bytecode {
         label_offsets: &BTreeMap<Label, CodeOffset>,
     ) -> Vec<CodeOffset> {
         let bytecode = &code[pc as usize];
-        assert!(bytecode.is_branch());
+        assert!(bytecode.is_branch(), "{:?} at {}", bytecode, pc);
         let mut v = vec![];
         for label in bytecode.branch_dests() {
             v.push(*label_offsets.get(&label).expect("label defined"));
@@ -320,6 +328,54 @@ impl Bytecode {
             .filter(|(_, bytecode)| bytecode.is_exit())
             .map(|(idx, _)| idx as CodeOffset)
             .collect()
+    }
+
+    /// Remaps variables in the instruction.
+    pub fn remap_vars<F>(self, f: &mut F) -> Self
+    where
+        F: FnMut(TempIndex) -> TempIndex,
+    {
+        use BorrowNode::*;
+        use Bytecode::*;
+        use Operation::*;
+        let map = |f: &mut F, v: Vec<TempIndex>| -> Vec<TempIndex> {
+            v.into_iter().map(|i| f(i)).collect()
+        };
+        match self {
+            Load(attr, dst, cons) => Load(attr, f(dst), cons),
+            Assign(attr, dest, src, kind) => Assign(attr, f(dest), f(src), kind),
+            Call(attr, _, WriteBack(LocalRoot(dest)), srcs) => {
+                Call(attr, vec![], WriteBack(LocalRoot(f(dest))), map(f, srcs))
+            }
+            Call(attr, _, WriteBack(Reference(dest)), srcs) => {
+                Call(attr, vec![], WriteBack(Reference(f(dest))), map(f, srcs))
+            }
+            Call(attr, dests, Splice(m), srcs) => {
+                let m = m.into_iter().map(|(p, t)| (p, f(t))).collect();
+                Call(attr, map(f, dests), Splice(m), map(f, srcs))
+            }
+            Call(attr, dests, op, srcs) => Call(attr, map(f, dests), op, map(f, srcs)),
+            Ret(attr, rets) => Ret(attr, map(f, rets)),
+            Branch(attr, if_label, else_label, cond) => Branch(attr, if_label, else_label, f(cond)),
+            Abort(attr, cond) => Abort(attr, f(cond)),
+            _ => self,
+        }
+    }
+
+    /// Return the temporaries this instruction modifies.
+    pub fn modifies(&self) -> Vec<TempIndex> {
+        use BorrowNode::*;
+        use Bytecode::*;
+        use Operation::*;
+        match self {
+            Assign(_, dest, ..)
+            | Load(_, dest, ..)
+            | Call(_, _, WriteBack(LocalRoot(dest)), ..)
+            | Call(_, _, WriteBack(Reference(dest)), ..) => vec![*dest],
+            Call(_, _, WriteRef, srcs) => vec![srcs[0]],
+            Call(_, dests, ..) => dests.clone(),
+            _ => vec![],
+        }
     }
 }
 
@@ -401,22 +457,6 @@ impl<'env> fmt::Display for BytecodeDisplay<'env> {
             Nop(_) => {
                 write!(f, "nop")?;
             }
-            WriteBack(_, dst, src) => write!(
-                f,
-                "{} <- {}",
-                dst.display(self.func_target),
-                self.lstr(*src)
-            )?,
-            UnpackRef(_, src) => write!(f, "UnpackRef({})", self.lstr(*src))?,
-            PackRef(_, src) => write!(f, "PackRef({})", self.lstr(*src))?,
-            Splice(_, dst, srcs) => write!(
-                f,
-                "{} ~- [{}]",
-                self.lstr(*dst),
-                srcs.iter()
-                    .map(|(idx, local)| format!("{} -> {}", idx, self.lstr(*local)))
-                    .join(", ")
-            )?,
         }
         Ok(())
     }
@@ -564,6 +604,34 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             FreezeRef => {
                 write!(f, "freeze_ref")?;
             }
+
+            // Memory model
+            UnpackRef => {
+                write!(f, "unpack_ref")?;
+            }
+            PackRef => {
+                write!(f, "pack_ref")?;
+            }
+            PackRefDeep => {
+                write!(f, "pack_ref_deep")?;
+            }
+            UnpackRefDeep => {
+                write!(f, "unpack_ref_deep")?;
+            }
+            WriteBack(node) => write!(f, "write_back[{}]", node.display(self.func_target))?,
+            Splice(map) => write!(
+                f,
+                "splice[{}]",
+                map.iter()
+                    .map(|(idx, local)| format!(
+                        "{} -> {}",
+                        idx,
+                        self.func_target
+                            .symbol_pool()
+                            .string(self.func_target.get_local_name(*local))
+                    ))
+                    .join(", ")
+            )?,
 
             // Unary
             CastU8 => write!(f, "(u8)")?,

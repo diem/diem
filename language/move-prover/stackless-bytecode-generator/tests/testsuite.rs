@@ -12,12 +12,10 @@ use stackless_bytecode_generator::{
     eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
-    lifetime_analysis::LifetimeAnalysisProcessor,
     livevar_analysis::LiveVarAnalysisProcessor,
-    packref_analysis::PackrefAnalysisProcessor,
+    memory_instrumentation::MemoryInstrumentationProcessor,
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
-    writeback_analysis::WritebackAnalysisProcessor,
 };
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 
@@ -31,59 +29,47 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
             Ok(Some(pipeline))
         }
+        "eliminate_mut_refs" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "reaching_def" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            Ok(Some(pipeline))
+        }
         "livevar" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
             pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
             Ok(Some(pipeline))
         }
         "borrow" => {
             let mut pipeline = FunctionTargetPipeline::default();
             pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            Ok(Some(pipeline))
-        }
-        "writeback" => {
-            let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(WritebackAnalysisProcessor {}));
-            Ok(Some(pipeline))
-        }
-        "packref" => {
-            let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(PackrefAnalysisProcessor {}));
-            Ok(Some(pipeline))
-        }
-        "eliminate_mut_refs" => {
-            let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
-            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(WritebackAnalysisProcessor {}));
-            pipeline.add_processor(Box::new(PackrefAnalysisProcessor {}));
             pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
             Ok(Some(pipeline))
         }
-        "lifetime" => {
+        "memory_instr" => {
             let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(LifetimeAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
             Ok(Some(pipeline))
         }
-        "reaching_def" => {
-            let mut pipeline = FunctionTargetPipeline::default();
-            pipeline.add_processor(Box::new(ReachingDefProcessor()));
-            Ok(Some(pipeline))
-        }
+
         _ => Err(anyhow!(
             "the sub-directory `{}` has no associated pipeline to test",
             dir_name

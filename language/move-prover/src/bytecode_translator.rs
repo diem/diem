@@ -46,6 +46,7 @@ use spec_lang::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
     SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
 };
+use stackless_bytecode_generator::stackless_bytecode::TempIndex;
 use std::cell::RefCell;
 
 const MODIFY_RESOURCE_FAILS_MESSAGE: &str =
@@ -183,11 +184,10 @@ impl BytecodeContext {
         use BorrowNode::*;
         match bytecode {
             Assign(_, dest, _, _) => vec![*dest],
-            Call(_, dests, _, _) => dests.clone(),
             Load(_, dest, _) => vec![*dest],
-            WriteBack(_, LocalRoot(dest), _) => vec![*dest],
-            WriteBack(_, Reference(dest), _) => vec![*dest],
-            Splice(_, dest, _) => vec![*dest],
+            Call(_, _, Operation::WriteBack(LocalRoot(dest)), _) => vec![*dest],
+            Call(_, _, Operation::WriteBack(Reference(dest)), _) => vec![*dest],
+            Call(_, dests, _, _) => dests.clone(),
             _ => vec![],
         }
     }
@@ -390,7 +390,7 @@ impl<'env> ModuleTranslator<'env> {
                     self.module_env.env,
                     field_param,
                     &field_env.get_type(),
-                    WellFormedMode::Default,
+                    WellFormedMode::WithInvariant,
                 );
                 emit!(self.writer, &type_check);
                 // TODO: Remove the use of $ExtendValueArray; it is deprecated
@@ -407,7 +407,7 @@ impl<'env> ModuleTranslator<'env> {
                     self.module_env.env,
                     field_param,
                     &field_env.get_type(),
-                    WellFormedMode::Default,
+                    WellFormedMode::WithInvariant,
                 );
                 emit!(self.writer, &type_check);
                 ctor_expr = format!(
@@ -460,7 +460,7 @@ impl<'env> ModuleTranslator<'env> {
                 self.module_env.env,
                 &format!("{}", field_env.get_name().display(struct_env.symbol_pool())),
                 &field_env.get_type(),
-                WellFormedMode::Default,
+                WellFormedMode::WithInvariant,
             );
             emit!(self.writer, &type_check);
         }
@@ -680,17 +680,12 @@ impl<'env> ModuleTranslator<'env> {
     /// Generate preconditions to make sure procedure parameters are well formed
     fn generate_function_args_well_formed(&self, func_target: &FunctionTarget<'_>) {
         let num_args = func_target.get_parameter_count();
-        let mode = if func_target.is_public() {
-            // For public functions, we always include invariants in type assumptions for parameters,
-            // even for mutable references.
-            WellFormedMode::WithInvariant
-        } else {
-            WellFormedMode::Default
-        };
+
         for i in 0..num_args {
             let local_name = func_target.get_local_name(i);
             let local_str = format!("{}", local_name.display(func_target.symbol_pool()));
             let local_type = func_target.get_local_type(i);
+            let mode = self.get_wellformed_mode(func_target, i);
             let type_check = boogie_requires_well_formed(
                 self.module_env.env,
                 &local_str,
@@ -701,6 +696,29 @@ impl<'env> ModuleTranslator<'env> {
             if !type_check.is_empty() {
                 emitln!(self.writer, &type_check);
             }
+        }
+    }
+
+    /// Returns true if the invariant for the data at idx can be assumed to hold. This is the
+    /// case if the type is a value and the local is not an in/out parameter of a previous `&mut`
+    /// private function parameter.
+    fn invariant_is_valid(&self, func_target: &FunctionTarget<'_>, idx: TempIndex) -> bool {
+        let ty = func_target.get_local_type(idx);
+        !ty.is_reference()
+            && (func_target.is_public() || func_target.get_ref_proxy_index(idx).is_none())
+    }
+
+    /// Get the mode in which to assume well-formedness. Depending on whether the invariant is
+    /// valid, types and invariant are assumed, or only types.
+    fn get_wellformed_mode(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        idx: TempIndex,
+    ) -> WellFormedMode {
+        if self.invariant_is_valid(func_target, idx) {
+            WellFormedMode::WithInvariant
+        } else {
+            WellFormedMode::WithoutInvariant
         }
     }
 
@@ -976,65 +994,6 @@ impl<'env> ModuleTranslator<'env> {
 
         // Translate the bytecode instruction.
         match bytecode {
-            UnpackRef(_, src) => {
-                self.enforce_before_update_invariant(func_target, *src);
-            }
-            PackRef(_, src) => {
-                self.enforce_after_update_invariant(func_target, *src);
-            }
-            WriteBack(_, dest, src) => {
-                use BorrowNode::*;
-                match dest {
-                    GlobalRoot(struct_decl) => {
-                        let memory = struct_decl.module_id.qualified(struct_decl.struct_id);
-                        let spec_translator = self.new_spec_translator_for_module();
-                        spec_translator.emit_on_update_global_invariant_assumes(memory);
-                        spec_translator.save_memory_for_update_invariants(memory);
-                        let memory_name =
-                            boogie_resource_memory_name(func_target.global_env(), memory);
-                        emitln!(
-                            self.writer,
-                            "call {} := $WritebackToGlobal({}, {});",
-                            memory_name,
-                            memory_name,
-                            str_local(*src),
-                        );
-                        spec_translator.emit_on_update_global_invariant_asserts(memory);
-                    }
-                    LocalRoot(idx) => {
-                        emitln!(
-                            self.writer,
-                            "call {} := $WritebackToValue({}, {}, {});",
-                            str_local(*idx),
-                            str_local(*src),
-                            idx,
-                            str_local(*idx)
-                        );
-                    }
-                    Reference(idx) => {
-                        emitln!(
-                            self.writer,
-                            "call {} := $WritebackToReference({}, {});",
-                            str_local(*idx),
-                            str_local(*src),
-                            str_local(*idx)
-                        );
-                    }
-                }
-            }
-            Splice(_, dest, srcs) => {
-                assert!(!srcs.is_empty());
-                emitln!(
-                    self.writer,
-                    "call {} := $Splice{}({}, {});",
-                    str_local(*dest),
-                    srcs.len(),
-                    srcs.iter()
-                        .map(|(pos, idx)| format!("{}, {}", pos, str_local(*idx)))
-                        .join(", "),
-                    str_local(*dest)
-                );
-            }
             SpecBlock(_, block_id) => {
                 self.generate_function_spec_inside_impl(func_target, *block_id);
             }
@@ -1057,13 +1016,14 @@ impl<'env> ModuleTranslator<'env> {
                             }
                         }
                         if targets.contains(&idx) {
+                            let mode = self.get_wellformed_mode(func_target, idx);
                             emit!(
                                 self.writer,
                                 &boogie_well_formed_check(
                                     self.module_env.env,
                                     str_local(idx).as_str(),
                                     &func_target.get_local_type(idx),
-                                    WellFormedMode::Default,
+                                    mode
                                 )
                             );
                         }
@@ -1120,6 +1080,74 @@ impl<'env> ModuleTranslator<'env> {
             Call(_, dests, oper, srcs) => {
                 use Operation::*;
                 match oper {
+                    UnpackRef => {
+                        self.unpack_ref(false, func_target, srcs[0]);
+                    }
+                    UnpackRefDeep => {
+                        self.unpack_ref(true, func_target, srcs[0]);
+                    }
+                    PackRef => {
+                        self.pack_ref(false, func_target, srcs[0]);
+                    }
+                    PackRefDeep => {
+                        self.pack_ref(true, func_target, srcs[0]);
+                    }
+                    WriteBack(dest) => {
+                        use BorrowNode::*;
+                        let src = srcs[0];
+                        match dest {
+                            GlobalRoot(struct_decl) => {
+                                let memory = struct_decl.module_id.qualified(struct_decl.struct_id);
+                                let spec_translator = self.new_spec_translator_for_module();
+                                spec_translator.emit_on_update_global_invariant_assumes(memory);
+                                spec_translator.save_memory_for_update_invariants(memory);
+                                let memory_name =
+                                    boogie_resource_memory_name(func_target.global_env(), memory);
+                                emitln!(
+                                    self.writer,
+                                    "call {} := $WritebackToGlobal({}, {});",
+                                    memory_name,
+                                    memory_name,
+                                    str_local(src),
+                                );
+                                spec_translator.emit_on_update_global_invariant_asserts(memory);
+                            }
+                            LocalRoot(idx) => {
+                                emitln!(
+                                    self.writer,
+                                    "call {} := $WritebackToValue({}, {}, {});",
+                                    str_local(*idx),
+                                    str_local(src),
+                                    idx,
+                                    str_local(*idx)
+                                );
+                            }
+                            Reference(idx) => {
+                                emitln!(
+                                    self.writer,
+                                    "call {} := $WritebackToReference({}, {});",
+                                    str_local(*idx),
+                                    str_local(src),
+                                    str_local(*idx)
+                                );
+                            }
+                        }
+                    }
+                    Splice(map) => {
+                        let src = srcs[0];
+                        assert!(!map.is_empty());
+                        emitln!(
+                            self.writer,
+                            "call {} := $Splice{}({}, {});",
+                            str_local(src),
+                            map.len(),
+                            map.iter()
+                                .map(|(pos, idx)| format!("{}, {}", pos, str_local(*idx)))
+                                .join(", "),
+                            str_local(src)
+                        );
+                    }
+
                     BorrowLoc => {
                         let src = srcs[0];
                         let dest = dests[0];
@@ -1137,7 +1165,7 @@ impl<'env> ModuleTranslator<'env> {
                                     self.module_env.env,
                                     str_local(dest).as_str(),
                                     &func_target.get_local_type(dest),
-                                    // At the begining of a borrow, invariant holds.
+                                    // At the beginning of a borrow, invariant holds.
                                     WellFormedMode::WithInvariant,
                                 )
                             );
@@ -1160,10 +1188,19 @@ impl<'env> ModuleTranslator<'env> {
                                     self.module_env.env,
                                     str_local(dest).as_str(),
                                     &func_target.get_local_type(dest),
-                                    WellFormedMode::Default
+                                    WellFormedMode::WithoutInvariant
                                 )
                             );
                         }
+                        // We need to assert the invariant, if there is any, since we
+                        // are creating a value from a reference, for which the invariant
+                        // may not hold.
+                        let spec_translator = self.new_spec_translator_for_module();
+                        spec_translator.emit_data_invariant_assert_for_ref_read(
+                            &loc,
+                            &func_target.get_local_type(dest),
+                            str_local(dest).as_str(),
+                        );
                     }
                     WriteRef => {
                         let reference = srcs[0];
@@ -1230,12 +1267,13 @@ impl<'env> ModuleTranslator<'env> {
                                 .map(|dest_idx| {
                                     let dest = str_local(*dest_idx).to_string();
                                     if self.options.prover.assume_wellformed_on_access {
+                                        // TODO(wrwg): determine when we assume with invariant.
                                         let dest_type = &func_target.get_local_type(*dest_idx);
                                         dest_type_assumptions.push(boogie_well_formed_check(
                                             self.module_env.env,
                                             &dest,
                                             dest_type,
-                                            WellFormedMode::Default,
+                                            WellFormedMode::WithInvariant,
                                         ));
                                     }
                                     dest
@@ -1366,7 +1404,8 @@ impl<'env> ModuleTranslator<'env> {
                                     self.module_env.env,
                                     str_local(dest).as_str(),
                                     &func_target.get_local_type(dest),
-                                    WellFormedMode::Default
+                                    // This is a &mut, so do not assume invariant.
+                                    WellFormedMode::WithoutInvariant
                                 )
                             );
                         }
@@ -1381,11 +1420,12 @@ impl<'env> ModuleTranslator<'env> {
                             .get_module(*mid)
                             .into_struct(*sid);
                         let field_env = &struct_env.get_field_by_offset(*field_offset);
+                        let is_ref = func_target.get_local_type(src).is_reference();
                         emitln!(
                             self.writer,
                             "call {} := {}({}, {});",
                             str_local(dest),
-                            if func_target.get_local_type(src).is_reference() {
+                            if is_ref {
                                 "$GetFieldFromReference"
                             } else {
                                 "$GetFieldFromValue"
@@ -1395,14 +1435,30 @@ impl<'env> ModuleTranslator<'env> {
                         );
                         emit_track_local(dest);
                         if self.options.prover.assume_wellformed_on_access {
+                            let mode = if is_ref {
+                                WellFormedMode::WithoutInvariant
+                            } else {
+                                WellFormedMode::WithInvariant
+                            };
                             emit!(
                                 self.writer,
                                 &boogie_well_formed_check(
                                     self.module_env.env,
                                     str_local(dest).as_str(),
                                     &func_target.get_local_type(dest),
-                                    WellFormedMode::Default
+                                    mode,
                                 )
+                            );
+                        }
+                        if is_ref {
+                            // We need to assert the invariant, if there is any, since we
+                            // are selecting a field from a reference, for which the invariant
+                            // may not hold.
+                            let spec_translator = self.new_spec_translator_for_module();
+                            spec_translator.emit_data_invariant_assert_for_ref_read(
+                                &loc,
+                                &func_target.get_local_type(dest),
+                                str_local(dest).as_str(),
                             );
                         }
                     }
@@ -1540,7 +1596,7 @@ impl<'env> ModuleTranslator<'env> {
                                     self.module_env.env,
                                     str_local(dest).as_str(),
                                     &func_target.get_local_type(dest),
-                                    WellFormedMode::Default
+                                    WellFormedMode::WithInvariant
                                 )
                             );
                         }
@@ -1895,11 +1951,11 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Enforce the invariant of an updated value before mutation starts. Does nothing if there
     /// is no before-update invariant.
-    fn enforce_before_update_invariant(&self, func_target: &FunctionTarget<'_>, idx: usize) {
+    fn unpack_ref(&self, deep: bool, func_target: &FunctionTarget<'_>, idx: usize) {
         if let Some((struct_env, type_args)) =
             self.get_referred_struct(func_target.get_local_type(idx))
         {
-            if SpecTranslator::has_before_update_invariant(&struct_env) {
+            if SpecTranslator::has_unpack_ref(&struct_env) {
                 let name = func_target
                     .symbol_pool()
                     .string(func_target.get_local_name(idx));
@@ -1910,8 +1966,9 @@ impl<'env> ModuleTranslator<'env> {
                     .join(", ");
                 emitln!(
                     self.writer,
-                    "call {}_before_update_inv({});",
+                    "call {}_$unpack_ref{}({});",
                     boogie_struct_name(&struct_env),
+                    if deep { "_deep" } else { "" },
                     args_str,
                 );
             }
@@ -1920,11 +1977,11 @@ impl<'env> ModuleTranslator<'env> {
 
     /// Enforce the invariant of an updated value after mutation ended. Does nothing if there is
     /// no after-update invariant.
-    fn enforce_after_update_invariant(&self, func_target: &FunctionTarget<'_>, idx: usize) {
+    fn pack_ref(&self, deep: bool, func_target: &FunctionTarget<'_>, idx: usize) {
         if let Some((struct_env, type_args)) =
             self.get_referred_struct(func_target.get_local_type(idx))
         {
-            if SpecTranslator::has_after_update_invariant(&struct_env) {
+            if SpecTranslator::pack_ref(&struct_env) {
                 let name = func_target
                     .symbol_pool()
                     .string(func_target.get_local_name(idx));
@@ -1935,8 +1992,9 @@ impl<'env> ModuleTranslator<'env> {
                     .join(", ");
                 emitln!(
                     self.writer,
-                    "call {}_after_update_inv({});",
+                    "call {}_$pack_ref{}({});",
                     boogie_struct_name(&struct_env),
+                    if deep { "_deep" } else { "" },
                     args_str,
                 );
             }

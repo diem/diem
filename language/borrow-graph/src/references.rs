@@ -25,6 +25,11 @@ impl RefID {
     pub const fn new(x: usize) -> Self {
         RefID(x)
     }
+
+    /// Returns the number representing this reference id.
+    pub fn number(&self) -> usize {
+        self.0
+    }
 }
 
 /// An edge in the borrow graph

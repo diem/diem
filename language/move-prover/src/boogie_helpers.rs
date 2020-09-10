@@ -205,9 +205,6 @@ pub fn boogie_local_type(ty: &Type) -> String {
 /// A value indicating how to perform well-formed checks.
 #[derive(Clone, Copy, PartialEq)]
 pub enum WellFormedMode {
-    /// Assume types and invariants in auto mode. If the type is a mutable reference, invariants
-    /// will not be assumed.
-    Default,
     /// Assume types and invariants.
     WithInvariant,
     /// Assume types only.
@@ -221,51 +218,69 @@ pub fn boogie_well_formed_expr(
     ty: &Type,
     mode: WellFormedMode,
 ) -> String {
-    boogie_well_formed_expr_impl(env, name, ty, mode, 0)
+    boogie_well_formed_expr_impl(env, name, ty, true, mode, 0)
+}
+
+/// Create boogie invariant check boolean expression.
+pub fn boogie_inv_expr(env: &GlobalEnv, name: &str, ty: &Type) -> String {
+    boogie_well_formed_expr_impl(env, name, ty, false, WellFormedMode::WithInvariant, 0)
 }
 
 fn boogie_well_formed_expr_impl(
     env: &GlobalEnv,
     name: &str,
     ty: &Type,
+    with_types: bool,
     mode: WellFormedMode,
     nest: usize,
 ) -> String {
     let mut conds = vec![];
+    let mut add_type_check = |s: String| {
+        if with_types {
+            conds.push(s);
+        }
+    };
     match ty {
         Type::Primitive(p) => match p {
-            PrimitiveType::U8 => conds.push(format!("$IsValidU8({})", name)),
-            PrimitiveType::U64 => conds.push(format!("$IsValidU64({})", name)),
-            PrimitiveType::U128 => conds.push(format!("$IsValidU128({})", name)),
-            PrimitiveType::Num => conds.push(format!("$IsValidNum({})", name)),
-            PrimitiveType::Bool => conds.push(format!("is#$Boolean({})", name)),
-            PrimitiveType::Address => conds.push(format!("is#$Address({})", name)),
+            PrimitiveType::U8 => add_type_check(format!("$IsValidU8({})", name)),
+            PrimitiveType::U64 => add_type_check(format!("$IsValidU64({})", name)),
+            PrimitiveType::U128 => add_type_check(format!("$IsValidU128({})", name)),
+            PrimitiveType::Num => add_type_check(format!("$IsValidNum({})", name)),
+            PrimitiveType::Bool => add_type_check(format!("is#$Boolean({})", name)),
+            PrimitiveType::Address => add_type_check(format!("is#$Address({})", name)),
             // TODO fix this for a real boogie check
-            PrimitiveType::Signer => conds.push(format!("is#$Address({})", name)),
-            PrimitiveType::Range => conds.push(format!("$IsValidRange({})", name)),
-            PrimitiveType::TypeValue => conds.push(format!("is#$Type({})", name)),
+            PrimitiveType::Signer => add_type_check(format!("is#$Address({})", name)),
+            PrimitiveType::Range => add_type_check(format!("$IsValidRange({})", name)),
+            PrimitiveType::TypeValue => add_type_check(format!("is#$Type({})", name)),
         },
         Type::Vector(elem_ty) => {
-            conds.push(format!("$Vector_is_well_formed({})", name));
+            add_type_check(format!("$Vector_$is_well_formed({})", name));
             if !matches!(**elem_ty, Type::TypeParameter(..)) {
                 let nest_value = &format!("$select_vector({},$${})", name, nest);
-                conds.push(format!(
-                    "(forall $${}: int :: {{{}}} $${} >= 0 && $${} < $vlen({}) ==> {})",
-                    nest,
+                let elem_expr = boogie_well_formed_expr_impl(
+                    env,
                     nest_value,
-                    nest,
-                    nest,
-                    name,
-                    boogie_well_formed_expr_impl(env, nest_value, &elem_ty, mode, nest + 1)
-                ));
+                    &elem_ty,
+                    with_types,
+                    mode,
+                    nest + 1,
+                );
+                if !elem_expr.is_empty() {
+                    conds.push(format!(
+                        "(forall $${}: int :: {{{}}} $${} >= 0 && $${} < $vlen({}) ==> {})",
+                        nest, nest_value, nest, nest, name, elem_expr,
+                    ));
+                }
             }
         }
         Type::Struct(module_idx, struct_idx, _) => {
             let struct_env = env.get_module(*module_idx).into_struct(*struct_idx);
-            let well_formed_name = if mode == WellFormedMode::WithoutInvariant {
-                "is_well_formed_types"
+            let well_formed_name = if !with_types {
+                "$invariant_holds"
+            } else if mode == WellFormedMode::WithoutInvariant {
+                "$is_well_typed"
             } else {
-                "is_well_formed"
+                "$is_well_formed"
             };
             conds.push(format!(
                 "{}_{}({})",
@@ -274,16 +289,12 @@ fn boogie_well_formed_expr_impl(
                 name
             ))
         }
-        Type::Reference(is_mut, rtype) => {
-            let mode = if *is_mut && mode == WellFormedMode::Default {
-                WellFormedMode::WithoutInvariant
-            } else {
-                mode
-            };
+        Type::Reference(_, rtype) => {
             conds.push(boogie_well_formed_expr_impl(
                 env,
                 &format!("$Dereference({})", name),
                 rtype,
+                with_types,
                 mode,
                 nest + 1,
             ));
@@ -346,7 +357,8 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty
             name,
             (0..param_count).map(|i| format!("$tv{}", i)).join(", ")
         );
-        let type_check = boogie_well_formed_expr(env, &var_selector, ty, WellFormedMode::Default);
+        let type_check =
+            boogie_well_formed_expr(env, &var_selector, ty, WellFormedMode::WithInvariant);
         format!(
             "var {} where (forall {} :: {});",
             declarator,
@@ -359,7 +371,7 @@ pub fn boogie_declare_global(env: &GlobalEnv, name: &str, param_count: usize, ty
         format!(
             "var {} where {};",
             declarator,
-            boogie_well_formed_expr(env, name, ty, WellFormedMode::Default)
+            boogie_well_formed_expr(env, name, ty, WellFormedMode::WithInvariant)
         )
     }
 }

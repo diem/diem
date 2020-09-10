@@ -125,6 +125,8 @@ pub struct ProverOptions {
     /// is accessed, instead of on function entry. This is currently known to be slower
     /// if one than off, so off by default.
     pub assume_invariant_on_access: bool,
+    /// Whether pack/unpack should recurse over the structure.
+    pub deep_pack_unpack: bool,
     /// Whether to automatically debug trace values of specification expression leafs.
     pub debug_trace: bool,
     /// Report warnings. This is not on by default. We may turn it on if the warnings
@@ -147,6 +149,7 @@ impl Default for ProverOptions {
             verify_scope: VerificationScope::Public,
             resource_wellformed_axiom: false,
             assume_wellformed_on_access: false,
+            deep_pack_unpack: false,
             debug_trace: false,
             report_warnings: false,
             assume_invariant_on_access: false,

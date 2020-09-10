@@ -2,55 +2,113 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    dataflow_analysis::{
-        AbstractDomain, DataflowAnalysis, JoinResult, StateMap, TransferFunctions,
-    },
+    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     livevar_analysis::LiveVarAnnotation,
     stackless_bytecode::{AssignKind, BorrowNode, Bytecode, Operation, StructDecl, TempIndex},
-    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    stackless_control_flow_graph::StacklessControlFlowGraph,
 };
-use borrow_graph::references::RefID;
 use itertools::Itertools;
 use spec_lang::env::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-#[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd)]
-struct Field {
-    struct_decl: StructDecl,
-    field_offset: usize,
-}
-
-type BorrowGraph = borrow_graph::graph::BorrowGraph<(), Field>;
-
 #[derive(Debug, Clone)]
 pub struct BorrowInfo {
-    pub live_refs: BTreeSet<TempIndex>,
+    /// Contains the nodes which are alive. This excludes nodes which are alive because
+    /// other nodes which are alive borrow from them.
+    pub live_nodes: BTreeSet<BorrowNode>,
+
+    /// Contains the nodes which are unchecked regards their pack/unpack invariant.
+    /// These are nodes derived from &mut parameters of private functions.
+    pub unchecked_nodes: BTreeSet<BorrowNode>,
+
+    /// Contains the nodes which have been updated via a Splice operation.
+    pub spliced_nodes: BTreeSet<BorrowNode>,
+
+    /// Contains the nodes which have been moved via a move instruction.
+    pub moved_nodes: BTreeSet<BorrowNode>,
+
+    /// Forward borrow information.
     pub borrowed_by: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+
+    /// Backward borrow information.
     pub borrows_from: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-    pub dirty_nodes: BTreeSet<BorrowNode>,
 }
 
 impl BorrowInfo {
-    pub fn all_refs(&self) -> BTreeSet<TempIndex> {
-        let filter_fn = |node: &BorrowNode| {
-            if let BorrowNode::Reference(idx) = node {
-                Some(*idx)
-            } else {
-                None
+    /// Checks whether a node is in use. A node is used if it is in the live_nodes set
+    /// or if it is borrowed by a node which is used.
+    pub fn is_in_use(&self, node: &BorrowNode) -> bool {
+        if self.live_nodes.contains(node) {
+            true
+        } else if let Some(childs) = self.borrowed_by.get(node) {
+            childs.iter().any(|child| self.is_in_use(child))
+        } else {
+            false
+        }
+    }
+
+    /// Checks whether this is an unchecked node.
+    pub fn is_unchecked(&self, node: &BorrowNode) -> bool {
+        self.unchecked_nodes.contains(node)
+    }
+
+    /// Checks whether this is an unchecked node.
+    pub fn is_moved(&self, node: &BorrowNode) -> bool {
+        self.moved_nodes.contains(node)
+    }
+
+    /// Checks whether this is an spliced node.
+    pub fn is_spliced(&self, node: &BorrowNode) -> bool {
+        self.spliced_nodes.contains(node)
+    }
+
+    /// Returns nodes which are dying from this to the next state. This includes those which
+    /// are directly dying plus those from which they borrow. Returns nodes in child-first order.
+    pub fn dying_nodes(&self, next: &BorrowInfo) -> Vec<BorrowNode> {
+        let mut visited = BTreeSet::new();
+        let mut result = vec![];
+        for dying in self.live_nodes.difference(&next.live_nodes) {
+            // Collect ancestors, but exclude those which are still in use. Some nodes may be
+            // dying regards direct usage in instructions, but they may still be ancestors of
+            // living nodes (this is what `is_in_use` checks for).
+            if !next.is_in_use(dying) {
+                self.collect_ancestors(&mut visited, &mut result, dying, &|n| !next.is_in_use(n));
             }
-        };
-        let borrowed_by_refs = self.borrowed_by.keys().filter_map(filter_fn).collect();
-        self.live_refs.union(&borrowed_by_refs).cloned().collect()
+        }
+        result
+    }
+
+    /// Collects this node and ancestors, inserting them in child-first order into the
+    /// given vector. Ancestors are only added if they fulfill the predicate.
+    fn collect_ancestors<P>(
+        &self,
+        visited: &mut BTreeSet<BorrowNode>,
+        order: &mut Vec<BorrowNode>,
+        node: &BorrowNode,
+        cond: &P,
+    ) where
+        P: Fn(&BorrowNode) -> bool,
+    {
+        if visited.insert(node.clone()) {
+            order.push(node.clone());
+            if let Some(parents) = self.borrows_from.get(&node) {
+                for parent in parents {
+                    if cond(parent) {
+                        self.collect_ancestors(visited, order, parent, cond);
+                    }
+                }
+            }
+        }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.live_refs.is_empty()
+        self.live_nodes.is_empty()
+            && self.unchecked_nodes.is_empty()
             && self.borrowed_by.is_empty()
             && self.borrows_from.is_empty()
-            && self.dirty_nodes.is_empty()
     }
 
     pub fn borrow_info_str(&self, func_target: &FunctionTarget<'_>) -> String {
@@ -61,13 +119,31 @@ impl BorrowInfo {
             }
         };
         add(
-            "live_refs",
-            self.live_refs
+            "live_nodes",
+            self.live_nodes
                 .iter()
-                .map(|idx| {
-                    let name = func_target.get_local_name(*idx);
-                    format!("{}", name.display(func_target.symbol_pool()),)
-                })
+                .map(|node| format!("{}", node.display(func_target)))
+                .join(", "),
+        );
+        add(
+            "unchecked_nodes",
+            self.unchecked_nodes
+                .iter()
+                .map(|node| format!("{}", node.display(func_target)))
+                .join(", "),
+        );
+        add(
+            "spliced_nodes",
+            self.spliced_nodes
+                .iter()
+                .map(|node| format!("{}", node.display(func_target)))
+                .join(", "),
+        );
+        add(
+            "moved_nodes",
+            self.moved_nodes
+                .iter()
+                .map(|node| format!("{}", node.display(func_target)))
                 .join(", "),
         );
         let borrows_str = |(node, borrows): (&BorrowNode, &BTreeSet<BorrowNode>)| {
@@ -87,13 +163,6 @@ impl BorrowInfo {
         add(
             "borrows_from",
             self.borrows_from.iter().map(borrows_str).join(", "),
-        );
-        add(
-            "dirty_nodes",
-            self.dirty_nodes
-                .iter()
-                .map(|borrow| borrow.display(func_target))
-                .join(", "),
         );
         parts.iter().join("\n")
     }
@@ -142,7 +211,9 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
         } else {
             let func_target = FunctionTarget::new(func_env, &data);
             let mut analyzer = BorrowAnalysis::new(&func_target);
-            BorrowAnnotation(analyzer.analyze(&data.code))
+            let result = analyzer.analyze(&data.code);
+            let propagator = PropagateSplicedAnalysis::new(result);
+            BorrowAnnotation(propagator.run(&data.code))
         };
         // Annotate function target with computed borrow data.
         data.annotations.set::<BorrowAnnotation>(borrow_annotation);
@@ -155,18 +226,35 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 struct BorrowState {
-    borrow_graph: BorrowGraph,
-    dead_edges: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-    dirty_nodes: BTreeSet<BorrowNode>,
+    live_nodes: BTreeSet<BorrowNode>,
+    unchecked_nodes: BTreeSet<BorrowNode>,
+    spliced_nodes: BTreeSet<BorrowNode>,
+    moved_nodes: BTreeSet<BorrowNode>,
+    graph: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+}
+
+impl BorrowState {
+    fn add_node(&mut self, node: BorrowNode) {
+        self.live_nodes.insert(node);
+    }
+
+    fn remove_node(&mut self, node: &BorrowNode) {
+        self.live_nodes.remove(node);
+    }
+
+    fn add_edge(&mut self, src: BorrowNode, dest: BorrowNode) -> bool {
+        if self.unchecked_nodes.contains(&src) {
+            self.unchecked_nodes.insert(dest.clone());
+        }
+        self.graph.entry(src).or_default().insert(dest)
+    }
 }
 
 struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
-    ref_id_to_borrow_node: BTreeMap<RefID, BorrowNode>,
-    borrow_node_to_ref_id: BTreeMap<BorrowNode, RefID>,
 }
 
 impl<'a> BorrowAnalysis<'a> {
@@ -176,461 +264,88 @@ impl<'a> BorrowAnalysis<'a> {
             .get::<LiveVarAnnotation>()
             .expect("livevar annotation");
 
-        let mut ref_id_to_borrow_node = BTreeMap::new();
-        let mut borrow_node_to_ref_id = BTreeMap::new();
-        let local_count = func_target.get_local_count();
-        let parameter_count = func_target.get_parameter_count();
-        for idx in 0..local_count {
-            let ref_id = RefID::new(idx);
-            let ty = func_target.get_local_type(idx);
-            let borrow_node = if ty.is_reference() {
-                BorrowNode::Reference(idx)
-            } else {
-                BorrowNode::LocalRoot(idx)
-            };
-            ref_id_to_borrow_node.insert(ref_id, borrow_node.clone());
-            borrow_node_to_ref_id.insert(borrow_node, ref_id);
-            if ty.is_reference() && idx < parameter_count {
-                let ref_param_proxy_root_idx = Self::ref_param_proxy_root_idx(func_target, idx);
-                let ref_param_proxy_root = RefID::new(ref_param_proxy_root_idx);
-                ref_id_to_borrow_node.insert(ref_param_proxy_root, BorrowNode::LocalRoot(idx));
-                borrow_node_to_ref_id.insert(BorrowNode::LocalRoot(idx), ref_param_proxy_root);
-            }
-        }
-        let mut next_idx = local_count + parameter_count;
-        for struct_id in func_target.get_acquires_global_resources() {
-            let ref_id = RefID::new(next_idx);
-            let borrow_node = BorrowNode::GlobalRoot(StructDecl {
-                module_id: func_target.module_env().get_id(),
-                struct_id: *struct_id,
-            });
-            ref_id_to_borrow_node.insert(ref_id, borrow_node.clone());
-            borrow_node_to_ref_id.insert(borrow_node, ref_id);
-            next_idx += 1;
-        }
         Self {
             func_target,
             livevar_annotation,
-            ref_id_to_borrow_node,
-            borrow_node_to_ref_id,
         }
     }
 
     fn analyze(&mut self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
         let cfg = StacklessControlFlowGraph::new_forward(instrs);
-        let mut borrow_graph = BorrowGraph::new();
-        for (ref_id, _) in self
-            .ref_id_to_borrow_node
-            .iter()
-            .filter(|(_, node)| match node {
-                BorrowNode::Reference(..) => false,
-                _ => true,
-            })
-        {
-            borrow_graph.new_ref(*ref_id, true);
-        }
+
+        let mut state = BorrowState::default();
+
+        // Initialize state from parameters
         for idx in 0..self.func_target.get_parameter_count() {
-            if self.func_target.get_local_type(idx).is_reference() {
-                let ref_id = RefID::new(idx);
-                borrow_graph.new_ref(ref_id, true);
-                borrow_graph.add_strong_borrow(
-                    (),
-                    RefID::new(Self::ref_param_proxy_root_idx(self.func_target, idx)),
-                    ref_id,
-                );
+            let node = self.borrow_node(idx);
+            if self.func_target.is_unchecked_param(idx) {
+                state.unchecked_nodes.insert(node.clone());
             }
+            state.add_node(self.borrow_node(idx));
         }
-        let initial_state = BorrowState {
-            borrow_graph,
-            dead_edges: BTreeMap::new(),
-            dirty_nodes: BTreeSet::new(),
-        };
-        let state_map = self.analyze_function(initial_state, instrs, &cfg);
-        self.post_process(&cfg, instrs, state_map)
+
+        let state_map = self.analyze_function(state, instrs, &cfg);
+        self.state_per_instruction(state_map, instrs, &cfg, |before, after| {
+            let before = self.convert_state_to_info(before.clone());
+            let after = self.convert_state_to_info(after.clone());
+            BorrowInfoAtCodeOffset { before, after }
+        })
     }
 
-    fn ref_param_proxy_root_idx(func_target: &FunctionTarget, ref_param_idx: usize) -> usize {
-        assert!(ref_param_idx < func_target.get_parameter_count());
-        func_target.get_local_count() + ref_param_idx
+    fn borrow_node(&self, idx: TempIndex) -> BorrowNode {
+        let ty = self.func_target.get_local_type(idx);
+        if ty.is_reference() {
+            BorrowNode::Reference(idx)
+        } else {
+            BorrowNode::LocalRoot(idx)
+        }
     }
 
-    fn post_process(
-        &mut self,
-        cfg: &StacklessControlFlowGraph,
-        instrs: &[Bytecode],
-        state_map: StateMap<BorrowState, PackError>,
-    ) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
-        let mut result = BTreeMap::new();
-        for (block_id, block_state) in state_map {
-            let mut state = block_state.pre;
-            for offset in cfg.instr_indexes(block_id) {
-                let instr = &instrs[offset as usize];
-                let before = self.convert_state_to_info(&state);
-                state = self.execute(state, instr, offset).unwrap();
-                let after = self.convert_state_to_info(&state);
-                result.insert(offset, BorrowInfoAtCodeOffset { before, after });
-            }
-        }
-        result
-    }
-
-    fn convert_state_to_info(&self, borrow_state: &BorrowState) -> BorrowInfo {
-        let all_ref_ids = borrow_state.borrow_graph.all_refs();
-        let live_refs = (0..self.func_target.get_local_count())
-            .filter(|idx| {
-                if self.func_target.get_local_type(*idx).is_reference() {
-                    all_ref_ids.contains(&RefID::new(*idx))
-                } else {
-                    false
-                }
-            })
-            .collect();
-        let mut borrowed_by = BTreeMap::new();
-        let mut borrows_from = BTreeMap::new();
-        for ref_id in self.ref_id_to_borrow_node.keys() {
-            if all_ref_ids.contains(ref_id) {
-                let edges = borrow_state.borrow_graph.out_edges(*ref_id);
-                for edge in edges {
-                    let src = &self.ref_id_to_borrow_node[ref_id];
-                    let dest = &self.ref_id_to_borrow_node[&edge.3];
-                    Self::add_edge(&mut borrowed_by, src, dest);
-                    Self::add_edge(&mut borrows_from, dest, src);
-                }
-            }
-        }
-        for (src, dests) in &borrow_state.dead_edges {
+    fn convert_state_to_info(&self, borrow_state: BorrowState) -> BorrowInfo {
+        let BorrowState {
+            live_nodes,
+            unchecked_nodes,
+            spliced_nodes,
+            moved_nodes,
+            graph,
+        } = borrow_state;
+        let mut reverse_graph: BTreeMap<BorrowNode, BTreeSet<BorrowNode>> = BTreeMap::default();
+        for (src, dests) in graph.iter() {
             for dest in dests {
-                Self::add_edge(&mut borrowed_by, src, dest);
-                Self::add_edge(&mut borrows_from, dest, src);
+                reverse_graph
+                    .entry(dest.clone())
+                    .or_default()
+                    .insert(src.clone());
             }
         }
         BorrowInfo {
-            live_refs,
-            borrowed_by,
-            borrows_from,
-            dirty_nodes: borrow_state.dirty_nodes.clone(),
+            live_nodes,
+            unchecked_nodes,
+            spliced_nodes,
+            moved_nodes,
+            borrowed_by: graph,
+            borrows_from: reverse_graph,
         }
     }
 
-    fn add_edge(
-        edges: &mut BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-        at: &BorrowNode,
-        node: &BorrowNode,
-    ) {
-        edges.entry(at.clone()).or_insert_with(BTreeSet::new);
-        edges.entry(at.clone()).and_modify(|x| {
-            x.insert(node.clone());
-        });
-    }
-
-    fn add_edges(
-        edges: &mut BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-        other: &BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-    ) {
-        for x in other.keys() {
-            for y in &other[x] {
-                BorrowAnalysis::add_edge(edges, x, y);
-            }
-        }
-    }
-
-    fn is_subset(
-        other: &BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-        edges: &BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-    ) -> bool {
-        other
-            .iter()
-            .all(|(x, y)| edges.contains_key(x) && y.is_subset(&edges[x]))
-    }
-
-    fn error_indices(&self, state: &BorrowState, dests: Vec<TempIndex>) -> Vec<TempIndex> {
-        let mut indices = vec![];
-        let all_refs = state.borrow_graph.all_refs();
-        for idx in dests {
-            if self.func_target.get_local_type(idx).is_reference()
-                && (all_refs.contains(&RefID::new(idx))
-                    || state.dead_edges.contains_key(&BorrowNode::Reference(idx)))
-            {
-                indices.push(idx);
-            }
-        }
-        indices
-    }
-
-    fn remap_borrow_node(&self, node: &BorrowNode, id_map: &BTreeMap<RefID, RefID>) -> BorrowNode {
-        match node {
-            BorrowNode::Reference(idx) => {
-                let ref_id = RefID::new(*idx);
-                let node = if id_map.contains_key(&ref_id) {
-                    &self.ref_id_to_borrow_node[&id_map[&ref_id]]
-                } else {
-                    node
-                };
-                node.clone()
-            }
-            _ => node.clone(),
-        }
-    }
-
-    fn remap_edges(
-        &self,
-        edges: &mut BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-        id_map: &BTreeMap<RefID, RefID>,
-    ) {
-        *edges = edges
-            .iter()
-            .map(|(src, dests)| {
-                (
-                    self.remap_borrow_node(src, id_map),
-                    dests
-                        .iter()
-                        .map(|dest| self.remap_borrow_node(dest, id_map))
-                        .collect(),
-                )
-            })
+    fn remap_borrow_node(&self, state: &mut BorrowState, from: &BorrowNode, to: &BorrowNode) {
+        let remap = |node: BorrowNode| if &node == from { to.clone() } else { node };
+        state.live_nodes = std::mem::take(&mut state.live_nodes)
+            .into_iter()
+            .map(remap)
             .collect();
-    }
-
-    fn execute(
-        &mut self,
-        pre: BorrowState,
-        instr: &Bytecode,
-        code_offset: CodeOffset,
-    ) -> Result<BorrowState, PackError> {
-        use Bytecode::*;
-        let mut post = pre;
-
-        // error if any unpacked ref (live or dead) is being overwritten by the instruction
-        let mut indices = vec![];
-        match instr {
-            Assign(_, dest, _, _) => indices.push(*dest),
-            Call(_, dests, _, _) => indices = dests.clone(),
-            _ => {}
-        };
-        indices = self.error_indices(&post, indices);
-        if !indices.is_empty() {
-            return Err(PackError {
-                func_name: self.current_fun_name(),
-                code_offset,
-                indices,
-            });
-        }
-
-        // apply changes to post.borrow_graph based on the instruction
-        match instr {
-            Assign(_, dest, src, kind) => {
-                if self.func_target.get_local_type(*dest).is_reference() {
-                    let dest_ref_id = RefID::new(*dest);
-                    let src_ref_id = RefID::new(*src);
-                    match kind {
-                        AssignKind::Move | AssignKind::Store => {
-                            let mut id_map = BTreeMap::new();
-                            id_map.insert(src_ref_id, dest_ref_id);
-                            post.borrow_graph.remap_refs(&id_map);
-                            self.remap_edges(&mut post.dead_edges, &id_map);
-                            post.dirty_nodes = post
-                                .dirty_nodes
-                                .iter()
-                                .map(|n| self.remap_borrow_node(n, &id_map))
-                                .collect();
-                        }
-                        AssignKind::Copy => {
-                            post.borrow_graph.new_ref(dest_ref_id, true);
-                            post.borrow_graph
-                                .add_strong_borrow((), src_ref_id, dest_ref_id);
-                        }
-                    }
-                }
-            }
-            Call(_, dests, oper, srcs) => {
-                use Operation::*;
-                match oper {
-                    BorrowLoc => {
-                        let dest = dests[0];
-                        let dest_ref_id = RefID::new(dest);
-                        let src = srcs[0];
-                        let src_ref_id = RefID::new(src);
-                        post.borrow_graph.new_ref(dest_ref_id, true);
-                        post.borrow_graph
-                            .add_strong_borrow((), src_ref_id, dest_ref_id);
-                    }
-                    BorrowGlobal(mid, sid, _) => {
-                        let dest = dests[0];
-                        let dest_ref_id = RefID::new(dest);
-                        let src_borrow_node = BorrowNode::GlobalRoot(StructDecl {
-                            module_id: *mid,
-                            struct_id: *sid,
-                        });
-                        let src_ref_id = self.borrow_node_to_ref_id[&src_borrow_node];
-                        post.borrow_graph.new_ref(dest_ref_id, true);
-                        post.borrow_graph
-                            .add_strong_borrow((), src_ref_id, dest_ref_id);
-                    }
-                    BorrowField(mid, sid, _, offset) => {
-                        let dest = dests[0];
-                        let dest_ref_id = RefID::new(dest);
-                        let src = srcs[0];
-                        let src_ref_id = RefID::new(src);
-                        assert!(
-                            post.borrow_graph.contains_id(src_ref_id),
-                            "in {} at {} for BorrowField({})",
-                            self.current_fun_name(),
-                            code_offset,
-                            self.func_target
-                                .get_local_name(src)
-                                .display(self.func_target.symbol_pool())
-                        );
-                        post.borrow_graph.new_ref(dest_ref_id, true);
-                        post.borrow_graph.add_strong_field_borrow(
-                            (),
-                            src_ref_id,
-                            Field {
-                                struct_decl: StructDecl {
-                                    module_id: *mid,
-                                    struct_id: *sid,
-                                },
-                                field_offset: *offset,
-                            },
-                            dest_ref_id,
-                        );
-                    }
-                    Function(..) => {
-                        for src in srcs
-                            .iter()
-                            .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
-                        {
-                            let src_ref_id = RefID::new(*src);
-                            for dest in dests
-                                .iter()
-                                .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
-                            {
-                                let dest_ref_id = RefID::new(*dest);
-                                post.borrow_graph.new_ref(dest_ref_id, true);
-                                post.borrow_graph
-                                    .add_weak_borrow((), src_ref_id, dest_ref_id);
-                            }
-                            // Conservative assumption that function writes to reference.
-                            self.mark_dirty(&mut post, src_ref_id);
-                        }
-                    }
-                    WriteRef => {
-                        let src_ref_id = RefID::new(srcs[0]);
-                        self.mark_dirty(&mut post, src_ref_id);
-                    }
-                    _ => {
-                        // Other operations do not create references or write to them.
-                    }
-                }
-            }
-            _ => {
-                // Other instructions do not create references
-            }
-        }
-
-        // copy outgoing edges from dying refs in post.borrow_graph to post.dead_edges
-        // and release dying refs
-        let livevar_annotation_at = self
-            .livevar_annotation
-            .get_live_var_info_at(code_offset)
-            .ok_or_else(|| PackError {
-                func_name: self.current_fun_name(),
-                code_offset,
-                indices,
-            })?;
-        for idx in livevar_annotation_at
-            .before
-            .difference(&livevar_annotation_at.after)
-        {
-            if self.func_target.get_local_type(*idx).is_reference() {
-                let ref_id = RefID::new(*idx);
-                if post.borrow_graph.contains_id(ref_id) {
-                    let borrow_node = &self.ref_id_to_borrow_node[&ref_id];
-                    let (full_borrows, field_borrows) = post.borrow_graph.borrowed_by(ref_id);
-                    for dest in full_borrows.keys() {
-                        Self::add_edge(
-                            &mut post.dead_edges,
-                            borrow_node,
-                            &self.ref_id_to_borrow_node[dest],
-                        );
-                    }
-                    for edges in field_borrows.values() {
-                        for dest in edges.keys() {
-                            Self::add_edge(
-                                &mut post.dead_edges,
-                                borrow_node,
-                                &self.ref_id_to_borrow_node[dest],
-                            );
-                        }
-                    }
-                    if !post.dead_edges.contains_key(borrow_node) {
-                        // add empty set if necessary to bootstrap the cleanup below
-                        post.dead_edges.insert(borrow_node.clone(), BTreeSet::new());
-                    }
-                    post.borrow_graph.release(ref_id);
-                }
-            }
-        }
-
-        // clean up post.dead_edges: remove nodes until every node has at least one outgoing edge
-        let mut dead_edges = std::mem::take(&mut post.dead_edges);
-        loop {
-            let (new_dead_edges, leaf_nodes) = Self::remove_leaves(dead_edges);
-            dead_edges = new_dead_edges;
-            if leaf_nodes.is_empty() {
-                break;
-            }
-            for (_, y) in dead_edges.iter_mut() {
-                for node in &leaf_nodes {
-                    y.remove(node);
-                }
-            }
-        }
-        post.dead_edges = dead_edges;
-
-        Ok(post)
-    }
-
-    fn mark_dirty(&self, state: &mut BorrowState, ref_id: RefID) {
-        if let Some(node) = self.ref_id_to_borrow_node.get(&ref_id).cloned() {
-            // We could stop if the node is already in the set, but the graph can change as we
-            // currently do not clean the dirty set if a variable is assigned multiple times.
-            state.dirty_nodes.insert(node.clone());
-
-            // Recursively mark source of incoming edges as dirty.
-            let mut parents = BTreeSet::new();
-            if state.borrow_graph.all_refs().contains(&ref_id) {
-                for (_, parent_id, _, _) in state.borrow_graph.in_edges(ref_id) {
-                    parents.insert(parent_id);
-                }
-            }
-
-            // Also need to process dead edges, since they might not be written back yet.
-            for (src, dests) in state.dead_edges.clone() {
-                if let Some(src_ref_id) = self.borrow_node_to_ref_id.get(&src) {
-                    if dests.contains(&node) {
-                        parents.insert(*src_ref_id);
-                    }
-                }
-            }
-            for parent in parents {
-                self.mark_dirty(state, parent);
-            }
-        }
-    }
-
-    fn remove_leaves(
-        dead_edges: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-    ) -> (BTreeMap<BorrowNode, BTreeSet<BorrowNode>>, Vec<BorrowNode>) {
-        let mut new_dead_edges = BTreeMap::new();
-        let mut leaf_nodes = vec![];
-        for (x, y) in dead_edges {
-            if y.is_empty() {
-                leaf_nodes.push(x);
-            } else {
-                new_dead_edges.insert(x, y);
-            }
-        }
-        (new_dead_edges, leaf_nodes)
+        state.unchecked_nodes = std::mem::take(&mut state.unchecked_nodes)
+            .into_iter()
+            .map(remap)
+            .collect();
+        state.spliced_nodes = std::mem::take(&mut state.spliced_nodes)
+            .into_iter()
+            .map(remap)
+            .collect();
+        state.graph = std::mem::take(&mut state.graph)
+            .into_iter()
+            .map(|(src, dests)| (remap(src), dests.into_iter().map(remap).collect()))
+            .collect();
     }
 
     fn current_fun_name(&self) -> String {
@@ -644,19 +359,115 @@ impl<'a> BorrowAnalysis<'a> {
 impl<'a> TransferFunctions for BorrowAnalysis<'a> {
     type State = BorrowState;
     type AnalysisError = PackError;
+    const BACKWARD: bool = false;
 
-    fn execute_block(
-        &mut self,
-        block_id: BlockId,
-        pre_state: Self::State,
-        instrs: &[Bytecode],
-        cfg: &StacklessControlFlowGraph,
-    ) -> Result<Self::State, Self::AnalysisError> {
-        let mut state = pre_state;
-        for offset in cfg.instr_indexes(block_id) {
-            let instr = &instrs[offset as usize];
-            state = self.execute(state, instr, offset)?;
+    fn execute(
+        &self,
+        mut state: BorrowState,
+        instr: &Bytecode,
+        code_offset: CodeOffset,
+    ) -> Result<BorrowState, PackError> {
+        use Bytecode::*;
+        let livevar_annotation_at = self
+            .livevar_annotation
+            .get_live_var_info_at(code_offset)
+            .ok_or_else(|| PackError {
+                func_name: self.current_fun_name(),
+                code_offset,
+                indices: vec![],
+            })?;
+        match instr {
+            Assign(_, dest, src, kind) => {
+                let dest_node = self.borrow_node(*dest);
+                let src_node = self.borrow_node(*src);
+                match kind {
+                    AssignKind::Move | AssignKind::Store => {
+                        self.remap_borrow_node(&mut state, &src_node, &dest_node);
+                        state.moved_nodes.insert(src_node);
+                    }
+                    AssignKind::Copy => {
+                        state.add_node(dest_node.clone());
+                        state.add_edge(src_node, dest_node);
+                    }
+                }
+            }
+            Call(_, dests, oper, srcs) => {
+                use Operation::*;
+                match oper {
+                    // In the borrows below, we only create an edge if the
+                    // borrowed value is actually alive. For a dead borrow we would
+                    // otherwise never end live time, because we cannot see a node
+                    // being created and dying at the very same instruction.
+                    BorrowLoc if livevar_annotation_at.after.contains(&dests[0]) => {
+                        let dest_node = self.borrow_node(dests[0]);
+                        let src_node = self.borrow_node(srcs[0]);
+                        state.add_node(dest_node.clone());
+                        state.add_edge(src_node, dest_node);
+                    }
+                    BorrowGlobal(mid, sid, _)
+                        if livevar_annotation_at.after.contains(&dests[0]) =>
+                    {
+                        let dest_node = self.borrow_node(dests[0]);
+                        let src_node = BorrowNode::GlobalRoot(StructDecl {
+                            module_id: *mid,
+                            struct_id: *sid,
+                        });
+                        state.add_node(dest_node.clone());
+                        state.add_edge(src_node, dest_node);
+                    }
+                    BorrowField(..) if livevar_annotation_at.after.contains(&dests[0]) => {
+                        let dest_node = self.borrow_node(dests[0]);
+                        let src_node = self.borrow_node(srcs[0]);
+                        state.add_node(dest_node.clone());
+                        state.add_edge(src_node, dest_node);
+                    }
+                    Splice(map) => {
+                        let child_node = self.borrow_node(srcs[0]);
+                        state.add_node(child_node.clone());
+                        for parent in map.values() {
+                            state.add_edge(self.borrow_node(*parent), child_node.clone());
+                            state.spliced_nodes.insert(self.borrow_node(*parent));
+                            state.unchecked_nodes.insert(child_node.clone());
+                        }
+                    }
+                    Function(..) => {
+                        for src in srcs
+                            .iter()
+                            .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
+                        {
+                            let src_node = self.borrow_node(*src);
+                            for dest in dests
+                                .iter()
+                                .filter(|idx| self.func_target.get_local_type(**idx).is_reference())
+                            {
+                                let dest_node = self.borrow_node(*dest);
+                                state.add_node(dest_node.clone());
+                                state.add_edge(src_node.clone(), dest_node);
+                            }
+                        }
+                    }
+                    _ => {
+                        // Other operations do not create references.
+                    }
+                }
+            }
+            _ => {
+                // Other instructions do not create references
+            }
         }
+
+        // Update live_vars.
+
+        for idx in livevar_annotation_at
+            .before
+            .difference(&livevar_annotation_at.after)
+        {
+            if self.func_target.get_local_type(*idx).is_reference() {
+                let node = self.borrow_node(*idx);
+                state.remove_node(&node);
+            }
+        }
+
         Ok(state)
     }
 }
@@ -665,24 +476,105 @@ impl<'a> DataflowAnalysis for BorrowAnalysis<'a> {}
 
 impl AbstractDomain for BorrowState {
     fn join(&mut self, other: &Self) -> JoinResult {
-        let borrow_graph_unchanged = self.borrow_graph.leq(&other.borrow_graph);
-        if !borrow_graph_unchanged {
-            self.borrow_graph = self.borrow_graph.join(&other.borrow_graph);
+        let live_changed = extend_set(&mut self.live_nodes, &other.live_nodes);
+        let unchecked_changed = extend_set(&mut self.unchecked_nodes, &other.unchecked_nodes);
+        let spliced_changed = extend_set(&mut self.spliced_nodes, &other.spliced_nodes);
+        let moved_changed = extend_set(&mut self.moved_nodes, &other.moved_nodes);
+        let mut changed = live_changed || unchecked_changed || spliced_changed || moved_changed;
+        for (src, dests) in other.graph.iter() {
+            for dest in dests {
+                let is_new = self.add_edge(src.clone(), dest.clone());
+                changed = changed || is_new;
+            }
         }
-        let dead_edges_unchanged = BorrowAnalysis::is_subset(&other.dead_edges, &self.dead_edges);
-        if !dead_edges_unchanged {
-            BorrowAnalysis::add_edges(&mut self.dead_edges, &other.dead_edges);
-        }
-        let old_dirty_count = self.dirty_nodes.len();
-        self.dirty_nodes.extend(other.dirty_nodes.iter().cloned());
-        if dead_edges_unchanged
-            && borrow_graph_unchanged
-            && old_dirty_count == self.dirty_nodes.len()
-        {
-            JoinResult::Unchanged
-        } else {
+        if changed {
             JoinResult::Changed
+        } else {
+            JoinResult::Unchanged
         }
+    }
+}
+
+fn extend_set(set: &mut BTreeSet<BorrowNode>, other: &BTreeSet<BorrowNode>) -> bool {
+    let n = set.len();
+    set.extend(other.iter().cloned());
+    n != set.len()
+}
+
+/// Analysis for propagating the spliced node information back to the point where
+/// the node is borrowed.
+struct PropagateSplicedAnalysis {
+    borrow: BTreeMap<CodeOffset, BorrowInfoAtCodeOffset>,
+}
+
+#[derive(Default, Clone)]
+struct SplicedState {
+    spliced: BTreeSet<BorrowNode>,
+}
+
+impl AbstractDomain for SplicedState {
+    fn join(&mut self, other: &Self) -> JoinResult {
+        if extend_set(&mut self.spliced, &other.spliced) {
+            JoinResult::Changed
+        } else {
+            JoinResult::Unchanged
+        }
+    }
+}
+
+impl TransferFunctions for PropagateSplicedAnalysis {
+    type State = SplicedState;
+    type AnalysisError = ();
+    const BACKWARD: bool = true;
+
+    fn execute(
+        &self,
+        mut state: Self::State,
+        instr: &Bytecode,
+        offset: u16,
+    ) -> Result<Self::State, Self::AnalysisError> {
+        use Bytecode::*;
+        use Operation::*;
+        if let Some(borrow) = self.borrow.get(&offset) {
+            state
+                .spliced
+                .extend(borrow.after.spliced_nodes.iter().cloned());
+        }
+        match instr {
+            Call(_, dests, BorrowLoc, _)
+            | Call(_, dests, BorrowGlobal(..), _)
+            | Call(_, dests, BorrowField(..), _) => {
+                state.spliced.remove(&BorrowNode::Reference(dests[0]));
+            }
+            _ => {}
+        }
+        Ok(state)
+    }
+}
+
+impl DataflowAnalysis for PropagateSplicedAnalysis {}
+
+impl PropagateSplicedAnalysis {
+    fn new(borrow: BTreeMap<CodeOffset, BorrowInfoAtCodeOffset>) -> Self {
+        Self { borrow }
+    }
+
+    fn run(mut self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
+        let cfg = StacklessControlFlowGraph::new_backward(instrs);
+        let state_map = self.analyze_function(SplicedState::default(), instrs, &cfg);
+        let mut data = self.state_per_instruction(state_map, instrs, &cfg, |before, after| {
+            (before.clone(), after.clone())
+        });
+        let PropagateSplicedAnalysis { mut borrow } = self;
+        for (code_offset, info) in borrow.iter_mut() {
+            if let Some((SplicedState { spliced: before }, SplicedState { spliced: after })) =
+                data.remove(code_offset)
+            {
+                info.before.spliced_nodes = before;
+                info.after.spliced_nodes = after;
+            }
+        }
+        borrow
     }
 }
 

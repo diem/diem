@@ -1,6 +1,6 @@
 module M {
 
-  resource struct S {
+  struct S {
     x: u64,
   }
 

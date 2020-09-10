@@ -105,10 +105,9 @@ impl<'a> EliminateImmRefs<'a> {
                     }
                 }
                 BorrowField(mid, sid, type_actuals, field_offset) => {
-                    let dest = dests[0];
                     if self
                         .func_target
-                        .get_local_type(dest)
+                        .get_local_type(dests[0])
                         .is_immutable_reference()
                     {
                         Call(

@@ -11,7 +11,6 @@ error: post-condition does not hold
     =         v2 = <redacted>,
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:42:33: hash_test1_incorrect
     =     at tests/sources/functional/hash_model.move:41:24: hash_test1_incorrect
     =     at tests/sources/functional/hash_model.move:42:24: hash_test1_incorrect
     =     at tests/sources/functional/hash_model.move:43:9: hash_test1_incorrect
@@ -28,7 +27,6 @@ error: post-condition does not hold
     =         v2 = <redacted>,
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:85:33: hash_test2_incorrect
     =     at tests/sources/functional/hash_model.move:84:24: hash_test2_incorrect
     =     at tests/sources/functional/hash_model.move:85:24: hash_test2_incorrect
     =     at tests/sources/functional/hash_model.move:86:9: hash_test2_incorrect

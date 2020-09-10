@@ -39,7 +39,6 @@ error: data invariant does not hold
      =         tmp#$5 = <redacted>,
      =         x_ref = <redacted>,
      =         x_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:154:15: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching

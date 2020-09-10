@@ -5,13 +5,11 @@
 // computation of new Destroy instructions.
 
 use crate::{
-    dataflow_analysis::{
-        AbstractDomain, DataflowAnalysis, JoinResult, StateMap, TransferFunctions,
-    },
+    dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionTarget, FunctionTargetData},
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
     stackless_bytecode::{AttrId, Bytecode, Label, Operation, TempIndex},
-    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    stackless_control_flow_graph::StacklessControlFlowGraph,
 };
 use itertools::Itertools;
 use spec_lang::{env::FunctionEnv, ty::Type};
@@ -38,11 +36,11 @@ impl LiveVarAnnotation {
     }
 }
 
-pub struct LiveVarAnalysisProcessor();
+pub struct LiveVarAnalysisProcessor {}
 
 impl LiveVarAnalysisProcessor {
     pub fn new() -> Box<Self> {
-        Box::new(LiveVarAnalysisProcessor())
+        Box::new(LiveVarAnalysisProcessor {})
     }
 }
 
@@ -64,7 +62,14 @@ impl FunctionTargetProcessor for LiveVarAnalysisProcessor {
             let (code, _) = Self::analyze_and_transform(&func_target, code);
 
             // Eliminate unused locals after dead code elimination.
-            let (code, local_types) = Self::eliminate_unused_vars(&func_target, code);
+            let (code, local_types, remap) = Self::eliminate_unused_vars(&func_target, code);
+            data.rename_vars(&|idx| {
+                if let Some(new_idx) = remap.get(&idx) {
+                    *new_idx
+                } else {
+                    idx
+                }
+            });
             data.local_types = local_types;
             data.code = code;
             let func_target = FunctionTarget::new(func_env, &data);
@@ -108,66 +113,46 @@ impl LiveVarAnalysisProcessor {
             &code,
             &cfg,
         );
-        analyzer.post_process(&cfg, &code, state_map)
+        analyzer.state_per_instruction(state_map, code, &cfg, |before, after| {
+            LiveVarInfoAtCodeOffset {
+                before: before.livevars.clone(),
+                after: after.livevars.clone(),
+            }
+        })
     }
 
     fn eliminate_unused_vars(
         func_target: &FunctionTarget,
         code: Vec<Bytecode>,
-    ) -> (Vec<Bytecode>, Vec<Type>) {
+    ) -> (Vec<Bytecode>, Vec<Type>, BTreeMap<TempIndex, TempIndex>) {
+        if code.iter().any(|c| matches!(c, Bytecode::SpecBlock(..))) {
+            // TODO(wrwg): SpecBlock currently does not work with variable renaming.
+            return (code, func_target.data.local_types.clone(), BTreeMap::new());
+        }
         let mut new_code = vec![];
         let mut new_vars = vec![];
         let mut remap = BTreeMap::new();
         // Do not change user declared vars, so populate remap info with them first.
         for local in 0..func_target.get_user_local_count() {
-            new_vars.push(func_target.get_local_type(local).clone());
+            let ty = func_target.get_local_type(local);
+            new_vars.push(ty.clone());
             remap.insert(local, local);
         }
         let mut transform_local = |local: TempIndex| {
             if let Some(new_idx) = remap.get(&local) {
                 *new_idx
             } else {
-                let ty = func_target.get_local_type(local);
                 let new_idx = new_vars.len();
+                let ty = func_target.get_local_type(local);
                 new_vars.push(ty.clone());
                 remap.insert(local, new_idx);
                 new_idx
             }
         };
-        // The closures of transform_local cannot be removed, but clippy complains anyway.
-        #[allow(clippy::redundant_closure)]
         for bytecode in code {
-            use Bytecode::*;
-            match bytecode {
-                Assign(attr, dest, src, kind) => {
-                    let dest = transform_local(dest);
-                    let src = transform_local(src);
-                    new_code.push(Assign(attr, dest, src, kind));
-                }
-                Call(attr, dests, op, srcs) => {
-                    let transformed_dests = dests.into_iter().map(|d| transform_local(d)).collect();
-                    let transformed_srcs = srcs.into_iter().map(|s| transform_local(s)).collect();
-                    new_code.push(Call(attr, transformed_dests, op, transformed_srcs));
-                }
-                Ret(attr, rets) => {
-                    let transformed_rets = rets.into_iter().map(|r| transform_local(r)).collect();
-                    new_code.push(Ret(attr, transformed_rets));
-                }
-                Branch(attr, if_label, else_label, cond) => {
-                    new_code.push(Branch(attr, if_label, else_label, transform_local(cond)));
-                }
-                Load(attr, dest, cons) => {
-                    new_code.push(Load(attr, transform_local(dest), cons));
-                }
-                Abort(attr, cond) => {
-                    new_code.push(Abort(attr, transform_local(cond)));
-                }
-                _ => {
-                    new_code.push(bytecode);
-                }
-            }
+            new_code.push(bytecode.remap_vars(&mut transform_local));
         }
-        (new_code, new_vars)
+        (new_code, new_vars, remap)
     }
 }
 
@@ -226,6 +211,7 @@ impl<'a> LiveVarAnalysis<'a> {
                 continue;
             }
             let bytecode = std::mem::replace(&mut code[code_offset], Bytecode::Nop(AttrId::new(0)));
+            let annotation_at = &annotations[&(code_offset as CodeOffset)];
             match bytecode {
                 Bytecode::Branch(attr_id, then_label, else_label, src) => {
                     let (then_label, mut bytecodes) = self.create_block_to_destroy_refs(
@@ -248,13 +234,8 @@ impl<'a> LiveVarAnalysis<'a> {
                     new_bytecodes.append(&mut bytecodes);
                     transformed_code.push(Bytecode::Branch(attr_id, then_label, else_label, src));
                 }
-                Bytecode::Assign(_, dest, _, _) => {
-                    let annotation_at = &annotations[&(code_offset as CodeOffset)];
-                    if annotation_at.after.contains(&dest) {
-                        transformed_code.push(bytecode);
-                    } else {
-                        // Drop this assign; it is likely a left-over from copy propagation.
-                    }
+                Bytecode::Assign(_, dest, _, _) if !annotation_at.after.contains(&dest) => {
+                    // Drop this assign as it is not used.
                 }
                 Bytecode::Call(attr_id, dests, oper, srcs)
                     if code_offset + 1 < code.len() && dests.len() == 1 =>
@@ -341,28 +322,19 @@ impl<'a> LiveVarAnalysis<'a> {
             .copied()
             .collect()
     }
+}
 
-    fn post_process(
-        &mut self,
-        cfg: &StacklessControlFlowGraph,
-        instrs: &[Bytecode],
-        state_map: StateMap<LiveVarState, ()>,
-    ) -> BTreeMap<CodeOffset, LiveVarInfoAtCodeOffset> {
-        let mut result = BTreeMap::new();
-        for (block_id, block_state) in state_map {
-            let mut state = block_state.pre;
-            for offset in cfg.instr_indexes(block_id).rev() {
-                let instr = &instrs[offset as usize];
-                let after = state.livevars.clone();
-                state = self.execute(state, instr, offset);
-                let before = state.livevars.clone();
-                result.insert(offset, LiveVarInfoAtCodeOffset { before, after });
-            }
-        }
-        result
-    }
+impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
+    type State = LiveVarState;
+    type AnalysisError = ();
+    const BACKWARD: bool = true;
 
-    fn execute(&mut self, pre: LiveVarState, instr: &Bytecode, _idx: CodeOffset) -> LiveVarState {
+    fn execute(
+        &self,
+        pre: LiveVarState,
+        instr: &Bytecode,
+        _idx: CodeOffset,
+    ) -> Result<LiveVarState, ()> {
         use Bytecode::*;
         let mut post = pre;
         match instr {
@@ -374,9 +346,12 @@ impl<'a> LiveVarAnalysis<'a> {
             Load(_, dst, _) => {
                 post.remove(&[*dst]);
             }
-            Call(_, dsts, _, srcs) => {
+            Call(_, dsts, oper, srcs) => {
                 post.remove(dsts);
                 post.insert(srcs.clone());
+                if let Operation::Splice(map) = oper {
+                    post.insert(map.values().cloned().collect());
+                }
             }
             Ret(_, srcs) => {
                 post.insert(srcs.clone());
@@ -386,27 +361,7 @@ impl<'a> LiveVarAnalysis<'a> {
             }
             _ => {}
         }
-        post
-    }
-}
-
-impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
-    type State = LiveVarState;
-    type AnalysisError = ();
-
-    fn execute_block(
-        &mut self,
-        block_id: BlockId,
-        pre_state: Self::State,
-        instrs: &[Bytecode],
-        cfg: &StacklessControlFlowGraph,
-    ) -> Result<Self::State, Self::AnalysisError> {
-        let mut state = pre_state;
-        for offset in cfg.instr_indexes(block_id).rev() {
-            let instr = &instrs[offset as usize];
-            state = self.execute(state, instr, offset);
-        }
-        Ok(state)
+        Ok(post)
     }
 }
 

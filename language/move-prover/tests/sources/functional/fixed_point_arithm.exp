@@ -59,7 +59,7 @@ error: post-condition does not hold
     =     at tests/sources/functional/fixed_point_arithm.move:20:5: multiply_0_x_incorrect
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/fixed_point_arithm.move:21:9: multiply_0_x_incorrect
+    =     at tests/sources/functional/fixed_point_arithm.move:21:23: multiply_0_x_incorrect
 
 error: post-condition does not hold
 
@@ -71,7 +71,7 @@ error: post-condition does not hold
     =     at tests/sources/functional/fixed_point_arithm.move:58:5: multiply_1_x_incorrect
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/fixed_point_arithm.move:59:9: multiply_1_x_incorrect
+    =     at tests/sources/functional/fixed_point_arithm.move:59:23: multiply_1_x_incorrect
 
 error: post-condition does not hold
 
@@ -83,7 +83,6 @@ error: post-condition does not hold
     =     at tests/sources/functional/fixed_point_arithm.move:36:5: multiply_x_0_incorrect
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/fixed_point_arithm.move:37:9: multiply_x_0_incorrect
     =     at ../stdlib/modules/FixedPoint32.move:137:5: create_from_raw_value
     =         value = <redacted>,
     =         result = <redacted>
@@ -100,4 +99,4 @@ error: post-condition does not hold
     =     at tests/sources/functional/fixed_point_arithm.move:75:5: multiply_x_1_incorrect
     =         x = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/functional/fixed_point_arithm.move:76:9: multiply_x_1_incorrect
+    =     at tests/sources/functional/fixed_point_arithm.move:76:53: multiply_x_1_incorrect
