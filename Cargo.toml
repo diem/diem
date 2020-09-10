@@ -9,6 +9,7 @@ members = [
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",
+    "common/channel/many-keys-stress-test",
     "common/crash-handler",
     "common/datatest-stable",
     "common/debug-interface",
