@@ -438,7 +438,7 @@ where
                     lost_conn_metadata,
                     reason
                 );
-                let peer_id = lost_conn_metadata.peer_id;
+                let peer_id = lost_conn_metadata.remote_peer_id;
                 // If the active connection with the peer is lost, remove it from `active_peers`.
                 if let Entry::Occupied(entry) = self.active_peers.entry(peer_id) {
                     let (conn_metadata, _) = entry.get();
@@ -629,7 +629,7 @@ where
 
     fn add_peer(&mut self, connection: Connection<TSocket>) {
         let conn_meta = connection.metadata.clone();
-        let peer_id = conn_meta.peer_id;
+        let peer_id = conn_meta.remote_peer_id;
         assert_ne!(self.network_context.peer_id(), peer_id);
 
         let mut send_new_peer_notification = true;
@@ -991,7 +991,7 @@ where
     ) {
         match upgrade {
             Ok(connection) => {
-                let dialed_peer_id = connection.metadata.peer_id;
+                let dialed_peer_id = connection.metadata.remote_peer_id;
                 let response = if dialed_peer_id == peer_id {
                     debug!(
                         NetworkSchema::new(&self.network_context)
@@ -1073,7 +1073,7 @@ where
                     connection_id = connection.metadata.connection_id,
                     "{} Connection from {} at {} successfully upgraded",
                     self.network_context,
-                    connection.metadata.peer_id.short_str(),
+                    connection.metadata.remote_peer_id.short_str(),
                     addr
                 );
                 let event = TransportNotification::NewConnection(connection);

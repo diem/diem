@@ -141,7 +141,7 @@ async fn assert_peer_disconnected_event(
     let connection_event = peer_manager.transport_notifs_rx.select_next_some().await;
     match &connection_event {
         TransportNotification::Disconnected(ref actual_metadata, ref actual_reason) => {
-            assert_eq!(actual_metadata.peer_id, peer_id);
+            assert_eq!(actual_metadata.remote_peer_id, peer_id);
             assert_eq!(*actual_reason, reason);
             assert_eq!(actual_metadata.origin, origin);
             peer_manager.handle_connection_event(connection_event);

@@ -94,7 +94,7 @@ impl ConnectionIdGenerator {
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, Serialize)]
 pub struct ConnectionMetadata {
-    pub peer_id: PeerId,
+    pub remote_peer_id: PeerId,
     pub connection_id: ConnectionId,
     pub addr: NetworkAddress,
     pub origin: ConnectionOrigin,
@@ -104,7 +104,7 @@ pub struct ConnectionMetadata {
 
 impl ConnectionMetadata {
     pub fn new(
-        peer_id: PeerId,
+        remote_peer_id: PeerId,
         connection_id: ConnectionId,
         addr: NetworkAddress,
         origin: ConnectionOrigin,
@@ -112,7 +112,7 @@ impl ConnectionMetadata {
         application_protocols: SupportedProtocols,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
-            peer_id,
+            remote_peer_id,
             connection_id,
             addr,
             origin,
@@ -133,7 +133,7 @@ impl std::fmt::Display for ConnectionMetadata {
         write!(
             f,
             "[{},{},{},{},{:?}]",
-            self.peer_id,
+            self.remote_peer_id,
             self.addr,
             self.origin,
             self.messaging_protocol,

@@ -63,7 +63,7 @@ impl<'a> NetworkSchema<'a> {
         self.connection_id(&metadata.connection_id)
             .connection_origin(&metadata.origin)
             .network_address(&metadata.addr)
-            .remote_peer(&metadata.peer_id)
+            .remote_peer(&metadata.remote_peer_id)
     }
 
     pub fn debug_error<Err: std::fmt::Debug>(self, error: &Err) -> Self {
