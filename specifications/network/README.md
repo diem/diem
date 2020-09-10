@@ -15,7 +15,7 @@ This document describes **LibraNet**, the primary network protocol used for comm
 * **Server**: In the context of a connection, the server is the side that received the connection. Also sometimes referred to as the "responder" or "listener".
 * **PeerId**: A peer's id, a 16-byte value which is either:
 
-  * In the validator network, the on-chain [AccountAddress](../common/common_data_structures.md#accountaddress) of the validator peer
+  * In the validator network, the on-chain [AccountAddress](../common/data_structures.md#accountaddress) of the validator peer
   * In all other networks, the last 16 bytes of the peer's static x25519 public key
 
 ## Standard Network Topology

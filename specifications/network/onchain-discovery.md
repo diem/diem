@@ -56,7 +56,7 @@ enum ConsensusScheme {
 }
 ```
 
-* [`AccountAddress`](../common/common_data_structures.md#accountaddress)
+* [`AccountAddress`](../common/data_structures.md#accountaddress)
 * [`RawNetworkAddress`](network-address.md)
 * [`RawEncNetworkAddress`](network-address.md)
 

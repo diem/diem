@@ -337,7 +337,7 @@ Each transaction makes updates to one or more accounts, which generates a new le
 
 The list of events emitted by each transaction are stored in an individual Merkle accumulator (`MerkleAccumulator<ContractEvent>`). The events are appended to the accmulator in the same order that Move VM outputs them. The root hash of the accumulator is the event root hash and acts as the authenticator for any event.
 
-See [ContractEvent](../common/common_data_structures.md#contractevent) for details of `ContractEvent`.
+See [ContractEvent](../common/data_structures.md#contractevent) for details of `ContractEvent`.
 
 ### Ledger History
 

@@ -46,7 +46,7 @@ While a validator has a public endpoint and a validator endpoint, in order to su
 
 As [depicted](#The-Libra-network), there are 4 network protocol specifications:
 
-* **[Consensus protocol](consensus/consensus.md)**. This is how agreement is reached between a known set of validators assuming byzantine fault-tolerant (BFT) conditions.
+* **[Consensus protocol](consensus/)**. This is how agreement is reached between a known set of validators assuming byzantine fault-tolerant (BFT) conditions.
 * **Mempool protocol**. The protocol is used between validators, between full nodes, and between validators and full nodes to quickly re-share user transactions. This is how transactions are passed upstream, eventually intending to reach a validator that proposes a block that includes these transactions.
 * **State synchronizer protocol**. The protocol used between validators, between full nodes, and between validators and full nodes to replicate the ledger history and ledger state of the committed blockchain.
 * **[JSON-RPC](../json-rpc/json-rpc-spec.md) client to full node protocol**. The protocol used between clients and full nodes to submit transactions and query the state of the blockchain. This uses the [JSON-RPC 2.0](https://www.jsonrpc.org/specification) protocol, and takes into account trusted or untrusted full nodes.
@@ -54,10 +54,10 @@ As [depicted](#The-Libra-network), there are 4 network protocol specifications:
 In addition, these specifications build on top of a common set of specifications:
 
 * **[Libra canonical serialization (LCS)](https://libra.github.io/libra/libra_canonical_serialization/)**. This details how data is canonically serialized and deserialized. Hashing and signing of data structures are applied after LCS serialization.
-* **Common data structures**. These are the data structures that are used across more than one specification.
-* **LibraNet**. This describes a handshake and wire protocol for all networking protocols. This relies on the [Noise protocol framework](https://noiseprotocol.org/) for integrity and confidentiality.
-* **P2P discovery**. This defines how clients can safely find the endpoints of the LPN validators.
-* **Authenticated data structures**. This describes the ledger history, ledger state, and events data structures.
+* **[Common data structures](common/data_structures.md)**. These are the data structures that are used across more than one specification.
+* **[LibraNet](network/)**. This describes a handshake and wire protocol for all networking protocols. This relies on the [Noise protocol framework](https://noiseprotocol.org/) for integrity and confidentiality.
+* **[On-chain discovery](network/onchain-discovery.md)**. This defines how clients can safely find the endpoints of the LPN validators.
+* **[Authenticated data structures](common/authenticated_data_structures.md)**. This describes the ledger history, ledger state, and events data structures.
 * **Move virtual machine (VM)**. This defines the semantics of the Move bytecode interpreter and Move bytecode verifier.
 * **Libra adapter**. This defines the checks performed on a transaction before passing its script into the Move VM (e.g., signature checking).
 

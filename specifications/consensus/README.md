@@ -20,7 +20,7 @@ TODO: Add picture
 
 ## Data structures
 
-In this section, we specify data structures specific to consensus and how to verify the validity of these data structures - both for instantiation and acceptance from other validators. Any dependent data structures not described here are specified in the [common data structures document](../common/common_data_structures.md). Additionally, there is context specific verification of these data structures that is described in the [consensus modules](#Consensus-modules). For example, a proposed block is invalid and not accepted if its round is less than the current round of the receiving validator.
+In this section, we specify data structures specific to consensus and how to verify the validity of these data structures - both for instantiation and acceptance from other validators. Any dependent data structures not described here are specified in the [common data structures document](../common/data_structures.md). Additionally, there is context specific verification of these data structures that is described in the [consensus modules](#Consensus-modules). For example, a proposed block is invalid and not accepted if its round is less than the current round of the receiving validator.
 
 ### Payload
 
@@ -194,7 +194,7 @@ struct QuorumCert {
 Fields:
 
 * `vote_data` is a helper structure that includes block information about a proposed block and its parent block. The LCS hash of `vote_data` must be equal to the `signed_ledger_info`.ledger_info.consensus_data_hash as a part of verification
-* `signed_ledger_info` contains the [ledger state](../common/common_data_structures.md#LedgerInfoWithSignatures) of the committed block. Since a signature agrees on the hash of `vote_data`, it certifies the proposed block and its parent from `vote_data` as well as the highest committed state on this blockchain branch.
+* `signed_ledger_info` contains the [ledger state](../common/data_structures.md#LedgerInfoWithSignatures) of the committed block. Since a signature agrees on the hash of `vote_data`, it certifies the proposed block and its parent from `vote_data` as well as the highest committed state on this blockchain branch.
 
 Derived Fields
 
