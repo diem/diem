@@ -41,6 +41,7 @@ const VAULT_TESTS: &[fn()] = &[
     test_vault_crypto_policies,
     test_vault_key_value_policies,
     test_vault_tokens,
+    test_vault_cas,
 ];
 
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API and enforces
@@ -81,7 +82,14 @@ fn test_suite_multiple_namespaces() {
 /// Creates and initializes a VaultStorage instance for testing. If a namespace is specified, the
 /// instance will perform all storage operations under that namespace.
 fn create_vault_with_namespace(namespace: Option<String>) -> VaultStorage {
-    VaultStorage::new(dev::test_host(), ROOT_TOKEN.into(), namespace, None, None)
+    VaultStorage::new(
+        dev::test_host(),
+        ROOT_TOKEN.into(),
+        namespace,
+        None,
+        None,
+        true,
+    )
 }
 
 /// Initializes test policies for a VaultStorage instance and checks the instance is
@@ -140,14 +148,14 @@ fn test_vault_key_value_policies() {
     assert_eq!(storage.get::<u64>(FULL).unwrap().value, 4);
 
     let writer_token = storage.create_token(vec![&WRITER]).unwrap();
-    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, ttl);
+    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, ttl, false);
     assert_eq!(writer.get::<u64>(ANYONE).unwrap().value, 1);
     assert_eq!(writer.get::<u64>(ROOT), Err(Error::PermissionDenied));
     assert_eq!(writer.get::<u64>(PARTIAL).unwrap().value, 3);
     assert_eq!(writer.get::<u64>(FULL).unwrap().value, 4);
 
     let reader_token = storage.create_token(vec![&READER]).unwrap();
-    let mut reader = VaultStorage::new(dev::test_host(), reader_token, None, None, ttl);
+    let mut reader = VaultStorage::new(dev::test_host(), reader_token, None, None, ttl, false);
     assert_eq!(reader.get::<u64>(ANYONE).unwrap().value, 1);
     assert_eq!(reader.get::<u64>(ROOT), Err(Error::PermissionDenied));
     assert_eq!(reader.get::<u64>(PARTIAL).unwrap().value, 3);
@@ -202,7 +210,8 @@ fn test_vault_crypto_policies() {
 
     // Verify exporter policy
     let exporter_token = storage.create_token(vec![&EXPORTER]).unwrap();
-    let mut exporter_store = VaultStorage::new(dev::test_host(), exporter_token, None, None, None);
+    let mut exporter_store =
+        VaultStorage::new(dev::test_host(), exporter_token, None, None, None, true);
     exporter_store.export_private_key(CRYPTO_KEY).unwrap();
     exporter_store.get_public_key(CRYPTO_KEY).unwrap_err();
     exporter_store.rotate_key(CRYPTO_KEY).unwrap_err();
@@ -210,7 +219,7 @@ fn test_vault_crypto_policies() {
 
     // Verify noone policy
     let noone_token = storage.create_token(vec![&NOONE]).unwrap();
-    let mut noone_store = VaultStorage::new(dev::test_host(), noone_token, None, None, None);
+    let mut noone_store = VaultStorage::new(dev::test_host(), noone_token, None, None, None, true);
     noone_store.export_private_key(CRYPTO_KEY).unwrap_err();
     noone_store.get_public_key(CRYPTO_KEY).unwrap_err();
     noone_store.rotate_key(CRYPTO_KEY).unwrap_err();
@@ -218,7 +227,8 @@ fn test_vault_crypto_policies() {
 
     // Verify reader policy
     let reader_token = storage.create_token(vec![&READER]).unwrap();
-    let mut reader_store = VaultStorage::new(dev::test_host(), reader_token, None, None, None);
+    let mut reader_store =
+        VaultStorage::new(dev::test_host(), reader_token, None, None, None, true);
     reader_store.export_private_key(CRYPTO_KEY).unwrap_err();
     assert_eq!(
         reader_store.get_public_key(CRYPTO_KEY).unwrap().public_key,
@@ -229,7 +239,8 @@ fn test_vault_crypto_policies() {
 
     // Verify rotater policy
     let rotater_token = storage.create_token(vec![&ROTATER]).unwrap();
-    let mut rotater_store = VaultStorage::new(dev::test_host(), rotater_token, None, None, None);
+    let mut rotater_store =
+        VaultStorage::new(dev::test_host(), rotater_token, None, None, None, true);
     rotater_store.export_private_key(CRYPTO_KEY).unwrap_err();
     assert_eq!(
         rotater_store.get_public_key(CRYPTO_KEY).unwrap().public_key,
@@ -242,7 +253,8 @@ fn test_vault_crypto_policies() {
 
     // Verify signer policy
     let signer_token = storage.create_token(vec![&SIGNER]).unwrap();
-    let mut signer_store = VaultStorage::new(dev::test_host(), signer_token, None, None, None);
+    let mut signer_store =
+        VaultStorage::new(dev::test_host(), signer_token, None, None, None, true);
     signer_store.export_private_key(CRYPTO_KEY).unwrap_err();
     signer_store.get_public_key(CRYPTO_KEY).unwrap_err();
     signer_store.rotate_key(CRYPTO_KEY).unwrap_err();
@@ -266,7 +278,7 @@ fn test_vault_tokens() {
         .unwrap();
 
     let writer_token = storage.create_token(vec![&WRITER]).unwrap();
-    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, None);
+    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, None, true);
 
     // Verify reads and write succeed
     assert_eq!(writer.get::<u64>(PARTIAL).unwrap().value, 3);
@@ -277,6 +289,44 @@ fn test_vault_tokens() {
     assert_eq!(writer.get::<u64>(PARTIAL), Err(Error::PermissionDenied));
 
     // Try to use an invalid token and verify failure
-    let writer = VaultStorage::new(dev::test_host(), "INVALID TOKEN".into(), None, None, None);
+    let writer = VaultStorage::new(
+        dev::test_host(),
+        "INVALID TOKEN".into(),
+        None,
+        None,
+        None,
+        true,
+    );
     assert_eq!(writer.get::<u64>(PARTIAL), Err(Error::PermissionDenied));
+}
+
+fn test_vault_cas() {
+    let mut with_cas = create_vault_with_namespace(None);
+    let mut without_cas =
+        VaultStorage::new(dev::test_host(), ROOT_TOKEN.into(), None, None, None, false);
+
+    // Test initial write with no version
+    with_cas.set("test", 1).unwrap();
+    assert_eq!(with_cas.get::<u64>("test").unwrap().value, 1);
+
+    // Test subsequent write with version
+    with_cas.set("test", 2).unwrap();
+    assert_eq!(with_cas.get::<u64>("test").unwrap().value, 2);
+
+    // Test that version is updated on writes
+    with_cas.set("test", 3).unwrap();
+    with_cas.set("test", 4).unwrap();
+    assert_eq!(with_cas.get::<u64>("test").unwrap().value, 4);
+
+    // Test that CAS is not used if disabled
+    without_cas.set("test", 5).unwrap();
+    assert_eq!(without_cas.get::<u64>("test").unwrap().value, 5);
+
+    // Test that write fails if version doesn't match
+    with_cas.set("test", 6).unwrap_err();
+
+    // Test that reading updates the version
+    assert_eq!(with_cas.get::<u64>("test").unwrap().value, 5);
+    with_cas.set("test", 6).unwrap();
+    assert_eq!(with_cas.get::<u64>("test").unwrap().value, 6);
 }

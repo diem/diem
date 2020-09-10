@@ -221,6 +221,7 @@ impl ValidatorConfig {
                             .clone(),
                     ),
                     renew_ttl_secs: None,
+                    disable_cas: None,
                 }),
                 _ => return Err(Error::InvalidSafetyRulesBackend(backend.to_string()).into()),
             };

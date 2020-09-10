@@ -273,6 +273,7 @@ mod tests {
             Some("network_address_encryption_keys".to_string()),
             None,
             None,
+            true,
         ));
         let mut encryptor = Encryptor::new(storage);
         encryptor.initialize().unwrap();

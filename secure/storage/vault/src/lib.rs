@@ -339,15 +339,30 @@ impl Client {
     }
 
     /// Create or update a key/value pair in a given secret store.
-    pub fn write_secret(&self, secret: &str, key: &str, value: &Value) -> Result<(), Error> {
+    pub fn write_secret(
+        &self,
+        secret: &str,
+        key: &str,
+        value: &Value,
+        version: Option<u32>,
+    ) -> Result<u32, Error> {
+        let payload = if let Some(version) = version {
+            json!({ "data": { key: value }, "options": {"cas": version} })
+        } else {
+            json!({ "data": { key: value } })
+        };
+
         let request = self
             .agent
             .put(&format!("{}/v1/secret/data/{}", self.host, secret));
-        let resp = self
-            .upgrade_request(request)
-            .send_json(json!({ "data": { key: value } }));
+        let resp = self.upgrade_request(request).send_json(payload);
 
-        process_generic_response(resp)
+        if resp.ok() {
+            let resp: WriteSecretResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(resp.data.version)
+        } else {
+            Err(resp.into())
+        }
     }
 
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
@@ -927,6 +942,11 @@ struct ReadSecretData {
 struct ReadSecretMetadata {
     created_time: String,
     version: u32,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct WriteSecretResponse {
+    data: ReadSecretMetadata,
 }
 
 /// {

@@ -49,6 +49,8 @@ pub struct VaultConfig {
     pub server: String,
     /// The authorization token for accessing secrets
     pub token: Token,
+    /// Disable check-and-set when writing secrets to Vault
+    pub disable_cas: Option<bool>,
 }
 
 impl VaultConfig {
@@ -170,6 +172,11 @@ impl From<&SecureBackend> for Storage {
                     .as_ref()
                     .map(|_| config.ca_certificate().unwrap()),
                 config.renew_ttl_secs,
+                if let Some(disable) = config.disable_cas {
+                    !disable
+                } else {
+                    true
+                },
             )),
         }
     }
@@ -193,6 +200,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                disable_cas: None,
             },
         };
 
@@ -218,6 +226,7 @@ vault:
                 ca_certificate: None,
                 token: Token::FromDisk(PathBuf::from("/token")),
                 renew_ttl_secs: None,
+                disable_cas: None,
             },
         };
 
