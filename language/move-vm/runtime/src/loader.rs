@@ -37,6 +37,10 @@ use vm::{
     IndexKind,
 };
 
+//@SG-beg
+use std::time::{Instant};
+//@SG-end
+
 // A simple cache that offers both a HashMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.
 // Access to this cache is always under a `Mutex`.
@@ -537,22 +541,47 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+        println!("***************LF*****************");
+
+        let t1 = Instant::now();
+
         self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
+
+        println!("Step 1: load_function: {:?}",t1.elapsed());
+
+        let t1 = Instant::now();
+
         let idx = self
             .module_cache
             .lock()
             .unwrap()
             .resolve_function_by_name(function_name, module_id)
             .map_err(|err| err.finish(Location::Undefined))?;
+
+        println!("Step 2: load_function: {:?}",t1.elapsed());
+
+        let t1 = Instant::now();
+
         let func = self.module_cache.lock().unwrap().function_at(idx);
+
+        println!("Step 3: load_function: {:?}",t1.elapsed());
+
+        let t1 = Instant::now();
 
         // verify type arguments
         let mut type_params = vec![];
         for ty in ty_args {
             type_params.push(self.load_type(ty, data_store)?);
         }
+
+        println!("Step 4: load_function: {:?}",t1.elapsed());  
+
+        let t1 = Instant::now();
+
         self.verify_ty_args(func.type_parameters(), &type_params)
             .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
+
+        println!("Step 5: load_function: {:?}",t1.elapsed());
 
         Ok((func, type_params))
     }
@@ -728,9 +757,15 @@ impl Loader {
             Ok(module)
         }
 
+        let t1 = Instant::now(); 
+
         if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
             return Ok(module);
         }
+
+        println!("LOAD MODULE S1: {:?}",t1.elapsed()); 
+
+        let t1 = Instant::now();
 
         let bytes = match data_store.load_module(id) {
             Ok(bytes) => bytes,
@@ -741,8 +776,15 @@ impl Loader {
             }
         };
 
+        println!("LOAD MODULE S2: {:?}",t1.elapsed());  
+
+        let t1 = Instant::now();
+
         let module = deserialize_and_verify_module(self, bytes, data_store)
             .map_err(expect_no_verification_errors)?;
+
+        println!("LOAD MODULE S3: {:?}",t1.elapsed());
+
         self.module_cache.lock().unwrap().insert(id.clone(), module)
     }
 
