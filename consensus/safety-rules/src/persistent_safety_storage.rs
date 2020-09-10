@@ -10,33 +10,17 @@ use consensus_types::{common::Author, safety_data::SafetyData};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{CONSENSUS_KEY, EXECUTION_KEY, OWNER_ACCOUNT, SAFETY_DATA, WAYPOINT};
 use libra_logger::prelude::*;
-use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::waypoint::Waypoint;
 
 /// SafetyRules needs an abstract storage interface to act as a common utility for storing
 /// persistent data to local disk, cloud, secrets managers, or even memory (for tests)
 /// Any set function is expected to sync to the remote system before returning.
-/// @TODO add access to private key from persistent store
-/// @TODO add retrieval of private key based upon public key to persistent store
 pub struct PersistentSafetyStorage {
     internal_store: Storage,
 }
 
 impl PersistentSafetyStorage {
-    pub fn in_memory(
-        consensus_private_key: Ed25519PrivateKey,
-        execution_private_key: Ed25519PrivateKey,
-    ) -> Self {
-        let storage = Storage::from(InMemoryStorage::new());
-        Self::initialize(
-            storage,
-            Author::random(),
-            consensus_private_key,
-            execution_private_key,
-            Waypoint::default(),
-        )
-    }
-
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
     /// SafetyRules values set.
     pub fn initialize(
@@ -142,23 +126,31 @@ impl PersistentSafetyStorage {
 mod tests {
     use super::*;
     use libra_crypto::Uniform;
+    use libra_secure_storage::InMemoryStorage;
     use libra_types::validator_signer::ValidatorSigner;
 
     #[test]
     fn test() {
-        let private_key = ValidatorSigner::from_int(0).private_key().clone();
-        let mut storage = PersistentSafetyStorage::in_memory(
-            private_key,
+        let consensus_private_key = ValidatorSigner::from_int(0).private_key().clone();
+        let storage = Storage::from(InMemoryStorage::new());
+        let mut safety_storage = PersistentSafetyStorage::initialize(
+            storage,
+            Author::random(),
+            consensus_private_key,
             Ed25519PrivateKey::generate_for_testing(),
+            Waypoint::default(),
         );
-        let safety_data = storage.safety_data().unwrap();
+
+        let safety_data = safety_storage.safety_data().unwrap();
         assert_eq!(safety_data.epoch, 1);
         assert_eq!(safety_data.last_voted_round, 0);
         assert_eq!(safety_data.preferred_round, 0);
-        storage
+
+        safety_storage
             .set_safety_data(SafetyData::new(9, 8, 1, None))
             .unwrap();
-        let safety_data = storage.safety_data().unwrap();
+
+        let safety_data = safety_storage.safety_data().unwrap();
         assert_eq!(safety_data.epoch, 9);
         assert_eq!(safety_data.last_voted_round, 8);
         assert_eq!(safety_data.preferred_round, 1);
