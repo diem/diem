@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-libc = "0.2.76"
+libc = "0.2.77"
 static_assertions = "1.1.0"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
