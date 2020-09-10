@@ -13,6 +13,7 @@ mod json_rpc_service;
 mod mempool;
 mod move_vm;
 mod network;
+mod proof;
 mod safety_rules;
 mod secure_json_rpc_client;
 mod secure_storage_vault;
@@ -35,6 +36,14 @@ static ALL_TARGETS: Lazy<BTreeMap<&'static str, Box<dyn FuzzTargetImpl>>> = Lazy
         Box::new(mempool::MempoolIncomingTransactions::default()),
         // Move VM
         Box::new(move_vm::ValueTarget::default()),
+        // Proof
+        Box::new(proof::TestAccumulatorProofFuzzer::default()),
+        Box::new(proof::SparseMerkleProofFuzzer::default()),
+        Box::new(proof::TestAccumulatorRangeProofFuzzer::default()),
+        Box::new(proof::TransactionInfoWithProofFuzzer::default()),
+        Box::new(proof::AccountStateProofFuzzer::default()),
+        Box::new(proof::EventProofFuzzer::default()),
+        Box::new(proof::TransactionListProofFuzzer::default()),
         // Network
         Box::new(network::RpcInboundRequest::default()),
         Box::new(network::NetworkNoiseInitiator::default()),
