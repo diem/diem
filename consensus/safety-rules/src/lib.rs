@@ -16,6 +16,7 @@ mod safety_rules_manager;
 mod serializer;
 mod t_safety_rules;
 mod thread;
+mod validator_handle;
 
 pub use crate::{
     consensus_state::ConsensusState, error::Error,

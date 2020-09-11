@@ -8,6 +8,7 @@ use crate::{
     logging::{LogEntry, LogEvent, SafetyLogSchema},
     persistent_safety_storage::PersistentSafetyStorage,
     t_safety_rules::TSafetyRules,
+    validator_handle::ValidatorHandle,
 };
 use consensus_types::{
     block::Block,
@@ -25,10 +26,11 @@ use libra_crypto::{
     hash::HashValue,
     traits::Signature,
 };
+use libra_global_constants::CONSENSUS_KEY;
 use libra_logger::prelude::*;
 use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
-    ledger_info::LedgerInfo, validator_signer::ValidatorSigner, waypoint::Waypoint,
+    ledger_info::LedgerInfo, waypoint::Waypoint,
 };
 use std::cmp::Ordering;
 
@@ -36,7 +38,7 @@ use std::cmp::Ordering;
 pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
     execution_public_key: Option<Ed25519PublicKey>,
-    validator_signer: Option<ValidatorSigner>,
+    validator_handle: Option<ValidatorHandle>,
     epoch_state: Option<EpochState>,
 }
 
@@ -59,15 +61,15 @@ impl SafetyRules {
         Self {
             persistent_storage,
             execution_public_key,
-            validator_signer: None,
+            validator_handle: None,
             epoch_state: None,
         }
     }
 
-    fn signer(&self) -> Result<&ValidatorSigner, Error> {
-        self.validator_signer
+    fn validator_handle(&self) -> Result<&ValidatorHandle, Error> {
+        self.validator_handle
             .as_ref()
-            .ok_or_else(|| Error::NotInitialized("validator_signer".into()))
+            .ok_or_else(|| Error::NotInitialized("validator_handle".into()))
     }
 
     fn epoch_state(&self) -> Result<&EpochState, Error> {
@@ -165,14 +167,14 @@ impl SafetyRules {
         Ok(updated)
     }
 
-    /// This verifies whether the author of one proposal is the validator signer
+    /// This verifies whether the author of one proposal is the validator handle
     fn verify_author(&self, author: Option<Author>) -> Result<(), Error> {
-        let validator_signer_author = &self.signer()?.author();
+        let handle_author = &self.validator_handle()?.author();
         let author = author
             .ok_or_else(|| Error::InvalidProposal("No author found in the proposal".into()))?;
-        if validator_signer_author != &author {
+        if handle_author != &author {
             return Err(Error::InvalidProposal(
-                "Proposal author is not validator signer!".into(),
+                "Proposal author is not validator handle!".into(),
             ));
         }
         Ok(())
@@ -222,7 +224,7 @@ impl SafetyRules {
         Ok(ConsensusState::new(
             self.persistent_storage.safety_data()?,
             self.persistent_storage.waypoint()?,
-            self.signer().is_ok(),
+            self.validator_handle().is_ok(),
         ))
     }
 
@@ -239,23 +241,13 @@ impl SafetyRules {
 
         let author = self.persistent_storage.author()?;
         if let Some(expected_key) = epoch_state.verifier.get_public_key(&author) {
-            let curr_key = self.signer().ok().map(|s| s.public_key());
+            let curr_key = self.validator_handle().ok().map(|s| s.public_key());
             if curr_key != Some(expected_key.clone()) {
-                let consensus_key = self
-                    .persistent_storage
-                    .consensus_key_for_version(expected_key)
-                    .ok()
-                    .ok_or_else(|| {
-                        error!(
-                            SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error),
-                            "Validator key not found",
-                        );
-
-                        self.validator_signer = None;
-                        Error::InternalError("Validator key not found".into())
-                    })?;
-
-                self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
+                self.validator_handle = Some(ValidatorHandle::new(
+                    author,
+                    CONSENSUS_KEY.into(),
+                    expected_key,
+                ));
             }
 
             debug!(
@@ -267,7 +259,7 @@ impl SafetyRules {
                 SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Success),
                 "not in set",
             );
-            self.validator_signer = None;
+            self.validator_handle = None;
         }
 
         let current_epoch = self.persistent_storage.safety_data()?.epoch;
@@ -300,7 +292,7 @@ impl SafetyRules {
         maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
     ) -> Result<Vote, Error> {
         // Exit early if we cannot sign
-        self.signer()?;
+        self.validator_handle()?;
         let mut safety_data = self.persistent_storage.safety_data()?;
 
         let (vote_proposal, execution_signature) = (
@@ -338,12 +330,12 @@ impl SafetyRules {
 
         let vote_data = self.extension_check(vote_proposal)?;
 
-        let validator_signer = self.signer()?;
+        let validator_handle = self.validator_handle()?;
         let vote = Vote::new(
             vote_data,
-            validator_signer.author(),
+            validator_handle.author(),
             self.construct_ledger_info(proposed_block)?,
-            validator_signer,
+            validator_handle,
         );
         safety_data.last_vote = Some(vote.clone());
         self.persistent_storage.set_safety_data(safety_data)?;
@@ -353,7 +345,7 @@ impl SafetyRules {
 
     fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         let mut safety_data = self.persistent_storage.safety_data()?;
-        self.signer()?;
+        self.validator_handle()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch(), &safety_data)?;
         if block_data.round() <= safety_data.last_voted_round {
@@ -370,12 +362,12 @@ impl SafetyRules {
 
         Ok(Block::new_proposal_from_block_data(
             block_data,
-            self.signer()?,
+            self.validator_handle()?,
         ))
     }
 
     fn guarded_sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
-        self.signer()?;
+        self.validator_handle()?;
         let mut safety_data = self.persistent_storage.safety_data()?;
         self.verify_epoch(timeout.epoch(), &safety_data)?;
 
@@ -397,8 +389,8 @@ impl SafetyRules {
             self.persistent_storage.set_safety_data(safety_data)?;
         }
 
-        let validator_signer = self.signer()?;
-        let signature = timeout.sign(&validator_signer);
+        let validator_handle = self.validator_handle()?;
+        let signature = timeout.sign(&validator_handle);
 
         Ok(signature)
     }
