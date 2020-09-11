@@ -946,6 +946,7 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
+                - master
       - docker-update-base-images:
           context: docker
           filters:
