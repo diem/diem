@@ -36,6 +36,7 @@ fi
 ${CARGO} ${CARGOFLAGS} build --release \
          -p cluster-test \
          -p cli \
+         -p libra-faucet \
          "$@"
 
 rm -rf target/release/{build,deps,incremental}

@@ -38,6 +38,7 @@ RUN pip3 install -r /libra/docker/mint/requirements.txt
 RUN mkdir -p /opt/libra/bin  /libra/client/data/wallet/
 
 COPY --from=builder /libra/target/release/cli /opt/libra/bin
+COPY --from=builder /libra/target/release/libra-faucet /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin
