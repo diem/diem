@@ -159,8 +159,6 @@ module LBR {
     }
 
     spec fun calculate_component_amounts_for_lbr {
-        /// TODO: timeout
-        pragma verify = false;
         pragma opaque;
         let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include CalculateComponentAmountsForLBRAbortsIf;

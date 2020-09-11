@@ -218,12 +218,11 @@ module TestArithmetic {
         aborts_if false;
     }
 
-    // TODO: Should succeed. JP: Prover seems to give a false counterexample.
     fun overflow_u64_mul(x: u64, y: u64): u64 {
         x * y
     }
     spec fun overflow_u64_mul {
-        //aborts_if x * y > max_u64();
+        aborts_if x * y > max_u64();
     }
 
     // fails.
@@ -234,11 +233,10 @@ module TestArithmetic {
         aborts_if false;
     }
 
-    // TODO: Should succeed. JP: Prover seems to give a false counterexample.
     fun overflow_u128_mul(x: u128, y: u128): u128 {
         x * y
     }
     spec fun overflow_u128_mul {
-        //aborts_if x * y > max_u128(); // U128_MAX
+        aborts_if x * y > max_u128(); // U128_MAX
     }
 }
