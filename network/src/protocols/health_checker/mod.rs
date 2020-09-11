@@ -21,6 +21,7 @@ use crate::{
     constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
+    logging::NetworkSchema,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
@@ -232,7 +233,14 @@ where
                     match self.sample_random_peer() {
                         Some(peer_id) => {
                             let nonce = self.sample_nonce();
-                            debug!("{} Will ping: {} for round: {} nonce: {}", self.network_context, peer_id.short_str(), self.round, nonce);
+                            debug!(
+                                NetworkSchema::new(&self.network_context),
+                                round = self.round,
+                                "{} Will ping: {} for round: {} nonce: {}",
+                                self.network_context, peer_id.short_str(),
+                                self.round,
+                                nonce
+                            );
 
                             tick_handlers.push(
                                 Self::ping_peer(
@@ -244,7 +252,13 @@ where
                                     self.ping_timeout.clone()));
                         }
                         None => {
-                            debug!("{} No connected peer to ping round: {}", self.network_context, self.round);
+                            debug!(
+                                NetworkSchema::new(&self.network_context),
+                                round = self.round,
+                                "{} No connected peer to ping round: {}",
+                                self.network_context,
+                                self.round
+                            );
                         }
                     }
                 }
@@ -257,7 +271,10 @@ where
                 }
             }
         }
-        error!("{} Health checker actor terminated", self.network_context);
+        error!(
+            NetworkSchema::new(&self.network_context),
+            "{} Health checker actor terminated", self.network_context
+        );
     }
 
     fn handle_ping_request(
@@ -270,13 +287,14 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 warn!(
-                    "{} Unable to serialize pong response: {}",
-                    self.network_context, e
+                    NetworkSchema::new(&self.network_context).debug_error(&e),
+                    "{} Unable to serialize pong response: {}", self.network_context, e
                 );
                 return;
             }
         };
         debug!(
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Sending Pong response to peer: {} with nonce: {}",
             self.network_context,
             peer_id.short_str(),
@@ -296,6 +314,8 @@ where
             Ok(pong) => {
                 if pong.0 == req_nonce {
                     debug!(
+                        NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+                        rount = round,
                         "{} Ping successful for peer: {} round: {}",
                         self.network_context,
                         peer_id.short_str(),
@@ -325,6 +345,10 @@ where
             }
             Err(err) => {
                 warn!(
+                    NetworkSchema::new(&self.network_context)
+                        .remote_peer(&peer_id)
+                        .debug_error(&err),
+                    round = round,
                     "{} Ping failed for peer: {} round: {} with error: {:?}",
                     self.network_context,
                     peer_id.short_str(),
@@ -348,12 +372,16 @@ where
                         *failures += 1;
                         if *failures > self.ping_failures_tolerated {
                             info!(
+                                NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
                                 "{} Disconnecting from peer: {}",
                                 self.network_context,
                                 peer_id.short_str()
                             );
                             if let Err(err) = self.network_tx.disconnect_peer(peer_id).await {
                                 warn!(
+                                    NetworkSchema::new(&self.network_context)
+                                        .remote_peer(&peer_id)
+                                        .debug_error(&err),
                                     "{} Failed to disconnect from peer: {} with error: {:?}",
                                     self.network_context,
                                     peer_id.short_str(),
@@ -376,6 +404,8 @@ where
         ping_timeout: Duration,
     ) -> (PeerId, u64, u32, Result<Pong, RpcError>) {
         debug!(
+            NetworkSchema::new(&network_context).remote_peer(&peer_id),
+            round = round,
             "{} Sending Ping request to peer: {} for round: {} nonce: {}",
             network_context,
             peer_id.short_str(),
