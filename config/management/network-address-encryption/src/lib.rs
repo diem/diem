@@ -14,7 +14,7 @@ use libra_network_address::{
 use libra_secure_storage::{Error as StorageError, KVStorage, Storage};
 use move_core_types::account_address::AccountAddress;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -35,11 +35,15 @@ pub enum Error {
 
 pub struct Encryptor {
     storage: Storage,
+    cached_keys: RwLock<Option<ValidatorKeys>>,
 }
 
 impl Encryptor {
     pub fn new(storage: Storage) -> Self {
-        Self { storage }
+        Self {
+            storage,
+            cached_keys: RwLock::new(None),
+        }
     }
 
     /// This generates an Encryptor for use in default / testing scenarios where (proper)
@@ -126,10 +130,25 @@ impl Encryptor {
     }
 
     fn read(&self) -> Result<ValidatorKeys, Error> {
-        self.storage
+        let result = self
+            .storage
             .get::<ValidatorKeys>(VALIDATOR_NETWORK_ADDRESS_KEYS)
             .map(|v| v.value)
-            .map_err(|e| e.into())
+            .map_err(|e| e.into());
+
+        match &result {
+            Ok(keys) => {
+                *self.cached_keys.write().unwrap() = Some(keys.clone());
+            }
+            Err(err) => libra_logger::error!(
+                "Unable to read {} from storage: {}",
+                VALIDATOR_NETWORK_ADDRESS_KEYS,
+                err
+            ),
+        }
+
+        let keys = self.cached_keys.read().unwrap();
+        keys.as_ref().map_or(result, |v| Ok(v.clone()))
     }
 
     fn write(&mut self, keys: &ValidatorKeys) -> Result<(), Error> {
@@ -139,7 +158,7 @@ impl Encryptor {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct StorageKey(
     #[serde(
         serialize_with = "libra_secure_storage::to_base64",
@@ -167,7 +186,7 @@ where
         })
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ValidatorKeys {
     keys: HashMap<KeyVersion, StorageKey>,
     current: KeyVersion,
@@ -218,6 +237,30 @@ mod tests {
 
         let another_account = AccountAddress::random();
         encryptor.decrypt(&enc_addrs, another_account).unwrap_err();
+    }
+
+    #[test]
+    fn cache_test() {
+        // Prepare some initial data and verify e2e
+        let mut encryptor = Encryptor::for_testing();
+        let addr = std::str::FromStr::from_str("/ip4/10.0.0.16/tcp/80").unwrap();
+        let addrs = vec![addr];
+        let account = AccountAddress::random();
+
+        let enc_addrs = encryptor.encrypt(&addrs, account, 0).unwrap();
+        let dec_addrs = encryptor.decrypt(&enc_addrs, account).unwrap();
+        assert_eq!(addrs, dec_addrs);
+
+        // Reset storage and we should use cache
+        encryptor.storage = Storage::from(InMemoryStorage::new());
+        let enc_addrs = encryptor.encrypt(&addrs, account, 1).unwrap();
+        let dec_addrs = encryptor.decrypt(&enc_addrs, account).unwrap();
+        assert_eq!(addrs, dec_addrs);
+
+        // Reset cache and we should get an err
+        *encryptor.cached_keys.write().unwrap() = None;
+        encryptor.encrypt(&addrs, account, 1).unwrap_err();
+        encryptor.decrypt(&enc_addrs, account).unwrap_err();
     }
 
     // The only purpose of this test is to generate a baseline for vault

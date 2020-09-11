@@ -8,7 +8,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::NetworkAddress;
-use libra_network_address_encryption::Encryptor;
+use libra_network_address_encryption::{Encryptor, Error as EncryptorError};
 use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
 use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
@@ -70,9 +70,16 @@ fn extract_updates(
             let config = info.into_config();
 
             let addrs_res = match role {
-                RoleType::Validator => encryptor
-                    .decrypt(&config.validator_network_addresses, peer_id)
-                    .map_err(anyhow::Error::from),
+                RoleType::Validator => {
+                    let result = encryptor.decrypt(&config.validator_network_addresses, peer_id);
+                    if let Err(EncryptorError::StorageError(_)) = result {
+                        panic!(format!(
+                            "Unable to initialize validator network addresses: {:?}",
+                            result
+                        ));
+                    }
+                    result.map_err(anyhow::Error::from)
+                }
                 RoleType::FullNode => config
                     .fullnode_network_addresses()
                     .map_err(anyhow::Error::from),

@@ -2981,6 +2981,7 @@ dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-global-constants 0.1.0",
+ "libra-logger 0.1.0",
  "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
  "libra-workspace-hack 0.1.0",
