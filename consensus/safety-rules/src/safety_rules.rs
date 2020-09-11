@@ -304,7 +304,6 @@ impl SafetyRules {
     ) -> Result<Vote, Error> {
         // Exit early if we cannot sign
         self.signer()?;
-        let mut safety_data = self.persistent_storage.safety_data()?;
 
         let (vote_proposal, execution_signature) = (
             &maybe_signed_vote_proposal.vote_proposal,
@@ -319,6 +318,7 @@ impl SafetyRules {
         }
 
         let proposed_block = vote_proposal.block();
+        let mut safety_data = self.persistent_storage.safety_data()?;
         self.verify_epoch(proposed_block.epoch(), &safety_data)?;
         self.verify_qc(proposed_block.quorum_cert())?;
         proposed_block
@@ -339,15 +339,14 @@ impl SafetyRules {
             &mut safety_data,
         )?;
 
-        let vote_data = self.extension_check(vote_proposal)?;
-
         let validator_signer = self.signer()?;
         let vote = Vote::new(
-            vote_data,
+            self.extension_check(vote_proposal)?,
             validator_signer.author(),
             self.construct_ledger_info(proposed_block)?,
             validator_signer,
         );
+
         safety_data.last_vote = Some(vote.clone());
         self.persistent_storage.set_safety_data(safety_data)?;
 
@@ -355,10 +354,12 @@ impl SafetyRules {
     }
 
     fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
-        let mut safety_data = self.persistent_storage.safety_data()?;
         self.signer()?;
         self.verify_author(block_data.author())?;
+
+        let mut safety_data = self.persistent_storage.safety_data()?;
         self.verify_epoch(block_data.epoch(), &safety_data)?;
+
         if block_data.round() <= safety_data.last_voted_round {
             return Err(Error::InvalidProposal(format!(
                 "Proposed round {} is not higher than last voted round {}",
@@ -366,6 +367,7 @@ impl SafetyRules {
                 safety_data.last_voted_round
             )));
         }
+
         self.verify_qc(block_data.quorum_cert())?;
         if self.verify_and_update_preferred_round(block_data.quorum_cert(), &mut safety_data)? {
             self.persistent_storage.set_safety_data(safety_data)?;
@@ -379,6 +381,7 @@ impl SafetyRules {
 
     fn guarded_sign_timeout(&mut self, timeout: &Timeout) -> Result<Ed25519Signature, Error> {
         self.signer()?;
+
         let mut safety_data = self.persistent_storage.safety_data()?;
         self.verify_epoch(timeout.epoch(), &safety_data)?;
 
@@ -388,7 +391,6 @@ impl SafetyRules {
                 safety_data.preferred_round,
             ));
         }
-
         if timeout.round() < safety_data.last_voted_round {
             return Err(Error::IncorrectLastVotedRound(
                 timeout.round(),
@@ -400,9 +402,7 @@ impl SafetyRules {
             self.persistent_storage.set_safety_data(safety_data)?;
         }
 
-        let validator_signer = self.signer()?;
-        let signature = timeout.sign(&validator_signer);
-
+        let signature = timeout.sign(self.signer()?);
         Ok(signature)
     }
 }
