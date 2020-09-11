@@ -21,6 +21,7 @@
 //! actors.
 use crate::{
     counters::{self, FAILED_LABEL, RECEIVED_LABEL, SENT_LABEL},
+    logging::NetworkSchema,
     peer::{PeerHandle, PeerNotification},
     protocols::wire::messaging::v1::{DirectSendMsg, NetworkMessage, Priority},
     ProtocolId,
@@ -105,7 +106,9 @@ impl DirectSend {
     pub async fn start(mut self) {
         let peer_id = self.peer_handle.peer_id();
         info!(
-            "Starting direct send actor for peer: {}",
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+            "{} Starting direct send actor for peer: {}",
+            self.network_context,
             peer_id.short_str()
         );
         // Outbound message queues for various protocols.
@@ -129,21 +132,31 @@ impl DirectSend {
             }
         }
         info!(
-            "Terminating direct send actor for peer: {}",
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+            "{} Terminating direct send actor for peer: {}",
+            self.network_context,
             peer_id.short_str()
         );
     }
 
     // Handle PeerNotification, which can only be NewMessage for now.
     async fn handle_peer_notification(&mut self, notif: PeerNotification) {
-        trace!("PeerNotification::{:?}", notif);
+        trace!(
+            NetworkSchema::new(&self.network_context),
+            "{} PeerNotification::{:?}",
+            self.network_context,
+            notif
+        );
         match notif {
             PeerNotification::NewMessage(message) => {
                 let peer_id = self.peer_handle.peer_id();
                 if let NetworkMessage::DirectSendMsg(message) = message {
                     let protocol_id = message.protocol_id;
                     trace!(
-                        "DirectSend: Received inbound message from peer {} for protocol {:?}",
+                        NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+                        protocol_id = protocol_id,
+                        "{} DirectSend: Received inbound message from peer {} for protocol {:?}",
+                        self.network_context,
                         peer_id.short_str(),
                         protocol_id
                     );
@@ -157,22 +170,39 @@ impl DirectSend {
                     });
                     if let Err(err) = self.ds_notifs_tx.send(notif).await {
                         warn!(
-                            "Failed to notify upstream actor about inbound DirectSend message. Error: {:?}",
+                            NetworkSchema::new(&self.network_context)
+                                .debug_error(&err),
+                            "{} Failed to notify upstream actor about inbound DirectSend message. Error: {:?}",
+                            self.network_context,
                             err
                         );
                     }
                 } else {
-                    error!("Unexpected message from peer actor: {:?}", message);
+                    error!(
+                        NetworkSchema::new(&self.network_context),
+                        message = message,
+                        "{} Unexpected message from peer actor: {:?}",
+                        self.network_context,
+                        message
+                    );
                 }
             }
-            _ => warn!("Unexpected PeerNotification: {:?}", notif),
+            _ => warn!(
+                NetworkSchema::new(&self.network_context),
+                "{} Unexpected PeerNotification: {:?}", self.network_context, notif
+            ),
         }
     }
 
     // Handle DirectSendRequest, which can only be SendMessage request for now.
     // Tries to synchronously send a message to the peer handle.
     async fn handle_direct_send_request(&mut self, req: DirectSendRequest) {
-        trace!("DirectSendRequest::{:?}", req);
+        trace!(
+            NetworkSchema::new(&self.network_context),
+            "{} DirectSendRequest::{:?}",
+            self.network_context,
+            req
+        );
         match req {
             DirectSendRequest::SendMessage(msg) => {
                 let protocol_id = msg.protocol_id;
@@ -197,10 +227,13 @@ impl DirectSend {
                             .inc_by(msg_len as i64);
                     }
                     Err(e) => {
+                        let peer_id = self.peer_handle.peer_id();
                         warn!(
+                            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+                            protocol_id = protocol_id,
                             "Failed to send message for protocol: {} to peer: {}. Error: {:?}",
                             protocol_id,
-                            self.peer_handle.peer_id().short_str(),
+                            peer_id.short_str(),
                             e
                         );
                         counters::direct_send_messages(&self.network_context, FAILED_LABEL).inc();
