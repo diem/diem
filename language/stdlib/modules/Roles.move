@@ -179,14 +179,15 @@ module Roles {
     spec fun grant_role {
         pragma opaque;
         include GrantRole;
+        let addr = Signer::spec_address_of(account);
+        // Requires to satisfy global invariants.
+        requires role_id == LIBRA_ROOT_ROLE_ID ==> addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
+        requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
     }
     spec schema GrantRole {
         account: signer;
         role_id: num;
         let addr = Signer::spec_address_of(account);
-        // Requires to satisfy global invariants.
-        requires role_id == LIBRA_ROOT_ROLE_ID ==> addr == CoreAddresses::LIBRA_ROOT_ADDRESS();
-        requires role_id == TREASURY_COMPLIANCE_ROLE_ID ==> addr == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         aborts_if exists<RoleId>(addr) with Errors::ALREADY_PUBLISHED;
         ensures exists<RoleId>(addr);
         ensures global<RoleId>(addr).role_id == role_id;
@@ -312,11 +313,11 @@ module Roles {
     }
 
     /// Assert that the account has the validator role.
-    public fun assert_validator(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+    public fun assert_validator(validator_account: &signer) acquires RoleId {
+        let validator_addr = Signer::address_of(validator_account);
+        assert(exists<RoleId>(validator_addr), Errors::not_published(EROLE_ID));
         assert(
-            borrow_global<RoleId>(addr).role_id == VALIDATOR_ROLE_ID,
+            borrow_global<RoleId>(validator_addr).role_id == VALIDATOR_ROLE_ID,
             Errors::requires_role(EVALIDATOR)
         )
     }
@@ -326,11 +327,11 @@ module Roles {
     }
 
     /// Assert that the account has the validator operator role.
-    public fun assert_validator_operator(account: &signer) acquires RoleId {
-        let addr = Signer::address_of(account);
-        assert(exists<RoleId>(addr), Errors::not_published(EROLE_ID));
+    public fun assert_validator_operator(validator_operator_account: &signer) acquires RoleId {
+        let validator_operator_addr = Signer::address_of(validator_operator_account);
+        assert(exists<RoleId>(validator_operator_addr), Errors::not_published(EROLE_ID));
         assert(
-            borrow_global<RoleId>(addr).role_id == VALIDATOR_OPERATOR_ROLE_ID,
+            borrow_global<RoleId>(validator_operator_addr).role_id == VALIDATOR_OPERATOR_ROLE_ID,
             Errors::requires_role(EVALIDATOR_OPERATOR)
         )
     }
@@ -475,17 +476,18 @@ module Roles {
     }
 
     spec schema AbortsIfNotValidator {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != VALIDATOR_ROLE_ID with Errors::REQUIRES_ROLE;
+        validator_account: signer;
+        let validator_addr = Signer::spec_address_of(validator_account);
+        aborts_if !exists<RoleId>(validator_addr) with Errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(validator_addr).role_id != VALIDATOR_ROLE_ID with Errors::REQUIRES_ROLE;
     }
 
     spec schema AbortsIfNotValidatorOperator {
-        account: signer;
-        let addr = Signer::spec_address_of(account);
-        aborts_if !exists<RoleId>(addr) with Errors::NOT_PUBLISHED;
-        aborts_if global<RoleId>(addr).role_id != VALIDATOR_OPERATOR_ROLE_ID with Errors::REQUIRES_ROLE;
+        validator_operator_account: signer;
+        let validator_operator_addr = Signer::spec_address_of(validator_operator_account);
+        aborts_if !exists<RoleId>(validator_operator_addr) with Errors::NOT_PUBLISHED;
+        aborts_if global<RoleId>(validator_operator_addr).role_id != VALIDATOR_OPERATOR_ROLE_ID
+            with Errors::REQUIRES_ROLE;
     }
 
 

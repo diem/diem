@@ -25,7 +25,7 @@ module Holder {
 script {
     use 0x1::LibraAccount;
     fun main(sender: &signer) {
-        LibraAccount::initialize(sender);
+        LibraAccount::initialize(sender, x"00000000000000000000000000000000");
     }
 }
 // check: "Keep(ABORTED { code: 1,"
@@ -159,23 +159,3 @@ stdlib_script::create_parent_vasp_account
 //! args: 0, {{abby}}, x"", b"bob", true
 stdlib_script::create_parent_vasp_account
 // check: "Keep(ABORTED { code: 2055,"
-
-//! new-transaction
-//! sender: libraroot
-script {
-    use 0x1::LibraAccount;
-    fun main() {
-        LibraAccount::create_libra_root_account({{libraroot}}, {{libraroot::auth_key}});
-    }
-}
-// check: "Keep(ABORTED { code: 1,"
-
-//! new-transaction
-//! sender: libraroot
-script {
-    use 0x1::LibraAccount;
-    fun main(account: &signer) {
-        LibraAccount::create_treasury_compliance_account(account, {{blessed}}, {{blessed::auth_key}});
-    }
-}
-// check: "Keep(ABORTED { code: 1,"

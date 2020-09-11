@@ -62,7 +62,7 @@ The <code><a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></co
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_publish">publish</a>(account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_publish">publish</a>(validator_operator_account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -72,18 +72,18 @@ The <code><a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a></co
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_publish">publish</a>(
-    account: &signer,
+    validator_operator_account: &signer,
     lr_account: &signer,
     human_name: vector&lt;u8&gt;,
 ) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <a href="Roles.md#0x1_Roles_assert_validator_operator">Roles::assert_validator_operator</a>(account);
+    <a href="Roles.md#0x1_Roles_assert_validator_operator">Roles::assert_validator_operator</a>(validator_operator_account);
     <b>assert</b>(
-        !<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        !<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account)),
         <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">EVALIDATOR_OPERATOR_CONFIG</a>)
     );
 
-    move_to(account, <a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a> {
+    move_to(validator_operator_account, <a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a> {
         human_name,
     });
 }
@@ -101,7 +101,7 @@ Get validator's account human name
 Aborts if there is no ValidatorOperatorConfig resource
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(validator_operator_addr: address): vector&lt;u8&gt;
 </code></pre>
 
 
@@ -110,9 +110,9 @@ Aborts if there is no ValidatorOperatorConfig resource
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a> {
-    <b>assert</b>(<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">EVALIDATOR_OPERATOR_CONFIG</a>));
-    *&borrow_global&lt;<a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(addr).human_name
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(validator_operator_addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a> {
+    <b>assert</b>(<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_ValidatorOperatorConfig_EVALIDATOR_OPERATOR_CONFIG">EVALIDATOR_OPERATOR_CONFIG</a>));
+    *&borrow_global&lt;<a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(validator_operator_addr).human_name
 }
 </code></pre>
 
@@ -126,7 +126,7 @@ Aborts if there is no ValidatorOperatorConfig resource
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr: address): bool
 </code></pre>
 
 
@@ -135,8 +135,8 @@ Aborts if there is no ValidatorOperatorConfig resource
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(addr)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr: address): bool {
+    exists&lt;<a href="#0x1_ValidatorOperatorConfig">ValidatorOperatorConfig</a>&gt;(validator_operator_addr)
 }
 </code></pre>
 
@@ -154,7 +154,7 @@ Aborts if there is no ValidatorOperatorConfig resource
 ### Function `publish`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_publish">publish</a>(account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_publish">publish</a>(validator_operator_account: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -162,8 +162,9 @@ Aborts if there is no ValidatorOperatorConfig resource
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotValidatorOperator">Roles::AbortsIfNotValidatorOperator</a>;
-<b>aborts_if</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>ensures</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>aborts_if</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_operator_account))
+    with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+<b>ensures</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_operator_account));
 </code></pre>
 
 
@@ -173,15 +174,15 @@ Aborts if there is no ValidatorOperatorConfig resource
 ### Function `get_human_name`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(addr: address): vector&lt;u8&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(validator_operator_addr: address): vector&lt;u8&gt;
 </code></pre>
 
 
 
 
 <pre><code>pragma opaque;
-<b>aborts_if</b> !<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<b>ensures</b> result == <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(addr);
+<b>aborts_if</b> !<a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>ensures</b> result == <a href="#0x1_ValidatorOperatorConfig_get_human_name">get_human_name</a>(validator_operator_addr);
 </code></pre>
 
 
@@ -191,11 +192,21 @@ Aborts if there is no ValidatorOperatorConfig resource
 ### Function `has_validator_operator_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr: address): bool
 </code></pre>
 
 
 
 
-<pre><code><b>ensures</b> result == <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr);
+<pre><code><b>ensures</b> result == <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(validator_operator_addr);
+</code></pre>
+
+
+If address has a ValidatorOperatorConfig, it has a validator operator role.
+This invariant is useful in LibraSystem so we don't have to check whether
+every validator address has a validator role.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1:address where <a href="#0x1_ValidatorOperatorConfig_has_validator_operator_config">has_validator_operator_config</a>(addr1):
+    <a href="Roles.md#0x1_Roles_spec_has_validator_operator_role_addr">Roles::spec_has_validator_operator_role_addr</a>(addr1);
 </code></pre>

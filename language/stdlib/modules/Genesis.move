@@ -9,7 +9,6 @@ module Genesis {
     use 0x1::Coin1;
     use 0x1::Coin2;
     use 0x1::DualAttestation;
-    use 0x1::Event;
     use 0x1::LBR;
     use 0x1::Libra;
     use 0x1::LibraAccount;
@@ -20,16 +19,14 @@ module Genesis {
     use 0x1::LibraTransactionPublishingOption;
     use 0x1::LibraVersion;
     use 0x1::LibraWriteSetManager;
-    use 0x1::Signer;
     use 0x1::TransactionFee;
-    use 0x1::Roles;
     use 0x1::LibraVMConfig;
 
     fun initialize(
         lr_account: &signer,
         tc_account: &signer,
         lr_auth_key: vector<u8>,
-        tc_addr: address,
+        _tc_addr: address,
         tc_auth_key: vector<u8>,
         initial_script_allow_list: vector<vector<u8>>,
         is_open_module: bool,
@@ -37,15 +34,12 @@ module Genesis {
         native_schedule: vector<u8>,
         chain_id: u8,
     ) {
-        let dummy_auth_key_prefix = x"00000000000000000000000000000000";
+
+        LibraAccount::initialize(lr_account, x"00000000000000000000000000000000");
 
         ChainId::initialize(lr_account, chain_id);
 
-        Roles::grant_libra_root_role(lr_account);
-        Roles::grant_treasury_compliance_role(tc_account, lr_account);
-
-        // Event and On-chain config setup
-        Event::publish_generator(lr_account);
+        // On-chain config setup
         LibraConfig::initialize(lr_account);
 
         // Currency setup
@@ -61,23 +55,11 @@ module Genesis {
         );
 
         AccountFreezing::initialize(lr_account);
-        LibraAccount::initialize(lr_account);
-        LibraAccount::create_libra_root_account(
-            Signer::address_of(lr_account),
-            copy dummy_auth_key_prefix,
-        );
 
         // Register transaction fee resource
         TransactionFee::initialize(
             lr_account,
             tc_account,
-        );
-
-        // Create the treasury compliance account
-        LibraAccount::create_treasury_compliance_account(
-            lr_account,
-            tc_addr,
-            copy dummy_auth_key_prefix,
         );
 
         LibraSystem::initialize_validator_set(
