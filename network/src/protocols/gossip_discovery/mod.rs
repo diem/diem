@@ -38,6 +38,7 @@ use crate::{
     constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
+    logging::NetworkSchema,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
@@ -197,8 +198,8 @@ where
         self.record_num_discovery_notes();
 
         debug!(
-            "{} Starting Discovery actor event loop",
-            self.network_context
+            NetworkSchema::new(&self.network_context),
+            "{} Starting Discovery actor event loop", self.network_context
         );
         loop {
             futures::select! {
@@ -209,7 +210,11 @@ where
                     self.handle_tick();
                 }
                 complete => {
-                    error!("{} Discovery actor terminated", self.network_context);
+                    warn!(
+                        NetworkSchema::new(&self.network_context),
+                        "{} Discovery actor terminated",
+                        self.network_context
+                    );
                     break;
                 }
             }
@@ -221,7 +226,10 @@ where
     // 2. Compose the msg to send.
     // 3. Spawn off a new task to push the msg to the peer.
     fn handle_tick(&mut self) {
-        debug!("{} Discovery interval tick", self.network_context);
+        debug!(
+            NetworkSchema::new(&self.network_context),
+            "{} Discovery interval tick", self.network_context
+        );
         // On each tick, we choose a random neighbor and push our state to it.
         if let Some(peer) = self.choose_random_neighbor() {
             // We clone `peer_mgr_reqs_tx` member of Self, since using `self` inside fut below
@@ -231,6 +239,9 @@ where
             let msg = self.compose_discovery_msg();
             if let Err(err) = sender.send_to(peer, msg) {
                 warn!(
+                    NetworkSchema::new(&self.network_context)
+                        .remote_peer(&peer)
+                        .debug_error(&err),
                     "{} Failed to send discovery msg to {}; error: {:?}",
                     self.network_context,
                     peer.short_str(),
@@ -244,7 +255,12 @@ where
         &mut self,
         event: Result<Event<GossipDiscoveryMsg>, NetworkError>,
     ) {
-        trace!("{} Network event::{:?}", self.network_context, event);
+        trace!(
+            NetworkSchema::new(&self.network_context),
+            "{} Network event::{:?}",
+            self.network_context,
+            event
+        );
         match event {
             Ok(e) => {
                 match e {
@@ -262,15 +278,20 @@ where
                     }
                     Event::RpcRequest(req) => {
                         warn!(
+                            NetworkSchema::new(&self.network_context),
                             "{} Unexpected notification from network: {:?}",
-                            self.network_context, req
+                            self.network_context,
+                            req
                         );
                         debug_assert!(false);
                     }
                 }
             }
             Err(err) => {
-                info!("{} Received error: {}", self.network_context, err);
+                info!(
+                    NetworkSchema::new(&self.network_context).debug_error(&err),
+                    "{} Received error: {}", self.network_context, err
+                );
             }
         }
     }
@@ -304,6 +325,8 @@ where
                 Some(ref curr_note) if note.epoch() <= curr_note.epoch() => {
                     if note.epoch() < curr_note.epoch() {
                         debug!(
+                            NetworkSchema::new(&self.network_context).remote_peer(&remote_peer),
+                            note_peer = note.peer_id,
                             "{} Received stale note for peer: {} from peer: {}",
                             self.network_context,
                             note.peer_id.short_str(),
@@ -314,6 +337,8 @@ where
                 }
                 _ => {
                     info!(
+                        NetworkSchema::new(&self.network_context).remote_peer(&remote_peer),
+                        note_peer = note.peer_id,
                         "{} Received updated note for peer: {} from peer: {}",
                         self.network_context,
                         note.peer_id.short_str(),
@@ -327,6 +352,9 @@ where
                     // issued epoch number is u64::MAX).
                     if note.peer_id == self.network_context.peer_id() {
                         info!(
+                            NetworkSchema::new(&self.network_context),
+                            previous_epoch = note.epoch(),
+                            current_epoch = self.note.epoch(),
                             "{} Received an older note for self, but with higher epoch. \
                              Previous epoch: {}, current epoch: {}",
                             self.network_context,

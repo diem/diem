@@ -3,6 +3,7 @@
 
 use crate::{
     connectivity_manager::ConnectivityRequest,
+    logging::NetworkSchema,
     protocols::gossip_discovery::{
         GossipDiscovery, GossipDiscoveryNetworkEvents, GossipDiscoveryNetworkSender,
     },
@@ -74,8 +75,8 @@ impl GossipDiscoveryBuilder {
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         debug!(
-            "{} Created gossip discovery protocol actor (builder)",
-            network_context
+            NetworkSchema::new(&network_context),
+            "{} Created gossip discovery protocol actor (builder)", network_context
         );
         Self {
             network_context: network_context.clone(),
@@ -107,8 +108,8 @@ impl GossipDiscoveryBuilder {
                 )
             }));
             debug!(
-                "{} Built gossip discovery protocol actor (builder)",
-                self.network_context
+                NetworkSchema::new(&self.network_context),
+                "{} Built gossip discovery protocol actor (builder)", self.network_context
             );
         };
 
@@ -121,8 +122,8 @@ impl GossipDiscoveryBuilder {
         if let Some(discovery) = self.discovery.take() {
             executor.spawn(discovery.start());
             debug!(
-                "{} Started gossip discovery protocol actor (builder)",
-                self.network_context
+                NetworkSchema::new(&self.network_context),
+                "{} Started gossip discovery protocol actor (builder)", self.network_context
             );
         }
         self
