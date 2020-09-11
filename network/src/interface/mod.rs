@@ -13,6 +13,7 @@
 //! handler, determined using the protocol negotiated on the RPC substream.
 use crate::{
     constants, counters,
+    logging::NetworkSchema,
     peer::{Peer, PeerHandle, PeerNotification},
     peer_manager::TransportNotification,
     protocols::{
@@ -105,7 +106,11 @@ where
                 &peer_id.short_str(),
             ),
         );
-        let peer_handle = PeerHandle::new(peer_id, peer_reqs_tx);
+        let peer_handle = PeerHandle::new(
+            network_context.clone(),
+            connection.metadata.clone(),
+            peer_reqs_tx,
+        );
         let peer = Peer::new(
             Arc::clone(&network_context),
             executor.clone(),
@@ -157,7 +162,7 @@ where
             ),
         );
         let ds = DirectSend::new(
-            network_context,
+            network_context.clone(),
             peer_handle.clone(),
             ds_reqs_rx,
             ds_notifs_tx,
@@ -214,7 +219,9 @@ where
                 })
                 .then(|_| async move {
                     info!(
-                        "Network provider actor terminating for peer: {}",
+                        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+                        "{} Network provider actor terminating for peer: {}",
+                        network_context,
                         peer_id_str
                     );
                     // Cleanly close connection with peer.
@@ -238,6 +245,8 @@ where
             NetworkRequest::SendRpc(req) => {
                 if let Err(e) = rpc_reqs_tx.send(req).await {
                     error!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
                         "Failed to send RPC to peer: {}. Error: {:?}",
                         peer_id.short_str(),
                         e
@@ -247,6 +256,8 @@ where
             NetworkRequest::SendMessage(msg) => {
                 if let Err(e) = ds_reqs_tx.send(DirectSendRequest::SendMessage(msg)).await {
                     error!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
                         "Failed to send DirectSend to peer: {}. Error: {:?}",
                         peer_id.short_str(),
                         e
@@ -265,7 +276,13 @@ where
         match notif {
             RpcNotification::RecvRpc(req) => {
                 if let Err(e) = notifs_tx.push(req.protocol_id, NetworkNotification::RecvRpc(req)) {
-                    warn!("Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
+                    warn!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
+                        "Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}",
+                        peer_id.short_str(),
+                        e
+                    );
                 }
             }
         }
@@ -282,7 +299,13 @@ where
                 if let Err(e) =
                     notifs_tx.push(msg.protocol_id, NetworkNotification::RecvMessage(msg))
                 {
-                    warn!("Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
+                    warn!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
+                        "Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}",
+                        peer_id.short_str(),
+                        e
+                    );
                 }
             }
         }
@@ -300,7 +323,11 @@ where
                     .send(TransportNotification::Disconnected(conn_info, reason))
                     .await
                 {
-                    warn!("Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}", err);
+                    warn!(
+                        error = err.to_string(),
+                        "Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}",
+                        err
+                    );
                 }
             }
             _ => {

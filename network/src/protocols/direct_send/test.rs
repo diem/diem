@@ -9,6 +9,7 @@ use crate::{
         direct_send::{DirectSend, DirectSendNotification, DirectSendRequest, Message},
         wire::messaging::v1::{DirectSendMsg, NetworkMessage, Priority},
     },
+    transport::ConnectionMetadata,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -50,9 +51,10 @@ fn start_direct_send_actor(
     let (peer_reqs_tx, peer_reqs_rx) = channel::new_test(8);
     // Reset counters before starting actor.
     reset_counters();
+    let connection_metadata = ConnectionMetadata::mock(PeerId::random());
     let direct_send = DirectSend::new(
         Arc::clone(&network_context),
-        PeerHandle::new(PeerId::random(), peer_reqs_tx),
+        PeerHandle::new(network_context.clone(), connection_metadata, peer_reqs_tx),
         ds_requests_rx,
         ds_notifs_tx,
         peer_notifs_rx,

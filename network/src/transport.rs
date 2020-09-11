@@ -120,6 +120,18 @@ impl ConnectionMetadata {
             application_protocols,
         }
     }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock(remote_peer_id: PeerId) -> ConnectionMetadata {
+        ConnectionMetadata {
+            remote_peer_id,
+            connection_id: ConnectionId::default(),
+            addr: NetworkAddress::mock(),
+            origin: ConnectionOrigin::Inbound,
+            messaging_protocol: MessagingProtocolVersion::V1,
+            application_protocols: [].iter().into(),
+        }
+    }
 }
 
 impl std::fmt::Debug for ConnectionMetadata {

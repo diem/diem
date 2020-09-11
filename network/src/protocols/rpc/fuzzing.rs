@@ -7,6 +7,7 @@ use crate::{
         rpc::{self, RpcNotification},
         wire::messaging::v1::{NetworkMessage, RpcRequest, RpcResponse},
     },
+    transport::ConnectionMetadata,
     ProtocolId,
 };
 use futures::{
@@ -63,6 +64,7 @@ pub fn generate_corpus(gen: &mut ValueGenerator) -> Vec<u8> {
 // Fuzz the inbound rpc protocol.
 pub fn fuzzer(data: &[u8]) {
     let network_context = NetworkContext::mock();
+    let connection_metadata = ConnectionMetadata::mock(MOCK_PEER_ID);
     let (notification_tx, mut notification_rx) = channel::new_test(8);
     let (peer_reqs_tx, mut peer_reqs_rx) = channel::new_test(8);
     let raw_request = Vec::from(data);
@@ -78,7 +80,7 @@ pub fn fuzzer(data: &[u8]) {
         &network_context,
         notification_tx,
         inbound_request,
-        PeerHandle::new(MOCK_PEER_ID, peer_reqs_tx),
+        PeerHandle::new(network_context.clone(), connection_metadata, peer_reqs_tx),
     )
     .map(|_| io::Result::Ok(()));
 

@@ -11,6 +11,7 @@ use crate::{
     counters::{CANCELED_LABEL, FAILED_LABEL, REQUEST_LABEL, RESPONSE_LABEL},
     peer::{PeerNotification, PeerRequest},
     peer_manager::PeerManagerError,
+    transport::ConnectionMetadata,
 };
 use anyhow::anyhow;
 use futures::future::join;
@@ -44,9 +45,10 @@ fn start_rpc_actor(
     let (rpc_notifs_tx, rpc_notifs_rx) = channel::new_test(8);
     // Reset counters before starting actor.
     reset_counters();
+    let connection_metadata = ConnectionMetadata::mock(PeerId::random());
     let rpc = Rpc::new(
         Arc::clone(&network_context),
-        PeerHandle::new(PeerId::random(), peer_reqs_tx),
+        PeerHandle::new(network_context.clone(), connection_metadata, peer_reqs_tx),
         rpc_requests_rx,
         peer_notifs_rx,
         rpc_notifs_tx,
