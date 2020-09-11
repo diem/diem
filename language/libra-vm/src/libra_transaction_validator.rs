@@ -24,10 +24,6 @@ use move_core_types::{
 
 use move_vm_types::gas_schedule::CostStrategy;
 
-//@SG-beg
-//use std::time::{Instant};
-//@SG-end
-
 #[derive(Clone)]
 pub struct LibraVMValidator(LibraVMImpl);
 
@@ -54,9 +50,6 @@ impl LibraVMValidator {
         remote_cache: &StateViewCache,
         account_currency_symbol: &IdentStr,
     ) -> Result<(), VMStatus> {
-
-        println!("LVM Verify");
-
         let txn_data = TransactionMetadata::new(transaction);
         let mut session = self.0.new_session(remote_cache);
         let mut cost_strategy = CostStrategy::system(self.0.get_gas_schedule()?, GasUnits::new(0));
@@ -104,9 +97,6 @@ impl VMValidator for LibraVMValidator {
         transaction: SignedTransaction,
         state_view: &dyn StateView,
     ) -> VMValidatorResult {
-
-        println!("LVM Validate");
-
         let data_cache = StateViewCache::new(state_view);
         let _timer = TXN_VALIDATION_SECONDS.start_timer();
         let gas_price = transaction.gas_unit_price();
@@ -169,8 +159,6 @@ impl VMValidator for LibraVMValidator {
         TRANSACTIONS_VALIDATED
             .with_label_values(&[counter_label])
             .inc();
-
-        println!("LVM Validate Exit");
 
         VMValidatorResult::new(
             res.map(|s| s.status_code()),

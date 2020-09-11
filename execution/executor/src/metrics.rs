@@ -14,6 +14,17 @@ pub static LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS: Lazy<Histogram> = Lazy::new(
     .unwrap()
 });
 
+pub static LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_process_vm_outputs_seconds",
+        // metric description
+        "The time spent in seconds to compute vm outputs and results in Libra executor"
+    )
+    .unwrap()
+});
+
+
 pub static LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         // metric name

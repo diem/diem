@@ -22,6 +22,7 @@ use crate::{
         LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
         LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
         LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+        LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -63,10 +64,6 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
-
-//@SG-beg
-use std::time::{Instant};
-//@SG-end
 
 static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
@@ -125,9 +122,6 @@ where
         epoch_change_li: Option<LedgerInfoWithSignatures>,
         new_output: &ProcessedVMOutput,
     ) -> Result<Option<LedgerInfoWithSignatures>> {
-
-        println!("EXE Find Chunk Li");
-
         // If the chunk corresponds to the target LI, the target LI can be added to storage.
         if verified_target_li.ledger_info().version() == new_output.version().unwrap_or(0) {
             ensure!(
@@ -180,9 +174,6 @@ where
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: &LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<TransactionInfo>)> {
-
-        println!("EXE Verify Chunk");
-
         // 1. Verify that input transactions belongs to the ledger represented by the ledger info.
         txn_list_with_proof.verify(
             verified_target_li.ledger_info(),
@@ -271,9 +262,6 @@ where
         vm_outputs: Vec<TransactionOutput>,
         parent_trees: &ExecutedTrees,
     ) -> Result<ProcessedVMOutput> {
-
-        println!("EXE Process VM Outputs");
-
         // The data of each individual transaction. For convenience purpose, even for the
         // transactions that will be discarded, we will compute its in-memory Sparse Merkle Tree
         // (it will be identical to the previous one).
@@ -411,7 +399,6 @@ where
 
     fn get_executed_trees(&self, block_id: HashValue) -> Result<ExecutedTrees, Error> {
         let executed_trees = if block_id == self.cache.committed_block_id() {
-            println!("Get_Executed_Trees: Parent");
             self.cache.committed_trees().clone()
         } else {
             self.cache
@@ -642,10 +629,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block: (HashValue, Vec<Transaction>),
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
-
-        // This function seems to be the entry point into the executor.
-        println!("EXE Execute Block");
-
         let (block_id, mut transactions) = block;
 
         // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
@@ -659,10 +642,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 .output()
                 .has_reconfiguration()
         {
-            //@SG: This if condition is only true when the parent of a block is not the root of the 
-            //SpeculationCache. Not sure what does it mean by reconfiguration block rule.
-            println!("FIND PARENT");
-
             let parent = self.cache.get_block(&parent_block_id)?;
             let parent_block = parent.lock().unwrap();
             let parent_output = parent_block.output();
@@ -689,8 +668,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             (output, state_compute_result)
         } else {
-            println!("EB Start");
-
             info!(
                 LogSchema::new(LogEntry::BlockExecutor).block_id(block_id),
                 "execute_block"
@@ -706,11 +683,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 &parent_block_executed_trees,
             );
 
-            // @SG -- In my opinion, it is at this point that we will split the VM functionality 
-            // and we will basically send the following in a channel: state_view and transactions.
-
-            let t1 = Instant::now();
-
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
                 let __timer = OP_COUNTERS.timer("vm_execute_block_time_s");
@@ -718,11 +690,8 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
 
-            println!("VM TIME in executor/src/lib.rs: {:?}",t1.elapsed());
-
             trace_code_block!("executor::process_vm_outputs", {"block", block_id});
-
-            let t1 = Instant::now();
+            let _timer = LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS.start_timer();
 
             let status: Vec<_> = vm_outputs
                 .iter()
@@ -749,9 +718,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 parent_accu.frozen_subtree_roots().clone(),
                 parent_accu.num_leaves(),
             );
-
-            println!("REMAINING EXECUTOR TIME in executor/src/lib.rs: {:?}",t1.elapsed());
-
             (output, state_compute_result)
         };
 
@@ -767,9 +733,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
-
-        println!("EXE Commit Blocks");
-
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
         info!(
@@ -922,9 +885,6 @@ pub fn process_write_set(
     HashMap<AccountAddress, AccountStateBlob>,
     Arc<SparseMerkleTree>,
 )> {
-
-    println!("EXE Process Write Sets");
-
     let mut updated_blobs = HashMap::new();
 
     // Find all addresses this transaction touches while processing each write op.

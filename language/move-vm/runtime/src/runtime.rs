@@ -22,9 +22,7 @@ use vm::{
     CompiledModule, IndexKind,
 };
 
-//@SG-beg
-use std::time::{Instant};
-//@SG-end
+use crate::load_metrics::*;
 
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
@@ -152,13 +150,11 @@ impl VMRuntime {
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
         
-        let t1 = Instant::now();
-        
-        let (func, type_params) =
+        let (func, type_params) = {
+            let _timer = MOVE_VM_LOAD_FUNCTION_SECONDS.start_timer();
             self.loader
-                .load_function(function_name, module, &ty_args, data_store)?;
-
-        println!("LOAD TIME in language/move-vm/runtime/src/runtime.rs: {:?}",t1.elapsed());
+                .load_function(function_name, module, &ty_args, data_store)?
+        };
 
         // check the arguments provided are of restricted types
         check_args(&args).map_err(|e| e.finish(Location::Module(module.clone())))?;

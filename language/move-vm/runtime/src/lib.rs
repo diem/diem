@@ -19,6 +19,8 @@ pub mod move_vm;
 mod native_functions;
 mod runtime;
 pub mod session;
+mod load_metrics;
+
 #[macro_use]
 mod tracing;
 

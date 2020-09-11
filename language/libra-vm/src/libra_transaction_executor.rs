@@ -43,10 +43,6 @@ use std::{
     convert::{AsMut, AsRef, TryFrom},
 };
 
-//@SG-beg
-use std::time::{Instant};
-//@SG-end
-
 pub struct LibraVM(LibraVMImpl);
 
 impl LibraVM {
@@ -155,16 +151,12 @@ impl LibraVM {
         script: &Script,
         account_currency_symbol: &IdentStr,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-
-        println!("LE Execute Script");
-
         let gas_schedule = self.0.get_gas_schedule()?;
         let mut session = self.0.new_session(remote_cache);
 
-        let t1 = Instant::now(); 
-
         // Run the validation logic
         {
+            let _timer = VM_RUN_SCRIPT_PROLOGUE_SECONDS.start_timer();
             cost_strategy.disable_metering();
             self.0.check_gas(txn_data)?;
             self.0.run_script_prologue(
@@ -175,12 +167,9 @@ impl LibraVM {
             )?;
         }
 
-        println!("LE VALID TIME: {:?}",t1.elapsed());
-
         // Run the execution logic
         {
-            let t1 = Instant::now();
-
+            let _timer = VM_EXECUTE_SCRIPT_SECONDS.start_timer();
             cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
@@ -198,8 +187,6 @@ impl LibraVM {
             charge_global_write_gas_usage(cost_strategy, &session)?;
 
             cost_strategy.disable_metering();
-
-            println!("LE EXECUTE TIME: {:?}",t1.elapsed());
 
             self.success_transaction_cleanup(
                 session,
@@ -219,9 +206,6 @@ impl LibraVM {
         module: &Module,
         account_currency_symbol: &IdentStr,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-
-        println!("LE Execute Module");
-
         let gas_schedule = self.0.get_gas_schedule()?;
         let mut session = self.0.new_session(remote_cache);
 
@@ -267,8 +251,7 @@ impl LibraVM {
         txn: &SignatureCheckedTransaction,
     ) -> (VMStatus, TransactionOutput) {
 
-        println!("LE Execute User Transaction");
-        let t1 = Instant::now();
+        let _timer = VM_EXECUTE_USER_TRANSACTION_SECONDS.start_timer();
 
         macro_rules! unwrap_or_discard {
             ($res: expr) => {
@@ -312,8 +295,6 @@ impl LibraVM {
             .get();
         TXN_GAS_USAGE.observe(gas_usage as f64);
 
-        println!("User Transaction Execution Time in language/libra-vm/src/libra_transaction_executor.rs: {:?}",t1.elapsed());
-
         match result {
             Ok(output) => output,
             Err(err) => {
@@ -340,9 +321,6 @@ impl LibraVM {
         writeset_payload: &WriteSetPayload,
         txn_sender: Option<AccountAddress>,
     ) -> Result<ChangeSet, Result<(VMStatus, TransactionOutput), VMStatus>> {
-
-        println!("LE Execute WriteSet");
-
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
@@ -384,9 +362,6 @@ impl LibraVM {
         remote_cache: &StateViewCache<'_>,
         write_set: &WriteSet,
     ) -> Result<(), VMStatus> {
-
-        println!("LE Read WriteSet");
-
         // All Move executions satisfy the read-before-write property. Thus we need to read each
         // access path that the write set is going to update.
         for (ap, _) in write_set.iter() {
@@ -420,9 +395,6 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         block_metadata: BlockMetadata,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-
-        println!("LE Process Block Prologue");
-
         let mut txn_data = TransactionMetadata::default();
         txn_data.sender = account_config::reserved_vm_address();
 
@@ -467,9 +439,6 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         txn: SignatureCheckedTransaction,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
-
-        println!("LE Process WriteSet Transaction");
-
         let txn_data = TransactionMetadata::new(&txn);
 
         let mut session = self.0.new_session(remote_cache);
@@ -590,9 +559,6 @@ impl LibraVM {
         transactions: Vec<Transaction>,
         data_cache: &mut StateViewCache,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-
-        println!("LE Execute Block Impl");
-
         let count = transactions.len();
         let mut result = vec![];
         let mut current_block_id;
@@ -607,14 +573,7 @@ impl LibraVM {
                 .collect();
         }
 
-        //@SG - counter
-        let mut ventry = 0;
-
         for txn in signature_verified_block {
-            //println!("HMM: {}",ventry);
-            //@SG - counter
-            ventry = ventry+1;
-
             if should_restart {
                 let txn_output = TransactionOutput::new(
                     WriteSet::default(),
@@ -684,9 +643,6 @@ impl LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<(VMStatus, TransactionOutput)>, VMStatus> {
-
-        println!("LE Execute Block Keep VM status");
-
         let mut state_view_cache = StateViewCache::new(state_view);
         let mut vm = LibraVM::new(&state_view_cache);
         vm.execute_block_impl(transactions, &mut state_view_cache)
@@ -739,9 +695,6 @@ impl VMExecutor for LibraVM {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus> {
-
-        println!("LE Execute Block");
-
         let output = Self::execute_block_and_keep_vm_status(transactions, state_view)?;
         Ok(output
             .into_iter()

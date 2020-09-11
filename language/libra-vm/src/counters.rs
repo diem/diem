@@ -69,3 +69,33 @@ pub static TXN_GAS_USAGE: Lazy<Histogram> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static VM_RUN_SCRIPT_PROLOGUE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "vm_run_script_prologue_seconds",
+        // metric description
+        "The time spent in seconds by libra vm to run prologue"
+    )
+    .unwrap()
+});
+
+pub static VM_EXECUTE_SCRIPT_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "vm_execute_script_seconds",
+        // metric description
+        "The time spent in seconds by libra vm to execute script"
+    )
+    .unwrap()
+});
+
+pub static VM_EXECUTE_USER_TRANSACTION_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "vm_execute_user_transaction_seconds",
+        // metric description
+        "The time spent in seconds by libra vm to execute user transaction"
+    )
+    .unwrap()
+});
