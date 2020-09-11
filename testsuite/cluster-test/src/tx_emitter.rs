@@ -36,7 +36,10 @@ use tokio::runtime::Handle;
 
 use futures::future::{try_join_all, FutureExt};
 use libra_json_rpc_client::JsonRpcAsyncClient;
-use libra_types::transaction::SignedTransaction;
+use libra_types::{
+    account_config::{libra_root_address, treasury_compliance_account_address},
+    transaction::SignedTransaction,
+};
 use once_cell::sync::Lazy;
 use std::{
     cmp::{max, min},
@@ -260,15 +263,19 @@ impl TxEmitter {
         })
     }
 
-    pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
+    async fn load_account_with_mint_key(
+        &self,
+        instance: &Instance,
+        address: AccountAddress,
+    ) -> Result<AccountData> {
         let client = instance.json_rpc_client();
-        let address = testnet_dd_account_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
             .map_err(|e| {
                 format_err!(
-                    "query_sequence_numbers on {:?} for faucet account failed: {}",
+                    "query_sequence_numbers on {:?} for account {} failed: {}",
                     client,
+                    address,
                     e
                 )
             })?[0];
@@ -279,23 +286,19 @@ impl TxEmitter {
         })
     }
 
-    pub async fn load_tc_account(&self, instance: &Instance) -> Result<AccountData> {
-        let client = instance.json_rpc_client();
-        let address = account_config::treasury_compliance_account_address();
-        let sequence_number = query_sequence_numbers(&client, &[address])
+    pub async fn load_libra_root_account(&self, instance: &Instance) -> Result<AccountData> {
+        self.load_account_with_mint_key(instance, libra_root_address())
             .await
-            .map_err(|e| {
-                format_err!(
-                    "query_sequence_numbers on {:?} for treasury compliance account failed: {}",
-                    client,
-                    e
-                )
-            })?[0];
-        Ok(AccountData {
-            address,
-            key_pair: self.mint_key_pair.clone(),
-            sequence_number,
-        })
+    }
+
+    pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
+        self.load_account_with_mint_key(instance, testnet_dd_account_address())
+            .await
+    }
+
+    pub async fn load_tc_account(&self, instance: &Instance) -> Result<AccountData> {
+        self.load_account_with_mint_key(instance, treasury_compliance_account_address())
+            .await
     }
 
     pub async fn mint_accounts(
@@ -610,7 +613,7 @@ const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64
 const MAX_TXNS: u64 = 1_000_000;
 const SEND_AMOUNT: u64 = 1;
 
-fn gen_submit_transaction_request(
+pub fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
     no_gas: bool,

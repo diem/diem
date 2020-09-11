@@ -7,7 +7,7 @@ mod account;
 mod account_resource;
 pub mod command;
 mod governance;
-mod json_rpc;
+pub mod json_rpc;
 mod keys;
 mod validate_transaction;
 mod validator_config;

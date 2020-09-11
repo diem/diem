@@ -11,6 +11,7 @@ mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
 mod reboot_cluster;
 mod reboot_random_validators;
+mod reconfiguration_test;
 mod recovery_time;
 mod twin_validator;
 mod versioning_test;
@@ -32,6 +33,7 @@ pub use performance_benchmark_three_region_simulation::{
 };
 pub use reboot_cluster::{RebootCluster, RebootClusterParams};
 pub use reboot_random_validators::{RebootRandomValidators, RebootRandomValidatorsParams};
+pub use reconfiguration_test::{Reconfiguration, ReconfigurationParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
 pub use twin_validator::{TwinValidators, TwinValidatorsParams};
 pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
@@ -156,6 +158,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         f::<ClientCompatiblityTestParams>(),
     );
     known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
+    known_experiments.insert("reconfiguration", f::<ReconfigurationParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
