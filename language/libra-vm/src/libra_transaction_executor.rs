@@ -156,7 +156,7 @@ impl LibraVM {
 
         // Run the validation logic
         {
-            let _timer = VM_RUN_SCRIPT_PROLOGUE_SECONDS.start_timer();
+            let _timer = LIBRA_VM_RUN_SCRIPT_PROLOGUE_SECONDS.start_timer();
             cost_strategy.disable_metering();
             self.0.check_gas(txn_data)?;
             self.0.run_script_prologue(
@@ -169,7 +169,7 @@ impl LibraVM {
 
         // Run the execution logic
         {
-            let _timer = VM_EXECUTE_SCRIPT_SECONDS.start_timer();
+            let _timer = LIBRA_VM_EXECUTE_SCRIPT_SECONDS.start_timer();
             cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
@@ -187,7 +187,6 @@ impl LibraVM {
             charge_global_write_gas_usage(cost_strategy, &session)?;
 
             cost_strategy.disable_metering();
-
             self.success_transaction_cleanup(
                 session,
                 gas_schedule,
@@ -251,7 +250,7 @@ impl LibraVM {
         txn: &SignatureCheckedTransaction,
     ) -> (VMStatus, TransactionOutput) {
 
-        let _timer = VM_EXECUTE_USER_TRANSACTION_SECONDS.start_timer();
+        let _timer = LIBRA_VM_EXECUTE_USER_TRANSACTION_SECONDS.start_timer();
 
         macro_rules! unwrap_or_discard {
             ($res: expr) => {

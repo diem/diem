@@ -24,7 +24,6 @@ pub static LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS: Lazy<Histogram> = Lazy::ne
     .unwrap()
 });
 
-
 pub static LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         // metric name

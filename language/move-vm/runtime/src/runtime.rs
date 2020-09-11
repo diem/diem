@@ -151,7 +151,7 @@ impl VMRuntime {
         // its dependencies if the module was not loaded
         
         let (func, type_params) = {
-            let _timer = MOVE_VM_LOAD_FUNCTION_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_LOAD_FUNCTION_SECONDS.start_timer();
             self.loader
                 .load_function(function_name, module, &ty_args, data_store)?
         };

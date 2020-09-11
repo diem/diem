@@ -541,12 +541,12 @@ impl Loader {
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
 
         {
-            let _timer = MOVE_VM_LOAD_MODULE_EXPECT_NO_MISSING_DEPENDENCIES_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_LOAD_MODULE_EXPECT_NO_MISSING_DEPENDENCIES_SECONDS.start_timer();
             self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
         }
 
         let idx = {
-            let _timer = MOVE_VM_MODULE_CACHE_RESOLVE_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_MODULE_CACHE_RESOLVE_SECONDS.start_timer();
             self.module_cache
             .lock()
             .unwrap()
@@ -555,21 +555,21 @@ impl Loader {
         };
 
         let func = {
-            let _timer = MOVE_VM_MODULE_CACHE_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_MODULE_CACHE_SECONDS.start_timer();
             self.module_cache.lock().unwrap().function_at(idx)
         };
 
         // verify type arguments
         let mut type_params = vec![];
         {
-            let _timer = MOVE_VM_LOAD_TYPE_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_LOAD_TYPE_SECONDS.start_timer();
             for ty in ty_args {
                 type_params.push(self.load_type(ty, data_store)?);
             }
         }
 
         {
-            let _timer = MOVE_VM_VERIFY_TYPE_PARAMETERS_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_VERIFY_TYPE_PARAMETERS_SECONDS.start_timer();
             self.verify_ty_args(func.type_parameters(), &type_params)
                 .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
         }
@@ -748,14 +748,14 @@ impl Loader {
         }
 
         {
-            let _timer = MOVE_VM_LOAD_MODULE_CACHE_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_LOAD_MODULE_CACHE_SECONDS.start_timer();
             if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
                 return Ok(module);
             }
         }
 
         let bytes = {
-            let _timer = MOVE_VM_DATA_STORE_LOAD_MODULE_SECONDS.start_timer();
+            let _timer = LIBRA_MOVEVM_DATA_STORE_LOAD_MODULE_SECONDS.start_timer();
             match data_store.load_module(id) {
                 Ok(bytes) => bytes,
                 Err(err) if verify_no_missing_modules => return Err(err),
@@ -766,7 +766,7 @@ impl Loader {
             }
         };
 
-        let _timer = MOVE_VM_DESERIALIZE_AND_VERIFY_MODULE_SECONDS.start_timer();
+        let _timer = LIBRA_MOVEVM_DESERIALIZE_AND_VERIFY_MODULE_SECONDS.start_timer();
         let module = deserialize_and_verify_module(self, bytes, data_store)
             .map_err(expect_no_verification_errors)?;
 
@@ -1958,6 +1958,3 @@ impl Loader {
         self.type_to_kind_info_impl(ty, 1)
     }
 }
-
-
-
