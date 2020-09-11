@@ -5,7 +5,6 @@ use crate::{
     executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, SynchronizerState,
 };
 use anyhow::Result;
-use executor_types::ExecutedTrees;
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
@@ -105,7 +104,6 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         self.storage.write().unwrap().add_txns_with_li(
             txn_list_with_proof.transactions,

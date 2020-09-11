@@ -28,7 +28,6 @@ pub trait ExecutorProxyTrait: Send {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        synced_trees: &mut ExecutedTrees,
     ) -> Result<()>;
 
     /// Gets chunk of transactions given the known version, target version and the max limit.
@@ -148,7 +147,6 @@ impl ExecutorProxyTrait for ExecutorProxy {
         txn_list_with_proof: TransactionListWithProof,
         verified_target_li: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
-        _synced_trees: &mut ExecutedTrees,
     ) -> Result<()> {
         // track chunk execution time
         let timer = counters::EXECUTE_CHUNK_DURATION.start_timer();
