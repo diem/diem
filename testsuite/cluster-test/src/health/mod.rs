@@ -29,8 +29,15 @@ use termion::color::*;
 #[derive(Clone, Debug)]
 pub struct Commit {
     commit: String,
+    epoch: u64,
     round: u64,
     parent: String,
+}
+
+impl Commit {
+    pub fn epoch_and_round(&self) -> (u64, u64) {
+        (self.epoch, self.round)
+    }
 }
 
 #[derive(Clone, Debug)]

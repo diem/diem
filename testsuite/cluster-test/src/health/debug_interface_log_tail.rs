@@ -131,6 +131,11 @@ impl DebugPortLogWorker {
                 .as_str()
                 .expect("block_id is not string")
                 .to_string(),
+            epoch: json
+                .get("epoch")
+                .expect("No epoch in commit event")
+                .as_u64()
+                .expect("epoch is not u64"),
             round: json
                 .get("round")
                 .expect("No round in commit event")
