@@ -19,7 +19,7 @@ Get all transactions sent by the account.
 
 Array of [Transaction](type_transaction.md) objects
 
-if include_events is false, the events field in the Transaction object will be an empty array.
+if include_events is false, the events field in the Transaction object will be an empty array. // Can we update "events" to be a hyperlink?
 
 
 ### Example
