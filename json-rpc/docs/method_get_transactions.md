@@ -10,8 +10,8 @@ Get the transactions on the blockchain.
 | Name           | Type           | Description                                                          |
 |----------------|----------------|----------------------------------------------------------------------|
 | start_version  | unsigned int64 | Start on this transaction version for this query                     |
-| limit          | unsigned int64 | Limit the number of transactions returned, default max value is 1000 |
-| include_events | boolean        | Set to true, to also fetch events for each transaction               |
+| limit          | unsigned int64 | Limit the number of transactions returned, default max value is 1000 | // This isn't super clear.  Is the default value 1000 or is 1000 the max that you can do?
+| include_events | boolean        | Set to true, to also fetch events for each transaction               | // Can we turn "events" into a hyperlink to the file that describes what events are?
 
 ### Returns
 
