@@ -3658,6 +3658,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "compiled-stdlib 0.1.0",
+ "datatest-stable 0.1.0",
+ "difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "disassembler 0.1.0",
  "errmapgen 0.1.0",
  "libra-canonical-serialization 0.1.0",

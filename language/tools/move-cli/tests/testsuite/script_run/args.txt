@@ -1,0 +1,1 @@
+run script.move --type-args u64 --signers 0x1 0x2 --args true 10

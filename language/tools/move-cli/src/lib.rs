@@ -10,6 +10,7 @@ use move_core_types::{
     value::MoveTypeLayout,
     vm_status::StatusCode,
 };
+use move_lang::shared::Address;
 use move_vm_runtime::data_cache::RemoteCache;
 use move_vm_types::values::Value;
 use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
@@ -26,6 +27,15 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+
+pub mod test;
+
+pub const MOVE_SRC: &str = "move_src";
+pub const MOVE_DATA: &str = "move_data";
+/// Store modules under move_src without an explicit `address {}` block under 0x2.
+pub const MOVE_SRC_ADDRESS: Address = Address::new([
+    0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 2u8,
+]);
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
@@ -88,7 +98,10 @@ impl OnDiskStateView {
 
     /// Read the resource bytes stored on-disk at `addr`/`tag`
     fn get_module_bytes(&self, module_id: &ModuleId) -> Result<Option<Vec<u8>>> {
-        Self::get_bytes(&self.get_module_path(module_id))
+        match self.modules.get(module_id) {
+            None => Self::get_bytes(&self.get_module_path(module_id)),
+            m => Ok(m.cloned()),
+        }
     }
 
     /// Deserialize and return the module stored on-disk at `addr`/`module_id`
@@ -222,12 +235,8 @@ impl OnDiskStateView {
 
 impl RemoteCache for OnDiskStateView {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
-        match self.modules.get(module_id) {
-            None => self.get_module_bytes(module_id).map_err(|_| {
-                PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined)
-            }),
-            m => Ok(m.cloned()),
-        }
+        self.get_module_bytes(module_id)
+            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR).finish(Location::Undefined))
     }
 
     fn get_resource(

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use errmapgen::ErrorMapping;
-use move_cli::OnDiskStateView;
+use move_cli::{test, OnDiskStateView, MOVE_DATA, MOVE_SRC, MOVE_SRC_ADDRESS};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
@@ -11,7 +11,7 @@ use move_core_types::{
     transaction_argument::TransactionArgument,
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
-use move_lang::{self, compiled_unit::CompiledUnit, shared::Address};
+use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
@@ -27,11 +27,11 @@ use structopt::StructOpt;
 #[structopt(name = "Move", about = "CLI frontend for Move compiler and VM")]
 struct Move {
     /// Directory storing Move resources and module bytecodes produced by script execution.
-    #[structopt(name = "move-data", long = "move-data", default_value = "move_data")]
+    #[structopt(name = "move-data", long = "move-data", default_value = MOVE_DATA)]
     move_data: String,
     /// Directory storing Move source files that will be compiled and loaded into the VM before
     /// script execution.
-    #[structopt(name = "move-src", long = "move-src", default_value = "move_src")]
+    #[structopt(name = "move-src", long = "move-src", default_value = MOVE_SRC)]
     move_src: String,
     // Command to be run.
     #[structopt(subcommand)]
@@ -75,6 +75,14 @@ enum Command {
         #[structopt(long = "commit", short = "c")]
         commit: bool,
     },
+    /// Run expected value tests using the given batch file
+    #[structopt(name = "test")]
+    Test {
+        // TODO: generalize this to support running all the tests in a given directory
+        /// File containing batch of commands to run
+        #[structopt(name = "file")]
+        file: String,
+    },
     /// View Move resources and modules stored on disk
     #[structopt(name = "view")]
     View {
@@ -87,11 +95,6 @@ enum Command {
     Clean {},
 }
 
-/// Store modules under move_src without an explicit `address {}` block under 0x2.
-const MOVE_SRC: Address = Address::new([
-    0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 2u8,
-]);
-
 /// Create a directory at ./`dir_name` if one does not already exist
 fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
     let dir = Path::new(dir_name);
@@ -101,34 +104,39 @@ fn maybe_create_dir(dir_name: &str) -> Result<&Path> {
     Ok(dir)
 }
 
-/// Compile the user modules in `move_src_directory` and the script in `script_file`
+/// Compile the user modules in `move_src` and the script in `script_file`
 fn compile(
     args: &Move,
     script_file: &Option<String>,
 ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
-    let move_src = maybe_create_dir(&args.move_src)?;
     let move_data = maybe_create_dir(&args.move_data)?;
 
-    // allow user modules in move_src directory to compile against stdlib and move_data modules, but
-    // not Libra framework modules
     // TODO: prevent cyclic dep?
-    let mut user_lib_files: Vec<String> = fs::read_dir(move_src)?
-        .map(|f| f.map_or("".to_string(), |f| f.path().to_string_lossy().into_owned()))
-        .filter(|p| p.ends_with(".move"))
-        .collect();
+    let mut user_move_src_files = if Path::new(&args.move_src).exists() {
+        move_lang::find_move_filenames(&[args.move_src.clone()])?
+    } else {
+        vec![]
+    };
 
-    if !user_lib_files.is_empty() {
-        println!("Compiling {:?} user module(s)", user_lib_files.len());
+    let has_user_modules = !user_move_src_files.is_empty();
+    if has_user_modules {
+        print!("Compiling {:?} module(s)", user_move_src_files.len());
     }
     if let Some(f) = script_file.as_ref() {
-        user_lib_files.push(f.to_string())
+        if has_user_modules {
+            println!(" and 1 transaction script")
+        } else {
+            println!("Compiling transaction script")
+        }
+        user_move_src_files.push(f.to_string())
+    } else if has_user_modules {
+        println!()
     }
 
-    // allow script to compile against both modules in `move_src` and Libra framework modules
-    // modules
     let deps = stdlib::stdlib_files();
-    let code_address = Some(MOVE_SRC);
-    let (_, compilation_units) = move_lang::move_compile(&user_lib_files, &deps, code_address)?;
+    let code_address = Some(MOVE_SRC_ADDRESS);
+    let (_, compilation_units) =
+        move_lang::move_compile(&user_move_src_files, &deps, code_address)?;
 
     let mut modules: Vec<CompiledModule> = stdlib::stdlib_bytecode_files()
         .iter()
@@ -291,7 +299,7 @@ fn maybe_commit_effects(
         // TODO: print modules to be saved?
         state.save_modules()?;
         println!("Committed changes.")
-    } else if !effects_opt.map_or(false, |effects| effects.resources.is_empty()) {
+    } else if !effects_opt.map_or(true, |effects| effects.resources.is_empty()) {
         println!("Discarding changes; re-run with --commit if you would like to keep them.")
     }
 
@@ -338,13 +346,13 @@ fn explain_error(error: VMError, state: &OnDiskStateView) -> Result<()> {
             code_offset,
         } => {
             let status_explanation = match status_code {
-                    StatusCode::RESOURCE_ALREADY_EXISTS => "resource already exists (i.e., move_to<T>(account) when there is already a value of type T under account)".to_string(),
-                    StatusCode::MISSING_DATA => "resource does not exist (i.e., move_from<T>(a), borrow_global<T>(a), or borrow_global_mut<T>(a) when there is no value of type T at address a)".to_string(),
-                    StatusCode::ARITHMETIC_ERROR => "arithmetic error (i.e., integer overflow, underflow, or divide-by-zero)".to_string(),
-                    StatusCode::EXECUTION_STACK_OVERFLOW => "execution stack overflow".to_string(),
-                    StatusCode::CALL_STACK_OVERFLOW => "call stack overflow".to_string(),
-                    StatusCode::OUT_OF_GAS => "out of gas".to_string(),
-                    _ => format!("{} error", status_code.status_type()),
+                    StatusCode::RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`)".to_string(),
+                    StatusCode::MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`)".to_string(),
+                    StatusCode::ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or divide-by-zero)".to_string(),
+                    StatusCode::EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
+                    StatusCode::CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
+                    StatusCode::OUT_OF_GAS => "an out of gas error".to_string(),
+                    _ => format!("a {} error", status_code.status_type()),
                 };
             // TODO: map to source code location
             let location_explanation = match location {
@@ -357,7 +365,7 @@ fn explain_error(error: VMError, state: &OnDiskStateView) -> Result<()> {
             // This is potentially confusing to someone trying to understnd where something failed
             // by looking at a code offset + disassembled bytecode; we should fix it
             println!(
-                "Execution failed with {} in {} at code offset {}",
+                "Execution failed because of {} in {} at code offset {}",
                 status_explanation, location_explanation, code_offset
             )
         }
@@ -391,7 +399,6 @@ fn view(args: &Move, file: &str) -> Result<()> {
     Ok(())
 }
 
-// TODO: add expected output tests
 fn main() -> Result<()> {
     let move_args = Move::from_args();
 
@@ -418,12 +425,16 @@ fn main() -> Result<()> {
             type_args.to_vec(),
             *commit,
         ),
+        Command::Test { file } => test::run_one(
+            &Path::new(file),
+            &std::env::current_exe()?.to_string_lossy(),
+        ),
         Command::View { file } => view(&move_args, file),
         Command::Clean {} => {
+            // delete move_data
             let move_data = Path::new(&move_args.move_data);
             if move_data.exists() {
                 fs::remove_dir_all(&move_data)?;
-                fs::create_dir(&move_data)?;
             }
             Ok(())
         }
