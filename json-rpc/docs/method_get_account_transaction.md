@@ -1,5 +1,7 @@
 ## Method get_account_transaction
 
+// Why does this exist?  It's the same as get account transactions with limit 1
+
 **Description**
 
 Get the transaction sent by the account with the given sequence number
