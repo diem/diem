@@ -207,6 +207,19 @@ impl Block {
         }
     }
 
+    pub fn new_proposal_from_block_data_and_signature(
+        block_data: BlockData,
+        signature: Ed25519Signature,
+    ) -> Self {
+        let id = block_data.hash();
+
+        Block {
+            id,
+            block_data,
+            signature: Some(signature),
+        }
+    }
+
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
     pub fn validate_signature(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {

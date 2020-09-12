@@ -69,6 +69,21 @@ impl Vote {
         }
     }
 
+    pub fn new_with_signature(
+        vote_data: VoteData,
+        author: Author,
+        ledger_info_placeholder: LedgerInfo,
+        signature: Ed25519Signature,
+    ) -> Self {
+        Self {
+            vote_data,
+            author,
+            ledger_info: ledger_info_placeholder,
+            signature,
+            timeout_signature: None,
+        }
+    }
+
     /// Generates a round signature, which can then be used for aggregating a timeout certificate.
     /// Typically called for generating vote messages that are sent upon timeouts.
     pub fn add_timeout_signature(&mut self, signature: Ed25519Signature) {
