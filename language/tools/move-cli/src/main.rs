@@ -179,12 +179,11 @@ fn run(
     // TODO: use nonzero schedule and pick reasonable max default gas price
     let cost_schedule = gas_schedule::zero_cost_schedule();
     let mut cost_strategy = gas_schedule::CostStrategy::system(&cost_schedule, GasUnits::new(0));
-    let mut signers = signers
+    let signer_addresses = signers
         .iter()
         .map(|s| AccountAddress::from_hex_literal(&s))
         .collect::<Result<Vec<AccountAddress>>>()?;
-    signers.reverse(); // TODO: figure out why VM reads this right-to-left
-                       // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
+    // TODO: parse Value's directly instead of going through the indirection of TransactionArgument?
     let vm_args: Vec<Value> = txn_args
         .iter()
         .map(|arg| match arg {
@@ -203,7 +202,7 @@ fn run(
         script_bytes,
         vm_type_args,
         vm_args,
-        signers,
+        signer_addresses,
         &mut cost_strategy,
     );
 

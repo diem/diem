@@ -111,25 +111,30 @@ impl VMRuntime {
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
         // signer arguments can be be used by a script.
         let parameters = &main.parameters().0;
-        let first_param_is_signer_ref = parameters.get(0).map_or(false, is_signer_reference);
-        if first_param_is_signer_ref {
+        let has_signer_parameters = parameters.get(0).map_or(false, is_signer_reference);
+        let mut signers_and_args = if has_signer_parameters {
             if parameters.len() != args.len() + senders.len() {
                 return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
                     .with_message("Scripts must use all or no signers".to_string())
                     .finish(Location::Script));
             }
-            senders.into_iter().for_each(|addr| {
-                args.insert(0, Value::transaction_argument_signer_reference(addr))
-            });
-        }
-
-        check_args(&args).map_err(|e| e.finish(Location::Script))?;
+            // add signers to args
+            senders
+                .into_iter()
+                .map(Value::transaction_argument_signer_reference)
+                .collect()
+        } else {
+            // no signer parameters, don't add to args
+            vec![]
+        };
+        signers_and_args.append(&mut args);
+        check_args(&signers_and_args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script
         Interpreter::entrypoint(
             main,
             type_params,
-            args,
+            signers_and_args,
             data_store,
             cost_strategy,
             &self.loader,

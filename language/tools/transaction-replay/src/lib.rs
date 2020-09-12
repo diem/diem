@@ -169,7 +169,7 @@ impl LibraDebugger {
                     predicate.clone(),
                     vec![],
                     vec![],
-                    vec![sender, libra_root_address()],
+                    vec![libra_root_address(), sender],
                     &mut cost_strategy,
                 )
             })

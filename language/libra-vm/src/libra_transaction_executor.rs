@@ -330,7 +330,7 @@ impl LibraVM {
                 let args = convert_txn_args(script.args());
                 let senders = match txn_sender {
                     None => vec![*execute_as],
-                    Some(sender) => vec![*execute_as, sender],
+                    Some(sender) => vec![sender, *execute_as],
                 };
                 let execution_result = tmp_session
                     .execute_script(
