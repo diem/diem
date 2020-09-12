@@ -13,6 +13,8 @@ use libra_secure_time::{RealTimeService, TimeService};
 use libra_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::HashMap;
+use std::sync::RwLock;
 
 const LIBRA_DEFAULT: &str = "libra_default";
 
@@ -28,6 +30,7 @@ pub struct VaultStorage {
     namespace: Option<String>,
     renew_ttl_secs: Option<u32>,
     next_renewal: AtomicU64,
+    key_versions:  RwLock<HashMap<Ed25519PublicKey, u32>>,
 }
 
 impl VaultStorage {
@@ -43,6 +46,7 @@ impl VaultStorage {
             namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),
+            key_versions: RwLock::new(HashMap::new()),
         }
     }
 
@@ -345,7 +349,11 @@ impl CryptoStorage for VaultStorage {
         message: &T,
     ) -> Result<Ed25519Signature, Error> {
         let name = self.crypto_name(name);
-        let vers = self.key_version(&name, &version)?;
+        let vers = match self.key_versions.read().unwrap().get(&version) {
+            Some(version) => *version,
+            None => self.key_version(&name, &version)?,
+        };
+        self.key_versions.write().unwrap().insert(version, vers);
         let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message).map_err(|e| {
             Error::InternalError(format!(
