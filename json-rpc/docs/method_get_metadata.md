@@ -2,7 +2,7 @@
 
 **Description**
 
-Get the blockchain metadata (e.g., state as known to the current full node).
+Get the blockchain metadata (e.g., state as known to the current full node). // I feel like "state" is misleading here since it's a bit of an overloaded term for us.  Can we possibly use a different term?
 
 ### Parameters
 
