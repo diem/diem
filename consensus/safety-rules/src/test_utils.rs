@@ -161,12 +161,8 @@ pub fn make_proposal_with_parent_and_overrides(
         None => LedgerInfo::new(BlockInfo::empty(), vote_data.hash()),
     };
 
-    let vote = Vote::new(
-        vote_data.clone(),
-        validator_signer.author(),
-        ledger_info,
-        validator_signer,
-    );
+    let author = validator_signer.author();
+    let vote = Vote::new(vote_data.clone(), author, ledger_info, validator_signer);
 
     let mut ledger_info_with_signatures =
         LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new());

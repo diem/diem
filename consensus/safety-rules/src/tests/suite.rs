@@ -537,7 +537,7 @@ fn test_sign_proposal_with_bad_signer(safety_rules: &Callback) {
         .unwrap_err();
     assert_eq!(
         err,
-        Error::InvalidProposal("Proposal author is not validator signer!".into())
+        Error::InvalidProposal("Proposal author is not validator handle!".into())
     );
 }
 
@@ -616,11 +616,11 @@ fn test_uninitialized_signer(safety_rules: &Callback) {
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
     let err = safety_rules.construct_and_sign_vote(&a1).unwrap_err();
-    assert_eq!(err, Error::NotInitialized("validator_signer".into()));
+    assert_eq!(err, Error::NotInitialized("validator_handle".into()));
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
-    assert_eq!(err, Error::NotInitialized("validator_signer".into()));
+    assert_eq!(err, Error::NotInitialized("validator_handle".into()));
 
     safety_rules.initialize(&proof).unwrap();
     safety_rules.construct_and_sign_vote(&a1).unwrap();

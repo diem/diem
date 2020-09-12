@@ -23,7 +23,7 @@ use consensus_types::{
 };
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
-    hash::HashValue,
+    hash::{CryptoHash, HashValue},
     traits::Signature,
 };
 use libra_global_constants::CONSENSUS_KEY;
@@ -32,6 +32,7 @@ use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
     ledger_info::LedgerInfo, waypoint::Waypoint,
 };
+use serde::Serialize;
 use std::cmp::Ordering;
 
 /// @TODO consider a cache of verified QCs to cut down on verification costs
@@ -243,6 +244,16 @@ impl SafetyRules {
         if let Some(expected_key) = epoch_state.verifier.get_public_key(&author) {
             let curr_key = self.validator_handle().ok().map(|s| s.public_key());
             if curr_key != Some(expected_key.clone()) {
+                // TODO(joshlind): try to sign something with the key to check the
+                // key is held in storage. If not, do the following:
+                // error!(
+                //   SafetyLogSchema::new(LogEntry::KeyReconciliation, LogEvent::Error),
+                //   "Validator key not found",
+                // );
+                //
+                // self.validator_handle = None;
+                // Error::InternalError("Validator key not found".into())
+
                 self.validator_handle = Some(ValidatorHandle::new(
                     author,
                     CONSENSUS_KEY.into(),
@@ -329,18 +340,37 @@ impl SafetyRules {
         )?;
 
         let vote_data = self.extension_check(vote_proposal)?;
+        let mut ledger_info_placeholder = self.construct_ledger_info(proposed_block)?;
+        ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
+        let vote = self.create_and_sign_vote(vote_data, ledger_info_placeholder)?;
 
-        let validator_handle = self.validator_handle()?;
-        let vote = Vote::new(
-            vote_data,
-            validator_handle.author(),
-            self.construct_ledger_info(proposed_block)?,
-            validator_handle,
-        );
         safety_data.last_vote = Some(vote.clone());
         self.persistent_storage.set_safety_data(safety_data)?;
 
         Ok(vote)
+    }
+
+    fn create_and_sign_vote(
+        &mut self,
+        vote_data: VoteData,
+        ledger_info_placeholder: LedgerInfo,
+    ) -> Result<Vote, Error> {
+        let author = self.validator_handle()?.author();
+        let signature = self.sign(&ledger_info_placeholder)?;
+        Ok(Vote::new_with_signature(
+            vote_data,
+            author,
+            ledger_info_placeholder,
+            signature,
+        ))
+    }
+
+    fn sign<T: Serialize + CryptoHash>(&mut self, message: &T) -> Result<Ed25519Signature, Error> {
+        let validator_handle = self.validator_handle()?;
+        let key_name = validator_handle.key_name();
+        let public_key = validator_handle.public_key();
+
+        self.persistent_storage.sign(key_name, public_key, message)
     }
 
     fn guarded_sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
@@ -359,10 +389,10 @@ impl SafetyRules {
         if self.verify_and_update_preferred_round(block_data.quorum_cert(), &mut safety_data)? {
             self.persistent_storage.set_safety_data(safety_data)?;
         }
+        let signature = self.sign(&block_data)?;
 
-        Ok(Block::new_proposal_from_block_data(
-            block_data,
-            self.validator_handle()?,
+        Ok(Block::new_proposal_from_block_data_and_signature(
+            block_data, signature,
         ))
     }
 
@@ -389,8 +419,7 @@ impl SafetyRules {
             self.persistent_storage.set_safety_data(safety_data)?;
         }
 
-        let validator_handle = self.validator_handle()?;
-        let signature = timeout.sign(&validator_handle);
+        let signature = self.sign(timeout)?;
 
         Ok(signature)
     }
