@@ -1,3 +1,4 @@
+// This file is kind of confusing.  We should at least add a summary at the top that tells what this is intended for
 
 # Basics
 
