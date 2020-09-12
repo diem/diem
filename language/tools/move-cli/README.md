@@ -4,9 +4,9 @@ This is a tool for experimenting with Move without validators, a blockchain, or 
 
 ## Installation
 ```
-cargo build --release
-export LIBRA_HOME=<path_to_your_libra_dir>
-alias move="$LIBRA_HOME/target/release/move-cli $@"
+λ cargo build --release
+λ export LIBRA_HOME=<path_to_your_libra_repo>
+λ alias move="$LIBRA_HOME/target/release/move-cli $@"
 ```
 
 ## Compiling and running scripts
@@ -14,7 +14,6 @@ alias move="$LIBRA_HOME/target/release/move-cli $@"
 Here is a simple script that prints its `signer`:
 
 ```rust
-// TODO: perhaps start with a gentler intro script before going to signers
 script {
 use 0x1::Debug;
 fun main(account: &signer) {
@@ -31,18 +30,13 @@ Place this in a file named `script.move` and try
 
 The `--signers 0xf` part indicates which account address(es) have signed off on the script. Omitting `--signers` or passing multiple signers to this single-`signer` script will trigger a type error.
 
-TODO: show script compilation error
+## Adding new modules via `move_src`
 
-TODO: showcase basic arithmetic, control-flow constructs, `Signer` module, `Vector` and `Option` modules.
+By default, the CLI compiles and includes all files from the Move standard library and Libra Framework. New modules can be added to the `move_src` directory (or a directory of your choosing specified via `--move-src`. The `move run` command will compile and publish each module source file in this directory before running the given script.
 
-## Adding new modules via `move_lib`
-
-By default, the CLI compiles and includes the `Compare`, `Debug`, `Errors`, `Option`, `Signer`, and `Vector` modules from the Move standard library. New modules can be added to the `move_lib` directory. The `move run` command will compile and publish each module source file in `move_lib` before running the given script.
-
-Try saving this code in `move_lib/Test.move`:
+Try saving this code in `move_src/Test.move`:
 
 ```
-// TODO: more carefully chosen example + comments to show what's going on
 module Test {
     use 0x1::Signer;
 
@@ -70,7 +64,7 @@ Compiling 1 user module(s)
 Discarding changes; re-run with --commit if you would like to keep them.
 ```
 
-The CLI has successfully compiled the module, but by default it chooses not to publish the module bytecode under `move_state`. Re-running the command with `--commit` (`-c` for short) will produce
+The CLI has successfully compiled the module, but by default it chooses not to publish the module bytecode under `move_data`. Re-running the command with `--commit` (`-c` for short) will produce
 
 ```
 λ move compile -c
@@ -81,14 +75,14 @@ Committed changes.
 If we take a look under `move_data`, we will now see the published bytecodes for our test module:
 
 ```
-λ ls move_data/00000000000000000000000000000002/
+λ ls move_data/0x00000000000000000000000000000002/
 Test
 ```
 
 We can also inspect the compiled bytecode using `move view`:
 
 ```
-λ move view move_data/00000000000000000000000000000002/Test
+λ move view move_data/0x00000000000000000000000000000002/Test
 module 00000000.Test {
 resource Resource {
 	i: u64
@@ -148,50 +142,19 @@ Committed changes.
 We can also inspect this newly published resource using `move view`:
 
 ```
-λ move view move_data/0000000000000000000000000000000f/00000000000000000000000000000002\:\:Test\:\:Resource
+λ move view move_data/0x0000000000000000000000000000000f/0x00000000000000000000000000000002\:\:Test\:\:Resource
 resource 00000000::Test::Resource {
     i: 10
 }
 ```
 
-TODO: exercise the other functions of the module
 
 ## Using the CLI with Libra modules and genesis state
 
-From `libra/language/stdlib`, run the following script via `move --no-use-stdlib --lib modules run script.move --signers 0xA550C18 0xB1E55ED -c`:
+Take a look at `tests/testsuite/liba_smoke/args.txt`. This test uses the CLI to run a fairly realistic Libra genesis setup and a few basic transactions. Running
 
 ```
-script {
-use 0x1::Genesis;
-use 0x1::Vector;
-fun main(
-    lr_account: &signer,
-    tc_account: &signer
-) {
-    let dummy_auth_key = x"0000000000000000000000000000000000000000000000000000000000000000";
-    let lr_auth_key = copy dummy_auth_key;
-    let tc_addr = 0xB1E55ED;
-    let tc_auth_key = dummy_auth_key;
-    let initial_script_allow_list = Vector::empty<vector<u8>>();
-    let is_open_module = true;
-    let instruction_schedule = Vector::empty<u8>();
-    let native_schedule = Vector::empty<u8>();
-    let chain_id = 0;
-
-    Genesis::initialize(
-        lr_account,
-        tc_account,
-        lr_auth_key,
-        tc_addr,
-        tc_auth_key,
-        initial_script_allow_list,
-        is_open_module,
-        instruction_schedule,
-        native_schedule,
-        chain_id
-    );
-}
-}
+λ NO_MOVE_CLEAN=1 cargo xtest libra_smoke
 ```
 
-This will initialize the Libra genesis state and make it possible to invoke Libra Framework scripts and modules that rely on the existence of the genesis state.
+will execute each command in this file and leave you the resulting `move_data` to experiment with.

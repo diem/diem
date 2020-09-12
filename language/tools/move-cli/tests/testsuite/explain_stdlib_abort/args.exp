@@ -1,0 +1,10 @@
+Command `run script.move`:
+Compiling transaction script
+Execution aborted with code 1 in module 00000000000000000000000000000001::Vector. Abort code details:
+Reason:
+  Name: EINDEX_OUT_OF_BOUNDS
+  Description: The index into the vector is out of bounds
+Category:
+  Name: INVALID_STATE
+  Description: The system is in a state where the performed operation is not allowed. Example: call to a function only allowed
+ in genesis.

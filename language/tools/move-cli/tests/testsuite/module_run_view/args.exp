@@ -1,0 +1,28 @@
+Command `run script.move --signers 0xA 0xB --args 6 7`:
+Compiling 1 module(s) and 1 transaction script
+Changed resource(s) under 2 address(es):
+  Changed 1 resource(s) under address 0000000000000000000000000000000a:
+    Added type 00000000::Test::R: [U64(6)]
+  Changed 1 resource(s) under address 0000000000000000000000000000000b:
+    Added type 00000000::Test::R: [U64(7)]
+Discarding changes; re-run with --commit if you would like to keep them.
+Command `view move_data/0x0000000000000000000000000000000a/0x00000000000000000000000000000002::Test::R`:
+Resource not found.
+Command `view move_data/0x0000000000000000000000000000000b/0x00000000000000000000000000000002::Test::R`:
+Resource not found.
+Command `run script.move --signers 0xA 0xB --args 6 7 -c`:
+Compiling 1 module(s) and 1 transaction script
+Changed resource(s) under 2 address(es):
+  Changed 1 resource(s) under address 0000000000000000000000000000000a:
+    Added type 00000000::Test::R: [U64(6)]
+  Changed 1 resource(s) under address 0000000000000000000000000000000b:
+    Added type 00000000::Test::R: [U64(7)]
+Committed changes.
+Command `view move_data/0x0000000000000000000000000000000a/0x00000000000000000000000000000002::Test::R`:
+resource 00000000::Test::R {
+    i: 6
+}
+Command `view move_data/0x0000000000000000000000000000000b/0x00000000000000000000000000000002::Test::R`:
+resource 00000000::Test::R {
+    i: 7
+}
