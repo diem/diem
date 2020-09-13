@@ -24,6 +24,7 @@ use serde::Serialize;
 /// @TODO add retrieval of private key based upon public key to persistent store
 pub struct PersistentSafetyStorage {
     internal_store: Storage,
+    safety_data: Option<SafetyData>,
 }
 
 impl PersistentSafetyStorage {
@@ -58,7 +59,7 @@ impl PersistentSafetyStorage {
             waypoint,
         )
         .expect("Unable to initialize backend storage");
-        Self { internal_store }
+        Self { internal_store, safety_data: None }
     }
 
     fn initialize_(
@@ -89,7 +90,7 @@ impl PersistentSafetyStorage {
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
     /// for constructed environments.
     pub fn new(internal_store: Storage) -> Self {
-        Self { internal_store }
+        Self { internal_store, safety_data: None }
     }
 
     pub fn author(&self) -> Result<Author, Error> {
@@ -103,14 +104,22 @@ impl PersistentSafetyStorage {
             .map(|r| r.public_key)?)
     }
 
-    pub fn safety_data(&self) -> Result<SafetyData, Error> {
-        Ok(self.internal_store.get(SAFETY_DATA).map(|v| v.value)?)
+    pub fn safety_data(&mut self) -> Result<SafetyData, Error> {
+        match &self.safety_data {
+          Some(data) => Ok(data.clone()),
+          None => {
+            let data = self.internal_store.get::<SafetyData>(SAFETY_DATA).map(|v| v.value)?;
+            self.safety_data = Some(data.clone());
+            Ok(data)
+          },
+      }
     }
 
     pub fn set_safety_data(&mut self, data: SafetyData) -> Result<(), Error> {
         counters::set_state("epoch", data.epoch as i64);
         counters::set_state("last_voted_round", data.last_voted_round as i64);
         counters::set_state("preferred_round", data.preferred_round as i64);
+        self.safety_data = Some(data.clone());
         self.internal_store.set(SAFETY_DATA, data)?;
         Ok(())
     }
