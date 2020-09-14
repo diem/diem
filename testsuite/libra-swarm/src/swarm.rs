@@ -43,6 +43,7 @@ impl Drop for LibraNode {
                 if let Err(e) = self.node.kill() {
                     panic!("LibraNode process could not be killed: '{}'", e);
                 }
+                self.node.wait().unwrap();
             }
         }
     }
