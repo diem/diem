@@ -2534,7 +2534,7 @@ dependencies = [
  "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "trybuild 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
+ "trybuild 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "x25519-dalek 1.0.1 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat3)",
  "x25519-dalek 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -6376,7 +6376,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "trybuild"
-version = "1.0.33"
+version = "1.0.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "glob 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7346,7 +7346,7 @@ dependencies = [
 "checksum tracing-core 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)" = "4f0e00789804e99b20f12bc7003ca416309d28a6f495d6af58d1e2c2842461b5"
 "checksum tracing-futures 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ab7bb6f14721aa00656086e9335d363c5c8747bae02ebe32ea2c7dece5689b4c"
 "checksum try-lock 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
-"checksum trybuild 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)" = "48105a4deaf74163c017939b45ef7322fba46e8b17281528039b0beb04235e92"
+"checksum trybuild 1.0.34 (registry+https://github.com/rust-lang/crates.io-index)" = "ffdb1ae6e98424e27a7e9df768f01a1206123b046647704999a376670a12a5db"
 "checksum tungstenite 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f0308d80d86700c5878b9ef6321f020f29b1bb9d5ff3cab25e75e23f3a492a23"
 "checksum twoway 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "59b11b2b5241ba34be09c3cc85a36e56e48f9888862e19cedf23336d35316ed1"
 "checksum typed-arena 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0685c84d5d54d1c26f7d3eb96cd41550adb97baed141a761cf335d3d33bcd0ae"
