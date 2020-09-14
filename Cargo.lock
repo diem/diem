@@ -635,7 +635,7 @@ dependencies = [
  "reqwest 0.10.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "resource-viewer 0.1.0",
  "rust_decimal 1.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustyline 6.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustyline 6.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
@@ -3996,6 +3996,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cc 1.0.59 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.77 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "nom"
 version = "5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5116,7 +5127,7 @@ dependencies = [
 
 [[package]]
 name = "rustyline"
-version = "6.2.0"
+version = "6.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5124,7 +5135,7 @@ dependencies = [
  "libc 0.2.77 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "memchr 2.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "nix 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nix 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "scopeguard 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-segmentation 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7144,6 +7155,7 @@ dependencies = [
 "checksum net2 0.2.34 (registry+https://github.com/rust-lang/crates.io-index)" = "2ba7c918ac76704fb42afcbbb43891e72731f3dcca3bef2a19786297baf14af7"
 "checksum nibble_vec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "77a5d83df9f36fe23f0c3648c6bbb8b0298bb5f1939c8f2704431371f4b84d43"
 "checksum nix 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)" = "50e4785f2c3b7589a0d0c1dd60285e1188adac4006e8abd6dd578e1567027363"
+"checksum nix 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)" = "83450fe6a6142ddd95fb064b746083fc4ef1705fe81f64a64e1d4b39f54a1055"
 "checksum nom 5.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
 "checksum num 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b8536030f9fea7127f841b45bb6243b27255787fb4eb83958aa1ef9d2fdc0c36"
 "checksum num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ab3e176191bc4faad357e3122c4747aa098ac880e88b168f106386128736cf4a"
@@ -7256,7 +7268,7 @@ dependencies = [
 "checksum rustls 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5d1126dcf58e93cee7d098dbda643b5f92ed724f1f6a63007c1116eed6700c81"
 "checksum rustls-native-certs 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a75ffeb84a6bd9d014713119542ce415db3a3e4748f0bfce1e1416cd224a23a5"
 "checksum rusty-fork 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cb3dcc6e454c328bb824492db107ab7c0ae8fcffe4ad210136ef014458c1bc4f"
-"checksum rustyline 6.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3358c21cbbc1a751892528db4e1de4b7a2b6a73f001e215aaba97d712cfa9777"
+"checksum rustyline 6.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6f0d5e7b0219a3eadd5439498525d4765c59b7c993ef0c12244865cd2d988413"
 "checksum ryu 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 "checksum safemem 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 "checksum same-file 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
