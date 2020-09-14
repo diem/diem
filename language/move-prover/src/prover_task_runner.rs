@@ -10,12 +10,13 @@ use futures::{future::FutureExt, pin_mut, select};
 use rand::Rng;
 use std::{
     process::Output,
+    sync::Arc,
     sync::mpsc::{channel, Sender},
 };
 use tokio::{
     process::Command,
     runtime::Runtime,
-    sync::{broadcast, broadcast::Receiver},
+    sync::{broadcast, broadcast::Receiver, Semaphore},
 };
 
 #[derive(Debug, Clone)]
@@ -32,7 +33,7 @@ pub trait ProverTask {
     fn init(&mut self, num_instances: usize) -> Vec<Self::TaskId>;
 
     /// Run the task with task_id. This function will be called from one of the worker threads.
-    async fn run(&mut self, task_id: Self::TaskId) -> Self::TaskResult;
+    async fn run(&mut self, task_id: Self::TaskId, sem: Arc<Semaphore>) -> Self::TaskResult;
 }
 
 pub struct ProverTaskRunner();
@@ -44,8 +45,14 @@ impl ProverTaskRunner {
     where
         T: ProverTask + Clone + Send + 'static,
     {
-        let rt = Runtime::new().unwrap();
-
+        // let rt = Runtime::new().unwrap();
+        let mut rt = tokio::runtime::Builder::new()
+            .core_threads(1)
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .unwrap();
+        let sem = Arc::new(Semaphore::new(3));
         // Create channels for communication.
         let (worker_tx, master_rx) = channel();
         let (master_tx, _): (
@@ -56,12 +63,15 @@ impl ProverTaskRunner {
         // Initialize the prover tasks.
         let task_ids = task.init(num_instances);
         for task_id in task_ids {
+            let s = sem.clone();
             let send_n = worker_tx.clone();
             let worker_rx = master_tx.subscribe();
             let cloned_task = task.clone();
             // Spawn a task worker for each task_id.
+            println!("spawning tasks now");
             rt.spawn(async move {
-                Self::run_task_until_cancelled(cloned_task, task_id, send_n, worker_rx).await;
+                println!("task spawned");
+                Self::run_task_until_cancelled(cloned_task, task_id, send_n, worker_rx, s).await;
             });
         }
         // Listens until one of the workers finishes.
@@ -85,10 +95,11 @@ impl ProverTaskRunner {
         task_id: T::TaskId,
         tx: Sender<(T::TaskId, T::TaskResult)>,
         rx: Receiver<BroadcastMsg>,
+        sem: Arc<Semaphore>,
     ) where
         T: ProverTask,
     {
-        let boogie_fut = task.run(task_id).fuse();
+        let boogie_fut = task.run(task_id, sem).fuse();
         let watchdog_fut = Self::watchdog(rx).fuse();
         pin_mut!(boogie_fut, watchdog_fut);
         select! {
@@ -131,8 +142,10 @@ impl ProverTask for RunBoogieWithSeeds {
             .collect()
     }
 
-    async fn run(&mut self, task_id: Self::TaskId) -> Self::TaskResult {
+    async fn run(&mut self, task_id: Self::TaskId, sem: Arc<Semaphore>) -> Self::TaskResult {
+        let _guard = sem.acquire().await;
         let args = self.get_boogie_command(task_id);
+        println!("ruunning command with seed {}", task_id);
         Command::new(&args[0])
             .args(&args[1..])
             .kill_on_drop(true)
