@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.32"
 reqwest = { version = "0.10.8", features = ["blocking"], default-features = false }
-serde = "1.0.115"
+serde = "1.0.116"
 serde_derive = "1.0.115"
 structopt = "0.3.17"
 tokio = { version = "0.2.22", features = ["full"] }

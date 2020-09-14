@@ -24,7 +24,7 @@ libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-serde = { version = "1.0.115", default-features = false }
+serde = { version = "1.0.116", default-features = false }
 storage-client = { path = "../../storage/storage-client", version = "0.1.0" }
 thiserror = "1.0.20"
 # this is actually a dev-dependency (see "Conditional compilation of tests" in coding_guidelines.md)

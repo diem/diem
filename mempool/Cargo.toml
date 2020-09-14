@@ -15,7 +15,7 @@ futures = "0.3.5"
 itertools = "0.9.0"
 once_cell = "1.4.1"
 proptest = { version = "0.10.1", optional = true }
-serde = { version = "1.0.115", default-features = false }
+serde = { version = "1.0.116", default-features = false }
 tokio = { version = "0.2.22", features = ["full"] }
 
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }

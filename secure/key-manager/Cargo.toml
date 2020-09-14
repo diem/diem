@@ -11,7 +11,7 @@ publish = false
 
 [dependencies]
 once_cell = "1.4.1"
-serde = { version = "1.0.115", features = ["rc"], default-features = false }
+serde = { version = "1.0.116", features = ["rc"], default-features = false }
 thiserror = "1.0.20"
 
 libra-config = { path = "../../config", version = "0.1.0"}

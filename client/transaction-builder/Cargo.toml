@@ -10,7 +10,7 @@ edition = "2018"
 
 [dependencies]
 once_cell = "1.4.1"
-serde = { version = "1.0.115", features = ["derive"] }
+serde = { version = "1.0.116", features = ["derive"] }
 
 compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

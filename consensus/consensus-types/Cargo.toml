@@ -10,7 +10,7 @@ edition = "2018"
 anyhow = "1.0.32"
 mirai-annotations = { version = "1.10.1", default-features = false }
 proptest = { version = "0.10.1", optional = true }
-serde = { version = "1.0.115", default-features = false }
+serde = { version = "1.0.116", default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
