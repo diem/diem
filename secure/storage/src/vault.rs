@@ -111,6 +111,11 @@ impl VaultStorage {
         Ok(())
     }
 
+    #[cfg(any(test, feature = "testing"))]
+    pub fn revoke_token_self(&self) -> Result<(), Error> {
+        Ok(self.client.revoke_token_self()?)
+    }
+
     /// Creates a token but uses the namespace for policies
     pub fn create_token(&self, mut policies: Vec<&str>) -> Result<String, Error> {
         policies.push(LIBRA_DEFAULT);

@@ -9,10 +9,27 @@ use crate::{
 use libra_crypto::{test_utils::TestLibraCrypto, Signature};
 use libra_vault_client::dev::{self, ROOT_TOKEN};
 
-/// VaultStorage test constants
+/// VaultStorage namespace constants
 const VAULT_NAMESPACE_1: &str = "namespace_1";
 const VAULT_NAMESPACE_2: &str = "namespace_2";
 const VAULT_NAMESPACE_3: &str = "namespace_3";
+
+/// VaultStorage KV data names
+const ANYONE: &str = "anyone";
+const ROOT: &str = "root";
+const PARTIAL: &str = "partial";
+const FULL: &str = "full";
+
+/// VaultStorage Transit key names
+const CRYPTO_KEY: &str = "crypto_key";
+
+/// VaultStorage role names
+const EXPORTER: &str = "exporter";
+const NOONE: &str = "noone";
+const READER: &str = "reader";
+const ROTATER: &str = "rotater";
+const SIGNER: &str = "signer";
+const WRITER: &str = "writer";
 
 /// This holds the canonical list of vault storage tests. This is required because vault tests
 /// cannot currently be run in parallel, as each test uses the same vault instance and
@@ -23,6 +40,7 @@ const VAULT_TESTS: &[fn()] = &[
     test_suite_no_namespaces,
     test_vault_crypto_policies,
     test_vault_key_value_policies,
+    test_vault_tokens,
 ];
 
 /// A test for verifying VaultStorage properly implements the LibraSecureStorage API and enforces
@@ -69,29 +87,24 @@ fn create_vault_with_namespace(namespace: Option<String>) -> VaultStorage {
 /// Initializes test policies for a VaultStorage instance and checks the instance is
 /// accessible (e.g., by ensuring subsequent read and write operations complete successfully).
 fn test_vault_key_value_policies() {
-    // TODO(davidiw,joshlind): evaluate other systems and determine if create_token can be on the
-    // Storage / KV interface. And then refactor this method to make it cleaner and easier to reason
-    // about.
     let mut storage = create_vault_with_namespace(None);
-    let reader: String = "reader".into();
-    let writer: String = "writer".into();
 
     let anyone = Policy::public();
     let root = Policy::new(vec![]);
     let partial = Policy::new(vec![
-        Permission::new(Identity::User(reader.clone()), vec![Capability::Read]),
+        Permission::new(Identity::User(READER.into()), vec![Capability::Read]),
         Permission::new(
-            Identity::User(writer.clone()),
+            Identity::User(WRITER.into()),
             vec![Capability::Read, Capability::Write],
         ),
     ]);
     let full = Policy::new(vec![
         Permission::new(
-            Identity::User(reader.clone()),
+            Identity::User(READER.into()),
             vec![Capability::Read, Capability::Write],
         ),
         Permission::new(
-            Identity::User(writer.clone()),
+            Identity::User(WRITER.into()),
             vec![Capability::Read, Capability::Write],
         ),
     ]);
@@ -100,146 +113,170 @@ fn test_vault_key_value_policies() {
     let ttl = Some(3600);
 
     // Initialize data and policies
-
-    storage.set("anyone", 1).unwrap();
+    storage.set(ANYONE, 1).unwrap();
     storage
-        .set_policies("anyone", &VaultEngine::KVSecrets, &anyone)
+        .set_policies(ANYONE, &VaultEngine::KVSecrets, &anyone)
         .unwrap();
 
-    storage.set("root", 2).unwrap();
+    storage.set(ROOT, 2).unwrap();
     storage
-        .set_policies("root", &VaultEngine::KVSecrets, &root)
+        .set_policies(ROOT, &VaultEngine::KVSecrets, &root)
         .unwrap();
 
-    storage.set("partial", 3).unwrap();
+    storage.set(PARTIAL, 3).unwrap();
     storage
-        .set_policies("partial", &VaultEngine::KVSecrets, &partial)
+        .set_policies(PARTIAL, &VaultEngine::KVSecrets, &partial)
         .unwrap();
 
-    storage.set("full", 4).unwrap();
+    storage.set(FULL, 4).unwrap();
     storage
-        .set_policies("full", &VaultEngine::KVSecrets, &full)
+        .set_policies(FULL, &VaultEngine::KVSecrets, &full)
         .unwrap();
 
     // Verify initial reading works correctly
+    assert_eq!(storage.get::<u64>(ANYONE).unwrap().value, 1);
+    assert_eq!(storage.get::<u64>(ROOT).unwrap().value, 2);
+    assert_eq!(storage.get::<u64>(PARTIAL).unwrap().value, 3);
+    assert_eq!(storage.get::<u64>(FULL).unwrap().value, 4);
 
-    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 1);
-    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
-    assert_eq!(storage.get::<u64>("partial").unwrap().value, 3);
-    assert_eq!(storage.get::<u64>("full").unwrap().value, 4);
-
-    let writer_token = storage.create_token(vec![&writer]).unwrap();
+    let writer_token = storage.create_token(vec![&WRITER]).unwrap();
     let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, ttl);
-    assert_eq!(writer.get::<u64>("anyone").unwrap().value, 1);
-    assert_eq!(writer.get::<u64>("root"), Err(Error::PermissionDenied));
-    assert_eq!(writer.get::<u64>("partial").unwrap().value, 3);
-    assert_eq!(writer.get::<u64>("full").unwrap().value, 4);
+    assert_eq!(writer.get::<u64>(ANYONE).unwrap().value, 1);
+    assert_eq!(writer.get::<u64>(ROOT), Err(Error::PermissionDenied));
+    assert_eq!(writer.get::<u64>(PARTIAL).unwrap().value, 3);
+    assert_eq!(writer.get::<u64>(FULL).unwrap().value, 4);
 
-    let reader_token = storage.create_token(vec![&reader]).unwrap();
+    let reader_token = storage.create_token(vec![&READER]).unwrap();
     let mut reader = VaultStorage::new(dev::test_host(), reader_token, None, None, ttl);
-    assert_eq!(reader.get::<u64>("anyone").unwrap().value, 1);
-    assert_eq!(reader.get::<u64>("root"), Err(Error::PermissionDenied));
-    assert_eq!(reader.get::<u64>("partial").unwrap().value, 3);
-    assert_eq!(reader.get::<u64>("full").unwrap().value, 4);
+    assert_eq!(reader.get::<u64>(ANYONE).unwrap().value, 1);
+    assert_eq!(reader.get::<u64>(ROOT), Err(Error::PermissionDenied));
+    assert_eq!(reader.get::<u64>(PARTIAL).unwrap().value, 3);
+    assert_eq!(reader.get::<u64>(FULL).unwrap().value, 4);
 
     // Attempt writes followed by reads for correctness
+    writer.set(ANYONE, 5).unwrap();
+    assert_eq!(writer.set(ROOT, 6), Err(Error::PermissionDenied));
+    writer.set(PARTIAL, 7).unwrap();
+    writer.set(FULL, 8).unwrap();
 
-    writer.set("anyone", 5).unwrap();
-    assert_eq!(writer.set("root", 6), Err(Error::PermissionDenied));
-    writer.set("partial", 7).unwrap();
-    writer.set("full", 8).unwrap();
+    assert_eq!(storage.get::<u64>(ANYONE).unwrap().value, 5);
+    assert_eq!(storage.get::<u64>(ROOT).unwrap().value, 2);
+    assert_eq!(storage.get::<u64>(PARTIAL).unwrap().value, 7);
+    assert_eq!(storage.get::<u64>(FULL).unwrap().value, 8);
 
-    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 5);
-    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
-    assert_eq!(storage.get::<u64>("partial").unwrap().value, 7);
-    assert_eq!(storage.get::<u64>("full").unwrap().value, 8);
+    reader.set(ANYONE, 9).unwrap();
+    assert_eq!(reader.set(ROOT, 10), Err(Error::PermissionDenied));
+    assert_eq!(reader.set(PARTIAL, 11), Err(Error::PermissionDenied));
+    reader.set(FULL, 12).unwrap();
 
-    reader.set("anyone", 9).unwrap();
-    assert_eq!(reader.set("root", 10), Err(Error::PermissionDenied));
-    assert_eq!(reader.set("partial", 11), Err(Error::PermissionDenied));
-    reader.set("full", 12).unwrap();
-
-    assert_eq!(storage.get::<u64>("anyone").unwrap().value, 9);
-    assert_eq!(storage.get::<u64>("root").unwrap().value, 2);
-    assert_eq!(storage.get::<u64>("partial").unwrap().value, 7);
-    assert_eq!(storage.get::<u64>("full").unwrap().value, 12);
+    assert_eq!(storage.get::<u64>(ANYONE).unwrap().value, 9);
+    assert_eq!(storage.get::<u64>(ROOT).unwrap().value, 2);
+    assert_eq!(storage.get::<u64>(PARTIAL).unwrap().value, 7);
+    assert_eq!(storage.get::<u64>(FULL).unwrap().value, 12);
 }
 
 fn test_vault_crypto_policies() {
     let mut storage = create_vault_with_namespace(None);
-    let exporter: String = "exporter".into();
-    let noone: String = "noone".into();
-    let reader: String = "reader".into();
-    let rotater: String = "rotater".into();
-    let signer: String = "signer".into();
 
     let policy = Policy::new(vec![
-        Permission::new(Identity::User(exporter.clone()), vec![Capability::Export]),
-        Permission::new(Identity::User(reader.clone()), vec![Capability::Read]),
+        Permission::new(Identity::User(EXPORTER.into()), vec![Capability::Export]),
+        Permission::new(Identity::User(READER.into()), vec![Capability::Read]),
         Permission::new(
-            Identity::User(rotater.clone()),
+            Identity::User(ROTATER.into()),
             vec![Capability::Read, Capability::Rotate],
         ),
-        Permission::new(Identity::User(signer.clone()), vec![Capability::Sign]),
+        Permission::new(Identity::User(SIGNER.into()), vec![Capability::Sign]),
     ]);
 
     // Initialize data and policies
-    let key_name = "crypto_key";
-    let pubkey = storage.create_key(key_name).unwrap();
+    let pubkey = storage.create_key(CRYPTO_KEY).unwrap();
     storage
-        .set_policies(key_name, &VaultEngine::Transit, &policy)
+        .set_policies(CRYPTO_KEY, &VaultEngine::Transit, &policy)
         .unwrap();
-    assert_eq!(storage.get_public_key(key_name).unwrap().public_key, pubkey);
+    assert_eq!(
+        storage.get_public_key(CRYPTO_KEY).unwrap().public_key,
+        pubkey
+    );
 
     let message = TestLibraCrypto("Hello, World".to_string());
 
     // Verify exporter policy
-    let exporter_token = storage.create_token(vec![&exporter]).unwrap();
+    let exporter_token = storage.create_token(vec![&EXPORTER]).unwrap();
     let mut exporter_store = VaultStorage::new(dev::test_host(), exporter_token, None, None, None);
-    exporter_store.export_private_key(key_name).unwrap();
-    exporter_store.get_public_key(key_name).unwrap_err();
-    exporter_store.rotate_key(key_name).unwrap_err();
-    exporter_store.sign(key_name, &message).unwrap_err();
+    exporter_store.export_private_key(CRYPTO_KEY).unwrap();
+    exporter_store.get_public_key(CRYPTO_KEY).unwrap_err();
+    exporter_store.rotate_key(CRYPTO_KEY).unwrap_err();
+    exporter_store.sign(CRYPTO_KEY, &message).unwrap_err();
 
     // Verify noone policy
-    let noone_token = storage.create_token(vec![&noone]).unwrap();
+    let noone_token = storage.create_token(vec![&NOONE]).unwrap();
     let mut noone_store = VaultStorage::new(dev::test_host(), noone_token, None, None, None);
-    noone_store.export_private_key(key_name).unwrap_err();
-    noone_store.get_public_key(key_name).unwrap_err();
-    noone_store.rotate_key(key_name).unwrap_err();
-    noone_store.sign(key_name, &message).unwrap_err();
+    noone_store.export_private_key(CRYPTO_KEY).unwrap_err();
+    noone_store.get_public_key(CRYPTO_KEY).unwrap_err();
+    noone_store.rotate_key(CRYPTO_KEY).unwrap_err();
+    noone_store.sign(CRYPTO_KEY, &message).unwrap_err();
 
     // Verify reader policy
-    let reader_token = storage.create_token(vec![&reader]).unwrap();
+    let reader_token = storage.create_token(vec![&READER]).unwrap();
     let mut reader_store = VaultStorage::new(dev::test_host(), reader_token, None, None, None);
-    reader_store.export_private_key(key_name).unwrap_err();
+    reader_store.export_private_key(CRYPTO_KEY).unwrap_err();
     assert_eq!(
-        reader_store.get_public_key(key_name).unwrap().public_key,
+        reader_store.get_public_key(CRYPTO_KEY).unwrap().public_key,
         pubkey
     );
-    reader_store.rotate_key(key_name).unwrap_err();
-    reader_store.sign(key_name, &message).unwrap_err();
+    reader_store.rotate_key(CRYPTO_KEY).unwrap_err();
+    reader_store.sign(CRYPTO_KEY, &message).unwrap_err();
 
     // Verify rotater policy
-    let rotater_token = storage.create_token(vec![&rotater]).unwrap();
+    let rotater_token = storage.create_token(vec![&ROTATER]).unwrap();
     let mut rotater_store = VaultStorage::new(dev::test_host(), rotater_token, None, None, None);
-    rotater_store.export_private_key(key_name).unwrap_err();
+    rotater_store.export_private_key(CRYPTO_KEY).unwrap_err();
     assert_eq!(
-        rotater_store.get_public_key(key_name).unwrap().public_key,
+        rotater_store.get_public_key(CRYPTO_KEY).unwrap().public_key,
         pubkey
     );
-    assert_ne!(rotater_store.rotate_key(key_name).unwrap(), pubkey);
-    rotater_store.sign(key_name, &message).unwrap_err();
+    assert_ne!(rotater_store.rotate_key(CRYPTO_KEY).unwrap(), pubkey);
+    rotater_store.sign(CRYPTO_KEY, &message).unwrap_err();
 
-    let new_pubkey = storage.get_public_key(key_name).unwrap().public_key;
+    let new_pubkey = storage.get_public_key(CRYPTO_KEY).unwrap().public_key;
 
     // Verify signer policy
-    let signer_token = storage.create_token(vec![&signer]).unwrap();
+    let signer_token = storage.create_token(vec![&SIGNER]).unwrap();
     let mut signer_store = VaultStorage::new(dev::test_host(), signer_token, None, None, None);
-    signer_store.export_private_key(key_name).unwrap_err();
-    signer_store.get_public_key(key_name).unwrap_err();
-    signer_store.rotate_key(key_name).unwrap_err();
-    let signature = signer_store.sign(key_name, &message).unwrap();
+    signer_store.export_private_key(CRYPTO_KEY).unwrap_err();
+    signer_store.get_public_key(CRYPTO_KEY).unwrap_err();
+    signer_store.rotate_key(CRYPTO_KEY).unwrap_err();
+    let signature = signer_store.sign(CRYPTO_KEY, &message).unwrap();
     signature.verify(&message, &pubkey).unwrap_err();
     signature.verify(&message, &new_pubkey).unwrap();
+}
+
+fn test_vault_tokens() {
+    let mut storage = create_vault_with_namespace(None);
+
+    let partial = Policy::new(vec![Permission::new(
+        Identity::User(WRITER.into()),
+        vec![Capability::Read, Capability::Write],
+    )]);
+
+    // Initialize data and policies
+    storage.set(PARTIAL, 3).unwrap();
+    storage
+        .set_policies(PARTIAL, &VaultEngine::KVSecrets, &partial)
+        .unwrap();
+
+    let writer_token = storage.create_token(vec![&WRITER]).unwrap();
+    let mut writer = VaultStorage::new(dev::test_host(), writer_token, None, None, None);
+
+    // Verify reads and write succeed
+    assert_eq!(writer.get::<u64>(PARTIAL).unwrap().value, 3);
+    writer.set::<u64>(PARTIAL, 5).unwrap();
+
+    // Revoke the token and verify failure
+    writer.revoke_token_self().unwrap();
+    assert_eq!(writer.get::<u64>(PARTIAL), Err(Error::PermissionDenied));
+
+    // Try to use an invalid token and verify failure
+    let writer = VaultStorage::new(dev::test_host(), "INVALID TOKEN".into(), None, None, None);
+    assert_eq!(writer.get::<u64>(PARTIAL), Err(Error::PermissionDenied));
 }

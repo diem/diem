@@ -187,6 +187,21 @@ impl Client {
         process_token_renew_response(resp)
     }
 
+    pub fn revoke_token_self(&self) -> Result<(), Error> {
+        let request = self
+            .agent
+            .post(&format!("{}/v1/auth/token/revoke-self", self.host));
+        let mut request = self.upgrade_request(request);
+        let resp = request.call();
+
+        if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            Ok(())
+        } else {
+            Err(resp.into())
+        }
+    }
+
     /// List all stored secrets
     pub fn list_secrets(&self, secret: &str) -> Result<Vec<String>, Error> {
         let request = self.agent.request(
