@@ -394,7 +394,7 @@ async fn get_currencies(
         Ok(account_state
             .get_registered_currency_info_resources()?
             .iter()
-            .map(|info| CurrencyInfoView::from(info.as_ref().unwrap()))
+            .map(|info| info.into())
             .collect())
     } else {
         Ok(vec![])
