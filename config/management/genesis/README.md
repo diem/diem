@@ -1,8 +1,9 @@
 # Libra Config Manager
 
-The `libra-genesis-tool` provides a tool for the genesis ceremony of the Libra blockchain. The functionality of the tool is dictated by the organization of nodes within the system:
+The `libra-genesis-tool` provides a tool for the genesis ceremony of the Libra blockchain as well as adding new validators to an existing blockchain. The functionality of the tool is dictated by the organization of nodes within the system:
 
-* An association account that maintains the set of validator owners and validator operators.
+* A libra root account that maintains the set of validator owners and validator operators.
+* A treasury compliance account that maintains VASPs, DDs, and other related topics.
 * Validator owners (OW) that have accounts on the blockchain. These accounts contain a validator configuration and specify a validator operator.
 * Validator operators (OP) that have accounts on the blockchain. These accounts have the ability to manipulate validator configuration.
 
@@ -11,24 +12,27 @@ The `libra-genesis-tool` provides a tool for the genesis ceremony of the Libra b
 The process for starting organization of the planned and current functionality includes:
 
 * Initialization ceremony
-  * Association sets up a secure-backend for data uploads, `association drive`.  The association then distributes credentials for each node owner and validator operator.
-  * The association generates its `libra root key` and shares the public key to the association drive.
-  * Each OW will generate a private `owner key` and share the public key to the association drive.
-  * Each OP will generate a private `operator key` and share the public key to the association drive.
+  * The association sets up a secure-backend for data uploads, `shared storage`, e.g., GitHub.  The association then distributes credentials for each OW and OP.
+  * The association generates its `libra root key` and shares the public key to the `shared storage`.
+  * Each OW will generate a private `owner key` and share the public key to the `shared storage`.
+  * Each OP will generate a private `operator key` and share the public key to the `shared storage`.
 * Validator initialization
-  * Each OW will select a OP and submit this as a transaction signed by their `owner key` and uploads it to the association drive..
-  * For each validator supported by a OP, the OP will generate network, execution and consensus keys as well as network addresses for full node and validator endpoints. The OP will generate a transaction containing this data signed by their `operator key` and uploads it to the association drive.
+  * Each OW will select a OP and submit this as a transaction signed by their `owner key` and uploads it to the `shared storage`.
+  * For each validator supported by a OP, the OP will generate network, execution and consensus keys as well as network addresses for full node and validator endpoints. The OP will generate a transaction containing this data signed by their `operator key` and uploads it to the `shared storage`.
 * Genesis
   * Each OP will download the accumulated data to produce a genesis.blob
-  * Association will download the accumulated data to produce both a genesis.blob and genesis waypoint.
+  * The association will download the accumulated data to produce both a genesis.blob and genesis waypoint.
 * Starting
-  * Association publishes the data associated with genesis, the genesis.blob, and the genesis waypoint.
-  * Each OP downloads the genesis waypoint provided by the association and inserts it into their Libra instance(s) and starts them.
+  * The association publishes the data associated with genesis, the genesis.blob, and the genesis waypoint.
+  * Each OP downloads the genesis waypoint provided by the association and inserts it into their Libra instance(s).
+  * Each OP verifies that the genesis.blob, waypoint, and local configuration are correct and broadcast their results to other OPs and the association.
+  * Upon a quorum of validators having correct status, the association instructs the OPs to begin their validators.
   * Upon a quorum of validators coming online, the blockchain will begin processing transactions.
 
 Notes:
 * This describes a process for instantiating organization that has yet to be specified but extends from the current state of the Libra Testnet.
 * The implementation as described has yet to be fully implemented in Move, hence, this tool maps to the current state.
+* A new OP / OW onboarding to an existing blockchain follow the same process and delegate the initial creation of accounts and setting of configuration to the association.
 
 ## Requirements
 
@@ -36,46 +40,86 @@ Each individual instance, OW or OP, should have access to a secure storage solut
 
 ## The Tools
 
-While this is compiled as a single binary it provides several different facilities:
+`libra-genesis-tool` offers several facilities:
 
-* A means for bootstrapping an identity mapped to a local configuration file.  The identities are used to interact with local and remote secure storages.
-* Retrieving and submitting validator owner, validator operator, and validator configuration -- this is from a local secure storage to a remote secure storage -- leveraging the identity tool.
+* Simplified configuration management via a config file that can store frequently reused paramters including validator and shared storage.
+* Retrieving and submitting OW, OP, and validator configuration -- this is from a local secure storage to a remote secure storage -- leveraging the identity tool.
 * Converting a genesis configuration and a secure storage into a genesis.blob / genesis waypoint.
 
 ## The Process
 
-The end-to-end process assumes that each participant has their own Vault solution and a token stored locally on their disk in a file accessible to the management tool.
+The end-to-end process assumes that each participant has their own secure storage solution, e.g., Vault, and a token stored locally on their disk in a file accessible to the management tool.
 
-In addition, the association will provide a GitHub repository (and repository owner) along with a distinct namespace for each participant. GitHub namespaces equate to directories within the repository.
+In addition, the association will provide an entry point into a `shared storage`, e.g., GitHub repository (and repository owner) along with a distinct namespace for each participant. GitHub namespaces equate to directories within the repository.
 
 Each participant must retrieve an appropriate GitHub [token](https://github.com/settings/tokens) for their account that allows access to the `repo` scope. This token must be stored locally on their disk in a file accessible to the management tool.
 
-Finally, each participant should initialize their respective key: `libra_root`, `owner`, or `operator` in a secure storage solution. How this is done is outside the scope of this document.
+Finally, each participant should initialize their respective key: `libra_root`, `treasury_compliance`, `owner`, or `operator` in a secure storage solution. How this is done is outside the scope of this document.
 
 The remainder of this section specifies distinct behaviors for each role.
 
+### Build a Configuration File
+
+While `libra-genesis-tool` supports setting the backends on each command, doing so is cumbersome and fraught with error. Instead, all participants, should first construct a configuration file for use in genesis and later use via the operational tool. Below is an example configuration file in yaml format:
+
+```
+chain_id: "MAINNET"
+json_server: "http://127.0.0.1:8080"
+shared_backend:
+    type: "github"
+    repository_owner: "REPOSITORY_OWNER"
+    repository: "REPOSITORY"
+    namespace: "REPOSITOR_FOLDER"
+    token:
+        from_config: "test"
+validator_backend:
+    type: "vault"
+    server: "127.0.0.1:8200"
+    namespace: "VIRTUAL_NAMESPACE"
+    token:
+        from_config: "test"
+```
+
+Overview of fields:
+
+* `chain_id` specifies a distinct chain and is written into genesis, checked during network connections, and part of each transaction. It is provided by the association.
+* `json_server` specifies a Libra JSON Server. This can be any that connect to your network including your own of one run by the association. It is not used in genesis, so a dummy value is acceptable during initial configuration.
+* `shared_backend` is a pointer to the associaton's `shared storage`.
+* `validator_backend` is a pointer to the local validator node's secure storage.
+
 ### The Association
 
-* The association will publish a layout containing the distinct names and roles of the participants, this is placed into a common namespace:
+* The association will publish a layout containing the distinct names and roles of the participants to `shared storage`:
 ```
 cargo run -p libra-genesis-tool -- \
     set-layout \
-    --path PATH_TO_LAYOUT \
-    --backend 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=common'
-```
-* Each Member of the Association will upload their key to GitHub:
+    --config config_file.yaml \
+    --path PATH_TO_LAYOUT ```
+* The association will publish the the `libra root`  public key to the `shared storage`:
 ```
 cargo run -p libra-genesis-tool -- \
     libra-root-key \
-    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
-    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
+    --config config_file.yaml
+```
+* The association will publish the the `libra root`  public key to the `shared storage`:
+```
+cargo run -p libra-genesis-tool -- \
+    libra-treasury-compliance-key \
+    --config config_file.yaml
+```
+* Upon both OW and OP completing their portion of this process, the association will build a genesis waypoint:
+```
+cargo run -p libra-genesis-tool -- \
+    create-waypoint \
+    --config config_file.yaml
 ```
 
 The layout is a toml configuration file of the following format:
 ```
 [operator] = ["alice", "bob"]
 [owner] = ["carol", "dave"]
-[libra_root] = ["erin"]
+libra_root = "erin"
+treasury_compliance = "fred"
 ```
 where each field maps to a role as described in this document.
 
@@ -85,58 +129,57 @@ where each field maps to a role as described in this document.
 ```
 cargo run -p libra-genesis-tool -- \
     owner-key \
-    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
-    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
+    --config config_file.yaml
 ```
-
-* Each validator owner will select the validator operator responsible for operating the validator node. This selection is done by specifying the name of the validator operator (as registered in the shared Github):
+* Each OW will select the OP responsible for operating the validator node. This selection is done by specifying the name of the OP (as registered in the shared Github):
 ```
-cargo run -p libra-genesis-tool -- \
+cargo run -p libra-genesis-tool --
     set-operator \
-    --operator-name OPERATOR_NAME \
-    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
-    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
+    --config config_file.yaml \
+    --operator-name OPERATOR_NAME
 ```
 
 ### Validator Operators
 
 * Each Validator Operator member will upload their key to GitHub:
 ```
-cargo run -p libra-genesis-tool -- \
+cargo run -p libra-genesis-tool --
     operator-key \
-    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
-    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
+    --config config_file.yaml
 ```
-* For each validator managed by an operator, the operator will upload a signed validator-config. The owner corresponds to the name of the validator owner (as registered in the shared Github). The namespace in GitHub correlates to the operator namespace:
+* For each validator managed by an operator, the operator will upload a signed validator-config. The owner corresponds to the name of the OW (as registered in the shared Github). The namespace in GitHub correlates to the operator namespace:
 ```
-cargo run -p libra-genesis-tool -- \
+cargo run -p libra-genesis-tool --
     validator-config \
+    --config config_file.yaml \
     --owner-name OWNER_NAME \
     --validator-address '/dns/DNS/tcp/PORT' \
     --fullnode-address '/dns/DNS/tcp/PORT' \
-    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
-    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
 ```
-* Upon receiving signal from the association, validator operators can now build
-  genesis, this requires no namespace:
+* Upon receiving signal from the association, OPs can now build genesis:
 ```
 cargo run -p libra-genesis-tool -- \
     genesis \
+    --config config_file.yaml \
     --path PATH_TO_GENESIS \
-    --backend 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN'
 ```
-* Upon receiving signal from the association, validator operators can now build a genesis waypoint, this requires no namespace.  In this command, the remote store is the destination where the waypoint will be saved. It is derived from data in the local backend:
+* Similarly, the association should publish a genesis waypoint, and the OP should insert it into their storage (using the management tool):
+```
+cargo run -p libra-management-tool -- \
+    insert-waypoint \
+    --config config_file.yaml
+```
+* Perform a verify that ensures the local store maps to Genesis and Genesis maps
+  to the waypoint:
 ```
 cargo run -p libra-genesis-tool -- \
-    create-and-insert-waypoint \
-    --local 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN' \
-    --remote 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN'
+    verify \
+    --config config_file.yaml \
+    --genesis_path PATH_TO_GENESIS
 ```
-* Perform a verify that ensures the local store maps to Genesis and Genesis maps to the waypoint. (TBD)
 
 ### Important Notes
 
 * A namespace in Vault is represented as a subdirectory for secrets and a prefix followed by `__` for transit, e.g., `namespace__`.
 * A namespace in GitHub is represented by a subdirectory
 * The GitHub repository and repository owner translate into the following url: `https://github.org/REPOSITORY_OWNER/REPOSITORY`
-* The owner-address is intentionally set as all 0s as it is unused at this point in time.
