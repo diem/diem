@@ -31,6 +31,7 @@ use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
     TransactionReplayer,
 };
+use fail::fail_point;
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
@@ -210,7 +211,7 @@ where
         // 2. Verify that skipped transactions match what's already persisted (no fork):
         let num_txns_to_skip = num_committed_txns - first_txn_version;
 
-        info!(
+        debug!(
             LogSchema::new(LogEntry::ChunkExecutor).num(num_txns_to_skip),
             "skipping_chunk_txns"
         );
@@ -447,6 +448,9 @@ where
         let vm_outputs = {
             let __timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
             let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
+            fail_point!("executor::vm_execute_chunk", |_| {
+                Err(anyhow::anyhow!("Injected error in execute_chunk"))
+            });
             V::execute_block(transactions.clone(), &state_view)?
         };
 
@@ -550,6 +554,9 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(reconfig_events);
         }
+        fail_point!("executor::commit_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in commit_chunk"))
+        });
         self.db.writer.save_transactions(
             &txns_to_commit,
             first_version,
@@ -686,6 +693,11 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 trace_code_block!("executor::execute_block", {"block", block_id});
                 let __timer = OP_COUNTERS.timer("vm_execute_block_time_s");
                 let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
+                fail_point!("executor::vm_execute_block", |_| {
+                    Err(Error::from(anyhow::anyhow!(
+                        "Injected error in vm_execute_block"
+                    )))
+                });
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
 
@@ -816,7 +828,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         let first_version_to_commit = first_version_to_keep + num_txns_to_skip;
 
         if num_txns_to_skip != 0 {
-            info!(
+            debug!(
                 LogSchema::new(LogEntry::BlockExecutor)
                     .latest_synced_version(num_persistent_txns - 1)
                     .first_version_to_keep(first_version_to_keep)
@@ -837,6 +849,11 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
 
             assert_eq!(first_version_to_commit, num_txns_in_li - num_txns_to_commit);
+            fail_point!("executor::commit_blocks", |_| {
+                Err(Error::from(anyhow::anyhow!(
+                    "Injected error in commit_blocks"
+                )))
+            });
             self.db.writer.save_transactions(
                 txns_to_commit,
                 first_version_to_commit,
