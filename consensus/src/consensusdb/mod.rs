@@ -6,7 +6,7 @@ mod consensusdb_test;
 mod schema;
 
 use crate::consensusdb::schema::{
-    block::{BlockSchema, SchemaBlock},
+    block::BlockSchema,
     quorum_certificate::QCSchema,
     single_entry::{SingleEntryKey, SingleEntrySchema},
 };
@@ -103,9 +103,7 @@ impl ConsensusDB {
         let mut batch = SchemaBatch::new();
         block_data
             .iter()
-            .map(|block| {
-                batch.put::<BlockSchema>(&block.id(), &SchemaBlock::from_block(block.clone()))
-            })
+            .map(|block| batch.put::<BlockSchema>(&block.id(), block))
             .collect::<Result<()>>()?;
         qc_data
             .iter()
@@ -162,8 +160,7 @@ impl ConsensusDB {
     fn get_blocks(&self) -> Result<HashMap<HashValue, Block>> {
         let mut iter = self.db.iter::<BlockSchema>(ReadOptions::default())?;
         iter.seek_to_first();
-        iter.map(|value| value.map(|(k, v)| (k, v.borrow_into_block().clone())))
-            .collect::<Result<HashMap<HashValue, Block>>>()
+        iter.collect::<Result<HashMap<HashValue, Block>>>()
     }
 
     /// Get all consensus QCs.
