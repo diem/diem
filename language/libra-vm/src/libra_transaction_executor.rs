@@ -448,22 +448,6 @@ impl LibraVM {
             return Ok((e, discard_error_output(StatusCode::REJECTED_WRITE_SET)));
         };
 
-        // Bump the sequence number of sender.
-        let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &BUMP_SEQUENCE_NUMBER_NAME,
-            vec![],
-            vec![Value::transaction_argument_signer_reference(
-                txn_data.sender,
-            )],
-            txn_data.sender,
-            &mut cost_strategy,
-            expect_only_successful_execution(BUMP_SEQUENCE_NUMBER_NAME.as_str()),
-        )?;
-
         let change_set = match txn.payload() {
             TransactionPayload::WriteSet(writeset_payload) => {
                 match self.execute_writeset(remote_cache, writeset_payload, Some(txn_data.sender()))

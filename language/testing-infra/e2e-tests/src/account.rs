@@ -201,6 +201,7 @@ pub struct TransactionBuilder {
     pub max_gas_amount: Option<u64>,
     pub gas_unit_price: Option<u64>,
     pub gas_currency_code: Option<String>,
+    pub chain_id: Option<ChainId>,
     pub ttl: Option<u64>,
 }
 
@@ -213,12 +214,18 @@ impl TransactionBuilder {
             max_gas_amount: None,
             gas_unit_price: None,
             gas_currency_code: None,
+            chain_id: None,
             ttl: None,
         }
     }
 
     pub fn sequence_number(mut self, sequence_number: u64) -> Self {
         self.sequence_number = Some(sequence_number);
+        self
+    }
+
+    pub fn chain_id(mut self, id: ChainId) -> Self {
+        self.chain_id = Some(id);
         self
     }
 
@@ -283,7 +290,7 @@ impl TransactionBuilder {
             self.gas_currency_code
                 .unwrap_or_else(|| LBR_NAME.to_owned()),
             self.ttl.unwrap_or_else(|| DEFAULT_EXPIRATION_TIME),
-            ChainId::test(),
+            self.chain_id.unwrap_or_else(ChainId::test),
         )
         .sign(&self.sender.privkey, self.sender.pubkey)
         .unwrap()

@@ -19,11 +19,7 @@ pub const ETRANSACTION_EXPIRED: u64 = 1006; // transaction expiration time excee
 pub const EBAD_CHAIN_ID: u64 = 1007; // chain_id in transaction doesn't match the one on-chain
 pub const ESCRIPT_NOT_ALLOWED: u64 = 1008;
 pub const EMODULE_NOT_ALLOWED: u64 = 1009;
-
-// writeset prologue sequence nubmer is too new
-pub const EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 1011;
-// invalid sender (not libra root) for write set
-pub const EINVALID_WRITESET_SENDER: u64 = 1033;
+pub const EINVALID_WRITESET_SENDER: u64 = 1010; // invalid sender (not libra root) for write set
 
 const INVALID_STATE: u8 = 1;
 const INVALID_ARGUMENT: u8 = 7;
@@ -135,7 +131,7 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
     match status {
         VMStatus::Executed => VMStatus::Executed,
         VMStatus::MoveAbort(location, code)
-            if location != known_locations::write_set_manager_module_abort() =>
+            if location != known_locations::account_module_abort() =>
         {
             let (category, reason) = error_split(code);
             error!(
@@ -149,10 +145,10 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
         VMStatus::MoveAbort(location, code) => match error_split(code) {
             (INVALID_ARGUMENT, EINVALID_WRITESET_SENDER)
             | (INVALID_ARGUMENT, ESEQUENCE_NUMBER_TOO_OLD)
-            | (INVALID_ARGUMENT, EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW)
-            | (INVALID_ARGUMENT, EBAD_ACCOUNT_AUTHENTICATION_KEY) => {
-                VMStatus::Error(StatusCode::REJECTED_WRITE_SET)
-            }
+            | (INVALID_ARGUMENT, ESEQUENCE_NUMBER_TOO_NEW)
+            | (INVALID_ARGUMENT, EBAD_ACCOUNT_AUTHENTICATION_KEY)
+            | (INVALID_ARGUMENT, ETRANSACTION_EXPIRED)
+            | (INVALID_ARGUMENT, EBAD_CHAIN_ID) => VMStatus::Error(StatusCode::REJECTED_WRITE_SET),
             (category, reason) => {
                 error!(
                     "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?} \

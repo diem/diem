@@ -14,6 +14,7 @@ module LibraAccount {
     use 0x1::Hash;
     use 0x1::LBR::{Self, LBR};
     use 0x1::LCS;
+    use 0x1::LibraConfig;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionPublishingOption;
     use 0x1::Signer;
@@ -79,10 +80,18 @@ module LibraAccount {
         limits_cap: AccountLimitMutationCapability,
     }
 
+    /// A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
+    resource struct LibraWriteSetManager {
+        upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
+    }
+
     spec module {
         /// After genesis, the `AccountOperationsCapability` exists.
         invariant [global]
             LibraTimestamp::is_operating() ==> exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        /// After genesis, the `LibraWriteSetManager` exists.
+        invariant [global]
+            LibraTimestamp::is_operating() ==> exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
 
     /// Message for sent events
@@ -107,6 +116,11 @@ module LibraAccount {
         payer: address,
         /// Metadata associated with the payment
         metadata: vector<u8>,
+    }
+
+    /// Message for committed WriteSet transaction.
+    struct UpgradeEvent {
+        writeset_payload: vector<u8>,
     }
 
     const MAX_U64: u128 = 18446744073709551615;
@@ -148,6 +162,8 @@ module LibraAccount {
     const EGAS: u64 = 20;
     /// The `AccountOperationsCapability` was not in the required state
     const EACCOUNT_OPERATIONS_CAPABILITY: u64 = 22;
+    /// The `LibraWriteSetManager` was not in the required state
+    const EWRITESET_MANAGER: u64 = 23;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -164,10 +180,7 @@ module LibraAccount {
     const PROLOGUE_EBAD_CHAIN_ID: u64 = 1007;
     const PROLOGUE_ESCRIPT_NOT_ALLOWED: u64 = 1008;
     const PROLOGUE_EMODULE_NOT_ALLOWED: u64 = 1009;
-
-    const WRITESET_TRANSACTION_TAG: u8 = 0;
-    const SCRIPT_TRANSACTION_TAG: u8 = 1;
-    const MODULE_TRANSACTION_TAG: u8 = 2;
+    const PROLOGUE_INVALID_WRITESET_SENDER: u64 = 1010;
 
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
@@ -194,6 +207,17 @@ module LibraAccount {
             lr_account,
             AccountOperationsCapability {
                 limits_cap: AccountLimits::grant_mutation_capability(lr_account),
+            }
+        );
+
+        assert(
+            !exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::already_published(EWRITESET_MANAGER)
+        );
+        move_to(
+            lr_account,
+            LibraWriteSetManager {
+                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(lr_account),
             }
         );
     }
@@ -1103,6 +1127,10 @@ module LibraAccount {
         exists<LibraAccount>(check_addr)
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Prologues and Epilogues of user signed transactions
+    ///////////////////////////////////////////////////////////////////////////
+
     /// The prologue for module transaction
     fun module_prologue<Token>(
         sender: &signer,
@@ -1128,6 +1156,7 @@ module LibraAccount {
             chain_id,
         )
     }
+
     /// The prologue for script transaction
     fun script_prologue<Token>(
         sender: &signer,
@@ -1153,6 +1182,39 @@ module LibraAccount {
             txn_expiration_time,
             chain_id,
         )
+    }
+
+    /// The prologue for WriteSet transaction
+    fun writeset_prologue(
+        sender: &signer,
+        txn_sequence_number: u64,
+        txn_public_key: vector<u8>,
+        txn_expiration_time: u64,
+        chain_id: u8,
+    ) acquires LibraAccount, Balance {
+        assert(
+            Signer::address_of(sender) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
+            Errors::invalid_argument(PROLOGUE_INVALID_WRITESET_SENDER)
+        );
+        assert(Roles::has_libra_root_role(sender), Errors::invalid_argument(PROLOGUE_INVALID_WRITESET_SENDER));
+
+        // Currency code don't matter here as it won't be charged anyway. Gas constants are ommitted.
+        prologue_common<LBR::LBR>(
+            sender,
+            txn_sequence_number,
+            txn_public_key,
+            0,
+            0,
+            txn_expiration_time,
+            chain_id,
+        )
+    }
+
+    spec fun writeset_prologue {
+        pragma aborts_if_is_partial = true;
+
+        /// Must abort if the signer does not have the LibraRoot role [B18].
+        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::address_of(sender));
     }
 
     /// The common prologue is invoked at the beginning of every transaction
@@ -1192,12 +1254,14 @@ module LibraAccount {
             Errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
         );
 
-        // Check that the account has enough balance for all of the gas
+        // Check that the gas calculation will not overflow
         assert(
             (txn_gas_price as u128) * (txn_max_gas_units as u128) <= MAX_U64,
             Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT),
         );
+
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+
         // Don't grab the balance if the transaction fee is zero
         if (max_transaction_fee > 0) {
             assert(
@@ -1220,6 +1284,7 @@ module LibraAccount {
             txn_sequence_number == sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
         );
+
         assert(
             LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
             Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
@@ -1270,18 +1335,28 @@ module LibraAccount {
             TransactionFee::pay_fee(Libra::withdraw(coin, transaction_fee_amount))
         }
     }
+
     spec fun epilogue {
         pragma verify = true;
     }
 
-    /// Bump the sequence number of an account. This function should be used only for bumping the sequence number when
-    /// a writeset transaction is committed.
-    fun bump_sequence_number(signer: &signer) acquires LibraAccount {
-        let addr = Signer::address_of(signer);
-        assert(exists_at(addr), Errors::not_published(EACCOUNT));
-        let sender_account = borrow_global_mut<LibraAccount>(addr);
-        sender_account.sequence_number = sender_account.sequence_number + 1;
+    /// Epilogue for WriteSet trasnaction
+    fun writeset_epilogue(
+        lr_account: &signer,
+        writeset_payload: vector<u8>,
+        txn_sequence_number: u64
+    ) acquires LibraWriteSetManager, LibraAccount, Balance {
+        let writeset_events_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+
+        Event::emit_event<UpgradeEvent>(
+            &mut writeset_events_ref.upgrade_events,
+            UpgradeEvent { writeset_payload },
+        );
+        // Currency code don't matter here as it won't be charged anyway.
+        epilogue<LBR::LBR>(lr_account, txn_sequence_number, 0, 0, 0);
+        LibraConfig::reconfigure(lr_account)
     }
+
 
     ///////////////////////////////////////////////////////////////////////////
     // Proof of concept code used for Validator and ValidatorOperator roles management

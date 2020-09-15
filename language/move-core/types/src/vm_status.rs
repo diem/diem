@@ -353,22 +353,6 @@ pub mod known_locations {
     pub fn designated_dealer_module_abort() -> AbortLocation {
         AbortLocation::Module(DESIGNATED_DEALER_MODULE.clone())
     }
-
-    /// The name of the Write Set Manager module.
-    pub const WRITE_SET_MANAGER_MODULE_NAME: &str = "LibraWriteSetManager";
-    /// The Identifier for the Write Set Manager module.
-    pub static WRITE_SET_MANAGER_MODULE_IDENTIFIER: Lazy<Identifier> =
-        Lazy::new(|| Identifier::new(WRITE_SET_MANAGER_MODULE_NAME).unwrap());
-    /// The ModuleId for the Write Set Manager module.
-    pub static WRITE_SET_MANAGER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-        ModuleId::new(
-            CORE_CODE_ADDRESS,
-            WRITE_SET_MANAGER_MODULE_IDENTIFIER.clone(),
-        )
-    });
-    pub fn write_set_manager_module_abort() -> AbortLocation {
-        AbortLocation::Module(WRITE_SET_MANAGER_MODULE.clone())
-    }
 }
 
 macro_rules! derive_status_try_from_repr {

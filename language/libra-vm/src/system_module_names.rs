@@ -8,13 +8,6 @@ use once_cell::sync::Lazy;
 
 // Data to resolve basic account and transaction flow functions and structs
 /// The ModuleId for the libra writeset manager module
-pub static LIBRA_WRITESET_MANAGER_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        Identifier::new("LibraWriteSetManager").unwrap(),
-    )
-});
-
 /// The ModuleId for the libra block module
 pub static LIBRA_BLOCK_MODULE: Lazy<ModuleId> = Lazy::new(|| {
     ModuleId::new(
@@ -29,12 +22,10 @@ pub static SCRIPT_PROLOGUE_NAME: Lazy<Identifier> =
 pub static MODULE_PROLOGUE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("module_prologue").unwrap());
 pub static WRITESET_PROLOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("prologue").unwrap());
+    Lazy::new(|| Identifier::new("writeset_prologue").unwrap());
 pub static WRITESET_EPILOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("epilogue").unwrap());
+    Lazy::new(|| Identifier::new("writeset_epilogue").unwrap());
 pub static USER_EPILOGUE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("epilogue").unwrap());
-pub static BUMP_SEQUENCE_NUMBER_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("bump_sequence_number").unwrap());
 pub static BLOCK_PROLOGUE: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("block_prologue").unwrap());

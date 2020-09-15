@@ -10,13 +10,14 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     access_path::AccessPath,
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS},
+    chain_id::{ChainId, NamedChain},
     contract_event::ContractEvent,
     on_chain_config::new_epoch_event_key,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, TransactionStatus, WriteSetPayload,
     },
     vm_status::{KeptVMStatus, StatusCode},
-    write_set::{WriteOp, WriteSetMut},
+    write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
     identifier::Identifier,
@@ -204,7 +205,7 @@ fn bad_writesets() {
         *genesis_account.address(),
         StructTag {
             address: CORE_CODE_ADDRESS,
-            module: Identifier::new("LibraWriteSetManager").unwrap(),
+            module: Identifier::new("LibraAccount").unwrap(),
             name: Identifier::new("LibraWriteSetManager").unwrap(),
             type_params: vec![],
         },
@@ -249,6 +250,38 @@ fn bad_writesets() {
     assert_eq!(
         output.status(),
         &TransactionStatus::Discard(StatusCode::INVALID_WRITE_SET)
+    );
+
+    // (5) The WriteSet has bad ChainId
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
+            WriteSet::default(),
+            vec![],
+        )))
+        .sequence_number(1)
+        .chain_id(ChainId::new(NamedChain::DEVNET.id()))
+        .sign();
+    let output = executor.execute_transaction(writeset_txn);
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
+    );
+
+    // (6) The WriteSet has expired
+    let writeset_txn = genesis_account
+        .transaction()
+        .write_set(WriteSetPayload::Direct(ChangeSet::new(
+            WriteSet::default(),
+            vec![],
+        )))
+        .sequence_number(1)
+        .ttl(0)
+        .sign();
+    let output = executor.execute_transaction(writeset_txn);
+    assert_eq!(
+        output.status(),
+        &TransactionStatus::Discard(StatusCode::REJECTED_WRITE_SET)
     );
 }
 

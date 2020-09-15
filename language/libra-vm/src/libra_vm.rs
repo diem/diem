@@ -335,16 +335,21 @@ impl LibraVMImpl {
     ) -> Result<(), VMStatus> {
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
+        let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
+        let chain_id = txn_data.chain_id();
+
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         session.execute_function(
-            &LIBRA_WRITESET_MANAGER_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &WRITESET_PROLOGUE_NAME,
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::u64(txn_sequence_number),
                 Value::vector_u8(txn_public_key),
+                Value::u64(txn_expiration_timestamp_secs),
+                Value::u8(chain_id.id()),
             ],
             txn_data.sender,
             &mut cost_strategy,
@@ -365,12 +370,13 @@ impl LibraVMImpl {
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         session.execute_function(
-            &LIBRA_WRITESET_MANAGER_MODULE,
+            &account_config::ACCOUNT_MODULE,
             &WRITESET_EPILOGUE_NAME,
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::vector_u8(change_set_bytes),
+                Value::u64(txn_data.sequence_number),
             ],
             txn_data.sender,
             &mut cost_strategy,
