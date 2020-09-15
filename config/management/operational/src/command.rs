@@ -19,6 +19,10 @@ pub enum Command {
     AccountResource(crate::account_resource::AccountResource),
     #[structopt(about = "Remove a validator from ValidatorSet")]
     AddValidator(crate::governance::AddValidator),
+    #[structopt(about = "Create a new validator account")]
+    CreateValidator(crate::governance::CreateValidator),
+    #[structopt(about = "Create a new validator operator account")]
+    CreateValidatorOperator(crate::governance::CreateValidatorOperator),
     #[structopt(about = "Extract a private key from the validator storage")]
     ExtractPrivateKey(crate::keys::ExtractPrivateKey),
     #[structopt(about = "Extract a public key from the validator storage")]
@@ -51,6 +55,8 @@ pub enum Command {
 pub enum CommandName {
     AccountResource,
     AddValidator,
+    CreateValidator,
+    CreateValidatorOperator,
     ExtractPrivateKey,
     ExtractPublicKey,
     InsertWaypoint,
@@ -71,6 +77,8 @@ impl From<&Command> for CommandName {
         match command {
             Command::AccountResource(_) => CommandName::AccountResource,
             Command::AddValidator(_) => CommandName::AddValidator,
+            Command::CreateValidator(_) => CommandName::CreateValidator,
+            Command::CreateValidatorOperator(_) => CommandName::CreateValidatorOperator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
@@ -93,6 +101,8 @@ impl std::fmt::Display for CommandName {
         let name = match self {
             CommandName::AccountResource => "account-resource",
             CommandName::AddValidator => "add-validator",
+            CommandName::CreateValidator => "create-validator",
+            CommandName::CreateValidatorOperator => "create-validator-operator",
             CommandName::ExtractPrivateKey => "extract-private-key",
             CommandName::ExtractPublicKey => "extract-public-key",
             CommandName::InsertWaypoint => "insert-waypoint",
@@ -116,6 +126,8 @@ impl Command {
         match self {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CreateValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CreateValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),

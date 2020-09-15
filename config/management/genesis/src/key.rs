@@ -7,7 +7,7 @@ use libra_management::{
     error::Error,
     secure_backend::{SecureBackend, SharedBackend},
 };
-use std::{convert::TryInto, fs, path::PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 libra_management::secure_backend!(
@@ -42,7 +42,7 @@ impl Key {
             .override_validator_backend(&self.validator_backend.validator_backend)?;
 
         let key = if let Some(path_to_key) = &self.path_to_key {
-            read_key_from_file(path_to_key)
+            libra_management::read_key_from_file(path_to_key)
                 .map_err(|e| Error::UnableToReadFile(format!("{:?}", path_to_key), e))?
         } else {
             let mut validator_storage = config.validator_backend();
@@ -59,20 +59,6 @@ impl Key {
         shared_storage.set(key_name, key.clone())?;
 
         Ok(key)
-    }
-}
-
-fn read_key_from_file(path: &PathBuf) -> Result<Ed25519PublicKey, String> {
-    let data = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let data = data.trim();
-    if let Ok(key) = lcs::from_bytes(data.as_bytes()) {
-        Ok(key)
-    } else {
-        let key_data = hex::decode(&data).map_err(|e| e.to_string())?;
-        key_data
-            .as_slice()
-            .try_into()
-            .map_err(|e: libra_crypto::CryptoMaterialError| e.to_string())
     }
 }
 
