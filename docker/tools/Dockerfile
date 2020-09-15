@@ -3,7 +3,7 @@ FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d239
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
 
-RUN apt-get update && apt-get install -y cmake curl clang git
+RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-dev
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
@@ -29,7 +29,7 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
 
 RUN apt-get update && \
-    apt-get -y install socat python3-botocore/bullseye awscli/bullseye && \
+    apt-get -y install libssl1.1 socat python3-botocore/bullseye awscli/bullseye && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/*
 

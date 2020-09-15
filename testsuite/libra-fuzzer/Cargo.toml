@@ -20,7 +20,7 @@ rusty-fork = { version = "0.3.0", default-features = false }
 sha-1 = { version = "0.9.1", default-features = false }
 structopt = "0.3.17"
 rand = "0.7.3"
-ureq = { version = "1.3.0", features = ["json"] }
+ureq = { version = "1.4.1", features = ["json", "native-tls"], default-features = false }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
