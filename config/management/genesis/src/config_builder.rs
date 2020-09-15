@@ -14,7 +14,7 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_management::constants::{COMMON_NS, LAYOUT};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_temppath::TempPath;
-use libra_types::chain_id::ChainId;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::path::{Path, PathBuf};
 
 const LIBRA_ROOT_NS: &str = "libra_root";
@@ -161,7 +161,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Operators generate genesis from shared storage and verify against waypoint.
     /// Insert the genesis/waypoint into local config.
-    fn finish_validator_config(&self, index: usize, config: &mut NodeConfig) {
+    fn finish_validator_config(&self, index: usize, config: &mut NodeConfig, waypoint: Waypoint) {
         let local_ns = index.to_string() + OPERATOR_NS;
 
         let genesis_path = TempPath::new();
@@ -171,10 +171,10 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .genesis(ChainId::test(), genesis_path.path())
             .unwrap();
 
-        let _ = self
-            .storage_helper
-            .create_and_insert_waypoint(ChainId::test(), &local_ns)
+        self.storage_helper
+            .insert_waypoint(&local_ns, waypoint)
             .unwrap();
+
         let output = self
             .storage_helper
             .verify_genesis(&local_ns, genesis_path.path())
@@ -216,9 +216,13 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
             configs.push(config);
         }
 
+        let waypoint = self
+            .storage_helper
+            .create_waypoint(ChainId::test())
+            .unwrap();
         // Create genesis and waypoint
         for (i, config) in configs.iter_mut().enumerate() {
-            self.finish_validator_config(i, config);
+            self.finish_validator_config(i, config, waypoint);
         }
 
         Ok((configs, libra_root_key))

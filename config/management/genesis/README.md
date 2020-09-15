@@ -165,9 +165,10 @@ cargo run -p libra-genesis-tool -- \
 ```
 * Similarly, the association should publish a genesis waypoint, and the OP should insert it into their storage (using the management tool):
 ```
-cargo run -p libra-management-tool -- \
+cargo run -p libra-genesist-tool -- \
     insert-waypoint \
-    --config config_file.yaml
+    --config config_file.yaml \
+    --waypoint WAYPOINT
 ```
 * Perform a verify that ensures the local store maps to Genesis and Genesis maps
   to the waypoint:

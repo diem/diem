@@ -74,30 +74,42 @@ impl StorageHelper {
             .unwrap();
     }
 
-    pub fn create_and_insert_waypoint(
-        &self,
-        chain_id: ChainId,
-        validator_ns: &str,
-    ) -> Result<Waypoint, Error> {
+    pub fn create_waypoint(&self, chain_id: ChainId) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 libra-genesis-tool
-                create-and-insert-waypoint
+                create-waypoint
                 --chain-id {chain_id}
                 --shared-backend backend={backend};\
                     path={path}
-                --validator-backend backend={backend};\
-                    path={path};\
-                    namespace={validator_ns}\
             ",
             chain_id = chain_id,
             backend = DISK,
             path = self.path_string(),
-            validator_ns = validator_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        command.create_and_insert_waypoint()
+        command.create_waypoint()
+    }
+
+    pub fn insert_waypoint(&self, validator_ns: &str, waypoint: Waypoint) -> Result<(), Error> {
+        let args = format!(
+            "
+                libra-genesis-tool
+                insert-waypoint
+                --validator-backend backend={backend};\
+                    path={path};\
+                    namespace={validator_ns}
+                --waypoint {waypoint}
+            ",
+            backend = DISK,
+            path = self.path_string(),
+            validator_ns = validator_ns,
+            waypoint = waypoint,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.insert_waypoint()
     }
 
     pub fn genesis(&self, chain_id: ChainId, genesis_path: &Path) -> Result<Transaction, Error> {
@@ -199,20 +211,18 @@ impl StorageHelper {
     }
 
     #[cfg(test)]
-    pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
+    pub fn set_layout(&self, path: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
                 libra-genesis-tool
                 set-layout
                 --path {path}
                 --shared-backend backend={backend};\
-                    path={storage_path};\
-                    namespace={ns}
+                    path={storage_path}
             ",
             path = path,
             backend = DISK,
             storage_path = self.path_string(),
-            ns = namespace,
         );
 
         let command = Command::from_iter(args.split_whitespace());

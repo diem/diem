@@ -8,12 +8,12 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used for genesis")]
 pub enum Command {
-    #[structopt(about = "Create a waypoint and place it in a store")]
-    CreateAndInsertWaypoint(crate::waypoint::CreateAndInsertWaypoint),
     #[structopt(about = "Create a waypoint")]
     CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
+    #[structopt(about = "Set the waypoint in the validator storage")]
+    InsertWaypoint(crate::waypoint::InsertWaypoint),
     #[structopt(about = "Submits an Ed25519PublicKey for the libra root")]
     LibraRootKey(crate::key::LibraRootKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
@@ -34,9 +34,9 @@ pub enum Command {
 
 #[derive(Debug, PartialEq)]
 pub enum CommandName {
-    CreateAndInsertWaypoint,
     CreateWaypoint,
     Genesis,
+    InsertWaypoint,
     LibraRootKey,
     OperatorKey,
     OwnerKey,
@@ -50,9 +50,9 @@ pub enum CommandName {
 impl From<&Command> for CommandName {
     fn from(command: &Command) -> Self {
         match command {
-            Command::CreateAndInsertWaypoint(_) => CommandName::CreateAndInsertWaypoint,
             Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
+            Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::LibraRootKey(_) => CommandName::LibraRootKey,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
@@ -68,9 +68,9 @@ impl From<&Command> for CommandName {
 impl std::fmt::Display for CommandName {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let name = match self {
-            CommandName::CreateAndInsertWaypoint => "create-and-insert-waypoint",
             CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
+            CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::LibraRootKey => "libra-root-key",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
@@ -87,13 +87,11 @@ impl std::fmt::Display for CommandName {
 impl Command {
     pub fn execute(self) -> Result<String, Error> {
         match &self {
-            Command::CreateAndInsertWaypoint(_) => self
-                .create_and_insert_waypoint()
-                .map(|w| format!("Waypoint: {}", w)),
             Command::CreateWaypoint(_) => {
                 self.create_waypoint().map(|w| format!("Waypoint: {}", w))
             }
             Command::Genesis(_) => self.genesis().map(|_| "Success!".to_string()),
+            Command::InsertWaypoint(_) => self.insert_waypoint().map(|_| "Success!".to_string()),
             Command::LibraRootKey(_) => self.libra_root_key().map(|_| "Success!".to_string()),
             Command::OperatorKey(_) => self.operator_key().map(|_| "Success!".to_string()),
             Command::OwnerKey(_) => self.owner_key().map(|_| "Success!".to_string()),
@@ -107,20 +105,16 @@ impl Command {
         }
     }
 
-    pub fn create_and_insert_waypoint(self) -> Result<Waypoint, Error> {
-        execute_command!(
-            self,
-            Command::CreateAndInsertWaypoint,
-            CommandName::CreateAndInsertWaypoint
-        )
-    }
-
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
         execute_command!(self, Command::CreateWaypoint, CommandName::CreateWaypoint)
     }
 
     pub fn genesis(self) -> Result<Transaction, Error> {
         execute_command!(self, Command::Genesis, CommandName::Genesis)
+    }
+
+    pub fn insert_waypoint(self) -> Result<(), Error> {
+        execute_command!(self, Command::InsertWaypoint, CommandName::InsertWaypoint)
     }
 
     pub fn libra_root_key(self) -> Result<Ed25519PublicKey, Error> {
@@ -219,7 +213,7 @@ pub mod tests {
         file.sync_all().unwrap();
 
         helper
-            .set_layout(temppath.path().to_str().unwrap(), constants::COMMON_NS)
+            .set_layout(temppath.path().to_str().unwrap())
             .unwrap();
 
         // Step 2) Upload the root keys:
@@ -292,9 +286,8 @@ pub mod tests {
 
         // Step 9) Verify
         for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
-            helper
-                .create_and_insert_waypoint(ChainId::test(), ns)
-                .unwrap();
+            let waypoint = helper.create_waypoint(ChainId::test()).unwrap();
+            helper.insert_waypoint(ns, waypoint).unwrap();
             helper.verify_genesis(ns, genesis_path.path()).unwrap();
         }
     }
@@ -302,11 +295,10 @@ pub mod tests {
     #[test]
     fn test_set_layout() {
         let helper = StorageHelper::new();
-        let namespace = "set_layout";
 
         let temppath = libra_temppath::TempPath::new();
         helper
-            .set_layout(temppath.path().to_str().unwrap(), namespace)
+            .set_layout(temppath.path().to_str().unwrap())
             .unwrap_err();
 
         temppath.create_as_file().unwrap();
@@ -322,9 +314,9 @@ pub mod tests {
         file.sync_all().unwrap();
 
         helper
-            .set_layout(temppath.path().to_str().unwrap(), namespace)
+            .set_layout(temppath.path().to_str().unwrap())
             .unwrap();
-        let storage = helper.storage(namespace.into());
+        let storage = helper.storage(constants::COMMON_NS.into());
         let stored_layout = storage.get::<String>(constants::LAYOUT).unwrap().value;
         assert_eq!(layout_text, stored_layout);
     }
