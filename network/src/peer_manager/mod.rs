@@ -418,7 +418,8 @@ where
         match event {
             TransportNotification::NewConnection(conn) => {
                 info!(
-                    NetworkSchema::new(&self.network_context).connection_metadata(&conn.metadata),
+                    NetworkSchema::new(&self.network_context)
+                        .connection_metadata_with_address(&conn.metadata),
                     "{} New connection established: {}", self.network_context, conn.metadata
                 );
 
@@ -431,7 +432,7 @@ where
                 // detailed reasoning on `Disconnected` events should be handled correctly.
                 info!(
                     NetworkSchema::new(&self.network_context)
-                        .connection_metadata(&lost_conn_metadata),
+                        .connection_metadata_with_address(&lost_conn_metadata),
                     disconnection_reason = reason,
                     "{} Connection {} closed due to {}",
                     self.network_context,
@@ -495,7 +496,7 @@ where
                     let error = PeerManagerError::AlreadyConnected(curr_connection.addr.clone());
                     debug!(
                         NetworkSchema::new(&self.network_context)
-                            .connection_metadata(curr_connection),
+                            .connection_metadata_with_address(curr_connection),
                         "{} Already connected with Peer {} using connection {:?}. Not dialing address {}",
                         self.network_context,
                         requested_peer_id.short_str(),
@@ -995,7 +996,7 @@ where
                 let response = if dialed_peer_id == peer_id {
                     debug!(
                         NetworkSchema::new(&self.network_context)
-                            .remote_peer(&peer_id)
+                            .connection_metadata(&connection.metadata)
                             .network_address(&addr),
                         "{} Peer '{}' successfully dialed at '{}'",
                         self.network_context,
@@ -1069,8 +1070,7 @@ where
             Ok(connection) => {
                 debug!(
                     NetworkSchema::new(&self.network_context)
-                        .connection_metadata(&connection.metadata),
-                    connection_id = connection.metadata.connection_id,
+                        .connection_metadata_with_address(&connection.metadata),
                     "{} Connection from {} at {} successfully upgraded",
                     self.network_context,
                     connection.metadata.remote_peer_id.short_str(),

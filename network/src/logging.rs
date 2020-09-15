@@ -62,8 +62,14 @@ impl<'a> NetworkSchema<'a> {
     pub fn connection_metadata(self, metadata: &'a ConnectionMetadata) -> Self {
         self.connection_id(&metadata.connection_id)
             .connection_origin(&metadata.origin)
-            .network_address(&metadata.addr)
             .remote_peer(&metadata.remote_peer_id)
+    }
+
+    pub fn connection_metadata_with_address(self, metadata: &'a ConnectionMetadata) -> Self {
+        self.connection_id(&metadata.connection_id)
+            .connection_origin(&metadata.origin)
+            .remote_peer(&metadata.remote_peer_id)
+            .network_address(&metadata.addr)
     }
 
     pub fn debug_error<Err: std::fmt::Debug>(self, error: &Err) -> Self {
