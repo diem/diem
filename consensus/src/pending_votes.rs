@@ -93,10 +93,9 @@ impl PendingVotes {
                 // we have seen a different vote for the same round
                 error!(
                     SecurityEvent::ConsensusEquivocatingVote,
-                    StructuredLogEntry::default()
-                        .data("from_peer", vote.author())
-                        .data("vote", &vote)
-                        .data("previous_vote", &previously_seen_vote)
+                    remote_peer = vote.author(),
+                    vote = vote,
+                    previous_vote = previously_seen_vote
                 );
 
                 return VoteReceptionResult::EquivocateVote;

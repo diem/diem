@@ -339,9 +339,9 @@ impl RoundManager {
                 .map_err(|e| {
                     error!(
                         SecurityEvent::InvalidSyncInfoMsg,
-                        StructuredLogEntry::default()
-                            .data("sync_info", &sync_info)
-                            .data_display("error", &e)
+                        sync_info = sync_info,
+                        remote_peer = author,
+                        error = e.to_string()
                     );
                     e
                 })?;

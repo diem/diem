@@ -101,9 +101,8 @@ impl NetworkSender {
             .map_err(|e| {
                 error!(
                     SecurityEvent::InvalidRetrievedBlock,
-                    StructuredLogEntry::default()
-                        .data("request_block_reponse", &response)
-                        .data_display("error", &e)
+                    request_block_response = response,
+                    error = e.to_string()
                 );
                 e
             })?;

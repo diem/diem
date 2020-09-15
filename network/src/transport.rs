@@ -226,10 +226,9 @@ async fn upgrade_inbound<T: TSocket>(
         .map_err(|err| {
             warn!(
                 SecurityEvent::InvalidNetworkHandshakeMsg,
-                StructuredLogEntry::default()
-                    .data_display("error", &err)
-                    .data("origin", "inbound")
-                    .data("remote_peer", remote_peer_id)
+                error = err.to_string(),
+                origin = "inbound",
+                remote_peer = remote_peer_id
             );
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",

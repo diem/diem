@@ -334,10 +334,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     // security log
                     error!(
                         SecurityEvent::StateSyncInvalidChunk,
-                        StructuredLogEntry::default()
-                            .data("from_peer", &peer)
-                            .data_display("error", &err)
-                            .data("chunk", &response)
+                        remote_peer = peer.peer_id(),
+                        node_network_id = peer.network_id(),
+                        error = err.to_string(),
+                        chunk = response
                     );
 
                     // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID

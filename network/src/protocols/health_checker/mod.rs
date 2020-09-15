@@ -200,10 +200,12 @@ where
                             _ => {
                                 error!(
                                     SecurityEvent::InvalidHealthCheckerMsg,
-                                    StructuredLogEntry::default()
-                                        .data("error", "Unexpected rpc message")
-                                        .data("message", &msg)
-                                        .data("peer_id", &peer_id)
+                                    NetworkSchema::new(&self.network_context)
+                                        .remote_peer(&peer_id),
+                                    rpc_message = msg,
+                                    "{} Unexpected RPC message from {}",
+                                    self.network_context,
+                                    peer_id
                                 );
                             },
                             };
@@ -211,17 +213,21 @@ where
                         Ok(Event::Message(msg)) => {
                             error!(
                                 SecurityEvent::InvalidNetworkEventHC,
-                                StructuredLogEntry::default()
-                                    .data("error", "Unexpected network event")
-                                    .data("event_message", &msg)
+                                NetworkSchema::new(&self.network_context),
+                                "{} Unexpected network event: {:?}",
+                                self.network_context,
+                                msg
                             );
                             debug_assert!(false, "Unexpected network event");
                         },
                         Err(err) => {
                             error!(
                                 SecurityEvent::InvalidNetworkEventHC,
-                                StructuredLogEntry::default()
-                                    .data_display("error", &err)
+                                NetworkSchema::new(&self.network_context)
+                                    .debug_error(&err),
+                                "{} Unexpected network error: {}",
+                                self.network_context,
+                                err
                             );
 
                             debug_assert!(false, "Unexpected network error");
@@ -333,12 +339,12 @@ where
                 } else {
                     error!(
                         SecurityEvent::InvalidHealthCheckerMsg,
-                        StructuredLogEntry::default()
-                            .data("error", "Pong nonce doesn't match our challenge Ping nonce")
-                            .data("req_nonce", &req_nonce)
-                            .data("peer_id", &peer_id)
-                            .data("pong", pong.0)
-                            .data("round", round)
+                        NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+                        "{} Pong nonce doesn't match Ping nonce. Round: {}, Pong: {}, Ping: {}",
+                        self.network_context,
+                        round,
+                        pong.0,
+                        req_nonce
                     );
                     debug_assert!(false, "Pong nonce doesn't match our challenge Ping nonce");
                 }
