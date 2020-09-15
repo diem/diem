@@ -348,13 +348,41 @@ Aborts if
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
-<b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover) with Errors::NOT_PUBLISHED;
-<b>aborts_if</b> len(new_key) != 32;
-<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
-<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
-            || <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == to_recover);
-<b>ensures</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover).authentication_key == new_key;
+<pre><code><b>include</b> <a href="#0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf">RotateAuthenticationKeyAbortsIf</a>;
+<b>include</b> <a href="#0x1_RecoveryAddress_RotateAuthenticationKeyEnsures">RotateAuthenticationKeyEnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf">RotateAuthenticationKeyAbortsIf</a> {
+    account: signer;
+    recovery_address: address;
+    to_recover: address;
+    new_key: vector&lt;u8&gt;;
+    <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> len(new_key) != 32;
+    <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
+    <b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
+                || <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == to_recover);
+}
+</code></pre>
+
+
+
+
+<a name="0x1_RecoveryAddress_RotateAuthenticationKeyEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RotateAuthenticationKeyEnsures">RotateAuthenticationKeyEnsures</a> {
+    to_recover: address;
+    new_key: vector&lt;u8&gt;;
+    <b>ensures</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover).authentication_key == new_key;
+}
 </code></pre>
 
 

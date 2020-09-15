@@ -2600,11 +2600,11 @@ pragma verify_duration_estimate = 100;
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBRAbortsIf">StapleLBRAbortsIf</a> {
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     amount_lbr: u64;
-    <a name="0x1_LibraAccount_reserve$56"></a>
+    <a name="0x1_LibraAccount_reserve$57"></a>
     <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a name="0x1_LibraAccount_amount_coin1$57"></a>
+    <a name="0x1_LibraAccount_amount_coin1$58"></a>
     <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
-    <a name="0x1_LibraAccount_amount_coin2$58"></a>
+    <a name="0x1_LibraAccount_amount_coin2$59"></a>
     <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
     <b>aborts_if</b> amount_lbr == 0 with Errors::INVALID_ARGUMENT;
     <b>aborts_if</b> reserve.coin1.backing.value + amount_coin1 &gt; MAX_U64 with Errors::LIMIT_EXCEEDED;
@@ -2635,17 +2635,17 @@ pragma verify_duration_estimate = 100;
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_StapleLBREnsures">StapleLBREnsures</a> {
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     amount_lbr: u64;
-    <a name="0x1_LibraAccount_reserve$59"></a>
+    <a name="0x1_LibraAccount_reserve$60"></a>
     <b>let</b> reserve = <b>global</b>&lt;<a href="LBR.md#0x1_LBR_Reserve">LBR::Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a name="0x1_LibraAccount_amount_coin1$60"></a>
+    <a name="0x1_LibraAccount_amount_coin1$61"></a>
     <b>let</b> amount_coin1 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin1.ratio) + 1;
-    <a name="0x1_LibraAccount_amount_coin2$61"></a>
+    <a name="0x1_LibraAccount_amount_coin2$62"></a>
     <b>let</b> amount_coin2 = <a href="FixedPoint32.md#0x1_FixedPoint32_spec_multiply_u64">FixedPoint32::spec_multiply_u64</a>(amount_lbr, reserve.coin2.ratio) + 1;
-    <a name="0x1_LibraAccount_total_value_coin1$62"></a>
+    <a name="0x1_LibraAccount_total_value_coin1$63"></a>
     <b>let</b> total_value_coin1 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
-    <a name="0x1_LibraAccount_total_value_coin2$63"></a>
+    <a name="0x1_LibraAccount_total_value_coin2$64"></a>
     <b>let</b> total_value_coin2 = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
-    <a name="0x1_LibraAccount_total_value_lbr$64"></a>
+    <a name="0x1_LibraAccount_total_value_lbr$65"></a>
     <b>let</b> total_value_lbr = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value;
     <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value
         == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address).coin.value) - amount_coin1;
@@ -2797,9 +2797,9 @@ pragma verify_duration_estimate = 100;
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_TieredMintEnsures">TieredMintEnsures</a>&lt;Token&gt; {
     designated_dealer_address: address;
     mint_amount: u64;
-    <a name="0x1_LibraAccount_dealer_balance$65"></a>
+    <a name="0x1_LibraAccount_dealer_balance$66"></a>
     <b>let</b> dealer_balance = <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(designated_dealer_address).coin.value;
-    <a name="0x1_LibraAccount_currency_info$66"></a>
+    <a name="0x1_LibraAccount_currency_info$67"></a>
     <b>let</b> currency_info = <b>global</b>&lt;<a href="Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 }
 </code></pre>
@@ -2909,7 +2909,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_payer$69"></a>
+<a name="0x1_LibraAccount_payer$71"></a>
 <b>let</b> payer = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payer);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payer);
@@ -2931,7 +2931,7 @@ Can only withdraw from the balances of cap.account_address [B27].
     cap: <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>;
     payee: address;
     amount: u64;
-    <a name="0x1_LibraAccount_payer$55"></a>
+    <a name="0x1_LibraAccount_payer$56"></a>
     <b>let</b> payer = cap.account_address;
     <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
     <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
@@ -2955,15 +2955,15 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_sender_addr$70"></a>
+<a name="0x1_LibraAccount_sender_addr$72"></a>
 <b>let</b> sender_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(sender);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
-<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
 <b>include</b> <a href="#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">ExtractWithdrawCapAbortsIf</a>{sender_addr};
-<b>ensures</b> result == <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<b>old</b>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(sender_addr)));
+<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(sender_addr);
+<b>ensures</b> result == <b>old</b>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(sender_addr));
 <b>ensures</b> result.account_address == sender_addr;
 <b>ensures</b> <a href="#0x1_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(sender_addr);
-<b>ensures</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(sender_addr) == <b>old</b>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(sender_addr));
+<b>ensures</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(sender_addr) == <b>old</b>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(sender_addr));
 </code></pre>
 
 
@@ -2993,7 +2993,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code>pragma opaque;
-<a name="0x1_LibraAccount_cap_addr$71"></a>
+<a name="0x1_LibraAccount_cap_addr$73"></a>
 <b>let</b> cap_addr = cap.account_address;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap_addr);
 <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap_addr) with Errors::NOT_PUBLISHED;
@@ -3015,7 +3015,7 @@ Can only withdraw from the balances of cap.account_address [B27].
 
 
 <pre><code><b>include</b> <a href="#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">RotateAuthenticationKeyAbortsIf</a>;
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address).authentication_key == new_authentication_key;
+<b>include</b> <a href="#0x1_LibraAccount_RotateAuthenticationKeyEnsures">RotateAuthenticationKeyEnsures</a>{addr: cap.account_address};
 </code></pre>
 
 
@@ -3043,11 +3043,13 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_spec_rotate_authentication_key"></a>
+<a name="0x1_LibraAccount_RotateAuthenticationKeyEnsures"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_rotate_authentication_key">spec_rotate_authentication_key</a>(addr: address, new_authentication_key: vector&lt;u8&gt;): bool {
-<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key == new_authentication_key
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_RotateAuthenticationKeyEnsures">RotateAuthenticationKeyEnsures</a> {
+    addr: address;
+    new_authentication_key: vector&lt;u8&gt;;
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).authentication_key == new_authentication_key;
 }
 </code></pre>
 
@@ -3064,13 +3066,35 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<a name="0x1_LibraAccount_account_addr$72"></a>
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">ExtractKeyRotationCapabilityEnsures</a>;
+</code></pre>
 
 
-<pre><code><b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(account_addr) with Errors::NOT_PUBLISHED;
-<b>aborts_if</b> <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_addr) with Errors::INVALID_STATE;
-<b>ensures</b> <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_addr);
+
+
+<a name="0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">ExtractKeyRotationCapabilityAbortsIf</a> {
+    account: signer;
+    <a name="0x1_LibraAccount_account_addr$68"></a>
+    <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(account_addr) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_addr) with Errors::INVALID_STATE;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">ExtractKeyRotationCapabilityEnsures</a> {
+    account: signer;
+    <b>ensures</b> <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+}
 </code></pre>
 
 
@@ -3086,9 +3110,33 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address) with Errors::NOT_PUBLISHED;
-<b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(cap.account_address) with Errors::INVALID_ARGUMENT;
-<b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_RestoreKeyRotationCapabilityAbortsIf">RestoreKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="#0x1_LibraAccount_RestoreKeyRotationCapabilityEnsures">RestoreKeyRotationCapabilityEnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_RestoreKeyRotationCapabilityAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_RestoreKeyRotationCapabilityAbortsIf">RestoreKeyRotationCapabilityAbortsIf</a> {
+    cap: <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>;
+    <b>aborts_if</b> !<a href="#0x1_LibraAccount_exists_at">exists_at</a>(cap.account_address) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !<a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(cap.account_address) with Errors::INVALID_ARGUMENT;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_RestoreKeyRotationCapabilityEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_RestoreKeyRotationCapabilityEnsures">RestoreKeyRotationCapabilityEnsures</a> {
+    cap: <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>;
+    <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(cap.account_address);
+}
 </code></pre>
 
 
@@ -3137,16 +3185,32 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 Returns field
-<code>key_rotation_capability</code> of the
-LibraAccount under
+<code>key_rotation_capability</code> of the LibraAccount under
 <code>addr</code>.
+
+
+<a name="0x1_LibraAccount_spec_get_key_rotation_cap_field"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>&gt; {
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability
+}
+</code></pre>
+
+
+Returns the KeyRotationCapability of the field
+<code>key_rotation_capability</code>.
 
 
 <a name="0x1_LibraAccount_spec_get_key_rotation_cap"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>&gt; {
-    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address): <a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a> {
+    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
+}
+<a name="0x1_LibraAccount_spec_has_key_rotation_cap"></a>
+<b>define</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr: address): bool {
+    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap_field">spec_get_key_rotation_cap_field</a>(addr))
 }
 </code></pre>
 
@@ -3160,9 +3224,8 @@ Returns true if the LibraAccount at
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr: address): bool {
-    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
-    && addr == <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(
-        <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address
+    <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr)
+    && addr == <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr).account_address
 }
 </code></pre>
 
@@ -3177,10 +3240,6 @@ Returns true if
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_has_account_operations_cap">spec_has_account_operations_cap</a>(): bool {
     exists&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
 }
-<a name="0x1_LibraAccount_spec_has_key_rotation_cap"></a>
-<b>define</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr: address): bool {
-    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability)
-}
 </code></pre>
 
 
@@ -3189,11 +3248,24 @@ Returns field
 <code>addr</code>.
 
 
+<a name="0x1_LibraAccount_spec_get_withdraw_cap_field"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>&gt; {
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability
+}
+</code></pre>
+
+
+Returns the WithdrawCapability of the field
+<code>withdrawal_capability</code>.
+
+
 <a name="0x1_LibraAccount_spec_get_withdraw_cap"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>&gt; {
-    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).withdrawal_capability
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr: address): <a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a> {
+    <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
 }
 </code></pre>
 
@@ -3207,7 +3279,7 @@ Returns true if the LibraAccount at
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr: address): bool {
-    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr))
+    <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap_field">spec_get_withdraw_cap_field</a>(addr))
 }
 </code></pre>
 
@@ -3222,7 +3294,7 @@ Returns true if the LibraAccount at
 
 <pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr: address): bool {
     <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr)
-    && addr == <a href="Option.md#0x1_Option_borrow">Option::borrow</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address
+    && addr == <a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr).account_address
 }
 </code></pre>
 
@@ -3234,10 +3306,9 @@ Returns true if the LibraAccount at
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresHasKeyRotationCap">EnsuresHasKeyRotationCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$67"></a>
+    <a name="0x1_LibraAccount_addr$69"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr);
-    <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address == addr;
+    <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr);
 }
 </code></pre>
 
@@ -3251,8 +3322,8 @@ The absence of KeyRotationCap is preserved.
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_PreserveKeyRotationCapAbsence">PreserveKeyRotationCapAbsence</a> {
     <b>ensures</b> forall addr1: address:
-        <b>old</b>(!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).key_rotation_capability)) ==&gt;
-            (!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(<b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1).key_rotation_capability));
+        <b>old</b>(!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || !<a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr1)) ==&gt;
+            (!exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr1) || !<a href="#0x1_LibraAccount_spec_has_key_rotation_cap">spec_has_key_rotation_cap</a>(addr1));
 }
 </code></pre>
 
@@ -3281,7 +3352,7 @@ Every account holds either no key rotation capability (because KeyRotationCapabi
 or the key rotation capability for addr itself [B26].
 
 
-<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_LibraAccount_exists_at">exists_at</a>(addr1):
     <a href="#0x1_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(addr1) || <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr1);
 </code></pre>
 
@@ -3293,10 +3364,9 @@ or the key rotation capability for addr itself [B26].
 
 <pre><code><b>schema</b> <a href="#0x1_LibraAccount_EnsuresWithdrawalCap">EnsuresWithdrawalCap</a> {
     account: signer;
-    <a name="0x1_LibraAccount_addr$68"></a>
+    <a name="0x1_LibraAccount_addr$70"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>ensures</b> <a href="#0x1_LibraAccount_spec_has_withdraw_cap">spec_has_withdraw_cap</a>(addr);
-    <b>ensures</b> <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(<a href="#0x1_LibraAccount_spec_get_withdraw_cap">spec_get_withdraw_cap</a>(addr)).account_address == addr;
+    <b>ensures</b> <a href="#0x1_LibraAccount_spec_holds_own_withdraw_cap">spec_holds_own_withdraw_cap</a>(addr);
 }
 </code></pre>
 

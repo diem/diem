@@ -14,4 +14,8 @@ fun rotate_authentication_key_with_recovery_address(
 ) {
     RecoveryAddress::rotate_authentication_key(account, recovery_address, to_recover, new_key)
 }
+spec fun rotate_authentication_key_with_recovery_address {
+    include RecoveryAddress::RotateAuthenticationKeyAbortsIf;
+    include RecoveryAddress::RotateAuthenticationKeyEnsures;
+}
 }

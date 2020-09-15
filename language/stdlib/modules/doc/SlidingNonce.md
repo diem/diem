@@ -322,6 +322,7 @@ Specification version of
 
 
 > TODO: turn verify on when we are ready to specify this function.
+It is currently assumed that this function raises no arithmetic overflow/underflow.
 
 
 <pre><code>pragma opaque, verify = <b>false</b>;

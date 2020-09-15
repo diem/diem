@@ -7,6 +7,8 @@
 
 -  [Function `rotate_authentication_key_with_recovery_address`](#SCRIPT_rotate_authentication_key_with_recovery_address)
         -  [Aborts](#SCRIPT_@Aborts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `rotate_authentication_key_with_recovery_address`](#SCRIPT_Specification_rotate_authentication_key_with_recovery_address)
 
 
 
@@ -64,3 +66,23 @@ stored under
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_rotate_authentication_key_with_recovery_address"></a>
+
+### Function `rotate_authentication_key_with_recovery_address`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyAbortsIf">RecoveryAddress::RotateAuthenticationKeyAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_RotateAuthenticationKeyEnsures">RecoveryAddress::RotateAuthenticationKeyEnsures</a>;
+</code></pre>

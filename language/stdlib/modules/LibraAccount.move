@@ -655,12 +655,13 @@ module LibraAccount {
         pragma opaque;
         let sender_addr = Signer::spec_address_of(sender);
         modifies global<LibraAccount>(sender_addr);
-        ensures exists<LibraAccount>(sender_addr);
         include ExtractWithdrawCapAbortsIf{sender_addr};
-        ensures result == Option::borrow(old(spec_get_withdraw_cap(sender_addr)));
+
+        ensures exists<LibraAccount>(sender_addr);
+        ensures result == old(spec_get_withdraw_cap(sender_addr));
         ensures result.account_address == sender_addr;
         ensures delegated_withdraw_capability(sender_addr);
-        ensures spec_get_key_rotation_cap(sender_addr) == old(spec_get_key_rotation_cap(sender_addr));
+        ensures spec_get_key_rotation_cap_field(sender_addr) == old(spec_get_key_rotation_cap_field(sender_addr));
     }
 
     spec schema ExtractWithdrawCapAbortsIf {
@@ -729,7 +730,7 @@ module LibraAccount {
     }
     spec fun rotate_authentication_key {
         include RotateAuthenticationKeyAbortsIf;
-        ensures global<LibraAccount>(cap.account_address).authentication_key == new_authentication_key;
+        include RotateAuthenticationKeyEnsures{addr: cap.account_address};
 
         /// Can only rotate the authentication_key of cap.account_address [B26].
         ensures forall addr: address where addr != cap.account_address && old(exists_at(addr)):
@@ -741,10 +742,11 @@ module LibraAccount {
         aborts_if !exists_at(cap.account_address) with Errors::NOT_PUBLISHED;
         aborts_if len(new_authentication_key) != 32 with Errors::INVALID_ARGUMENT;
     }
-    spec define spec_rotate_authentication_key(addr: address, new_authentication_key: vector<u8>): bool {
-        global<LibraAccount>(addr).authentication_key == new_authentication_key
+    spec schema RotateAuthenticationKeyEnsures {
+        addr: address;
+        new_authentication_key: vector<u8>;
+        ensures global<LibraAccount>(addr).authentication_key == new_authentication_key;
     }
-
 
     /// Return a unique capability granting permission to rotate the sender's authentication key
     public fun extract_key_rotation_capability(account: &signer): KeyRotationCapability
@@ -760,10 +762,18 @@ module LibraAccount {
         Option::extract(&mut account.key_rotation_capability)
     }
     spec fun extract_key_rotation_capability {
+        include ExtractKeyRotationCapabilityAbortsIf;
+        include ExtractKeyRotationCapabilityEnsures;
+    }
+    spec schema ExtractKeyRotationCapabilityAbortsIf {
+        account: signer;
         let account_addr = Signer::spec_address_of(account);
         aborts_if !exists_at(account_addr) with Errors::NOT_PUBLISHED;
         aborts_if delegated_key_rotation_capability(account_addr) with Errors::INVALID_STATE;
-        ensures delegated_key_rotation_capability(account_addr);
+    }
+    spec schema ExtractKeyRotationCapabilityEnsures {
+        account: signer;
+        ensures delegated_key_rotation_capability(Signer::spec_address_of(account));
     }
 
     /// Return the key rotation capability to the account it originally came from
@@ -774,10 +784,19 @@ module LibraAccount {
         Option::fill(&mut account.key_rotation_capability, cap)
     }
     spec fun restore_key_rotation_capability {
+        include RestoreKeyRotationCapabilityAbortsIf;
+        include RestoreKeyRotationCapabilityEnsures;
+    }
+    spec schema RestoreKeyRotationCapabilityAbortsIf {
+        cap: KeyRotationCapability;
         aborts_if !exists_at(cap.account_address) with Errors::NOT_PUBLISHED;
         aborts_if !delegated_key_rotation_capability(cap.account_address) with Errors::INVALID_ARGUMENT;
+    }
+    spec schema RestoreKeyRotationCapabilityEnsures {
+        cap: KeyRotationCapability;
         ensures spec_holds_own_key_rotation_cap(cap.account_address);
     }
+
 
     fun add_currencies_for_account<Token>(
         new_account: &signer,
@@ -1253,18 +1272,26 @@ module LibraAccount {
     spec module {
         pragma verify;
 
-        /// Returns field `key_rotation_capability` of the
-        /// LibraAccount under `addr`.
-        define spec_get_key_rotation_cap(addr: address): Option<KeyRotationCapability> {
+        /// Returns field `key_rotation_capability` of the LibraAccount under `addr`.
+        define spec_get_key_rotation_cap_field(addr: address): Option<KeyRotationCapability> {
             global<LibraAccount>(addr).key_rotation_capability
+        }
+
+        /// Returns the KeyRotationCapability of the field `key_rotation_capability`.
+        define spec_get_key_rotation_cap(addr: address): KeyRotationCapability {
+            Option::spec_get(spec_get_key_rotation_cap_field(addr))
+        }
+
+        // Returns if the account holds KeyRotationCapability.
+        define spec_has_key_rotation_cap(addr: address): bool {
+            Option::is_some(spec_get_key_rotation_cap_field(addr))
         }
 
         /// Returns true if the LibraAccount at `addr` holds
         /// `KeyRotationCapability` for itself.
         define spec_holds_own_key_rotation_cap(addr: address): bool {
-            Option::is_some(spec_get_key_rotation_cap(addr))
-            && addr == Option::borrow(
-                spec_get_key_rotation_cap(addr)).account_address
+            spec_has_key_rotation_cap(addr)
+            && addr == spec_get_key_rotation_cap(addr).account_address
         }
 
         /// Returns true if `AccountOperationsCapability` is published.
@@ -1272,40 +1299,38 @@ module LibraAccount {
             exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
 
-        define spec_has_key_rotation_cap(addr: address): bool {
-            Option::is_some(global<LibraAccount>(addr).key_rotation_capability)
-        }
-
         /// Returns field `withdrawal_capability` of LibraAccount under `addr`.
-        define spec_get_withdraw_cap(addr: address): Option<WithdrawCapability> {
+        define spec_get_withdraw_cap_field(addr: address): Option<WithdrawCapability> {
             global<LibraAccount>(addr).withdrawal_capability
         }
 
-        /// Returns true if the LibraAccount at `addr` holds a
-        /// `WithdrawCapability`.
-        define spec_has_withdraw_cap(addr: address): bool {
-            Option::is_some(spec_get_withdraw_cap(addr))
+        /// Returns the WithdrawCapability of the field `withdrawal_capability`.
+        define spec_get_withdraw_cap(addr: address): WithdrawCapability {
+            Option::spec_get(spec_get_withdraw_cap_field(addr))
         }
 
-        /// Returns true if the LibraAccount at `addr` holds
-        /// `WithdrawCapability` for itself.
+        /// Returns true if the LibraAccount at `addr` holds a `WithdrawCapability`.
+        define spec_has_withdraw_cap(addr: address): bool {
+            Option::is_some(spec_get_withdraw_cap_field(addr))
+        }
+
+        /// Returns true if the LibraAccount at `addr` holds `WithdrawCapability` for itself.
         define spec_holds_own_withdraw_cap(addr: address): bool {
             spec_has_withdraw_cap(addr)
-            && addr == Option::borrow(spec_get_withdraw_cap(addr)).account_address
+            && addr == spec_get_withdraw_cap(addr).account_address
         }
     }
 
     spec schema EnsuresHasKeyRotationCap {
         account: signer;
         let addr = Signer::spec_address_of(account);
-        ensures spec_has_key_rotation_cap(addr);
-        ensures Option::spec_get(spec_get_key_rotation_cap(addr)).account_address == addr;
+        ensures spec_holds_own_key_rotation_cap(addr);
     }
     spec schema PreserveKeyRotationCapAbsence {
         /// The absence of KeyRotationCap is preserved.
         ensures forall addr1: address:
-            old(!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).key_rotation_capability)) ==>
-                (!exists<LibraAccount>(addr1) || Option::is_none(global<LibraAccount>(addr1).key_rotation_capability));
+            old(!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1)) ==>
+                (!exists<LibraAccount>(addr1) || !spec_has_key_rotation_cap(addr1));
     }
     spec module {
         /// the permission "RotateAuthenticationKey(addr)" is granted to the account at addr [B26].
@@ -1319,15 +1344,14 @@ module LibraAccount {
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
         /// or the key rotation capability for addr itself [B26].
-        invariant [global, isolated] forall addr1: address where exists_at(addr1):
+        invariant [global] forall addr1: address where exists_at(addr1):
             delegated_key_rotation_capability(addr1) || spec_holds_own_key_rotation_cap(addr1);
     }
 
     spec schema EnsuresWithdrawalCap {
         account: signer;
         let addr = Signer::spec_address_of(account);
-        ensures spec_has_withdraw_cap(addr);
-        ensures Option::spec_get(spec_get_withdraw_cap(addr)).account_address == addr;
+        ensures spec_holds_own_withdraw_cap(addr);
     }
     spec schema PreserveWithdrawCapAbsence {
         /// The absence of WithdrawCap is preserved.

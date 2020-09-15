@@ -63,11 +63,10 @@ fun mint_lbr(account: &signer, amount_lbr: u64) {
 
 spec fun mint_lbr {
     use 0x1::Signer;
-    use 0x1::Option;
     /// > TODO: timeout due to FixedPoint32 flakiness.
     pragma verify = false;
     let account_addr = Signer::spec_address_of(account);
-    let cap = Option::borrow(LibraAccount::spec_get_withdraw_cap(account_addr));
+    let cap = LibraAccount::spec_get_withdraw_cap(account_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
     include LibraAccount::StapleLBRAbortsIf{cap: cap};
     include LibraAccount::StapleLBREnsures{cap: cap};
