@@ -12,6 +12,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `preburn`](#SCRIPT_Specification_preburn)
 
 
 
@@ -105,3 +107,29 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_preburn"></a>
+
+### Function `preburn`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify;
+<a name="SCRIPT_account_addr$1"></a>
+<b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<a name="SCRIPT_cap$2"></a>
+<b>let</b> cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(account_addr);
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnAbortsIf">LibraAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnEnsures">LibraAccount::PreburnEnsures</a>&lt;Token&gt;{dd_addr: account_addr, payer: account_addr};
+</code></pre>

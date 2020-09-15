@@ -2339,7 +2339,7 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 <pre><code>pragma opaque;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>ensures</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-<a name="0x1_Libra_currency_info$54"></a>
+<a name="0x1_Libra_currency_info$56"></a>
 <b>let</b> currency_info = <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
 <b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt;;
@@ -2390,8 +2390,8 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 
 
 
-<pre><code><b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;;
-<b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;;
+<pre><code><b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
+<b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{amount: coin.value};
 </code></pre>
 
 
@@ -2401,7 +2401,7 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt; {
-    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    amount: u64;
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> preburn.to_burn.value != 0 with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
@@ -2415,9 +2415,9 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt; {
-    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    amount: u64;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value + coin.value &gt; <a href="#0x1_Libra_MAX_U64">MAX_U64</a> with <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value + amount &gt; <a href="#0x1_Libra_MAX_U64">MAX_U64</a> with <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -2428,10 +2428,10 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt; {
-    coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
+    amount: u64;
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
-                == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) + coin.value;
+                == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) + amount;
 }
 </code></pre>
 
@@ -2482,14 +2482,39 @@ Preburn is published under the DesignatedDealer account.
 
 
 
+
+<a name="0x1_Libra_preburn$57"></a>
+
+
+<pre><code><b>let</b> preburn = <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>include</b> <a href="#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
+<b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: preburn, amount: coin.value};
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_PreburnToAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
+    account: signer;
+    amount: u64;
+    <a name="0x1_Libra_account_addr$50"></a>
+    <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <a name="0x1_Libra_preburn$51"></a>
+    <b>let</b> preburn = <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr);
+}
+</code></pre>
+
+
 Must abort if the account does have the Preburn [B13].
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)).to_burn.value != 0
-    with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
-<b>include</b> <a href="#0x1_Libra_PreburnAbortsIf">PreburnAbortsIf</a>&lt;CoinType&gt;;
-<b>include</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))};
+<pre><code><b>schema</b> <a href="#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{preburn: preburn};
+}
 </code></pre>
 
 
@@ -2536,9 +2561,9 @@ Must abort if the account does have the Preburn [B13].
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_to_burn$50"></a>
+    <a name="0x1_Libra_to_burn$52"></a>
     <b>let</b> to_burn = preburn.to_burn.value;
-    <a name="0x1_Libra_info$51"></a>
+    <a name="0x1_Libra_info$53"></a>
     <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> to_burn == 0 with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> info.total_value &lt; to_burn with <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
@@ -2576,7 +2601,7 @@ Must abort if the account does have the Preburn [B13].
 
 <pre><code><b>include</b> <a href="#0x1_Libra_BurnNowAbortsIf">BurnNowAbortsIf</a>&lt;CoinType&gt;;
 <b>ensures</b> preburn.to_burn.value == 0;
-<a name="0x1_Libra_info$55"></a>
+<a name="0x1_Libra_info$58"></a>
 <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
 <b>ensures</b> info.total_value == <b>old</b>(info.total_value) - coin.value;
 </code></pre>
@@ -2591,8 +2616,8 @@ Must abort if the account does have the Preburn [B13].
     coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> coin.value == 0 with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-    <b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_info$52"></a>
+    <b>include</b> <a href="#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{amount: coin.value};
+    <a name="0x1_Libra_info$54"></a>
     <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> info.total_value &lt; coin.value with <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
@@ -2868,7 +2893,7 @@ Returns the market cap of CoinType.
 <pre><code><b>schema</b> <a href="#0x1_Libra_ApproxLbrForValueAbortsIf">ApproxLbrForValueAbortsIf</a>&lt;CoinType&gt; {
     from_value: num;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_lbr_exchange_rate$53"></a>
+    <a name="0x1_Libra_lbr_exchange_rate$55"></a>
     <b>let</b> lbr_exchange_rate = <a href="#0x1_Libra_spec_lbr_exchange_rate">spec_lbr_exchange_rate</a>&lt;CoinType&gt;();
     <b>include</b> <a href="FixedPoint32.md#0x1_FixedPoint32_MultiplyAbortsIf">FixedPoint32::MultiplyAbortsIf</a>{val: from_value, multiplier: lbr_exchange_rate};
 }

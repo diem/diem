@@ -391,25 +391,25 @@ module Libra {
         };
     }
     spec fun preburn_with_resource {
-        include PreburnWithResourceAbortsIf<CoinType>;
-        include PreburnEnsures<CoinType>;
+        include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
+        include PreburnEnsures<CoinType>{amount: coin.value};
     }
     spec schema PreburnWithResourceAbortsIf<CoinType> {
-        coin: Libra<CoinType>;
+        amount: u64;
         preburn: Preburn<CoinType>;
         aborts_if preburn.to_burn.value != 0 with Errors::INVALID_STATE;
         include PreburnAbortsIf<CoinType>;
     }
     spec schema PreburnAbortsIf<CoinType> {
-        coin: Libra<CoinType>;
+        amount: u64;
         include AbortsIfNoCurrency<CoinType>;
-        aborts_if spec_currency_info<CoinType>().preburn_value + coin.value > MAX_U64 with Errors::LIMIT_EXCEEDED;
+        aborts_if spec_currency_info<CoinType>().preburn_value + amount > MAX_U64 with Errors::LIMIT_EXCEEDED;
     }
     spec schema PreburnEnsures<CoinType> {
-        coin: Libra<CoinType>;
+        amount: u64;
         preburn: Preburn<CoinType>;
         ensures spec_currency_info<CoinType>().preburn_value
-                    == old(spec_currency_info<CoinType>().preburn_value) + coin.value;
+                    == old(spec_currency_info<CoinType>().preburn_value) + amount;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -469,13 +469,19 @@ module Libra {
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
     }
     spec fun preburn_to {
-        /// Must abort if the account does have the Preburn [B13].
-        aborts_if !exists<Preburn<CoinType>>(Signer::spec_address_of(account)) with Errors::NOT_PUBLISHED;
+        let preburn = global<Preburn<CoinType>>(Signer::spec_address_of(account));
+        include PreburnToAbortsIf<CoinType>{amount: coin.value};
+        include PreburnEnsures<CoinType>{preburn: preburn, amount: coin.value};
+    }
 
-        aborts_if global<Preburn<CoinType>>(Signer::spec_address_of(account)).to_burn.value != 0
-            with Errors::INVALID_STATE;
-        include PreburnAbortsIf<CoinType>;
-        include PreburnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(Signer::spec_address_of(account))};
+    spec schema PreburnToAbortsIf<CoinType> {
+        account: signer;
+        amount: u64;
+        let account_addr = Signer::spec_address_of(account);
+        let preburn = global<Preburn<CoinType>>(account_addr);
+        /// Must abort if the account does have the Preburn [B13].
+        aborts_if !exists<Preburn<CoinType>>(account_addr) with Errors::NOT_PUBLISHED;
+        include PreburnWithResourceAbortsIf<CoinType>{preburn: preburn};
     }
 
     /// Permanently removes the coins held in the `Preburn` resource (in to_burn field)
@@ -620,7 +626,7 @@ module Libra {
         coin: Libra<CoinType>;
         preburn: Preburn<CoinType>;
         aborts_if coin.value == 0 with Errors::INVALID_ARGUMENT;
-        include PreburnWithResourceAbortsIf<CoinType>;
+        include PreburnWithResourceAbortsIf<CoinType>{amount: coin.value};
         // The aborts condition for the burn is simplified because of previous call to preburn.
         let info = spec_currency_info<CoinType>();
         aborts_if info.total_value < coin.value with Errors::LIMIT_EXCEEDED;

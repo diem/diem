@@ -638,6 +638,39 @@ module LibraAccount {
         Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
     }
 
+    spec fun preburn {
+        pragma opaque;
+        let dd_addr = Signer::spec_address_of(dd);
+        let payer = cap.account_address;
+        modifies global<LibraAccount>(payer);
+        ensures exists<LibraAccount>(payer);
+        ensures global<LibraAccount>(payer).withdrawal_capability
+                == old(global<LibraAccount>(payer).withdrawal_capability);
+        include PreburnAbortsIf<Token>;
+        include PreburnEnsures<Token>{dd_addr: dd_addr, payer: payer};
+    }
+
+    spec schema PreburnAbortsIf<Token> {
+        dd: signer;
+        cap: WithdrawCapability;
+        amount: u64;
+        include LibraTimestamp::AbortsIfNotOperating{};
+        include WithdrawFromAbortsIf<Token>{payee: Signer::spec_address_of(dd)};
+        include Libra::PreburnToAbortsIf<Token>{account: dd};
+    }
+
+    spec schema PreburnEnsures<Token> {
+        dd_addr: address;
+        payer: address;
+        let payer_balance = global<Balance<Token>>(payer).coin.value;
+        let preburn = global<Libra::Preburn<Token>>(dd_addr);
+        /// The balance of payer decreases by `amount`.
+        ensures payer_balance == old(payer_balance) - amount;
+        /// The value of preburn at `dd_addr` increases by `amount`;
+        include Libra::PreburnEnsures<Token>{preburn: preburn};
+    }
+
+
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
     public fun extract_withdraw_capability(
         sender: &signer
