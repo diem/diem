@@ -107,10 +107,7 @@ impl VMRuntime {
         }
 
         // load the script, perform verification
-        let (main, type_params) = {
-            let _timer = LIBRA_MOVEVM_LOADER_SCRIPT_SECONDS.start_timer();  
-            self.loader.load_script(&script, &ty_args, data_store)?
-        };
+        let (main, type_params) = self.loader.load_script(&script, &ty_args, data_store)?;
 
         // Build the arguments list for the main and check the arguments are of restricted types.
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
@@ -136,6 +133,7 @@ impl VMRuntime {
         check_args(&signers_and_args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script
+        let _timer = LIBRA_MOVEVM_INTERPRETER_RUN_SCRIPT_SECONDS.start_timer();
         Interpreter::entrypoint(
             main,
             type_params,
@@ -189,10 +187,10 @@ fn check_args(args: &[Value]) -> PartialVMResult<()> {
     Ok(())
 }
 
-pub static LIBRA_MOVEVM_LOADER_SCRIPT_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+pub static LIBRA_MOVEVM_INTERPRETER_RUN_SCRIPT_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
-        "libra_movevm_loader_script_seconds",
-        "The time spent in seconds by prologue to load the script"
+        "libra_movevm_interpreter_run_script_seconds",
+        "The time spent in seconds by interpreter to run the script"
     )
     .unwrap()
 });
