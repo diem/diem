@@ -63,6 +63,8 @@ The remainder of this section specifies distinct behaviors for each role.
 While `libra-genesis-tool` supports setting the backends on each command, doing so is cumbersome and fraught with error. Instead, all participants, should first construct a configuration file for use in genesis and later use via the operational tool. Below is an example configuration file in yaml format:
 
 ```
+# config.yaml
+
 chain_id: "MAINNET"
 json_server: "http://127.0.0.1:8080"
 shared_backend:
@@ -94,7 +96,7 @@ Overview of fields:
 cargo run -p libra-genesis-tool -- \
     set-layout \
     --config config_file.yaml \
-    --path PATH_TO_LAYOUT ```
+    --path $PATH_TO_LAYOUT ```
 * The association will publish the the `libra root`  public key to the `shared storage`:
 ```
 cargo run -p libra-genesis-tool -- \
@@ -136,7 +138,7 @@ cargo run -p libra-genesis-tool -- \
 cargo run -p libra-genesis-tool --
     set-operator \
     --config config_file.yaml \
-    --operator-name OPERATOR_NAME
+    --operator-name $OPERATOR_NAME
 ```
 
 ### Validator Operators
@@ -152,23 +154,23 @@ cargo run -p libra-genesis-tool --
 cargo run -p libra-genesis-tool --
     validator-config \
     --config config_file.yaml \
-    --owner-name OWNER_NAME \
-    --validator-address '/dns/DNS/tcp/PORT' \
-    --fullnode-address '/dns/DNS/tcp/PORT' \
+    --owner-name $OWNER_NAME \
+    --validator-address "/dns/$VALIDATOR_DNS/tcp/$VALIDATOR_PORT" \
+    --fullnode-address "/dns/$VFN_DNS/tcp/$VFN_PORT" \
 ```
 * Upon receiving signal from the association, OPs can now build genesis:
 ```
 cargo run -p libra-genesis-tool -- \
     genesis \
     --config config_file.yaml \
-    --path PATH_TO_GENESIS \
+    --path $PATH_TO_GENESIS \
 ```
 * Similarly, the association should publish a genesis waypoint, and the OP should insert it into their storage (using the management tool):
 ```
 cargo run -p libra-genesist-tool -- \
     insert-waypoint \
     --config config_file.yaml \
-    --waypoint WAYPOINT
+    --waypoint $WAYPOINT
 ```
 * Perform a verify that ensures the local store maps to Genesis and Genesis maps
   to the waypoint:
@@ -176,7 +178,7 @@ cargo run -p libra-genesist-tool -- \
 cargo run -p libra-genesis-tool -- \
     verify \
     --config config_file.yaml \
-    --genesis_path PATH_TO_GENESIS
+    --genesis_path $PATH_TO_GENESIS
 ```
 
 ### Important Notes
