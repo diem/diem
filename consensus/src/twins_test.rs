@@ -17,13 +17,7 @@ use consensus_types::{
     block::Block,
     common::{Author, Payload, Round},
 };
-//use futures::channel::mpsc;
-use futures::{
-    channel::{mpsc, oneshot},
-    executor::block_on,
-    stream::select,
-    Stream, StreamExt, TryStreamExt,
-};
+use futures::{channel::mpsc, StreamExt};
 use libra_config::{
     config::{
         ConsensusProposerType::{self, FixedProposer, RotatingProposer, RoundProposer},
@@ -42,9 +36,8 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
+use std::{cmp::Ordering, collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
-use std::cmp::Ordering;
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
@@ -75,7 +68,6 @@ impl Ord for SMRNode {
         self.author.cmp(&other.author)
     }
 }
-
 
 impl SMRNode {
     fn start(
@@ -189,8 +181,9 @@ impl SMRNode {
         let proposer_type = match proposer_type {
             RoundProposer(_) => {
                 let mut round_proposers: HashMap<Round, Author> = HashMap::new();
-                if round_proposers_idx.is_some() {
-                    for (round, idx) in round_proposers_idx.unwrap().iter() {
+
+                if let Some(round_proposers_idx) = round_proposers_idx {
+                    for (round, idx) in round_proposers_idx.iter() {
                         round_proposers.insert(
                             *round,
                             nodes[*idx].validator_network.as_ref().unwrap().peer_id(),
@@ -228,6 +221,9 @@ impl SMRNode {
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type.clone();
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
+            // Change initial timeout from default 1s to 2s. Our experience
+            // suggests that 1s is too small for twins testing
+            config.consensus.round_initial_timeout_ms = 2000;
 
             let author = config.validator_network.as_ref().unwrap().peer_id();
 
@@ -250,7 +246,6 @@ impl SMRNode {
 ///
 /// Run the test:
 /// cargo xtest -p consensus basic_start_test -- --nocapture
-#[test]
 fn basic_start_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -284,6 +279,7 @@ fn basic_start_test() {
     });
 }
 
+#[test]
 /// This test checks that the split_network function works
 /// as expected, that is: nodes in a partition with less nodes
 /// than required for quorum do not commit anything.
@@ -301,7 +297,6 @@ fn basic_start_test() {
 ///
 /// Run the test:
 /// cargo xtest -p consensus drop_config_test -- --nocapture
-#[test]
 fn drop_config_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -346,12 +341,11 @@ fn drop_config_test() {
         // Check that the commit log for n2 is empty
         let node2_commit = match nodes[2].commit_cb_receiver.try_next() {
             Ok(Some(node_commit)) => Some(node_commit),
-            _ => None
+            _ => None,
         };
         assert!(node2_commit.is_none());
     });
 }
-
 
 #[test]
 /// This test checks that the vote of a node and its twin
@@ -373,7 +367,6 @@ fn drop_config_test() {
 ///
 /// Run the test:
 /// cargo xtest -p consensus twins_vote_dedup_test -- --nocapture
-#[cfg(test)]
 fn twins_vote_dedup_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -440,7 +433,6 @@ fn twins_vote_dedup_test() {
 ///
 /// Run the test:
 /// cargo xtest -p consensus twins_proposer_test -- --nocapture
-#[cfg(test)]
 fn twins_proposer_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -498,7 +490,7 @@ fn twins_proposer_test() {
             .wait_for_messages(50, NetworkPlayground::votes_only)
             .await;
 
-        let mut node0_commit = nodes[0].commit_cb_receiver.next().await;
+        let node0_commit = nodes[0].commit_cb_receiver.next().await;
         let twin0_commit = nodes[4].commit_cb_receiver.next().await;
 
         match (node0_commit, twin0_commit) {
@@ -544,7 +536,7 @@ fn twins_commit_test() {
         round_proposers.insert(i, 0);
     }
 
-    let (mut nodes, node_authors) = SMRNode::start_num_nodes_with_twins(
+    let (mut nodes, _node_authors) = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,

@@ -307,16 +307,8 @@ impl NetworkPlayground {
     /// Return the round of a given message
     fn get_message_round(&self, msg: ConsensusMsg) -> Option<u64> {
         match msg {
-            ConsensusMsg::ProposalMsg(proposal_msg) => {
-                let unboxed = *proposal_msg;
-                Some(unboxed.proposal().round())
-            }
-
-            ConsensusMsg::VoteMsg(vote_msg) => {
-                let unboxed: VoteMsg = *vote_msg;
-                Some(unboxed.vote().vote_data().proposed().round())
-            }
-
+            ConsensusMsg::ProposalMsg(proposal_msg) => Some(proposal_msg.proposal().round()),
+            ConsensusMsg::VoteMsg(vote_msg) => Some(vote_msg.vote().vote_data().proposed().round()),
             _ => None,
         }
     }
@@ -389,23 +381,21 @@ impl NetworkPlayground {
         let mut ret = true;
 
         for (round, partitions) in round_partitions.iter() {
-            let idx_last_partition = partitions.len() - 1;
-
-            for (idx_curr_partition, curr_partition) in partitions.iter().enumerate() {
-                if idx_curr_partition < idx_last_partition {
-                    for src in curr_partition.iter() {
-                        for idx_next_partition in (idx_curr_partition + 1)..idx_last_partition + 1 {
-                            for dst in partitions[idx_next_partition].iter() {
-                                // Drop messages in both directions i.e. src->dst and dst->src
-                                ret &= self.drop_message_for_round(src, dst, *round);
-                                ret &= self.drop_message_for_round(dst, src, *round);
-                            }
-                        }
-                    }
-                }
-            }
+            partitions
+                .iter()
+                .enumerate()
+                .flat_map(|(i, v1)| {
+                    partitions.iter().skip(i + 1).flat_map(move |v2| {
+                        v1.iter()
+                            .flat_map(move |src| v2.iter().map(move |dst| (src, dst)))
+                    })
+                })
+                .for_each(|(src, dst)| {
+                    // Drop messages in both directions i.e. src->dst and dst->src
+                    ret &= self.drop_message_for_round(src, dst, *round);
+                    ret &= self.drop_message_for_round(dst, src, *round);
+                });
         }
-
         ret
     }
 
@@ -492,39 +482,29 @@ struct DropConfigRound(HashMap<u64, DropConfig>);
 impl DropConfigRound {
     /// Check if the message from 'src' to 'dst' should be dropped in the given round
     pub fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
-        let mut result = false;
-
-        if self.0.contains_key(&round) {
-            let drop_config = self.0.get(&round).unwrap();
-
-            if drop_config.0.contains_key(src) {
-                result = drop_config.0.get(src).unwrap().contains(dst);
-            }
-        }
-        result
+        self.0
+            .get(&round)
+            .and_then(|config| config.0.get(src).and_then(|set| set.get(dst)))
+            .is_some()
     }
 
     /// Drop messages from 'src' to 'dst' in the given round
     pub fn drop_message_for(&mut self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
-        if !self.0.contains_key(&round) {
-            let drop_config = DropConfig(HashMap::new());
-            self.0.insert(round, drop_config);
-        }
+        self.0
+            .entry(round)
+            .or_insert_with(|| DropConfig(HashMap::new()));
 
         if !self.0.get_mut(&round).unwrap().0.contains_key(src) {
             self.0.get_mut(&round).unwrap().add_node(*src);
         }
 
-        let result = self
-            .0
+        self.0
             .get_mut(&round)
             .unwrap()
             .0
             .get_mut(src)
             .unwrap()
-            .insert(*dst);
-
-        result
+            .insert(*dst)
     }
 }
 

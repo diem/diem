@@ -158,7 +158,7 @@ impl RecoveryManager {
             self.storage.clone(),
             self.state_computer.clone(),
         )
-            .await?;
+        .await?;
 
         Ok(recovery_data)
     }
@@ -629,22 +629,22 @@ impl RoundManager {
         match self
             .round_state
             .insert_vote(vote, &self.epoch_state.verifier)
-            {
-                VoteReceptionResult::NewQuorumCertificate(qc) => {
-                    // Note that the block might not be present locally, in which case we cannot calculate
-                    // time between block creation and qc
-                    if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
-                        duration_since_epoch()
-                            .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                    }) {
-                        counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
-                    }
-
-                    self.new_qc_aggregated(qc, vote.author()).await
+        {
+            VoteReceptionResult::NewQuorumCertificate(qc) => {
+                // Note that the block might not be present locally, in which case we cannot calculate
+                // time between block creation and qc
+                if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
+                    duration_since_epoch()
+                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                }) {
+                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
                 }
-                VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
-                _ => Ok(()),
+
+                self.new_qc_aggregated(qc, vote.author()).await
             }
+            VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,
+            _ => Ok(()),
+        }
     }
 
     async fn new_qc_aggregated(
