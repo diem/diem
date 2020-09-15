@@ -12,6 +12,7 @@ use libra_types::chain_id::ChainId;
 use reqwest::Url;
 use structopt::{clap::ArgGroup, StructOpt};
 use termion::{color, style};
+use futures::StreamExt;
 
 use anyhow::{bail, format_err, Result};
 use cluster_test::{
@@ -58,6 +59,8 @@ struct Args {
     health_check: bool,
     #[structopt(long, group = "action")]
     emit_tx: bool,
+    #[structopt(long, group = "action")]
+    load_test: bool,
     #[structopt(long, group = "action", requires = "swarm")]
     diag: bool,
     #[structopt(long, group = "action")]
@@ -107,6 +110,11 @@ struct Args {
     )]
     pub wait_on_failure: Option<u64>,
 
+    // load_test options
+    // shares mint_file arg with emit-tx option
+    #[structopt(long)]
+    validator_config_path: Vec<String>,
+
     #[structopt(flatten)]
     pub cluster_builder_params: ClusterBuilderParams,
 }
@@ -117,13 +125,17 @@ pub async fn main() {
 
     let args = Args::from_args();
 
-    if args.swarm && !(args.emit_tx || args.diag || args.health_check) {
-        panic!("Can only use --emit-tx or --diag or --health-check in --swarm mode");
+    if args.swarm && !(args.emit_tx || args.diag || args.health_check || args.load_test) {
+        panic!("Can only use --emit-tx or --diag or --health-check or --load-test in --swarm mode");
     }
 
     if args.diag {
         let util = BasicSwarmUtil::setup(&args);
         exit_on_error(util.diag().await);
+        return;
+    } else if args.load_test && args.swarm {
+        let util = BasicSwarmUtil::setup(&args);
+        exit_on_error(load_test(&util.cluster, &args).await);
         return;
     } else if args.emit_tx && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
@@ -230,6 +242,8 @@ async fn handle_cluster_test_runner_commands(
         );
     } else if args.emit_tx {
         emit_tx(&runner.cluster, &args).await?;
+    } else if args.load_test {
+        load_test(&runner.cluster, &args).await?;
     } else if let Some(ref exec) = args.exec {
         let pos = exec.find(':');
         let pos = pos.ok_or_else(|| {
@@ -334,6 +348,25 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
     let stats = emitter.stop_job(job).await;
     println!("Total stats: {}", stats);
     println!("Average rate: {}", stats.rate(duration));
+    Ok(())
+}
+
+async fn load_test(cluster: &Cluster, _args: &Args) -> Result<()> {
+    println!("[cluster test] begin load-testing!");
+//    let seed_peers = seed_peer_generator::utils::gen_seed_peer_config(args.peers[0].clone());
+    let vfn_instance = cluster.random_fullnode_instance();
+    let vfn_url = format!("http://{}:{}/v1", vfn_instance.ip(), vfn_instance.ac_port());
+    println!("vfn url: {:?}", vfn_url);
+    let seed_peers = seed_peer_generator::utils::gen_seed_peer_config(vfn_url);
+    println!("got seed peers config: {:?}", seed_peers);
+
+    let mut pub_network_instance = libra_node::libranet_instance::launch(ChainId::test(), seed_peers).await;
+    println!("yay pub network running");
+    let events = &mut pub_network_instance.mempool_handles[0].1;
+
+    let blah = events.select_next_some().await;
+    println!("\n got new mempool event: {:?}", blah);
+
     Ok(())
 }
 
