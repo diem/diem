@@ -37,8 +37,6 @@ use vm::{
     IndexKind,
 };
 
-use crate::load_metrics::*;
-
 // A simple cache that offers both a HashMap and a Vector lookup.
 // Values are forced into a `Arc` so they can be used from multiple thread.
 // Access to this cache is always under a `Mutex`.
@@ -539,40 +537,22 @@ impl Loader {
         ty_args: &[TypeTag],
         data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-
-        {
-            let _timer = LIBRA_MOVEVM_LOAD_MODULE_EXPECT_NO_MISSING_DEPENDENCIES_SECONDS.start_timer();
-            self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
-        }
-
-        let idx = {
-            let _timer = LIBRA_MOVEVM_MODULE_CACHE_RESOLVE_SECONDS.start_timer();
-            self.module_cache
+        self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
+        let idx = self.module_cache
             .lock()
             .unwrap()
             .resolve_function_by_name(function_name, module_id)
-            .map_err(|err| err.finish(Location::Undefined))?
-        };
-
-        let func = {
-            let _timer = LIBRA_MOVEVM_MODULE_CACHE_SECONDS.start_timer();
-            self.module_cache.lock().unwrap().function_at(idx)
-        };
+            .map_err(|err| err.finish(Location::Undefined))?;
+        let func = self.module_cache.lock().unwrap().function_at(idx);
 
         // verify type arguments
         let mut type_params = vec![];
-        {
-            let _timer = LIBRA_MOVEVM_LOAD_TYPE_SECONDS.start_timer();
-            for ty in ty_args {
-                type_params.push(self.load_type(ty, data_store)?);
-            }
+        for ty in ty_args {
+            type_params.push(self.load_type(ty, data_store)?);
         }
+        self.verify_ty_args(func.type_parameters(), &type_params)
+            .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
 
-        {
-            let _timer = LIBRA_MOVEVM_VERIFY_TYPE_PARAMETERS_SECONDS.start_timer();
-            self.verify_ty_args(func.type_parameters(), &type_params)
-                .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
-        }
         Ok((func, type_params))
     }
 
@@ -747,29 +727,22 @@ impl Loader {
             Ok(module)
         }
 
-        {
-            let _timer = LIBRA_MOVEVM_LOAD_MODULE_CACHE_SECONDS.start_timer();
-            if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
-                return Ok(module);
-            }
+        if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
+            return Ok(module);
         }
+        
 
-        let bytes = {
-            let _timer = LIBRA_MOVEVM_DATA_STORE_LOAD_MODULE_SECONDS.start_timer();
-            match data_store.load_module(id) {
-                Ok(bytes) => bytes,
-                Err(err) if verify_no_missing_modules => return Err(err),
-                Err(err) => {
-                    error!("[VM] Error fetching module with id {:?}", id);
-                    return Err(expect_no_verification_errors(err));
-                }
+        let bytes = match data_store.load_module(id) {
+            Ok(bytes) => bytes,
+            Err(err) if verify_no_missing_modules => return Err(err),
+            Err(err) => {
+                error!("[VM] Error fetching module with id {:?}", id);
+                return Err(expect_no_verification_errors(err));
             }
         };
 
-        let _timer = LIBRA_MOVEVM_DESERIALIZE_AND_VERIFY_MODULE_SECONDS.start_timer();
         let module = deserialize_and_verify_module(self, bytes, data_store)
             .map_err(expect_no_verification_errors)?;
-
         self.module_cache.lock().unwrap().insert(id.clone(), module)
     }
 

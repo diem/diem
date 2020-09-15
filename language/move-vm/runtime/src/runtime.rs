@@ -22,8 +22,6 @@ use vm::{
     CompiledModule, IndexKind,
 };
 
-use crate::load_metrics::*;
-
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
     loader: Loader,
@@ -149,9 +147,7 @@ impl VMRuntime {
     ) -> VMResult<()> {
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
-        
         let (func, type_params) = {
-            let _timer = LIBRA_MOVEVM_LOAD_FUNCTION_SECONDS.start_timer();
             self.loader
                 .load_function(function_name, module, &ty_args, data_store)?
         };
