@@ -1,0 +1,35 @@
+name: JSON-RPC Compat Warning
+
+on:
+  pull_request:
+    types: [opened, synchronized]
+    paths: ['json-rpc/**.rs']
+
+jobs:
+  warn-about-compat-requirements:
+    runs-on: ubuntu-latest
+    name: Warn PR author about compatibility requirements
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: comment
+        uses: ./.github/actions/comment
+        with:
+          comment: |
+            **This PR may have modified JSON-RPC server code.**
+
+            Breaking changes policy:
+
+            1. Chaning JSON-RPC method signatures or removing/modifying fields
+               in the response in /V1 will not be accepted.
+            2. Adding fields is ok.
+            3. Adding a new JSON-RPC method is ok.
+
+            Please ensure you have also done the following to update the docs:
+
+            1. Update json-rpc/API-CHANGELOG.md.
+            2. Add/update type/method documentation under json-rpc/docs.
+          tag: jsonrpc-compat
+          delete-older: true
