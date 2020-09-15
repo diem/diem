@@ -9,6 +9,7 @@ pub mod command;
 mod governance;
 pub mod json_rpc;
 mod keys;
+mod owner;
 mod validate_transaction;
 mod validator_config;
 mod validator_set;

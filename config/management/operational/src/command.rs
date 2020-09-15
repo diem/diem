@@ -43,6 +43,8 @@ pub enum Command {
     RotateValidatorNetworkKey(crate::validator_config::RotateValidatorNetworkKey),
     #[structopt(about = "Sets the validator config")]
     SetValidatorConfig(crate::validator_config::SetValidatorConfig),
+    #[structopt(about = "Sets the validator operator")]
+    SetValidatorOperator(crate::owner::SetValidatorOperator),
     #[structopt(about = "Validates a transaction")]
     ValidateTransaction(crate::validate_transaction::ValidateTransaction),
     #[structopt(about = "Displays the current validator config registered on the blockchain")]
@@ -67,6 +69,7 @@ pub enum CommandName {
     RotateFullNodeNetworkKey,
     RotateValidatorNetworkKey,
     SetValidatorConfig,
+    SetValidatorOperator,
     ValidateTransaction,
     ValidatorConfig,
     ValidatorSet,
@@ -89,6 +92,7 @@ impl From<&Command> for CommandName {
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
             Command::RotateValidatorNetworkKey(_) => CommandName::RotateValidatorNetworkKey,
             Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
+            Command::SetValidatorOperator(_) => CommandName::SetValidatorOperator,
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::ValidatorSet(_) => CommandName::ValidatorSet,
@@ -113,6 +117,7 @@ impl std::fmt::Display for CommandName {
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
             CommandName::SetValidatorConfig => "set-validator-config",
+            CommandName::SetValidatorOperator => "set-validator-operator",
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::ValidatorSet => "validator-set",
@@ -142,6 +147,7 @@ impl Command {
                 Self::print_transaction_context(cmd.execute())
             }
             Command::SetValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
+            Command::SetValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
             Command::ValidateTransaction(cmd) => Self::print_transaction_status(cmd.execute()),
             Command::ValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
             Command::ValidatorSet(cmd) => Self::pretty_print(cmd.execute()),
