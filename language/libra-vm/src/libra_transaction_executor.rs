@@ -187,6 +187,11 @@ impl LibraVM {
             charge_global_write_gas_usage(cost_strategy, &session)?;
 
             cost_strategy.disable_metering();
+        }
+
+        // Run the epilogue
+        {
+            let _timer = LIBRA_VM_RUN_EPILOGUE_SECONDS.start_timer();
             self.success_transaction_cleanup(
                 session,
                 gas_schedule,
