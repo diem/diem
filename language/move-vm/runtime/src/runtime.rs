@@ -21,6 +21,8 @@ use vm::{
     file_format::SignatureToken,
     CompiledModule, IndexKind,
 };
+use libra_metrics::{register_histogram, Histogram};
+use once_cell::sync::Lazy;
 
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
@@ -105,7 +107,10 @@ impl VMRuntime {
         }
 
         // load the script, perform verification
-        let (main, type_params) = self.loader.load_script(&script, &ty_args, data_store)?;
+        let (main, type_params) = {
+            let _timer = LIBRA_MOVEVM_LOADER_SCRIPT_SECONDS.start_timer();  
+            self.loader.load_script(&script, &ty_args, data_store)?
+        };
 
         // Build the arguments list for the main and check the arguments are of restricted types.
         // Signers are built up from left-to-right. Either all signer arguments are used, or no
@@ -183,3 +188,11 @@ fn check_args(args: &[Value]) -> PartialVMResult<()> {
     }
     Ok(())
 }
+
+pub static LIBRA_MOVEVM_LOADER_SCRIPT_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        "libra_movevm_loader_script_seconds",
+        "The time spent in seconds by prologue to load the script"
+    )
+    .unwrap()
+});
