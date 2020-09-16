@@ -13,7 +13,7 @@ use crate::{
 use chrono::{SecondsFormat, Utc};
 use serde::Serialize;
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     env, fmt,
     io::Write,
     sync::{
@@ -32,8 +32,8 @@ pub struct LogEntry {
     #[serde(flatten)]
     metadata: Metadata,
     timestamp: String,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    data: HashMap<&'static str, serde_json::Value>,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    data: BTreeMap<&'static str, serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     message: Option<String>,
 }
@@ -42,7 +42,7 @@ impl LogEntry {
     fn new(event: &Event) -> Self {
         use crate::{Key, Value, Visitor};
 
-        struct JsonVisitor<'a>(&'a mut HashMap<&'static str, serde_json::Value>);
+        struct JsonVisitor<'a>(&'a mut BTreeMap<&'static str, serde_json::Value>);
 
         impl<'a> Visitor for JsonVisitor<'a> {
             fn visit_pair(&mut self, key: Key, value: Value<'_>) {
@@ -59,7 +59,7 @@ impl LogEntry {
         let metadata = *event.metadata();
         let message = event.message().map(fmt::format);
 
-        let mut data = HashMap::new();
+        let mut data = BTreeMap::new();
         for schema in event.keys_and_values() {
             schema.visit(&mut JsonVisitor(&mut data));
         }

@@ -30,4 +30,9 @@ fn verify_end_to_end() {
     let string = logs.write().unwrap().remove(0);
     assert!(string.contains("INFO"));
     assert!(string.ends_with("Hello"));
+
+    info!(foo = 5, bar = 10, foobar = 15);
+    let string = logs.write().unwrap().remove(0);
+    let expect = r#"{"bar":10,"foo":5,"foobar":15}"#;
+    assert!(string.ends_with(expect));
 }
