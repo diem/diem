@@ -96,6 +96,8 @@ members = [
     "language/tools/move-explain",
     "language/tools/transaction-replay",
     "language/tools/vm-genesis",
+    "language/tools/genesis-builder",
+    "language/tools/move-vm-txn-effect-converter",
     "language/transaction-builder",
     "language/transaction-builder/generator",
     "language/vm",

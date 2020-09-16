@@ -1790,6 +1790,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "genesis-builder"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-core-types 0.1.0",
+ "move-vm-runtime 0.1.0",
+ "move-vm-txn-effect-converter 0.1.0",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "genesis-viewer"
 version = "0.1.0"
 dependencies = [
@@ -3819,6 +3830,15 @@ dependencies = [
  "once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
+]
+
+[[package]]
+name = "move-vm-txn-effect-converter"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-core-types 0.1.0",
+ "move-vm-runtime 0.1.0",
 ]
 
 [[package]]
@@ -6636,6 +6656,7 @@ dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-verifier 0.1.0",
  "compiled-stdlib 0.1.0",
+ "genesis-builder 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",

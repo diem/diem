@@ -1,0 +1,19 @@
+[package]
+name = "genesis-builder"
+version = "0.1.0"
+edition = "2018"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Libra vm genesis"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+move-vm-runtime = { path = "../../move-vm/runtime", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+move-core-types = {path = "../../move-core/types", version = "0.1.0" }
+anyhow = "1.0.32"
+move-vm-txn-effect-converter = { path = "../move-vm-txn-effect-converter", version = "0.1.0" }

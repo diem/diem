@@ -134,6 +134,12 @@ impl ModuleId {
     }
 }
 
+impl From<ModuleId> for (AccountAddress, Identifier) {
+    fn from(module_id: ModuleId) -> Self {
+        (module_id.address, module_id.name)
+    }
+}
+
 impl Display for ModuleId {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}::{}", self.address, self.name)
