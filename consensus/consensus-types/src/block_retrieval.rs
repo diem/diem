@@ -106,20 +106,20 @@ impl fmt::Display for BlockRetrievalResponse {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.status() {
             BlockRetrievalStatus::Succeeded => {
-                let block_ids = self
-                    .blocks
-                    .iter()
-                    .map(|b| b.id().short_str())
-                    .collect::<Vec<String>>();
                 write!(
                     f,
-                    "[BlockRetrievalResponse: status: {:?}, num_blocks: {}, block_ids: {:?}]",
+                    "[BlockRetrievalResponse: status: {:?}, num_blocks: {}, block_ids: ",
                     self.status(),
                     self.blocks().len(),
-                    block_ids
-                )
+                )?;
+
+                f.debug_list()
+                    .entries(self.blocks.iter().map(|b| b.id().short_str()))
+                    .finish()?;
+
+                write!(f, "]")
             }
-            _ => write!(f, "[BlockRetrievalResponse: status: {:?}", self.status()),
+            _ => write!(f, "[BlockRetrievalResponse: status: {:?}]", self.status()),
         }
     }
 }

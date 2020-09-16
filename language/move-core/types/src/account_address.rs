@@ -11,9 +11,9 @@ use libra_crypto_derive::CryptoHasher;
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
+use short_hex_str::ShortHexStr;
+use static_assertions::const_assert;
 use std::{convert::TryFrom, fmt, str::FromStr};
-
-const SHORT_STRING_LENGTH: usize = 4;
 
 /// A struct that represents an account address.
 #[derive(Ord, PartialOrd, Eq, PartialEq, Hash, Clone, Copy, CryptoHasher)]
@@ -38,8 +38,11 @@ impl AccountAddress {
     }
 
     // Helpful in log messages
-    pub fn short_str(&self) -> String {
-        hex::encode(&self.0[..SHORT_STRING_LENGTH])
+    pub fn short_str(&self) -> ShortHexStr {
+        const_assert!(AccountAddress::LENGTH >= ShortHexStr::SOURCE_LENGTH);
+        ShortHexStr::try_from_bytes(&self.0).expect(
+            "This can never fail since AccountAddress::LENGTH >= ShortHexStr::SOURCE_LENGTH",
+        )
     }
 
     pub fn to_vec(&self) -> Vec<u8> {

@@ -13,10 +13,6 @@ pub struct NetworkContext {
     network_id: NetworkId,
     role: RoleType,
     peer_id: PeerId,
-
-    /// Cache rendering the short PeerId String
-    #[serde(skip)]
-    peer_id_short_str: String,
 }
 
 impl fmt::Debug for NetworkContext {
@@ -26,11 +22,13 @@ impl fmt::Debug for NetworkContext {
 }
 
 impl fmt::Display for NetworkContext {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
-            formatter,
+            f,
             "[{},{},{}]",
-            self.network_id, self.role, self.peer_id_short_str,
+            self.network_id,
+            self.role,
+            self.peer_id.short_str(),
         )
     }
 }
@@ -41,7 +39,6 @@ impl NetworkContext {
             network_id,
             role,
             peer_id,
-            peer_id_short_str: peer_id.short_str(),
         }
     }
 
@@ -55,10 +52,6 @@ impl NetworkContext {
 
     pub fn peer_id(&self) -> PeerId {
         self.peer_id
-    }
-
-    pub fn peer_id_short_str(&self) -> &str {
-        self.peer_id_short_str.as_str()
     }
 
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]

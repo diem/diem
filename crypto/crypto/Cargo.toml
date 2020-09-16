@@ -29,6 +29,7 @@ serde = { version = "1.0.116", features = ["derive"] }
 serde_bytes = "0.11.5"
 serde-name = "0.1.1"
 sha2 = "0.9.1"
+short-hex-str = { path = "../../common/short-hex-str", version = "0.1.0" }
 static_assertions = "1.1.0"
 thiserror = "1.0.20"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }

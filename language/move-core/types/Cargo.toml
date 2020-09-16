@@ -19,6 +19,7 @@ proptest-derive = { version = "0.2.0", default-features = false, optional = true
 ref-cast = "1.0.2"
 serde = { version = "1.0.116", default-features = false }
 serde_bytes = "0.11.5"
+static_assertions = "1.1.0"
 thiserror = "1.0.20"
 once_cell = "1.4.1"
 
@@ -26,6 +27,7 @@ lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canoni
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0", default-features = false }
 libra-crypto-derive = { path = "../../../crypto/crypto-derive", version = "0.1.0" }
+short-hex-str = { path = "../../../common/short-hex-str", version = "0.1.0" }
 
 [dev-dependencies]
 once_cell = "1.4.1"

@@ -2570,6 +2570,7 @@ dependencies = [
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha3 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "short-hex-str 0.1.0",
  "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3694,6 +3695,8 @@ dependencies = [
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
+ "short-hex-str 0.1.0",
+ "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -5598,6 +5601,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "shlex"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "short-hex-str"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-workspace-hack 0.1.0",
+ "mirai-annotations 1.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "signal-hook-registry"

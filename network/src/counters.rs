@@ -43,7 +43,7 @@ pub fn connections(network_context: &NetworkContext, origin: ConnectionOrigin) -
     LIBRA_CONNECTIONS.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
         origin.as_str(),
     ])
 }
@@ -63,8 +63,8 @@ pub fn peer_connected(network_context: &NetworkContext, peer_id: &PeerId, v: i64
             .with_label_values(&[
                 network_context.role().as_str(),
                 network_context.network_id().as_str(),
-                network_context.peer_id_short_str(),
-                &peer_id.short_str(),
+                network_context.peer_id().short_str().as_str(),
+                peer_id.short_str().as_str(),
             ])
             .set(v)
     }
@@ -96,7 +96,7 @@ pub fn rpc_messages(
     LIBRA_NETWORK_RPC_MESSAGES.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
         type_label,
         state_label,
     ])
@@ -119,7 +119,7 @@ pub fn rpc_bytes(
     LIBRA_NETWORK_RPC_BYTES.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
         type_label,
         state_label,
     ])
@@ -142,7 +142,7 @@ pub fn rpc_latency(network_context: &NetworkContext) -> Histogram {
     LIBRA_NETWORK_RPC_LATENCY.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
     ])
 }
 
@@ -162,7 +162,7 @@ pub fn direct_send_messages(
     LIBRA_NETWORK_DIRECT_SEND_MESSAGES.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
         state_label,
     ])
 }
@@ -183,7 +183,7 @@ pub fn direct_send_bytes(
     LIBRA_NETWORK_DIRECT_SEND_BYTES.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
-        network_context.peer_id_short_str(),
+        network_context.peer_id().short_str().as_str(),
         state_label,
     ])
 }
