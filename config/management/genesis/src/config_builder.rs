@@ -27,8 +27,9 @@ const OWNER_SHARED_NS: &str = "_owner_shared";
 pub struct ValidatorBuilder<T: AsRef<Path>> {
     storage_helper: StorageHelper,
     num_validators: usize,
-    template: NodeConfig,
+    randomize_first_validator_ports: bool,
     swarm_path: T,
+    template: NodeConfig,
 }
 
 impl<T: AsRef<Path>> ValidatorBuilder<T> {
@@ -36,9 +37,15 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         Self {
             storage_helper: StorageHelper::new(),
             num_validators,
-            template,
+            randomize_first_validator_ports: true,
             swarm_path,
+            template,
         }
+    }
+
+    pub fn randomize_first_validator_ports(mut self, value: bool) -> Self {
+        self.randomize_first_validator_ports = value;
+        self
     }
 
     fn secure_backend(&self, ns: &str, usage: &str) -> SecureBackend {
@@ -125,7 +132,9 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
 
         let mut config = self.template.clone();
-        config.randomize_ports();
+        if index > 0 || self.randomize_first_validator_ports {
+            config.randomize_ports();
+        }
 
         let validator_network = config.validator_network.as_mut().unwrap();
         let validator_network_address = validator_network.listen_address.clone();
