@@ -5,7 +5,7 @@
 
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
-use libra_types::PeerId;
+use libra_types::{chain_id::ChainId, PeerId};
 use std::{
     path::PathBuf,
     sync::{
@@ -153,9 +153,10 @@ fn load_test_environment(config_path: Option<PathBuf>, no_logging: bool, random_
         "\tFullNode network: {}",
         config.full_node_networks[0].listen_address
     );
-    println!("");
+    println!("\tChainId: {}", ChainId::test());
+    println!();
     println!("Libra is running, press ctrl-c to exit");
-    println!("");
+    println!();
 
     start(no_logging, &config, Some(log_file))
 }
