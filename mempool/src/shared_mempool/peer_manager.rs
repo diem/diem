@@ -41,6 +41,7 @@ pub(crate) struct PeerSyncState {
     broadcast_info: BroadcastInfo,
 }
 
+/// ACK status for a broadcasted batch of txns
 #[derive(Clone)]
 enum AckStatus {
     /// waiting for an ACK
@@ -49,6 +50,7 @@ enum AckStatus {
     Retry,
 }
 
+/// Metadata for a single broadcasted batch of txns
 #[derive(Clone)]
 struct BatchInfo {
     /// time when this batch was last broadcast
@@ -57,23 +59,25 @@ struct BatchInfo {
     pub ack_status: AckStatus,
 }
 
+/// Identifier for a broadcasted batch of txns
+/// For BatchId(`start_id`, `end_id`), (`start_id`, `end_id`) is the range of timeline IDs read from
+/// the core mempool timeline index that produced the txns in this batch
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd)]
 struct BatchId(u64, u64);
 
 impl BatchId {
-    /// creates unique request id for the batch in the format "{start_id}_{end_id}"
-    /// where start is an id in timeline index  that is lower than the first txn in a batch
-    /// and end equals to timeline ID of last transaction in a batch
+    /// Creates unique request id for the batch in the format "{start_id}_{end_id}"
     fn create_request_id(&self) -> String {
         format!("{}_{}", self.0, self.1)
     }
 }
 
+/// Txn broadcast-related info for a given remote peer
 #[derive(Clone)]
 struct BroadcastInfo {
-    // sent broadcasts that have not been ACK'ed for yet
+    // sent broadcasts that have not yet received a success ACK
     pub sent_batches: BTreeMap<BatchId, BatchInfo>,
-    // whether broadcasts are in backoff/backpressure mode, e.g. broadcasting at longer intervals
+    // whether broadcasting to this peer is in backoff mode, e.g. broadcasting at longer intervals
     pub backoff_mode: bool,
 }
 
@@ -192,7 +196,7 @@ impl PeerManager {
     ///
     /// Broadcast strategy:
     /// Prioritize resending older broadcasts that timed out (i.e. didn't receive ACK in set window of time)
-    /// over sending more new broadcasts
+    /// or is retriable over sending more new broadcasts
     /// 1. clear pending (i.e. unACK'ed) broadcasts if the corresponding timeline index read is empty
     /// 2. find earliest broadcast that timed out or is retriable - rebroadcast if any
     /// 3. else, broadcast fresh batch of txns
@@ -317,9 +321,8 @@ impl PeerManager {
                 .with_label_values(&[peer_id])
                 .inc();
 
-            // update peer broadcast info for this peer with latest timestamp and next timeline id
+            // update peer sync state with info from above broadcast
             state.timeline_id = std::cmp::max(state.timeline_id, batch_id.1);
-
             // turn off backoff mode after every broadcast
             state.broadcast_info.backoff_mode = false;
             state.broadcast_info.sent_batches.insert(

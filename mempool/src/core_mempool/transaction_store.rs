@@ -347,7 +347,7 @@ impl TransactionStore {
             .iter()
             .filter_map(|(account, sequence_number)| {
                 self.transactions
-                    .get_mut(account)
+                    .get(account)
                     .and_then(|txns| txns.get(sequence_number))
                     .map(|txn| txn.txn.clone())
             })
