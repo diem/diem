@@ -191,11 +191,11 @@ impl NetworkBuilder {
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 // TODO:  it should be safe to enable the configuraction_change_listener always.
                 if role == RoleType::Validator {
-                    network_builder.add_configuration_change_listener(role, config.encryptor());
+                    network_builder.add_configuration_change_listener(config.encryptor());
                 }
             }
             DiscoveryMethod::Onchain => {
-                network_builder.add_configuration_change_listener(role, config.encryptor());
+                network_builder.add_configuration_change_listener(config.encryptor());
             }
             DiscoveryMethod::None => {}
         }
@@ -330,11 +330,7 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_configuration_change_listener(
-        &mut self,
-        role: RoleType,
-        encryptor: Encryptor,
-    ) -> &mut Self {
+    fn add_configuration_change_listener(&mut self, encryptor: Encryptor) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");
@@ -345,7 +341,7 @@ impl NetworkBuilder {
 
         self.configuration_change_listener_builder =
             Some(ConfigurationChangeListenerBuilder::create(
-                role,
+                self.network_context.clone(),
                 encryptor,
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,
