@@ -29,9 +29,13 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
 
 RUN apt-get update && \
-    apt-get -y install libssl1.1 socat python3-botocore/bullseye awscli/bullseye && \
+    apt-get --no-install-recommends --yes install busybox libssl1.1 socat python3-botocore/bullseye awscli/bullseye && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/*
+
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
+RUN busybox wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --directory /usr/local/bin --wildcards --extract '*/azcopy' --strip-components=1
+RUN busybox wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
 
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
