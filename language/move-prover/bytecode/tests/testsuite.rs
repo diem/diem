@@ -6,9 +6,9 @@ use std::path::Path;
 
 use codespan_reporting::term::termcolor::Buffer;
 
-use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
-use stackless_bytecode_generator::{
+use bytecode::{
     borrow_analysis::BorrowAnalysisProcessor,
+    clean_and_optimize::CleanAndOptimizeProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
     eliminate_mut_refs::EliminateMutRefsProcessor,
     function_target_pipeline::{FunctionTargetPipeline, FunctionTargetsHolder},
@@ -17,6 +17,7 @@ use stackless_bytecode_generator::{
     print_targets_for_test,
     reaching_def_analysis::ReachingDefProcessor,
 };
+use spec_lang::{env::GlobalEnv, run_spec_lang_compiler};
 use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directives};
 
 fn get_tested_transformation_pipeline(
@@ -67,6 +68,17 @@ fn get_tested_transformation_pipeline(
             pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
             pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
             pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
+            Ok(Some(pipeline))
+        }
+        "clean_and_optimize" => {
+            let mut pipeline = FunctionTargetPipeline::default();
+            pipeline.add_processor(Box::new(EliminateImmRefsProcessor {}));
+            pipeline.add_processor(Box::new(EliminateMutRefsProcessor {}));
+            pipeline.add_processor(Box::new(ReachingDefProcessor {}));
+            pipeline.add_processor(Box::new(LiveVarAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(BorrowAnalysisProcessor {}));
+            pipeline.add_processor(Box::new(MemoryInstrumentationProcessor {}));
+            pipeline.add_processor(Box::new(CleanAndOptimizeProcessor {}));
             Ok(Some(pipeline))
         }
 

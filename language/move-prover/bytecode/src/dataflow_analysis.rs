@@ -8,14 +8,23 @@ use crate::{
     stackless_bytecode::Bytecode,
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, VecDeque};
 use vm::file_format::CodeOffset;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum JoinResult {
     Unchanged,
     Changed,
-    Error,
+}
+
+impl JoinResult {
+    pub fn join(self, other: JoinResult) -> JoinResult {
+        use JoinResult::*;
+        match (self, other) {
+            (Unchanged, Unchanged) => Unchanged,
+            _ => Changed,
+        }
+    }
 }
 
 pub trait AbstractDomain: Clone + Sized {
@@ -23,17 +32,16 @@ pub trait AbstractDomain: Clone + Sized {
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct BlockState<State: Clone, AnalysisError: Clone> {
+pub struct BlockState<State: Clone> {
     pub pre: State,
-    pub post: Result<State, AnalysisError>,
+    pub post: State,
 }
 
-pub type StateMap<State, AnalysisError> = HashMap<BlockId, BlockState<State, AnalysisError>>;
+pub type StateMap<State> = BTreeMap<BlockId, BlockState<State>>;
 
 /// Take a pre-state + instruction and mutate it to produce a post-state。
 pub trait TransferFunctions {
     type State: AbstractDomain + Clone;
-    type AnalysisError: Clone;
     const BACKWARD: bool;
 
     fn execute_block(
@@ -42,27 +50,22 @@ pub trait TransferFunctions {
         mut state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> Result<Self::State, Self::AnalysisError> {
+    ) -> Self::State {
         if Self::BACKWARD {
             for offset in cfg.instr_indexes(block_id).rev() {
                 let instr = &instrs[offset as usize];
-                state = self.execute(state, instr, offset)?;
+                self.execute(&mut state, instr, offset);
             }
         } else {
             for offset in cfg.instr_indexes(block_id) {
                 let instr = &instrs[offset as usize];
-                state = self.execute(state, instr, offset)?;
+                self.execute(&mut state, instr, offset);
             }
         }
-        Ok(state)
+        state
     }
 
-    fn execute(
-        &self,
-        state: Self::State,
-        instr: &Bytecode,
-        offset: CodeOffset,
-    ) -> Result<Self::State, Self::AnalysisError>;
+    fn execute(&self, state: &mut Self::State, instr: &Bytecode, offset: CodeOffset);
 }
 
 pub trait DataflowAnalysis: TransferFunctions {
@@ -71,8 +74,8 @@ pub trait DataflowAnalysis: TransferFunctions {
         initial_state: Self::State,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
-    ) -> StateMap<Self::State, Self::AnalysisError> {
-        let mut state_map: StateMap<Self::State, Self::AnalysisError> = StateMap::new();
+    ) -> StateMap<Self::State> {
+        let mut state_map: StateMap<Self::State> = StateMap::new();
         let mut work_list = VecDeque::new();
         for entry_block_id in cfg.entry_blocks() {
             work_list.push_back(entry_block_id);
@@ -80,7 +83,7 @@ pub trait DataflowAnalysis: TransferFunctions {
                 entry_block_id,
                 BlockState {
                     pre: initial_state.clone(),
-                    post: Ok(initial_state.clone()),
+                    post: initial_state.clone(),
                 },
             );
         }
@@ -89,37 +92,34 @@ pub trait DataflowAnalysis: TransferFunctions {
             let post = self.execute_block(block_id, pre.clone(), &instrs, cfg);
 
             // propagate postcondition of this block to successor blocks
-            if let Ok(state) = &post {
-                for next_block_id in cfg.successors(block_id) {
-                    match state_map.get_mut(next_block_id) {
-                        Some(next_block_res) => {
-                            let join_result = next_block_res.pre.join(state);
+            for next_block_id in cfg.successors(block_id) {
+                match state_map.get_mut(next_block_id) {
+                    Some(next_block_res) => {
+                        let join_result = next_block_res.pre.join(&post);
 
-                            match join_result {
-                                JoinResult::Unchanged => {
-                                    // Pre is the same after join. Reanalyzing this block would produce
-                                    // the same post. Don't schedule it.
-                                    continue;
-                                }
-                                JoinResult::Changed => {
-                                    // The pre changed. Schedule the next block.
-                                    work_list.push_back(*next_block_id);
-                                }
-                                _ => unimplemented!(),
+                        match join_result {
+                            JoinResult::Unchanged => {
+                                // Pre is the same after join. Reanalyzing this block would produce
+                                // the same post. Don't schedule it.
+                                continue;
+                            }
+                            JoinResult::Changed => {
+                                // The pre changed. Schedule the next block.
+                                work_list.push_back(*next_block_id);
                             }
                         }
-                        None => {
-                            // Haven't visited the next block yet. Use the post of the current block as
-                            // its pre and schedule it.
-                            state_map.insert(
-                                *next_block_id,
-                                BlockState {
-                                    pre: state.clone(),
-                                    post: Ok(initial_state.clone()),
-                                },
-                            );
-                            work_list.push_back(*next_block_id);
-                        }
+                    }
+                    None => {
+                        // Haven't visited the next block yet. Use the post of the current block as
+                        // its pre and schedule it.
+                        state_map.insert(
+                            *next_block_id,
+                            BlockState {
+                                pre: post.clone(),
+                                post: initial_state.clone(),
+                            },
+                        );
+                        work_list.push_back(*next_block_id);
                     }
                 }
             }
@@ -136,7 +136,7 @@ pub trait DataflowAnalysis: TransferFunctions {
     /// of the instruction at a code offset. Returns a map from code offset to `A`.
     fn state_per_instruction<A, F>(
         &self,
-        state_map: StateMap<Self::State, Self::AnalysisError>,
+        state_map: StateMap<Self::State>,
         instrs: &[Bytecode],
         cfg: &StacklessControlFlowGraph,
         mut f: F,
@@ -150,17 +150,13 @@ pub trait DataflowAnalysis: TransferFunctions {
             if Self::BACKWARD {
                 for offset in cfg.instr_indexes(block_id).rev() {
                     let after = state.clone();
-                    state = self
-                        .execute(state, &instrs[offset as usize], offset)
-                        .unwrap_or_else(|_| panic!("unexpected analysis failure"));
+                    self.execute(&mut state, &instrs[offset as usize], offset);
                     result.insert(offset, f(&state, &after));
                 }
             } else {
                 for offset in cfg.instr_indexes(block_id) {
                     let before = state.clone();
-                    state = self
-                        .execute(state, &instrs[offset as usize], offset)
-                        .unwrap_or_else(|_| panic!("unexpected analysis failure"));
+                    self.execute(&mut state, &instrs[offset as usize], offset);
                     result.insert(offset, f(&before, &state));
                 }
             }

@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Final phase of cleanup and optimization.
-//
-// This runs copy propagation again as well as performs the peephole optimizations on bytecode.
 
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
@@ -79,15 +77,9 @@ struct Optimizer<'a> {
 
 impl<'a> TransferFunctions for Optimizer<'a> {
     type State = AnalysisState;
-    type AnalysisError = ();
     const BACKWARD: bool = false;
 
-    fn execute(
-        &self,
-        mut state: AnalysisState,
-        instr: &Bytecode,
-        _offset: CodeOffset,
-    ) -> Result<AnalysisState, ()> {
+    fn execute(&self, state: &mut AnalysisState, instr: &Bytecode, _offset: CodeOffset) {
         use BorrowNode::*;
         use Bytecode::*;
         use Operation::*;
@@ -104,7 +96,6 @@ impl<'a> TransferFunctions for Optimizer<'a> {
                 _ => {}
             }
         }
-        Ok(state)
     }
 }
 

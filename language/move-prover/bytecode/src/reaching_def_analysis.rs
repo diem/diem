@@ -157,17 +157,10 @@ impl<'a> ReachingDefAnalysis<'a> {}
 
 impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
     type State = ReachingDefState;
-    type AnalysisError = ();
     const BACKWARD: bool = false;
 
-    fn execute(
-        &self,
-        pre: ReachingDefState,
-        instr: &Bytecode,
-        _offset: CodeOffset,
-    ) -> Result<ReachingDefState, ()> {
+    fn execute(&self, state: &mut ReachingDefState, instr: &Bytecode, _offset: CodeOffset) {
         use Bytecode::*;
-        let mut post = pre;
         match instr {
             Assign(_, dst, src, _) => {
                 // Only define aliases for temporaries. We want to keep names for user
@@ -177,16 +170,15 @@ impl<'a> TransferFunctions for ReachingDefAnalysis<'a> {
                 // WriteBack instructions.
                 // TODO(remove): this restriction should be handled in the backend instead of here.
                 if self.target.is_temporary(*dst) && self.target.get_proxy_index(*src).is_none() {
-                    post.def_alias(*dst, *src);
+                    state.def_alias(*dst, *src);
                 }
             }
             _ => {
                 for dst in instr.modifies() {
-                    post.kill(dst);
+                    state.kill(dst);
                 }
             }
         }
-        Ok(post)
     }
 }
 

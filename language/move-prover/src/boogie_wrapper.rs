@@ -31,10 +31,8 @@ use crate::{
 };
 // DEBUG
 // use backtrace::Backtrace;
+use bytecode::{function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder};
 use spec_lang::env::{ConditionTag, NodeId};
-use stackless_bytecode_generator::{
-    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-};
 
 /// A type alias for the way how we use crate `pretty`'s document type. `pretty` is a
 /// Wadler-style pretty printer. Our simple usage doesn't require any lifetime management.

@@ -1,0 +1,881 @@
+============ initial translation from Move ================
+
+pub fun TestPackUnpack::call_private_violating_invariant(r: &mut TestPackUnpack::R) {
+     var s: &mut TestPackUnpack::S
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::S
+     var $t4: &mut TestPackUnpack::S
+     var $t5: u64
+     var $t6: u64
+     var $t7: &mut TestPackUnpack::S
+     var $t8: &mut u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  2: s := $t3
+  3: $t4 := copy(s)
+  4: $t5 := 0
+  5: TestPackUnpack::private_update_value($t4, $t5)
+  6: $t6 := 1
+  7: $t7 := move(s)
+  8: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
+  9: write_ref($t8, $t6)
+ 10: return ()
+}
+
+
+pub fun TestPackUnpack::call_public_violating_invariant_incorrect(r: &mut TestPackUnpack::R) {
+     var s: &mut TestPackUnpack::S
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::S
+     var $t4: &mut TestPackUnpack::S
+     var $t5: u64
+     var $t6: u64
+     var $t7: &mut TestPackUnpack::S
+     var $t8: &mut u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  2: s := $t3
+  3: $t4 := copy(s)
+  4: $t5 := 0
+  5: TestPackUnpack::public_update_value($t4, $t5)
+  6: $t6 := 1
+  7: $t7 := move(s)
+  8: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
+  9: write_ref($t8, $t6)
+ 10: return ()
+}
+
+
+pub fun TestPackUnpack::create(): TestPackUnpack::R {
+     var $t0: u64
+     var $t1: TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+  0: $t0 := 3
+  1: $t1 := pack TestPackUnpack::S($t0)
+  2: $t2 := pack TestPackUnpack::R($t1)
+  3: return $t2
+}
+
+
+pub fun TestPackUnpack::destroy(r: TestPackUnpack::R): u64 {
+     var nested: TestPackUnpack::S
+     var value: u64
+     var $t3: TestPackUnpack::R
+     var $t4: TestPackUnpack::S
+     var $t5: TestPackUnpack::S
+     var $t6: u64
+     var $t7: u64
+  0: $t3 := move(r)
+  1: $t4 := unpack TestPackUnpack::R($t3)
+  2: nested := $t4
+  3: $t5 := move(nested)
+  4: $t6 := unpack TestPackUnpack::S($t5)
+  5: value := $t6
+  6: $t7 := copy(value)
+  7: return $t7
+}
+
+
+pub fun TestPackUnpack::extract_and_update(r: TestPackUnpack::R): TestPackUnpack::S {
+     var nested: TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+     var $t3: TestPackUnpack::S
+     var $t4: &TestPackUnpack::S
+     var $t5: &u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: u64
+     var $t9: &mut TestPackUnpack::S
+     var $t10: &mut u64
+     var $t11: TestPackUnpack::S
+  0: $t2 := move(r)
+  1: $t3 := unpack TestPackUnpack::R($t2)
+  2: nested := $t3
+  3: $t4 := borrow_local(nested)
+  4: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
+  5: $t6 := read_ref($t5)
+  6: $t7 := 3
+  7: $t8 := +($t6, $t7)
+  8: $t9 := borrow_local(nested)
+  9: $t10 := borrow_field<TestPackUnpack::S>.value($t9)
+ 10: write_ref($t10, $t8)
+ 11: $t11 := move(nested)
+ 12: return $t11
+}
+
+
+fun TestPackUnpack::get_value_ref(r: &mut TestPackUnpack::R): &mut u64 {
+     var $t1: &mut TestPackUnpack::R
+     var $t2: &mut TestPackUnpack::S
+     var $t3: &mut u64
+  0: $t1 := move(r)
+  1: $t2 := borrow_field<TestPackUnpack::R>.nested($t1)
+  2: $t3 := borrow_field<TestPackUnpack::S>.value($t2)
+  3: return $t3
+}
+
+
+pub fun TestPackUnpack::move_ref_unchanged(r1: &mut TestPackUnpack::R, r2: &mut TestPackUnpack::R) {
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &TestPackUnpack::S
+     var $t4: &u64
+     var $t5: u64
+     var $t6: &mut TestPackUnpack::R
+     var $t7: &TestPackUnpack::S
+     var $t8: &u64
+     var $t9: u64
+     var $t10: u64
+     var $t11: u64
+     var $t12: u64
+     var $t13: &mut TestPackUnpack::R
+     var $t14: &mut TestPackUnpack::S
+     var $t15: &mut u64
+     var $t16: u64
+     var $t17: &mut TestPackUnpack::R
+     var $t18: &mut TestPackUnpack::S
+     var $t19: &mut u64
+  0: $t2 := copy(r2)
+  1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
+  3: $t5 := read_ref($t4)
+  4: $t6 := copy(r1)
+  5: $t7 := borrow_field<TestPackUnpack::R>.nested($t6)
+  6: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
+  7: $t9 := read_ref($t8)
+  8: $t10 := +($t5, $t9)
+  9: $t11 := 1
+ 10: $t12 := -($t10, $t11)
+ 11: $t13 := move(r2)
+ 12: $t14 := borrow_field<TestPackUnpack::R>.nested($t13)
+ 13: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
+ 14: write_ref($t15, $t12)
+ 15: $t16 := 1
+ 16: $t17 := move(r1)
+ 17: $t18 := borrow_field<TestPackUnpack::R>.nested($t17)
+ 18: $t19 := borrow_field<TestPackUnpack::S>.value($t18)
+ 19: write_ref($t19, $t16)
+ 20: return ()
+}
+
+
+pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: &mut TestPackUnpack::R, r2: &mut TestPackUnpack::R) {
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &TestPackUnpack::S
+     var $t4: &u64
+     var $t5: u64
+     var $t6: &mut TestPackUnpack::R
+     var $t7: &TestPackUnpack::S
+     var $t8: &u64
+     var $t9: u64
+     var $t10: u64
+     var $t11: &mut TestPackUnpack::R
+     var $t12: &mut TestPackUnpack::S
+     var $t13: &mut u64
+     var $t14: u64
+     var $t15: &mut TestPackUnpack::R
+     var $t16: &mut TestPackUnpack::S
+     var $t17: &mut u64
+  0: $t2 := copy(r2)
+  1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
+  3: $t5 := read_ref($t4)
+  4: $t6 := copy(r1)
+  5: $t7 := borrow_field<TestPackUnpack::R>.nested($t6)
+  6: $t8 := borrow_field<TestPackUnpack::S>.value($t7)
+  7: $t9 := read_ref($t8)
+  8: $t10 := +($t5, $t9)
+  9: $t11 := move(r2)
+ 10: $t12 := borrow_field<TestPackUnpack::R>.nested($t11)
+ 11: $t13 := borrow_field<TestPackUnpack::S>.value($t12)
+ 12: write_ref($t13, $t10)
+ 13: $t14 := 0
+ 14: $t15 := move(r1)
+ 15: $t16 := borrow_field<TestPackUnpack::R>.nested($t15)
+ 16: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
+ 17: write_ref($t17, $t14)
+ 18: return ()
+}
+
+
+fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: &mut TestPackUnpack::S): u64 {
+     var $t1: &mut TestPackUnpack::S
+     var $t2: &TestPackUnpack::S
+     var $t3: u64
+  0: $t1 := move(s)
+  1: $t2 := freeze_ref($t1)
+  2: $t3 := TestPackUnpack::read_S_from_immutable($t2)
+  3: return $t3
+}
+
+
+fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: &mut TestPackUnpack::R): u64 {
+     var $t1: &mut TestPackUnpack::R
+     var $t2: &TestPackUnpack::S
+     var $t3: u64
+  0: $t1 := move(r)
+  1: $t2 := borrow_field<TestPackUnpack::R>.nested($t1)
+  2: $t3 := TestPackUnpack::read_S_from_immutable($t2)
+  3: return $t3
+}
+
+
+fun TestPackUnpack::private_update_value(s: &mut TestPackUnpack::S, v: u64) {
+     var $t2: u64
+     var $t3: &mut TestPackUnpack::S
+     var $t4: &mut u64
+  0: $t2 := copy(v)
+  1: $t3 := move(s)
+  2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
+  3: write_ref($t4, $t2)
+  4: return ()
+}
+
+
+pub fun TestPackUnpack::public_update_value(s: &mut TestPackUnpack::S, v: u64) {
+     var $t2: u64
+     var $t3: &mut TestPackUnpack::S
+     var $t4: &mut u64
+  0: $t2 := copy(v)
+  1: $t3 := move(s)
+  2: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
+  3: write_ref($t4, $t2)
+  4: return ()
+}
+
+
+fun TestPackUnpack::read_S_from_immutable(s: &TestPackUnpack::S): u64 {
+     var $t1: &TestPackUnpack::S
+     var $t2: &u64
+     var $t3: u64
+  0: $t1 := move(s)
+  1: $t2 := borrow_field<TestPackUnpack::S>.value($t1)
+  2: $t3 := read_ref($t2)
+  3: return $t3
+}
+
+
+pub fun TestPackUnpack::read_ref_unchanged(r: &mut TestPackUnpack::R): u64 {
+     var nested: &mut TestPackUnpack::S
+     var tmp#$2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::S
+     var $t6: &mut TestPackUnpack::S
+     var $t7: &u64
+     var $t8: u64
+  0: $t3 := move(r)
+  1: tmp#$2 := $t3
+  2: $t4 := move(tmp#$2)
+  3: $t5 := borrow_field<TestPackUnpack::R>.nested($t4)
+  4: nested := $t5
+  5: $t6 := move(nested)
+  6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
+  7: $t8 := read_ref($t7)
+  8: return $t8
+}
+
+
+pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: &mut TestPackUnpack::R): u64 {
+     var s: &mut TestPackUnpack::S
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::S
+     var $t4: u64
+     var $t5: &mut TestPackUnpack::S
+     var $t6: &mut u64
+     var $t7: &mut TestPackUnpack::S
+     var $t8: &TestPackUnpack::S
+     var $t9: u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  2: s := $t3
+  3: $t4 := 0
+  4: $t5 := copy(s)
+  5: $t6 := borrow_field<TestPackUnpack::S>.value($t5)
+  6: write_ref($t6, $t4)
+  7: $t7 := move(s)
+  8: $t8 := freeze_ref($t7)
+  9: $t9 := TestPackUnpack::read_S_from_immutable($t8)
+ 10: return $t9
+}
+
+
+pub fun TestPackUnpack::update_ref_changed(r: &mut TestPackUnpack::R): u64 {
+     var nested: &mut TestPackUnpack::S
+     var tmp#$2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::S
+     var $t6: &mut TestPackUnpack::S
+     var $t7: &u64
+     var $t8: u64
+     var $t9: u64
+     var $t10: u64
+     var $t11: &mut TestPackUnpack::S
+     var $t12: &mut u64
+     var $t13: &mut TestPackUnpack::S
+     var $t14: &u64
+     var $t15: u64
+  0: $t3 := move(r)
+  1: tmp#$2 := $t3
+  2: $t4 := move(tmp#$2)
+  3: $t5 := borrow_field<TestPackUnpack::R>.nested($t4)
+  4: nested := $t5
+  5: $t6 := copy(nested)
+  6: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
+  7: $t8 := read_ref($t7)
+  8: $t9 := 2
+  9: $t10 := +($t8, $t9)
+ 10: $t11 := copy(nested)
+ 11: $t12 := borrow_field<TestPackUnpack::S>.value($t11)
+ 12: write_ref($t12, $t10)
+ 13: $t13 := move(nested)
+ 14: $t14 := borrow_field<TestPackUnpack::S>.value($t13)
+ 15: $t15 := read_ref($t14)
+ 16: return $t15
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: TestPackUnpack::R
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: $t4 := pack TestPackUnpack::R($t3)
+  3: r := $t4
+  4: $t5 := borrow_local(r)
+  5: $t6 := TestPackUnpack::get_value_ref($t5)
+  6: v_ref := $t6
+  7: $t7 := 2
+  8: $t8 := move(v_ref)
+  9: write_ref($t8, $t7)
+ 10: $t9 := move(r)
+ 11: return $t9
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: TestPackUnpack::R
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: $t4 := pack TestPackUnpack::R($t3)
+  3: r := $t4
+  4: $t5 := borrow_local(r)
+  5: $t6 := TestPackUnpack::get_value_ref($t5)
+  6: v_ref := $t6
+  7: $t7 := 0
+  8: $t8 := move(v_ref)
+  9: write_ref($t8, $t7)
+ 10: $t9 := move(r)
+ 11: return $t9
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: TestPackUnpack::R
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: $t4 := pack TestPackUnpack::R($t3)
+  3: r := $t4
+  4: $t5 := borrow_local(r)
+  5: $t6 := TestPackUnpack::get_value_ref($t5)
+  6: v_ref := $t6
+  7: $t7 := 1
+  8: $t8 := move(v_ref)
+  9: write_ref($t8, $t7)
+ 10: $t9 := move(r)
+ 11: return $t9
+}
+
+============ after pipeline `clean_and_optimize` ================
+
+pub fun TestPackUnpack::call_private_violating_invariant(r: TestPackUnpack::R): TestPackUnpack::R {
+     var s: &mut TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::R
+     var $t4: u64
+     var $t5: TestPackUnpack::S
+     var $t6: u64
+     var $t7: &mut u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_local($t2)
+  2: unpack_ref($t3)
+  3: s := borrow_field<TestPackUnpack::R>.nested($t3)
+  4: unpack_ref(s)
+  5: $t4 := 0
+  6: $t5 := read_ref(s)
+  7: $t5 := TestPackUnpack::private_update_value($t5, $t4)
+  8: write_ref(s, $t5)
+  9: $t6 := 1
+ 10: $t7 := borrow_field<TestPackUnpack::S>.value(s)
+ 11: unpack_ref($t7)
+ 12: write_ref($t7, $t6)
+ 13: pack_ref($t7)
+ 14: write_back[Reference(s)]($t7)
+ 15: pack_ref(s)
+ 16: write_back[Reference($t3)](s)
+ 17: pack_ref($t3)
+ 18: write_back[LocalRoot($t2)]($t3)
+ 19: return $t2
+}
+
+
+pub fun TestPackUnpack::call_public_violating_invariant_incorrect(r: TestPackUnpack::R): TestPackUnpack::R {
+     var s: &mut TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::R
+     var $t4: u64
+     var $t5: TestPackUnpack::S
+     var $t6: u64
+     var $t7: &mut u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_local($t2)
+  2: unpack_ref($t3)
+  3: s := borrow_field<TestPackUnpack::R>.nested($t3)
+  4: unpack_ref(s)
+  5: $t4 := 0
+  6: $t5 := read_ref(s)
+  7: $t5 := TestPackUnpack::public_update_value($t5, $t4)
+  8: write_ref(s, $t5)
+  9: $t6 := 1
+ 10: $t7 := borrow_field<TestPackUnpack::S>.value(s)
+ 11: unpack_ref($t7)
+ 12: write_ref($t7, $t6)
+ 13: pack_ref($t7)
+ 14: write_back[Reference(s)]($t7)
+ 15: pack_ref(s)
+ 16: write_back[Reference($t3)](s)
+ 17: pack_ref($t3)
+ 18: write_back[LocalRoot($t2)]($t3)
+ 19: return $t2
+}
+
+
+pub fun TestPackUnpack::create(): TestPackUnpack::R {
+     var $t0: u64
+     var $t1: TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+  0: $t0 := 3
+  1: $t1 := pack TestPackUnpack::S($t0)
+  2: $t2 := pack TestPackUnpack::R($t1)
+  3: return $t2
+}
+
+
+pub fun TestPackUnpack::destroy(r: TestPackUnpack::R): u64 {
+     var nested: TestPackUnpack::S
+     var value: u64
+     var $t3: TestPackUnpack::R
+  0: $t3 := move(r)
+  1: nested := unpack TestPackUnpack::R($t3)
+  2: value := unpack TestPackUnpack::S(nested)
+  3: return value
+}
+
+
+pub fun TestPackUnpack::extract_and_update(r: TestPackUnpack::R): TestPackUnpack::S {
+     var nested: TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+     var $t3: u64
+     var $t4: u64
+     var $t5: u64
+     var $t6: &mut TestPackUnpack::S
+     var $t7: &mut u64
+  0: $t2 := move(r)
+  1: nested := unpack TestPackUnpack::R($t2)
+  2: $t3 := get_field<TestPackUnpack::S>.value(nested)
+  3: $t4 := 3
+  4: $t5 := +($t3, $t4)
+  5: $t6 := borrow_local(nested)
+  6: unpack_ref($t6)
+  7: $t7 := borrow_field<TestPackUnpack::S>.value($t6)
+  8: unpack_ref($t7)
+  9: write_ref($t7, $t5)
+ 10: pack_ref($t7)
+ 11: write_back[Reference($t6)]($t7)
+ 12: pack_ref($t6)
+ 13: write_back[LocalRoot(nested)]($t6)
+ 14: return nested
+}
+
+
+fun TestPackUnpack::get_value_ref(r: TestPackUnpack::R): (&mut u64, TestPackUnpack::R) {
+     var $t1: TestPackUnpack::R
+     var $t2: &mut TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::S
+     var $t4: &mut u64
+  0: $t1 := move(r)
+  1: $t2 := borrow_local($t1)
+  2: $t3 := borrow_field<TestPackUnpack::R>.nested($t2)
+  3: $t4 := borrow_field<TestPackUnpack::S>.value($t3)
+  4: return ($t4, $t1)
+}
+
+
+pub fun TestPackUnpack::move_ref_unchanged(r1: TestPackUnpack::R, r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
+     var $t2: TestPackUnpack::R
+     var $t3: TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::R
+     var $t6: TestPackUnpack::S
+     var $t7: u64
+     var $t8: TestPackUnpack::S
+     var $t9: u64
+     var $t10: u64
+     var $t11: u64
+     var $t12: u64
+     var $t13: &mut TestPackUnpack::S
+     var $t14: &mut u64
+     var $t15: u64
+     var $t16: &mut TestPackUnpack::S
+     var $t17: &mut u64
+  0: $t2 := move(r1)
+  1: $t3 := move(r2)
+  2: $t4 := borrow_local($t2)
+  3: unpack_ref($t4)
+  4: $t5 := borrow_local($t3)
+  5: unpack_ref($t5)
+  6: $t6 := get_field<TestPackUnpack::R>.nested($t5)
+  7: $t7 := get_field<TestPackUnpack::S>.value($t6)
+  8: $t8 := get_field<TestPackUnpack::R>.nested($t4)
+  9: $t9 := get_field<TestPackUnpack::S>.value($t8)
+ 10: $t10 := +($t7, $t9)
+ 11: $t11 := 1
+ 12: $t12 := -($t10, $t11)
+ 13: $t13 := borrow_field<TestPackUnpack::R>.nested($t5)
+ 14: unpack_ref($t13)
+ 15: $t14 := borrow_field<TestPackUnpack::S>.value($t13)
+ 16: unpack_ref($t14)
+ 17: write_ref($t14, $t12)
+ 18: pack_ref($t14)
+ 19: write_back[Reference($t13)]($t14)
+ 20: pack_ref($t13)
+ 21: write_back[Reference($t5)]($t13)
+ 22: pack_ref($t5)
+ 23: write_back[LocalRoot($t3)]($t5)
+ 24: $t15 := 1
+ 25: $t16 := borrow_field<TestPackUnpack::R>.nested($t4)
+ 26: unpack_ref($t16)
+ 27: $t17 := borrow_field<TestPackUnpack::S>.value($t16)
+ 28: unpack_ref($t17)
+ 29: write_ref($t17, $t15)
+ 30: pack_ref($t17)
+ 31: write_back[Reference($t16)]($t17)
+ 32: pack_ref($t16)
+ 33: write_back[Reference($t4)]($t16)
+ 34: pack_ref($t4)
+ 35: write_back[LocalRoot($t2)]($t4)
+ 36: return ($t2, $t3)
+}
+
+
+pub fun TestPackUnpack::move_ref_unchanged_invariant_incorrect(r1: TestPackUnpack::R, r2: TestPackUnpack::R): (TestPackUnpack::R, TestPackUnpack::R) {
+     var $t2: TestPackUnpack::R
+     var $t3: TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: &mut TestPackUnpack::R
+     var $t6: TestPackUnpack::S
+     var $t7: u64
+     var $t8: TestPackUnpack::S
+     var $t9: u64
+     var $t10: u64
+     var $t11: &mut TestPackUnpack::S
+     var $t12: &mut u64
+     var $t13: u64
+     var $t14: &mut TestPackUnpack::S
+     var $t15: &mut u64
+  0: $t2 := move(r1)
+  1: $t3 := move(r2)
+  2: $t4 := borrow_local($t2)
+  3: unpack_ref($t4)
+  4: $t5 := borrow_local($t3)
+  5: unpack_ref($t5)
+  6: $t6 := get_field<TestPackUnpack::R>.nested($t5)
+  7: $t7 := get_field<TestPackUnpack::S>.value($t6)
+  8: $t8 := get_field<TestPackUnpack::R>.nested($t4)
+  9: $t9 := get_field<TestPackUnpack::S>.value($t8)
+ 10: $t10 := +($t7, $t9)
+ 11: $t11 := borrow_field<TestPackUnpack::R>.nested($t5)
+ 12: unpack_ref($t11)
+ 13: $t12 := borrow_field<TestPackUnpack::S>.value($t11)
+ 14: unpack_ref($t12)
+ 15: write_ref($t12, $t10)
+ 16: pack_ref($t12)
+ 17: write_back[Reference($t11)]($t12)
+ 18: pack_ref($t11)
+ 19: write_back[Reference($t5)]($t11)
+ 20: pack_ref($t5)
+ 21: write_back[LocalRoot($t3)]($t5)
+ 22: $t13 := 0
+ 23: $t14 := borrow_field<TestPackUnpack::R>.nested($t4)
+ 24: unpack_ref($t14)
+ 25: $t15 := borrow_field<TestPackUnpack::S>.value($t14)
+ 26: unpack_ref($t15)
+ 27: write_ref($t15, $t13)
+ 28: pack_ref($t15)
+ 29: write_back[Reference($t14)]($t15)
+ 30: pack_ref($t14)
+ 31: write_back[Reference($t4)]($t14)
+ 32: pack_ref($t4)
+ 33: write_back[LocalRoot($t2)]($t4)
+ 34: return ($t2, $t3)
+}
+
+
+fun TestPackUnpack::private_pass_value_violating_invariant_incorrect(s: TestPackUnpack::S): (u64, TestPackUnpack::S) {
+     var $t1: TestPackUnpack::S
+     var $t2: &mut TestPackUnpack::S
+     var $t3: TestPackUnpack::S
+     var $t4: u64
+  0: $t1 := move(s)
+  1: $t2 := borrow_local($t1)
+  2: $t3 := read_ref($t2)
+  3: $t4 := TestPackUnpack::read_S_from_immutable($t3)
+  4: return ($t4, $t1)
+}
+
+
+fun TestPackUnpack::private_select_value_violating_invariant_incorrect(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var $t1: TestPackUnpack::R
+     var $t2: &mut TestPackUnpack::R
+     var $t3: TestPackUnpack::S
+     var $t4: u64
+  0: $t1 := move(r)
+  1: $t2 := borrow_local($t1)
+  2: $t3 := get_field<TestPackUnpack::R>.nested($t2)
+  3: $t4 := TestPackUnpack::read_S_from_immutable($t3)
+  4: return ($t4, $t1)
+}
+
+
+fun TestPackUnpack::private_update_value(s: TestPackUnpack::S, v: u64): TestPackUnpack::S {
+     var $t2: TestPackUnpack::S
+     var $t3: u64
+     var $t4: &mut TestPackUnpack::S
+     var $t5: &mut u64
+  0: $t2 := move(s)
+  1: $t3 := move(v)
+  2: $t4 := borrow_local($t2)
+  3: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
+  4: write_ref($t5, $t3)
+  5: write_back[Reference($t4)]($t5)
+  6: write_back[LocalRoot($t2)]($t4)
+  7: return $t2
+}
+
+
+pub fun TestPackUnpack::public_update_value(s: TestPackUnpack::S, v: u64): TestPackUnpack::S {
+     var $t2: TestPackUnpack::S
+     var $t3: u64
+     var $t4: &mut TestPackUnpack::S
+     var $t5: &mut u64
+  0: $t2 := move(s)
+  1: $t3 := move(v)
+  2: $t4 := borrow_local($t2)
+  3: unpack_ref($t4)
+  4: $t5 := borrow_field<TestPackUnpack::S>.value($t4)
+  5: unpack_ref($t5)
+  6: write_ref($t5, $t3)
+  7: pack_ref($t5)
+  8: write_back[Reference($t4)]($t5)
+  9: pack_ref($t4)
+ 10: write_back[LocalRoot($t2)]($t4)
+ 11: return $t2
+}
+
+
+fun TestPackUnpack::read_S_from_immutable(s: TestPackUnpack::S): u64 {
+     var $t1: TestPackUnpack::S
+     var $t2: u64
+  0: $t1 := move(s)
+  1: $t2 := get_field<TestPackUnpack::S>.value($t1)
+  2: return $t2
+}
+
+
+pub fun TestPackUnpack::read_ref_unchanged(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var nested: &mut TestPackUnpack::S
+     var tmp#$2: &mut TestPackUnpack::R
+     var $t3: TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: u64
+  0: $t3 := move(r)
+  1: $t4 := borrow_local($t3)
+  2: unpack_ref($t4)
+  3: nested := borrow_field<TestPackUnpack::R>.nested($t4)
+  4: unpack_ref(nested)
+  5: $t5 := get_field<TestPackUnpack::S>.value(nested)
+  6: pack_ref(nested)
+  7: pack_ref($t4)
+  8: return ($t5, $t3)
+}
+
+
+pub fun TestPackUnpack::select_value_violating_invariant_incorrect(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var s: &mut TestPackUnpack::S
+     var $t2: TestPackUnpack::R
+     var $t3: &mut TestPackUnpack::R
+     var $t4: u64
+     var $t5: &mut u64
+     var $t6: TestPackUnpack::S
+     var $t7: u64
+  0: $t2 := move(r)
+  1: $t3 := borrow_local($t2)
+  2: unpack_ref($t3)
+  3: s := borrow_field<TestPackUnpack::R>.nested($t3)
+  4: unpack_ref(s)
+  5: $t4 := 0
+  6: $t5 := borrow_field<TestPackUnpack::S>.value(s)
+  7: unpack_ref($t5)
+  8: write_ref($t5, $t4)
+  9: pack_ref($t5)
+ 10: write_back[Reference(s)]($t5)
+ 11: $t6 := read_ref(s)
+ 12: pack_ref(s)
+ 13: write_back[Reference($t3)](s)
+ 14: pack_ref($t3)
+ 15: write_back[LocalRoot($t2)]($t3)
+ 16: $t7 := TestPackUnpack::read_S_from_immutable($t6)
+ 17: return ($t7, $t2)
+}
+
+
+pub fun TestPackUnpack::update_ref_changed(r: TestPackUnpack::R): (u64, TestPackUnpack::R) {
+     var nested: &mut TestPackUnpack::S
+     var tmp#$2: &mut TestPackUnpack::R
+     var $t3: TestPackUnpack::R
+     var $t4: &mut TestPackUnpack::R
+     var $t5: u64
+     var $t6: u64
+     var $t7: u64
+     var $t8: &mut u64
+     var $t9: u64
+  0: $t3 := move(r)
+  1: $t4 := borrow_local($t3)
+  2: unpack_ref($t4)
+  3: nested := borrow_field<TestPackUnpack::R>.nested($t4)
+  4: unpack_ref(nested)
+  5: $t5 := get_field<TestPackUnpack::S>.value(nested)
+  6: $t6 := 2
+  7: $t7 := +($t5, $t6)
+  8: $t8 := borrow_field<TestPackUnpack::S>.value(nested)
+  9: unpack_ref($t8)
+ 10: write_ref($t8, $t7)
+ 11: pack_ref($t8)
+ 12: write_back[Reference(nested)]($t8)
+ 13: $t9 := get_field<TestPackUnpack::S>.value(nested)
+ 14: pack_ref(nested)
+ 15: write_back[Reference($t4)](nested)
+ 16: pack_ref($t4)
+ 17: write_back[LocalRoot($t3)]($t4)
+ 18: return ($t9, $t3)
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: &mut TestPackUnpack::R
+     var $t5: TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: r := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local(r)
+  4: unpack_ref_deep($t4)
+  5: $t5 := read_ref($t4)
+  6: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
+  7: write_ref($t4, $t5)
+  8: splice[0 -> $t4]($t6)
+  9: v_ref := $t6
+ 10: $t7 := 2
+ 11: write_ref(v_ref, $t7)
+ 12: write_back[Reference($t4)](v_ref)
+ 13: pack_ref_deep($t4)
+ 14: write_back[LocalRoot(r)]($t4)
+ 15: return r
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref_invariant_incorrect(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: &mut TestPackUnpack::R
+     var $t5: TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: r := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local(r)
+  4: unpack_ref_deep($t4)
+  5: $t5 := read_ref($t4)
+  6: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
+  7: write_ref($t4, $t5)
+  8: splice[0 -> $t4]($t6)
+  9: v_ref := $t6
+ 10: $t7 := 0
+ 11: write_ref(v_ref, $t7)
+ 12: write_back[Reference($t4)](v_ref)
+ 13: pack_ref_deep($t4)
+ 14: write_back[LocalRoot(r)]($t4)
+ 15: return r
+}
+
+
+pub fun TestPackUnpack::update_via_returned_ref_var_incorrect(): TestPackUnpack::R {
+     var r: TestPackUnpack::R
+     var v_ref: &mut u64
+     var $t2: u64
+     var $t3: TestPackUnpack::S
+     var $t4: &mut TestPackUnpack::R
+     var $t5: TestPackUnpack::R
+     var $t6: &mut u64
+     var $t7: u64
+  0: $t2 := 1
+  1: $t3 := pack TestPackUnpack::S($t2)
+  2: r := pack TestPackUnpack::R($t3)
+  3: $t4 := borrow_local(r)
+  4: unpack_ref_deep($t4)
+  5: $t5 := read_ref($t4)
+  6: ($t6, $t5) := TestPackUnpack::get_value_ref($t5)
+  7: write_ref($t4, $t5)
+  8: splice[0 -> $t4]($t6)
+  9: v_ref := $t6
+ 10: $t7 := 1
+ 11: write_ref(v_ref, $t7)
+ 12: write_back[Reference($t4)](v_ref)
+ 13: pack_ref_deep($t4)
+ 14: write_back[LocalRoot(r)]($t4)
+ 15: return r
+}

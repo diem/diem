@@ -415,8 +415,11 @@ fun TestBorrow::test6(): TestBorrow::R {
      var $t6: &mut u64
      var $t7: u64
      var $t8: u64
+     // spliced_nodes: Reference($t4)
   0: $t3 := 3
+     // spliced_nodes: Reference($t4)
   1: r := pack TestBorrow::R($t3)
+     // spliced_nodes: Reference($t4)
   2: r_ref := borrow_local(r)
      // live_nodes: Reference(r_ref)
      // spliced_nodes: Reference($t4)

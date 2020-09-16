@@ -24,6 +24,10 @@ use crate::{
     },
     cli::Options,
 };
+use bytecode::{
+    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
+    stackless_bytecode::SpecBlockId, usage_analysis,
+};
 use itertools::Itertools;
 use spec_lang::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
@@ -38,10 +42,6 @@ use spec_lang::{
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
-};
-use stackless_bytecode_generator::{
-    function_target::FunctionTarget, function_target_pipeline::FunctionTargetsHolder,
-    stackless_bytecode::SpecBlockId, usage_analysis,
 };
 use std::collections::BTreeSet;
 

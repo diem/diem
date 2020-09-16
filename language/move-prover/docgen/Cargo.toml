@@ -9,7 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 # libra dependencies
 spec-lang = { path = "../spec-lang", version = "0.1.0" }
-stackless-bytecode-generator = { path = "../stackless-bytecode-generator", version = "0.1.0"}
+bytecode = { path = "../bytecode", version = "0.1.0"}
 libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
 
 # external dependencies

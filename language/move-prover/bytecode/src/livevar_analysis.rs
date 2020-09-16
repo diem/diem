@@ -19,6 +19,7 @@ use vm::file_format::CodeOffset;
 /// The annotation for live variable analysis. For each code position, we have a set of local
 /// variable indices that are live just before the code offset, i.e. these variables are used
 /// before being overwritten.
+#[derive(Debug, Default)]
 pub struct LiveVarInfoAtCodeOffset {
     pub before: BTreeSet<TempIndex>,
     pub after: BTreeSet<TempIndex>,
@@ -326,42 +327,34 @@ impl<'a> LiveVarAnalysis<'a> {
 
 impl<'a> TransferFunctions for LiveVarAnalysis<'a> {
     type State = LiveVarState;
-    type AnalysisError = ();
     const BACKWARD: bool = true;
 
-    fn execute(
-        &self,
-        pre: LiveVarState,
-        instr: &Bytecode,
-        _idx: CodeOffset,
-    ) -> Result<LiveVarState, ()> {
+    fn execute(&self, state: &mut LiveVarState, instr: &Bytecode, _idx: CodeOffset) {
         use Bytecode::*;
-        let mut post = pre;
         match instr {
             Assign(_, dst, src, _) => {
-                if post.remove(&[*dst]) {
-                    post.insert(vec![*src]);
+                if state.remove(&[*dst]) {
+                    state.insert(vec![*src]);
                 }
             }
             Load(_, dst, _) => {
-                post.remove(&[*dst]);
+                state.remove(&[*dst]);
             }
             Call(_, dsts, oper, srcs) => {
-                post.remove(dsts);
-                post.insert(srcs.clone());
+                state.remove(dsts);
+                state.insert(srcs.clone());
                 if let Operation::Splice(map) = oper {
-                    post.insert(map.values().cloned().collect());
+                    state.insert(map.values().cloned().collect());
                 }
             }
             Ret(_, srcs) => {
-                post.insert(srcs.clone());
+                state.insert(srcs.clone());
             }
             Abort(_, src) | Branch(_, _, _, src) => {
-                post.insert(vec![*src]);
+                state.insert(vec![*src]);
             }
             _ => {}
         }
-        Ok(post)
     }
 }
 

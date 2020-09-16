@@ -11,18 +11,7 @@ use crate::{
 };
 use abigen::Abigen;
 use anyhow::anyhow;
-use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
-use docgen::Docgen;
-use errmapgen::ErrmapGen;
-use handlebars::Handlebars;
-use itertools::Itertools;
-#[allow(unused_imports)]
-use log::{debug, info, warn};
-use move_lang::find_move_filenames;
-use once_cell::sync::Lazy;
-use regex::Regex;
-use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
-use stackless_bytecode_generator::{
+use bytecode::{
     borrow_analysis::BorrowAnalysisProcessor,
     clean_and_optimize::CleanAndOptimizeProcessor,
     eliminate_imm_refs::EliminateImmRefsProcessor,
@@ -35,6 +24,17 @@ use stackless_bytecode_generator::{
     test_instrumenter::TestInstrumenter,
     usage_analysis::{self, UsageProcessor},
 };
+use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
+use docgen::Docgen;
+use errmapgen::ErrmapGen;
+use handlebars::Handlebars;
+use itertools::Itertools;
+#[allow(unused_imports)]
+use log::{debug, info, warn};
+use move_lang::find_move_filenames;
+use once_cell::sync::Lazy;
+use regex::Regex;
+use spec_lang::{code_writer::CodeWriter, emit, emitln, env::GlobalEnv, run_spec_lang_compiler};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,

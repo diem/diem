@@ -223,15 +223,13 @@ impl<'a> Instrumenter<'a> {
                     ));
                 }
                 // Generate write_back for this reference.
-                if let Some(parents) = before.borrows_from.get(&node) {
-                    for parent in parents {
-                        instrumented_bytecodes.push(Bytecode::Call(
-                            self.clone_attr(attr_id),
-                            vec![],
-                            Operation::WriteBack(parent.clone()),
-                            vec![*idx],
-                        ));
-                    }
+                for parent in before.get_parents(&node) {
+                    instrumented_bytecodes.push(Bytecode::Call(
+                        self.clone_attr(attr_id),
+                        vec![],
+                        Operation::WriteBack(parent.clone()),
+                        vec![*idx],
+                    ));
                 }
             }
         }

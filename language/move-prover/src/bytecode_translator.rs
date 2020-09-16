@@ -9,16 +9,7 @@ use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, log, warn, Level};
 
-use spec_lang::{
-    code_writer::CodeWriter,
-    emit, emitln,
-    env::{
-        ConditionInfo, ConditionTag, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructEnv, StructId,
-        TypeParameter,
-    },
-    ty::{PrimitiveType, Type},
-};
-use stackless_bytecode_generator::{
+use bytecode::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
     graph::{Graph, Reducible},
@@ -28,6 +19,15 @@ use stackless_bytecode_generator::{
         Constant, Label, Operation, SpecBlockId,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+};
+use spec_lang::{
+    code_writer::CodeWriter,
+    emit, emitln,
+    env::{
+        ConditionInfo, ConditionTag, GlobalEnv, Loc, ModuleEnv, QualifiedId, StructEnv, StructId,
+        TypeParameter,
+    },
+    ty::{PrimitiveType, Type},
 };
 use vm::file_format::CodeOffset;
 
@@ -42,11 +42,11 @@ use crate::{
     cli::Options,
     spec_translator::{ConditionDistribution, FunctionEntryPoint, SpecEnv, SpecTranslator},
 };
+use bytecode::stackless_bytecode::TempIndex;
 use spec_lang::env::{
     ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
     SEED_PRAGMA, TIMEOUT_PRAGMA, VERIFY_DURATION_ESTIMATE_PRAGMA,
 };
-use stackless_bytecode_generator::stackless_bytecode::TempIndex;
 use std::cell::RefCell;
 
 const MODIFY_RESOURCE_FAILS_MESSAGE: &str =

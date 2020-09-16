@@ -1,6 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! Data flow analysis computing borrow information for preparation of memory_instrumentation.
+
 use crate::{
     dataflow_analysis::{AbstractDomain, DataflowAnalysis, JoinResult, TransferFunctions},
     function_target::{FunctionTarget, FunctionTargetData},
@@ -14,39 +16,57 @@ use spec_lang::env::FunctionEnv;
 use std::collections::{BTreeMap, BTreeSet};
 use vm::file_format::CodeOffset;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct BorrowInfo {
     /// Contains the nodes which are alive. This excludes nodes which are alive because
     /// other nodes which are alive borrow from them.
-    pub live_nodes: BTreeSet<BorrowNode>,
+    live_nodes: BTreeSet<BorrowNode>,
 
     /// Contains the nodes which are unchecked regards their pack/unpack invariant.
-    /// These are nodes derived from &mut parameters of private functions.
-    pub unchecked_nodes: BTreeSet<BorrowNode>,
+    /// These are nodes derived from &mut parameters of private functions for which we do
+    /// not perform pack/unpack.
+    unchecked_nodes: BTreeSet<BorrowNode>,
 
     /// Contains the nodes which have been updated via a Splice operation.
-    pub spliced_nodes: BTreeSet<BorrowNode>,
+    spliced_nodes: BTreeSet<BorrowNode>,
 
     /// Contains the nodes which have been moved via a move instruction.
-    pub moved_nodes: BTreeSet<BorrowNode>,
+    moved_nodes: BTreeSet<BorrowNode>,
 
     /// Forward borrow information.
-    pub borrowed_by: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    borrowed_by: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
 
-    /// Backward borrow information.
-    pub borrows_from: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
+    /// Backward borrow information. This field is not used during analysis, but computed once
+    /// analysis is done.
+    borrows_from: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
 }
 
 impl BorrowInfo {
+    /// Gets the children of this node.
+    pub fn get_children(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
+        self.borrowed_by
+            .get(node)
+            .map(|s| s.iter().collect_vec())
+            .unwrap_or_else(Vec::new)
+    }
+
+    /// Gets the parents of this node.
+    pub fn get_parents(&self, node: &BorrowNode) -> Vec<&BorrowNode> {
+        self.borrows_from
+            .get(node)
+            .map(|s| s.iter().collect_vec())
+            .unwrap_or_else(Vec::new)
+    }
+
     /// Checks whether a node is in use. A node is used if it is in the live_nodes set
     /// or if it is borrowed by a node which is used.
     pub fn is_in_use(&self, node: &BorrowNode) -> bool {
         if self.live_nodes.contains(node) {
             true
-        } else if let Some(childs) = self.borrowed_by.get(node) {
-            childs.iter().any(|child| self.is_in_use(child))
         } else {
-            false
+            self.get_children(node)
+                .iter()
+                .any(|child| self.is_in_use(child))
         }
     }
 
@@ -55,7 +75,7 @@ impl BorrowInfo {
         self.unchecked_nodes.contains(node)
     }
 
-    /// Checks whether this is an unchecked node.
+    /// Checks whether this is a moved node.
     pub fn is_moved(&self, node: &BorrowNode) -> bool {
         self.moved_nodes.contains(node)
     }
@@ -94,11 +114,9 @@ impl BorrowInfo {
     {
         if visited.insert(node.clone()) {
             order.push(node.clone());
-            if let Some(parents) = self.borrows_from.get(&node) {
-                for parent in parents {
-                    if cond(parent) {
-                        self.collect_ancestors(visited, order, parent, cond);
-                    }
+            for parent in self.get_parents(node) {
+                if cond(parent) {
+                    self.collect_ancestors(visited, order, parent, cond);
                 }
             }
         }
@@ -107,6 +125,8 @@ impl BorrowInfo {
     pub fn is_empty(&self) -> bool {
         self.live_nodes.is_empty()
             && self.unchecked_nodes.is_empty()
+            && self.moved_nodes.is_empty()
+            && self.spliced_nodes.is_empty()
             && self.borrowed_by.is_empty()
             && self.borrows_from.is_empty()
     }
@@ -166,6 +186,33 @@ impl BorrowInfo {
         );
         parts.iter().join("\n")
     }
+
+    fn add_node(&mut self, node: BorrowNode) {
+        self.live_nodes.insert(node);
+    }
+
+    fn remove_node(&mut self, node: &BorrowNode) {
+        self.live_nodes.remove(node);
+    }
+
+    fn add_edge(&mut self, parent: BorrowNode, child: BorrowNode) -> bool {
+        if self.unchecked_nodes.contains(&parent) {
+            // If the parent node is unchecked, so is the child node.
+            self.unchecked_nodes.insert(child.clone());
+        }
+        self.borrowed_by.entry(parent).or_default().insert(child)
+    }
+
+    fn consolidate(&mut self) {
+        for (parent, childs) in &self.borrowed_by {
+            for child in childs {
+                self.borrows_from
+                    .entry(child.clone())
+                    .or_default()
+                    .insert(parent.clone());
+            }
+        }
+    }
 }
 
 pub struct BorrowInfoAtCodeOffset {
@@ -180,13 +227,6 @@ impl BorrowAnnotation {
     pub fn get_borrow_info_at(&self, code_offset: CodeOffset) -> Option<&BorrowInfoAtCodeOffset> {
         self.0.get(&code_offset)
     }
-}
-
-#[derive(Debug, Clone)]
-struct PackError {
-    func_name: String,
-    code_offset: CodeOffset,
-    indices: Vec<TempIndex>,
 }
 
 /// Borrow analysis processor.
@@ -226,32 +266,6 @@ impl FunctionTargetProcessor for BorrowAnalysisProcessor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-struct BorrowState {
-    live_nodes: BTreeSet<BorrowNode>,
-    unchecked_nodes: BTreeSet<BorrowNode>,
-    spliced_nodes: BTreeSet<BorrowNode>,
-    moved_nodes: BTreeSet<BorrowNode>,
-    graph: BTreeMap<BorrowNode, BTreeSet<BorrowNode>>,
-}
-
-impl BorrowState {
-    fn add_node(&mut self, node: BorrowNode) {
-        self.live_nodes.insert(node);
-    }
-
-    fn remove_node(&mut self, node: &BorrowNode) {
-        self.live_nodes.remove(node);
-    }
-
-    fn add_edge(&mut self, src: BorrowNode, dest: BorrowNode) -> bool {
-        if self.unchecked_nodes.contains(&src) {
-            self.unchecked_nodes.insert(dest.clone());
-        }
-        self.graph.entry(src).or_default().insert(dest)
-    }
-}
-
 struct BorrowAnalysis<'a> {
     func_target: &'a FunctionTarget<'a>,
     livevar_annotation: &'a LiveVarAnnotation,
@@ -273,7 +287,7 @@ impl<'a> BorrowAnalysis<'a> {
     fn analyze(&mut self, instrs: &[Bytecode]) -> BTreeMap<CodeOffset, BorrowInfoAtCodeOffset> {
         let cfg = StacklessControlFlowGraph::new_forward(instrs);
 
-        let mut state = BorrowState::default();
+        let mut state = BorrowInfo::default();
 
         // Initialize state from parameters
         for idx in 0..self.func_target.get_parameter_count() {
@@ -286,8 +300,10 @@ impl<'a> BorrowAnalysis<'a> {
 
         let state_map = self.analyze_function(state, instrs, &cfg);
         self.state_per_instruction(state_map, instrs, &cfg, |before, after| {
-            let before = self.convert_state_to_info(before.clone());
-            let after = self.convert_state_to_info(after.clone());
+            let mut before = before.clone();
+            let mut after = after.clone();
+            before.consolidate();
+            after.consolidate();
             BorrowInfoAtCodeOffset { before, after }
         })
     }
@@ -301,34 +317,7 @@ impl<'a> BorrowAnalysis<'a> {
         }
     }
 
-    fn convert_state_to_info(&self, borrow_state: BorrowState) -> BorrowInfo {
-        let BorrowState {
-            live_nodes,
-            unchecked_nodes,
-            spliced_nodes,
-            moved_nodes,
-            graph,
-        } = borrow_state;
-        let mut reverse_graph: BTreeMap<BorrowNode, BTreeSet<BorrowNode>> = BTreeMap::default();
-        for (src, dests) in graph.iter() {
-            for dest in dests {
-                reverse_graph
-                    .entry(dest.clone())
-                    .or_default()
-                    .insert(src.clone());
-            }
-        }
-        BorrowInfo {
-            live_nodes,
-            unchecked_nodes,
-            spliced_nodes,
-            moved_nodes,
-            borrowed_by: graph,
-            borrows_from: reverse_graph,
-        }
-    }
-
-    fn remap_borrow_node(&self, state: &mut BorrowState, from: &BorrowNode, to: &BorrowNode) {
+    fn remap_borrow_node(&self, state: &mut BorrowInfo, from: &BorrowNode, to: &BorrowNode) {
         let remap = |node: BorrowNode| if &node == from { to.clone() } else { node };
         state.live_nodes = std::mem::take(&mut state.live_nodes)
             .into_iter()
@@ -342,47 +331,30 @@ impl<'a> BorrowAnalysis<'a> {
             .into_iter()
             .map(remap)
             .collect();
-        state.graph = std::mem::take(&mut state.graph)
+        state.borrowed_by = std::mem::take(&mut state.borrowed_by)
             .into_iter()
             .map(|(src, dests)| (remap(src), dests.into_iter().map(remap).collect()))
             .collect();
     }
-
-    fn current_fun_name(&self) -> String {
-        self.func_target
-            .symbol_pool()
-            .string(self.func_target.get_name())
-            .to_string()
-    }
 }
 
 impl<'a> TransferFunctions for BorrowAnalysis<'a> {
-    type State = BorrowState;
-    type AnalysisError = PackError;
+    type State = BorrowInfo;
     const BACKWARD: bool = false;
 
-    fn execute(
-        &self,
-        mut state: BorrowState,
-        instr: &Bytecode,
-        code_offset: CodeOffset,
-    ) -> Result<BorrowState, PackError> {
+    fn execute(&self, state: &mut BorrowInfo, instr: &Bytecode, code_offset: CodeOffset) {
         use Bytecode::*;
         let livevar_annotation_at = self
             .livevar_annotation
             .get_live_var_info_at(code_offset)
-            .ok_or_else(|| PackError {
-                func_name: self.current_fun_name(),
-                code_offset,
-                indices: vec![],
-            })?;
+            .expect("livevar annotation");
         match instr {
             Assign(_, dest, src, kind) => {
                 let dest_node = self.borrow_node(*dest);
                 let src_node = self.borrow_node(*src);
                 match kind {
                     AssignKind::Move | AssignKind::Store => {
-                        self.remap_borrow_node(&mut state, &src_node, &dest_node);
+                        self.remap_borrow_node(state, &src_node, &dest_node);
                         state.moved_nodes.insert(src_node);
                     }
                     AssignKind::Copy => {
@@ -467,21 +439,19 @@ impl<'a> TransferFunctions for BorrowAnalysis<'a> {
                 state.remove_node(&node);
             }
         }
-
-        Ok(state)
     }
 }
 
 impl<'a> DataflowAnalysis for BorrowAnalysis<'a> {}
 
-impl AbstractDomain for BorrowState {
+impl AbstractDomain for BorrowInfo {
     fn join(&mut self, other: &Self) -> JoinResult {
         let live_changed = extend_set(&mut self.live_nodes, &other.live_nodes);
         let unchecked_changed = extend_set(&mut self.unchecked_nodes, &other.unchecked_nodes);
         let spliced_changed = extend_set(&mut self.spliced_nodes, &other.spliced_nodes);
         let moved_changed = extend_set(&mut self.moved_nodes, &other.moved_nodes);
         let mut changed = live_changed || unchecked_changed || spliced_changed || moved_changed;
-        for (src, dests) in other.graph.iter() {
+        for (src, dests) in other.borrowed_by.iter() {
             for dest in dests {
                 let is_new = self.add_edge(src.clone(), dest.clone());
                 changed = changed || is_new;
@@ -524,15 +494,9 @@ impl AbstractDomain for SplicedState {
 
 impl TransferFunctions for PropagateSplicedAnalysis {
     type State = SplicedState;
-    type AnalysisError = ();
     const BACKWARD: bool = true;
 
-    fn execute(
-        &self,
-        mut state: Self::State,
-        instr: &Bytecode,
-        offset: u16,
-    ) -> Result<Self::State, Self::AnalysisError> {
+    fn execute(&self, state: &mut Self::State, instr: &Bytecode, offset: u16) {
         use Bytecode::*;
         use Operation::*;
         if let Some(borrow) = self.borrow.get(&offset) {
@@ -548,7 +512,6 @@ impl TransferFunctions for PropagateSplicedAnalysis {
             }
             _ => {}
         }
-        Ok(state)
     }
 }
 
