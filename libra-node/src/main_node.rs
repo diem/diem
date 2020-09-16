@@ -149,7 +149,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // consensus has to subscribe to ALL on-chain configs
     let (consensus_reconfig_subscription, consensus_reconfig_events) =
         gen_consensus_reconfig_subscription();
-    reconfig_subscriptions.push(consensus_reconfig_subscription);
+    if node_config.base.role.is_validator() {
+        reconfig_subscriptions.push(consensus_reconfig_subscription);
+    }
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig

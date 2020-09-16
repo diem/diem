@@ -211,7 +211,7 @@ impl Experiment for Reconfiguration {
 
     fn deadline(&self) -> Duration {
         // allow each epoch to take 20 secs
-        Duration::from_secs(self.count as u64 * 20)
+        Duration::from_secs(self.count as u64 * 10)
     }
 }
 
