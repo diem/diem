@@ -1,3 +1,4 @@
+This file is a checklist of requirement & technical details for a Libra client SDK implementation.
 
 # Basics
 

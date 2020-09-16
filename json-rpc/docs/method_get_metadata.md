@@ -2,7 +2,7 @@
 
 **Description**
 
-Get the blockchain metadata (e.g., state as known to the current full node).
+Get the blockchain / ledger metadata.
 
 ### Parameters
 
