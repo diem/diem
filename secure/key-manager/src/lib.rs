@@ -60,18 +60,20 @@ pub enum Action {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    #[error("Key mismatch, config: {0}, info: {0}")]
+    #[error("Key mismatch, config: {0}, info: {1}")]
     ConfigInfoKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
-    #[error("Key mismatch, config: {0}, storage: {0}")]
+    #[error("Key mismatch, config: {0}, storage: {1}")]
     ConfigStorageKeyMismatch(Ed25519PublicKey, Ed25519PublicKey),
     #[error("Data does not exist: {0}")]
     DataDoesNotExist(String),
     #[error(
-        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {0}"
+        "The libra_timestamp value on-chain isn't increasing. Last value: {0}, Current value: {1}"
     )]
     LivenessError(u64, u64),
-    #[error("Unable to retrieve the operator account address. Storage error: {0}")]
-    MissingAccountAddress(#[from] libra_secure_storage::Error),
+    #[error("Unable to retrieve the account address: {0}, storage error: {1}")]
+    MissingAccountAddress(String, String),
+    #[error("Storage error: {0}")]
+    StorageError(String),
     #[error("ValidatorInfo not found in ValidatorConfig: {0}")]
     ValidatorInfoNotFound(AccountAddress),
     #[error("Unknown error: {0}")]
@@ -82,6 +84,12 @@ pub enum Error {
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
         Error::UnknownError(format!("{}", error))
+    }
+}
+
+impl From<libra_secure_storage::Error> for Error {
+    fn from(error: libra_secure_storage::Error) -> Self {
+        Error::StorageError(error.to_string())
     }
 }
 
@@ -334,7 +342,7 @@ where
         self.storage
             .get::<AccountAddress>(account_name)
             .map(|v| v.value)
-            .map_err(Error::MissingAccountAddress)
+            .map_err(|e| Error::MissingAccountAddress(account_name.into(), e.to_string()))
     }
 }
 
