@@ -1271,8 +1271,7 @@ module LibraAccount {
         }
     }
     spec fun epilogue {
-        /// > TODO: timeout
-        pragma verify = false;
+        pragma verify = true;
     }
 
     /// Bump the sequence number of an account. This function should be used only for bumping the sequence number when

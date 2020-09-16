@@ -121,8 +121,11 @@ impl<'env> BoogieWrapper<'env> {
             // different random seeds cause significant instabilities in verification times.
             // Thus by running multiple instances of Boogie with different random seeds, we can
             // potentially alleviate the instability.
-            let (seed, output) =
-                ProverTaskRunner::run_tasks(task, self.options.prover.num_instances);
+            let (seed, output) = ProverTaskRunner::run_tasks(
+                task,
+                self.options.prover.num_instances,
+                self.options.prover.sequential_task,
+            );
             if self.options.prover.num_instances > 1 {
                 debug!("Boogie instance with seed {} finished first", seed);
             }

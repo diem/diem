@@ -121,10 +121,8 @@ components amounts of <code>amount_lbr</code> LBR; and
 
 
 
-> TODO: timeout due to FixedPoint32 flakiness.
 
-
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify = <b>true</b>;
 <a name="SCRIPT_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
 <a name="SCRIPT_cap$2"></a>

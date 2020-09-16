@@ -154,14 +154,9 @@ module LBR {
         assert(amount2 != MAX_U64, Errors::limit_exceeded(ECOIN2));
         (amount1 + 1, amount2 + 1)
     }
-    spec fun calculate_component_amounts_for_lbr {
-        pragma verify = false; // TODO: timeout
-    }
 
     spec fun calculate_component_amounts_for_lbr {
         pragma opaque;
-        // TODO (dd): A timeout just showed up here.
-        pragma verify = false;
         let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include CalculateComponentAmountsForLBRAbortsIf;
         ensures result_1 == FixedPoint32::spec_multiply_u64(amount_lbr, reserve.coin1.ratio) + 1;
@@ -264,7 +259,7 @@ module LBR {
     }
     spec fun unpack {
         /// > TODO: this times out sometimes so bump the duration estimate
-        pragma verify_duration_estimate = 100;
+//        pragma verify_duration_estimate = 100;
         include UnpackAbortsIf;
         ensures Libra::spec_market_cap<LBR>() == old(Libra::spec_market_cap<LBR>()) - coin.value;
         ensures result_1.value == spec_unpack_coin1(coin);

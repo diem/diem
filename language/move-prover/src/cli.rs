@@ -135,6 +135,8 @@ pub struct ProverOptions {
     pub dump_bytecode: bool,
     /// Number of Boogie instances to be run concurrently.
     pub num_instances: usize,
+    /// Whether to run Boogie instances sequentially.
+    pub sequential_task: bool,
     /// Run negative verification checks.
     pub negative_checks: bool,
 }
@@ -156,6 +158,7 @@ impl Default for ProverOptions {
             assume_invariant_on_access: false,
             dump_bytecode: false,
             num_instances: 1,
+            sequential_task: false,
             negative_checks: false,
         }
     }
@@ -453,6 +456,11 @@ impl Options {
                     .validator(is_number)
                     .help("sets the number of Boogie instances to run concurrently (default 1)")
             )
+            .arg(
+                Arg::with_name("sequential")
+                    .long("sequential")
+                    .help("whether to run the Boogie instances sequentially")
+            )
             .after_help("More options available via `--config file` or `--config-str str`. \
             Use `--print-config` to see format and current values. \
             See `move-prover/src/cli.rs::Option` for documentation.");
@@ -542,6 +550,9 @@ impl Options {
                 .unwrap()
                 .parse::<usize>()?;
             options.prover.num_instances = std::cmp::max(num_instances, 1); // at least one instance
+        }
+        if matches.is_present("sequential") {
+            options.prover.sequential_task = true;
         }
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;

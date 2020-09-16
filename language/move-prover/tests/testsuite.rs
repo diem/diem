@@ -29,6 +29,8 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let mut args = vec!["mvp_test".to_string()];
     args.extend(flags);
     args.push("--verbose=warn".to_owned());
+    args.push("--num-instances=2".to_owned()); // run two Boogie instances with different seeds
+    args.push("--sequential".to_owned());
     args.push(path.to_string_lossy().to_string());
 
     args.extend(shell_words::split(&read_env_var(ENV_FLAGS))?);

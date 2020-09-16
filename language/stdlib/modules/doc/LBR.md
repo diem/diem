@@ -554,14 +554,7 @@ type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-
 <pre><code>pragma opaque;
-pragma verify = <b>false</b>;
 <a name="0x1_LBR_reserve$13"></a>
 <b>let</b> reserve = <b>global</b>&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <b>include</b> <a href="#0x1_LBR_CalculateComponentAmountsForLBRAbortsIf">CalculateComponentAmountsForLBRAbortsIf</a>;
@@ -662,8 +655,7 @@ pragma verify = <b>false</b>;
 > TODO: this times out sometimes so bump the duration estimate
 
 
-<pre><code>pragma verify_duration_estimate = 100;
-<b>include</b> <a href="#0x1_LBR_UnpackAbortsIf">UnpackAbortsIf</a>;
+<pre><code><b>include</b> <a href="#0x1_LBR_UnpackAbortsIf">UnpackAbortsIf</a>;
 <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_market_cap">Libra::spec_market_cap</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;() == <b>old</b>(<a href="Libra.md#0x1_Libra_spec_market_cap">Libra::spec_market_cap</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;()) - coin.value;
 <b>ensures</b> result_1.value == <a href="#0x1_LBR_spec_unpack_coin1">spec_unpack_coin1</a>(coin);
 <b>ensures</b> result_2.value == <a href="#0x1_LBR_spec_unpack_coin2">spec_unpack_coin2</a>(coin);

@@ -3188,10 +3188,8 @@ Needed to prove invariant
 
 
 
-> TODO: timeout
 
-
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>
 
 
