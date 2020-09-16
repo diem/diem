@@ -74,10 +74,11 @@ pub enum BoogieErrorKind {
 impl BoogieErrorKind {
     fn is_from_verification(self) -> bool {
         use BoogieErrorKind::*;
-        matches!(
+        let a = matches!(
             self,
             Assertion | Precondition | Postcondition | Inconclusive
-        )
+        );
+        a
     }
 }
 
