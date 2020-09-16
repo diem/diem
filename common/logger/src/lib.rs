@@ -72,7 +72,12 @@
 
 pub mod prelude {
     pub use crate::{
-        debug, error, event, info, libra_logger::FileWriter, security::SecurityEvent, trace, warn,
+        debug, error, event, info,
+        libra_logger::FileWriter,
+        sample,
+        sample::{SampleRate, Sampling},
+        security::SecurityEvent,
+        trace, warn,
     };
 }
 pub mod json_log;

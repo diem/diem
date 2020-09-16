@@ -371,6 +371,25 @@ where
             .set(outbound as i64);
     }
 
+    fn sample_connected_peers(&self) {
+        // Sample final state at most once a minute, ensuring consistent ordering
+        sample!(
+            SampleRate::Duration(Duration::from_secs(60)),
+            info!(
+                NetworkSchema::new(&self.network_context),
+                peers = (&self.active_peers)
+                    .iter()
+                    .map(|(_, (conn_metadata, _))| (
+                        conn_metadata.remote_peer_id,
+                        conn_metadata.origin
+                    ))
+                    .collect::<Vec<(PeerId, ConnectionOrigin)>>()
+                    .sort_by(|(a_addr, _), (b_addr, _)| a_addr.cmp(b_addr)),
+                "Current connected peers"
+            )
+        );
+    }
+
     /// Get the [`NetworkAddress`] we're listening for incoming connections on
     pub fn listen_addr(&self) -> &NetworkAddress {
         &self.listen_addr
@@ -415,6 +434,7 @@ where
             self.network_context,
             event
         );
+        self.sample_connected_peers();
         match event {
             TransportNotification::NewConnection(conn) => {
                 info!(
@@ -489,6 +509,7 @@ where
             self.network_context,
             request
         );
+        self.sample_connected_peers();
         match request {
             ConnectionRequest::DialPeer(requested_peer_id, addr, response_tx) => {
                 // Only dial peers which we aren't already connected with
@@ -554,6 +575,7 @@ where
             self.network_context,
             request
         );
+        self.sample_connected_peers();
         match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
                 if let Some((_, sender)) = self.active_peers.get_mut(&peer_id) {
