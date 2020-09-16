@@ -5,17 +5,29 @@
 
 # run this script from the project root using `./scripts/build_docs.sh`
 
-usage() {
-  echo "Usage: $0 [-b]"
+function usage() {
+  echo "Usage: $0 [-b] [-r]"
   echo ""
   echo "Build Libra documentation."
   echo ""
   echo "  -b   Build static version of documentation (otherwise start server)"
   echo ""
-  exit 1
+  echo "  -r   Build Libra Rust crate documentation"
+  echo ""
+}
+
+function install_rustup {
+  echo "Installing Rust......"
+  if rustup --version &>/dev/null; then
+    echo "Rust is already installed"
+  else
+    curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+    PATH="${HOME}/.cargo/bin:${PATH}"
+  fi
 }
 
 BUILD_STATIC=false
+BUILD_RUSTDOCS=false
 
 if [[ "$(basename $PWD)" != "developers.libra.org" ]]; then
   echo "Didn't pass directory check."
@@ -28,19 +40,27 @@ if [[ "$(basename $PWD)" != "developers.libra.org" ]]; then
   exit 1
 fi
 
-while getopts 'hb' flag; do
+while getopts 'hbr' flag; do
   case "${flag}" in
     h)
-      usage
+      usage;
+      exit 0;
       ;;
     b)
       BUILD_STATIC=true
       ;;
+    r)
+      BUILD_RUSTDOCS=true
+      ;;
     *)
-      usage
+      usage;
+      exit 0;
       ;;
   esac
 done
+
+# Install Rust (Netlify will need this for website previews, for example)
+install_rustup
 
 # create needed output directories, ignore error if they exist already
 mkdir -p docs/crates
@@ -73,6 +93,27 @@ echo "Manually Copy Contributing Guidelines"
 echo "-----------------------------------"
 sed -i.old '/^# Libra Core Contributing Guidelines/d' ../CONTRIBUTING.md
 cp ../CONTRIBUTING.md docs/community/contributing.md
+
+if [[ $BUILD_RUSTDOCS == true ]]; then
+  echo "-----------------------------------"
+  echo "Generating API reference via Rustdoc"
+  echo "-----------------------------------"
+
+  # Back to the Libra repo root dir
+  cd ..
+
+  # Build the rust crate docs
+  # Use `RUSTC_BOOTSTRAP` in order to use the `--enable-index-page` flag of rustdoc
+  # This is needed in order to generate a landing page `index.html` for workspaces
+  export PATH="$PATH:$HOME/.cargo/bin"
+  RUSTC_BOOTSTRAP=1 RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --no-deps --workspace --lib || exit 1
+  RUSTDOC_DIR='../target/doc/'
+  DOCUSAURUS_RUSTDOC_DIR='website/static/docs/rustdocs/'
+  cd developers.libra.org || exit
+
+  mkdir -p $DOCUSAURUS_RUSTDOC_DIR
+  cp -r $RUSTDOC_DIR $DOCUSAURUS_RUSTDOC_DIR
+fi
 
 echo "-----------------------------------"
 echo "Building Docusaurus 🦖"

@@ -1,0 +1,37 @@
+name: Libra Developers Website CI
+
+on:
+  push:
+    branches: [ auto ]
+    # would have had
+    # paths: [ 'developers.libra.org/**' ]
+    # but want to build rustdocs on main Libra code changes outside of the website too
+  pull_request:
+    branches: [ master ]
+    # would have had
+    # paths: [ 'developers.libra.org/**' ]
+    # but want to build rustdocs on main Libra code changes outside of the website too
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checks-out the Libra website repository under $GITHUB_WORKSPACE, so job can access it
+    - uses: actions/checkout@v2
+    # Installs node and yarn
+    - name: Use Node.js 12
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
+    # Install git
+    - name: Install git
+      run: |
+        sudo apt --assume-yes update
+        sudo apt --assume-yes install git
+    # Test that building the site is successful
+    - name: Build Site
+      run: |
+        cd developers.libra.org
+        ./scripts/build_docs.sh -b -r
