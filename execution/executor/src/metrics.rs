@@ -34,6 +34,16 @@ pub static LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS: Lazy<Histogram> = Lazy::new(|| 
     .unwrap()
 });
 
+pub static LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_commit_blocks_seconds",
+        // metric description
+        "The total time spent in seconds of commiting blocks in Libra executor "
+    )
+    .unwrap()
+});
+
 pub static LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         // metric name

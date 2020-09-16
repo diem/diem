@@ -19,9 +19,9 @@ pub mod db_bootstrapper;
 use crate::{
     logging::{LogEntry, LogSchema},
     metrics::{
-        LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
-        LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
-        LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+        LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS,
+        LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, LIBRA_EXECUTOR_TRANSACTIONS_SAVED,
+        LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -742,6 +742,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
+        let _timer = LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
         info!(
