@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.32"
+rand = "0.7.3"
 serde = { version = "1.0.116", features = ["rc"], default-features = false }
 structopt = "0.3.17"
 thiserror = "1.0.20"

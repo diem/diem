@@ -2724,6 +2724,7 @@ dependencies = [
  "libra-vm 0.1.0",
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "storage-interface 0.1.0",
  "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",

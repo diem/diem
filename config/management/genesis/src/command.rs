@@ -195,6 +195,7 @@ pub mod tests {
         let operator_carol_ns = "operator_carol";
         let dave_ns = "dave";
         let shared = "_shared";
+        let mut storage_idx = 0;
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uploaded to the common namespace:
@@ -217,7 +218,7 @@ pub mod tests {
             .unwrap();
 
         // Step 2) Upload the root keys:
-        helper.initialize(dave_ns.into());
+        helper.initialize_by_idx(dave_ns.into(), storage_idx);
         helper
             .libra_root_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
@@ -230,7 +231,8 @@ pub mod tests {
             let ns = (*ns).to_string();
             let ns_shared = (*ns).to_string() + shared;
 
-            helper.initialize(ns.clone());
+            storage_idx += 1;
+            helper.initialize_by_idx(ns.clone(), storage_idx);
             if ns != carol_ns {
                 helper.owner_key(&ns, &ns_shared).unwrap();
             }
@@ -241,7 +243,8 @@ pub mod tests {
             let ns = (*ns).to_string();
             let ns_shared = (*ns).to_string() + shared;
 
-            helper.initialize(ns.clone());
+            storage_idx += 1;
+            helper.initialize_by_idx(ns.clone(), storage_idx);
             helper.operator_key(&ns, &ns_shared).unwrap();
         }
 
@@ -326,7 +329,7 @@ pub mod tests {
         let storage_helper = StorageHelper::new();
         let local_operator_ns = "local";
         let remote_operator_ns = "operator";
-        storage_helper.initialize(local_operator_ns.into());
+        storage_helper.initialize_by_idx(local_operator_ns.into(), 0);
 
         // Operator uploads key to shared storage and initializes address in local storage
         let operator_key = storage_helper
@@ -392,7 +395,7 @@ pub mod tests {
         let storage_helper = StorageHelper::new();
         let local_owner_ns = "local";
         let remote_owner_ns = "owner";
-        storage_helper.initialize(local_owner_ns.into());
+        storage_helper.initialize_by_idx(local_owner_ns.into(), 0);
 
         // Upload an operator key to the remote storage
         let operator_name = "operator";
@@ -430,7 +433,7 @@ pub mod tests {
         // 9 KeyNotSet results in 10 splits
         assert_eq!(output, 10);
 
-        helper.initialize(namespace.into());
+        helper.initialize_by_idx(namespace.into(), 0);
 
         let output = helper
             .verify(namespace)

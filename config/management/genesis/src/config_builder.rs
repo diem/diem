@@ -74,7 +74,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Root initializes libra root and treasury root keys.
     fn create_root(&self) {
-        self.storage_helper.initialize(LIBRA_ROOT_NS.into());
+        self.storage_helper
+            .initialize_by_idx(LIBRA_ROOT_NS.into(), 0);
         self.storage_helper
             .libra_root_key(LIBRA_ROOT_NS, LIBRA_ROOT_SHARED_NS)
             .unwrap();
@@ -88,7 +89,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let local_ns = index.to_string() + OWNER_NS;
         let remote_ns = index.to_string() + OWNER_SHARED_NS;
 
-        self.storage_helper.initialize(local_ns.clone());
+        self.storage_helper
+            .initialize_by_idx(local_ns.clone(), 1 + index);
         let _ = self
             .storage_helper
             .owner_key(&local_ns, &remote_ns)
@@ -100,7 +102,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let local_ns = index.to_string() + OPERATOR_NS;
         let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
 
-        self.storage_helper.initialize(local_ns.clone());
+        self.storage_helper
+            .initialize_by_idx(local_ns.clone(), self.num_validators + 1 + index);
         let _ = self
             .storage_helper
             .operator_key(&local_ns, &remote_ns)
