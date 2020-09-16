@@ -71,9 +71,7 @@
 #![forbid(unsafe_code)]
 
 pub mod prelude {
-    pub use crate::{
-        debug, error, event, info, security::SecurityEvent, trace, warn, StructuredLogEntry,
-    };
+    pub use crate::{debug, error, event, info, security::SecurityEvent, trace, warn};
 }
 pub mod json_log;
 
@@ -95,8 +93,6 @@ pub use crate::libra_logger::{
 pub use event::Event;
 pub use filter::{Filter, LevelFilter};
 pub use metadata::{Level, Metadata};
-
-pub use struct_log::{LoggingField, StructuredLogEntry};
 
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;
