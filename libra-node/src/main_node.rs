@@ -97,10 +97,15 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
 
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
     // cause confusion, otherwise the threads would have their parent's name.
-    rayon::ThreadPoolBuilder::new()
+    let result = rayon::ThreadPoolBuilder::new()
         .thread_name(|index| format!("rayon-global-{}", index))
-        .build_global()
-        .expect("Building rayon global thread pool should work.");
+        .build_global();
+    // If it was already initialized, move along. There is no access to the internal error.
+    if let Err(err) = &result {
+        if err.to_string() != "The global thread pool has already been initialized." {
+            result.expect("Building rayon global thread pool should work.");
+        }
+    }
 
     let mut instant = Instant::now();
     let (libra_db, db_rw) = DbReaderWriter::wrap(

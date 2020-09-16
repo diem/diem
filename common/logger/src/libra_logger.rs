@@ -304,6 +304,33 @@ impl Writer for StderrWriter {
     }
 }
 
+/// A struct for writing logs to a file
+pub struct FileWriter {
+    log_file: std::sync::RwLock<std::fs::File>,
+}
+
+impl FileWriter {
+    pub fn new(log_file: std::path::PathBuf) -> Self {
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(log_file)
+            .expect("Unable to open log file");
+        Self {
+            log_file: std::sync::RwLock::new(file),
+        }
+    }
+}
+
+impl Writer for FileWriter {
+    /// Write to file
+    fn write(&self, log: String) {
+        if let Err(err) = writeln!(self.log_file.write().unwrap(), "{}", log) {
+            eprintln!("Unable to write to log file: {}", err.to_string());
+        }
+    }
+}
+
 /// Converts a record into a string representation:
 /// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
 /// Example:

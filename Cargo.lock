@@ -3040,6 +3040,7 @@ name = "libra-node"
 version = "0.1.0"
 dependencies = [
  "backup-service 0.1.0",
+ "config-builder 0.1.0",
  "consensus 0.1.0",
  "crash-handler 0.1.0",
  "debug-interface 0.1.0",
@@ -3050,11 +3051,13 @@ dependencies = [
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-genesis-tool 0.1.0",
  "libra-json-rpc 0.1.0",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",
  "libra-secure-storage 0.1.0",
+ "libra-temppath 0.1.0",
  "libra-trace 0.1.0",
  "libra-types 0.1.0",
  "libra-vm 0.1.0",

@@ -18,12 +18,21 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Libra Node")]
 struct Args {
-    #[structopt(short = "f", long, parse(from_os_str))]
-    /// Path to NodeConfig
-    config: PathBuf,
-    #[structopt(short = "d", long)]
-    /// Disable logging
+    #[structopt(
+        short = "f",
+        long,
+        required_unless = "test",
+        help = "Path to NodeConfig"
+    )]
+    config: Option<PathBuf>,
+    #[structopt(short = "d", long, help = "Disable logging")]
     no_logging: bool,
+    #[structopt(
+        long,
+        conflicts_with = "config",
+        help = "Enable a single validator testnet"
+    )]
+    test: bool,
 }
 
 #[global_allocator]
@@ -32,19 +41,30 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 fn main() {
     let args = Args::from_args();
 
-    let config = NodeConfig::load(args.config).expect("Failed to load node config");
-    println!("Using node config {:?}", &config);
+    if args.test {
+        println!("Entering test mode, this should never be used in production!");
+        load_test_environment(args.no_logging);
+    } else {
+        let config = NodeConfig::load(args.config.unwrap()).expect("Failed to load node config");
+        println!("Using node config {:?}", &config);
+        start(args.no_logging, &config, None);
+    };
+}
+
+fn start(no_logging: bool, config: &NodeConfig, log_file: Option<PathBuf>) {
     crash_handler::setup_panic_handler();
 
-    let logger = if !args.no_logging {
-        Some(
-            libra_logger::Logger::new()
-                .channel_size(config.logger.chan_size)
-                .is_async(config.logger.is_async)
-                .level(config.logger.level)
-                .read_env()
-                .build(),
-        )
+    let logger = if !no_logging {
+        let mut logger = libra_logger::Logger::new();
+        logger
+            .channel_size(config.logger.chan_size)
+            .is_async(config.logger.is_async)
+            .level(config.logger.level)
+            .read_env();
+        if let Some(log_file) = log_file {
+            logger.printer(Box::new(FileWriter::new(log_file)));
+        }
+        Some(logger.build())
     } else {
         None
     };
@@ -88,4 +108,37 @@ fn setup_metrics(peer_id: PeerId, config: &NodeConfig) {
         &format!("{}.metrics", peer_id),
         config.metrics.collection_interval_ms,
     );
+}
+
+fn load_test_environment(no_logging: bool) {
+    let config_temp_path = libra_temppath::TempPath::new();
+    config_temp_path.create_as_dir().unwrap();
+    let config_path = config_temp_path.as_ref().to_path_buf();
+
+    let template = NodeConfig::default_for_validator();
+    let builder =
+        libra_genesis_tool::config_builder::ValidatorBuilder::new(1, template, &config_path);
+    let test_config = config_builder::SwarmConfig::build(&builder, &config_path).unwrap();
+
+    let mut log_file = config_path.clone();
+    log_file.push("validator.log");
+
+    println!("Completed generating configuration:");
+    println!("\tLog file: {:?}", log_file);
+    println!("\tConfig path: {:?}", test_config.config_files[0]);
+    println!(
+        "\tLibra root key path: {:?}",
+        test_config.libra_root_key_path
+    );
+    println!("\tWaypoint: {}", test_config.waypoint);
+    let config = NodeConfig::load(&test_config.config_files[0]).unwrap();
+    println!("\tJSON-RPC endpoint: {}", config.rpc.address);
+    println!(
+        "\tFullNode network: {}",
+        config.full_node_networks[0].listen_address
+    );
+    println!("\n");
+    println!("Libra is running, press ctrl-c to exit");
+
+    start(no_logging, &config, Some(log_file))
 }

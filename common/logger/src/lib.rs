@@ -71,7 +71,9 @@
 #![forbid(unsafe_code)]
 
 pub mod prelude {
-    pub use crate::{debug, error, event, info, security::SecurityEvent, trace, warn};
+    pub use crate::{
+        debug, error, event, info, libra_logger::FileWriter, security::SecurityEvent, trace, warn,
+    };
 }
 pub mod json_log;
 
