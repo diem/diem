@@ -50,7 +50,7 @@ fn main() {
     };
 
     // Let's now log some important information, since the logger is set up
-    info!(StructuredLogEntry::new_named("config", "startup").data("config", &config));
+    info!(config = config, "Loaded config");
 
     if config.metrics.enabled {
         for network in &config.full_node_networks {
