@@ -1,10 +1,27 @@
 [[env_vars]]
-key = "BUCKET"
+key = "BASE_PATH"
 value = "libra-backup"
 
 [commands]
-create_backup = 'echo "$BACKUP_NAME"'
-create_for_write = 'echo "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME" && exec >&- && aws s3 cp - "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME"'
-open_for_read = 'aws s3 cp "$FILE_HANDLE" -'
-save_metadata_line= 'aws s3 cp - "s3://$BUCKET/metadata/$FILE_NAME"'
-list_metadata_files = 'aws s3 ls s3://$BUCKET/metadata/  | sed -ne "s/.* //p" | xargs -I{} echo s3://$BUCKET/metadata/{}'
+create_backup = '''
+    echo "$BACKUP_NAME"  # backup handle is the same with input backup name, output to stdout
+'''
+
+create_for_write = '''
+    FILE_HANDLE="s3://$BASE_PATH/$BACKUP_HANDLE/$FILE_NAME"  # file handle is the file name under the folder with the name of the backup handle
+    echo "$FILE_HANDLE" # output file handle to stdout
+    exec 1>&-  # close stdout
+    aws s3 cp - "$FILE_HANDLE"  # route stdin to file handle
+'''
+
+open_for_read = '''
+    aws s3 cp "$FILE_HANDLE" -  # route file handle content to stdout
+'''
+
+save_metadata_line= '''
+    aws s3 cp - "s3://$BASE_PATH/metadata/$FILE_NAME"  # save the line to a new file under the metadata folder
+'''
+
+list_metadata_files = '''
+    (aws s3 ls s3://$BASE_PATH/metadata/ ||:) | sed -ne "s/.* //p" | xargs -I{} echo s3://$BASE_PATH/metadata/{}  # list files under the metadata folder
+'''
