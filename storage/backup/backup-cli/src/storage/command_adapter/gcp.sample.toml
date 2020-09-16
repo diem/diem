@@ -1,0 +1,27 @@
+[[env_vars]]
+key = "BASE_PATH"
+value = "libra-backup/backup1"
+
+[commands]
+create_backup = '''
+    echo "$BACKUP_NAME"  # backup handle is the same with input backup name, output to stdout
+'''
+
+create_for_write = '''
+    FILE_HANDLE="gs://$BASE_PATH/$BACKUP_HANDLE/$FILE_NAME"  # file handle is the file name under the folder with the name of the backup handle
+    echo "$FILE_HANDLE" # output file handle to stdout
+    exec 1>&-  # close stdout
+    gsutil -q cp - "$FILE_HANDLE" > /dev/null  # route stdin to file handle
+'''
+
+open_for_read = '''
+    gsutil -q cp "$FILE_HANDLE" -  # route file handle content to stdout
+'''
+
+save_metadata_line= '''
+    gsutil -q cp - "gs://$BASE_PATH/metadata/$FILE_NAME"  # save the line to a new file under the metadata folder
+'''
+
+list_metadata_files = '''
+    gsutil -q ls gs://$BASE_PATH/metadata/ ||:
+'''
