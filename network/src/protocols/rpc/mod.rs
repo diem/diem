@@ -165,6 +165,7 @@ impl RequestIdGenerator {
             match self.next_id.overflowing_add(1) {
                 (next_id, true) => {
                     info!(
+                        remote_peer = self.peer_id,
                         "Request ids with peer: {} wrapped around to 0",
                         self.peer_id.short_str(),
                     );
@@ -257,7 +258,9 @@ impl Rpc {
             }
         }
         info!(
-            "Rpc actor terminated for peer: {}",
+            NetworkSchema::new(&self.network_context).remote_peer(&self.peer_handle.peer_id()),
+            "{} Rpc actor terminated for peer: {}",
+            self.network_context,
             self.peer_handle.peer_id().short_str()
         );
     }
@@ -281,7 +284,12 @@ impl Rpc {
                         self.handle_inbound_request(request, inbound_rpc_tasks);
                     }
                     _ => {
-                        error!("Received non-RPC message from Peer actor: {:?}", message);
+                        error!(
+                            NetworkSchema::new(&self.network_context),
+                            "{} Received non-RPC message from Peer actor: {:?}",
+                            self.network_context,
+                            message
+                        );
                     }
                 }
             }
@@ -481,8 +489,11 @@ impl Rpc {
                                 .remote_peer(&peer_id)
                                 .debug_error(&err),
                             request_id = request_id,
-                            "Error making outbound rpc request with request_id {} to {}: {:?}",
-                            request_id, peer_id.short_str(), err
+                            "{} Error making outbound rpc request with request_id {} to {}: {:?}",
+                            network_context,
+                            request_id,
+                            peer_id.short_str(),
+                            err
                         );
                     }
                     // Propagate the results to the rpc client layer.
@@ -492,7 +503,8 @@ impl Rpc {
                         info!(
                             NetworkSchema::new(&network_context)
                                 .remote_peer(&peer_id),
-                            "Rpc client canceled outbound rpc call to {}",
+                            "{} Rpc client canceled outbound rpc call to {}",
+                            network_context,
                             peer_id.short_str()
                         );
                     }
@@ -504,7 +516,8 @@ impl Rpc {
                     info!(
                         NetworkSchema::new(&network_context)
                             .remote_peer(&peer_id),
-                        "Rpc client canceled outbound rpc call to {}",
+                        "{} Rpc client canceled outbound rpc call to {}",
+                        network_context,
                         peer_id.short_str()
                     );
                 },
