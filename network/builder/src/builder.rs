@@ -234,7 +234,7 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
+    pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         match self.connectivity_manager_builder.as_ref() {
             Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
             None => None,

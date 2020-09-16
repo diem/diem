@@ -6,6 +6,7 @@
 mod client_compatibility_test;
 mod compatibility_test;
 mod cpu_flamegraph;
+mod load_test;
 mod packet_loss_random_validators;
 mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
@@ -24,6 +25,7 @@ use std::{
 
 pub use client_compatibility_test::{ClientCompatibilityTest, ClientCompatiblityTestParams};
 pub use compatibility_test::{CompatibilityTest, CompatiblityTestParams};
+pub use load_test::LoadTestParams;
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
@@ -159,6 +161,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     );
     known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
     known_experiments.insert("reconfiguration", f::<ReconfigurationParams>());
+    known_experiments.insert("load_test", f::<LoadTestParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)

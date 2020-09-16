@@ -45,14 +45,21 @@ libra-genesis-tool = { path = "../../config/management/genesis", version = "0.1.
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-management = { path = "../../config/management", version = "0.1.0", features = ["testing"] }
+libra-mempool = { path = "../../mempool", version = "0.1.0" }
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
 libra-network-address-encryption = { path = "../../config/management/network-address-encryption", version = "0.1.0" }
+libra-node = { path = "../../libra-node", version = "0.1.0" }
 libra-operational-tool = {path = "../../config/management/operational", version = "0.1.0", features = ["testing"] }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
+libra-swarm = { path = "../libra-swarm", version = "0.1.0" }
 libra-time = {path = "../../common/time", version = "0.1.0"}
 libra-trace = {path = "../../common/trace", version = "0.1.0"}
 libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0" }
+network-builder = { path = "../../network/builder", version = "0.1.0" }
+seed-peer-generator = { path = "../../config/seed-peer-generator", version = "0.1.0" }
+state-synchronizer = { path = "../../state-synchronizer", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 
 futures = "0.3.5"
