@@ -1,0 +1,34 @@
+# This compose file defines a single validator node test network. In addition, it offers the
+# following facilities:
+# * JSON-RPC endpoint at http://127.0.0.1:8080.
+# * waypoint file at waypoint.txt in the same directory as this compose
+# * genesis.blob at genesis.blob in the same directory as this compose
+# * libra_root_key (mint.key) in the same directory as this compose
+# * chain_id of 4 / TESTING
+#
+# Additional information:
+# * If you use this compose for different Libra Networks, you will need remove the db volume first.
+# * If you move this compose, you must recreate the empty waypoint.txt and genesis.blob otherwise
+# the container will fail to start.
+version: "3.8"
+services:
+    validator:
+        image: libra/validator
+        volumes:
+            - type: volume
+              source: db
+              target: /opt/libra/var
+            - type: bind
+              source: ./genesis.blob
+              target: /opt/libra/var/0/genesis.blob
+            - type: bind
+              source: ./libra_root_key
+              target: /opt/libra/var/mint.key
+            - type: bind
+              source: ./waypoint.txt
+              target: /opt/libra/var/waypoint.txt
+        command: ["/opt/libra/bin/libra-node", "--test", "--config", "/opt/libra/var"]
+        ports:
+            - "8080:8080"
+volumes:
+    db:
