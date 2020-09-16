@@ -56,11 +56,9 @@ spec:
       name: config
     env:
     - name: RUST_LOG
-      value: "warn"
+      value: "debug"
     - name: STRUCT_LOG_TCP_ADDR
       value: "127.0.0.1:5044"
-    - name: STRUCT_LOG_LEVEL
-      value: "debug"
     - name: RUST_BACKTRACE
       value: "1"
     - name: MY_POD_IP

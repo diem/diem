@@ -38,6 +38,7 @@ num_cpus = "1.13.0"
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-genesis-tool = { path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
