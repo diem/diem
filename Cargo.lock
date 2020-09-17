@@ -3064,7 +3064,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "libradb 0.1.0",
  "network-builder 0.1.0",
- "rayon 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "state-synchronizer 0.1.0",
  "storage-client 0.1.0",
  "storage-interface 0.1.0",
