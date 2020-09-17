@@ -111,20 +111,12 @@ impl Type {
 
     /// Determines whether this is a mutable reference.
     pub fn is_mutable_reference(&self) -> bool {
-        if let Type::Reference(true, _) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Type::Reference(true, _))
     }
 
     /// Determines whether this is an immutable reference.
     pub fn is_immutable_reference(&self) -> bool {
-        if let Type::Reference(false, _) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Type::Reference(false, _))
     }
 
     /// Returns true if this type is a specification language only type or contains specification

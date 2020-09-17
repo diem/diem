@@ -3,9 +3,10 @@
 
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
-    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, HistogramVec,
-    IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, Histogram,
+    HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
 };
+use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use once_cell::sync::Lazy;
 
@@ -38,19 +39,35 @@ pub static LIBRA_CONNECTIONS: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub fn update_libra_connections(
-    network_context: &NetworkContext,
-    origin: ConnectionOrigin,
-    num_connections: usize,
-) {
-    LIBRA_CONNECTIONS
-        .with_label_values(&[
-            network_context.role().as_str(),
-            network_context.network_id().to_string().as_str(),
-            network_context.peer_id().short_str().as_str(),
-            origin.to_string().as_str(),
-        ])
-        .set(num_connections as i64);
+pub fn connections(network_context: &NetworkContext, origin: ConnectionOrigin) -> IntGauge {
+    LIBRA_CONNECTIONS.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        origin.as_str(),
+    ])
+}
+
+pub static LIBRA_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_network_peer_connected",
+        "Indicates if we are connected to a particular peer",
+        &["role_type", "network_id", "peer_id", "remote_peer_id"]
+    )
+    .unwrap()
+});
+
+pub fn peer_connected(network_context: &NetworkContext, peer_id: &PeerId, v: i64) {
+    if network_context.role().is_validator() {
+        LIBRA_NETWORK_PEER_CONNECTED
+            .with_label_values(&[
+                network_context.role().as_str(),
+                network_context.network_id().as_str(),
+                network_context.peer_id().short_str().as_str(),
+                peer_id.short_str().as_str(),
+            ])
+            .set(v)
+    }
 }
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -66,46 +83,110 @@ pub static LIBRA_NETWORK_RPC_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_rpc_messages",
         "Number of RPC messages",
-        &["type", "state"]
+        &["role_type", "network_id", "peer_id", "type", "state"]
     )
     .unwrap()
 });
 
-pub static LIBRA_NETWORK_RPC_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
-    register_histogram_vec!(
+pub fn rpc_messages(
+    network_context: &NetworkContext,
+    type_label: &'static str,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_RPC_MESSAGES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        type_label,
+        state_label,
+    ])
+}
+
+pub static LIBRA_NETWORK_RPC_BYTES: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
         "libra_network_rpc_bytes",
         "Number of RPC bytes transferred",
-        &["type", "state"]
+        &["role_type", "network_id", "peer_id", "type", "state"]
     )
     .unwrap()
 });
+
+pub fn rpc_bytes(
+    network_context: &NetworkContext,
+    type_label: &'static str,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_RPC_BYTES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        type_label,
+        state_label,
+    ])
+}
+
+// TODO(philiphayes): specify that this is outbound rpc only
+// TODO(philiphayes): somehow get per-peer latency metrics without using a
+// separate peer_id label ==> cardinality explosion.
 
 pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_latency_seconds",
         "RPC request latency in seconds",
-        &["type", "protocol_id", "peer_id"]
+        &["role_type", "network_id", "peer_id"]
     )
     .unwrap()
 });
+
+pub fn rpc_latency(network_context: &NetworkContext) -> Histogram {
+    LIBRA_NETWORK_RPC_LATENCY.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+    ])
+}
 
 pub static LIBRA_NETWORK_DIRECT_SEND_MESSAGES: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
         "libra_network_direct_send_messages",
         "Number of direct send messages",
-        &["state"]
+        &["role_type", "network_id", "peer_id", "state"]
     )
     .unwrap()
 });
 
-pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
-    register_histogram_vec!(
+pub fn direct_send_messages(
+    network_context: &NetworkContext,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_DIRECT_SEND_MESSAGES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        state_label,
+    ])
+}
+
+pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
         "libra_network_direct_send_bytes",
         "Number of direct send bytes transferred",
-        &["state"]
+        &["role_type", "network_id", "peer_id", "state"]
     )
     .unwrap()
 });
+
+pub fn direct_send_bytes(
+    network_context: &NetworkContext,
+    state_label: &'static str,
+) -> IntCounter {
+    LIBRA_NETWORK_DIRECT_SEND_BYTES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        state_label,
+    ])
+}
 
 /// Counters(queued,dequeued,dropped) related to inbound network notifications for RPCs and
 /// DirectSends.

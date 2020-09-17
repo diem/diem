@@ -760,8 +760,9 @@ fn test_key_not_in_store(safety_rules: &Callback) {
     proof
         .ledger_info_with_sigs
         .push(a2.block().quorum_cert().ledger_info().clone());
-    let err = safety_rules.initialize(&proof).unwrap_err();
-    assert_eq!(err, Error::InternalError("Validator key not found".into()));
+
+    // Expected failure due to validator key not being found.
+    safety_rules.initialize(&proof).unwrap_err();
 
     let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.in_validator_set(), false);

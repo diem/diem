@@ -35,20 +35,20 @@ error: abort not covered by any of the `aborts_if` clauses
 
 error: abort not covered by any of the `aborts_if` clauses
 
-     ┌── tests/sources/functional/arithm.move:230:5 ───
+     ┌── tests/sources/functional/arithm.move:229:5 ───
      │
- 230 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
- 231 │ │         x * y
- 232 │ │     }
+ 229 │ ╭     fun overflow_u128_mul_incorrect(x: u128, y: u128): u128 {
+ 230 │ │         x * y
+ 231 │ │     }
      │ ╰─────^
      ·
- 231 │         x * y
+ 230 │         x * y
      │           - abort happened here with execution failure
      │
-     =     at tests/sources/functional/arithm.move:230:5: overflow_u128_mul_incorrect
+     =     at tests/sources/functional/arithm.move:229:5: overflow_u128_mul_incorrect
      =         x = <redacted>,
      =         y = <redacted>
-     =     at tests/sources/functional/arithm.move:231:11: overflow_u128_mul_incorrect (ABORTED)
+     =     at tests/sources/functional/arithm.move:230:11: overflow_u128_mul_incorrect (ABORTED)
 
 error: abort not covered by any of the `aborts_if` clauses
 

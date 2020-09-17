@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    counters::*, create_access_path, data_cache::StateViewCache, libra_vm::LibraVMImpl,
-    transaction_metadata::TransactionMetadata, VMValidator,
+    counters::*,
+    create_access_path,
+    data_cache::StateViewCache,
+    libra_vm::{get_currency_info, LibraVMImpl},
+    transaction_metadata::TransactionMetadata,
+    VMValidator,
 };
 use libra_state_view::StateView;
 use libra_types::{
@@ -124,9 +128,8 @@ impl VMValidator for LibraVMValidator {
         };
 
         let account_role = get_account_role(txn_sender, &data_cache);
-        let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
-        {
-            Ok(price) => price,
+        let normalized_gas_price = match get_currency_info(&currency_code, &data_cache) {
+            Ok(info) => info.convert_to_lbr(gas_price),
             Err(err) => {
                 return VMValidatorResult::new(
                     Some(err.status_code()),
@@ -176,20 +179,4 @@ fn get_account_role(sender: AccountAddress, remote_cache: &StateViewCache) -> Go
             .unwrap_or(GovernanceRole::NonGovernanceRole);
     }
     GovernanceRole::NonGovernanceRole
-}
-
-fn normalize_gas_price(
-    gas_price: u64,
-    currency_code: &IdentStr,
-    remote_cache: &StateViewCache,
-) -> Result<u64, VMStatus> {
-    let currency_info_path =
-        account_config::CurrencyInfoResource::resource_path_for(currency_code.to_owned());
-    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
-        let x = lcs::from_bytes::<account_config::CurrencyInfoResource>(&blob)
-            .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
-        Ok(x.convert_to_lbr(gas_price))
-    } else {
-        Err(VMStatus::Error(StatusCode::MISSING_DATA))
-    }
 }

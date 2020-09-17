@@ -91,46 +91,50 @@ fn main() {
     }
 
     if !no_compiler {
-        time_it("Compiling modules and checking ABI compatibility", || {
-            std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
-            let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
-            module_path.push(COMPILED_STDLIB_DIR);
-            let new_modules = build_stdlib();
+        time_it(
+            "Compiling modules and checking linking/layout compatibility",
+            || {
+                std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
+                let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
+                module_path.push(COMPILED_STDLIB_DIR);
+                let new_modules = build_stdlib();
 
-            let mut is_linking_layout_compatible = true;
-            if !no_check_linking_layout_compatibility {
-                for module in new_modules.values() {
-                    // extract new linking/layout API and check compatibility with old
-                    let new_module_id = module.self_id();
-                    if let Some(old_api) = old_module_apis.get(&new_module_id) {
-                        let new_api = Module::new(module);
-                        let compatibility = Compatibility::check(old_api, &new_api);
-                        if is_linking_layout_compatible && !compatibility.is_fully_compatible() {
-                            println!("Found linking/layout-incompatible change:");
-                            is_linking_layout_compatible = false
-                        }
-                        if !compatibility.struct_and_function_linking {
-                            println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", new_module_id.name())
-                        }
-                        if !compatibility.struct_layout {
-                            println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", new_module_id.name())
+                let mut is_linking_layout_compatible = true;
+                if !no_check_linking_layout_compatibility {
+                    for module in new_modules.values() {
+                        // extract new linking/layout API and check compatibility with old
+                        let new_module_id = module.self_id();
+                        if let Some(old_api) = old_module_apis.get(&new_module_id) {
+                            let new_api = Module::new(module);
+                            let compatibility = Compatibility::check(old_api, &new_api);
+                            if is_linking_layout_compatible && !compatibility.is_fully_compatible()
+                            {
+                                println!("Found linking/layout-incompatible change:");
+                                is_linking_layout_compatible = false
+                            }
+                            if !compatibility.struct_and_function_linking {
+                                println!("Linking API for structs/functions of module {} has changed. Need to redeploy all dependent modules.", new_module_id.name())
+                            }
+                            if !compatibility.struct_layout {
+                                println!("Layout API for structs of module {} has changed. Need to do a data migration of published structs", new_module_id.name())
+                            }
                         }
                     }
                 }
-            }
 
-            // write module bytecodes to disk. start by clearing out all of the old ones
-            std::fs::remove_dir_all(&module_path).unwrap();
-            std::fs::create_dir_all(&module_path).unwrap();
-            for (name, module) in new_modules {
-                let mut bytes = Vec::new();
-                module.serialize(&mut bytes).unwrap();
-                module_path.push(name);
-                module_path.set_extension(COMPILED_EXTENSION);
-                save_binary(&module_path, &bytes);
-                module_path.pop();
-            }
-        });
+                // write module bytecodes to disk. start by clearing out all of the old ones
+                std::fs::remove_dir_all(&module_path).unwrap();
+                std::fs::create_dir_all(&module_path).unwrap();
+                for (name, module) in new_modules {
+                    let mut bytes = Vec::new();
+                    module.serialize(&mut bytes).unwrap();
+                    module_path.push(name);
+                    module_path.set_extension(COMPILED_EXTENSION);
+                    save_binary(&module_path, &bytes);
+                    module_path.pop();
+                }
+            },
+        );
     }
 
     let txn_source_files =

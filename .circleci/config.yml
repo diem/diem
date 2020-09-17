@@ -459,7 +459,7 @@ jobs:
           # metadata is enabled, the tests can be distributed by run time to
           # speed up this job.
           command: |
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x test --package testsuite -- --list | \
+            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x test --package smoke-test -- --list | \
               grep "::" | sed 's/: .*$//' > e2e_tests
             cat e2e_tests
             echo -e "Found $(wc -l e2e_tests) tests."
@@ -478,7 +478,7 @@ jobs:
               status=1
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
                 RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
-                  $CARGO $CARGOFLAGS x test --package testsuite -- $target --test-threads 1 --exact --nocapture
+                  $CARGO $CARGOFLAGS x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
                 if [[ $status != 0 ]] ; then
@@ -887,6 +887,7 @@ jobs:
           name: Run code coverage
           command: |
             scripts/coverage_report.sh . ${CODECOV_OUTPUT} --batch --failed_crate_file ${MESSAGE_PAYLOAD_FILE}
+          no_output_timeout: 20m
       - run:
           name: Upload result to codecov.io
           command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info -F unittest;
@@ -946,6 +947,7 @@ workflows:
               only:
                 - /^test-[\d|.]+$/
                 - /^release-[\d|.]+$/
+                - master
       - docker-update-base-images:
           context: docker
           filters:

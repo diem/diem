@@ -19,6 +19,10 @@ pub enum Command {
     AccountResource(crate::account_resource::AccountResource),
     #[structopt(about = "Remove a validator from ValidatorSet")]
     AddValidator(crate::governance::AddValidator),
+    #[structopt(about = "Create a new validator account")]
+    CreateValidator(crate::governance::CreateValidator),
+    #[structopt(about = "Create a new validator operator account")]
+    CreateValidatorOperator(crate::governance::CreateValidatorOperator),
     #[structopt(about = "Extract a private key from the validator storage")]
     ExtractPrivateKey(crate::keys::ExtractPrivateKey),
     #[structopt(about = "Extract a public key from the validator storage")]
@@ -39,6 +43,8 @@ pub enum Command {
     RotateValidatorNetworkKey(crate::validator_config::RotateValidatorNetworkKey),
     #[structopt(about = "Sets the validator config")]
     SetValidatorConfig(crate::validator_config::SetValidatorConfig),
+    #[structopt(about = "Sets the validator operator")]
+    SetValidatorOperator(crate::owner::SetValidatorOperator),
     #[structopt(about = "Validates a transaction")]
     ValidateTransaction(crate::validate_transaction::ValidateTransaction),
     #[structopt(about = "Displays the current validator config registered on the blockchain")]
@@ -51,6 +57,8 @@ pub enum Command {
 pub enum CommandName {
     AccountResource,
     AddValidator,
+    CreateValidator,
+    CreateValidatorOperator,
     ExtractPrivateKey,
     ExtractPublicKey,
     InsertWaypoint,
@@ -61,6 +69,7 @@ pub enum CommandName {
     RotateFullNodeNetworkKey,
     RotateValidatorNetworkKey,
     SetValidatorConfig,
+    SetValidatorOperator,
     ValidateTransaction,
     ValidatorConfig,
     ValidatorSet,
@@ -71,6 +80,8 @@ impl From<&Command> for CommandName {
         match command {
             Command::AccountResource(_) => CommandName::AccountResource,
             Command::AddValidator(_) => CommandName::AddValidator,
+            Command::CreateValidator(_) => CommandName::CreateValidator,
+            Command::CreateValidatorOperator(_) => CommandName::CreateValidatorOperator,
             Command::ExtractPrivateKey(_) => CommandName::ExtractPrivateKey,
             Command::ExtractPublicKey(_) => CommandName::ExtractPublicKey,
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
@@ -81,6 +92,7 @@ impl From<&Command> for CommandName {
             Command::RotateFullNodeNetworkKey(_) => CommandName::RotateFullNodeNetworkKey,
             Command::RotateValidatorNetworkKey(_) => CommandName::RotateValidatorNetworkKey,
             Command::SetValidatorConfig(_) => CommandName::SetValidatorConfig,
+            Command::SetValidatorOperator(_) => CommandName::SetValidatorOperator,
             Command::ValidateTransaction(_) => CommandName::ValidateTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::ValidatorSet(_) => CommandName::ValidatorSet,
@@ -93,6 +105,8 @@ impl std::fmt::Display for CommandName {
         let name = match self {
             CommandName::AccountResource => "account-resource",
             CommandName::AddValidator => "add-validator",
+            CommandName::CreateValidator => "create-validator",
+            CommandName::CreateValidatorOperator => "create-validator-operator",
             CommandName::ExtractPrivateKey => "extract-private-key",
             CommandName::ExtractPublicKey => "extract-public-key",
             CommandName::InsertWaypoint => "insert-waypoint",
@@ -103,6 +117,7 @@ impl std::fmt::Display for CommandName {
             CommandName::RotateFullNodeNetworkKey => "rotate-fullnode-network-key",
             CommandName::RotateValidatorNetworkKey => "rotate-validator-network-key",
             CommandName::SetValidatorConfig => "set-validator-config",
+            CommandName::SetValidatorOperator => "set-validator-operator",
             CommandName::ValidateTransaction => "validate-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::ValidatorSet => "validator-set",
@@ -116,6 +131,8 @@ impl Command {
         match self {
             Command::AccountResource(cmd) => Self::pretty_print(cmd.execute()),
             Command::AddValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CreateValidator(cmd) => Self::pretty_print(cmd.execute()),
+            Command::CreateValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
             Command::InsertWaypoint(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPrivateKey(cmd) => Self::print_success(cmd.execute()),
             Command::ExtractPublicKey(cmd) => Self::print_success(cmd.execute()),
@@ -130,6 +147,7 @@ impl Command {
                 Self::print_transaction_context(cmd.execute())
             }
             Command::SetValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
+            Command::SetValidatorOperator(cmd) => Self::pretty_print(cmd.execute()),
             Command::ValidateTransaction(cmd) => Self::print_transaction_status(cmd.execute()),
             Command::ValidatorConfig(cmd) => Self::pretty_print(cmd.execute()),
             Command::ValidatorSet(cmd) => Self::pretty_print(cmd.execute()),

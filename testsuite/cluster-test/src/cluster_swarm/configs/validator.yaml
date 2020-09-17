@@ -60,3 +60,7 @@ failpoints:
   consensus::sync_to: 1%return
   consensus::compute: 1%return
   consensus::pull_txn: 1%return
+  executor::vm_execute_chunk: 1%return
+  executor::commit_chunk: 1%return
+  executor::vm_execute_block: 1%return
+  #executor::commit_blocks: 0.01%return

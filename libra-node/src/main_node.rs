@@ -95,13 +95,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
         metric_server::start_server(public_metric_host, public_metrics_port, true)
     });
 
-    // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
-    // cause confusion, otherwise the threads would have their parent's name.
-    rayon::ThreadPoolBuilder::new()
-        .thread_name(|index| format!("rayon-global-{}", index))
-        .build_global()
-        .expect("Building rayon global thread pool should work.");
-
     let mut instant = Instant::now();
     let (libra_db, db_rw) = DbReaderWriter::wrap(
         LibraDB::open(
@@ -119,6 +112,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     );
 
     let waypoint = node_config.base.waypoint.waypoint();
+    println!("WWWW1111: {}", waypoint);
     // if there's genesis txn and waypoint, commit it if the result matches.
     if let Some(genesis) = get_genesis_txn(&node_config) {
         maybe_bootstrap::<LibraVM>(&db_rw, genesis, waypoint)
@@ -149,7 +143,9 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     // consensus has to subscribe to ALL on-chain configs
     let (consensus_reconfig_subscription, consensus_reconfig_events) =
         gen_consensus_reconfig_subscription();
-    reconfig_subscriptions.push(consensus_reconfig_subscription);
+    if node_config.base.role.is_validator() {
+        reconfig_subscriptions.push(consensus_reconfig_subscription);
+    }
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig

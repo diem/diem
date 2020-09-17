@@ -7,7 +7,7 @@ use crate::{
 };
 
 fn parse_input(input: &str) -> Result<()> {
-    let config = extract_global_config("".lines())?;
+    let config = extract_global_config("".lines(), false)?;
     let (_, transactions) = split_input(input.lines(), &config)?;
     build_transactions(&config, &transactions)?;
     Ok(())

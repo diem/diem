@@ -2,12 +2,46 @@ script {
 use 0x1::LibraAccount;
 use 0x1::RecoveryAddress;
 
-/// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress` resource under `recovery_address`.
+/// # Summary
+/// Stores the sending accounts ability to rotate its authentication key with a designated recovery
+/// account. Both the sending and recovery accounts need to belong to the same VASP and
+/// both be VASP accounts. After this transaction both the sending account and the
+/// specified recovery account can rotate the sender account's authentication key.
 ///
-/// ## Aborts
-/// * Aborts with `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` if `account` has already delegated its `KeyRotationCapability`.
-/// * Aborts with `RecoveryAddress:ENOT_A_RECOVERY_ADDRESS` if `recovery_address` does not have a `RecoveryAddress` resource.
-/// * Aborts with `RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION` if `to_recover_account` and `recovery_address` do not belong to the same VASP.
+/// # Technical Description
+/// Adds the `LibraAccount::KeyRotationCapability` for the sending account
+/// (`to_recover_account`) to the `RecoveryAddress::RecoveryAddress` resource under
+/// `recovery_address`. After this transaction has been executed successfully the account at
+/// `recovery_address` and the `to_recover_account` may rotate the authentication key of
+/// `to_recover_account` (the sender of this transaction).
+///
+/// The sending account of this transaction (`to_recover_account`) must not have previously given away its unique key
+/// rotation capability, and must be a VASP account. The account at `recovery_address`
+/// must also be a VASP account belonging to the same VASP as the `to_recover_account`.
+/// Additionally the account at `recovery_address` must have already initialized itself as
+/// a recovery account address using the `Script::create_recovery_address` transaction script.
+///
+/// The sending account's (`to_recover_account`) key rotation capability is
+/// removed in this transaction and stored in the `RecoveryAddress::RecoveryAddress`
+/// resource stored under the account at `recovery_address`.
+///
+/// # Parameters
+/// | Name                 | Type      | Description                                                                                                |
+/// | ------               | ------    | -------------                                                                                              |
+/// | `to_recover_account` | `&signer` | The signer reference of the sending account of this transaction.                                           |
+/// | `recovery_address`   | `address` | The account address where the `to_recover_account`'s `LibraAccount::KeyRotationCapability` will be stored. |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                               | Description                                                                                     |
+/// | ----------------           | --------------                                             | -------------                                                                                   |
+/// | `Errors::INVALID_STATE`    | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `to_recover_account` has already delegated/extracted its `LibraAccount::KeyRotationCapability`. |
+/// | `Errors::NOT_PUBLISHED`    | `RecoveryAddress::ERECOVERY_ADDRESS`                       | `recovery_address` does not have a `RecoveryAddress` resource published under it.               |
+/// | `Errors::INVALID_ARGUMENT` | `RecoveryAddress::EINVALID_KEY_ROTATION_DELEGATION`        | `to_recover_account` and `recovery_address` do not belong to the same VASP.                     |
+///
+/// # Related Scripts
+/// * `Script::create_recovery_address`
+/// * `Script::rotate_authentication_key_with_recovery_address`
+
 fun add_recovery_rotation_capability(to_recover_account: &signer, recovery_address: address) {
     RecoveryAddress::add_rotation_capability(
         LibraAccount::extract_key_rotation_capability(to_recover_account), recovery_address

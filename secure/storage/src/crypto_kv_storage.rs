@@ -42,10 +42,12 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
                 if previous_private_key.public_key().eq(&version) {
                     Ok(previous_private_key)
                 } else {
-                    Err(Error::KeyVersionNotFound(version.to_string()))
+                    Err(Error::KeyVersionNotFound(name.into(), version.to_string()))
                 }
             }
-            Err(Error::KeyNotSet(_)) => Err(Error::KeyVersionNotFound(version.to_string())),
+            Err(Error::KeyNotSet(_)) => {
+                Err(Error::KeyVersionNotFound(name.into(), version.to_string()))
+            }
             Err(e) => Err(e),
         }
     }
@@ -67,7 +69,10 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
     fn get_public_key_previous_version(&self, name: &str) -> Result<Ed25519PublicKey, Error> {
         match self.export_private_key(&get_previous_version_name(name)) {
             Ok(previous_private_key) => Ok(previous_private_key.public_key()),
-            Err(Error::KeyNotSet(_)) => Err(Error::KeyVersionNotFound(name.to_string())),
+            Err(Error::KeyNotSet(_)) => Err(Error::KeyVersionNotFound(
+                name.into(),
+                "previous version".into(),
+            )),
             Err(e) => Err(e),
         }
     }

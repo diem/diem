@@ -7,12 +7,12 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
-use libra_state_view::StateView;
-use libra_types::{access_path::AccessPath, account_address::AccountAddress};
+use libra_types::account_address::AccountAddress;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
 };
+use move_vm_runtime::data_cache::RemoteCache;
 use std::rc::Rc;
 use vm::{
     access::ModuleAccess,
@@ -24,12 +24,12 @@ use vm::{
 };
 
 pub(crate) struct Resolver<'a> {
-    state: &'a dyn StateView,
+    state: &'a dyn RemoteCache,
     cache: ModuleCache,
 }
 
 impl<'a> Resolver<'a> {
-    pub fn new(state: &'a dyn StateView, use_stdlib: bool) -> Self {
+    pub fn new(state: &'a dyn RemoteCache, use_stdlib: bool) -> Self {
         let cache = ModuleCache::new();
         if use_stdlib {
             let modules = stdlib_modules(StdLibOptions::Compiled);
@@ -47,7 +47,8 @@ impl<'a> Resolver<'a> {
         }
         let blob = self
             .state
-            .get(&AccessPath::code_access_path(&module_id))?
+            .get_module(&module_id)
+            .map_err(|e| anyhow!("Error retrieving module {:?}: {:?}", module_id, e))?
             .ok_or_else(|| anyhow!("Module {:?} can't be found", module_id))?;
         let compiled_module = CompiledModule::deserialize(&blob).map_err(|status| {
             anyhow!(

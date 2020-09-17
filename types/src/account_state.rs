@@ -16,7 +16,7 @@ use crate::{
     },
     validator_config::{ValidatorConfigResource, ValidatorOperatorConfigResource},
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use move_core_types::{identifier::Identifier, move_resource::MoveResource};
 use serde::{de::DeserializeOwned, export::Formatter, Deserialize, Serialize};
 use std::{collections::btree_map::BTreeMap, convert::TryFrom, fmt};
@@ -138,18 +138,22 @@ impl AccountState {
         self.get_resource(&LibraVersion::CONFIG_ID.access_path().path)
     }
 
-    pub fn get_registered_currency_info_resources(
-        &self,
-    ) -> Result<Vec<Option<CurrencyInfoResource>>> {
+    pub fn get_registered_currency_info_resources(&self) -> Result<Vec<CurrencyInfoResource>> {
         let path = RegisteredCurrencies::CONFIG_ID.access_path().path;
         let currencies: Option<RegisteredCurrencies> = self.get_resource(&path)?;
         match currencies {
-            Some(currencies) => currencies
-                .currency_codes()
-                .iter()
-                .map(|code| CurrencyInfoResource::resource_path_for(code.clone()))
-                .map(|access_path| self.get_resource(&access_path.path))
-                .collect(),
+            Some(currencies) => {
+                let codes = currencies.currency_codes();
+                let mut resources = vec![];
+                for code in codes {
+                    let access_path = CurrencyInfoResource::resource_path_for(code.clone());
+                    let info: CurrencyInfoResource = self
+                        .get_resource(&access_path.path)?
+                        .ok_or_else(|| format_err!("currency info resource not found: {}", code))?;
+                    resources.push(info);
+                }
+                Ok(resources)
+            }
             None => Ok(vec![]),
         }
     }

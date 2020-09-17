@@ -57,7 +57,6 @@ use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
-use libra_metrics::OpMetrics;
 use libra_types::{
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
@@ -74,12 +73,9 @@ use libra_types::{
         Version, PRE_GENESIS_VERSION,
     },
 };
-use once_cell::sync::Lazy;
 use schemadb::{ColumnFamilyName, DB, DEFAULT_CF_NAME};
 use std::{iter::Iterator, path::Path, sync::Arc, time::Instant};
 use storage_interface::{DbReader, DbWriter, Order, StartupInfo, TreeState};
-
-static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("storage"));
 
 const MAX_LIMIT: u64 = 1000;
 
@@ -462,7 +458,6 @@ impl LibraDB {
         match self.db.get_approximate_sizes_cf() {
             Ok(cf_sizes) => {
                 for (cf_name, size) in cf_sizes {
-                    OP_COUNTER.set(&format!("cf_size_bytes_{}", cf_name), size as usize);
                     LIBRA_STORAGE_CF_SIZE_BYTES
                         .with_label_values(&[&cf_name])
                         .set(size as i64);
@@ -859,9 +854,7 @@ impl DbWriter for LibraDB {
         // to the storage. That's also when we'd inform the pruner thread to work.
         if num_txns > 0 {
             let last_version = first_version + num_txns - 1;
-            OP_COUNTER.inc_by("committed_txns", num_txns as usize);
             LIBRA_STORAGE_COMMITTED_TXNS.inc_by(num_txns as i64);
-            OP_COUNTER.set("latest_transaction_version", last_version as usize);
             LIBRA_STORAGE_LATEST_TXN_VERSION.set(last_version as i64);
             counters
                 .expect("Counters should be bumped with transactions being saved.")

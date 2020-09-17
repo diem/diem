@@ -2,8 +2,7 @@
 // This file is basically a clone of `stdlib/modules/vector.move` with renaming the module and function names.
 // In this file, the functions with prefix of `verify_model` are verifying the corresponding built-in Boogie
 // procedures that they inline (e.g., `verify_model_remove`).
-// This file also attempts to verify the actual Move implementations of non-native functions (e.g., `verify_remove`),
-// but it fails if loops are involved.
+// This file also verifies the actual Move implementations of non-native functions (e.g., `verify_remove`).
 
 module VerifyVector {
     use 0x1::Vector;

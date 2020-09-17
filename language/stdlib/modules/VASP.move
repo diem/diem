@@ -1,12 +1,11 @@
 address 0x1 {
 
 module VASP {
-    use 0x1::CoreAddresses;
     use 0x1::Errors;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Roles;
-    use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
+    use 0x1::AccountLimits;
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -19,35 +18,18 @@ module VASP {
     /// A resource that represents a child account of the parent VASP account at `parent_vasp_addr`
     resource struct ChildVASP { parent_vasp_addr: address }
 
-    /// A singleton resource allowing this module to publish limits definitions and accounting windows
-    resource struct VASPOperationsResource { limits_cap: AccountLimitMutationCapability }
-
-    /// The `VASPOperationsResource` was not in the required state
-    const EVASP_OPERATIONS_RESOURCE: u64 = 0;
     /// The `ParentVASP` or `ChildVASP` resources are not in the required state
-    const EPARENT_OR_CHILD_VASP: u64 = 1;
+    const EPARENT_OR_CHILD_VASP: u64 = 0;
     /// The creation of a new Child VASP account would exceed the number of children permitted for a VASP
-    const ETOO_MANY_CHILDREN: u64 = 2;
+    const ETOO_MANY_CHILDREN: u64 = 1;
     /// The account must be a Parent or Child VASP account
-    const ENOT_A_VASP: u64 = 3;
+    const ENOT_A_VASP: u64 = 2;
     /// The creating account must be a Parent VASP account
-    const ENOT_A_PARENT_VASP: u64 = 4;
+    const ENOT_A_PARENT_VASP: u64 = 3;
 
 
     /// Maximum number of child accounts that can be created by a single ParentVASP
     const MAX_CHILD_ACCOUNTS: u64 = 256;
-
-    public fun initialize(lr_account: &signer) {
-        LibraTimestamp::assert_genesis();
-        Roles::assert_libra_root(lr_account);
-        assert(
-            !exists<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
-            Errors::already_published(EVASP_OPERATIONS_RESOURCE)
-        );
-        move_to(lr_account, VASPOperationsResource {
-            limits_cap: AccountLimits::grant_mutation_capability(lr_account),
-        })
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // To-be parent-vasp called functions
@@ -224,15 +206,6 @@ module VASP {
 
     spec module {
         pragma verify;
-    }
-
-    /// ## Post Genesis
-
-    spec module {
-        /// `VASPOperationsResource` is published under the LibraRoot address after genesis.
-        invariant [global, isolated]
-            LibraTimestamp::is_operating() ==>
-                exists<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
 
     /// # Existence of Parents

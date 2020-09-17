@@ -103,6 +103,9 @@
 //! |  ...  |   ...     |
 //! ```
 
+#[cfg(any(test, feature = "fuzzing"))]
+pub mod test_helpers;
+
 use anyhow::{ensure, format_err, Result};
 use libra_crypto::hash::{CryptoHash, CryptoHasher, HashValue, ACCUMULATOR_PLACEHOLDER_HASH};
 use libra_types::proof::{

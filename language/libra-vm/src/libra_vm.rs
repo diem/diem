@@ -3,7 +3,7 @@
 
 use crate::{
     access_path_cache::AccessPathCache,
-    data_cache::RemoteStorage,
+    data_cache::{RemoteStorage, StateViewCache},
     errors::{
         convert_normal_prologue_error, convert_normal_success_epilogue_error,
         convert_write_set_prologue_error, expect_only_successful_execution,
@@ -15,7 +15,7 @@ use crate::{
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
-    account_config,
+    account_config::{self, CurrencyInfoResource},
     contract_event::ContractEvent,
     event::EventKey,
     on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig, VMPublishingOption},
@@ -275,7 +275,7 @@ impl LibraVMImpl {
         let gas_remaining = cost_strategy.remaining_gas().get();
         session.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &SUCCESS_EPILOGUE_NAME,
+            &USER_EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -290,7 +290,7 @@ impl LibraVMImpl {
         )
     }
 
-    /// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function
+    /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
     /// stored in the `ACCOUNT_MODULE` on chain.
     pub(crate) fn run_failure_epilogue<R: RemoteCache>(
         &self,
@@ -307,7 +307,7 @@ impl LibraVMImpl {
         let gas_remaining = cost_strategy.remaining_gas().get();
         session.execute_function(
             &account_config::ACCOUNT_MODULE,
-            &FAILURE_EPILOGUE_NAME,
+            &USER_EPILOGUE_NAME,
             vec![gas_currency_ty],
             vec![
                 Value::transaction_argument_signer_reference(txn_data.sender),
@@ -318,7 +318,7 @@ impl LibraVMImpl {
             ],
             txn_data.sender,
             cost_strategy,
-            expect_only_successful_execution(FAILURE_EPILOGUE_NAME.as_str()),
+            expect_only_successful_execution(USER_EPILOGUE_NAME.as_str()),
         )
     }
 
@@ -515,6 +515,20 @@ pub fn txn_effects_to_writeset_and_events(
     effects: TransactionEffects,
 ) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     txn_effects_to_writeset_and_events_cached(&mut (), effects)
+}
+
+pub(crate) fn get_currency_info(
+    currency_code: &IdentStr,
+    remote_cache: &StateViewCache,
+) -> Result<CurrencyInfoResource, VMStatus> {
+    let currency_info_path = CurrencyInfoResource::resource_path_for(currency_code.to_owned());
+    if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
+        let x = lcs::from_bytes::<CurrencyInfoResource>(&blob)
+            .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
+        Ok(x)
+    } else {
+        Err(VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))
+    }
 }
 
 #[test]

@@ -11,11 +11,14 @@ use crate::{
     counters::{CANCELED_LABEL, FAILED_LABEL, REQUEST_LABEL, RESPONSE_LABEL},
     peer::{PeerNotification, PeerRequest},
     peer_manager::PeerManagerError,
+    transport::ConnectionMetadata,
 };
 use anyhow::anyhow;
 use futures::future::join;
+use libra_config::network_id::NetworkContext;
 use libra_types::PeerId;
 use serial_test::serial;
+use std::sync::Arc;
 use tokio::runtime::{Handle, Runtime};
 
 static RPC_PROTOCOL_A: ProtocolId = ProtocolId::ConsensusRpc;
@@ -29,19 +32,23 @@ fn reset_counters() {
 fn start_rpc_actor(
     executor: Handle,
 ) -> (
+    Arc<NetworkContext>,
     channel::Sender<OutboundRpcRequest>,
     channel::Receiver<RpcNotification>,
     channel::Receiver<PeerRequest>,
     channel::Sender<PeerNotification>,
 ) {
+    let network_context = NetworkContext::mock();
     let (peer_reqs_tx, peer_reqs_rx) = channel::new_test(8);
     let (peer_notifs_tx, peer_notifs_rx) = channel::new_test(8);
     let (rpc_requests_tx, rpc_requests_rx) = channel::new_test(8);
     let (rpc_notifs_tx, rpc_notifs_rx) = channel::new_test(8);
     // Reset counters before starting actor.
     reset_counters();
+    let connection_metadata = ConnectionMetadata::mock(PeerId::random());
     let rpc = Rpc::new(
-        PeerHandle::new(PeerId::random(), peer_reqs_tx),
+        Arc::clone(&network_context),
+        PeerHandle::new(network_context.clone(), connection_metadata, peer_reqs_tx),
         rpc_requests_rx,
         peer_notifs_rx,
         rpc_notifs_tx,
@@ -50,7 +57,13 @@ fn start_rpc_actor(
         10,                     // max_concurrent_inbound_rpcs
     );
     executor.spawn(rpc.start());
-    (rpc_requests_tx, rpc_notifs_rx, peer_reqs_rx, peer_notifs_tx)
+    (
+        network_context,
+        rpc_requests_tx,
+        rpc_notifs_rx,
+        peer_reqs_rx,
+        peer_notifs_tx,
+    )
 }
 
 async fn expect_two_requests(
@@ -78,13 +91,13 @@ async fn expect_two_requests(
 
 async fn expect_successful_send(
     peer_rx: &mut channel::Receiver<PeerRequest>,
-    expected_protocol: ProtocolId,
+    expected_protocol_id: ProtocolId,
     expected_message: NetworkMessage,
 ) {
     // Return success on the next SendMessage request.
     match peer_rx.next().await.unwrap() {
-        PeerRequest::SendMessage(message, protocol, res_tx) => {
-            assert_eq!(protocol, expected_protocol);
+        PeerRequest::SendMessage(message, protocol_id, res_tx) => {
+            assert_eq!(protocol_id, expected_protocol_id);
             assert_eq!(message, expected_message);
             res_tx.send(Ok(())).unwrap();
         }
@@ -94,13 +107,13 @@ async fn expect_successful_send(
 
 async fn handle_inbound_request(
     rpc_notifs_rx: &mut channel::Receiver<RpcNotification>,
-    expected_protocol: ProtocolId,
+    expected_protocol_id: ProtocolId,
     expected_message: Bytes,
     response: Bytes,
 ) {
     match rpc_notifs_rx.next().await.unwrap() {
         RpcNotification::RecvRpc(request) => {
-            assert_eq!(request.protocol, expected_protocol);
+            assert_eq!(request.protocol_id, expected_protocol_id);
             assert_eq!(request.data, expected_message);
             request.res_tx.send(Ok(response)).unwrap();
         }
@@ -109,13 +122,13 @@ async fn handle_inbound_request(
 
 async fn expect_failed_send(
     peer_rx: &mut channel::Receiver<PeerRequest>,
-    expected_protocol: ProtocolId,
+    expected_protocol_id: ProtocolId,
     expected_message: NetworkMessage,
 ) {
     // Return failure on the next SendMessage request.
     match peer_rx.next().await.unwrap() {
-        PeerRequest::SendMessage(message, protocol, res_tx) => {
-            assert_eq!(protocol, expected_protocol);
+        PeerRequest::SendMessage(message, protocol_id, res_tx) => {
+            assert_eq!(protocol_id, expected_protocol_id);
             assert_eq!(message, expected_message);
             res_tx
                 .send(Err(PeerManagerError::Error(anyhow!("failed to send"))))
@@ -154,8 +167,13 @@ fn outbound_rpc_success() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        _network_context,
+        mut rpc_requests_tx,
+        _rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
     let req_data = Bytes::from_static(b"Hello");
@@ -183,7 +201,7 @@ fn outbound_rpc_success() {
         let (res_tx, res_rx) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id,
+                protocol_id,
                 data: req_data.clone(),
                 res_tx,
                 timeout: Duration::from_millis(100),
@@ -207,8 +225,13 @@ fn outbound_rpc_concurrent() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        _network_context,
+        mut rpc_requests_tx,
+        _rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id_a = RPC_PROTOCOL_A;
     let protocol_id_b = RPC_PROTOCOL_B;
@@ -258,7 +281,7 @@ fn outbound_rpc_concurrent() {
         let (res_tx_a, res_rx_a) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id_a,
+                protocol_id: protocol_id_a,
                 data: req_data_a.clone(),
                 res_tx: res_tx_a,
                 timeout: Duration::from_millis(100),
@@ -270,7 +293,7 @@ fn outbound_rpc_concurrent() {
         let (res_tx_b, res_rx_b) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id_b,
+                protocol_id: protocol_id_b,
                 data: req_data_b.clone(),
                 res_tx: res_tx_b,
                 timeout: Duration::from_millis(100),
@@ -295,7 +318,7 @@ fn outbound_rpc_timeout() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -313,7 +336,7 @@ fn outbound_rpc_timeout() {
         let (res_tx, res_rx) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id,
+                protocol_id,
                 data: req_data,
                 res_tx,
                 timeout: Duration::from_millis(100),
@@ -337,7 +360,7 @@ fn outbound_cancellation_before_send() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, _peer_notifs_tx) =
+    let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -348,7 +371,7 @@ fn outbound_cancellation_before_send() {
     let f_send_rpc = async move {
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id,
+                protocol_id,
                 data: req_data.clone(),
                 res_tx,
                 timeout: Duration::from_secs(100), // use a large timeout value.
@@ -359,9 +382,7 @@ fn outbound_cancellation_before_send() {
         // drop res_rx to cancel the rpc request and wait for request to be canceled.
         drop(res_rx);
 
-        while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
-            .get() as u64
+        while counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL).get() as u64
             != 1
         {
             tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -377,7 +398,7 @@ fn outbound_cancellation_before_recv() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -389,7 +410,7 @@ fn outbound_cancellation_before_recv() {
     let f_send_rpc = async move {
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id,
+                protocol_id,
                 data: req_data.clone(),
                 res_tx,
                 timeout: Duration::from_secs(100), // use a large timeout value.
@@ -405,9 +426,7 @@ fn outbound_cancellation_before_recv() {
         // drop res_rx to cancel the rpc request and wait for request to be canceled.
         drop(res_rx);
 
-        while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
-            .get() as u64
+        while counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL).get() as u64
             != 1
         {
             tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -423,7 +442,7 @@ fn outbound_rpc_failed_request_delivery() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
+    let (_network_context, mut rpc_requests_tx, _rpc_notifs_rx, mut peer_reqs_rx, _peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -437,7 +456,7 @@ fn outbound_rpc_failed_request_delivery() {
         let (res_tx, res_rx) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id,
+                protocol_id,
                 data: req_data,
                 res_tx,
                 timeout: Duration::from_millis(100),
@@ -461,8 +480,13 @@ fn inbound_rpc_success() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        _network_context,
+        _rpc_requests_tx,
+        mut rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
     let req_data = Bytes::from_static(b"Hello");
@@ -507,8 +531,13 @@ fn inbound_rpc_concurrent() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        _network_context,
+        _rpc_requests_tx,
+        mut rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id_a = RPC_PROTOCOL_A;
     let protocol_id_b = RPC_PROTOCOL_B;
@@ -583,7 +612,7 @@ fn inbound_rpc_timeout() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
+    let (network_context, _rpc_requests_tx, _rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -601,9 +630,7 @@ fn inbound_rpc_timeout() {
         // Wait for time greater than inbound_rpc_timeout and check for failure counter.
         tokio::time::delay_for(Duration::from_millis(1500)).await;
         assert_eq!(
-            counters::LIBRA_NETWORK_RPC_MESSAGES
-                .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
-                .get() as u64,
+            counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64,
             1
         );
     };
@@ -617,8 +644,13 @@ fn inbound_rpc_failed_response_delivery() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        network_context,
+        _rpc_requests_tx,
+        mut rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
     let req_data = Bytes::from_static(b"Hello");
@@ -650,9 +682,7 @@ fn inbound_rpc_failed_response_delivery() {
         )
         .await;
         // Failure counter should increase.
-        while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
-            .get() as u64
+        while counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64
             != 1
         {
             tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -670,7 +700,7 @@ fn inbound_rpc_failed_upstream_delivery() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (_rpc_requests_tx, rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
+    let (network_context, _rpc_requests_tx, rpc_notifs_rx, _peer_reqs_rx, mut peer_notifs_tx) =
         start_rpc_actor(rt.handle().clone());
 
     let protocol_id = RPC_PROTOCOL_A;
@@ -688,9 +718,7 @@ fn inbound_rpc_failed_upstream_delivery() {
             .await
             .unwrap();
         // Failure counter should increase.
-        while counters::LIBRA_NETWORK_RPC_MESSAGES
-            .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
-            .get() as u64
+        while counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).get() as u64
             != 1
         {
             tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -706,8 +734,13 @@ fn concurrent_inbound_outbound() {
     ::libra_logger::Logger::init_for_testing();
 
     let mut rt = Runtime::new().unwrap();
-    let (mut rpc_requests_tx, mut rpc_notifs_rx, mut peer_reqs_rx, mut peer_notifs_tx) =
-        start_rpc_actor(rt.handle().clone());
+    let (
+        _network_context,
+        mut rpc_requests_tx,
+        mut rpc_notifs_rx,
+        mut peer_reqs_rx,
+        mut peer_notifs_tx,
+    ) = start_rpc_actor(rt.handle().clone());
 
     let protocol_id_a = RPC_PROTOCOL_A;
     let protocol_id_b = RPC_PROTOCOL_B;
@@ -754,7 +787,7 @@ fn concurrent_inbound_outbound() {
         let (res_tx_a, res_rx_a) = oneshot::channel();
         rpc_requests_tx
             .send(OutboundRpcRequest {
-                protocol: protocol_id_a,
+                protocol_id: protocol_id_a,
                 data: req_data_a.clone(),
                 res_tx: res_tx_a,
                 timeout: Duration::from_millis(100),

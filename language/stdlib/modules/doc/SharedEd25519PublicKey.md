@@ -14,12 +14,17 @@
 -  [Function `key`](#0x1_SharedEd25519PublicKey_key)
 -  [Function `exists_at`](#0x1_SharedEd25519PublicKey_exists_at)
 
+Each address that holds a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource can rotate the public key stored in
+this resource, but the account's authentication key will be updated in lockstep. This ensures
+that the two keys always stay in sync.
 
 
 <a name="0x1_SharedEd25519PublicKey_SharedEd25519PublicKey"></a>
 
 ## Resource `SharedEd25519PublicKey`
 
+A resource that forces the account associated with <code>rotation_cap</code> to use a ed25519
+authentication key derived from <code>key</code>
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>
@@ -33,18 +38,16 @@
 
 <dl>
 <dt>
-
 <code>key: vector&lt;u8&gt;</code>
 </dt>
 <dd>
-
+ 32 byte ed25519 public key
 </dd>
 <dt>
-
 <code>rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a></code>
 </dt>
 <dd>
-
+ rotation capability for an account whose authentication key is always derived from <code>key</code>
 </dd>
 </dl>
 
@@ -58,7 +61,7 @@
 The shared ed25519 public key is not valid ed25519 public key
 
 
-<pre><code><b>const</b> EMALFORMED_PUBLIC_KEY: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">EMALFORMED_PUBLIC_KEY</a>: u64 = 0;
 </code></pre>
 
 
@@ -70,7 +73,7 @@ The shared ed25519 public key is not valid ed25519 public key
 A shared ed25519 public key resource was not in the required state
 
 
-<pre><code><b>const</b> ESHARED_KEY: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_SharedEd25519PublicKey_ESHARED_KEY">ESHARED_KEY</a>: u64 = 1;
 </code></pre>
 
 
@@ -79,6 +82,11 @@ A shared ed25519 public key resource was not in the required state
 
 ## Function `publish`
 
+(1) Rotate the authentication key of the sender to <code>key</code>
+(2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
+of the sender under the <code>account</code>'s address.
+Aborts if the sender already has a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource.
+Aborts if the length of <code>new_public_key</code> is not 32.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_publish">publish</a>(account: &signer, key: vector&lt;u8&gt;)
@@ -96,7 +104,7 @@ A shared ed25519 public key resource was not in the required state
         rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account)
     };
     <a href="#0x1_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(&<b>mut</b> t, key);
-    <b>assert</b>(!exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ESHARED_KEY));
+    <b>assert</b>(!exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_SharedEd25519PublicKey_ESHARED_KEY">ESHARED_KEY</a>));
     move_to(account, t);
 }
 </code></pre>
@@ -124,7 +132,7 @@ A shared ed25519 public key resource was not in the required state
     // Cryptographic check of <b>public</b> key validity
     <b>assert</b>(
         <a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EMALFORMED_PUBLIC_KEY)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">EMALFORMED_PUBLIC_KEY</a>)
     );
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(
         &shared_key.rotation_cap,
@@ -142,6 +150,12 @@ A shared ed25519 public key resource was not in the required state
 
 ## Function `rotate_key`
 
+(1) rotate the public key stored <code>account</code>'s <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource to
+<code>new_public_key</code>
+(2) rotate the authentication key using the capability stored in the <code>account</code>'s
+<code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> to a new value derived from <code>new_public_key</code>
+Aborts if the sender does not have a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource.
+Aborts if the length of <code>new_public_key</code> is not 32.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;)
@@ -154,7 +168,9 @@ A shared ed25519 public key resource was not in the required state
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
-    <a href="#0x1_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(borrow_global_mut&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), new_public_key);
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>assert</b>(exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_SharedEd25519PublicKey_ESHARED_KEY">ESHARED_KEY</a>));
+    <a href="#0x1_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(borrow_global_mut&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), new_public_key);
 }
 </code></pre>
 
@@ -166,6 +182,8 @@ A shared ed25519 public key resource was not in the required state
 
 ## Function `key`
 
+Return the public key stored under <code>addr</code>.
+Aborts if <code>addr</code> does not hold a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_key">key</a>(addr: address): vector&lt;u8&gt;
@@ -178,7 +196,7 @@ A shared ed25519 public key resource was not in the required state
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_key">key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ESHARED_KEY));
+    <b>assert</b>(exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_SharedEd25519PublicKey_ESHARED_KEY">ESHARED_KEY</a>));
     *&borrow_global&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr).key
 }
 </code></pre>
@@ -191,6 +209,7 @@ A shared ed25519 public key resource was not in the required state
 
 ## Function `exists_at`
 
+Returns true if <code>addr</code> holds a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_exists_at">exists_at</a>(addr: address): bool

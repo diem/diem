@@ -41,8 +41,7 @@
 
 Module defining error codes used in Move aborts throughout the framework.
 
-A
-<code>u64</code> error code is constructed from two values:
+A <code>u64</code> error code is constructed from two values:
 
 1. The *error category* which is encoded in the lower 8 bits of the code. Error categories are
 declared in this module and are globally unique across the Libra framework. There is a limited
@@ -63,7 +62,7 @@ The system is in a state where the performed operation is not allowed. Example: 
 in genesis.
 
 
-<pre><code><b>const</b> INVALID_STATE: u8 = 1;
+<pre><code><b>const</b> <a href="#0x1_Errors_INVALID_STATE">INVALID_STATE</a>: u8 = 1;
 </code></pre>
 
 
@@ -76,7 +75,7 @@ The signer of a transaction does not have the expected address for this operatio
 which publishes a resource under a particular address.
 
 
-<pre><code><b>const</b> REQUIRES_ADDRESS: u8 = 2;
+<pre><code><b>const</b> <a href="#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>: u8 = 2;
 </code></pre>
 
 
@@ -89,7 +88,7 @@ The signer of a transaction does not have the expected  role for this operation.
 which requires the signer to have the role of treasury compliance.
 
 
-<pre><code><b>const</b> REQUIRES_ROLE: u8 = 3;
+<pre><code><b>const</b> <a href="#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>: u8 = 3;
 </code></pre>
 
 
@@ -101,7 +100,7 @@ which requires the signer to have the role of treasury compliance.
 The signer of a transaction does not have a required capability.
 
 
-<pre><code><b>const</b> REQUIRES_CAPABILITY: u8 = 4;
+<pre><code><b>const</b> <a href="#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>: u8 = 4;
 </code></pre>
 
 
@@ -113,7 +112,7 @@ The signer of a transaction does not have a required capability.
 A resource is required but not published. Example: access to non-existing AccountLimits resource.
 
 
-<pre><code><b>const</b> NOT_PUBLISHED: u8 = 5;
+<pre><code><b>const</b> <a href="#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>: u8 = 5;
 </code></pre>
 
 
@@ -126,7 +125,7 @@ Attempting to publish a resource that is already published. Example: calling an 
 twice.
 
 
-<pre><code><b>const</b> ALREADY_PUBLISHED: u8 = 6;
+<pre><code><b>const</b> <a href="#0x1_Errors_ALREADY_PUBLISHED">ALREADY_PUBLISHED</a>: u8 = 6;
 </code></pre>
 
 
@@ -138,7 +137,7 @@ twice.
 An argument provided to an operation is invalid. Example: a signing key has the wrong format.
 
 
-<pre><code><b>const</b> INVALID_ARGUMENT: u8 = 7;
+<pre><code><b>const</b> <a href="#0x1_Errors_INVALID_ARGUMENT">INVALID_ARGUMENT</a>: u8 = 7;
 </code></pre>
 
 
@@ -151,7 +150,7 @@ A limit on an amount, e.g. a currency, is exceeded. Example: withdrawal of money
 is exhausted.
 
 
-<pre><code><b>const</b> LIMIT_EXCEEDED: u8 = 8;
+<pre><code><b>const</b> <a href="#0x1_Errors_LIMIT_EXCEEDED">LIMIT_EXCEEDED</a>: u8 = 8;
 </code></pre>
 
 
@@ -163,7 +162,7 @@ is exhausted.
 An internal error (bug) has occurred.
 
 
-<pre><code><b>const</b> INTERNAL: u8 = 10;
+<pre><code><b>const</b> <a href="#0x1_Errors_INTERNAL">INTERNAL</a>: u8 = 10;
 </code></pre>
 
 
@@ -175,7 +174,7 @@ An internal error (bug) has occurred.
 A custom error category for extension points.
 
 
-<pre><code><b>const</b> CUSTOM: u8 = 255;
+<pre><code><b>const</b> <a href="#0x1_Errors_CUSTOM">CUSTOM</a>: u8 = 255;
 </code></pre>
 
 
@@ -220,7 +219,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_state">invalid_state</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(INVALID_STATE, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_state">invalid_state</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_INVALID_STATE">INVALID_STATE</a>, reason) }
 </code></pre>
 
 
@@ -242,7 +241,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_address">requires_address</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(REQUIRES_ADDRESS, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_address">requires_address</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>, reason) }
 </code></pre>
 
 
@@ -264,7 +263,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(REQUIRES_ROLE, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_role">requires_role</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>, reason) }
 </code></pre>
 
 
@@ -286,7 +285,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(REQUIRES_CAPABILITY, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_requires_capability">requires_capability</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>, reason) }
 </code></pre>
 
 
@@ -308,7 +307,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_not_published">not_published</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(NOT_PUBLISHED, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_not_published">not_published</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>, reason) }
 </code></pre>
 
 
@@ -330,7 +329,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_already_published">already_published</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(ALREADY_PUBLISHED, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_already_published">already_published</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_ALREADY_PUBLISHED">ALREADY_PUBLISHED</a>, reason) }
 </code></pre>
 
 
@@ -352,7 +351,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_argument">invalid_argument</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(INVALID_ARGUMENT, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_invalid_argument">invalid_argument</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_INVALID_ARGUMENT">INVALID_ARGUMENT</a>, reason) }
 </code></pre>
 
 
@@ -374,7 +373,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_limit_exceeded">limit_exceeded</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(LIMIT_EXCEEDED, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_limit_exceeded">limit_exceeded</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_LIMIT_EXCEEDED">LIMIT_EXCEEDED</a>, reason) }
 </code></pre>
 
 
@@ -396,7 +395,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_internal">internal</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(INTERNAL, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_internal">internal</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_INTERNAL">INTERNAL</a>, reason) }
 </code></pre>
 
 
@@ -418,7 +417,7 @@ A function to create an error from from a category and a reason.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_custom">custom</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(CUSTOM, reason) }
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Errors_custom">custom</a>(reason: u64): u64 { <a href="#0x1_Errors_make">make</a>(<a href="#0x1_Errors_CUSTOM">CUSTOM</a>, reason) }
 </code></pre>
 
 
@@ -468,7 +467,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == INVALID_STATE;
+<b>ensures</b> result == <a href="#0x1_Errors_INVALID_STATE">INVALID_STATE</a>;
 </code></pre>
 
 
@@ -486,7 +485,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == REQUIRES_ADDRESS;
+<b>ensures</b> result == <a href="#0x1_Errors_REQUIRES_ADDRESS">REQUIRES_ADDRESS</a>;
 </code></pre>
 
 
@@ -504,7 +503,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == REQUIRES_ROLE;
+<b>ensures</b> result == <a href="#0x1_Errors_REQUIRES_ROLE">REQUIRES_ROLE</a>;
 </code></pre>
 
 
@@ -522,7 +521,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == REQUIRES_CAPABILITY;
+<b>ensures</b> result == <a href="#0x1_Errors_REQUIRES_CAPABILITY">REQUIRES_CAPABILITY</a>;
 </code></pre>
 
 
@@ -540,7 +539,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == NOT_PUBLISHED;
+<b>ensures</b> result == <a href="#0x1_Errors_NOT_PUBLISHED">NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -558,7 +557,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == ALREADY_PUBLISHED;
+<b>ensures</b> result == <a href="#0x1_Errors_ALREADY_PUBLISHED">ALREADY_PUBLISHED</a>;
 </code></pre>
 
 
@@ -576,7 +575,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == INVALID_ARGUMENT;
+<b>ensures</b> result == <a href="#0x1_Errors_INVALID_ARGUMENT">INVALID_ARGUMENT</a>;
 </code></pre>
 
 
@@ -594,7 +593,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == LIMIT_EXCEEDED;
+<b>ensures</b> result == <a href="#0x1_Errors_LIMIT_EXCEEDED">LIMIT_EXCEEDED</a>;
 </code></pre>
 
 
@@ -612,7 +611,7 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == INTERNAL;
+<b>ensures</b> result == <a href="#0x1_Errors_INTERNAL">INTERNAL</a>;
 </code></pre>
 
 
@@ -630,5 +629,5 @@ A function to create an error from from a category and a reason.
 
 <pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == CUSTOM;
+<b>ensures</b> result == <a href="#0x1_Errors_CUSTOM">CUSTOM</a>;
 </code></pre>

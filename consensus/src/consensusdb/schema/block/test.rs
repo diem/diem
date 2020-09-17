@@ -6,6 +6,6 @@ use schemadb::schema::assert_encode_decode;
 
 #[test]
 fn test_encode_decode() {
-    let genesis_block = SchemaBlock::from_block(Block::make_genesis_block());
-    assert_encode_decode::<BlockSchema>(&HashValue::random(), &genesis_block);
+    let block = Block::make_genesis_block();
+    assert_encode_decode::<BlockSchema>(&block.id(), &block);
 }

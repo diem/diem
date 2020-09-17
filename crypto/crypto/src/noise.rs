@@ -121,7 +121,7 @@ pub const fn handshake_resp_msg_len(payload_len: usize) -> usize {
 
 /// This implementation relies on the fact that the hash function used has a 256-bit output
 #[rustfmt::skip]
-const _: [(); 0 - !{ const ASSERT: bool = HashValue::LENGTH == 32; ASSERT } as usize] = [];
+const _: [(); 32] = [(); HashValue::LENGTH];
 
 //
 // Errors

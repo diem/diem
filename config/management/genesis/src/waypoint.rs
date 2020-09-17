@@ -49,32 +49,23 @@ impl CreateWaypoint {
 }
 
 #[derive(Debug, StructOpt)]
-pub struct CreateAndInsertWaypoint {
-    #[structopt(long, required_unless("config"))]
-    chain_id: Option<ChainId>,
+pub struct InsertWaypoint {
     #[structopt(flatten)]
-    config: ConfigPath,
-    #[structopt(flatten)]
-    shared_backend: SharedBackend,
+    pub config: ConfigPath,
     #[structopt(flatten)]
     validator_backend: ValidatorBackend,
+    #[structopt(long)]
+    waypoint: Waypoint,
 }
 
-impl CreateAndInsertWaypoint {
-    pub fn execute(self) -> Result<Waypoint, Error> {
-        let waypoint = CreateWaypoint {
-            chain_id: self.chain_id,
-            config: self.config.clone(),
-            shared_backend: self.shared_backend,
-        }
-        .execute()?;
-
+impl InsertWaypoint {
+    pub fn execute(self) -> Result<(), Error> {
         let config = self
             .config
             .load()?
             .override_validator_backend(&self.validator_backend.validator_backend)?;
         let mut validator_storage = config.validator_backend();
-        validator_storage.set(WAYPOINT, waypoint)?;
-        Ok(waypoint)
+        validator_storage.set(WAYPOINT, self.waypoint)?;
+        Ok(())
     }
 }

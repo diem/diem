@@ -28,6 +28,7 @@
 //! using a relay protocol.
 
 use crate::{
+    counters,
     logging::NetworkSchema,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
@@ -388,6 +389,10 @@ where
         let init_dial_state = DialState::new(self.backoff_strategy.clone());
 
         for (p, addrs) in to_connect.choose_multiple(&mut self.rng, to_connect_size) {
+            // If we're attempting to dial a Peer we must not be connected to it. This ensures that
+            // newly eligible, but not connected to peers, have their counter initialized properly.
+            counters::peer_connected(&self.network_context, p, 0);
+
             let mut connction_reqs_tx = self.connection_reqs_tx.clone();
             let peer_id = **p;
             let dial_state = self
@@ -667,6 +672,7 @@ where
         match notif {
             peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _origin, _context) => {
                 // TODO(gnazario): Keep track of inbound and outbound separately?  Somehow handle limits between both
+                counters::peer_connected(&self.network_context, &peer_id, 1);
                 self.connected.insert(peer_id, addr);
 
                 // Cancel possible queued dial to this peer.
@@ -676,6 +682,9 @@ where
             peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _origin, _reason) => {
                 if let Some(stored_addr) = self.connected.get(&peer_id) {
                     // Remove node from connected peers list.
+
+                    counters::peer_connected(&self.network_context, &peer_id, 0);
+
                     info!(
                         NetworkSchema::new(&self.network_context)
                             .remote_peer(&peer_id)

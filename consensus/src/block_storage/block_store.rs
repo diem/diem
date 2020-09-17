@@ -232,6 +232,7 @@ impl BlockStore {
         debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
         event!("committed",
             "block_id": block_to_commit.id().short_str(),
+            "epoch": block_to_commit.epoch(),
             "round": block_to_commit.round(),
             "parent_id": block_to_commit.parent_id().short_str(),
         );

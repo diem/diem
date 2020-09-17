@@ -5,7 +5,10 @@
 
 use crate::command::Command;
 use consensus_types::safety_data::SafetyData;
-use libra_crypto::ed25519::Ed25519PublicKey;
+use libra_crypto::{
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
+    Uniform,
+};
 use libra_global_constants::{
     CONSENSUS_KEY, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LIBRA_ROOT_KEY, OPERATOR_KEY, OWNER_KEY,
     SAFETY_DATA, TREASURY_COMPLIANCE_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
@@ -42,22 +45,45 @@ impl StorageHelper {
         self.temppath.path().to_str().unwrap()
     }
 
-    pub fn initialize(&self, namespace: String) {
+    pub fn initialize_by_idx(&self, namespace: String, idx: usize) {
+        let partial_seed = lcs::to_bytes(&idx).unwrap();
+        let mut seed = [0u8; 32];
+        let data_to_copy = 32 - std::cmp::min(32, partial_seed.len());
+        seed[data_to_copy..].copy_from_slice(partial_seed.as_slice());
+        self.initialize(namespace, seed);
+    }
+
+    pub fn initialize(&self, namespace: String, seed: [u8; 32]) {
+        let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed(seed);
         let mut storage = self.storage(namespace);
 
         // Initialize all keys in storage
-        storage.create_key(LIBRA_ROOT_KEY).unwrap();
+        storage
+            .import_private_key(LIBRA_ROOT_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
         // TODO(davidiw) use distinct keys in tests for treasury and libra root keys
         let libra_root_key = storage.export_private_key(LIBRA_ROOT_KEY).unwrap();
         storage
             .import_private_key(TREASURY_COMPLIANCE_KEY, libra_root_key)
             .unwrap();
-        storage.create_key(CONSENSUS_KEY).unwrap();
-        storage.create_key(EXECUTION_KEY).unwrap();
-        storage.create_key(FULLNODE_NETWORK_KEY).unwrap();
-        storage.create_key(OWNER_KEY).unwrap();
-        storage.create_key(OPERATOR_KEY).unwrap();
-        storage.create_key(VALIDATOR_NETWORK_KEY).unwrap();
+        storage
+            .import_private_key(CONSENSUS_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
+        storage
+            .import_private_key(EXECUTION_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
+        storage
+            .import_private_key(FULLNODE_NETWORK_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
+        storage
+            .import_private_key(OWNER_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
+        storage
+            .import_private_key(OPERATOR_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
+        storage
+            .import_private_key(VALIDATOR_NETWORK_KEY, Ed25519PrivateKey::generate(&mut rng))
+            .unwrap();
 
         // Initialize all other data in storage
         storage
@@ -74,30 +100,42 @@ impl StorageHelper {
             .unwrap();
     }
 
-    pub fn create_and_insert_waypoint(
-        &self,
-        chain_id: ChainId,
-        validator_ns: &str,
-    ) -> Result<Waypoint, Error> {
+    pub fn create_waypoint(&self, chain_id: ChainId) -> Result<Waypoint, Error> {
         let args = format!(
             "
                 libra-genesis-tool
-                create-and-insert-waypoint
+                create-waypoint
                 --chain-id {chain_id}
                 --shared-backend backend={backend};\
                     path={path}
-                --validator-backend backend={backend};\
-                    path={path};\
-                    namespace={validator_ns}\
             ",
             chain_id = chain_id,
             backend = DISK,
             path = self.path_string(),
-            validator_ns = validator_ns,
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        command.create_and_insert_waypoint()
+        command.create_waypoint()
+    }
+
+    pub fn insert_waypoint(&self, validator_ns: &str, waypoint: Waypoint) -> Result<(), Error> {
+        let args = format!(
+            "
+                libra-genesis-tool
+                insert-waypoint
+                --validator-backend backend={backend};\
+                    path={path};\
+                    namespace={validator_ns}
+                --waypoint {waypoint}
+            ",
+            backend = DISK,
+            path = self.path_string(),
+            validator_ns = validator_ns,
+            waypoint = waypoint,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.insert_waypoint()
     }
 
     pub fn genesis(&self, chain_id: ChainId, genesis_path: &Path) -> Result<Transaction, Error> {
@@ -199,20 +237,18 @@ impl StorageHelper {
     }
 
     #[cfg(test)]
-    pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
+    pub fn set_layout(&self, path: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
                 libra-genesis-tool
                 set-layout
                 --path {path}
                 --shared-backend backend={backend};\
-                    path={storage_path};\
-                    namespace={ns}
+                    path={storage_path}
             ",
             path = path,
             backend = DISK,
             storage_path = self.path_string(),
-            ns = namespace,
         );
 
         let command = Command::from_iter(args.split_whitespace());

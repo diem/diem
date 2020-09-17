@@ -43,7 +43,7 @@ A variable-sized container that can hold both unrestricted types and resources.
 The index into the vector is out of bounds
 
 
-<pre><code><b>const</b> EINDEX_OUT_OF_BOUNDS: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_Vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>: u64 = 0;
 </code></pre>
 
 
@@ -98,11 +98,8 @@ Return the length of the vector.
 
 ## Function `borrow`
 
-Acquire an immutable reference to the
-<code>i</code>th element of the vector
-<code>v</code>.
-Aborts if
-<code>i</code> is out of bounds.
+Acquire an immutable reference to the <code>i</code>th element of the vector <code>v</code>.
+Aborts if <code>i</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_borrow">borrow</a>&lt;Element&gt;(v: &vector&lt;Element&gt;, i: u64): &Element
@@ -125,9 +122,7 @@ Aborts if
 
 ## Function `push_back`
 
-Add element
-<code>e</code> to the end of the vector
-<code>v</code>.
+Add element <code>e</code> to the end of the vector <code>v</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_push_back">push_back</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, e: Element)
@@ -150,11 +145,8 @@ Add element
 
 ## Function `borrow_mut`
 
-Return a mutable reference to the
-<code>i</code>th element in the vector
-<code>v</code>.
-Aborts if
-<code>i</code> is out of bounds.
+Return a mutable reference to the <code>i</code>th element in the vector <code>v</code>.
+Aborts if <code>i</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_borrow_mut">borrow_mut</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): &<b>mut</b> Element
@@ -177,10 +169,8 @@ Aborts if
 
 ## Function `pop_back`
 
-Pop an element from the end of vector
-<code>v</code>.
-Aborts if
-<code>v</code> is empty.
+Pop an element from the end of vector <code>v</code>.
+Aborts if <code>v</code> is empty.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_pop_back">pop_back</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;): Element
@@ -203,10 +193,8 @@ Aborts if
 
 ## Function `destroy_empty`
 
-Destroy the vector
-<code>v</code>.
-Aborts if
-<code>v</code> is not empty.
+Destroy the vector <code>v</code>.
+Aborts if <code>v</code> is not empty.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_destroy_empty">destroy_empty</a>&lt;Element&gt;(v: vector&lt;Element&gt;)
@@ -229,13 +217,8 @@ Aborts if
 
 ## Function `swap`
 
-Swaps the elements at the
-<code>i</code>th and
-<code>j</code>th indices in the vector
-<code>v</code>.
-Aborts if
-<code>i</code>or
-<code>j</code> is out of bounds.
+Swaps the elements at the <code>i</code>th and <code>j</code>th indices in the vector <code>v</code>.
+Aborts if <code>i</code>or <code>j</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_swap">swap</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64, j: u64)
@@ -258,8 +241,7 @@ Aborts if
 
 ## Function `singleton`
 
-Return an vector of size one containing element
-<code>e</code>.
+Return an vector of size one containing element <code>e</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_singleton">singleton</a>&lt;Element&gt;(e: Element): vector&lt;Element&gt;
@@ -286,8 +268,7 @@ Return an vector of size one containing element
 
 ## Function `reverse`
 
-Reverses the order of the elements in the vector
-<code>v</code> in place.
+Reverses the order of the elements in the vector <code>v</code> in place.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_reverse">reverse</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;)
@@ -321,9 +302,7 @@ Reverses the order of the elements in the vector
 
 ## Function `append`
 
-Moves all of the elements of the
-<code>other</code> vector into the
-<code>lhs</code> vector.
+Moves all of the elements of the <code>other</code> vector into the <code>lhs</code> vector.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_append">append</a>&lt;Element&gt;(lhs: &<b>mut</b> vector&lt;Element&gt;, other: vector&lt;Element&gt;)
@@ -350,10 +329,7 @@ Moves all of the elements of the
 
 ## Function `is_empty`
 
-Return
-<code><b>true</b></code> if the vector
-<code>v</code> has no elements and
-<code><b>false</b></code> otherwise.
+Return <code><b>true</b></code> if the vector <code>v</code> has no elements and <code><b>false</b></code> otherwise.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_is_empty">is_empty</a>&lt;Element&gt;(v: &vector&lt;Element&gt;): bool
@@ -378,9 +354,7 @@ Return
 
 ## Function `contains`
 
-Return true if
-<code>e</code> is in the vector
-<code>v</code>.
+Return true if <code>e</code> is in the vector <code>v</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_contains">contains</a>&lt;Element&gt;(v: &vector&lt;Element&gt;, e: &Element): bool
@@ -411,13 +385,8 @@ Return true if
 
 ## Function `index_of`
 
-Return
-<code>(<b>true</b>, i)</code> if
-<code>e</code> is in the vector
-<code>v</code> at index
-<code>i</code>.
-Otherwise, returns
-<code>(<b>false</b>, 0)</code>.
+Return <code>(<b>true</b>, i)</code> if <code>e</code> is in the vector <code>v</code> at index <code>i</code>.
+Otherwise, returns <code>(<b>false</b>, 0)</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_index_of">index_of</a>&lt;Element&gt;(v: &vector&lt;Element&gt;, e: &Element): (bool, u64)
@@ -448,12 +417,9 @@ Otherwise, returns
 
 ## Function `remove`
 
-Remove the
-<code>i</code>th element of the vector
-<code>v</code>, shifting all subsequent elements.
+Remove the <code>i</code>th element of the vector <code>v</code>, shifting all subsequent elements.
 This is O(n) and preserves ordering of elements in the vector.
-Aborts if
-<code>i</code> is out of bounds.
+Aborts if <code>i</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_remove">remove</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): Element
@@ -468,7 +434,7 @@ Aborts if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_remove">remove</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): Element {
     <b>let</b> len = <a href="#0x1_Vector_length">length</a>(v);
     // i out of bounds; <b>abort</b>
-    <b>if</b> (i &gt;= len) <b>abort</b> EINDEX_OUT_OF_BOUNDS;
+    <b>if</b> (i &gt;= len) <b>abort</b> <a href="#0x1_Vector_EINDEX_OUT_OF_BOUNDS">EINDEX_OUT_OF_BOUNDS</a>;
 
     len = len - 1;
     <b>while</b> (i &lt; len) <a href="#0x1_Vector_swap">swap</a>(v, i, { i = i + 1; i });
@@ -484,12 +450,9 @@ Aborts if
 
 ## Function `swap_remove`
 
-Swap the
-<code>i</code>th element of the vector
-<code>v</code> with the last element and then pop the vector.
+Swap the <code>i</code>th element of the vector <code>v</code> with the last element and then pop the vector.
 This is O(1), but does not preserve ordering of elements in the vector.
-Aborts if
-<code>i</code> is out of bounds.
+Aborts if <code>i</code> is out of bounds.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_swap_remove">swap_remove</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): Element
@@ -562,10 +525,7 @@ Auxiliary function to check whether a vector contains an element.
 </code></pre>
 
 
-Auxiliary function to check if
-<code>v1</code> is equal to the result of adding
-<code>e</code> at the end of
-<code>v2</code>
+Auxiliary function to check if <code>v1</code> is equal to the result of adding <code>e</code> at the end of <code>v2</code>
 
 
 <a name="0x1_Vector_eq_push_back"></a>
@@ -579,10 +539,7 @@ Auxiliary function to check if
 </code></pre>
 
 
-Auxiliary function to check if
-<code>v</code> is equal to the result of concatenating
-<code>v1</code> and
-<code>v2</code>
+Auxiliary function to check if <code>v</code> is equal to the result of concatenating <code>v1</code> and <code>v2</code>
 
 
 <a name="0x1_Vector_eq_append"></a>

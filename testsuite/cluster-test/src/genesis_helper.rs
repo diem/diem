@@ -288,31 +288,30 @@ impl GenesisHelper {
         token_path: &str,
         validator_ns: &str,
     ) -> Result<Waypoint, Error> {
+        let waypoint = self.create_waypoint(chain_id).await?;
+
         let args = format!(
             "
                 libra-genesis-tool
-                create-and-insert-waypoint
-                --chain-id {chain_id}
-                --shared-backend backend={backend};\
-                    path={path}
+                insert-waypoint
                 --validator-backend backend={validator_backend};\
                     server={server};\
                     token={token_path};\
-                    namespace={validator_ns}\
+                    namespace={validator_ns}
+                --waypoint {waypoint}
             ",
-            chain_id = chain_id,
-            backend = DISK,
             validator_backend = validator_backend,
             server = server,
             token_path = token_path,
-            path = self.path,
             validator_ns = validator_ns,
+            waypoint = waypoint,
         );
 
         let command = Command::from_iter(args.split_whitespace());
-        spawn_blocking(|| command.create_and_insert_waypoint())
+        spawn_blocking(|| command.insert_waypoint())
             .await
             .expect("tokio spawn_blocking runtime error")
+            .map(|_| waypoint)
     }
 
     pub async fn create_waypoint(&self, chain_id: ChainId) -> Result<Waypoint, Error> {

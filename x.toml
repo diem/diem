@@ -1,5 +1,5 @@
 [system-tests]
-testsuite = { path = "testsuite" }
+smoke-test = { path = "smoke-test" }
 
 [cargo]
 toolchain = "nightly-2020-07-08"
@@ -72,6 +72,7 @@ features = ["fuzzing"]
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 [workspace.test-only]
 members = [
+    "common/channel/many-keys-stress-test",
     "common/libradoc",
     "common/proptest-helpers",
     "common/retrier",
@@ -95,12 +96,12 @@ members = [
     "language/vm/serializer-tests",
     "network/memsocket",
     "network/socket-bench-server",
-    "testsuite",
     "testsuite/cluster-test",
     "testsuite/generate-format",
     "testsuite/libra-fuzzer",
     "testsuite/libra-fuzzer/fuzz",
     "testsuite/libra-swarm",
+    "testsuite/smoke-test",
 ]
 
 # Interesting subsets of the workspace, These are used for generating and

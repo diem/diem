@@ -8,6 +8,7 @@ pub mod transaction_scripts;
 use bytecode_verifier::{verify_module, DependencyChecker};
 use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
+use std::collections::BTreeMap;
 use stdlib::build_stdlib;
 use vm::file_format::CompiledModule;
 
@@ -36,23 +37,16 @@ pub const ERROR_DESCRIPTIONS: &[u8] =
 // specified either by the MOVE_NO_USE_COMPILED env var, or by passing the "StdLibOptions::Fresh"
 // option to `stdlib_modules`.
 static COMPILED_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
-    let mut modules: Vec<(String, CompiledModule)> = COMPILED_STDLIB_DIR
+    let modules: BTreeMap<&str, CompiledModule> = COMPILED_STDLIB_DIR
         .files()
         .iter()
         .map(|file| {
             (
-                file.path().to_str().unwrap().to_string(),
+                file.path().to_str().unwrap(),
                 CompiledModule::deserialize(&file.contents()).unwrap(),
             )
         })
         .collect();
-
-    // We need to verify modules based on their dependency order.
-    modules.sort_by_key(|(path, _)| {
-        let splits: Vec<_> = path.split('_').collect();
-        assert!(splits.len() == 2, "Invalid module name encountered");
-        splits[0].parse::<u64>().unwrap()
-    });
 
     let mut verified_modules = vec![];
     for (_, module) in modules.into_iter() {

@@ -14,7 +14,7 @@ get_if_addrs = { version = "0.5.3", default-features = false }
 log = { version = "0.4.11", features = ["serde"] }
 mirai-annotations = "1.10.1"
 rand = "0.7.3"
-serde = { version = "1.0.115", features = ["rc"], default-features = false }
+serde = { version = "1.0.116", features = ["rc"], default-features = false }
 serde_yaml = "0.8.13"
 thiserror = "1.0.20"
 

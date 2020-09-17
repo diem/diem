@@ -32,7 +32,7 @@ async function main() {
         issue_number: number,
       });
       for (let c of comments.data) {
-        if (c.user.login == "github-actions[bot]") {
+        if (c.user.login == "github-actions[bot]" || c.user.login == "libra-action") {
           const m = extract_metadata(c.body);
           if ("tag" in m && m["tag"] == tag) {
             await client.issues.deleteComment({

@@ -36,14 +36,12 @@
 
 <dl>
 <dt>
-
 <code>height: u64</code>
 </dt>
 <dd>
  Height of the current block
 </dd>
 <dt>
-
 <code>new_block_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_LibraBlock_NewBlockEvent">LibraBlock::NewBlockEvent</a>&gt;</code>
 </dt>
 <dd>
@@ -71,28 +69,24 @@
 
 <dl>
 <dt>
-
 <code>round: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>proposer: address</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>previous_block_votes: vector&lt;address&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>time_microseconds: u64</code>
 </dt>
 <dd>
@@ -107,11 +101,10 @@
 
 ## Const `EBLOCK_METADATA`
 
-The
-<code><a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a></code> resource is in an invalid state
+The <code><a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> EBLOCK_METADATA: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraBlock_EBLOCK_METADATA">EBLOCK_METADATA</a>: u64 = 0;
 </code></pre>
 
 
@@ -123,7 +116,7 @@ The
 An invalid signer was provided. Expected the signer to be the VM or a Validator.
 
 
-<pre><code><b>const</b> EVM_OR_VALIDATOR: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_LibraBlock_EVM_OR_VALIDATOR">EVM_OR_VALIDATOR</a>: u64 = 1;
 </code></pre>
 
 
@@ -150,7 +143,7 @@ Currently, it is invoked in the genesis transaction
     // Operational constraint, only callable by the Association address
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(account);
 
-    <b>assert</b>(!<a href="#0x1_LibraBlock_is_initialized">is_initialized</a>(), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EBLOCK_METADATA));
+    <b>assert</b>(!<a href="#0x1_LibraBlock_is_initialized">is_initialized</a>(), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_LibraBlock_EBLOCK_METADATA">EBLOCK_METADATA</a>));
     move_to&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(
         account,
         <a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
@@ -221,7 +214,7 @@ The runtime always runs this before executing the transactions in a block.
     // Authorization
     <b>assert</b>(
         proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>() || <a href="LibraSystem.md#0x1_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer),
-        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(EVM_OR_VALIDATOR)
+        <a href="Errors.md#0x1_Errors_requires_address">Errors::requires_address</a>(<a href="#0x1_LibraBlock_EVM_OR_VALIDATOR">EVM_OR_VALIDATOR</a>)
     );
 
     <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
@@ -292,7 +285,7 @@ Get the current block height
 
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>;
-<b>aborts_if</b> <a href="#0x1_LibraBlock_is_initialized">is_initialized</a>() with Errors::ALREADY_PUBLISHED;
+<b>aborts_if</b> <a href="#0x1_LibraBlock_is_initialized">is_initialized</a>() with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>ensures</b> <a href="#0x1_LibraBlock_is_initialized">is_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>() == 0;
 </code></pre>
@@ -313,7 +306,7 @@ Get the current block height
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotVM">CoreAddresses::AbortsIfNotVM</a>{account: vm};
 <b>aborts_if</b> proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>() && !<a href="LibraSystem.md#0x1_LibraSystem_spec_is_validator">LibraSystem::spec_is_validator</a>(proposer)
-    with Errors::REQUIRES_ADDRESS;
+    with <a href="Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>;
 <b>ensures</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == timestamp;
 <b>ensures</b> <a href="#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>() == <b>old</b>(<a href="#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>()) + 1;
 </code></pre>

@@ -13,6 +13,7 @@
 //! handler, determined using the protocol negotiated on the RPC substream.
 use crate::{
     constants, counters,
+    logging::NetworkSchema,
     peer::{Peer, PeerHandle, PeerNotification},
     peer_manager::TransportNotification,
     protocols::{
@@ -28,9 +29,10 @@ use futures::{
     stream::StreamExt,
     FutureExt, SinkExt,
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
-use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, time::Duration};
+use std::{fmt::Debug, marker::PhantomData, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
 /// Requests [`NetworkProvider`] receives from the network interface.
@@ -63,6 +65,7 @@ where
     TSocket: AsyncRead + AsyncWrite + Send + 'static,
 {
     pub fn start(
+        network_context: Arc<NetworkContext>,
         executor: Handle,
         connection: Connection<TSocket>,
         connection_notifs_tx: channel::Sender<TransportNotification<TSocket>>,
@@ -74,37 +77,44 @@ where
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
     ) {
-        let peer_id = connection.metadata.peer_id;
+        let peer_id = connection.metadata.remote_peer_id;
 
         // Setup and start Peer actor.
         let (peer_reqs_tx, peer_reqs_rx) = channel::new(
             channel_size,
-            &counters::OP_COUNTERS
-                .peer_gauge(&counters::PENDING_PEER_REQUESTS, &peer_id.short_str()),
+            &counters::OP_COUNTERS.peer_gauge(
+                &counters::PENDING_PEER_REQUESTS,
+                peer_id.short_str().as_str(),
+            ),
         );
         let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new(
             channel_size,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_PEER_RPC_NOTIFICATIONS,
-                &peer_id.short_str(),
+                peer_id.short_str().as_str(),
             ),
         );
         let (peer_ds_notifs_tx, peer_ds_notifs_rx) = channel::new(
             channel_size,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_PEER_DIRECT_SEND_NOTIFICATIONS,
-                &peer_id.short_str(),
+                peer_id.short_str().as_str(),
             ),
         );
         let (peer_notifs_tx, peer_notifs_rx) = channel::new(
             channel_size,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_PEER_NETWORK_NOTIFICATIONS,
-                &peer_id.short_str(),
+                peer_id.short_str().as_str(),
             ),
         );
-        let peer_handle = PeerHandle::new(peer_id, peer_reqs_tx);
+        let peer_handle = PeerHandle::new(
+            network_context.clone(),
+            connection.metadata.clone(),
+            peer_reqs_tx,
+        );
         let peer = Peer::new(
+            Arc::clone(&network_context),
             executor.clone(),
             connection,
             peer_reqs_rx,
@@ -118,15 +128,20 @@ where
         // Setup and start RPC actor.
         let (rpc_notifs_tx, rpc_notifs_rx) = channel::new(
             channel_size,
-            &counters::OP_COUNTERS
-                .peer_gauge(&counters::PENDING_RPC_NOTIFICATIONS, &peer_id.short_str()),
+            &counters::OP_COUNTERS.peer_gauge(
+                &counters::PENDING_RPC_NOTIFICATIONS,
+                peer_id.short_str().as_str(),
+            ),
         );
         let (rpc_reqs_tx, rpc_reqs_rx) = channel::new(
             channel_size,
-            &counters::OP_COUNTERS
-                .peer_gauge(&counters::PENDING_RPC_REQUESTS, &peer_id.short_str()),
+            &counters::OP_COUNTERS.peer_gauge(
+                &counters::PENDING_RPC_REQUESTS,
+                peer_id.short_str().as_str(),
+            ),
         );
         let rpc = Rpc::new(
+            Arc::clone(&network_context),
             peer_handle.clone(),
             rpc_reqs_rx,
             peer_rpc_notifs_rx,
@@ -142,17 +157,18 @@ where
             channel_size,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_DIRECT_SEND_NOTIFICATIONS,
-                &peer_id.short_str(),
+                peer_id.short_str().as_str(),
             ),
         );
         let (ds_reqs_tx, ds_reqs_rx) = channel::new(
             channel_size,
             &counters::OP_COUNTERS.peer_gauge(
                 &counters::PENDING_DIRECT_SEND_REQUESTS,
-                &peer_id.short_str(),
+                peer_id.short_str().as_str(),
             ),
         );
         let ds = DirectSend::new(
+            network_context.clone(),
             peer_handle.clone(),
             ds_reqs_rx,
             ds_notifs_tx,
@@ -197,7 +213,6 @@ where
 
         // Handle network requests.
         let f = async move {
-            let peer_id_str = peer_id.short_str();
             requests_rx
                 .for_each_concurrent(max_concurrent_reqs, move |req| {
                     Self::handle_network_request(
@@ -209,8 +224,10 @@ where
                 })
                 .then(|_| async move {
                     info!(
-                        "Network provider actor terminating for peer: {}",
-                        peer_id_str
+                        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+                        "{} Network provider actor terminating for peer: {}",
+                        network_context,
+                        peer_id.short_str()
                     );
                     // Cleanly close connection with peer.
                     let mut peer_handle = peer_handle;
@@ -233,6 +250,8 @@ where
             NetworkRequest::SendRpc(req) => {
                 if let Err(e) = rpc_reqs_tx.send(req).await {
                     error!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
                         "Failed to send RPC to peer: {}. Error: {:?}",
                         peer_id.short_str(),
                         e
@@ -240,14 +259,10 @@ where
                 }
             }
             NetworkRequest::SendMessage(msg) => {
-                counters::LIBRA_NETWORK_DIRECT_SEND_MESSAGES
-                    .with_label_values(&["sent"])
-                    .inc();
-                counters::LIBRA_NETWORK_DIRECT_SEND_BYTES
-                    .with_label_values(&["sent"])
-                    .observe(msg.mdata.len() as f64);
                 if let Err(e) = ds_reqs_tx.send(DirectSendRequest::SendMessage(msg)).await {
                     error!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
                         "Failed to send DirectSend to peer: {}. Error: {:?}",
                         peer_id.short_str(),
                         e
@@ -265,8 +280,14 @@ where
         trace!("RpcNotification::{:?}", notif);
         match notif {
             RpcNotification::RecvRpc(req) => {
-                if let Err(e) = notifs_tx.push(req.protocol, NetworkNotification::RecvRpc(req)) {
-                    warn!("Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
+                if let Err(e) = notifs_tx.push(req.protocol_id, NetworkNotification::RecvRpc(req)) {
+                    warn!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
+                        "Failed to push RpcNotification to NetworkProvider for peer: {}. Error: {:?}",
+                        peer_id.short_str(),
+                        e
+                    );
                 }
             }
         }
@@ -280,9 +301,16 @@ where
         trace!("DirectSendNotification::{:?}", notif);
         match notif {
             DirectSendNotification::RecvMessage(msg) => {
-                if let Err(e) = notifs_tx.push(msg.protocol, NetworkNotification::RecvMessage(msg))
+                if let Err(e) =
+                    notifs_tx.push(msg.protocol_id, NetworkNotification::RecvMessage(msg))
                 {
-                    warn!("Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}", peer_id.short_str(), e);
+                    warn!(
+                        remote_peer = peer_id,
+                        error = e.to_string(),
+                        "Failed to push DirectSendNotification to NetworkProvider for peer: {}. Error: {:?}",
+                        peer_id.short_str(),
+                        e
+                    );
                 }
             }
         }
@@ -300,7 +328,11 @@ where
                     .send(TransportNotification::Disconnected(conn_info, reason))
                     .await
                 {
-                    warn!("Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}", err);
+                    warn!(
+                        error = err.to_string(),
+                        "Failed to push Disconnected event to connection event handler. Probably in shutdown mode. Error: {:?}",
+                        err
+                    );
                 }
             }
             _ => {

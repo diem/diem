@@ -5,7 +5,7 @@ FROM debian-base AS toolchain
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
 
-RUN apt-get update && apt-get install -y cmake curl clang git
+RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-dev
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
@@ -38,6 +38,7 @@ RUN pip3 install -r /libra/docker/mint/requirements.txt
 RUN mkdir -p /opt/libra/bin  /libra/client/data/wallet/
 
 COPY --from=builder /libra/target/release/cli /opt/libra/bin
+COPY --from=builder /libra/target/release/libra-faucet /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY docker/mint/server.py /opt/libra/bin
 COPY docker/mint/docker-run.sh /opt/libra/bin

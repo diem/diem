@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 /// Struct that represents a ReceivedMintEvent.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReceivedMintEvent {
-    amount: u64,
     currency_code: Identifier,
     destination_address: AccountAddress,
+    amount: u64,
 }
 
 impl ReceivedMintEvent {

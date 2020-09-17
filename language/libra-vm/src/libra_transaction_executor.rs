@@ -6,7 +6,7 @@ use crate::{
     data_cache::StateViewCache,
     errors::expect_only_successful_execution,
     libra_vm::{
-        charge_global_write_gas_usage, get_transaction_output,
+        charge_global_write_gas_usage, get_currency_info, get_transaction_output,
         txn_effects_to_writeset_and_events_cached, LibraVMImpl, LibraVMInternals,
     },
     system_module_names::*,
@@ -273,6 +273,11 @@ impl LibraVM {
             account_config::from_currency_code_string(txn.gas_currency_code())
                 .map_err(|_| VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER))
         );
+        // Check that the gas currency is valid. It is not used directly here but the
+        // results should be consistent with the checks performed for validation.
+        if let Err(err) = get_currency_info(&account_currency_symbol, remote_cache) {
+            return discard_error_vm_status(err);
+        }
         let result = match txn.payload() {
             TransactionPayload::Script(s) => self.execute_script(
                 remote_cache,
@@ -335,7 +340,7 @@ impl LibraVM {
                 let args = convert_txn_args(script.args());
                 let senders = match txn_sender {
                     None => vec![*execute_as],
-                    Some(sender) => vec![*execute_as, sender],
+                    Some(sender) => vec![sender, *execute_as],
                 };
                 let execution_result = tmp_session
                     .execute_script(
@@ -449,7 +454,7 @@ impl LibraVM {
 
         if let Err(e) = self.0.run_writeset_prologue(&mut session, &txn_data) {
             // Switch any error from the prologue to a reject
-            debug_assert!(e.status_code() == StatusCode::REJECTED_WRITE_SET);
+            debug_assert_eq!(e.status_code(), StatusCode::REJECTED_WRITE_SET);
             return Ok((e, discard_error_output(StatusCode::REJECTED_WRITE_SET)));
         };
 

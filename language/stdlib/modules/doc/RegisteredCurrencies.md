@@ -36,7 +36,6 @@ currency names.
 
 <dl>
 <dt>
-
 <code>currency_codes: vector&lt;vector&lt;u8&gt;&gt;</code>
 </dt>
 <dd>
@@ -54,7 +53,7 @@ currency names.
 Attempted to add a currency code that is already in use
 
 
-<pre><code><b>const</b> ECURRENCY_CODE_ALREADY_TAKEN: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN">ECURRENCY_CODE_ALREADY_TAKEN</a>: u64 = 0;
 </code></pre>
 
 
@@ -112,7 +111,7 @@ Adds a new currency code. The currency code must not yet exist.
     <b>let</b> config = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
     <b>assert</b>(
         !<a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&config.currency_codes, &currency_code),
-        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(ECURRENCY_CODE_ALREADY_TAKEN)
+        <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_RegisteredCurrencies_ECURRENCY_CODE_ALREADY_TAKEN">ECURRENCY_CODE_ALREADY_TAKEN</a>)
     );
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> config.currency_codes, currency_code);
     <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>(lr_account, config);
@@ -186,7 +185,7 @@ The same currency code can be only added once.
     <b>aborts_if</b> <a href="Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(
         <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes,
         currency_code
-    ) with Errors::INVALID_ARGUMENT;
+    ) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 

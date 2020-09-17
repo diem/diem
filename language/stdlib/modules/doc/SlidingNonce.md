@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Const `ESLIDING_NONCE`](#0x1_SlidingNonce_ESLIDING_NONCE)
 -  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
 -  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
 -  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
@@ -14,6 +15,9 @@
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
+-  [Specification](#0x1_SlidingNonce_Specification)
+    -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_Specification_record_nonce_or_abort)
+    -  [Function `try_record_nonce`](#0x1_SlidingNonce_Specification_try_record_nonce)
 
 
 
@@ -40,14 +44,12 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 <dl>
 <dt>
-
 <code>min_nonce: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>nonce_mask: u128</code>
 </dt>
 <dd>
@@ -58,6 +60,18 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 </details>
 
+<a name="0x1_SlidingNonce_ESLIDING_NONCE"></a>
+
+## Const `ESLIDING_NONCE`
+
+The <code><a href="#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
+
+
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>: u64 = 0;
+</code></pre>
+
+
+
 <a name="0x1_SlidingNonce_ENONCE_TOO_OLD"></a>
 
 ## Const `ENONCE_TOO_OLD`
@@ -65,7 +79,7 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 The nonce is too old and impossible to ensure whether it's duplicated or not
 
 
-<pre><code><b>const</b> ENONCE_TOO_OLD: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
 </code></pre>
 
 
@@ -77,7 +91,7 @@ The nonce is too old and impossible to ensure whether it's duplicated or not
 The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
 
 
-<pre><code><b>const</b> ENONCE_TOO_NEW: u64 = 2;
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
 </code></pre>
 
 
@@ -89,7 +103,7 @@ The nonce is too far in the future - this is not allowed to protect against nonc
 The nonce was already recorded previously
 
 
-<pre><code><b>const</b> ENONCE_ALREADY_RECORDED: u64 = 3;
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
 </code></pre>
 
 
@@ -101,7 +115,7 @@ The nonce was already recorded previously
 Size of SlidingNonce::nonce_mask in bits.
 
 
-<pre><code><b>const</b> NONCE_MASK_SIZE: u64 = 128;
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>: u64 = 128;
 </code></pre>
 
 
@@ -153,20 +167,21 @@ Returns 0 if a nonce was recorded and non-0 otherwise
     <b>if</b> (seq_nonce == 0) {
         <b>return</b> 0
     };
+    <b>assert</b>(exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>));
     <b>let</b> t = borrow_global_mut&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
     <b>if</b> (t.min_nonce &gt; seq_nonce) {
-        <b>return</b> ENONCE_TOO_OLD
+        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>
     };
     <b>let</b> jump_limit = 10000; // Don't allow giant leaps in nonce <b>to</b> protect against nonce exhaustion
     <b>if</b> (t.min_nonce + jump_limit &lt;= seq_nonce) {
-        <b>return</b> ENONCE_TOO_NEW
+        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>
     };
     <b>let</b> bit_pos = seq_nonce - t.min_nonce;
-    <b>if</b> (bit_pos &gt;= NONCE_MASK_SIZE) {
-        <b>let</b> shift = (bit_pos - NONCE_MASK_SIZE + 1);
-        <b>if</b>(shift &gt;= NONCE_MASK_SIZE) {
+    <b>if</b> (bit_pos &gt;= <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
+        <b>let</b> shift = (bit_pos - <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a> + 1);
+        <b>if</b>(shift &gt;= <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
             t.nonce_mask = 0;
-            t.min_nonce = seq_nonce + 1 - NONCE_MASK_SIZE;
+            t.min_nonce = seq_nonce + 1 - <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>;
         } <b>else</b> {
             t.nonce_mask = t.nonce_mask &gt;&gt; (shift <b>as</b> u8);
             t.min_nonce = t.min_nonce + shift;
@@ -175,7 +190,7 @@ Returns 0 if a nonce was recorded and non-0 otherwise
     <b>let</b> bit_pos = seq_nonce - t.min_nonce;
     <b>let</b> set = 1u128 &lt;&lt; (bit_pos <b>as</b> u8);
     <b>if</b> (t.nonce_mask & set != 0) {
-        <b>return</b> ENONCE_ALREADY_RECORDED
+        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>
     };
     t.nonce_mask = t.nonce_mask | set;
     0
@@ -190,8 +205,7 @@ Returns 0 if a nonce was recorded and non-0 otherwise
 
 ## Function `publish`
 
-Publishes nonce resource for
-<code>account</code>
+Publishes nonce resource for <code>account</code>
 This is required before other functions in this module can be called for `account
 
 
@@ -246,3 +260,67 @@ Only the libra root account can create this resource for different accounts
 
 
 </details>
+
+<a name="0x1_SlidingNonce_Specification"></a>
+
+## Specification
+
+Specification version of <code><a href="#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
+
+
+<a name="0x1_SlidingNonce_spec_try_record_nonce"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_Specification_record_nonce_or_abort"></a>
+
+### Function `record_nonce_or_abort`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SlidingNonce_RecordNonceAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a> {
+    account: signer;
+    seq_nonce: u64;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce) != 0 with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_Specification_try_record_nonce"></a>
+
+### Function `try_record_nonce`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
+</code></pre>
+
+
+
+> TODO: turn verify on when we are ready to specify this function.
+It is currently assumed that this function raises no arithmetic overflow/underflow.
+
+
+<pre><code>pragma opaque, verify = <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+</code></pre>

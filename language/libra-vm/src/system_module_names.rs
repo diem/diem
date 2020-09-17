@@ -32,10 +32,8 @@ pub static WRITESET_PROLOGUE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("prologue").unwrap());
 pub static WRITESET_EPILOGUE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("epilogue").unwrap());
-pub static SUCCESS_EPILOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("success_epilogue").unwrap());
-pub static FAILURE_EPILOGUE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("failure_epilogue").unwrap());
+pub static USER_EPILOGUE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("epilogue").unwrap());
 pub static BUMP_SEQUENCE_NUMBER_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("bump_sequence_number").unwrap());
 pub static BLOCK_PROLOGUE: Lazy<Identifier> =

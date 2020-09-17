@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 libra-workspace-hack = { path = "../workspace-hack", version = "0.1.0" }
 thiserror = "1.0.20"
-serde = { version = "1.0.115", features = ["derive"] }
+serde = { version = "1.0.116", features = ["derive"] }
 
 [dev-dependencies]
 criterion = "0.3.3"

@@ -21,7 +21,7 @@ proptest = { version = "0.10.1", default-features = false, optional = true }
 proptest-derive = { version = "0.2.0", default-features = false, optional = true }
 radix_trie = { version = "0.2.0", default-features = false }
 rand = "0.7.3"
-serde = { version = "1.0.115", default-features = false }
+serde = { version = "1.0.116", default-features = false }
 serde_json = "1.0.57"
 serde_bytes = "0.11.5"
 thiserror = "1.0.20"

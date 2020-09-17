@@ -72,7 +72,12 @@
 
 pub mod prelude {
     pub use crate::{
-        debug, error, event, info, security::SecurityEvent, trace, warn, StructuredLogEntry,
+        debug, error, event, info,
+        libra_logger::FileWriter,
+        sample,
+        sample::{SampleRate, Sampling},
+        security::SecurityEvent,
+        trace, warn,
     };
 }
 pub mod json_log;
@@ -84,6 +89,8 @@ mod libra_logger;
 mod logger;
 mod macros;
 mod metadata;
+pub mod sample;
+
 mod security;
 mod struct_log;
 
@@ -93,8 +100,6 @@ pub use crate::libra_logger::{
 pub use event::Event;
 pub use filter::{Filter, LevelFilter};
 pub use metadata::{Level, Metadata};
-
-pub use struct_log::{LoggingField, StructuredLogEntry};
 
 pub use kv::{Key, KeyValue, Schema, Value, Visitor};
 pub use libra_log_derive::Schema;

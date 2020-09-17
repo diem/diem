@@ -182,11 +182,12 @@ impl ClientProxy {
             Some(dd_account_data)
         };
 
-        let faucet_url = Url::parse(&faucet_url.unwrap_or(format!(
-            "http://{}",
-            url.host_str().unwrap().replace("client", "faucet").as_str()
-        )))
-        .expect("Invalid faucet URL");
+        let faucet_url = if let Some(faucet_url) = &faucet_url {
+            Url::parse(faucet_url).expect("Invalid faucet URL specified")
+        } else {
+            url.join("/mint")
+                .expect("Failed to construct faucet URL from JSON-RPC URL")
+        };
 
         let address_to_ref_id = accounts
             .iter()

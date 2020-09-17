@@ -1,31 +1,45 @@
 script {
 use 0x1::LibraAccount;
 
-// imports for the prover
-use 0x1::Signer;
+/// # Summary
+/// Rotates the transaction sender's authentication key to the supplied new authentication key. May
+/// be sent by any account.
+///
+/// # Technical Description
+/// Rotate the `account`'s `LibraAccount::LibraAccount` `authentication_key` field to `new_key`.
+/// `new_key` must be a valid ed25519 public key, and `account` must not have previously delegated
+/// its `LibraAccount::KeyRotationCapability`.
+///
+/// # Parameters
+/// | Name      | Type         | Description                                                 |
+/// | ------    | ------       | -------------                                               |
+/// | `account` | `&signer`    | Signer reference of the sending account of the transaction. |
+/// | `new_key` | `vector<u8>` | New ed25519 public key to be used for `account`.            |
+///
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                               | Description                                                                              |
+/// | ----------------           | --------------                                             | -------------                                                                            |
+/// | `Errors::INVALID_STATE`    | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `LibraAccount::KeyRotationCapability`.     |
+/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EMALFORMED_AUTHENTICATION_KEY`              | `new_key` was an invalid length.                                                         |
+///
+/// # Related Scripts
+/// * `Script::rotate_authentication_key_with_nonce`
+/// * `Script::rotate_authentication_key_with_nonce_admin`
+/// * `Script::rotate_authentication_key_with_recovery_address`
 
-/// Rotate the sender's authentication key to `new_key`.
-/// `new_key` should be a 256 bit sha3 hash of an ed25519 public key.
-/// * Aborts with `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` if the `KeyRotationCapability` for `account` has already been extracted.
-/// * Aborts with `0` if the key rotation capability held by the account doesn't match the sender's address.
-/// * Aborts with `LibraAccount::EMALFORMED_AUTHENTICATION_KEY` if the length of `new_key` != 32.
 fun rotate_authentication_key(account: &signer, new_key: vector<u8>) {
-  let key_rotation_capability = LibraAccount::extract_key_rotation_capability(account);
-  assert(*LibraAccount::key_rotation_capability_address(&key_rotation_capability) == Signer::address_of(account), 0);
-  LibraAccount::rotate_authentication_key(&key_rotation_capability, new_key);
-  LibraAccount::restore_key_rotation_capability(key_rotation_capability);
+    let key_rotation_capability = LibraAccount::extract_key_rotation_capability(account);
+    LibraAccount::rotate_authentication_key(&key_rotation_capability, new_key);
+    LibraAccount::restore_key_rotation_capability(key_rotation_capability);
 }
 spec fun rotate_authentication_key {
-    pragma verify = false; // TODO: timeout
+    use 0x1::Signer;
     let account_addr = Signer::spec_address_of(account);
-    /// This rotates the authentication key of `account` to `new_key`
-    ensures LibraAccount::spec_rotate_authentication_key(account_addr, new_key);
+    include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
+    let key_rotation_capability = LibraAccount::spec_get_key_rotation_cap(account_addr);
+    include LibraAccount::RotateAuthenticationKeyAbortsIf{cap: key_rotation_capability, new_authentication_key: new_key};
 
-    /// If the sending account doesn't exist this will abort
-    aborts_if !exists<LibraAccount::LibraAccount>(account_addr);
-    /// `account` must not have delegated its rotation capability
-    aborts_if LibraAccount::delegated_key_rotation_capability(account_addr);
-    /// `new_key`'s length must be `32`.
-    aborts_if len(new_key) != 32;
+    /// This rotates the authentication key of `account` to `new_key`
+    include LibraAccount::RotateAuthenticationKeyEnsures{addr: account_addr, new_authentication_key: new_key};
 }
 }

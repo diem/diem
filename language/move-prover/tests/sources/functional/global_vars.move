@@ -7,14 +7,13 @@ module TestGlobalVars {
         global sum_of_T: u64;
     }
 
-    struct T {
+    resource struct T {
       i: u64,
     }
     spec struct T {
       invariant pack sum_of_T = sum_of_T + i;
       invariant unpack sum_of_T = sum_of_T - i;
     }
-
 
     // ----------
     // Pack tests
@@ -58,7 +57,6 @@ module TestGlobalVars {
         ensures result == old(t.i);
     }
 
-
     // ------------
     // Update tests
     // ------------
@@ -96,23 +94,25 @@ module TestGlobalVars {
     // Test with the combination of pack/unpack/update
     // -----------------------------------------------
 
-    fun combi_correct() {
+    fun combi_correct(): T {
         let t = T{i:2};
         let r = T{i:3};
         let s = &mut r;
         s.i = 4;
         let T {i: _} = t;
+        r
     }
     spec fun combi_correct {
         ensures sum_of_T == old(sum_of_T) + 2 + 3 - 3 + 4 - 2;
     }
 
-    fun combi_incorrect() {
+    fun combi_incorrect(): T {
         let t = T{i:2};
         let r = T{i:3};
         let s = &mut r;
         s.i = 4;
         let T {i: _} = t;
+        r
     }
     spec fun combi_incorrect {
         ensures sum_of_T == old(sum_of_T) + 2;
@@ -123,7 +123,7 @@ module TestGlobalVars {
     // Test with pack/unpack in the absence of update
     // ----------------------------------------------
 
-    struct S {
+    resource struct S {
       x: u64
     }
     spec struct S {

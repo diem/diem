@@ -12,6 +12,7 @@ use crate::{
     ProtocolId,
 };
 use futures::{future::join, io::AsyncWriteExt, stream::StreamExt, SinkExt};
+use libra_config::network_id::NetworkContext;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -53,8 +54,10 @@ fn build_test_peer(
         ),
         socket: a,
     };
+    let connection_metadata = connection.metadata.clone();
 
     let peer = Peer::new(
+        NetworkContext::mock(),
         executor,
         connection,
         peer_req_rx,
@@ -63,7 +66,7 @@ fn build_test_peer(
         peer_direct_send_notifs_tx,
         constants::MAX_FRAME_SIZE,
     );
-    let peer_handle = PeerHandle::new(peer_id, peer_req_tx);
+    let peer_handle = PeerHandle::new(NetworkContext::mock(), connection_metadata, peer_req_tx);
 
     (
         peer,
@@ -145,7 +148,7 @@ async fn assert_peer_disconnected_event(
 ) {
     match peer_notifs_rx.next().await {
         Some(PeerNotification::PeerDisconnected(conn_info, actual_reason)) => {
-            assert_eq!(conn_info.peer_id, peer_id);
+            assert_eq!(conn_info.remote_peer_id, peer_id);
             assert_eq!(actual_reason, reason);
         }
         event => {
@@ -293,13 +296,13 @@ fn peer_open_substream_simultaneous() {
 
         // Check that we received both shutdown events
         assert_peer_disconnected_event(
-            peer_handle_a.peer_id,
+            peer_handle_a.peer_id(),
             DisconnectReason::Requested,
             &mut peer_notifs_rx_a,
         )
         .await;
         assert_peer_disconnected_event(
-            peer_handle_b.peer_id,
+            peer_handle_b.peer_id(),
             DisconnectReason::ConnectionLost,
             &mut peer_notifs_rx_b,
         )
@@ -327,7 +330,7 @@ fn peer_disconnect_request() {
     let test = async move {
         peer_handle.disconnect().await;
         assert_peer_disconnected_event(
-            peer_handle.peer_id,
+            peer_handle.peer_id(),
             DisconnectReason::Requested,
             &mut peer_notifs_rx,
         )
@@ -353,7 +356,7 @@ fn peer_disconnect_connection_lost() {
     let test = async move {
         connection.close().await.unwrap();
         assert_peer_disconnected_event(
-            peer_handle.peer_id,
+            peer_handle.peer_id(),
             DisconnectReason::ConnectionLost,
             &mut peer_notifs_rx,
         )

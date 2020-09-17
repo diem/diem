@@ -108,10 +108,10 @@ impl ProposalMsg {
 
 impl fmt::Display for ProposalMsg {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let author = match self.proposal.author() {
-            Some(author) => author.short_str(),
-            None => String::from("NIL"),
-        };
-        write!(f, "[proposal {} from {}]", self.proposal, author,)
+        write!(f, "[proposal {} from ", self.proposal)?;
+        match self.proposal.author() {
+            Some(author) => write!(f, "{}]", author.short_str()),
+            None => write!(f, "NIL]"),
+        }
     }
 }

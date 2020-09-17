@@ -10,14 +10,14 @@ Get the transactions on the blockchain.
 | Name           | Type           | Description                                                          |
 |----------------|----------------|----------------------------------------------------------------------|
 | start_version  | unsigned int64 | Start on this transaction version for this query                     |
-| limit          | unsigned int64 | Limit the number of transactions returned, default max value is 1000 |
-| include_events | boolean        | Set to true, to also fetch events for each transaction               |
+| limit          | unsigned int64 | Limit the number of transactions returned, the max value is 1000     |
+| include_events | boolean        | Set to true, to also fetch [events](type_event.md) for each transaction |
 
 ### Returns
 
 Array of [Transaction](type_transaction.md) objects
 
-if include_events is false, the events field in the Transaction object will be an empty array.
+if include_events is false, the [events](type_event.md) field in the Transaction object will be an empty array.
 
 
 ### Example

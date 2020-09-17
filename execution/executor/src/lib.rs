@@ -19,6 +19,7 @@ pub mod db_bootstrapper;
 use crate::{
     logging::{LogEntry, LogSchema},
     metrics::{
+        LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_ERRORS,
         LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
         LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
         LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
@@ -32,6 +33,7 @@ use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
     TransactionReplayer,
 };
+use fail::fail_point;
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
     HashValue,
@@ -55,7 +57,6 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use libra_vm::VMExecutor;
-use once_cell::sync::Lazy;
 use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -64,9 +65,6 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
-
-static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
-    Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
@@ -191,6 +189,7 @@ where
                     category = "MUST_FIX",
                     "first_transaction_version should exist"
                 );
+                LIBRA_EXECUTOR_ERRORS.inc();
                 return Err(anyhow!("first_transaction_version should exist."));
             }
         };
@@ -211,7 +210,7 @@ where
         // 2. Verify that skipped transactions match what's already persisted (no fork):
         let num_txns_to_skip = num_committed_txns - first_txn_version;
 
-        info!(
+        debug!(
             LogSchema::new(LogEntry::ChunkExecutor).num(num_txns_to_skip),
             "skipping_chunk_txns"
         );
@@ -330,6 +329,7 @@ where
                              Transaction: {:?}. Status: {:?}.",
                             txn, status,
                         );
+                        LIBRA_EXECUTOR_ERRORS.inc();
                     }
                 }
                 TransactionStatus::Retry => (),
@@ -427,7 +427,7 @@ where
         )
     }
 
-    fn execute_chunk(
+    fn replay_transactions_impl(
         &mut self,
         first_version: u64,
         transactions: Vec<Transaction>,
@@ -436,6 +436,8 @@ where
         ProcessedVMOutput,
         Vec<TransactionToCommit>,
         Vec<ContractEvent>,
+        Vec<Transaction>,
+        Vec<TransactionInfo>,
     )> {
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
@@ -446,8 +448,10 @@ where
             self.cache.synced_trees().state_tree(),
         );
         let vm_outputs = {
-            let __timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
             let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
+            fail_point!("executor::vm_execute_chunk", |_| {
+                Err(anyhow::anyhow!("Injected error in execute_chunk"))
+            });
             V::execute_block(transactions.clone(), &state_view)?
         };
 
@@ -473,22 +477,29 @@ where
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
         let mut reconfig_events = vec![];
+        let mut seen_retry = false;
+        let mut txns_to_retry = vec![];
+        let mut txn_infos_to_retry = vec![];
         for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
             itertools::zip_eq(transactions, output.transaction_data()),
-            transaction_infos.iter().enumerate(),
+            transaction_infos.into_iter().enumerate(),
         ) {
             let recorded_status = match txn_data.status() {
                 TransactionStatus::Keep(recorded_status) => recorded_status.clone(),
-                status @ TransactionStatus::Discard(_) | status @ TransactionStatus::Retry => {
-                    bail!(
-                        "The {}-th transaction to be commited did not have a status of 'Keep' \
-                        but instead had the following status: {:?}",
-                        i,
-                        status
-                    )
+                status @ TransactionStatus::Discard(_) => bail!(
+                    "The transaction at version {}, got the status of 'Discard': {:?}",
+                    first_version + i as u64,
+                    status
+                ),
+                TransactionStatus::Retry => {
+                    seen_retry = true;
+                    txns_to_retry.push(txn);
+                    txn_infos_to_retry.push(txn_info);
+                    continue;
                 }
             };
-            let generated_txn_info = &TransactionInfo::new(
+            assert!(!seen_retry);
+            let generated_txn_info = TransactionInfo::new(
                 txn.hash(),
                 txn_data.state_root_hash(),
                 txn_data.event_root_hash(),
@@ -511,7 +522,38 @@ where
                 txn_data.events().to_vec(),
             ));
         }
-        Ok((output, txns_to_commit, reconfig_events))
+
+        Ok((
+            output,
+            txns_to_commit,
+            reconfig_events,
+            txns_to_retry,
+            txn_infos_to_retry,
+        ))
+    }
+
+    fn execute_chunk(
+        &mut self,
+        first_version: u64,
+        transactions: Vec<Transaction>,
+        transaction_infos: Vec<TransactionInfo>,
+    ) -> Result<(
+        ProcessedVMOutput,
+        Vec<TransactionToCommit>,
+        Vec<ContractEvent>,
+    )> {
+        let num_txns = transactions.len();
+
+        let (processed_vm_output, txns_to_commit, events, txns_to_retry, _txn_infos_to_retry) =
+            self.replay_transactions_impl(first_version, transactions, transaction_infos)?;
+
+        ensure!(
+            txns_to_retry.is_empty(),
+            "The transaction at version {} got the status of 'Retry'",
+            num_txns - txns_to_retry.len() + first_version as usize,
+        );
+
+        Ok((processed_vm_output, txns_to_commit, events))
     }
 }
 
@@ -551,6 +593,9 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         if ledger_info_to_commit.is_none() && txns_to_commit.is_empty() {
             return Ok(reconfig_events);
         }
+        fail_point!("executor::commit_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in commit_chunk"))
+        });
         self.db.writer.save_transactions(
             &txns_to_commit,
             first_version,
@@ -590,9 +635,9 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
 impl<V: VMExecutor> TransactionReplayer for Executor<V> {
     fn replay_chunk(
         &mut self,
-        first_version: Version,
-        txns: Vec<Transaction>,
-        txn_infos: Vec<TransactionInfo>,
+        mut first_version: Version,
+        mut txns: Vec<Transaction>,
+        mut txn_infos: Vec<TransactionInfo>,
     ) -> Result<()> {
         ensure!(
             first_version == self.cache.synced_trees().txn_accumulator().num_leaves(),
@@ -600,13 +645,24 @@ impl<V: VMExecutor> TransactionReplayer for Executor<V> {
             self.cache.synced_trees().txn_accumulator().num_leaves(),
             first_version,
         );
-        let (output, txns_to_commit, _) = self.execute_chunk(first_version, txns, txn_infos)?;
-        self.db
-            .writer
-            .save_transactions(&txns_to_commit, first_version, None)?;
+        while !txns.is_empty() {
+            let num_txns = txns.len();
 
-        self.cache
-            .update_synced_trees(output.executed_trees().clone());
+            let (output, txns_to_commit, _, txns_to_retry, txn_infos_to_retry) =
+                self.replay_transactions_impl(first_version, txns, txn_infos)?;
+            assert!(txns_to_retry.len() < num_txns);
+
+            self.db
+                .writer
+                .save_transactions(&txns_to_commit, first_version, None)?;
+
+            self.cache
+                .update_synced_trees(output.executed_trees().clone());
+
+            txns = txns_to_retry;
+            txn_infos = txn_infos_to_retry;
+            first_version += txns_to_commit.len() as u64;
+        }
         Ok(())
     }
 
@@ -673,7 +729,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 "execute_block"
             );
 
-            let __timer = OP_COUNTERS.timer("block_execute_time_s");
             let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
@@ -685,8 +740,12 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
-                let __timer = OP_COUNTERS.timer("vm_execute_block_time_s");
                 let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
+                fail_point!("executor::vm_execute_block", |_| {
+                    Err(Error::from(anyhow::anyhow!(
+                        "Injected error in vm_execute_block"
+                    )))
+                });
                 V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
             };
 
@@ -733,6 +792,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         block_ids: Vec<HashValue>,
         ledger_info_with_sigs: LedgerInfoWithSignatures,
     ) -> Result<(Vec<Transaction>, Vec<ContractEvent>), Error> {
+        let _timer = LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS.start_timer();
         let block_id_to_commit = ledger_info_with_sigs.ledger_info().consensus_block_id();
 
         info!(
@@ -819,7 +879,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         let first_version_to_commit = first_version_to_keep + num_txns_to_skip;
 
         if num_txns_to_skip != 0 {
-            info!(
+            debug!(
                 LogSchema::new(LogEntry::BlockExecutor)
                     .latest_synced_version(num_persistent_txns - 1)
                     .first_version_to_keep(first_version_to_keep)
@@ -834,12 +894,15 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let __timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             let _timer = LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS.start_timer();
-            OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
 
             assert_eq!(first_version_to_commit, num_txns_in_li - num_txns_to_commit);
+            fail_point!("executor::commit_blocks", |_| {
+                Err(Error::from(anyhow::anyhow!(
+                    "Injected error in commit_blocks"
+                )))
+            });
             self.db.writer.save_transactions(
                 txns_to_commit,
                 first_version_to_commit,

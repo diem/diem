@@ -187,6 +187,11 @@ impl<'env> Translator<'env> {
         self.env.error(at, msg)
     }
 
+    /// Reports a type checking error with notes.
+    fn error_with_notes(&self, at: &Loc, msg: &str, notes: Vec<String>) {
+        self.env.error_with_notes(at, msg, notes)
+    }
+
     /// Defines a spec function.
     fn define_spec_fun(
         &mut self,
@@ -2024,9 +2029,33 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         detail: &str,
     ) -> bool {
         use SpecBlockContext::*;
+        let mut notes = vec![];
         let ok = match context {
             Module => kind.allowed_on_module(),
-            Struct(_) => kind.allowed_on_struct(),
+            Struct(s) => {
+                let mut ok = true;
+                if !kind.allowed_on_struct() {
+                    ok = false;
+                } else if matches!(
+                    kind,
+                    ConditionKind::VarPack(..)
+                        | ConditionKind::VarUnpack(..)
+                        | ConditionKind::VarUpdate(..)
+                ) {
+                    // The struct must be a resource.
+                    if let Some(entry) = self.parent.struct_table.get(s) {
+                        if !entry.is_resource {
+                            notes.push(
+                                "global var updates can only be used with \
+                                       resources since they require linear semantics"
+                                    .to_string(),
+                            );
+                            ok = false
+                        }
+                    }
+                };
+                ok
+            }
             Function(name) => {
                 let entry = self.parent.fun_table.get(name).expect("function defined");
                 if entry.is_public {
@@ -2039,9 +2068,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             Schema(_) => true,
         };
         if !ok {
-            self.parent.error(
+            self.parent.error_with_notes(
                 loc,
                 &format!("`{}` not allowed in {} {}", kind, context, detail),
+                notes,
             );
         }
         ok

@@ -7,6 +7,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
     account_config::{lbr_type_tag, LBR_NAME},
+    chain_id::ChainId,
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
     vm_status::StatusCode,
@@ -50,10 +51,14 @@ impl std::ops::Deref for TestValidator {
 // verification of a transaction in the VM. However, there are a couple notable exceptions that we
 // do _not_ test here -- this is due to limitations around execution and semantics. The following
 // errors are not exercised:
-// * Sequence number too old -- We can't test sequence number too old here without running execution
+// * SEQUENCE_NUMBER_TOO_OLD -- We can't test sequence number too old here without running execution
 //   first in order to bump the account's sequence number. This needs to (and is) tested in the
 //   language e2e tests in: libra/language/e2e-testsuite/src/tests/verify_txn.rs ->
 //   verify_simple_payment.
+// * SEQUENCE_NUMBER_TOO_NEW -- This error is filtered out when running validation; it is only
+//   testable when running the executor.
+// * INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE -- This is tested in verify_txn.rs.
+// * SENDING_ACCOUNT_FROZEN: Tested in functional-tests/tests/libra_account/freezing.move.
 // * Errors arising from deserializing the code -- these are tested in
 //   - libra/language/vm/src/unit_tests/deserializer_tests.rs
 //   - libra/language/vm/tests/serializer_tests.rs
@@ -398,4 +403,91 @@ fn test_validate_non_genesis_write_set() {
             .into_inner();
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status().unwrap(), StatusCode::REJECTED_WRITE_SET);
+}
+
+#[test]
+fn test_validate_expiration_time() {
+    let (config, key) = config_builder::test_config();
+    let vm_validator = TestValidator::new(&config);
+
+    let address = account_config::libra_root_address();
+    let transaction = transaction_test_helpers::get_test_signed_transaction(
+        address,
+        1, /* sequence_number */
+        &key,
+        key.public_key(),
+        None, /* script */
+        0,    /* expiration_time */
+        0,    /* gas_unit_price */
+        LBR_NAME.to_owned(),
+        None, /* max_gas_amount */
+    );
+    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert_eq!(ret.status().unwrap(), StatusCode::TRANSACTION_EXPIRED);
+}
+
+#[test]
+fn test_validate_chain_id() {
+    let (config, key) = config_builder::test_config();
+    let vm_validator = TestValidator::new(&config);
+
+    let address = account_config::libra_root_address();
+    let transaction = transaction_test_helpers::get_test_txn_with_chain_id(
+        address,
+        0, /* sequence_number */
+        &key,
+        key.public_key(),
+        // all tests use ChainId::test() for chain_id, so pick something different
+        ChainId::new(ChainId::test().id() + 1),
+    );
+    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert_eq!(ret.status().unwrap(), StatusCode::BAD_CHAIN_ID);
+}
+
+#[test]
+fn test_validate_gas_currency_with_bad_identifier() {
+    let (config, key) = config_builder::test_config();
+    let vm_validator = TestValidator::new(&config);
+
+    let address = account_config::libra_root_address();
+    let transaction = transaction_test_helpers::get_test_signed_transaction(
+        address,
+        1, /* sequence_number */
+        &key,
+        key.public_key(),
+        None,     /* script */
+        u64::MAX, /* expiration_time */
+        0,        /* gas_unit_price */
+        // The gas currency code is treated as a Move identifier, so it needs to follow
+        // the rules about starting with a letter or underscore and containing only
+        // alphanumeric and underscore characters.
+        "1BadID".to_string(),
+        None, /* max_gas_amount */
+    );
+    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert_eq!(ret.status().unwrap(), StatusCode::INVALID_GAS_SPECIFIER);
+}
+
+#[test]
+fn test_validate_gas_currency_code() {
+    let (config, key) = config_builder::test_config();
+    let vm_validator = TestValidator::new(&config);
+
+    let address = account_config::libra_root_address();
+    let transaction = transaction_test_helpers::get_test_signed_transaction(
+        address,
+        1, /* sequence_number */
+        &key,
+        key.public_key(),
+        None,     /* script */
+        u64::MAX, /* expiration_time */
+        0,        /* gas_unit_price */
+        "INVALID".to_string(),
+        None, /* max_gas_amount */
+    );
+    let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert_eq!(
+        ret.status().unwrap(),
+        StatusCode::CURRENCY_INFO_DOES_NOT_EXIST
+    );
 }

@@ -40,7 +40,7 @@ fn parse_account_negative() {
 
 /// Parses each line in the given input as an entry and build global config.
 pub fn parse_and_build_config(s: &str) -> Result<Config> {
-    Config::build(&parse_each_line_as::<Entry>(s)?)
+    Config::build(&parse_each_line_as::<Entry>(s)?, false)
 }
 
 #[rustfmt::skip]

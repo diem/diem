@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    logging::network_events,
     noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
@@ -95,7 +94,7 @@ impl ConnectionIdGenerator {
 /// Metadata associated with an established and fully upgraded connection.
 #[derive(Clone, Serialize)]
 pub struct ConnectionMetadata {
-    pub peer_id: PeerId,
+    pub remote_peer_id: PeerId,
     pub connection_id: ConnectionId,
     pub addr: NetworkAddress,
     pub origin: ConnectionOrigin,
@@ -105,7 +104,7 @@ pub struct ConnectionMetadata {
 
 impl ConnectionMetadata {
     pub fn new(
-        peer_id: PeerId,
+        remote_peer_id: PeerId,
         connection_id: ConnectionId,
         addr: NetworkAddress,
         origin: ConnectionOrigin,
@@ -113,12 +112,24 @@ impl ConnectionMetadata {
         application_protocols: SupportedProtocols,
     ) -> ConnectionMetadata {
         ConnectionMetadata {
-            peer_id,
+            remote_peer_id,
             connection_id,
             addr,
             origin,
             messaging_protocol,
             application_protocols,
+        }
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn mock(remote_peer_id: PeerId) -> ConnectionMetadata {
+        ConnectionMetadata {
+            remote_peer_id,
+            connection_id: ConnectionId::default(),
+            addr: NetworkAddress::mock(),
+            origin: ConnectionOrigin::Inbound,
+            messaging_protocol: MessagingProtocolVersion::V1,
+            application_protocols: [].iter().into(),
         }
     }
 }
@@ -134,7 +145,7 @@ impl std::fmt::Display for ConnectionMetadata {
         write!(
             f,
             "[{},{},{},{},{:?}]",
-            self.peer_id,
+            self.remote_peer_id,
             self.addr,
             self.origin,
             self.messaging_protocol,
@@ -190,9 +201,11 @@ async fn upgrade_inbound<T: TSocket>(
         // security logging
         warn!(
             SecurityEvent::InvalidNetworkPeer,
-            StructuredLogEntry::default()
-                .data_display("error", &err)
-                .field(network_events::NETWORK_ADDRESS, &addr),
+            error = err.to_string(),
+            network_address = addr,
+            "security: InvalidNetworkPeer {}: '{}'",
+            addr,
+            err
         );
         err
     })?;
@@ -213,10 +226,9 @@ async fn upgrade_inbound<T: TSocket>(
         .map_err(|err| {
             warn!(
                 SecurityEvent::InvalidNetworkHandshakeMsg,
-                StructuredLogEntry::default()
-                    .data_display("error", &err)
-                    .data("origin", "inbound")
-                    .data("remote_peer", remote_peer_id)
+                error = err.to_string(),
+                origin = "inbound",
+                remote_peer = remote_peer_id
             );
             let err = format!(
                 "handshake negotiation with peer {} failed: {}",

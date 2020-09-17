@@ -159,8 +159,6 @@ module LBR {
     }
 
     spec fun calculate_component_amounts_for_lbr {
-        /// TODO: timeout
-        pragma verify = false;
         pragma opaque;
         let reserve = global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include CalculateComponentAmountsForLBRAbortsIf;
@@ -263,6 +261,8 @@ module LBR {
         (coin1, coin2)
     }
     spec fun unpack {
+        /// > TODO: this times out sometimes so bump the duration estimate
+        pragma verify_duration_estimate = 100;
         include UnpackAbortsIf;
         ensures Libra::spec_market_cap<LBR>() == old(Libra::spec_market_cap<LBR>()) - coin.value;
         ensures result_1.value == spec_unpack_coin1(coin);

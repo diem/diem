@@ -23,6 +23,7 @@ use libra_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     constants,
+    logging::NetworkSchema,
     peer_manager::{
         builder::{AuthenticationMode, PeerManagerBuilder},
         conn_notifs_channel, ConnectionRequestSender,
@@ -190,11 +191,11 @@ impl NetworkBuilder {
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 // TODO:  it should be safe to enable the configuraction_change_listener always.
                 if role == RoleType::Validator {
-                    network_builder.add_configuration_change_listener(role, config.encryptor());
+                    network_builder.add_configuration_change_listener(config.encryptor());
                 }
             }
             DiscoveryMethod::Onchain => {
-                network_builder.add_configuration_change_listener(role, config.encryptor());
+                network_builder.add_configuration_change_listener(config.encryptor());
             }
             DiscoveryMethod::None => {}
         }
@@ -233,7 +234,7 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
+    pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         match self.connectivity_manager_builder.as_ref() {
             Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
             None => None,
@@ -329,11 +330,7 @@ impl NetworkBuilder {
         self
     }
 
-    fn add_configuration_change_listener(
-        &mut self,
-        role: RoleType,
-        encryptor: Encryptor,
-    ) -> &mut Self {
+    fn add_configuration_change_listener(&mut self, encryptor: Encryptor) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager must be installed for validator");
@@ -344,7 +341,7 @@ impl NetworkBuilder {
 
         self.configuration_change_listener_builder =
             Some(ConfigurationChangeListenerBuilder::create(
-                role,
+                self.network_context.clone(),
                 encryptor,
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,
@@ -420,7 +417,10 @@ impl NetworkBuilder {
     fn build_gossip_discovery(&mut self) -> &mut Self {
         if let Some(discovery_builder) = self.discovery_builder.as_mut() {
             discovery_builder.build(self.executor.as_mut().expect("Executor must exist"));
-            debug!("{} Built Gossip Discovery", self.network_context());
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Built Gossip Discovery", self.network_context
+            );
         }
         self
     }
@@ -428,7 +428,10 @@ impl NetworkBuilder {
     fn start_gossip_discovery(&mut self) -> &mut Self {
         if let Some(discovery_builder) = self.discovery_builder.as_mut() {
             discovery_builder.start(self.executor.as_mut().expect("Executor must exist"));
-            debug!("{} Started gossip discovery", self.network_context());
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Started gossip discovery", self.network_context
+            );
         }
         self
     }
@@ -453,7 +456,10 @@ impl NetworkBuilder {
             hc_network_tx,
             hc_network_rx,
         ));
-        debug!("{} Created health checker", self.network_context);
+        debug!(
+            NetworkSchema::new(&self.network_context),
+            "{} Created health checker", self.network_context
+        );
         self
     }
 
@@ -461,7 +467,10 @@ impl NetworkBuilder {
     fn build_connection_monitoring(&mut self) -> &mut Self {
         if let Some(health_checker) = self.health_checker_builder.as_mut() {
             health_checker.build(self.executor.as_mut().expect("Executor must exist"));
-            debug!("{} Built health checker", self.network_context);
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Built health checker", self.network_context
+            );
         };
         self
     }
@@ -470,7 +479,10 @@ impl NetworkBuilder {
     fn start_connection_monitoring(&mut self) -> &mut Self {
         if let Some(health_checker) = self.health_checker_builder.as_mut() {
             health_checker.start(self.executor.as_mut().expect("Executor must exist"));
-            debug!("{} Started health checker", self.network_context);
+            debug!(
+                NetworkSchema::new(&self.network_context),
+                "{} Started health checker", self.network_context
+            );
         };
         self
     }

@@ -369,6 +369,7 @@ impl ClusterBuilder {
                 Some(pod_name.clone()),
                 None,
                 None,
+                true,
             ));
             if validator_index == 0 {
                 vault_storage.create_key(LIBRA_ROOT_KEY).map_err(|e| {
@@ -521,7 +522,7 @@ impl ClusterBuilder {
                         format!("/ip4/{}/tcp/{}", validator_nodes[i].internal_ip, 6180).as_str(),
                     )
                     .expect("Failed to parse network address"),
-                    NetworkAddress::from_str(format!("/ip4/{}/tcp/{}", fullnode_ip, 6180).as_str())
+                    NetworkAddress::from_str(format!("/ip4/{}/tcp/{}", fullnode_ip, 6182).as_str())
                         .expect("Failed to parse network address"),
                     ChainId::test(),
                     VAULT_BACKEND,

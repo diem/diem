@@ -126,6 +126,7 @@ fn vault(n: u64) {
         None,
         None,
         None,
+        true,
     );
     storage.reset_and_clear().unwrap();
 
@@ -153,6 +154,7 @@ pub fn benchmark(c: &mut Criterion) {
         None,
         None,
         None,
+        true,
     );
 
     let enable_vault = if storage.available().is_err() {

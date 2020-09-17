@@ -43,11 +43,11 @@
 //! RPCs. The RequestIdGenerator increments the request id by 1 for each subsequent outbound RPC.
 
 use crate::{
-    counters,
     counters::{
-        CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
+        self, CANCELED_LABEL, DECLINED_LABEL, FAILED_LABEL, RECEIVED_LABEL, REQUEST_LABEL,
         RESPONSE_LABEL, SENT_LABEL,
     },
+    logging::NetworkSchema,
     peer::{PeerHandle, PeerNotification},
     protocols::wire::messaging::v1::{
         NetworkMessage, Priority, RequestId, RpcRequest, RpcResponse,
@@ -63,10 +63,11 @@ use futures::{
     stream::{FuturesUnordered, StreamExt},
     task::Context,
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use serde::Serialize;
-use std::{collections::HashMap, fmt::Debug, time::Duration};
+use std::{collections::HashMap, fmt::Debug, sync::Arc, time::Duration};
 
 pub mod error;
 
@@ -80,35 +81,43 @@ mod test;
 /// A wrapper struct for an inbound rpc request and its associated context.
 #[derive(Debug)]
 pub struct InboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is used
-    /// to dispatch the request to the corresponding client handler.
-    pub protocol: ProtocolId,
-    /// The serialized request data received from the sender.
+    /// The [`ProtocolId`] for which of our upstream application modules should
+    /// handle (i.e., deserialize and then respond to) this inbound rpc request.
+    ///
+    /// For example, if `protocol_id == ProtocolId::ConsensusRpc`, then this
+    /// inbound rpc request will be dispatched to consensus for handling.
+    pub protocol_id: ProtocolId,
+    /// The serialized request data received from the sender. At this layer in
+    /// the stack, the request data is just an opaque blob and will only be fully
+    /// deserialized later in the handling application module.
     pub data: Bytes,
-    /// Channel over which the rpc response is sent from the upper client layer
-    /// to the rpc layer.
+    /// Channel over which the rpc response is sent from the upper application
+    /// layer to the network rpc layer.
     ///
     /// The rpc actor holds onto the receiving end of this channel, awaiting the
     /// response from the upper layer. If there is an error in, e.g.,
     /// deserializing the request, the upper layer should send an [`RpcError`]
     /// down the channel to signify that there was an error while handling this
-    /// rpc request. Currently, we just log these errors and drop the substream;
-    /// in the future, we will send an error response to the peer and/or log any
-    /// malicious behaviour.
+    /// rpc request. Currently, we just log these errors and drop the request.
     ///
-    /// The upper client layer should be prepared for `res_tx` to be potentially
-    /// disconnected when trying to send their response, as the rpc call might
-    /// have timed out while handling the request.
+    /// The upper client layer should be prepared for `res_tx` to be disconnected
+    /// when trying to send their response, as the rpc call might have timed out
+    /// while handling the request.
     pub res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
 }
 
 /// A wrapper struct for an outbound rpc request and its associated context.
 #[derive(Debug, Serialize)]
 pub struct OutboundRpcRequest {
-    /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is the
-    /// protocol we will negotiate our outbound substream to.
-    pub protocol: ProtocolId,
-    /// The serialized request data to be sent to the receiver.
+    /// The remote peer's application module that should handle our outbound rpc
+    /// request.
+    ///
+    /// For example, if `protocol_id == ProtocolId::ConsensusRpc`, then this
+    /// outbound rpc request should be handled by the remote peer's consensus
+    /// application module.
+    pub protocol_id: ProtocolId,
+    /// The serialized request data to be sent to the receiver. At this layer in
+    /// the stack, the request data is just an opaque blob.
     #[serde(skip)]
     pub data: Bytes,
     /// Channel over which the rpc response is sent from the rpc layer to the
@@ -156,6 +165,7 @@ impl RequestIdGenerator {
             match self.next_id.overflowing_add(1) {
                 (next_id, true) => {
                     info!(
+                        remote_peer = self.peer_id,
                         "Request ids with peer: {} wrapped around to 0",
                         self.peer_id.short_str(),
                     );
@@ -170,6 +180,8 @@ impl RequestIdGenerator {
 
 /// The rpc actor.
 pub struct Rpc {
+    /// The network instance this Rpc actor is running under.
+    network_context: Arc<NetworkContext>,
     /// Channel to send requests to Peer.
     peer_handle: PeerHandle,
     /// Channel to receive requests from other upstream actors.
@@ -195,6 +207,7 @@ pub struct Rpc {
 impl Rpc {
     /// Create a new instance of the [`Rpc`] protocol actor.
     pub fn new(
+        network_context: Arc<NetworkContext>,
         peer_handle: PeerHandle,
         requests_rx: channel::Receiver<OutboundRpcRequest>,
         peer_notifs_rx: channel::Receiver<PeerNotification>,
@@ -204,6 +217,7 @@ impl Rpc {
         max_concurrent_inbound_rpcs: u32,
     ) -> Self {
         Self {
+            network_context,
             request_id_gen: RequestIdGenerator::new(peer_handle.peer_id()),
             peer_handle,
             requests_rx,
@@ -244,7 +258,9 @@ impl Rpc {
             }
         }
         info!(
-            "Rpc actor terminated for peer: {}",
+            NetworkSchema::new(&self.network_context).remote_peer(&self.peer_handle.peer_id()),
+            "{} Rpc actor terminated for peer: {}",
+            self.network_context,
             self.peer_handle.peer_id().short_str()
         );
     }
@@ -268,7 +284,12 @@ impl Rpc {
                         self.handle_inbound_request(request, inbound_rpc_tasks);
                     }
                     _ => {
-                        error!("Received non-RPC message from Peer actor: {:?}", message);
+                        error!(
+                            NetworkSchema::new(&self.network_context),
+                            "{} Received non-RPC message from Peer actor: {:?}",
+                            self.network_context,
+                            message
+                        );
                     }
                 }
             }
@@ -285,28 +306,41 @@ impl Rpc {
     fn handle_inbound_response(&mut self, response: RpcResponse) {
         let peer_id = self.peer_handle.peer_id();
         let request_id = response.request_id;
-        if let Some((protocol, response_tx)) = self.pending_outbound_rpcs.remove(&request_id) {
+        if let Some((protocol_id, response_tx)) = self.pending_outbound_rpcs.remove(&request_id) {
             trace!(
-                "Waiting to notify outbound rpc task about inbound response for request_id {}",
+                NetworkSchema::new(&self.network_context),
+                request_id = request_id,
+                "{} Waiting to notify outbound rpc task about inbound response for request_id {}",
+                self.network_context,
                 request_id
             );
             if let Err(e) = response_tx.send(response) {
                 warn!(
-                    "Failed to handle inbount RPC response from peer: {} for protocol: {}. Error: {:?}",
+                    NetworkSchema::new(&self.network_context)
+                        .remote_peer(&peer_id)
+                        .debug_error(&e),
+                    protocol_id = protocol_id,
+                    "{} Failed to handle inbound RPC response from peer: {} for protocol: {}. Error: {:?}",
+                    self.network_context,
                     peer_id.short_str(),
-                    protocol,
+                    protocol_id,
                     e
                 );
             } else {
                 trace!(
-                    "Done notifying outbound RPC task about inbound response for request_id {}",
+                    NetworkSchema::new(&self.network_context),
+                    request_id = request_id,
+                    "{} Done notifying outbound RPC task about inbound response for request_id {}",
+                    self.network_context,
                     request_id
                 );
             }
         } else {
             // TODO: add ability to log protocol id as well
             info!(
-                "Received response for expired request from {}. Discarding.",
+                NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+                "{} Received response for expired request from {}. Discarding.",
+                self.network_context,
                 peer_id.short_str()
             )
         }
@@ -318,38 +352,51 @@ impl Rpc {
         request: RpcRequest,
         inbound_rpc_tasks: &mut InboundRpcTasks,
     ) {
-        let notification_tx = self.rpc_handler_tx.clone();
-        let peer_handle = self.peer_handle.clone();
-        let peer_id_str = peer_handle.peer_id().short_str();
+        let network_context = Arc::clone(&self.network_context);
+
+        // Drop new inbound requests if our completion queue is at capacity.
         if inbound_rpc_tasks.len() as u32 == self.max_concurrent_inbound_rpcs {
             // Increase counter of declined responses and log warning.
-            counters::LIBRA_NETWORK_RPC_MESSAGES
-                .with_label_values(&[RESPONSE_LABEL, DECLINED_LABEL])
-                .inc();
+            counters::rpc_messages(&network_context, RESPONSE_LABEL, DECLINED_LABEL).inc();
             warn!(
-                "Pending inbound RPCs are at limit ({}). Not processing new inbound rpc requests",
+                NetworkSchema::new(&self.network_context),
+                "{} Pending inbound RPCs are at limit ({}). Not processing new inbound rpc requests",
+                self.network_context,
                 self.max_concurrent_inbound_rpcs
             );
             return;
         }
+
+        let notification_tx = self.rpc_handler_tx.clone();
+        let peer_handle = self.peer_handle.clone();
+        let peer_id = peer_handle.peer_id();
         let timeout = self.inbound_rpc_timeout;
+
         // Handle request with timeout.
         let f = async move {
             if let Err(err) = tokio::time::timeout(
                 timeout,
-                handle_inbound_request_inner(notification_tx, request, peer_handle),
+                handle_inbound_request_inner(
+                    &network_context,
+                    notification_tx,
+                    request,
+                    peer_handle,
+                ),
             )
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
             .await
             {
                 // Log any errors.
-                counters::LIBRA_NETWORK_RPC_MESSAGES
-                    .with_label_values(&[RESPONSE_LABEL, FAILED_LABEL])
-                    .inc();
+                counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
                 warn!(
-                    "Error handling inbound rpc request from {}: {:?}",
-                    peer_id_str, err
+                    NetworkSchema::new(&network_context)
+                        .remote_peer(&peer_id)
+                        .debug_error(&err),
+                    "{} Error handling inbound rpc request from {}: {:?}",
+                    network_context,
+                    peer_id.short_str(),
+                    err
                 );
             }
         };
@@ -368,30 +415,35 @@ impl Rpc {
         req: OutboundRpcRequest,
         outbound_rpc_tasks: &mut OutboundRpcTasks,
     ) {
-        // If we already have too many pending RPCs, return error immediately.
-        if outbound_rpc_tasks.len() as u32 == self.max_concurrent_outbound_rpcs {
-            warn!(
-                "Pending outbound RPCs ({}) exceeding limit ({}).",
-                outbound_rpc_tasks.len(),
-                self.max_concurrent_outbound_rpcs,
-            );
-            let _result = req.res_tx.send(Err(RpcError::TooManyPending(
-                self.max_concurrent_outbound_rpcs,
-            )));
-            return;
-        }
+        let network_context = Arc::clone(&self.network_context);
 
         // Unpack request.
         let OutboundRpcRequest {
-            protocol,
+            protocol_id,
             data: req_data,
             timeout,
             mut res_tx,
             ..
         } = req;
 
+        // If we already have too many pending RPCs, return error immediately.
+        if outbound_rpc_tasks.len() as u32 == self.max_concurrent_outbound_rpcs {
+            counters::rpc_messages(&network_context, REQUEST_LABEL, DECLINED_LABEL).inc();
+            warn!(
+                NetworkSchema::new(&self.network_context),
+                "{} Pending outbound RPCs ({}) exceeding limit ({}).",
+                self.network_context,
+                outbound_rpc_tasks.len(),
+                self.max_concurrent_outbound_rpcs,
+            );
+            let _result = res_tx.send(Err(RpcError::TooManyPending(
+                self.max_concurrent_outbound_rpcs,
+            )));
+            return;
+        }
+
         let peer_handle = self.peer_handle.clone();
-        let peer_id_str = peer_handle.peer_id().short_str();
+        let peer_id = peer_handle.peer_id();
 
         // Generate and assign request id to this RPC.
         let request_id = self.request_id_gen.next();
@@ -400,14 +452,21 @@ impl Rpc {
         let (response_tx, response_rx) = oneshot::channel();
         // Save send end of channel which moving receive end of the channel into the future.
         self.pending_outbound_rpcs
-            .insert(request_id, (protocol, response_tx));
+            .insert(request_id, (protocol_id, response_tx));
 
         let f = async move {
             // Wrap the outbound rpc protocol with the requested timeout window.
             let mut f_rpc_res = tokio::time::timeout(
                 timeout,
                 // Future to run the actual outbound rpc protocol.
-                handle_outbound_rpc_inner(peer_handle, request_id, protocol, req_data, response_rx),
+                handle_outbound_rpc_inner(
+                    &network_context,
+                    peer_handle,
+                    request_id,
+                    protocol_id,
+                    req_data,
+                    response_rx,
+                ),
             )
             .map_err(Into::<RpcError>::into)
             .map(|r| r.and_then(|x| x))
@@ -423,28 +482,44 @@ impl Rpc {
                 res = f_rpc_res => {
                     // Log any errors.
                     if let Err(ref err) = res {
-                        counters::LIBRA_NETWORK_RPC_MESSAGES
-                            .with_label_values(&[REQUEST_LABEL, FAILED_LABEL])
+                        counters::rpc_messages(&network_context, REQUEST_LABEL, FAILED_LABEL)
                             .inc();
                         warn!(
-                            "Error making outbound rpc request with request_id {} to {}: {:?}",
-                            request_id, peer_id_str, err
+                            NetworkSchema::new(&network_context)
+                                .remote_peer(&peer_id)
+                                .debug_error(&err),
+                            request_id = request_id,
+                            "{} Error making outbound rpc request with request_id {} to {}: {:?}",
+                            network_context,
+                            request_id,
+                            peer_id.short_str(),
+                            err
                         );
                     }
                     // Propagate the results to the rpc client layer.
                     if res_tx.send(res).is_err() {
-                        counters::LIBRA_NETWORK_RPC_MESSAGES
-                            .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
+                        counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL)
                             .inc();
-                        info!("Rpc client canceled outbound rpc call to {}", peer_id_str);
+                        info!(
+                            NetworkSchema::new(&network_context)
+                                .remote_peer(&peer_id),
+                            "{} Rpc client canceled outbound rpc call to {}",
+                            network_context,
+                            peer_id.short_str()
+                        );
                     }
                 },
                 // The rpc client canceled the request
                 cancel = f_rpc_cancel => {
-                    counters::LIBRA_NETWORK_RPC_MESSAGES
-                        .with_label_values(&[REQUEST_LABEL, CANCELED_LABEL])
+                    counters::rpc_messages(&network_context, REQUEST_LABEL, CANCELED_LABEL)
                         .inc();
-                    info!("Rpc client canceled outbound rpc call to {}", peer_id_str);
+                    info!(
+                        NetworkSchema::new(&network_context)
+                            .remote_peer(&peer_id),
+                        "{} Rpc client canceled outbound rpc call to {}",
+                        network_context,
+                        peer_id.short_str()
+                    );
                 },
             }
             // Return the request_id for state management in the main event-loop.
@@ -455,76 +530,77 @@ impl Rpc {
 }
 
 async fn handle_outbound_rpc_inner(
+    network_context: &NetworkContext,
     mut peer_handle: PeerHandle,
     request_id: RequestId,
-    protocol: ProtocolId,
+    protocol_id: ProtocolId,
     req_data: Bytes,
     response_rx: oneshot::Receiver<RpcResponse>,
 ) -> Result<Bytes, RpcError> {
     let req_len = req_data.len();
     let peer_id = peer_handle.peer_id();
-    let peer_id_str = peer_id.to_string();
+    let peer_id_str = peer_id.short_str();
 
     // Create NetworkMessage to be sent over the wire.
     let request = NetworkMessage::RpcRequest(RpcRequest {
         request_id,
         // TODO: Use default priority for now. To be exposed via network API.
         priority: Priority::default(),
-        protocol_id: protocol,
+        protocol_id,
         raw_request: Vec::from(req_data.as_ref()),
     });
 
     // Send outbound request to peer_handle.
     trace!(
-        "Sending outbound rpc request with request_id {} to peer: {:?}",
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        "{} Sending outbound rpc request with request_id {} to peer: {:?}",
+        network_context,
         request_id,
-        peer_id_str
+        peer_id_str,
     );
-    let prototol_id_descriptor = protocol.as_str();
     // Start timer to collect RPC latency.
-    let timer = counters::LIBRA_NETWORK_RPC_LATENCY
-        .with_label_values(&[REQUEST_LABEL, prototol_id_descriptor, &peer_id_str])
-        .start_timer();
-
-    peer_handle.send_message(request, protocol).await?;
+    let timer = counters::rpc_latency(network_context).start_timer();
+    peer_handle.send_message(request, protocol_id).await?;
 
     // Collect counters for requests sent.
-    counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&[REQUEST_LABEL, SENT_LABEL])
-        .inc();
-    counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&[REQUEST_LABEL, SENT_LABEL])
-        .observe(req_len as f64);
+    counters::rpc_messages(network_context, REQUEST_LABEL, SENT_LABEL).inc();
+    counters::rpc_bytes(network_context, REQUEST_LABEL, SENT_LABEL).inc_by(req_len as i64);
 
     // Wait for listener's response.
     trace!(
-        "Waiting to receive response for request_id {} from peer: {:?}",
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        "{} Waiting to receive response for request_id {} from peer: {:?}",
+        network_context,
         request_id,
-        peer_id_str
+        peer_id_str,
     );
     let response = response_rx.await?;
     let latency = timer.stop_and_record();
     trace!(
-        "Received response for request_id {} from peer: {:?} \
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        protocol_id = protocol_id,
+        "{} Received response for request_id {} from peer: {:?} \
         with {:.6} seconds of latency. Request protocol_id: {}",
+        network_context,
         request_id,
         peer_id_str,
         latency,
-        prototol_id_descriptor
+        protocol_id.as_str(),
     );
 
     // Collect counters for received response.
     let res_data = response.raw_response;
-    counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&[RESPONSE_LABEL, RECEIVED_LABEL])
-        .inc();
-    counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&[RESPONSE_LABEL, RECEIVED_LABEL])
-        .observe(res_data.len() as f64);
+    counters::rpc_messages(network_context, RESPONSE_LABEL, RECEIVED_LABEL).inc();
+    counters::rpc_bytes(network_context, RESPONSE_LABEL, RECEIVED_LABEL)
+        .inc_by(res_data.len() as i64);
     Ok(Bytes::from(res_data))
 }
 
 async fn handle_inbound_request_inner(
+    network_context: &NetworkContext,
     mut notification_tx: channel::Sender<RpcNotification>,
     request: RpcRequest,
     mut peer_handle: PeerHandle,
@@ -532,24 +608,25 @@ async fn handle_inbound_request_inner(
     let req_data = request.raw_request;
     let request_id = request.request_id;
     let peer_id = peer_handle.peer_id();
+    let peer_id_str = peer_id.short_str();
 
     trace!(
-        "Received inbound request with request_id {} from peer: {:?}",
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        "{} Received inbound request with request_id {} from peer: {:?}",
+        network_context,
         request_id,
-        peer_id.short_str()
+        peer_id_str
     );
     // Collect counters for received request.
-    counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&[REQUEST_LABEL, RECEIVED_LABEL])
-        .inc();
-    counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&[REQUEST_LABEL, RECEIVED_LABEL])
-        .observe(req_data.len() as f64);
+    counters::rpc_messages(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc();
+    counters::rpc_bytes(network_context, REQUEST_LABEL, RECEIVED_LABEL)
+        .inc_by(req_data.len() as i64);
 
     // Forward request to upper layer.
     let (res_tx, res_rx) = oneshot::channel();
     let notification = RpcNotification::RecvRpc(InboundRpcRequest {
-        protocol: request.protocol_id,
+        protocol_id: request.protocol_id,
         data: Bytes::from(req_data),
         res_tx,
     });
@@ -557,18 +634,24 @@ async fn handle_inbound_request_inner(
 
     // Wait for response from upper layer.
     trace!(
-        "Waiting for upstream response for inbound request with request_id {} from peer: {:?}",
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        "{} Waiting for upstream response for inbound request with request_id {} from peer: {:?}",
+        network_context,
         request_id,
-        peer_id.short_str()
+        peer_id_str
     );
     let res_data = res_rx.await??;
     let res_len = res_data.len();
 
     // Send response to remote peer.
     trace!(
-        "Sending response for request_id {} to peer: {:?}",
+        NetworkSchema::new(&network_context).remote_peer(&peer_id),
+        request_id = request_id,
+        "{} Sending response for request_id {} to peer: {:?}",
+        network_context,
         request_id,
-        peer_id.short_str()
+        peer_id_str
     );
     let response = RpcResponse {
         raw_response: Vec::from(res_data.as_ref()),
@@ -580,11 +663,7 @@ async fn handle_inbound_request_inner(
         .await?;
 
     // Collect counters for sent response.
-    counters::LIBRA_NETWORK_RPC_MESSAGES
-        .with_label_values(&[RESPONSE_LABEL, SENT_LABEL])
-        .inc();
-    counters::LIBRA_NETWORK_RPC_BYTES
-        .with_label_values(&[RESPONSE_LABEL, SENT_LABEL])
-        .observe(res_len as f64);
+    counters::rpc_messages(network_context, RESPONSE_LABEL, SENT_LABEL).inc();
+    counters::rpc_bytes(network_context, RESPONSE_LABEL, SENT_LABEL).inc_by(res_len as i64);
     Ok(())
 }

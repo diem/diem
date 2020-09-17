@@ -399,10 +399,9 @@ impl EpochManager {
                 .map_err(|err| {
                     error!(
                         SecurityEvent::ConsensusInvalidMessage,
-                        StructuredLogEntry::default()
-                            .data("from_peer", &peer_id)
-                            .data_display("error", &err)
-                            .data("event", &unverified_event)
+                        remote_peer = peer_id,
+                        error = err.to_string(),
+                        unverified_event = unverified_event
                     );
                     err
                 })?;

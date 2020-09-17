@@ -197,11 +197,6 @@ fn verify_simple_payment() {
         StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE
     );
 
-    // XXX TZ: TransactionExpired
-
-    // RejectedWriteSet is tested in `verify_rejected_write_set`
-    // InvalidWriteSet is tested in genesis.rs
-
     // Create a new transaction from a bogus account that doesn't exist
     let bogus_account = AccountData::new(100_000, 10);
     let txn = bogus_account
@@ -219,9 +214,6 @@ fn verify_simple_payment() {
         executor.execute_transaction(txn).status(),
         StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
     );
-
-    // RejectedWriteSet is tested in `verify_rejected_write_set`
-    // InvalidWriteSet is tested in genesis.rs
 
     // The next couple tests test transaction size, and bounds on gas price and the number of
     // gas units that can be submitted with a transaction.
@@ -454,6 +446,30 @@ pub fn test_publish_from_libra_root() {
 }
 
 #[test]
+fn verify_expiration_time() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 0);
+    executor.add_account_data(&sender);
+    let private_key = &sender.account().privkey;
+    let txn = transaction_test_helpers::get_test_signed_transaction(
+        *sender.address(),
+        0, /* sequence_number */
+        private_key,
+        private_key.public_key(),
+        None, /* script */
+        0,    /* expiration_time */
+        0,    /* gas_unit_price */
+        account_config::LBR_NAME.to_owned(),
+        None, /* max_gas_amount */
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::TRANSACTION_EXPIRED
+    );
+}
+
+#[test]
 fn verify_chain_id() {
     let mut executor = FakeExecutor::from_genesis_file();
     let sender = AccountData::new(900_000, 0);
@@ -467,9 +483,62 @@ fn verify_chain_id() {
         // all tests use ChainId::test() for chain_id,so pick something different
         ChainId::new(ChainId::test().id() + 1),
     );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::BAD_CHAIN_ID
+    );
+}
 
-    let status = executor.execute_transaction(txn).status().clone();
-    assert_eq!(status, TransactionStatus::Discard(StatusCode::BAD_CHAIN_ID));
+#[test]
+fn verify_gas_currency_with_bad_identifier() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 0);
+    executor.add_account_data(&sender);
+    let private_key = &sender.account().privkey;
+    let txn = transaction_test_helpers::get_test_signed_transaction(
+        *sender.address(),
+        0, /* sequence_number */
+        private_key,
+        private_key.public_key(),
+        None,     /* script */
+        u64::MAX, /* expiration_time */
+        0,        /* gas_unit_price */
+        // The gas currency code is treated as a Move identifier, so it needs to follow
+        // the rules about starting with a letter or underscore and containing only
+        // alphanumeric and underscore characters.
+        "1BadID".to_string(),
+        None, /* max_gas_amount */
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::INVALID_GAS_SPECIFIER
+    );
+}
+
+#[test]
+fn verify_gas_currency_code() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let sender = AccountData::new(900_000, 0);
+    executor.add_account_data(&sender);
+    let private_key = &sender.account().privkey;
+    let txn = transaction_test_helpers::get_test_signed_transaction(
+        *sender.address(),
+        0, /* sequence_number */
+        private_key,
+        private_key.public_key(),
+        None,     /* script */
+        u64::MAX, /* expiration_time */
+        0,        /* gas_unit_price */
+        "INVALID".to_string(),
+        None, /* max_gas_amount */
+    );
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
+        executor.execute_transaction(txn).status(),
+        StatusCode::CURRENCY_INFO_DOES_NOT_EXIST
+    );
 }
 
 #[test]

@@ -25,13 +25,13 @@ use tokio::runtime::Runtime;
 
 fn get_raw_message(msg: GossipDiscoveryMsg) -> Message {
     Message {
-        protocol: ProtocolId::DiscoveryDirectSend,
+        protocol_id: ProtocolId::DiscoveryDirectSend,
         mdata: lcs::to_bytes(&msg).unwrap().into(),
     }
 }
 
 fn parse_raw_message(msg: Message) -> Result<GossipDiscoveryMsg, NetworkError> {
-    assert_eq!(msg.protocol, ProtocolId::DiscoveryDirectSend);
+    assert_eq!(msg.protocol_id, ProtocolId::DiscoveryDirectSend);
     let msg: GossipDiscoveryMsg = lcs::from_bytes(&msg.mdata)
         .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
     Ok(msg)

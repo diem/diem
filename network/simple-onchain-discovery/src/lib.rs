@@ -3,17 +3,21 @@
 
 use channel::libra_channel::{self, Receiver};
 use futures::{sink::SinkExt, StreamExt};
-use libra_config::config::RoleType;
+use libra_config::{config::RoleType, network_id::NetworkContext};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::NetworkAddress;
-use libra_network_address_encryption::Encryptor;
+use libra_network_address_encryption::{Encryptor, Error as EncryptorError};
 use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
-use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
+use network::{
+    connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    logging::NetworkSchema,
+};
 use once_cell::sync::Lazy;
 use std::{
     collections::{HashMap, HashSet},
+    sync::Arc,
     time::Instant,
 };
 use subscription_service::ReconfigSubscription;
@@ -45,7 +49,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 /// Listener which converts published  updates from the OnChainConfig to ConnectivityRequests
 /// for the ConnectivityManager.
 pub struct ConfigurationChangeListener {
-    role: RoleType,
+    network_context: Arc<NetworkContext>,
     encryptor: Encryptor,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
@@ -53,15 +57,17 @@ pub struct ConfigurationChangeListener {
 
 pub fn gen_simple_discovery_reconfig_subscription(
 ) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    ReconfigSubscription::subscribe_all(ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
+    ReconfigSubscription::subscribe_all("network", ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
 }
 
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
 fn extract_updates(
-    role: RoleType,
+    network_context: Arc<NetworkContext>,
     encryptor: &Encryptor,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
+    let role = network_context.role();
+
     // Decode addresses while ignoring bad addresses
     let new_peer_addrs: HashMap<_, _> = node_set
         .into_iter()
@@ -70,9 +76,16 @@ fn extract_updates(
             let config = info.into_config();
 
             let addrs_res = match role {
-                RoleType::Validator => encryptor
-                    .decrypt(&config.validator_network_addresses, peer_id)
-                    .map_err(anyhow::Error::from),
+                RoleType::Validator => {
+                    let result = encryptor.decrypt(&config.validator_network_addresses, peer_id);
+                    if let Err(EncryptorError::StorageError(_)) = result {
+                        panic!(format!(
+                            "Unable to initialize validator network addresses: {:?}",
+                            result
+                        ));
+                    }
+                    result.map_err(anyhow::Error::from)
+                }
                 RoleType::FullNode => config
                     .fullnode_network_addresses()
                     .map_err(anyhow::Error::from),
@@ -82,8 +95,10 @@ fn extract_updates(
                 Ok(addrs) => addrs,
                 Err(err) => {
                     warn!(
-                        "Failed to parse any network address: peer: {}, err: {}",
-                        peer_id, err
+                        NetworkSchema::new(&network_context),
+                        "OnChainDiscovery: Failed to parse any network address: peer: {}, err: {}",
+                        peer_id,
+                        err
                     );
                     Vec::new()
                 }
@@ -114,13 +129,13 @@ fn extract_updates(
 impl ConfigurationChangeListener {
     /// Creates a new ConfigurationListener
     pub fn new(
-        role: RoleType,
+        network_context: Arc<NetworkContext>,
         encryptor: Encryptor,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         Self {
-            role,
+            network_context,
             encryptor,
             conn_mgr_reqs_tx,
             reconfig_events,
@@ -134,14 +149,21 @@ impl ConfigurationChangeListener {
             .get()
             .expect("failed to get ValidatorSet from payload");
 
-        let updates = extract_updates(self.role, &self.encryptor, node_set);
+        let updates = extract_updates(self.network_context.clone(), &self.encryptor, node_set);
 
-        info!("Update {} Network about new Node IDs", self.role);
+        info!(
+            NetworkSchema::new(&self.network_context),
+            "Update {} Network about new Node IDs",
+            self.network_context.role()
+        );
 
         for update in updates {
             match self.conn_mgr_reqs_tx.send(update).await {
                 Ok(()) => (),
-                Err(e) => warn!("Failed to send update to ConnectivityManager {}", e),
+                Err(e) => warn!(
+                    NetworkSchema::new(&self.network_context),
+                    "Failed to send update to ConnectivityManager {}", e
+                ),
             }
         }
     }

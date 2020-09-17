@@ -1,0 +1,47 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+use crate::{json_rpc::JsonRpcClientWrapper, TransactionContext};
+use libra_management::{config::ConfigPath, error::Error, transaction::build_raw_transaction};
+use libra_types::{account_address::AccountAddress, chain_id::ChainId};
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+pub struct SetValidatorOperator {
+    #[structopt(flatten)]
+    config: ConfigPath,
+    #[structopt(long)]
+    name: String,
+    #[structopt(long)]
+    account_address: AccountAddress,
+    #[structopt(long, required_unless = "config")]
+    json_server: Option<String>,
+    #[structopt(long, required_unless("config"))]
+    chain_id: Option<ChainId>,
+}
+
+impl SetValidatorOperator {
+    pub fn execute(self) -> Result<TransactionContext, Error> {
+        let config = self
+            .config
+            .load()?
+            .override_chain_id(self.chain_id)
+            .override_json_server(&self.json_server);
+        let mut storage = config.validator_backend();
+        let owner_address = storage.account_address(libra_global_constants::OWNER_ACCOUNT)?;
+
+        let client = JsonRpcClientWrapper::new(config.json_server.clone());
+        let txn = build_raw_transaction(
+            config.chain_id,
+            owner_address,
+            client.sequence_number(owner_address)?,
+            transaction_builder::encode_set_validator_operator_script(
+                self.name.as_bytes().to_vec(),
+                self.account_address,
+            ),
+        );
+
+        let signed_txn = storage.sign(libra_global_constants::OWNER_KEY, "set-operator", txn)?;
+        client.submit_transaction(signed_txn)
+    }
+}

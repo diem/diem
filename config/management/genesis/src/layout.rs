@@ -66,7 +66,7 @@ impl SetLayout {
             .config
             .load()?
             .override_shared_backend(&self.backend.shared_backend)?;
-        let mut storage = config.shared_backend();
+        let mut storage = config.shared_backend_with_namespace(constants::COMMON_NS.to_string());
         storage.set(constants::LAYOUT, data)?;
 
         Ok(layout)

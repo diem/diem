@@ -12,7 +12,13 @@ use libra_crypto::{
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_vault_client::{self as vault, Client};
 use serde::{de::DeserializeOwned, Serialize};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        RwLock,
+    },
+};
 
 const LIBRA_DEFAULT: &str = "libra_default";
 
@@ -28,6 +34,8 @@ pub struct VaultStorage {
     namespace: Option<String>,
     renew_ttl_secs: Option<u32>,
     next_renewal: AtomicU64,
+    use_cas: bool,
+    secret_versions: RwLock<HashMap<String, u32>>,
 }
 
 impl VaultStorage {
@@ -37,12 +45,15 @@ impl VaultStorage {
         namespace: Option<String>,
         certificate: Option<String>,
         renew_ttl_secs: Option<u32>,
+        use_cas: bool,
     ) -> Self {
         Self {
             client: Client::new(host, token, certificate),
             namespace,
             renew_ttl_secs,
             next_renewal: AtomicU64::new(0),
+            use_cas,
+            secret_versions: RwLock::new(HashMap::new()),
         }
     }
 
@@ -111,6 +122,11 @@ impl VaultStorage {
         Ok(())
     }
 
+    #[cfg(any(test, feature = "testing"))]
+    pub fn revoke_token_self(&self) -> Result<(), Error> {
+        Ok(self.client.revoke_token_self()?)
+    }
+
     /// Creates a token but uses the namespace for policies
     pub fn create_token(&self, mut policies: Vec<&str>) -> Result<String, Error> {
         policies.push(LIBRA_DEFAULT);
@@ -170,7 +186,7 @@ impl VaultStorage {
         let pubkeys = self.client().read_ed25519_key(name)?;
         let pubkey = pubkeys.iter().find(|pubkey| version == &pubkey.value);
         Ok(pubkey
-            .ok_or_else(|| Error::KeyVersionNotFound(name.into()))?
+            .ok_or_else(|| Error::KeyVersionNotFound(name.into(), version.to_string()))?
             .version)
     }
 
@@ -223,18 +239,33 @@ impl KVStorage for VaultStorage {
         let resp = self.client().read_secret(&secret, key)?;
         let last_update = DateTime::parse_from_rfc3339(&resp.creation_time)?.timestamp() as u64;
         let value: T = serde_json::from_value(resp.value)?;
+        self.secret_versions
+            .write()
+            .unwrap()
+            .insert(key.to_string(), resp.version);
         Ok(GetResponse { last_update, value })
     }
 
     fn set<T: Serialize>(&mut self, key: &str, value: T) -> Result<(), Error> {
         let secret = self.secret_name(key);
-        self.client()
-            .write_secret(&secret, key, &serde_json::to_value(&value)?)?;
+        let version = if self.use_cas {
+            self.secret_versions.read().unwrap().get(key).copied()
+        } else {
+            None
+        };
+        let new_version =
+            self.client()
+                .write_secret(&secret, key, &serde_json::to_value(&value)?, version)?;
+        self.secret_versions
+            .write()
+            .unwrap()
+            .insert(key.to_string(), new_version);
         Ok(())
     }
 
     #[cfg(any(test, feature = "testing"))]
     fn reset_and_clear(&mut self) -> Result<(), Error> {
+        self.secret_versions.write().unwrap().clear();
         self.reset_kv("")?;
         self.reset_crypto()?;
         self.reset_policies()
@@ -308,11 +339,11 @@ impl CryptoStorage for VaultStorage {
             Some(version) => {
                 let pubkey = pubkeys.iter().find(|pubkey| pubkey.version == version - 1);
                 Ok(pubkey
-                    .ok_or_else(|| Error::KeyVersionNotFound(name))?
+                    .ok_or_else(|| Error::KeyVersionNotFound(name, "previous version".into()))?
                     .value
                     .clone())
             }
-            None => Err(Error::KeyVersionNotFound(name)),
+            None => Err(Error::KeyVersionNotFound(name, "previous version".into())),
         }
     }
 

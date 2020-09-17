@@ -51,6 +51,18 @@ impl From<libra_secure_net::Error> for Error {
 
 impl From<libra_secure_storage::Error> for Error {
     fn from(error: libra_secure_storage::Error) -> Self {
-        Self::SecureStorageError(error.to_string())
+        // If a storage error is thrown that indicates a permission failure, we
+        // want to panic immediately to alert an operator that something has gone
+        // wrong. For example, this error is thrown when a storage (e.g., vault)
+        // token has expired, so it makes sense to fail fast and require a token
+        // renewal!
+        if libra_secure_storage::Error::PermissionDenied == error {
+            panic!(
+                "A permission error was thrown: {:?}. Maybe the storage token needs to be renewed?",
+                error
+            );
+        } else {
+            Self::SecureStorageError(error.to_string())
+        }
     }
 }

@@ -55,32 +55,49 @@ impl SetValidatorConfig {
         let client = JsonRpcClientWrapper::new(config.json_server);
         let sequence_number = client.sequence_number(operator_account)?;
 
-        // Retrieve the current validator / fullnode addresses and update accordingly
-        let vc = client.validator_config(owner_account)?;
-        let validator_config = DecryptedValidatorConfig::from_validator_config_resource(
-            &vc,
-            owner_account,
-            &encryptor,
-        )
-        .map_err(|e| Error::UnexpectedError(format!("Error parsing validator config: {}", e)))?;
+        // See if the validator is in the set
+        let in_set = client
+            .validator_set(None)?
+            .iter()
+            .any(|vi| vi.account_address() == &owner_account);
+
+        let validator_config = if in_set {
+            // Retrieve the current validator / fullnode addresses and update accordingly
+            let vc = client.validator_config(owner_account)?;
+            DecryptedValidatorConfig::from_validator_config_resource(&vc, owner_account, &encryptor)
+                .map(Some)
+                .map_err(|e| {
+                    Error::UnexpectedError(format!("Error parsing validator config: {}", e))
+                })?
+        } else {
+            None
+        };
 
         let validator_address = if let Some(validator_address) = self.validator_address {
             validator_address
+        } else if let Some(vc) = &validator_config {
+            strip_address(&vc.validator_network_address)
         } else {
-            strip_address(&validator_config.validator_network_address)
+            return Err(Error::UnexpectedError(
+                "Missing validator-network-address".to_string(),
+            ));
         };
 
         let fullnode_address = if let Some(fullnode_address) = self.fullnode_address {
             fullnode_address
+        } else if let Some(vc) = &validator_config {
+            strip_address(&vc.fullnode_network_address)
         } else {
-            strip_address(&validator_config.fullnode_network_address)
+            return Err(Error::UnexpectedError(
+                "Missing fullnode-network-address".to_string(),
+            ));
         };
 
         let txn = self.validator_config.build_transaction(
             sequence_number,
             fullnode_address,
             validator_address,
-            true,
+            validator_config.is_some(),
         )?;
         client.submit_transaction(txn.as_signed_user_txn().unwrap().clone())
     }

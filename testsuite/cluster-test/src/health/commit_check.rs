@@ -7,13 +7,15 @@ use crate::health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent};
 use async_trait::async_trait;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
+type EpochAndRound = (u64, u64);
+
 /// Verifies that commit history produced by validators is 'lineariazble'
 /// This means that validators can be behind each other, but commits that they are producing
 /// do not contradict each other
 #[derive(Default)]
 pub struct CommitHistoryHealthCheck {
-    round_to_commit: HashMap<u64, CommitAndValidators>,
-    latest_committed_round: HashMap<String, u64>,
+    epoch_round_to_commit: HashMap<EpochAndRound, CommitAndValidators>,
+    latest_committed_epoch_round: HashMap<String, EpochAndRound>,
 }
 
 struct CommitAndValidators {
@@ -35,7 +37,7 @@ impl HealthCheck for CommitHistoryHealthCheck {
         } else {
             return;
         };
-        let round_to_commit = self.round_to_commit.entry(commit.round);
+        let round_to_commit = self.epoch_round_to_commit.entry(commit.epoch_and_round());
         match round_to_commit {
             Entry::Occupied(mut oe) => {
                 let commit_and_validators = oe.get_mut();
@@ -43,8 +45,10 @@ impl HealthCheck for CommitHistoryHealthCheck {
                     ctx.report_failure(
                         ve.validator.clone(),
                         format!(
-                            "produced contradicting commit {} at round {}, expected: {}",
-                            commit.commit, commit.round, commit_and_validators.hash
+                            "produced contradicting commit {} at epoch_round {:?}, expected: {}",
+                            commit.commit,
+                            commit.epoch_and_round(),
+                            commit_and_validators.hash
                         ),
                     );
                 } else {
@@ -62,35 +66,38 @@ impl HealthCheck for CommitHistoryHealthCheck {
                 });
             }
         }
-        let latest_committed_round = self.latest_committed_round.entry(ve.validator.clone());
+        let latest_committed_round = self
+            .latest_committed_epoch_round
+            .entry(ve.validator.clone());
         match latest_committed_round {
             Entry::Occupied(mut oe) => {
-                let previous_round = *oe.get();
-                if previous_round > commit.round {
+                let previous_epoch_and_round = *oe.get();
+                if previous_epoch_and_round > commit.epoch_and_round() {
                     ctx.report_failure(
                         ve.validator.clone(),
                         format!(
-                            "committed round {} after committing {}",
-                            commit.round, previous_round
+                            "committed epoch and round {:?} after committing {:?}",
+                            commit.epoch_and_round(),
+                            previous_epoch_and_round
                         ),
                     );
                 }
-                oe.insert(commit.round);
+                oe.insert(commit.epoch_and_round());
             }
             Entry::Vacant(va) => {
-                va.insert(commit.round);
+                va.insert(commit.epoch_and_round());
             }
         }
-        if let Some(min_round) = self.latest_committed_round.values().min() {
-            self.round_to_commit.retain(|k, _v| *k >= *min_round);
+        if let Some(min_round) = self.latest_committed_epoch_round.values().min() {
+            self.epoch_round_to_commit.retain(|k, _v| *k >= *min_round);
         }
     }
 
     async fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
 
     fn clear(&mut self) {
-        self.round_to_commit.clear();
-        self.latest_committed_round.clear();
+        self.epoch_round_to_commit.clear();
+        self.latest_committed_epoch_round.clear();
     }
 
     fn name(&self) -> &'static str {

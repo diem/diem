@@ -130,11 +130,20 @@ pub enum EvaluationOutput {
     Output(OutputType),
     Error(Box<Error>),
     Status(Status),
+    PlainMessage(String),
 }
 
 impl EvaluationOutput {
     pub fn is_error(&self) -> bool {
         matches!(self, Self::Error(_))
+    }
+
+    pub fn to_string_for_matching(&self) -> String {
+        match self {
+            EvaluationOutput::Error(e) => format!("{:?}", e.root_cause()),
+            EvaluationOutput::PlainMessage(s) => s.to_string(),
+            _ => format!("{:?}", self),
+        }
     }
 }
 
@@ -170,6 +179,13 @@ impl EvaluationLog {
         res
     }
 
+    pub fn to_text_for_matching(&self) -> Vec<String> {
+        self.outputs
+            .iter()
+            .map(EvaluationOutput::to_string_for_matching)
+            .collect()
+    }
+
     pub fn append(&mut self, output: EvaluationOutput) {
         self.outputs.push(output);
     }
@@ -196,6 +212,7 @@ impl fmt::Display for EvaluationOutput {
             Output(output) => write!(f, "{}", output),
             Error(error) => write!(f, "Error: {:#?}", error),
             Status(status) => write!(f, "Status: {:?}", status),
+            PlainMessage(s) => write!(f, "{}", s),
         }
     }
 }
@@ -423,6 +440,59 @@ fn run_transaction(
     }
 }
 
+fn run_transaction_exp_mode(
+    exec: &mut FakeExecutor,
+    transaction: SignedTransaction,
+    log: &mut EvaluationLog,
+    config: &TransactionConfig,
+) -> Result<()> {
+    let mut outputs = exec
+        .execute_block_and_keep_vm_status(vec![transaction])
+        .unwrap();
+    let (vm_status, txn_output) = match outputs.pop() {
+        Some(x) => x,
+        None => unreachable!("expected 1 output got {}"),
+    };
+
+    log.append(EvaluationOutput::PlainMessage(format!(
+        "Move VM Status: {:?}",
+        vm_status
+    )));
+    log.append(EvaluationOutput::PlainMessage(format!(
+        "Transaction Status: {:?}",
+        txn_output.status()
+    )));
+    if config.show_gas {
+        log.append(EvaluationOutput::PlainMessage(format!(
+            "Gas Used: {:?}",
+            txn_output.gas_used(),
+        )))
+    }
+    if config.show_writeset {
+        log.append(EvaluationOutput::PlainMessage(format!(
+            "Write Set: {:?}",
+            txn_output.write_set(),
+        )))
+    }
+    if config.show_events {
+        log.append(EvaluationOutput::PlainMessage(format!(
+            "Events: {:?}",
+            txn_output.events(),
+        )))
+    }
+
+    match txn_output.status() {
+        TransactionStatus::Keep(_) => {
+            exec.apply_write_set(txn_output.write_set());
+        }
+        TransactionStatus::Discard(_) | TransactionStatus::Retry => {
+            checked_verify!(txn_output.write_set().is_empty());
+        }
+    }
+
+    Ok(())
+}
+
 /// Serializes the script then deserializes it.
 fn serialize_and_deserialize_script(script: &CompiledScript) -> Result<()> {
     let mut script_blob = vec![];
@@ -465,6 +535,7 @@ fn is_precompiled_script(input_str: &str) -> Option<CompiledScript> {
 }
 
 fn eval_transaction<TComp: Compiler>(
+    global_config: &GlobalConfig,
     compiler: &mut TComp,
     exec: &mut FakeExecutor,
     idx: usize,
@@ -493,27 +564,37 @@ fn eval_transaction<TComp: Compiler>(
     if transaction.config.is_stage_disabled(Stage::Compiler) {
         return Ok(Status::Success);
     }
-    log.append(EvaluationOutput::Stage(Stage::Compiler));
-    let compiler_log = |s| log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
+    if !global_config.exp_mode {
+        log.append(EvaluationOutput::Stage(Stage::Compiler));
+    }
 
     let parsed_script_or_module =
         if let Some(compiled_script) = is_precompiled_script(&transaction.input) {
             ScriptOrModule::Script(compiled_script)
         } else {
+            let compiler_log = |s| {
+                if !global_config.exp_mode {
+                    log.append(EvaluationOutput::Output(OutputType::CompilerLog(s)));
+                }
+            };
             unwrap_or_abort!(compiler.compile(compiler_log, sender_addr, &transaction.input))
         };
 
     match parsed_script_or_module {
         ScriptOrModule::Script(compiled_script) => {
-            log.append(EvaluationOutput::Output(OutputType::CompiledScript(
-                Box::new(compiled_script.clone()),
-            )));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Output(OutputType::CompiledScript(
+                    Box::new(compiled_script.clone()),
+                )));
+            }
 
             // stage 2: verify the script
             if transaction.config.is_stage_disabled(Stage::Verifier) {
                 return Ok(Status::Success);
             }
-            log.append(EvaluationOutput::Stage(Stage::Verifier));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Stage(Stage::Verifier));
+            }
             let deps = fetch_script_dependencies(exec, &compiled_script);
             let compiled_script = match verify_script(compiled_script, &deps) {
                 Ok(script) => script,
@@ -526,7 +607,9 @@ fn eval_transaction<TComp: Compiler>(
 
             // stage 3: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {
-                log.append(EvaluationOutput::Stage(Stage::Serializer));
+                if !global_config.exp_mode {
+                    log.append(EvaluationOutput::Stage(Stage::Serializer));
+                }
                 unwrap_or_abort!(serialize_and_deserialize_script(&compiled_script));
             }
 
@@ -534,24 +617,35 @@ fn eval_transaction<TComp: Compiler>(
             if transaction.config.is_stage_disabled(Stage::Runtime) {
                 return Ok(Status::Success);
             }
-            log.append(EvaluationOutput::Stage(Stage::Runtime));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Stage(Stage::Runtime));
+            }
             let script_transaction =
                 make_script_transaction(&exec, &transaction.config, compiled_script)?;
-            let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction));
-            log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
-                Box::new(txn_output),
-            )));
+
+            if global_config.exp_mode {
+                run_transaction_exp_mode(exec, script_transaction, log, &transaction.config)?;
+            } else {
+                let txn_output = unwrap_or_abort!(run_transaction(exec, script_transaction));
+                log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
+                    Box::new(txn_output),
+                )));
+            }
         }
         ScriptOrModule::Module(compiled_module) => {
-            log.append(EvaluationOutput::Output(OutputType::CompiledModule(
-                Box::new(compiled_module.clone()),
-            )));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Output(OutputType::CompiledModule(
+                    Box::new(compiled_module.clone()),
+                )));
+            }
 
             // stage 2: verify the module
             if transaction.config.is_stage_disabled(Stage::Verifier) {
                 return Ok(Status::Success);
             }
-            log.append(EvaluationOutput::Stage(Stage::Verifier));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Stage(Stage::Verifier));
+            }
             let deps = fetch_module_dependencies(exec, &compiled_module);
             let compiled_module = match verify_module(compiled_module, &deps) {
                 Ok(module) => module,
@@ -564,7 +658,9 @@ fn eval_transaction<TComp: Compiler>(
 
             // stage 3: serializer round trip
             if !transaction.config.is_stage_disabled(Stage::Serializer) {
-                log.append(EvaluationOutput::Stage(Stage::Serializer));
+                if !global_config.exp_mode {
+                    log.append(EvaluationOutput::Stage(Stage::Serializer));
+                }
                 unwrap_or_abort!(serialize_and_deserialize_module(&compiled_module));
             }
 
@@ -572,13 +668,20 @@ fn eval_transaction<TComp: Compiler>(
             if transaction.config.is_stage_disabled(Stage::Runtime) {
                 return Ok(Status::Success);
             }
-            log.append(EvaluationOutput::Stage(Stage::Runtime));
+            if !global_config.exp_mode {
+                log.append(EvaluationOutput::Stage(Stage::Runtime));
+            }
             let module_transaction =
                 make_module_transaction(&exec, &transaction.config, compiled_module)?;
-            let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction));
-            log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
-                Box::new(txn_output),
-            )));
+
+            if global_config.exp_mode {
+                run_transaction_exp_mode(exec, module_transaction, log, &transaction.config)?;
+            } else {
+                let txn_output = unwrap_or_abort!(run_transaction(exec, module_transaction));
+                log.append(EvaluationOutput::Output(OutputType::TransactionOutput(
+                    Box::new(txn_output),
+                )));
+            }
         }
     }
     Ok(Status::Success)
@@ -648,12 +751,16 @@ pub fn eval<TComp: Compiler>(
         match command {
             Command::Transaction(transaction) => {
                 let status =
-                    eval_transaction(&mut compiler, &mut exec, idx, transaction, &mut log)?;
-                log.append(EvaluationOutput::Status(status));
+                    eval_transaction(config, &mut compiler, &mut exec, idx, transaction, &mut log)?;
+                if !config.exp_mode {
+                    log.append(EvaluationOutput::Status(status));
+                }
             }
             Command::BlockMetadata(block_metadata) => {
                 let status = eval_block_metadata(&mut exec, block_metadata.clone(), &mut log)?;
-                log.append(EvaluationOutput::Status(status));
+                if !config.exp_mode {
+                    log.append(EvaluationOutput::Status(status));
+                }
             }
         }
     }

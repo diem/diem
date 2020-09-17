@@ -29,6 +29,7 @@ fn safety_rules(verify_vote_proposal_signature: bool) -> suite::Callback {
             None,
             None,
             None,
+            true,
         ));
         storage.reset_and_clear().unwrap();
 

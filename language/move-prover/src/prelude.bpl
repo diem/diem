@@ -115,7 +115,7 @@ function {:inline} $IsValidU8(v: $Value): bool {
 }
 
 function {:inline} $IsValidU8Vector(vec: $Value): bool {
-  $Vector_is_well_formed(vec)
+  $Vector_$is_well_formed(vec)
   && (forall i: int :: {$select_vector(vec, i)} 0 <= i && i < $vlen(vec) ==> $IsValidU8($select_vector(vec, i)))
 }
 
@@ -1011,7 +1011,7 @@ function {:inline} $Vector_type_value(tv: $TypeValue): $TypeValue {
 {{#if backend.vector_using_sequences}}
 
 // This uses the implementation of $ValueArray using sequences
-function {:inline} $Vector_is_well_formed(v: $Value): bool {
+function {:inline} $Vector_$is_well_formed(v: $Value): bool {
     (
         is#$Vector(v)
     )
@@ -1020,7 +1020,7 @@ function {:inline} $Vector_is_well_formed(v: $Value): bool {
 {{else}}
 
 // This is uses the implementation of $ValueArray using integer maps
-function {:inline} $Vector_is_well_formed(v: $Value): bool {
+function {:inline} $Vector_$is_well_formed(v: $Value): bool {
     is#$Vector(v) &&
     (
         var va := v#$Vector(v);
@@ -1245,11 +1245,11 @@ function $Hash_sha2_core(val: $Value): $Value;
 // This says that Hash_sha2 respects isEquals (this would be automatic if we had an
 // extensional theory of arrays and used ==, which has the substitution property
 // for functions).
-axiom (forall v1,v2: $Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+axiom (forall v1,v2: $Value :: $Vector_$is_well_formed(v1) && $Vector_$is_well_formed(v2)
        && $IsEqual(v1, v2) ==> $IsEqual($Hash_sha2_core(v1), $Hash_sha2_core(v2)));
 
 // This says that Hash_sha2 is an injection
-axiom (forall v1,v2: $Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+axiom (forall v1,v2: $Value :: $Vector_$is_well_formed(v1) && $Vector_$is_well_formed(v2)
         && $IsEqual($Hash_sha2_core(v1), $Hash_sha2_core(v2)) ==> $IsEqual(v1, v2));
 
 // This procedure has no body. We want Boogie to just use its requires
@@ -1272,10 +1272,10 @@ function {:inline} $Hash_sha3(val: $Value): $Value {
 }
 function $Hash_sha3_core(val: $Value): $Value;
 
-axiom (forall v1,v2: $Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+axiom (forall v1,v2: $Value :: $Vector_$is_well_formed(v1) && $Vector_$is_well_formed(v2)
        && $IsEqual(v1, v2) ==> $IsEqual($Hash_sha3_core(v1), $Hash_sha3_core(v2)));
 
-axiom (forall v1,v2: $Value :: $Vector_is_well_formed(v1) && $Vector_is_well_formed(v2)
+axiom (forall v1,v2: $Value :: $Vector_$is_well_formed(v1) && $Vector_$is_well_formed(v2)
         && $IsEqual($Hash_sha3_core(v1), $Hash_sha3_core(v2)) ==> $IsEqual(v1, v2));
 
 procedure $Hash_sha3_256(val: $Value) returns (res: $Value);

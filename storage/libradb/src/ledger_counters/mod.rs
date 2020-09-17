@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{metrics::LIBRA_STORAGE_LEDGER, OP_COUNTER};
+use crate::metrics::LIBRA_STORAGE_LEDGER;
 use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 use num_variants::NumVariants;
@@ -145,7 +145,6 @@ impl LedgerCounters {
     /// Bump Prometheus counters.
     pub fn bump_op_counters(&self) {
         for counter in &LedgerCounter::VARIANTS {
-            OP_COUNTER.set(counter.name(), self.get(*counter));
             LIBRA_STORAGE_LEDGER
                 .with_label_values(&[counter.name()])
                 .set(self.get(*counter) as i64);

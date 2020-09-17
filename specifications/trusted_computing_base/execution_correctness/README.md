@@ -76,7 +76,7 @@ locally.
 ## Data Structures
 
 In this section, we specify data structures specific to or shared by all but primarily used by LEC. Any dependent data
-structures not provided here are specified in the [common data structures document](../../common/common_data_structures.md).
+structures not provided here are specified in the [common data structures document](../../common/data_structures.md).
 
 ### Public Data Structures
 

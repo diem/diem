@@ -13,8 +13,8 @@ use move_coverage::coverage_map::{CoverageMap, FunctionCoverage};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        Bytecode, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex, Kind, Signature,
-        SignatureIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
+        Bytecode, CompiledModule, FieldHandleIndex, FunctionDefinition, FunctionDefinitionIndex,
+        Kind, Signature, SignatureIndex, SignatureToken, StructDefinition, StructDefinitionIndex,
         StructFieldInformation, TableIndex, TypeSignature,
     },
 };
@@ -61,6 +61,16 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             options,
             coverage_map: None,
         }
+    }
+
+    pub fn from_module(module: CompiledModule, default_loc: Location) -> Result<Self> {
+        let mut options = DisassemblerOptions::new();
+        options.print_code = true;
+        Ok(Self {
+            source_mapper: SourceMapping::new_from_module(module, default_loc)?,
+            options,
+            coverage_map: None,
+        })
     }
 
     pub fn add_coverage_map(&mut self, coverage_map: CoverageMap) {
@@ -300,7 +310,8 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             let body_iter: Vec<String> = locals
                 .into_iter()
                 .enumerate()
-                .map(|(local_idx, local)| format!("L{}:\t{}", local_idx, local))
+                // + 1 because enumerate() starts at 0, but bytecode offsets start at 1
+                .map(|(local_idx, local)| format!("L{}:\t{}", local_idx + 1, local))
                 .chain(bytecode.into_iter())
                 .collect();
             format!(" {{\n{}\n}}", body_iter.join("\n"))

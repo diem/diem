@@ -52,7 +52,6 @@
 
 <dl>
 <dt>
-
 <code>payload: Config</code>
 </dt>
 <dd>
@@ -80,7 +79,6 @@
 
 <dl>
 <dt>
-
 <code>epoch: u64</code>
 </dt>
 <dd>
@@ -108,21 +106,18 @@
 
 <dl>
 <dt>
-
 <code>epoch: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>last_reconfiguration_time: u64</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a>&gt;</code>
 </dt>
 <dd>
@@ -150,7 +145,6 @@
 
 <dl>
 <dt>
-
 <code>dummy_field: bool</code>
 </dt>
 <dd>
@@ -165,11 +159,10 @@
 
 ## Const `ECONFIGURATION`
 
-The
-<code><a href="#0x1_LibraConfig_Configuration">Configuration</a></code> resource is in an invalid state
+The <code><a href="#0x1_LibraConfig_Configuration">Configuration</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> ECONFIGURATION: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraConfig_ECONFIGURATION">ECONFIGURATION</a>: u64 = 0;
 </code></pre>
 
 
@@ -178,11 +171,10 @@ The
 
 ## Const `ELIBRA_CONFIG`
 
-A
-<code><a href="#0x1_LibraConfig">LibraConfig</a></code> resource is in an invalid state
+A <code><a href="#0x1_LibraConfig">LibraConfig</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> ELIBRA_CONFIG: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a>: u64 = 1;
 </code></pre>
 
 
@@ -191,11 +183,10 @@ A
 
 ## Const `EMODIFY_CAPABILITY`
 
-A
-<code><a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a></code> is in a different state than was expected
+A <code><a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a></code> is in a different state than was expected
 
 
-<pre><code><b>const</b> EMODIFY_CAPABILITY: u64 = 2;
+<pre><code><b>const</b> <a href="#0x1_LibraConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>: u64 = 2;
 </code></pre>
 
 
@@ -207,7 +198,7 @@ A
 An invalid block time was encountered.
 
 
-<pre><code><b>const</b> EINVALID_BLOCK_TIME: u64 = 4;
+<pre><code><b>const</b> <a href="#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>: u64 = 4;
 </code></pre>
 
 
@@ -218,7 +209,7 @@ An invalid block time was encountered.
 
 
 
-<pre><code><b>const</b> MAX_U64: u64 = 18446744073709551615;
+<pre><code><b>const</b> <a href="#0x1_LibraConfig_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
 </code></pre>
 
 
@@ -243,7 +234,7 @@ An invalid block time was encountered.
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
-    <b>assert</b>(!exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECONFIGURATION));
+    <b>assert</b>(!exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_LibraConfig_ECONFIGURATION">ECONFIGURATION</a>));
     move_to&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(
         lr_account,
         <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
@@ -277,7 +268,7 @@ An invalid block time was encountered.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config
 <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a>));
     *&borrow_global&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
 </code></pre>
@@ -304,10 +295,10 @@ An invalid block time was encountered.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config)
 <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a>, <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="Errors.md#0x1_Errors_requires_capability">Errors::requires_capability</a>(EMODIFY_CAPABILITY));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), <a href="Errors.md#0x1_Errors_requires_capability">Errors::requires_capability</a>(<a href="#0x1_LibraConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>));
 
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a>));
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 
@@ -339,7 +330,7 @@ An invalid block time was encountered.
     payload: Config
 ) <b>acquires</b> <a href="#0x1_LibraConfig">LibraConfig</a>, <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ELIBRA_CONFIG));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a>));
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
@@ -373,7 +364,7 @@ An invalid block time was encountered.
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     <b>assert</b>(
         !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ELIBRA_CONFIG)
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_LibraConfig_ELIBRA_CONFIG">ELIBRA_CONFIG</a>)
     );
     move_to(lr_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {}
@@ -406,7 +397,7 @@ An invalid block time was encountered.
     <b>let</b> capability = <a href="#0x1_LibraConfig_publish_new_config_and_get_capability">publish_new_config_and_get_capability</a>&lt;Config&gt;(lr_account, payload);
     <b>assert</b>(
         !exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(EMODIFY_CAPABILITY)
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_LibraConfig_EMODIFY_CAPABILITY">EMODIFY_CAPABILITY</a>)
     );
     move_to(lr_account, capability);
 }
@@ -466,7 +457,7 @@ An invalid block time was encountered.
 
     <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-    <b>assert</b>(current_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(EINVALID_BLOCK_TIME));
+    <b>assert</b>(current_time &gt; config_ref.last_reconfiguration_time, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="#0x1_LibraConfig_EINVALID_BLOCK_TIME">EINVALID_BLOCK_TIME</a>));
     config_ref.last_reconfiguration_time = current_time;
     config_ref.epoch = config_ref.epoch + 1;
 
@@ -499,9 +490,9 @@ An invalid block time was encountered.
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraConfig_emit_genesis_reconfiguration_event">emit_genesis_reconfiguration_event</a>() <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(ECONFIGURATION));
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_LibraConfig_ECONFIGURATION">ECONFIGURATION</a>));
     <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <b>assert</b>(config_ref.epoch == 0 && config_ref.last_reconfiguration_time == 0, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(ECONFIGURATION));
+    <b>assert</b>(config_ref.epoch == 0 && config_ref.last_reconfiguration_time == 0, <a href="Errors.md#0x1_Errors_invalid_state">Errors::invalid_state</a>(<a href="#0x1_LibraConfig_ECONFIGURATION">ECONFIGURATION</a>));
     config_ref.epoch = 1;
 
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraConfig_NewEpochEvent">NewEpochEvent</a>&gt;(
@@ -553,7 +544,7 @@ An invalid block time was encountered.
     lr_account: signer;
     <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
     <b>include</b> <a href="CoreAddresses.md#0x1_CoreAddresses_AbortsIfNotLibraRoot">CoreAddresses::AbortsIfNotLibraRoot</a>{account: lr_account};
-    <b>aborts_if</b> <a href="#0x1_LibraConfig_spec_has_config">spec_has_config</a>() with Errors::ALREADY_PUBLISHED;
+    <b>aborts_if</b> <a href="#0x1_LibraConfig_spec_has_config">spec_has_config</a>() with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -582,7 +573,7 @@ An invalid block time was encountered.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfNotPublished">AbortsIfNotPublished</a>&lt;Config&gt; {
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with Errors::NOT_PUBLISHED;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -627,7 +618,7 @@ An invalid block time was encountered.
 <pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfNotModifiable">AbortsIfNotModifiable</a>&lt;Config&gt; {
     account: signer;
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account))
-        with Errors::REQUIRES_CAPABILITY;
+        with <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
 }
 </code></pre>
 
@@ -692,7 +683,7 @@ An invalid block time was encountered.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraConfig_AbortsIfPublished">AbortsIfPublished</a>&lt;Config&gt; {
-    <b>aborts_if</b> exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with Errors::ALREADY_PUBLISHED;
+    <b>aborts_if</b> exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -778,11 +769,11 @@ An invalid block time was encountered.
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="#0x1_LibraConfig_ReconfigureAbortsIf">ReconfigureAbortsIf</a>;
-<b>aborts_if</b> [<b>assume</b>] <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).epoch == MAX_U64;
+<b>aborts_if</b> [<b>assume</b>] <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).epoch == <a href="#0x1_LibraConfig_MAX_U64">MAX_U64</a>;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 <a name="0x1_LibraConfig_epoch$14"></a>
 <b>let</b> epoch = <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).epoch;
-<b>ensures</b> <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() || <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == 0 || <b>old</b>(epoch) == MAX_U64) { epoch == <b>old</b>(epoch) } <b>else</b> { epoch == <b>old</b>(epoch) + 1 };
+<b>ensures</b> <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() || <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == 0 || <b>old</b>(epoch) == <a href="#0x1_LibraConfig_MAX_U64">MAX_U64</a>) { epoch == <b>old</b>(epoch) } <b>else</b> { epoch == <b>old</b>(epoch) + 1 };
 </code></pre>
 
 
@@ -798,7 +789,7 @@ An invalid block time was encountered.
     <b>let</b> config = <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <a name="0x1_LibraConfig_current_time$12"></a>
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
-    <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() && <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; 0 && config.epoch &lt; MAX_U64 && current_time == config.last_reconfiguration_time with Errors::INVALID_STATE;
+    <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() && <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; 0 && config.epoch &lt; <a href="#0x1_LibraConfig_MAX_U64">MAX_U64</a> && current_time == config.last_reconfiguration_time with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
 }
 </code></pre>
 
@@ -817,7 +808,7 @@ An invalid block time was encountered.
     exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
 }
 <b>invariant</b> [<b>global</b>] (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() || <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() == 0) ==&gt;
-                        <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).epoch &lt; MAX_U64;
+                        <b>global</b>&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).epoch &lt; <a href="#0x1_LibraConfig_MAX_U64">MAX_U64</a>;
 </code></pre>
 
 

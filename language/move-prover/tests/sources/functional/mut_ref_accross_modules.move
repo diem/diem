@@ -1,12 +1,12 @@
 address 0x1 {
-module TestMutRefs {
+module TestMutRefsAccrossModule {
 
     spec module {
         pragma verify = true;
     }
 
 
-    struct T { value: u64 }
+    resource struct T { value: u64 }
 
     // Resource to track the sum of values in T
     resource struct TSum {
@@ -75,14 +75,14 @@ module TestMutRefs {
         r.sum = r.sum - 1;
     }
 
-    // TODO: This function should verify because the data invariant for a mut ref is expected to hold. Currently, it verifies but for the wrong reason: the resource invariant is assumed on the inout value modeling x.
+    // This one should succeed.
     public fun data_invariant(x: &mut T) {
         spec {
             assert x.value > 0;
         }
     }
 
-    // TODO: This function should fail because the data invariant for a mut ref is not expected to hold. Currently, it verifies because the resource invariant is assumed on the inout value modeling x.
+    // This one should fail because the invariant is not valid for private &mut.
     fun private_data_invariant_invalid(x: &mut T) {
         spec {
             assert x.value > 0;
@@ -90,14 +90,15 @@ module TestMutRefs {
     }
 
     // The next function should succeed because calling a public function from a private one maintains module invariants.
-    // TODO: This function fails because PackRef(r) is called just before increment(r).
     fun private_to_public_caller(r: &mut T) acquires TSum {
         // Before call to public increment, data invariants and module invariant must hold.
         // Here we assume them, and force spec_sum to start with a zero value.
         spec {
             assume spec_sum == 0;
             assume r.value > 0;
-            assume global<TSum>(0x0).sum == spec_sum;
+            // r is unpacked at this point, so mimic this below, as we pack before
+            // we call the public function.
+            assume global<TSum>(0x0).sum == spec_sum - r.value;
         };
         increment(r);
         // After call to increment, we expect spec_sum to be incremented.
@@ -107,8 +108,7 @@ module TestMutRefs {
     }
 
 
-     // TODO: This function should fail because the data invariant does not hold at the call to increment. But, currently it does not fail since there is no data invariant assertion at the call to increment (due to my changes?).
-     fun private_to_public_caller_invalid_data_invariant() acquires TSum {
+     fun private_to_public_caller_invalid_data_invariant(): T acquires TSum {
          // Before call to public new(), assume module invariant.
          spec {
             assume global<TSum>(0x0).sum == spec_sum;
@@ -120,16 +120,17 @@ module TestMutRefs {
          private_decrement(r);
          // The next call enforces both module and data invariants.
          increment(r);
+         x
      }
 }
 
 module TestMutRefsUser {
-    use 0x1::TestMutRefs;
+    use 0x1::TestMutRefsAccrossModule;
 
     public fun valid() {
-        let x = TestMutRefs::new(4);
-        TestMutRefs::increment(&mut x);
-        TestMutRefs::delete(x);
+        let x = TestMutRefsAccrossModule::new(4);
+        TestMutRefsAccrossModule::increment(&mut x);
+        TestMutRefsAccrossModule::delete(x);
     }
 }
 }

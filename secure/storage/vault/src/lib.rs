@@ -97,29 +97,28 @@ pub struct Client {
     agent: ureq::Agent,
     host: String,
     token: String,
-    tls_config: Option<Arc<rustls::ClientConfig>>,
+    tls_connector: Arc<native_tls::TlsConnector>,
 }
 
 impl Client {
     pub fn new(host: String, token: String, ca_certificate: Option<String>) -> Self {
-        let tls_config = if let Some(certificate) = ca_certificate {
-            let mut tls_config = rustls::ClientConfig::new();
-            // First try the certificate as a DER encoded cert, then as a PEM, and then panic.
-            let cert = rustls::Certificate(certificate.as_bytes().to_vec());
-            if tls_config.root_store.add(&cert).is_err() {
-                let certs = rustls::internal::pemfile::certs(&mut certificate.as_bytes()).unwrap();
-                tls_config.root_store.add(&certs[0]).unwrap();
+        let mut tls_builder = native_tls::TlsConnector::builder();
+        tls_builder.min_protocol_version(Some(native_tls::Protocol::Tlsv12));
+        if let Some(certificate) = ca_certificate {
+            // First try the certificate as a PEM encoded cert, then as DER, and then panic.
+            let mut cert = native_tls::Certificate::from_pem(certificate.as_bytes());
+            if cert.is_err() {
+                cert = native_tls::Certificate::from_der(certificate.as_bytes());
             }
-            Some(Arc::new(tls_config))
-        } else {
-            None
-        };
+            tls_builder.add_root_certificate(cert.unwrap());
+        }
+        let tls_connector = Arc::new(tls_builder.build().unwrap());
 
         Self {
             agent: ureq::Agent::new().set("connection", "keep-alive").build(),
             host,
             token,
-            tls_config,
+            tls_connector,
         }
     }
 
@@ -186,6 +185,21 @@ impl Client {
         };
 
         process_token_renew_response(resp)
+    }
+
+    pub fn revoke_token_self(&self) -> Result<(), Error> {
+        let request = self
+            .agent
+            .post(&format!("{}/v1/auth/token/revoke-self", self.host));
+        let mut request = self.upgrade_request(request);
+        let resp = request.call();
+
+        if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            Ok(())
+        } else {
+            Err(resp.into())
+        }
     }
 
     /// List all stored secrets
@@ -325,15 +339,30 @@ impl Client {
     }
 
     /// Create or update a key/value pair in a given secret store.
-    pub fn write_secret(&self, secret: &str, key: &str, value: &Value) -> Result<(), Error> {
+    pub fn write_secret(
+        &self,
+        secret: &str,
+        key: &str,
+        value: &Value,
+        version: Option<u32>,
+    ) -> Result<u32, Error> {
+        let payload = if let Some(version) = version {
+            json!({ "data": { key: value }, "options": {"cas": version} })
+        } else {
+            json!({ "data": { key: value } })
+        };
+
         let request = self
             .agent
             .put(&format!("{}/v1/secret/data/{}", self.host, secret));
-        let resp = self
-            .upgrade_request(request)
-            .send_json(json!({ "data": { key: value } }));
+        let resp = self.upgrade_request(request).send_json(payload);
 
-        process_generic_response(resp)
+        if resp.ok() {
+            let resp: WriteSecretResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(resp.data.version)
+        } else {
+            Err(resp.into())
+        }
     }
 
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
@@ -353,9 +382,7 @@ impl Client {
 
     fn upgrade_request_without_token(&self, mut request: ureq::Request) -> ureq::Request {
         request.timeout_connect(TIMEOUT);
-        if let Some(tls_config) = self.tls_config.as_ref() {
-            request.set_tls_config(tls_config.clone());
-        }
+        request.set_tls_connector(self.tls_connector.clone());
         request
     }
 }
@@ -915,6 +942,11 @@ struct ReadSecretData {
 struct ReadSecretMetadata {
     created_time: String,
     version: u32,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+struct WriteSecretResponse {
+    data: ReadSecretMetadata,
 }
 
 /// {

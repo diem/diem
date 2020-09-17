@@ -27,7 +27,7 @@ pub struct LibraNode {
     role: RoleType,
     debug_client: NodeDebugClient,
     port: u16,
-    log: PathBuf,
+    pub log: PathBuf,
 }
 
 impl Drop for LibraNode {
@@ -43,6 +43,7 @@ impl Drop for LibraNode {
                 if let Err(e) = self.node.kill() {
                     panic!("LibraNode process could not be killed: '{}'", e);
                 }
+                self.node.wait().unwrap();
             }
         }
     }
@@ -53,7 +54,7 @@ impl LibraNode {
     /// ports that are only reserved in a safe state for a brief period of time.
     /// workspace_builder::get_bin actually compiles all of the Libra code base which can take
     /// substantially longer time than the networking ports are reserved. Calling prior to
-    /// reserving those ports will reduce the liklihood of issues.
+    /// reserving those ports will reduce the likelihood of issues.
     pub fn prepare() {
         Command::new(workspace_builder::get_libra_node_with_failpoints());
     }

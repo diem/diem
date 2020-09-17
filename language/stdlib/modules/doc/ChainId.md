@@ -30,7 +30,6 @@
 
 <dl>
 <dt>
-
 <code>id: u8</code>
 </dt>
 <dd>
@@ -45,11 +44,10 @@
 
 ## Const `ECHAIN_ID`
 
-The
-<code><a href="#0x1_ChainId">ChainId</a></code> resource was not in the required state
+The <code><a href="#0x1_ChainId">ChainId</a></code> resource was not in the required state
 
 
-<pre><code><b>const</b> ECHAIN_ID: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_ChainId_ECHAIN_ID">ECHAIN_ID</a>: u64 = 0;
 </code></pre>
 
 
@@ -58,8 +56,7 @@ The
 
 ## Function `initialize`
 
-Publish the chain ID
-<code>id</code> of this Libra instance under the LibraRoot account
+Publish the chain ID <code>id</code> of this Libra instance under the LibraRoot account
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ChainId_initialize">initialize</a>(lr_account: &signer, id: u8)
@@ -74,7 +71,7 @@ Publish the chain ID
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ChainId_initialize">initialize</a>(lr_account: &signer, id: u8) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
-    <b>assert</b>(!exists&lt;<a href="#0x1_ChainId">ChainId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(ECHAIN_ID));
+    <b>assert</b>(!exists&lt;<a href="#0x1_ChainId">ChainId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account)), <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="#0x1_ChainId_ECHAIN_ID">ECHAIN_ID</a>));
     move_to(lr_account, <a href="#0x1_ChainId">ChainId</a> { id })
 }
 </code></pre>

@@ -22,13 +22,13 @@ impl fmt::Debug for NetworkContext {
 }
 
 impl fmt::Display for NetworkContext {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
-            formatter,
+            f,
             "[{},{},{}]",
             self.network_id,
             self.role,
-            self.peer_id.short_str()
+            self.peer_id.short_str(),
         )
     }
 }
@@ -46,30 +46,30 @@ impl NetworkContext {
         &self.network_id
     }
 
-    pub fn peer_id(&self) -> PeerId {
-        self.peer_id
-    }
-
     pub fn role(&self) -> RoleType {
         self.role
     }
 
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
+    }
+
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock_with_peer_id(peer_id: PeerId) -> std::sync::Arc<Self> {
-        std::sync::Arc::new(Self {
-            network_id: NetworkId::Validator,
-            role: RoleType::Validator,
+        std::sync::Arc::new(Self::new(
+            NetworkId::Validator,
+            RoleType::Validator,
             peer_id,
-        })
+        ))
     }
 
     #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock() -> std::sync::Arc<Self> {
-        std::sync::Arc::new(Self {
-            network_id: NetworkId::Validator,
-            role: RoleType::Validator,
-            peer_id: PeerId::random(),
-        })
+        std::sync::Arc::new(Self::new(
+            NetworkId::Validator,
+            RoleType::Validator,
+            PeerId::random(),
+        ))
     }
 }
 
@@ -124,17 +124,13 @@ impl Default for NetworkId {
 
 impl fmt::Debug for NetworkId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)
+        f.write_str(self.as_str())
     }
 }
 
 impl fmt::Display for NetworkId {
-    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            NetworkId::Validator => write!(formatter, "Validator"),
-            NetworkId::Public => write!(formatter, "Public"),
-            NetworkId::Private(info) => write!(formatter, "Private({})", info),
-        }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -142,6 +138,20 @@ impl NetworkId {
     /// Convenience function to specify the VFN network
     pub fn vfn_network() -> NetworkId {
         NetworkId::Private("vfn".to_string())
+    }
+
+    pub fn as_str(&self) -> &str {
+        match self {
+            NetworkId::Validator => "Validator",
+            NetworkId::Public => "Public",
+            // We used to return "Private({info})" here; however, it's important
+            // to get the network id str without temp allocs, as this is in the
+            // metrics/logging hot path. In theory, someone could set their
+            // network id as `Private("Validator")`, which would result in
+            // confusing metrics/logging output for them, but would not affect
+            // correctness.
+            NetworkId::Private(info) => info.as_ref(),
+        }
     }
 }
 

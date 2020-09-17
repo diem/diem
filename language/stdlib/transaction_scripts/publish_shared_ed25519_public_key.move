@@ -1,11 +1,33 @@
 script {
 use 0x1::SharedEd25519PublicKey;
 
-/// (1) Rotate the authentication key of the sender to `public_key`
-/// (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
-///     of the sender under the sender's address.
-/// Aborts if the sender already has a `SharedEd25519PublicKey` resource.
-/// Aborts if the length of `new_public_key` is not 32.
+/// # Summary
+/// Rotates the authentication key of the sending account to the
+/// newly-specified public key and publishes a new shared authentication key
+/// under the sender's account. Any account can send this transaction.
+///
+/// # Technical Description
+/// Rotates the authentication key of the sending account to `public_key`,
+/// and publishes a `SharedEd25519PublicKey::SharedEd25519PublicKey` resource
+/// containing the 32-byte ed25519 `public_key` and the `LibraAccount::KeyRotationCapability` for
+/// `account` under `account`.
+///
+/// # Parameters
+/// | Name         | Type         | Description                                                                               |
+/// | ------       | ------       | -------------                                                                             |
+/// | `account`    | `&signer`    | The signer reference of the sending account of the transaction.                           |
+/// | `public_key` | `vector<u8>` | 32-byte Ed25519 public key for `account`' authentication key to be rotated to and stored. |
+///
+/// # Common Abort Conditions
+/// | Error Category              | Error Reason                                               | Description                                                                                         |
+/// | ----------------            | --------------                                             | -------------                                                                                       |
+/// | `Errors::INVALID_STATE`     | `LibraAccount::EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED` | `account` has already delegated/extracted its `LibraAccount::KeyRotationCapability` resource.       |
+/// | `Errors::ALREADY_PUBLISHED` | `SharedEd25519PublicKey::ESHARED_KEY`                      | The `SharedEd25519PublicKey::SharedEd25519PublicKey` resource is already published under `account`. |
+/// | `Errors::INVALID_ARGUMENT`  | `SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY`            | `public_key` is an invalid ed25519 public key.                                                      |
+///
+/// # Related Scripts
+/// * `Script::rotate_shared_ed25519_public_key`
+
 fun publish_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
     SharedEd25519PublicKey::publish(account, public_key)
 }

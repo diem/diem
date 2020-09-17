@@ -153,7 +153,7 @@ where
                                     };
                                 }
                                 Err(e) => {
-                                    error!("Decryption Error: {}", e);
+                                    error!(error = e.to_string(), "Decryption Error: {}", e);
                                     self.read_state = ReadState::DecryptionError(e);
                                 }
                             }

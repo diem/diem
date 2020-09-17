@@ -12,7 +12,6 @@ error: abort not covered by any of the `aborts_if` clauses
    =         account = <redacted>
    =     at tests/sources/functional/script_provider.move:17:5: register
    =         account = <redacted>
-   =     at tests/sources/functional/script_provider.move:19:17: register
    =     at tests/sources/functional/script_provider.move:18:24: register (ABORTED)
 
     ┌── tests/sources/functional/script_provider.move:18:24 ───

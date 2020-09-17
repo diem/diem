@@ -15,12 +15,12 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use consensus_types::{
     block::Block,
-    common::{Author, Payload},
+    common::{Author, Payload, Round},
 };
-use futures::channel::mpsc;
+use futures::{channel::mpsc, StreamExt};
 use libra_config::{
     config::{
-        ConsensusProposerType::{self, FixedProposer, RotatingProposer},
+        ConsensusProposerType::{self, FixedProposer, RotatingProposer, RoundProposer},
         NodeConfig, WaypointConfig,
     },
     generator::{self, ValidatorSwarm},
@@ -36,16 +36,37 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
+use std::{cmp::Ordering, collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
+    author: Author,
     _runtime: Runtime,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage>,
     _shared_mempool: MockSharedMempool,
     _state_sync: mpsc::UnboundedReceiver<Payload>,
+}
+
+impl Eq for SMRNode {}
+
+impl PartialEq for SMRNode {
+    fn eq(&self, other: &SMRNode) -> bool {
+        self.author == other.author
+    }
+}
+
+impl PartialOrd for SMRNode {
+    fn partial_cmp(&self, other: &SMRNode) -> Option<Ordering> {
+        self.author.partial_cmp(&other.author)
+    }
+}
+
+impl Ord for SMRNode {
+    fn cmp(&self, other: &SMRNode) -> Ordering {
+        self.author.cmp(&other.author)
+    }
 }
 
 impl SMRNode {
@@ -122,6 +143,7 @@ impl SMRNode {
         runtime.spawn(network_task.start());
         runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver, reconfig_events));
         Self {
+            author: twin_id.author,
             _runtime: runtime,
             commit_cb_receiver,
             storage,
@@ -137,6 +159,7 @@ impl SMRNode {
         num_twins: usize,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
+        round_proposers_idx: Option<HashMap<Round, usize>>,
     ) -> (Vec<Self>, Vec<Author>) {
         assert!(num_nodes >= num_twins);
         let ValidatorSwarm { mut nodes } = generator::validator_swarm_for_testing(num_nodes);
@@ -155,8 +178,26 @@ impl SMRNode {
                 .collect(),
         );
 
-        // We don't add twins to ValidatorSet above because a node with
-        // twins should be treated the same at the consensus level
+        let proposer_type = match proposer_type {
+            RoundProposer(_) => {
+                let mut round_proposers: HashMap<Round, Author> = HashMap::new();
+
+                if let Some(round_proposers_idx) = round_proposers_idx {
+                    for (round, idx) in round_proposers_idx.iter() {
+                        round_proposers.insert(
+                            *round,
+                            nodes[*idx].validator_network.as_ref().unwrap().peer_id(),
+                        );
+                    }
+                }
+                RoundProposer(round_proposers)
+            }
+            _ => proposer_type,
+        };
+
+        // We don't add twins to ValidatorSet or round_proposers above
+        // because a node with twins should be treated the same at the
+        // consensus level
         for i in 0..num_twins {
             let twin = nodes[i].clone();
             nodes.push(twin);
@@ -180,6 +221,9 @@ impl SMRNode {
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type.clone();
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
+            // Change initial timeout from default 1s to 2s. Our experience
+            // suggests that 1s is too small for twins testing
+            config.consensus.round_initial_timeout_ms = 2000;
 
             let author = config.validator_network.as_ref().unwrap().peer_id();
 
@@ -202,7 +246,6 @@ impl SMRNode {
 ///
 /// Run the test:
 /// cargo xtest -p consensus basic_start_test -- --nocapture
-#[test]
 fn basic_start_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -213,6 +256,7 @@ fn basic_start_test() {
         num_twins,
         &mut playground,
         RotatingProposer,
+        None,
     );
     let genesis = Block::make_genesis_block_from_ledger_info(&nodes[0].storage.get_ledger_info());
     timed_block_on(&mut runtime, async {
@@ -235,6 +279,7 @@ fn basic_start_test() {
     });
 }
 
+#[test]
 /// This test checks that the split_network function works
 /// as expected, that is: nodes in a partition with less nodes
 /// than required for quorum do not commit anything.
@@ -242,8 +287,8 @@ fn basic_start_test() {
 /// Setup:
 ///
 /// 4 honest nodes (n0, n1, n2, n3), and 0 twins.
-/// Create two partitions p1=[n1], and p2=[n0, n2, n3] with
-/// a proposer in p2.
+/// Create two partitions p1=[n2], and p2=[n0, n1, n3] with
+/// a proposer (n0) in p2.
 ///
 /// Test:
 ///
@@ -252,23 +297,31 @@ fn basic_start_test() {
 ///
 /// Run the test:
 /// cargo xtest -p consensus drop_config_test -- --nocapture
-#[test]
-#[ignore]
-/// See https://github.com/libra/libra/issues/4899
 fn drop_config_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 0;
-    let (mut nodes, node_authors) =
-        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, FixedProposer);
+    let (mut nodes, mut node_authors) = SMRNode::start_num_nodes_with_twins(
+        num_nodes,
+        num_twins,
+        &mut playground,
+        FixedProposer,
+        None,
+    );
+
+    // Sort nodes by author, because FixedProposer chooses
+    // the node with the smallest author as the leader
+    nodes.sort();
+    node_authors.sort();
 
     // 4 honest nodes
     let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
     let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
     let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
     let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
-    assert!(playground.split_network(vec![n1_twin_id], vec![n0_twin_id, n2_twin_id, n3_twin_id]));
+
+    assert!(playground.split_network(vec![n2_twin_id], vec![n0_twin_id, n1_twin_id, n3_twin_id]));
 
     timed_block_on(&mut runtime, async {
         playground
@@ -278,24 +331,19 @@ fn drop_config_test() {
         // Pull enough votes to get a few commits
         // The proposer's votes are implicit and do not go in the queue.
         playground
-            .wait_for_messages(30, NetworkPlayground::votes_only)
+            .wait_for_messages(50, NetworkPlayground::votes_only)
             .await;
 
         // Check that the commit log for n0 is not empty
-        let mut commit_seen = false;
-        nodes[0].commit_cb_receiver.close();
-        if let Ok(Some(_node_commit)) = nodes[0].commit_cb_receiver.try_next() {
-            commit_seen = true;
-        }
-        assert!(commit_seen);
+        let node0_commit = nodes[0].commit_cb_receiver.next().await;
+        assert!(node0_commit.is_some());
 
-        // Check that the commit log for n1 is empty
-        commit_seen = false;
-        nodes[1].commit_cb_receiver.close();
-        if let Ok(Some(_node_commit)) = nodes[1].commit_cb_receiver.try_next() {
-            commit_seen = true;
-        }
-        assert!(!commit_seen);
+        // Check that the commit log for n2 is empty
+        let node2_commit = match nodes[2].commit_cb_receiver.try_next() {
+            Ok(Some(node_commit)) => Some(node_commit),
+            _ => None,
+        };
+        assert!(node2_commit.is_none());
     });
 }
 
@@ -319,7 +367,6 @@ fn drop_config_test() {
 ///
 /// Run the test:
 /// cargo xtest -p consensus twins_vote_dedup_test -- --nocapture
-#[cfg(test)]
 fn twins_vote_dedup_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -330,6 +377,7 @@ fn twins_vote_dedup_test() {
         num_twins,
         &mut playground,
         RotatingProposer,
+        None,
     );
 
     // 4 honest nodes
@@ -353,18 +401,173 @@ fn twins_vote_dedup_test() {
         // Pull enough votes to get a few commits.
         // The proposer's votes are implicit and do not go in the queue.
         playground
-            .wait_for_messages(30, NetworkPlayground::votes_only)
+            .wait_for_messages(50, NetworkPlayground::votes_only)
             .await;
 
         // No node should be able to commit because of the way partitions
         // have been created
         let mut commit_seen = false;
         for node in &mut nodes {
-            node.commit_cb_receiver.close();
             if let Ok(Some(_node_commit)) = node.commit_cb_receiver.try_next() {
                 commit_seen = true;
             }
         }
         assert!(!commit_seen);
+    });
+}
+
+#[test]
+/// This test checks that when a node becomes a proposer, its
+/// twin becomes one too.
+///
+/// Setup:
+///
+/// 4 honest nodes (n0, n1, n2, n3), and 2 twins (twin0, twin1)
+/// Create 2 partitions, p1=[n0, n1, n2], p2=[n3, twin0, twin1]
+/// Let n0 (and implicitly twin0) be proposers
+///
+/// Test:
+///
+/// Extract enough votes so nodes in both partitions form commits.
+/// The commits should be on two different blocks
+///
+/// Run the test:
+/// cargo xtest -p consensus twins_proposer_test -- --nocapture
+fn twins_proposer_test() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let num_nodes = 4;
+    let num_twins = 2;
+
+    // Specify round leaders
+    // Will default to the first node, if no leader specified for given round
+    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
+    // Leaders are n0 (and implicitly twin0) for round 1..10
+    for i in 1..10 {
+        round_proposers.insert(i, 0);
+    }
+
+    let (mut nodes, node_authors) = SMRNode::start_num_nodes_with_twins(
+        num_nodes,
+        num_twins,
+        &mut playground,
+        RoundProposer(HashMap::new()),
+        Some(round_proposers),
+    );
+
+    // 4 honest nodes
+    let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
+    // twin of n0 has same author as node_authors[0]
+    let twin0_twin_id = *playground.get_twin_ids(node_authors[0]).get(1).unwrap();
+    let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
+    // twin of n1 has same author as node_authors[1]
+    let twin1_twin_id = *playground.get_twin_ids(node_authors[1]).get(1).unwrap();
+    let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
+    let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
+
+    // Create per round partitions
+    let mut round_partitions: HashMap<u64, Vec<Vec<TwinId>>> = HashMap::new();
+    // Round 1 to 10 partitions: [node0, node1, node2], [node3, twin0, twin1]
+    for i in 1..10 {
+        round_partitions.insert(
+            i,
+            vec![
+                vec![n0_twin_id, n1_twin_id, n2_twin_id],
+                vec![n3_twin_id, twin0_twin_id, twin1_twin_id],
+            ],
+        );
+    }
+    assert!(playground.split_network_round(&round_partitions));
+
+    timed_block_on(&mut runtime, async {
+        // Pull two proposals (by n0 and twin0)
+        playground
+            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .await;
+
+        // Pull enough votes to get a few commits.
+        playground
+            .wait_for_messages(50, NetworkPlayground::votes_only)
+            .await;
+
+        let node0_commit = nodes[0].commit_cb_receiver.next().await;
+        let twin0_commit = nodes[4].commit_cb_receiver.next().await;
+
+        match (node0_commit, twin0_commit) {
+            (Some(node0_commit_inner), Some(twin0_commit_inner)) => {
+                let node0_commit_id = node0_commit_inner.ledger_info().commit_info().id();
+                let twin0_commit_id = twin0_commit_inner.ledger_info().commit_info().id();
+                // Proposal from both node0 and twin_node0 are going to
+                // get committed in their respective partitions
+                assert_ne!(node0_commit_id, twin0_commit_id);
+            }
+            _ => panic!("[TwinsTest] Test failed due to no commit(s)"),
+        }
+    });
+}
+
+#[test]
+/// This test checks that when a node and its twin are both leaders
+/// for a round, only one of the two proposals gets committed
+///
+/// Setup:
+///
+/// Network of 4 nodes (n0, n1, n2, n3), and 1 twin (twin0)
+///
+/// Test:
+///
+/// Let n0 (and implicitly twin0) be proposers
+/// Pull out enough votes so a commit can be formed
+/// Check that the commit of n0 and twin0 matches
+///
+/// Run the test:
+/// cargo xtest -p consensus twins_commit_test -- --nocapture
+fn twins_commit_test() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let num_nodes = 4;
+    let num_twins = 1;
+
+    // Specify round leaders
+    // Will default to the first node, if no leader specified for given round
+    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
+    // Leaders are n0 and twin0 for round 1..10
+    for i in 1..10 {
+        round_proposers.insert(i, 0);
+    }
+
+    let (mut nodes, _node_authors) = SMRNode::start_num_nodes_with_twins(
+        num_nodes,
+        num_twins,
+        &mut playground,
+        RoundProposer(HashMap::new()),
+        Some(round_proposers),
+    );
+
+    timed_block_on(&mut runtime, async {
+        // Pull two proposals (by n0 and twin0)
+        playground
+            .wait_for_messages(2, NetworkPlayground::proposals_only)
+            .await;
+
+        // Pull enough votes to get a few commits.
+        // The proposer's votes are implicit and do not go in the queue.
+        playground
+            .wait_for_messages(50, NetworkPlayground::votes_only)
+            .await;
+
+        let node0_commit = nodes[0].commit_cb_receiver.next().await;
+        let twin0_commit = nodes[4].commit_cb_receiver.next().await;
+
+        match (node0_commit, twin0_commit) {
+            (Some(node0_commit_inner), Some(twin0_commit_inner)) => {
+                let node0_commit_id = node0_commit_inner.ledger_info().commit_info().id();
+                let twin0_commit_id = twin0_commit_inner.ledger_info().commit_info().id();
+                // Proposals from both node0 and twin_node0 are going to race,
+                // but only one of them will form a commit
+                assert_eq!(node0_commit_id, twin0_commit_id);
+            }
+            _ => panic!("[TwinsTest] Test failed due to no commit(s)"),
+        }
     });
 }

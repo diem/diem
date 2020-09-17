@@ -177,6 +177,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                disable_cas: None,
             }),
             validator_backend: SecureBackend::Vault(VaultConfig {
                 namespace: None,
@@ -184,6 +185,7 @@ mod tests {
                 ca_certificate: None,
                 token: Token::FromConfig("test".to_string()),
                 renew_ttl_secs: None,
+                disable_cas: None,
             }),
         };
 

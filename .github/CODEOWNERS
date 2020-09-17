@@ -1,3 +1,6 @@
+# Substribe to CI changes
+/.circleci/ @libra/libra-oss-admin-team
+/.github/ @libra/libra-oss-admin-team
 # Subscribe to crypto crate changing PRs
 /crypto @kchalkias @huitseeker @valerini
 # Subscribe to potential JSON API changing PRs

@@ -8,40 +8,57 @@ use 0x1::DualAttestation;
 use 0x1::Signer;
 use 0x1::VASP;
 
-/// Transfer `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
+/// # Summary
+/// Transfers a given number of coins in a specified currency from one account to another.
+/// Transfers over a specified amount defined on-chain that are between two different VASPs, or
+/// other accounts that have opted-in will be subject to on-chain checks to ensure the receiver has
+/// agreed to receive the coins.  This transaction can be sent by any account that can hold a
+/// balance, and to any account that can hold a balance. Both accounts must hold balances in the
+/// currency being transacted.
+///
+/// # Technical Description
+///
+/// Transfers `amount` coins of type `Currency` from `payer` to `payee` with (optional) associated
 /// `metadata` and an (optional) `metadata_signature` on the message
 /// `metadata` | `Signer::address_of(payer)` | `amount` | `DualAttestation::DOMAIN_SEPARATOR`.
 /// The `metadata` and `metadata_signature` parameters are only required if `amount` >=
 /// `DualAttestation::get_cur_microlibra_limit` LBR and `payer` and `payee` are distinct VASPs.
-/// However, a transaction sender can opt in to dual attestation even when it is not required (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
+/// However, a transaction sender can opt in to dual attestation even when it is not required
+/// (e.g., a DesignatedDealer -> VASP payment) by providing a non-empty `metadata_signature`.
 /// Standardized `metadata` LCS format can be found in `libra_types::transaction::metadata::Metadata`.
 ///
 /// ## Events
-/// When this script executes without aborting, it emits two events:
-/// `SentPaymentEvent { amount, currency_code = Currency, payee, metadata }`
-/// on `payer`'s `LibraAccount::sent_events` handle, and
-///  `ReceivedPaymentEvent { amount, currency_code = Currency, payer, metadata }`
-/// on `payee`'s `LibraAccount::received_events` handle.
+/// Successful execution of this script emits two events:
+/// * A `LibraAccount::SentPaymentEvent` on `payer`'s `LibraAccount::LibraAccount` `sent_events` handle; and
+/// * A `LibraAccount::ReceivedPaymentEvent` on `payee`'s `LibraAccount::LibraAccount` `received_events` handle.
 ///
-/// ## Common Aborts
-/// These aborts can in occur in any payment.
-/// * Aborts with `LibraAccount::EINSUFFICIENT_BALANCE` if `amount` is greater than `payer`'s balance in `Currency`.
-/// * Aborts with `LibraAccount::ECOIN_DEPOSIT_IS_ZERO` if `amount` is zero.
-/// * Aborts with `LibraAccount::EPAYEE_DOES_NOT_EXIST` if no account exists at the address `payee`.
-/// * Aborts with `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` if an account exists at `payee`, but it does not accept payments in `Currency`.
+/// # Parameters
+/// | Name                 | Type         | Description                                                                                                                  |
+/// | ------               | ------       | -------------                                                                                                                |
+/// | `Currency`           | Type         | The Move type for the `Currency` being sent in this transaction. `Currency` must be an already-registered currency on-chain. |
+/// | `payer`              | `&signer`    | The signer reference of the sending account that coins are being transferred from.                                           |
+/// | `payee`              | `address`    | The address of the account the coins are being transferred to.                                                               |
+/// | `metadata`           | `vector<u8>` | Optional metadata about this payment.                                                                                        |
+/// | `metadata_signature` | `vector<u8>` | Optional signature over `metadata` and payment information. See                                                              |
 ///
-/// ## Dual Attestation Aborts
-/// These aborts can occur in any payment subject to dual attestation.
-/// * Aborts with `DualAttestation::EMALFORMED_METADATA_SIGNATURE` if `metadata_signature`'s is not 64 bytes.
-/// * Aborts with `DualAttestation:EINVALID_METADATA_SIGNATURE` if `metadata_signature` does not verify on the message `metadata` | `payer` | `value` | `DOMAIN_SEPARATOR` using the `compliance_public_key` published in the `payee`'s `DualAttestation::Credential` resource.
+/// # Common Abort Conditions
+/// | Error Category             | Error Reason                                     | Description                                                                                                                         |
+/// | ----------------           | --------------                                   | -------------                                                                                                                       |
+/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYER_DOESNT_HOLD_CURRENCY`      | `payer` doesn't hold a balance in `Currency`.                                                                                       |
+/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EINSUFFICIENT_BALANCE`            | `amount` is greater than `payer`'s balance in `Currency`.                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::ECOIN_DEPOSIT_IS_ZERO`            | `amount` is zero.                                                                                                                   |
+/// | `Errors::NOT_PUBLISHED`    | `LibraAccount::EPAYEE_DOES_NOT_EXIST`            | No account exists at the `payee` address.                                                                                           |
+/// | `Errors::INVALID_ARGUMENT` | `LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE` | An account exists at `payee`, but it does not accept payments in `Currency`.                                                        |
+/// | `Errors::INVALID_STATE`    | `AccountFreezing::EACCOUNT_FROZEN`               | The `payee` account is frozen.                                                                                                      |
+/// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EMALFORMED_METADATA_SIGNATURE` | `metadata_signature` is not 64 bytes.                                                                                               |
+/// | `Errors::INVALID_ARGUMENT` | `DualAttestation::EINVALID_METADATA_SIGNATURE`   | `metadata_signature` does not verify on the against the `payee'`s `DualAttestation::Credential` `compliance_public_key` public key. |
+/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS`       | `payer` has exceeded its daily withdrawal limits for the backing coins of LBR.                                                      |
+/// | `Errors::LIMIT_EXCEEDED`   | `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS`          | `payee` has exceeded its daily deposit limits for LBR.                                                                              |
 ///
-/// ## Other Aborts
-/// These aborts should only happen when `payer` or `payee` have account limit restrictions or
-/// have been frozen by Libra administrators.
-/// * Aborts with `LibraAccount::EWITHDRAWAL_EXCEEDS_LIMITS` if `payer` has exceeded their daily
-/// withdrawal limits.
-/// * Aborts with `LibraAccount::EDEPOSIT_EXCEEDS_LIMITS` if `payee` has exceeded their daily deposit limits.
-/// * Aborts with `LibraAccount::EACCOUNT_FROZEN` if `payer`'s account is frozen.
+/// # Related Scripts
+/// * `Script::create_child_vasp_account`
+/// * `Script::create_parent_vasp_account`
+/// * `Script::add_currency_to_account`
 
 fun peer_to_peer_with_metadata<Currency>(
     payer: &signer,

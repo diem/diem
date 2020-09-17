@@ -10,10 +10,7 @@
 //!
 //! [stream]: network::noise::stream
 
-use crate::{
-    logging::{network_events, network_log},
-    noise::stream::NoiseStream,
-};
+use crate::{logging::NetworkSchema, noise::stream::NoiseStream};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_config::network_id::NetworkContext;
 use libra_crypto::{noise, x25519};
@@ -256,26 +253,26 @@ impl NoiseUpgrader {
 
         // send the first handshake message
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "client")
-                .data("step", "writing_data")
-                .message(format!(
-                    "{} noise client writing_data: {}",
-                    self.network_context, remote_public_key
-                ))
+            NetworkSchema::new(&self.network_context),
+            noise_role = "client",
+            step = "writing_data",
+            remote_public_key = remote_public_key,
+            "{} noise client writing_data: {}",
+            self.network_context,
+            remote_public_key
         );
         socket.write_all(&client_message).await?;
         socket.flush().await?;
 
         // receive the server's response (<- e, ee, se)
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "client")
-                .data("step", "reading_data")
-                .message(format!(
-                    "{} noise client reading_data: {}",
-                    self.network_context, remote_public_key
-                ))
+            NetworkSchema::new(&self.network_context),
+            noise_role = "client",
+            step = "reading_data",
+            remote_public_key = remote_public_key,
+            "{} noise client reading_data: {}",
+            self.network_context,
+            remote_public_key
         );
         let mut server_response = [0u8; Self::SERVER_MESSAGE_SIZE];
         socket.read_exact(&mut server_response).await?;
@@ -283,13 +280,13 @@ impl NoiseUpgrader {
         // parse the server's response
         // TODO: security logging here? (mimoo)
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "client")
-                .data("step", "finalizing")
-                .message(format!(
-                    "{} noise client finalize: {}",
-                    self.network_context, remote_public_key
-                ))
+            NetworkSchema::new(&self.network_context),
+            noise_role = "client",
+            step = "finalizing",
+            remote_public_key = remote_public_key,
+            "{} noise client finalize: {}",
+            self.network_context,
+            remote_public_key
         );
         let (_, session) = self
             .noise_config
@@ -320,13 +317,12 @@ impl NoiseUpgrader {
 
         // receive the prologue + first noise handshake message
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "server")
-                .data("step", "reading_data")
-                .message(format!(
-                    "{} noise server reading_data: {:?}",
-                    self.network_context, socket
-                ))
+            NetworkSchema::new(&self.network_context),
+            noise_role = "server",
+            step = "reading_data",
+            "{} noise client finalize: {:?}",
+            self.network_context,
+            socket
         );
         socket.read_exact(&mut client_message).await?;
 
@@ -475,25 +471,23 @@ impl NoiseUpgrader {
 
         // send the response
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "server")
-                .data("step", "writing_data")
-                .message(format!(
-                    "{} noise server writing_data: {}",
-                    self.network_context, remote_peer_id
-                ))
+            NetworkSchema::new(&self.network_context).remote_peer(&remote_peer_id),
+            noise_role = "server",
+            step = "writing_data",
+            "{} noise server writing_data: {}",
+            self.network_context,
+            remote_peer_id.short_str()
         );
         socket.write_all(&server_response).await?;
 
         // finalize the connection
         debug!(
-            network_log(network_events::NOISE_UPGRADE, &self.network_context)
-                .data("role", "server")
-                .data("step", "finalize")
-                .message(format!(
-                    "{} noise server finalize: {}",
-                    self.network_context, remote_peer_id
-                ))
+            NetworkSchema::new(&self.network_context).remote_peer(&remote_peer_id),
+            noise_role = "server",
+            step = "finalize",
+            "{} noise server finalize: {}",
+            self.network_context,
+            remote_peer_id.short_str()
         );
         Ok((NoiseStream::new(socket, session), remote_peer_id))
     }

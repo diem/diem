@@ -17,6 +17,7 @@ use libra_types::{
 use std::{collections::HashSet, num::NonZeroUsize};
 
 pub struct SubscriptionService<T, U> {
+    pub name: String,
     subscribed_items: T,
     sender: Sender<(), U>,
 }
@@ -24,11 +25,12 @@ pub struct SubscriptionService<T, U> {
 impl<T: Clone, U> SubscriptionService<T, U> {
     /// Constructs an subscription object for `items`
     /// Returns the subscription object, and the receiving end of a channel that subscription will be sent to
-    pub fn subscribe(items: T) -> (Self, Receiver<(), U>) {
+    pub fn subscribe(name: &str, items: T) -> (Self, Receiver<(), U>) {
         let (sender, receiver) =
             libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
         (
             Self {
+                name: name.to_string(),
                 sender,
                 subscribed_items: items,
             },
@@ -66,11 +68,15 @@ impl SubscriptionBundle {
 }
 
 impl ReconfigSubscription {
+    // Creates a subscription service named `name` that subscribes to changes in configs specified in `configs`
+    // and emission of events specified in `events`
+    // Returns (subscription service, endpoint that listens to the service)
     pub fn subscribe_all(
+        name: &str,
         configs: Vec<ConfigID>,
         events: Vec<EventKey>,
     ) -> (Self, Receiver<(), OnChainConfigPayload>) {
         let bundle = SubscriptionBundle::new(configs, events);
-        Self::subscribe(bundle)
+        Self::subscribe(name, bundle)
     }
 }

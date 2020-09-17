@@ -333,6 +333,10 @@ pub fn parse_type_tags(s: &str) -> Result<Vec<TypeTag>> {
     })
 }
 
+pub fn parse_type_tag(s: &str) -> Result<TypeTag> {
+    parse(s, |parser| parser.parse_type_tag())
+}
+
 pub fn parse_transaction_arguments(s: &str) -> Result<Vec<TransactionArgument>> {
     parse(s, |parser| {
         parser.parse_comma_list(

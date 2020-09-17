@@ -58,7 +58,7 @@ prop_compose! {
         (existent_kvs, nonexistent_keys) in hash_map(
             any::<HashValue>(),
             any::<AccountStateBlob>(),
-            0..num_kvs,
+            1..num_kvs,
         )
             .prop_flat_map(move |kvs| {
                 let kvs_clone = kvs.clone();

@@ -45,14 +45,12 @@ We represent these as the following resource.
 
 <dl>
 <dt>
-
 <code>script_allow_list: vector&lt;vector&lt;u8&gt;&gt;</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>module_publishing_allowed: bool</code>
 </dt>
 <dd>
@@ -69,7 +67,7 @@ We represent these as the following resource.
 
 
 
-<pre><code><b>const</b> SCRIPT_HASH_LENGTH: u64 = 32;
+<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>: u64 = 32;
 </code></pre>
 
 
@@ -81,7 +79,7 @@ We represent these as the following resource.
 The script hash has an invalid length
 
 
-<pre><code><b>const</b> EINVALID_SCRIPT_HASH: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>: u64 = 0;
 </code></pre>
 
 
@@ -93,7 +91,7 @@ The script hash has an invalid length
 The script hash already exists in the allowlist
 
 
-<pre><code><b>const</b> EALLOWLIST_ALREADY_CONTAINS_SCRIPT: u64 = 1;
+<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>: u64 = 1;
 </code></pre>
 
 
@@ -206,11 +204,11 @@ The script hash already exists in the allowlist
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_hash) == SCRIPT_HASH_LENGTH, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EINVALID_SCRIPT_HASH));
+    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_hash) == <a href="#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>));
 
     <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
     <b>if</b> (<a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&publish_option.script_allow_list, &new_hash)) {
-          <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
+          <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>)
     };
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> publish_option.script_allow_list, new_hash);
 
@@ -327,7 +325,7 @@ Must abort if the signer does not have the LibraRoot role [B20].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+aborts_with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -351,7 +349,7 @@ Must abort if the signer does not have the LibraRoot role [B20].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+aborts_with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -375,7 +373,7 @@ Must abort if the signer does not have the LibraRoot role [B20].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+aborts_with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 

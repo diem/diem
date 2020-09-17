@@ -108,6 +108,8 @@ use once_cell::sync::{Lazy, OnceCell};
 use proptest_derive::Arbitrary;
 use rand::{rngs::OsRng, Rng};
 use serde::{de, ser};
+use short_hex_str::ShortHexStr;
+use static_assertions::const_assert;
 use std::{self, convert::AsRef, fmt, str::FromStr};
 use tiny_keccak::{Hasher, Sha3};
 
@@ -115,7 +117,6 @@ use tiny_keccak::{Hasher, Sha3};
 /// consists in this global prefix, concatenated with the specified
 /// serialization name of the struct.
 pub(crate) const LIBRA_HASH_PREFIX: &[u8] = b"LIBRA::";
-const SHORT_STRING_LENGTH: usize = 4;
 
 /// Output value of our hash function. Intentionally opaque for safety and modularity.
 #[derive(Clone, Copy, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -256,9 +257,11 @@ impl HashValue {
         })
     }
 
-    /// Returns first SHORT_STRING_LENGTH bytes as String in hex
-    pub fn short_str(&self) -> String {
-        hex::encode(&self.hash[..SHORT_STRING_LENGTH])
+    /// Returns first 4 bytes as hex-formatted string
+    pub fn short_str(&self) -> ShortHexStr {
+        const_assert!(HashValue::LENGTH >= ShortHexStr::SOURCE_LENGTH);
+        ShortHexStr::try_from_bytes(&self.hash)
+            .expect("This can never fail since HashValue::LENGTH >= ShortHexStr::SOURCE_LENGTH")
     }
 
     /// Full hex representation of a given hash value.

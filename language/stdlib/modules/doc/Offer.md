@@ -39,14 +39,12 @@
 
 <dl>
 <dt>
-
 <code>offered: Offered</code>
 </dt>
 <dd>
 
 </dd>
 <dt>
-
 <code>for: address</code>
 </dt>
 <dd>
@@ -64,7 +62,7 @@
 An offer of the specified type for the account does not exist
 
 
-<pre><code><b>const</b> EOFFER_DNE_FOR_ACCOUNT: u64 = 0;
+<pre><code><b>const</b> <a href="#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT">EOFFER_DNE_FOR_ACCOUNT</a>: u64 = 0;
 </code></pre>
 
 
@@ -111,7 +109,7 @@ An offer of the specified type for the account does not exist
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x1_Offer">Offer</a> {
   <b>let</b> <a href="#0x1_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-  <b>assert</b>(sender == for || sender == offer_address, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(EOFFER_DNE_FOR_ACCOUNT));
+  <b>assert</b>(sender == for || sender == offer_address, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_Offer_EOFFER_DNE_FOR_ACCOUNT">EOFFER_DNE_FOR_ACCOUNT</a>));
   offered
 }
 </code></pre>
@@ -178,11 +176,9 @@ An offer of the specified type for the account does not exist
 ### Module specification
 
 
-This module defines a resource
-<code><a href="#0x1_Offer">Offer</a></code> that is used as a permissioned trading scheme between accounts.
+This module defines a resource <code><a href="#0x1_Offer">Offer</a></code> that is used as a permissioned trading scheme between accounts.
 It defines two main functions for creating and retrieving a struct offered by some user
-inside the resource
-<code><a href="#0x1_Offer">Offer</a></code> under the offerer's account.
+inside the resource <code><a href="#0x1_Offer">Offer</a></code> under the offerer's account.
 
 Currently, the only other module that depends on this module is LibraConfig, where it's used to
 pass a capability to an account that allows it to modify a config.
@@ -195,14 +191,9 @@ Verify all functions in this module
 </code></pre>
 
 
-Helper function that returns whether or not the
-<code>recipient</code> is an intended
-recipient of the offered struct in the
-<code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> resource at the address
-<code>offer_address</code>
-Returns true if the recipient is allowed to redeem
-<code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> at
-<code>offer_address</code>
+Helper function that returns whether or not the <code>recipient</code> is an intended
+recipient of the offered struct in the <code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> resource at the address <code>offer_address</code>
+Returns true if the recipient is allowed to redeem <code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> at <code>offer_address</code>
 and false otherwise.
 
 TODO (dd): this is undefined if the offer does not exist. Should this be anded with
@@ -239,13 +230,10 @@ Mirrors the Move function exists_at<Offered>, above.
 
 <a name="0x1_Offer_OnlyCreateCanCreateOffer"></a>
 
-Only
-<code><a href="#0x1_Offer_create">Self::create</a></code> can create a resource
-<code><a href="#0x1_Offer">Offer</a></code> under an address.
+Only <code><a href="#0x1_Offer_create">Self::create</a></code> can create a resource <code><a href="#0x1_Offer">Offer</a></code> under an address.
 
 **Informally:** No function to which this is applied can create an offer.
-If there didn't exist an offer under some
-<code>addr</code>, then it continues
+If there didn't exist an offer under some <code>addr</code>, then it continues
 not to have one.
 
 
@@ -273,12 +261,9 @@ Apply OnlyCreateCanCreateOffer
 
 <a name="0x1_Offer_OnlyRedeemCanRemoveOffer"></a>
 
-Only
-<code><a href="#0x1_Offer_redeem">Self::redeem</a></code> can remove the
-<code><a href="#0x1_Offer">Offer</a></code> resource from an account.
+Only <code><a href="#0x1_Offer_redeem">Self::redeem</a></code> can remove the <code><a href="#0x1_Offer">Offer</a></code> resource from an account.
 
-**Informally:** No other function except for
-<code>redeem</code> can remove an offer from an account.
+**Informally:** No other function except for <code>redeem</code> can remove an offer from an account.
 
 
 <pre><code><b>schema</b> <a href="#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> {
@@ -289,8 +274,7 @@ Only
 
 
 
-Enforce that every function except
-<code><a href="#0x1_Offer_redeem">Self::redeem</a></code> can remove an offer from the global store.
+Enforce that every function except <code><a href="#0x1_Offer_redeem">Self::redeem</a></code> can remove an offer from the global store.
 
 
 <pre><code><b>apply</b> <a href="#0x1_Offer_OnlyRedeemCanRemoveOffer">OnlyRedeemCanRemoveOffer</a> <b>to</b> *&lt;Offered&gt;, * <b>except</b> redeem;
@@ -309,8 +293,7 @@ Enforce that every function except
 
 
 
-Offer a struct to the account under address
-<code>for</code> by
+Offer a struct to the account under address <code>for</code> by
 placing the offer under the signer's address
 
 
@@ -331,11 +314,9 @@ placing the offer under the signer's address
 
 
 
-Aborts if there is no offer under
-<code>offer_address</code> or if the account
+Aborts if there is no offer under <code>offer_address</code> or if the account
 cannot redeem the offer.
-Ensures that the offered struct under
-<code>offer_address</code> is removed is returned.
+Ensures that the offered struct under <code>offer_address</code> is removed is returned.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
@@ -356,9 +337,7 @@ Ensures that the offered struct under
 
 
 
-Returns whether or not an
-<code><a href="#0x1_Offer">Offer</a></code> resource is under the given address
-<code>offer_address</code>.
+Returns whether or not an <code><a href="#0x1_Offer">Offer</a></code> resource is under the given address <code>offer_address</code>.
 
 
 <pre><code><b>ensures</b> result == exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
@@ -376,12 +355,9 @@ Returns whether or not an
 
 
 
-Aborts is there is no offer resource
-<code><a href="#0x1_Offer">Offer</a></code> at the
-<code>offer_address</code>.
+Aborts is there is no offer resource <code><a href="#0x1_Offer">Offer</a></code> at the <code>offer_address</code>.
 Returns the address of the intended recipient of the Offer
-under the
-<code>offer_address</code>.
+under the <code>offer_address</code>.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);

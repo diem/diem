@@ -14,7 +14,7 @@ structopt = "0.3.17"
 rand = "0.7.3"
 hex = "0.4.2"
 serde_json = "1.0.57"
-serde = { version = "1.0.115", features = ["derive"] }
+serde = { version = "1.0.116", features = ["derive"] }
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-types = { path = "../../types", version = "0.1.0" }

@@ -53,6 +53,10 @@ impl ExecutedBlock {
         self.block().id()
     }
 
+    pub fn epoch(&self) -> u64 {
+        self.block.epoch()
+    }
+
     pub fn payload(&self) -> Option<&Payload> {
         self.block().payload()
     }

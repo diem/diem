@@ -170,7 +170,7 @@ pub(crate) async fn coordinator<V>(
                     Err(e) => {
                         error!(
                             SecurityEvent::InvalidNetworkEventMempool,
-                            StructuredLogEntry::default().data_display("error", &e),
+                            error = e.to_string()
                         );
                     }
                 };

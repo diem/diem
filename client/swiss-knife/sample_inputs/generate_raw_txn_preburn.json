@@ -6,7 +6,7 @@
     "gas_unit_price": 0,
     "gas_currency_code": "LBR",
     "chain_id": "TESTING",
-    "expiration_timestamp": 1593189628
+    "expiration_timestamp_secs": 1593189628
   },
   "script_params": {
     "preburn": {

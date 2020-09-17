@@ -184,7 +184,7 @@ fn test_transport_success<TTransport>(
         let mut conn = inbound.await.unwrap();
 
         // check connection metadata
-        assert_eq!(conn.metadata.peer_id, dialer_peer_id);
+        assert_eq!(conn.metadata.remote_peer_id, dialer_peer_id);
         expect_formatted_addr(&conn.metadata.addr);
         assert_eq!(conn.metadata.origin, ConnectionOrigin::Inbound);
         assert_eq!(
@@ -213,7 +213,7 @@ fn test_transport_success<TTransport>(
             .unwrap();
 
         // check connection metadata
-        assert_eq!(conn.metadata.peer_id, listener_peer_id);
+        assert_eq!(conn.metadata.remote_peer_id, listener_peer_id);
         assert_eq!(conn.metadata.addr, listener_addr);
         assert_eq!(conn.metadata.origin, ConnectionOrigin::Outbound);
         assert_eq!(

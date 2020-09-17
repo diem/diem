@@ -296,6 +296,9 @@ jobs:
             }
             // Post test result on original pull request
             try {
+              if (!should_fail) {
+                body += "\n :tada: Land-blocking cluster test passed! :ok_hand:"
+              }
               await github.issues.createComment(
                   {
                     issue_number: pr_num,

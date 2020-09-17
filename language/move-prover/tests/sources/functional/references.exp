@@ -8,14 +8,13 @@ error: function does not abort under this condition
     │
     =     at tests/sources/functional/references.move:58:5: mut_ref_incorrect
     =         b = <redacted>,
-    =         b = <redacted>,
-    =         b_ref = <redacted>
+    =         b = <redacted>
     =     at tests/sources/functional/references.move:59:13: mut_ref_incorrect
     =     at tests/sources/functional/references.move:43:5: mut_b
     =         b = <redacted>,
+    =         $t1 = <redacted>,
     =         result = <redacted>
     =     at tests/sources/functional/references.move:44:16: mut_b
     =     at tests/sources/functional/references.move:43:9: mut_b
-    =     at tests/sources/functional/references.move:63:28: mut_ref_incorrect
     =     at tests/sources/functional/references.move:62:13: mut_ref_incorrect
-    =     at tests/sources/functional/references.move:63:28: mut_ref_incorrect
+    =     at tests/sources/functional/references.move:63:9: mut_ref_incorrect

@@ -3,7 +3,7 @@ FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d239
 # To use http/https proxy while building, use:
 # docker build --build-arg https_proxy=http://fwdproxy:8080 --build-arg http_proxy=http://fwdproxy:8080
 
-RUN apt-get update && apt-get install -y cmake curl clang git
+RUN apt-get update && apt-get install -y cmake curl clang git pkg-config libssl-dev
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
 ENV PATH "$PATH:/root/.cargo/bin"
@@ -25,7 +25,7 @@ RUN ./docker/build-common.sh
 ### Production Image ###
 FROM debian:buster-20200803@sha256:a44ab0cca6cd9411032d180bc396f19bc98f71972d2398d50460145cab81c5ab  AS prod
 
-RUN apt-get update && apt-get -y install wget busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
+RUN apt-get update && apt-get -y install libssl1.1 wget busybox gettext-base && apt-get clean && rm -r /var/lib/apt/lists/*
 RUN cd /usr/local/bin && busybox wget "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
 RUN cd /usr/local/bin && busybox wget "https://releases.hashicorp.com/vault/1.5.0/vault_1.5.0_linux_amd64.zip" -O - | busybox unzip - && chmod +x vault
 

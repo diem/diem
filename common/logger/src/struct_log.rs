@@ -1,117 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::counters::{STRUCT_LOG_CONNECT_ERROR_COUNT, STRUCT_LOG_TCP_CONNECT_COUNT};
-use serde::Serialize;
-use serde_json::Value;
 use std::{
-    collections::HashMap,
-    fmt::Display,
     io,
     io::Write,
-    marker::PhantomData,
     net::{TcpStream, ToSocketAddrs},
     time::Duration,
 };
 
 const WRITE_TIMEOUT_MS: u64 = 2000;
 const CONNECTION_TIMEOUT_MS: u64 = 5000;
-
-#[derive(Debug, Serialize)]
-pub struct StructuredLogEntry {
-    /// log message set by macros like info!
-    #[serde(skip_serializing_if = "Option::is_none")]
-    message: Option<String>,
-    /// category of the event
-    #[serde(skip_serializing_if = "Option::is_none")]
-    category: Option<&'static str>,
-    /// name of the event
-    #[serde(skip_serializing_if = "Option::is_none")]
-    name: Option<&'static str>,
-    /// arbitrary data that can be logged
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
-    data: HashMap<&'static str, Value>,
-}
-
-impl Default for StructuredLogEntry {
-    fn default() -> Self {
-        Self {
-            message: None,
-            category: None,
-            name: None,
-            data: Default::default(),
-        }
-    }
-}
-
-impl crate::Schema for StructuredLogEntry {
-    fn visit(&self, visitor: &mut dyn crate::Visitor) {
-        use crate::{Key, Value};
-
-        for (key, val) in &self.data {
-            visitor.visit_pair(Key::new(key), Value::from_serde(val));
-        }
-    }
-}
-
-impl StructuredLogEntry {
-    /// Creates a log with a category and a name.  This should be preferred
-    pub fn new_named(category: &'static str, name: &'static str) -> Self {
-        let mut ret = Self::default();
-        ret.category = Some(category);
-        ret.name = Some(name);
-        ret
-    }
-
-    fn json_data(mut self, key: &'static str, value: Value) -> Self {
-        self.data.insert(key, value);
-        self
-    }
-
-    /// Add a data field, with a given value, will serialize into JSON and be indexed accordingly
-    pub fn data<D: Serialize>(self, key: &'static str, value: D) -> Self {
-        self.json_data(
-            key,
-            serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),
-        )
-    }
-
-    /// Used for errors and other types that don't serialize well
-    pub fn data_display<D: Display>(self, key: &'static str, value: D) -> Self {
-        self.data(key, value.to_string())
-    }
-
-    /// Add a typed data field to serialize, to ensure type and name consistency
-    pub fn field<D: Serialize>(self, field: &LoggingField<D>, value: D) -> Self {
-        self.data(field.0, value)
-    }
-
-    /// Sets the context log line used for text logs.  This is useful for migration of text logs
-    pub fn message(mut self, message: String) -> Self {
-        self.message = Some(message);
-        self
-    }
-}
-
-/// Field is similar to .data but restricts type of the value to a specific type.
-///
-/// Example:
-///
-/// mod logging {
-///    pub const MY_FIELD:LoggingField<u64> = LoggingField::new("my_field");
-/// }
-///
-/// mod my_code {
-///    fn my_fn() {
-///        info!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
-///    }
-/// }
-pub struct LoggingField<D>(&'static str, PhantomData<D>);
-
-impl<D> LoggingField<D> {
-    pub const fn new(name: &'static str) -> Self {
-        Self(name, PhantomData)
-    }
-}
 
 /// A wrapper for `TcpStream` that handles reconnecting to the endpoint automatically
 ///
