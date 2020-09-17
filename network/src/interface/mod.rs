@@ -225,7 +225,7 @@ where
                 .then(|_| async move {
                     info!(
                         NetworkSchema::new(&network_context).remote_peer(&peer_id),
-                        "{} Network provider actor terminating for peer: {}",
+                        "{} Network peer actor terminating for peer: {}",
                         network_context,
                         peer_id.short_str()
                     );
