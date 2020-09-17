@@ -90,7 +90,7 @@ module LibraTransactionPublishingOption {
         /// Must abort if the signer does not have the LibraRoot role [B20].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
         // TODO(jkpark): this spec block is incomplete.
     }
 
@@ -107,7 +107,7 @@ module LibraTransactionPublishingOption {
         /// Must abort if the signer does not have the LibraRoot role [B20].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
         // TODO(jkpark): this spec block is incomplete.
     }
 
@@ -125,7 +125,7 @@ module LibraTransactionPublishingOption {
         /// Must abort if the signer does not have the LibraRoot role [B20].
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
 
-        aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
+        aborts_with Errors::INVALID_STATE, Errors::INVALID_ARGUMENT, Errors::REQUIRES_CAPABILITY, Errors::NOT_PUBLISHED;
         // TODO(jkpark): this spec block is incomplete.
     }
 

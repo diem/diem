@@ -75,8 +75,6 @@ module RegisteredCurrencies {
     // **************** Global Specification ****************
 
     spec module {
-        pragma verify = true;
-
         /// Helper to get the currency code vector.
         define get_currency_codes(): vector<vector<u8>> {
             LibraConfig::get<RegisteredCurrencies>().currency_codes

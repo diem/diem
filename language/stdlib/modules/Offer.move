@@ -51,8 +51,6 @@ module Offer {
   pass a capability to an account that allows it to modify a config.
   */
   spec module {
-    /// Verify all functions in this module
-    pragma verify = true;
     /// Helper function that returns whether or not the `recipient` is an intended
     /// recipient of the offered struct in the `Offer<Offered>` resource at the address `offer_address`
     /// Returns true if the recipient is allowed to redeem `Offer<Offered>` at `offer_address`

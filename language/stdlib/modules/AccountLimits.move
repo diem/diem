@@ -6,9 +6,6 @@ module AccountLimits {
     use 0x1::Roles;
     use 0x1::Signer;
 
-    spec module {
-        pragma verify;
-    }
     /// An operations capability that restricts callers of this module since
     /// the operations can mutate account states.
     resource struct AccountLimitMutationCapability { }

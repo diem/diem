@@ -128,14 +128,6 @@ Tried to set an invalid major version for the VM. Major versions must be strictl
 ## Specification
 
 
-Verify all functions in this module.
-
-
-<pre><code>pragma verify;
-</code></pre>
-
-
-
 <a name="0x1_LibraVersion_Specification_initialize"></a>
 
 ### Function `initialize`

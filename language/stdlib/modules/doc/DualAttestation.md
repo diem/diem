@@ -1331,11 +1331,6 @@ The Limit resource should be published after genesis
 
 
 
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
 Helper function to determine whether the Limit is published.
 
 

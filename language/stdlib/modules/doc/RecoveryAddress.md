@@ -392,12 +392,6 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
 ### Module specifications
 
 
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-
 Returns true if <code>addr</code> is a recovery address.
 
 

@@ -31,7 +31,7 @@
     -  [Function `is_same_vasp`](#0x1_VASP_Specification_is_same_vasp)
     -  [Function `num_children`](#0x1_VASP_Specification_num_children)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
-    -  [Existence of Parents](#0x1_VASP_@Existence_of_Parents)
+        -  [Existence of Parents](#0x1_VASP_@Existence_of_Parents)
         -  [Mutation](#0x1_VASP_@Mutation)
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
@@ -643,15 +643,9 @@ condition.
 ### Module specifications
 
 
-
-<pre><code>pragma verify;
-</code></pre>
-
-
-
 <a name="0x1_VASP_@Existence_of_Parents"></a>
 
-### Existence of Parents
+#### Existence of Parents
 
 
 

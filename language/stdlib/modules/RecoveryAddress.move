@@ -165,10 +165,6 @@ module RecoveryAddress {
     /// # Module specifications
 
     spec module {
-        pragma verify = true;
-    }
-
-    spec module {
         /// Returns true if `addr` is a recovery address.
         define spec_is_recovery_address(addr: address): bool
         {

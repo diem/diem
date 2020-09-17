@@ -157,8 +157,6 @@ module AccountFreezing {
     }
 
     spec module {
-        pragma verify = true;
-
         define spec_account_is_frozen(addr: address): bool {
             exists<FreezingBit>(addr) && global<FreezingBit>(addr).is_frozen
         }

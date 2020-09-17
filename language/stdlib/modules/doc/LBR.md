@@ -461,12 +461,6 @@ Return the account address where the globally unique LBR::Reserve resource is st
 ## Specification
 
 
-
-<pre><code>pragma verify;
-</code></pre>
-
-
-
 <a name="0x1_LBR_Specification_ReserveComponent"></a>
 
 ### Resource `ReserveComponent`
@@ -552,6 +546,12 @@ type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_calculate_component_amounts_for_lbr">calculate_component_amounts_for_lbr</a>(amount_lbr: u64): (u64, u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

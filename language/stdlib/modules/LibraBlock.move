@@ -109,12 +109,6 @@ module LibraBlock {
     public fun get_current_block_height(): u64 acquires BlockMetadata {
         borrow_global<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS()).height
     }
-
-    // **************** FUNCTION SPECIFICATIONS ****************
-
-    spec module {
-        pragma verify;
-    }
 }
 
 }

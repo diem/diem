@@ -6,6 +6,8 @@
 ### Table of Contents
 
 -  [Function `initialize`](#0x1_Genesis_initialize)
+-  [Specification](#0x1_Genesis_Specification)
+    -  [Function `initialize`](#0x1_Genesis_Specification_initialize)
 
 
 
@@ -117,3 +119,22 @@
 
 
 </details>
+
+<a name="0x1_Genesis_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_Genesis_Specification_initialize"></a>
+
+### Function `initialize`
+
+
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, lr_auth_key: vector&lt;u8&gt;, tc_addr: address, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>

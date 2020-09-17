@@ -494,39 +494,37 @@ impl<'a> ConditionDistribution<'a> {
         let abstract_ = get_prop(CONDITION_ABSTRACT_PROP);
         let concrete = get_prop(CONDITION_CONCRETE_PROP);
 
-        let external = (!injected || exported) && !concrete;
+        // Determines when a condition will be propagated to the caller. This is the case if
+        // the condition is not injected via a schema apply or it is explicitly marked
+        // as exported, and if it is not marked as concrete. Conditions which are not propagated
+        // are only applied to the verification entry point.
+        let propagated_to_intra_caller = !concrete;
+        let propagated_to_inter_caller = (!injected || exported) && propagated_to_intra_caller;
 
+        use FunctionEntryPoint::*;
         match entry_point {
-            FunctionEntryPoint::DirectInterModule if opaque => {
+            DirectInterModule if propagated_to_inter_caller && opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
-                    Requires if external => self.requires.push(cond),
-                    Ensures if external => self.ensures.push(cond),
-                    AbortsIf | AbortsWith | SucceedsIf if external && asserted => {
-                        self.requires.push(cond)
-                    }
-                    AbortsIf | AbortsWith | SucceedsIf if external && !assumed => {
-                        self.ensures.push(cond)
-                    }
+                    Requires => self.requires.push(cond),
+                    Ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if asserted => self.requires.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if !assumed => self.ensures.push(cond),
                     _ => {}
                 }
             }
-            FunctionEntryPoint::DirectInterModule if !opaque => {
+            DirectInterModule if propagated_to_inter_caller && !opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
-                    Requires if external => self.requires.push(cond),
-                    Ensures if external || export_ensures => self.ensures.push(cond),
-                    AbortsIf | SucceedsIf if external && asserted => self.requires.push(cond),
-                    AbortsIf | AbortsWith | SucceedsIf if external && assumed => {
-                        self.entry_assumes.push(cond)
-                    }
-                    AbortsIf | AbortsWith | SucceedsIf if external || export_ensures => {
-                        self.ensures.push(cond)
-                    }
+                    Requires => self.requires.push(cond),
+                    Ensures if export_ensures => self.ensures.push(cond),
+                    AbortsIf | SucceedsIf if asserted => self.requires.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if assumed => self.entry_assumes.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf if export_ensures => self.ensures.push(cond),
                     _ => {}
                 }
             }
-            FunctionEntryPoint::DirectIntraModule if opaque => {
+            DirectIntraModule if propagated_to_intra_caller && opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires | RequiresModule => self.requires.push(cond),
@@ -536,7 +534,7 @@ impl<'a> ConditionDistribution<'a> {
                     _ => {}
                 }
             }
-            FunctionEntryPoint::DirectIntraModule if !opaque => {
+            DirectIntraModule if propagated_to_intra_caller && !opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
                     Requires | RequiresModule => self.requires.push(cond),
@@ -547,19 +545,23 @@ impl<'a> ConditionDistribution<'a> {
                     _ => {}
                 }
             }
-            FunctionEntryPoint::Indirect if opaque => {
+            Indirect if propagated_to_inter_caller && opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
-                    Ensures if external || export_ensures => self.ensures.push(cond),
+                    Ensures if propagated_to_inter_caller || export_ensures => {
+                        self.ensures.push(cond)
+                    }
                     AbortsIf | AbortsWith | SucceedsIf
-                        if !assumed && !asserted && (external || export_ensures) =>
+                        if !assumed
+                            && !asserted
+                            && (propagated_to_inter_caller || export_ensures) =>
                     {
                         self.ensures.push(cond)
                     }
                     _ => {}
                 }
             }
-            FunctionEntryPoint::Indirect if !opaque => {
+            Indirect if propagated_to_inter_caller && !opaque => {
                 use ConditionKind::*;
                 match &cond.kind {
                     Ensures if export_ensures => self.ensures.push(cond),
@@ -570,15 +572,14 @@ impl<'a> ConditionDistribution<'a> {
                     _ => {}
                 }
             }
-            FunctionEntryPoint::Verification => {
+            Verification if !abstract_ => {
+                // All conditions are included unless marked as abstract.
                 use ConditionKind::*;
-                if !abstract_ {
-                    match &cond.kind {
-                        Requires | RequiresModule => self.entry_assumes.push(cond),
-                        Ensures => self.ensures.push(cond),
-                        AbortsIf | AbortsWith | SucceedsIf => self.ensures.push(cond),
-                        _ => {}
-                    }
+                match &cond.kind {
+                    Requires | RequiresModule => self.entry_assumes.push(cond),
+                    Ensures => self.ensures.push(cond),
+                    AbortsIf | AbortsWith | SucceedsIf => self.ensures.push(cond),
+                    _ => {}
                 }
             }
             _ => {}

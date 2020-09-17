@@ -197,7 +197,7 @@ If payer and payee are the same, the balance does not change.
 
 
 
-<pre><code>pragma verify = <b>true</b>, aborts_if_is_strict = <b>true</b>;
+<pre><code>pragma aborts_if_is_strict = <b>true</b>;
 </code></pre>
 
 
@@ -315,10 +315,4 @@ Aborts if the amount exceeds payer's withdraw limit.
                         )
                     );
 }
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>true</b>;
 </code></pre>

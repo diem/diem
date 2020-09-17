@@ -470,9 +470,3 @@ tc_account retrieves BurnCapability [B12]. BurnCapability is not transferrable [
     <b>ensures</b> exists&lt;<a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
 }
 </code></pre>
-
-
-
-
-<pre><code>pragma verify;
-</code></pre>

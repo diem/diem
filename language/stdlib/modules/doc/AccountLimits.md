@@ -746,12 +746,6 @@ Return whether the <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDef
 ## Specification
 
 
-
-<pre><code>pragma verify;
-</code></pre>
-
-
-
 <a name="0x1_AccountLimits_Specification_LimitsDefinition"></a>
 
 ### Resource `LimitsDefinition`

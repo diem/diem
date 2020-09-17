@@ -146,7 +146,7 @@ impl Default for ProverOptions {
             minimize_execution_trace: true,
             omit_model_debug: false,
             stable_test_output: false,
-            verify_scope: VerificationScope::Public,
+            verify_scope: VerificationScope::All,
             resource_wellformed_axiom: false,
             assume_wellformed_on_access: false,
             deep_pack_unpack: false,

@@ -8,7 +8,7 @@ module Option {
     use 0x1::Vector;
 
     spec module {
-        pragma verify, aborts_if_is_strict;
+        pragma aborts_if_is_strict;
     }
 
     /// Abstraction of a value that may or may not be present. Implemented with a vector of size

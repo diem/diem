@@ -39,8 +39,6 @@ fun add_currency_to_account<Currency>(account: &signer) {
     LibraAccount::add_currency<Currency>(account);
 }
 spec fun add_currency_to_account {
-    pragma verify = true;
-
     /// This publishes a `Balance<Currency>` to the caller's account
     ensures exists<LibraAccount::Balance<Currency>>(Signer::spec_address_of(account));
 

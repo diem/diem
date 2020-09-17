@@ -204,11 +204,7 @@ module VASP {
 
     /// # Module specifications
 
-    spec module {
-        pragma verify;
-    }
-
-    /// # Existence of Parents
+    /// ## Existence of Parents
 
     spec module {
         /* TODO: reactivate when termination problem is solved.

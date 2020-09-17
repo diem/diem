@@ -2996,14 +2996,6 @@ Must abort if the account does not have the TreasuryCompliance Role [B14].
 ### Module Specification
 
 
-Verify all functions in this module.
-
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-
 Checks whether currency is registered. Mirrors <code><a href="#0x1_Libra_is_currency">Self::is_currency</a>&lt;CoinType&gt;</code>.
 
 
@@ -3158,9 +3150,8 @@ If an account has MintCapability, it is a TreasuryCompliance account.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] forall coin_type: type:
-    forall addr: address:
-        exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr) ==&gt;
-            <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr);
+    forall mint_cap_owner: address where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner):
+        <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(mint_cap_owner);
 </code></pre>
 
 
@@ -3177,9 +3168,10 @@ At most one address has a mint capability for SCS CoinType
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated]
     forall coin_type: type where <a href="#0x1_Libra_spec_is_SCS_currency">spec_is_SCS_currency</a>&lt;coin_type&gt;():
-        forall addr1: address, addr2: address
-             where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1) && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr2):
-                  addr1 == addr2;
+        forall mint_cap_owner1: address, mint_cap_owner2: address
+             where exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner1)
+                        && exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(mint_cap_owner2):
+                  mint_cap_owner1 == mint_cap_owner2;
 </code></pre>
 
 

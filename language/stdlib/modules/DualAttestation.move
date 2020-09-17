@@ -476,8 +476,6 @@ module DualAttestation {
     }
 
     spec module {
-        pragma verify = true;
-
         /// Helper function to determine whether the Limit is published.
         define spec_is_published(): bool {
             exists<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS())

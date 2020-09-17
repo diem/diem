@@ -469,6 +469,5 @@ Returns true if the ratio is zero.
 
 
 
-<pre><code>pragma verify;
-pragma aborts_if_is_strict = <b>true</b>;
+<pre><code>pragma aborts_if_is_strict = <b>true</b>;
 </code></pre>
