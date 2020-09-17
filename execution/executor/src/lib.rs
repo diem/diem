@@ -19,9 +19,10 @@ pub mod db_bootstrapper;
 use crate::{
     logging::{LogEntry, LogSchema},
     metrics::{
-        LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS,
-        LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, LIBRA_EXECUTOR_TRANSACTIONS_SAVED,
-        LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+        LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_ERRORS,
+        LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
+        LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
+        LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -187,6 +188,7 @@ where
                     category = "MUST_FIX",
                     "first_transaction_version should exist"
                 );
+                LIBRA_EXECUTOR_ERRORS.inc();
                 return Err(anyhow!("first_transaction_version should exist."));
             }
         };
@@ -326,6 +328,7 @@ where
                              Transaction: {:?}. Status: {:?}.",
                             txn, status,
                         );
+                        LIBRA_EXECUTOR_ERRORS.inc();
                     }
                 }
                 TransactionStatus::Retry => (),
