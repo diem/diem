@@ -197,7 +197,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         config.consensus.safety_rules.backend = self.secure_backend(&local_ns, "safety-rules");
         config.execution.backend = self.secure_backend(&local_ns, "execution");
 
-        let backend = self.secure_backend(&local_ns, "waypoint");
+        let backend = self.secure_backend(&local_ns, "safety-rules");
         config.base.waypoint = WaypointConfig::FromStorage(backend);
         config.execution.genesis = Some(genesis);
         config.execution.genesis_file_location = PathBuf::from("");
