@@ -178,3 +178,40 @@ fn test_libra_timestamp_time_has_started() {
 
     assert_eq!(output.unwrap_err().move_abort_code(), Some(1));
 }
+
+#[test]
+fn test_libra_block_double_init() {
+    let mut executor = FakeExecutor::stdlib_only_genesis();
+
+    executor.exec(
+        "Event",
+        "publish_generator",
+        vec![],
+        vec![Value::transaction_argument_signer_reference(
+            account_config::libra_root_address(),
+        )],
+        &account_config::libra_root_address(),
+    );
+
+    executor.exec(
+        "LibraBlock",
+        "initialize_block_metadata",
+        vec![],
+        vec![Value::transaction_argument_signer_reference(
+            account_config::libra_root_address(),
+        )],
+        &account_config::libra_root_address(),
+    );
+
+    let output = executor.try_exec(
+        "LibraBlock",
+        "initialize_block_metadata",
+        vec![],
+        vec![Value::transaction_argument_signer_reference(
+            account_config::libra_root_address(),
+        )],
+        &account_config::libra_root_address(),
+    );
+
+    assert_eq!(output.unwrap_err().move_abort_code(), Some(6));
+}

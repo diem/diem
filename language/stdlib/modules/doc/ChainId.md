@@ -114,3 +114,14 @@ Return the chain ID of this Libra instance
 
 <pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt; exists&lt;<a href="#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 </code></pre>
+
+
+
+
+<a name="0x1_ChainId_spec_get_chain_id"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_ChainId_spec_get_chain_id">spec_get_chain_id</a>(): u8 {
+    <b>global</b>&lt;<a href="#0x1_ChainId">ChainId</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).id
+}
+</code></pre>

@@ -16,31 +16,43 @@ popd || exit 1
 
 #cargo test -p ir-testsuite -p language-e2e-tests -p move-lang-functional-tests
 
+echo "---------------------------------------------------------------------------"
 echo "Running IR testsuite..."
+echo "---------------------------------------------------------------------------"
 pushd ../../ir-testsuite || exit 1
 cargo test
 popd || exit 1
 
+echo "---------------------------------------------------------------------------"
 echo "Running e2e testsuite..."
+echo "---------------------------------------------------------------------------"
 pushd ../../e2e-testsuite || exit 1
 cargo test -- --skip account_universe --skip fuzz_scripts
 popd || exit 1
 
+echo "---------------------------------------------------------------------------"
 echo "Running Move testsuite..."
+echo "---------------------------------------------------------------------------"
 pushd ../../move-lang/functional-tests/tests || exit 1
 cargo test
 popd || exit 1
 
+echo "---------------------------------------------------------------------------"
 echo "Building Move modules and source maps.."
+echo "---------------------------------------------------------------------------"
 pushd ../../move-lang || exit 1
 rm -rf move_build_output
 cargo run --bin move-build -- ../stdlib/modules -m
 popd || exit 1
 
+echo "---------------------------------------------------------------------------"
 echo "Converting trace file..."
+echo "---------------------------------------------------------------------------"
 cargo run --bin move-trace-conversion -- -f "$TRACE_PATH" -o trace.mvcov
 
+echo "---------------------------------------------------------------------------"
 echo "Producing coverage summaries..."
+echo "---------------------------------------------------------------------------"
 cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/compiled/stdlib
 
 echo "==========================================================================="

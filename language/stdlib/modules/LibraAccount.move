@@ -1050,7 +1050,11 @@ module LibraAccount {
 
     /// Return the current balance of the account at `addr`.
     public fun balance<Token>(addr: address): u64 acquires Balance {
+        assert(exists<Balance<Token>>(addr), Errors::not_published(EPAYER_DOESNT_HOLD_CURRENCY));
         balance_for(borrow_global<Balance<Token>>(addr))
+    }
+    spec fun balance {
+        aborts_if !exists<Balance<Token>>(addr) with Errors::NOT_PUBLISHED;
     }
 
     /// Add a balance of `Token` type to the sending account
@@ -1169,6 +1173,39 @@ module LibraAccount {
             chain_id,
         )
     }
+    spec fun module_prologue {
+        let transaction_sender = Signer::spec_address_of(sender);
+        let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+        include AbortsIfModulePrologue<Token> {
+            sender,
+            txn_sequence_number,
+            txn_public_key,
+            chain_id,
+            max_transaction_fee,
+            txn_expiration_time_seconds: txn_expiration_time,
+        };
+    }
+    spec schema AbortsIfModulePrologue<Token> {
+        sender: signer;
+        txn_sequence_number: u64;
+        txn_public_key: vector<u8>;
+        chain_id: u8;
+        max_transaction_fee: u128;
+        txn_expiration_time_seconds: u64;
+        let transaction_sender = Signer::spec_address_of(sender);
+        include AbortsIfPrologueCommon<Token> {
+            transaction_sender,
+            txn_sequence_number,
+            txn_public_key,
+            chain_id,
+            max_transaction_fee,
+            txn_expiration_time_seconds,
+        };
+        /// Aborts only in genesis. Does not need to be handled.
+        include LibraTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
+        /// Covered: L75 (Match 9)
+        aborts_if !LibraTransactionPublishingOption::spec_is_module_allowed(sender) with Errors::INVALID_STATE;
+    }
 
     /// The prologue for script transaction
     fun script_prologue<Token>(
@@ -1195,6 +1232,29 @@ module LibraAccount {
             txn_expiration_time,
             chain_id,
         )
+    }
+    spec fun script_prologue {
+        let transaction_sender = Signer::spec_address_of(sender);
+        let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+        include AbortsIfScriptPrologue<Token>{
+            max_transaction_fee,
+            txn_expiration_time_seconds: txn_expiration_time,
+        };
+    }
+    spec schema AbortsIfScriptPrologue<Token> {
+        sender: signer;
+        txn_sequence_number: u64;
+        txn_public_key: vector<u8>;
+        chain_id: u8;
+        max_transaction_fee: u128;
+        txn_expiration_time_seconds: u64;
+        script_hash: vector<u8>;
+        let transaction_sender = Signer::spec_address_of(sender);
+        include AbortsIfPrologueCommon<Token> {transaction_sender};
+        /// Aborts only in Genesis. Does not need to be handled.
+        include LibraTransactionPublishingOption::AbortsIfNoTransactionPublishingOption;
+        /// Covered: L74 (Match 8)
+        aborts_if !LibraTransactionPublishingOption::spec_is_script_allowed(sender, script_hash) with Errors::INVALID_STATE;
     }
 
     /// The prologue for WriteSet transaction
@@ -1224,14 +1284,29 @@ module LibraAccount {
     }
 
     spec fun writeset_prologue {
-        pragma aborts_if_is_partial = true;
+        include AbortsIfWritesetPrologue {txn_expiration_time_seconds: txn_expiration_time};
+    }
 
+    spec schema AbortsIfWritesetPrologue {
+        sender: signer;
+        txn_sequence_number: u64;
+        txn_public_key: vector<u8>;
+        txn_expiration_time_seconds: u64;
+        chain_id: u8;
+        let transaction_sender = Signer::spec_address_of(sender);
+        /// Covered: L146 (Match 0)
+        aborts_if transaction_sender != CoreAddresses::LIBRA_ROOT_ADDRESS() with Errors::INVALID_ARGUMENT;
         /// Must abort if the signer does not have the LibraRoot role [B18].
-        aborts_if !Roles::spec_has_libra_root_role_addr(Signer::address_of(sender));
+        /// Covered: L146 (Match 0)
+        aborts_if !Roles::spec_has_libra_root_role_addr(transaction_sender) with Errors::INVALID_ARGUMENT;
+        include AbortsIfPrologueCommon<LBR::LBR>{
+            transaction_sender,
+            max_transaction_fee: 0,
+        };
     }
 
     /// The common prologue is invoked at the beginning of every transaction
-    /// It verifies:
+    /// The main properties that it verifies:
     /// - The account's auth key matches the transaction's public key
     /// - That the account has enough balance to pay for all of the gas
     /// - That the sequence number matches the transaction's sequence key
@@ -1246,13 +1321,13 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         let transaction_sender = Signer::address_of(sender);
 
-        // Check that the chain ID stored on-chain matches the chain ID specified by the transaction
+        // [PCA1]: Check that the chain ID stored on-chain matches the chain ID specified by the transaction
         assert(ChainId::get() == chain_id, Errors::invalid_argument(PROLOGUE_EBAD_CHAIN_ID));
 
-        // Verify that the transaction sender's account exists
+        // [PCA2]: Verify that the transaction sender's account exists
         assert(exists_at(transaction_sender), Errors::invalid_argument(PROLOGUE_EACCOUNT_DNE));
 
-        // We check whether this account is frozen, if it is no transaction can be sent from it.
+        // [PCA3]: We check whether this account is frozen, if it is no transaction can be sent from it.
         assert(
             !AccountFreezing::account_is_frozen(transaction_sender),
             Errors::invalid_state(PROLOGUE_EACCOUNT_FROZEN)
@@ -1261,13 +1336,13 @@ module LibraAccount {
         // Load the transaction sender's account
         let sender_account = borrow_global<LibraAccount>(transaction_sender);
 
-        // Check that the hash of the transaction's public key matches the account's auth key
+        // [PCA4]: Check that the hash of the transaction's public key matches the account's auth key
         assert(
             Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
             Errors::invalid_argument(PROLOGUE_EINVALID_ACCOUNT_AUTH_KEY),
         );
 
-        // Check that the gas calculation will not overflow
+        // [PCA5]: Check that the account has enough balance for all of the gas
         assert(
             (txn_gas_price as u128) * (txn_max_gas_units as u128) <= MAX_U64,
             Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT),
@@ -1277,31 +1352,75 @@ module LibraAccount {
 
         // Don't grab the balance if the transaction fee is zero
         if (max_transaction_fee > 0) {
+            // [PCA6]: Check that the account has a balance in this currency
             assert(
                 exists<Balance<Token>>(transaction_sender),
                 Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
             );
             let balance_amount = balance<Token>(transaction_sender);
+            // [PCA7]: Check that the account can cover the maximum transaction fee
             assert(
                 balance_amount >= max_transaction_fee,
                 Errors::invalid_argument(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
             );
         };
 
-        // Check that the transaction sequence number matches the sequence number of the account
+        // [PCA8]: Check that the transaction sequence number is not too old (in the past)
         assert(
             txn_sequence_number >= sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_OLD)
         );
+
+        // [PCA9]: Check that the transaction's sequence number matches the
+        // current sequence number. Otherwise sequence number is too new by [PCA8].
         assert(
             txn_sequence_number == sender_account.sequence_number,
             Errors::invalid_argument(PROLOGUE_ESEQUENCE_NUMBER_TOO_NEW)
         );
 
+        // [PCA10]: Check that the transaction hasn't expired
         assert(
             LibraTimestamp::now_seconds() < txn_expiration_time_seconds,
             Errors::invalid_argument(PROLOGUE_ETRANSACTION_EXPIRED)
         );
+    }
+    spec fun prologue_common {
+        let transaction_sender = Signer::spec_address_of(sender);
+        let max_transaction_fee = txn_gas_price * txn_max_gas_units;
+        include AbortsIfPrologueCommon<Token> {
+            transaction_sender,
+            max_transaction_fee,
+        };
+    }
+    spec schema AbortsIfPrologueCommon<Token> {
+        transaction_sender: address;
+        txn_sequence_number: u64;
+        txn_public_key: vector<u8>;
+        chain_id: u8;
+        max_transaction_fee: u128;
+        txn_expiration_time_seconds: u64;
+        /// Only happens if this is called in Genesis. Doesn't need to be handled.
+        include LibraTimestamp::AbortsIfNotOperating;
+        /// [PCA1] Covered: L73 (Match 7)
+        aborts_if chain_id != ChainId::spec_get_chain_id() with Errors::INVALID_ARGUMENT;
+        /// [PCA2] Covered: L65 (Match 4)
+        aborts_if !exists_at(transaction_sender) with Errors::INVALID_ARGUMENT;
+        /// [PCA3] Covered: L57 (Match 0)
+        aborts_if AccountFreezing::spec_account_is_frozen(transaction_sender) with Errors::INVALID_STATE;
+        /// [PCA4] Covered: L59 (Match 1)
+        aborts_if Hash::sha3_256(txn_public_key) != global<LibraAccount>(transaction_sender).authentication_key with Errors::INVALID_ARGUMENT;
+        /// [PCA5] Covered: L69 (Match 5)
+        aborts_if max_transaction_fee > MAX_U64 with Errors::INVALID_ARGUMENT;
+        /// [PCA6] Covered: L69 (Match 5)
+        aborts_if max_transaction_fee > 0 && !exists<Balance<Token>>(transaction_sender) with Errors::INVALID_ARGUMENT;
+        /// [PCA7] Covered: L69 (Match 5)
+        aborts_if max_transaction_fee > 0 && spec_get_balance_value<Token>(transaction_sender) < max_transaction_fee with Errors::INVALID_ARGUMENT;
+        /// [PCA8] Covered: L61 (Match 2)
+        aborts_if txn_sequence_number < global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
+        /// [PCA9] Covered: L63 (match 3)
+        aborts_if txn_sequence_number > global<LibraAccount>(transaction_sender).sequence_number with Errors::INVALID_ARGUMENT;
+        /// [PCA10] Covered: L72 (Match 6)
+        aborts_if LibraTimestamp::spec_now_seconds() >= txn_expiration_time_seconds with Errors::INVALID_ARGUMENT;
     }
 
     /// Collects gas and bumps the sequence number for executing a transaction.
@@ -1316,41 +1435,58 @@ module LibraAccount {
         gas_units_remaining: u64
     ) acquires LibraAccount, Balance {
         let sender = Signer::address_of(account);
-        // Charge for gas
+
+        // [EA1; Invariant]: Make sure that the transaction's `max_gas_units` is greater
+        // than the number of gas units remaining after execution.
         assert(txn_max_gas_units >= gas_units_remaining, Errors::invalid_argument(EGAS));
         let gas_used = txn_max_gas_units - gas_units_remaining;
+
+        // [EA2; Invariant]: Make sure that the transaction fee would not overflow maximum
+        // number representable in a u64. Already checked in [PCA5].
         assert(
             (txn_gas_price as u128) * (gas_used as u128) <= MAX_U64,
             Errors::limit_exceeded(EGAS)
         );
         let transaction_fee_amount = txn_gas_price * gas_used;
 
-        // Load the transaction sender's account and balance resources
+        // [EA3; Invariant]: Make sure that account exists, and load the
+        // transaction sender's account. Already checked in [PCA2].
         assert(exists_at(sender), Errors::not_published(EACCOUNT));
         let sender_account = borrow_global_mut<LibraAccount>(sender);
 
-        // Bump the sequence number
+        // [EA4; Condition]: Make sure account's sequence number is within the
+        // representable range of u64. Bump the sequence number
         assert(
             sender_account.sequence_number < (MAX_U64 as u64),
             Errors::limit_exceeded(ESEQUENCE_NUMBER)
         );
+
+        // [EA4; Invariant]: Make sure passed-in `txn_sequence_number` matches
+        // the `sender_account`'s `sequence_number`. Already checked in [PCA9].
+        assert(
+            sender_account.sequence_number == txn_sequence_number,
+            Errors::invalid_argument(ESEQUENCE_NUMBER)
+        );
+
+        // The transaction sequence number is passed in to prevent any
+        // possibility of the account's sequence number increasing by more than
+        // one for any transaction.
         sender_account.sequence_number = txn_sequence_number + 1;
 
         if (transaction_fee_amount > 0) {
+            // [Invariant Use]: Balance for `Token` verified to exist for non-zero transaction fee amounts by [PCA6].
             let sender_balance = borrow_global_mut<Balance<Token>>(sender);
             let coin = &mut sender_balance.coin;
-            // Abort if this withdrawal would make the `account`'s balance go negative
+
+            // [EA4; Condition]: Abort if this withdrawal would make the `sender_account`'s balance go negative
             assert(
-                Libra::value(coin) >= transaction_fee_amount,
+                transaction_fee_amount <= Libra::value(coin),
                 Errors::limit_exceeded(PROLOGUE_ECANT_PAY_GAS_DEPOSIT)
             );
-            // `withdraw_from_balance` is not used as limits do not apply to this transaction fee
+
+            // NB: `withdraw_from_balance` is not used as limits do not apply to this transaction fee
             TransactionFee::pay_fee(Libra::withdraw(coin, transaction_fee_amount))
         }
-    }
-
-    spec fun epilogue {
-        pragma verify = true;
     }
 
     /// Epilogue for WriteSet trasnaction
@@ -1456,6 +1592,11 @@ module LibraAccount {
         define spec_holds_own_withdraw_cap(addr: address): bool {
             spec_has_withdraw_cap(addr)
             && addr == spec_get_withdraw_cap(addr).account_address
+        }
+
+        /// Returns the value of the coins held in the specified currency.
+        define spec_get_balance_value<Currency>(addr: address): u64 {
+            Libra::value(global<Balance<Currency>>(addr).coin)
         }
     }
 

@@ -29,5 +29,10 @@ module ChainId {
     spec module {
         invariant [global] LibraTimestamp::is_operating() ==> exists<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
+    spec module {
+        define spec_get_chain_id(): u8 {
+            global<ChainId>(CoreAddresses::LIBRA_ROOT_ADDRESS()).id
+        }
+    }
 }
 }

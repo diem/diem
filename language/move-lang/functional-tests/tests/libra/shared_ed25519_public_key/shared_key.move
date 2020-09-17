@@ -3,6 +3,7 @@
 // test, so that case is covered in an e2e test.
 
 //! account: alice
+//! account: bob
 
 script {
 use 0x1::LibraAccount;
@@ -99,3 +100,15 @@ fun main(account: &signer) {
 }
 }
 // check: "Keep(ABORTED { code: 7,"
+
+// rotate a key on a non-shared account
+//! new-transaction
+//! sender: alice
+script {
+use 0x1::SharedEd25519PublicKey;
+fun main(account: &signer)  {
+    let invalid_pubkey = x"";
+    SharedEd25519PublicKey::rotate_key(account, invalid_pubkey);
+}
+}
+// check: "Keep(ABORTED { code: 261,"

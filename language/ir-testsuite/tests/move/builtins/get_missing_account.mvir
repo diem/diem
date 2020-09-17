@@ -11,5 +11,4 @@ main() {
     account_balance = LibraAccount.balance<LBR.LBR>(move(addr));
     return;
 }
-
-// check: MISSING_DATA
+// check: "Keep(ABORTED { code: 4869,"

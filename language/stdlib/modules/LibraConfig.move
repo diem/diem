@@ -300,6 +300,10 @@ module LibraConfig {
             exists<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
 
+        define spec_get_config<Config>(): Config {
+            global<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).payload
+        }
+
         /// After genesis, the `Configuration` is published.
         invariant [global] LibraTimestamp::is_operating() ==> spec_has_config();
 
