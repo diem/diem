@@ -47,9 +47,8 @@ impl CommandAdapter {
         Ok(Self::new(config))
     }
 
-    fn cmd(&self, cmd_str: &str, mut env_vars: Vec<EnvVar>) -> Command {
-        env_vars.extend_from_slice(&self.config.env_vars);
-        Command::new(cmd_str, env_vars)
+    fn cmd(&self, cmd_str: &str, env_vars: Vec<EnvVar>) -> Command {
+        Command::new(cmd_str, env_vars, self.config.env_vars.clone())
     }
 }
 
