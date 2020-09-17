@@ -35,7 +35,6 @@ libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
 libra-retrier = { path = "../../common/retrier", version = "0.1.0" }
 num_cpus = "1.13.0"
 
-config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 consensus-types = { path = "../../consensus/consensus-types", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

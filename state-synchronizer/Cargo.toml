@@ -39,7 +39,6 @@ storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
-config-builder = { path = "../config/config-builder", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0", optional = true }
 

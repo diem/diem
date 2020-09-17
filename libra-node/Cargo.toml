@@ -17,7 +17,6 @@ structopt = "0.3.17"
 tokio = { version = "0.2.22", features = ["full"] }
 
 backup-service = { path = "../storage/backup/backup-service", version = "0.1.0" }
-config-builder = { path = "../config/config-builder", version = "0.1.0" }
 consensus = { path = "../consensus", version = "0.1.0" }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }

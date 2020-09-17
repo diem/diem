@@ -44,7 +44,6 @@ proptest = "0.10.1"
 reqwest = { version = "0.10.8", features = ["blocking", "json"], default_features = false }
 rand = { version = "0.7.3" }
 
-config-builder = { path = "../config/config-builder", version = "0.1.0" }
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
 libra-genesis-tool = {path = "../config/management/genesis", version = "0.1.0", features = ["testing"] }

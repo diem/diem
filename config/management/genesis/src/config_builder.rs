@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{layout::Layout, storage_helper::StorageHelper};
-use config_builder::BuildSwarm;
+use crate::{layout::Layout, storage_helper::StorageHelper, swarm_config::BuildSwarm};
 use libra_config::{
     config::{
         DiscoveryMethod, Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService,

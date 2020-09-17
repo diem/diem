@@ -123,7 +123,8 @@ fn load_test_environment(config_path: Option<PathBuf>, no_logging: bool, random_
     let builder =
         libra_genesis_tool::config_builder::ValidatorBuilder::new(1, template, &config_path)
             .randomize_first_validator_ports(random_ports);
-    let test_config = config_builder::SwarmConfig::build(&builder, &config_path).unwrap();
+    let test_config =
+        libra_genesis_tool::swarm_config::SwarmConfig::build(&builder, &config_path).unwrap();
 
     // Prepare log file since we cannot automatically route logs to stderr
     let mut log_file = config_path.clone();

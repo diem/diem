@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use crate::instance::{Instance, ValidatorGroup};
-use config_builder::ValidatorConfig;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     test_utils::KeyPair,
@@ -13,7 +12,6 @@ use libra_crypto::{
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use rand::prelude::*;
 use reqwest::Client;
-use std::convert::TryInto;
 
 #[derive(Clone)]
 pub struct Cluster {
@@ -68,16 +66,6 @@ impl Cluster {
         }
     }
 
-    fn get_mint_key_pair() -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
-        let seed = "1337133713371337133713371337133713371337133713371337133713371337";
-        let seed = hex::decode(seed).expect("Invalid hex in seed.");
-        let seed = seed[..32].try_into().expect("Invalid seed");
-        let mut validator_config = ValidatorConfig::new();
-        validator_config.seed = seed;
-        let (mint_key, _) = validator_config.build_libra_root_key();
-        KeyPair::from(mint_key)
-    }
-
     fn get_mint_key_pair_from_file(
         mint_file: &str,
     ) -> KeyPair<Ed25519PrivateKey, Ed25519PublicKey> {
@@ -92,17 +80,12 @@ impl Cluster {
         vault_instances: Vec<Instance>,
         waypoint: Option<Waypoint>,
     ) -> Self {
-        let mint_key_pair = if waypoint.is_some() {
-            Self::get_mint_key_pair_from_file("/tmp/mint.key")
-        } else {
-            Self::get_mint_key_pair()
-        };
         Self {
             validator_instances,
             fullnode_instances,
             lsr_instances,
             vault_instances,
-            mint_key_pair,
+            mint_key_pair: Self::get_mint_key_pair_from_file("/tmp/mint.key"),
             waypoint,
             chain_id: ChainId::test(),
         }

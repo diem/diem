@@ -3,7 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-mod client_compatibility_test;
 mod compatibility_test;
 mod cpu_flamegraph;
 mod load_test;
@@ -23,7 +22,6 @@ use std::{
     time::Duration,
 };
 
-pub use client_compatibility_test::{ClientCompatibilityTest, ClientCompatiblityTestParams};
 pub use compatibility_test::{CompatibilityTest, CompatiblityTestParams};
 pub use load_test::LoadTestParams;
 pub use packet_loss_random_validators::{
@@ -155,10 +153,6 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
     known_experiments.insert("compatibility_test", f::<CompatiblityTestParams>());
-    known_experiments.insert(
-        "client_compatibility_test",
-        f::<ClientCompatiblityTestParams>(),
-    );
     known_experiments.insert("reboot_cluster", f::<RebootClusterParams>());
     known_experiments.insert("reconfiguration", f::<ReconfigurationParams>());
     known_experiments.insert("load_test", f::<LoadTestParams>());

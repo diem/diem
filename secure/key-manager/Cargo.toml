@@ -33,7 +33,6 @@ futures = "0.3.5"
 rand = "0.7.3"
 tokio = { version = "0.2.22", features = ["full"] }
 
-config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../../execution/executor-test-helpers", version = "0.1.0" }
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }

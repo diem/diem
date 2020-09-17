@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use config_builder::BuildSwarm;
 use libra_config::config::NodeConfig;
-use libra_genesis_tool::config_builder::ValidatorBuilder;
+use libra_genesis_tool::{config_builder::ValidatorBuilder, swarm_config::BuildSwarm};
 
 pub struct Node {
     pub config: NodeConfig,

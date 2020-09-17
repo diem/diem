@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Context, Result};
-use config_builder::SwarmConfig;
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType};
-use libra_genesis_tool::config_builder::{FullnodeBuilder, FullnodeType, ValidatorBuilder};
+use libra_genesis_tool::{
+    config_builder::{FullnodeBuilder, FullnodeType, ValidatorBuilder},
+    swarm_config::SwarmConfig,
+};
 use libra_logger::prelude::*;
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;

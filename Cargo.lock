@@ -680,7 +680,6 @@ dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "consensus-types 0.1.0",
  "debug-interface 0.1.0",
  "flate2 1.0.17 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -805,32 +804,6 @@ dependencies = [
  "serde_json 1.0.57 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
-]
-
-[[package]]
-name = "config-builder"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "executor 0.1.0",
- "generate-key 0.1.0",
- "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-canonical-serialization 0.1.0",
- "libra-config 0.1.0",
- "libra-crypto 0.1.0",
- "libra-logger 0.1.0",
- "libra-network-address 0.1.0",
- "libra-temppath 0.1.0",
- "libra-types 0.1.0",
- "libra-vm 0.1.0",
- "libra-workspace-hack 0.1.0",
- "libradb 0.1.0",
- "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "storage-interface 0.1.0",
- "structopt 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
- "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "transaction-builder 0.1.0",
- "vm-genesis 0.1.0",
 ]
 
 [[package]]
@@ -2672,7 +2645,6 @@ name = "libra-genesis-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "consensus-types 0.1.0",
  "executor 0.1.0",
  "generate-key 0.1.0",
@@ -2746,7 +2718,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "compiled-stdlib 0.1.0",
- "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-types 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2823,7 +2794,6 @@ name = "libra-key-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
@@ -2884,7 +2854,6 @@ name = "libra-management"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "executor 0.1.0",
  "generate-key 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3013,7 +2982,6 @@ name = "libra-node"
 version = "0.1.0"
 dependencies = [
  "backup-service 0.1.0",
- "config-builder 0.1.0",
  "consensus 0.1.0",
  "crash-handler 0.1.0",
  "debug-interface 0.1.0",
@@ -3051,7 +3019,6 @@ name = "libra-operational-tool"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "executor 0.1.0",
  "generate-key 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3209,7 +3176,6 @@ name = "libra-swarm"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
- "config-builder 0.1.0",
  "ctrlc 3.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "debug-interface 0.1.0",
  "libra-config 0.1.0",
@@ -5676,7 +5642,6 @@ dependencies = [
  "bytes 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "compiled-stdlib 0.1.0",
- "config-builder 0.1.0",
  "executor 0.1.0",
  "executor-test-helpers 0.1.0",
  "executor-types 0.1.0",
