@@ -149,15 +149,9 @@ impl JsonRpcAsyncClientError {
     pub fn is_retriable(&self) -> bool {
         match self {
             JsonRpcAsyncClientError::ClientError(e) => {
-                // TODO: Add following condition when is_request is added to reqwest stable release
-                // // Error sending request
-                //  if e.is_request() {
-                //      return true;
-                //  }
-                if e.is_timeout() {
+                if e.is_timeout() || e.is_request() {
                     return true;
                 }
-
                 if let Some(status) = e.status() {
                     // Returned status code indicates a server error
                     return status.is_server_error();
