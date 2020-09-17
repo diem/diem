@@ -12,7 +12,7 @@
 version: "3.8"
 services:
     mint:
-        image: libra/mint:master_6c5c58eb
+        image: libra/mint:master_f53da21f
         environment:
             AC_HOST: "172.16.1.3"
             AC_PORT: "8080"
