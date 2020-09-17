@@ -133,7 +133,7 @@ impl DirectSend {
         }
         info!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-            "{} Terminating direct send actor for peer: {}",
+            "{} Direct send actor for '{}' terminated",
             self.network_context,
             peer_id.short_str()
         );

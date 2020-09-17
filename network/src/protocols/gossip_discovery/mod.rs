@@ -210,15 +210,14 @@ where
                     self.handle_tick();
                 }
                 complete => {
-                    warn!(
-                        NetworkSchema::new(&self.network_context),
-                        "{} Discovery actor terminated",
-                        self.network_context
-                    );
                     break;
                 }
             }
         }
+        warn!(
+            NetworkSchema::new(&self.network_context),
+            "{} Discovery actor terminated", self.network_context
+        );
     }
 
     // Handles a clock "tick" by:

@@ -259,7 +259,7 @@ impl Rpc {
         }
         info!(
             NetworkSchema::new(&self.network_context).remote_peer(&self.peer_handle.peer_id()),
-            "{} Rpc actor terminated for peer: {}",
+            "{} Rpc actor for '{}' terminated",
             self.network_context,
             self.peer_handle.peer_id().short_str()
         );

@@ -422,7 +422,7 @@ where
 
         warn!(
             NetworkSchema::new(&self.network_context),
-            "PeerManager loop terminated"
+            "PeerManager actor terminated"
         );
     }
 

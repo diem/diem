@@ -282,15 +282,15 @@ where
                     self.dial_queue.remove(&peer_id);
                 },
                 complete => {
-                    warn!(
-                        NetworkSchema::new(&self.network_context),
-                        "{} ConnectivityManager loop terminated",
-                        self.network_context
-                    );
                     break;
                 }
             }
         }
+
+        warn!(
+            NetworkSchema::new(&self.network_context),
+            "{} ConnectivityManager loop terminated", self.network_context
+        );
     }
 
     /// Disconnect from all peers that are no longer eligible.

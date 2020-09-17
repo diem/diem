@@ -261,17 +261,18 @@ where
                             e
                         );
                     }
-                    debug!(
-                        NetworkSchema::new(&self.network_context)
-                            .connection_metadata(&self.connection_metadata),
-                        "{} Peer actor '{}' shutdown",
-                        self.network_context,
-                        remote_peer_id.short_str()
-                    );
                     break;
                 }
             }
         }
+
+        info!(
+            NetworkSchema::new(&self.network_context)
+                .connection_metadata(&self.connection_metadata),
+            "{} Peer actor '{}' for terminated",
+            self.network_context,
+            remote_peer_id.short_str()
+        );
     }
 
     // Start a new task on the given executor which is responsible for writing outbound messages on

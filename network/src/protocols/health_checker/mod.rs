@@ -277,7 +277,7 @@ where
                 }
             }
         }
-        error!(
+        warn!(
             NetworkSchema::new(&self.network_context),
             "{} Health checker actor terminated", self.network_context
         );
