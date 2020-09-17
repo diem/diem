@@ -7,6 +7,7 @@ use libra_management::{config::ConfigPath, error::Error, secure_backend::Validat
 use libra_network_address::NetworkAddress;
 use libra_types::account_address::AccountAddress;
 use serde::Serialize;
+use std::str::FromStr;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -44,11 +45,26 @@ impl ValidatorSet {
                 Ok(config) => config,
                 Err(err) => {
                     println!(
-                        "Unable to decode account {}: {}",
+                        "Unable to decode account {}: {}. Using a dummy validator network address!",
                         info.account_address(),
                         err
                     );
-                    continue;
+
+                    // Return the partially decrypted validator config (using a dummy validator
+                    // network address).
+                    let encrypted_config = info.config();
+                    DecryptedValidatorConfig {
+                        name: "".to_string(),
+                        consensus_public_key: encrypted_config.consensus_public_key.clone(),
+                        fullnode_network_address: encrypted_config
+                            .fullnode_network_addresses()
+                            .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?[0]
+                            .clone(),
+                        validator_network_address: NetworkAddress::from_str(
+                            "/dns4/could-not-decrypt",
+                        )
+                        .map_err(|e| Error::NetworkAddressDecodeError(e.to_string()))?,
+                    }
                 }
             };
 
