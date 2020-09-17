@@ -426,7 +426,7 @@ where
         )
     }
 
-    fn execute_chunk(
+    fn replay_transactions_impl(
         &mut self,
         first_version: u64,
         transactions: Vec<Transaction>,
@@ -435,6 +435,8 @@ where
         ProcessedVMOutput,
         Vec<TransactionToCommit>,
         Vec<ContractEvent>,
+        Vec<Transaction>,
+        Vec<TransactionInfo>,
     )> {
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
@@ -474,22 +476,29 @@ where
         // object matches what we have computed locally.
         let mut txns_to_commit = vec![];
         let mut reconfig_events = vec![];
+        let mut seen_retry = false;
+        let mut txns_to_retry = vec![];
+        let mut txn_infos_to_retry = vec![];
         for ((txn, txn_data), (i, txn_info)) in itertools::zip_eq(
             itertools::zip_eq(transactions, output.transaction_data()),
-            transaction_infos.iter().enumerate(),
+            transaction_infos.into_iter().enumerate(),
         ) {
             let recorded_status = match txn_data.status() {
                 TransactionStatus::Keep(recorded_status) => recorded_status.clone(),
-                status @ TransactionStatus::Discard(_) | status @ TransactionStatus::Retry => {
-                    bail!(
-                        "The {}-th transaction to be commited did not have a status of 'Keep' \
-                        but instead had the following status: {:?}",
-                        i,
-                        status
-                    )
+                status @ TransactionStatus::Discard(_) => bail!(
+                    "The transaction at version {}, got the status of 'Discard': {:?}",
+                    first_version + i as u64,
+                    status
+                ),
+                TransactionStatus::Retry => {
+                    seen_retry = true;
+                    txns_to_retry.push(txn);
+                    txn_infos_to_retry.push(txn_info);
+                    continue;
                 }
             };
-            let generated_txn_info = &TransactionInfo::new(
+            assert!(!seen_retry);
+            let generated_txn_info = TransactionInfo::new(
                 txn.hash(),
                 txn_data.state_root_hash(),
                 txn_data.event_root_hash(),
@@ -512,7 +521,38 @@ where
                 txn_data.events().to_vec(),
             ));
         }
-        Ok((output, txns_to_commit, reconfig_events))
+
+        Ok((
+            output,
+            txns_to_commit,
+            reconfig_events,
+            txns_to_retry,
+            txn_infos_to_retry,
+        ))
+    }
+
+    fn execute_chunk(
+        &mut self,
+        first_version: u64,
+        transactions: Vec<Transaction>,
+        transaction_infos: Vec<TransactionInfo>,
+    ) -> Result<(
+        ProcessedVMOutput,
+        Vec<TransactionToCommit>,
+        Vec<ContractEvent>,
+    )> {
+        let num_txns = transactions.len();
+
+        let (processed_vm_output, txns_to_commit, events, txns_to_retry, _txn_infos_to_retry) =
+            self.replay_transactions_impl(first_version, transactions, transaction_infos)?;
+
+        ensure!(
+            txns_to_retry.is_empty(),
+            "The transaction at version {} got the status of 'Retry'",
+            num_txns - txns_to_retry.len() + first_version as usize,
+        );
+
+        Ok((processed_vm_output, txns_to_commit, events))
     }
 }
 
