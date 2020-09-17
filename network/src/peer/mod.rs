@@ -216,7 +216,7 @@ where
                                     self.close_connection(DisconnectReason::ConnectionLost).await;
                                 }
                                 None => {
-                                    warn!(
+                                    info!(
                                         NetworkSchema::new(&self.network_context)
                                             .connection_metadata(&self.connection_metadata),
                                         "{} Received connection closed event for peer: {}",
@@ -534,7 +534,7 @@ impl PeerHandle {
             .send(PeerRequest::SendMessage(message, protocol, oneshot_tx))
             .await
         {
-            error!(
+            warn!(
                 NetworkSchema::new(&self.network_context)
                     .connection_metadata(&self.connection_metadata)
                     .debug_error(&e),
@@ -553,7 +553,7 @@ impl PeerHandle {
     pub async fn disconnect(&mut self) {
         // If we fail to send the request to the Peer, then it must have already been shutdown.
         if let Err(e) = self.sender.send(PeerRequest::CloseConnection).await {
-            error!(
+            info!(
                 NetworkSchema::new(&self.network_context)
                     .connection_metadata(&self.connection_metadata)
                     .debug_error(&e),

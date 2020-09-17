@@ -187,7 +187,7 @@ impl DirectSend {
                     );
                 }
             }
-            _ => warn!(
+            _ => error!(
                 NetworkSchema::new(&self.network_context),
                 "{} Unexpected PeerNotification: {:?}", self.network_context, notif
             ),

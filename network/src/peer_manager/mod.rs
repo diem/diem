@@ -528,7 +528,7 @@ where
                         warn!(
                             NetworkSchema::new(&self.network_context)
                                 .remote_peer(&requested_peer_id),
-                            "{} Receiver for DialPeer {} dropped",
+                            "{} Receiver for DialPeer {} dropped sending error message",
                             self.network_context,
                             requested_peer_id.short_str()
                         );

@@ -202,7 +202,7 @@ where
                             match msg {
                             HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
                             _ => {
-                                error!(
+                                warn!(
                                     SecurityEvent::InvalidHealthCheckerMsg,
                                     NetworkSchema::new(&self.network_context)
                                         .remote_peer(&peer_id),
@@ -225,7 +225,7 @@ where
                             debug_assert!(false, "Unexpected network event");
                         },
                         Err(err) => {
-                            error!(
+                            warn!(
                                 SecurityEvent::InvalidNetworkEventHC,
                                 NetworkSchema::new(&self.network_context)
                                     .debug_error(&err),
@@ -341,7 +341,7 @@ where
                             }
                         });
                 } else {
-                    error!(
+                    warn!(
                         SecurityEvent::InvalidHealthCheckerMsg,
                         NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
                         "{} Pong nonce doesn't match Ping nonce. Round: {}, Pong: {}, Ping: {}",
