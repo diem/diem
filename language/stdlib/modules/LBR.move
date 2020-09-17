@@ -18,9 +18,7 @@ module LBR {
     use 0x1::CoreAddresses;
     use 0x1::Errors;
     use 0x1::FixedPoint32::{Self, FixedPoint32};
-    use 0x1::Libra::{Self, Libra,
-    // RegisterNewCurrency
-    };
+    use 0x1::Libra::{Self, Libra};
     use 0x1::LibraTimestamp;
 
     /// The type tag representing the `LBR` currency on-chain.
@@ -28,8 +26,11 @@ module LBR {
 
     /// A `ReserveComponent` holds one part of the on-chain reserve that backs
     /// `LBR` coins. Each `ReserveComponent` holds both the backing currency
-    /// itself, along with the ratio of the backing currency to the `LBR` coin.
-    /// For example, if `Coin1` makes up 1/2 of an `LBR`, then the `ratio` field would be 0.5.
+    /// itself, along with the ratio between this coin and the `LBR`.
+    /// For example, if every `LBR` coin is made up of 100 `Coin1`'s and
+    /// `1/100`'th of a `Coin2`, then the `ratio` fields of
+    /// `ReserveComponent<Coin1>` and `ReserveComponent<Coin2>` would be `100`
+    /// and `0.01` respectively.
     resource struct ReserveComponent<CoinType> {
         /// Specifies the relative ratio between the `CoinType` and `LBR` (i.e., how
         /// many `CoinType`s make up one `LBR`).
@@ -46,8 +47,8 @@ module LBR {
     /// coins, and also each reserve component that holds the backing for these coins on-chain.
     /// A crucial invariant of this on-chain reserve is that for each component
     /// `c_i`, `c_i.value/c_i.ratio >= LBR.market_cap`.
-    /// e.g., if `coin1.ratio = 1/2` and `coin2.ratio = 1/2` and `LBR.market_cap ==
-    /// 100`, then `coin1.value >= 50`, and `coin2.value >= 50`.
+    /// e.g., if `coin1.ratio = 100` and `coin2.ratio = 1/100` and `LBR.market_cap ==
+    /// 100`, then `coin1.value >= 10_000`, and `coin2.value >= 1`.
     resource struct Reserve {
         /// The mint capability allowing minting of `LBR` coins.
         mint_cap: Libra::MintCapability<LBR>,
@@ -113,11 +114,11 @@ module LBR {
         AccountLimits::publish_unrestricted_limits<LBR>(lr_account);
         let preburn_cap = Libra::create_preburn<LBR>(tc_account);
         let coin1 = ReserveComponent<Coin1> {
-            ratio: FixedPoint32::create_from_rational(1, 2),
+            ratio: FixedPoint32::create_from_raw_value(2147483648), // 2^31 = 1/2
             backing: Libra::zero<Coin1>(),
         };
         let coin2 = ReserveComponent<Coin2> {
-            ratio: FixedPoint32::create_from_rational(1, 2),
+            ratio: FixedPoint32::create_from_raw_value(2147483648), // 2^31 = 1/2
             backing: Libra::zero<Coin2>(),
         };
         move_to(lr_account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });

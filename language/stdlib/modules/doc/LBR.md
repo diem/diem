@@ -73,8 +73,11 @@ The type tag representing the <code><a href="#0x1_LBR">LBR</a></code> currency o
 
 A <code><a href="#0x1_LBR_ReserveComponent">ReserveComponent</a></code> holds one part of the on-chain reserve that backs
 <code><a href="#0x1_LBR">LBR</a></code> coins. Each <code><a href="#0x1_LBR_ReserveComponent">ReserveComponent</a></code> holds both the backing currency
-itself, along with the ratio of the backing currency to the <code><a href="#0x1_LBR">LBR</a></code> coin.
-For example, if <code><a href="Coin1.md#0x1_Coin1">Coin1</a></code> makes up 1/2 of an <code><a href="#0x1_LBR">LBR</a></code>, then the <code>ratio</code> field would be 0.5.
+itself, along with the ratio between this coin and the <code><a href="#0x1_LBR">LBR</a></code>.
+For example, if every <code><a href="#0x1_LBR">LBR</a></code> coin is made up of 100 <code><a href="Coin1.md#0x1_Coin1">Coin1</a></code>'s and
+<code>1/100</code>'th of a <code><a href="Coin2.md#0x1_Coin2">Coin2</a></code>, then the <code>ratio</code> fields of
+<code><a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;</code> and <code><a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;</code> would be <code>100</code>
+and <code>0.01</code> respectively.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;CoinType&gt;
@@ -113,8 +116,8 @@ The on-chain reserve for the <code><a href="#0x1_LBR">LBR</a></code> holds both 
 coins, and also each reserve component that holds the backing for these coins on-chain.
 A crucial invariant of this on-chain reserve is that for each component
 <code>c_i</code>, <code>c_i.value/c_i.ratio &gt;= <a href="#0x1_LBR">LBR</a>.market_cap</code>.
-e.g., if <code>coin1.ratio = 1/2</code> and <code>coin2.ratio = 1/2</code> and <code><a href="#0x1_LBR">LBR</a>.market_cap ==
-100</code>, then <code>coin1.value &gt;= 50</code>, and <code>coin2.value &gt;= 50</code>.
+e.g., if <code>coin1.ratio = 100</code> and <code>coin2.ratio = 1/100</code> and <code><a href="#0x1_LBR">LBR</a>.market_cap ==
+100</code>, then <code>coin1.value &gt;= 10_000</code>, and <code>coin2.value &gt;= 1</code>.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LBR_Reserve">Reserve</a>
@@ -268,11 +271,11 @@ restrictions are enforced in the <code><a href="Libra.md#0x1_Libra_register_curr
     <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(lr_account);
     <b>let</b> preburn_cap = <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(tc_account);
     <b>let</b> coin1 = <a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt; {
-        ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2),
+        ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_raw_value">FixedPoint32::create_from_raw_value</a>(2147483648), // 2^31 = 1/2
         backing: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(),
     };
     <b>let</b> coin2 = <a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt; {
-        ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2),
+        ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_raw_value">FixedPoint32::create_from_raw_value</a>(2147483648), // 2^31 = 1/2
         backing: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(),
     };
     move_to(lr_account, <a href="#0x1_LBR_Reserve">Reserve</a> { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
