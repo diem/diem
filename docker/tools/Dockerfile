@@ -34,7 +34,7 @@ RUN apt-get update && \
     rm -r /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
-RUN busybox wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --directory /usr/local/bin --wildcards --extract '*/azcopy' --strip-components=1
+RUN cd /usr/local/bin && busybox wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
 RUN busybox wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
 
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
