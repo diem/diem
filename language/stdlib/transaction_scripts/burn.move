@@ -56,4 +56,9 @@ fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) 
     SlidingNonce::record_nonce_or_abort(account, sliding_nonce);
     Libra::burn<Token>(account, preburn_address)
 }
+spec fun burn {
+    include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
+    include Libra::BurnAbortsIf<Token>;
+    include Libra::BurnEnsures<Token>;
+}
 }

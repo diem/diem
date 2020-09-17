@@ -13,6 +13,10 @@
 -  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_rotate_key)
 -  [Function `key`](#0x1_SharedEd25519PublicKey_key)
 -  [Function `exists_at`](#0x1_SharedEd25519PublicKey_exists_at)
+-  [Specification](#0x1_SharedEd25519PublicKey_Specification)
+    -  [Function `publish`](#0x1_SharedEd25519PublicKey_Specification_publish)
+    -  [Function `rotate_key_`](#0x1_SharedEd25519PublicKey_Specification_rotate_key_)
+    -  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_Specification_rotate_key)
 
 Each address that holds a <code><a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a></code> resource can rotate the public key stored in
 this resource, but the account's authentication key will be updated in lockstep. This ensures
@@ -229,3 +233,157 @@ Returns true if <code>addr</code> holds a <code><a href="#0x1_SharedEd25519Publi
 
 
 </details>
+
+<a name="0x1_SharedEd25519PublicKey_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_SharedEd25519PublicKey_Specification_publish"></a>
+
+### Function `publish`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_publish">publish</a>(account: &signer, key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_SharedEd25519PublicKey_PublishAbortsIf">PublishAbortsIf</a>;
+<b>include</b> <a href="#0x1_SharedEd25519PublicKey_PublishEnsures">PublishEnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_PublishAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_PublishAbortsIf">PublishAbortsIf</a> {
+    account: signer;
+    key: vector&lt;u8&gt;;
+    <a name="0x1_SharedEd25519PublicKey_addr$5"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>include</b> <a href="LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+    <b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a> {
+            shared_key: <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a> {
+                key: x"",
+                rotation_cap: <a href="LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(addr)
+            },
+            new_public_key: key
+    };
+    <b>aborts_if</b> exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_PublishEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_PublishEnsures">PublishEnsures</a> {
+    account: signer;
+    key: vector&lt;u8&gt;;
+    <a name="0x1_SharedEd25519PublicKey_addr$6"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>ensures</b> exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr);
+    <b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a> { shared_key: <b>global</b>&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr), new_public_key: key};
+}
+</code></pre>
+
+
+
+<a name="0x1_SharedEd25519PublicKey_Specification_rotate_key_"></a>
+
+### Function `rotate_key_`
+
+
+<pre><code><b>fun</b> <a href="#0x1_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a>, new_public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a>;
+<b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_RotateKey_AbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a> {
+    shared_key: <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>;
+    new_public_key: vector&lt;u8&gt;;
+    <b>aborts_if</b> !<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(new_public_key) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>include</b> <a href="LibraAccount.md#0x1_LibraAccount_RotateAuthenticationKeyAbortsIf">LibraAccount::RotateAuthenticationKeyAbortsIf</a> {
+        cap: shared_key.rotation_cap,
+        new_authentication_key: <a href="Authenticator.md#0x1_Authenticator_spec_ed25519_authentication_key">Authenticator::spec_ed25519_authentication_key</a>(new_public_key)
+    };
+}
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_RotateKey_Ensures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a> {
+    shared_key: <a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>;
+    new_public_key: vector&lt;u8&gt;;
+    <b>ensures</b> shared_key.key == new_public_key;
+}
+</code></pre>
+
+
+
+<a name="0x1_SharedEd25519PublicKey_Specification_rotate_key"></a>
+
+### Function `rotate_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SharedEd25519PublicKey_rotate_key">rotate_key</a>(account: &signer, new_public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKeyAbortsIf">RotateKeyAbortsIf</a>;
+<b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKeyEnsures">RotateKeyEnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_RotateKeyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_RotateKeyAbortsIf">RotateKeyAbortsIf</a> {
+    account: signer;
+    new_public_key: vector&lt;u8&gt;;
+    <a name="0x1_SharedEd25519PublicKey_addr$7"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_AbortsIf">RotateKey_AbortsIf</a> {shared_key: <b>global</b>&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_SharedEd25519PublicKey_RotateKeyEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_SharedEd25519PublicKey_RotateKeyEnsures">RotateKeyEnsures</a> {
+    account: signer;
+    new_public_key: vector&lt;u8&gt;;
+    <a name="0x1_SharedEd25519PublicKey_addr$8"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+    <b>include</b> <a href="#0x1_SharedEd25519PublicKey_RotateKey_Ensures">RotateKey_Ensures</a> {shared_key: <b>global</b>&lt;<a href="#0x1_SharedEd25519PublicKey">SharedEd25519PublicKey</a>&gt;(addr)};
+}
+</code></pre>

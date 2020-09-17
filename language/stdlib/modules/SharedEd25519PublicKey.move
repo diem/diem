@@ -38,6 +38,32 @@ module SharedEd25519PublicKey {
         assert(!exists<SharedEd25519PublicKey>(Signer::address_of(account)), Errors::already_published(ESHARED_KEY));
         move_to(account, t);
     }
+    spec fun publish {
+        include PublishAbortsIf;
+        include PublishEnsures;
+    }
+    spec schema PublishAbortsIf {
+        account: signer;
+        key: vector<u8>;
+        let addr = Signer::spec_address_of(account);
+        include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
+        include RotateKey_AbortsIf {
+                shared_key: SharedEd25519PublicKey {
+                    key: x"",
+                    rotation_cap: LibraAccount::spec_get_key_rotation_cap(addr)
+                },
+                new_public_key: key
+        };
+        aborts_if exists<SharedEd25519PublicKey>(addr) with Errors::ALREADY_PUBLISHED;
+    }
+    spec schema PublishEnsures {
+        account: signer;
+        key: vector<u8>;
+        let addr = Signer::spec_address_of(account);
+
+        ensures exists<SharedEd25519PublicKey>(addr);
+        include RotateKey_Ensures { shared_key: global<SharedEd25519PublicKey>(addr), new_public_key: key};
+    }
 
     fun rotate_key_(shared_key: &mut SharedEd25519PublicKey, new_public_key: vector<u8>) {
         // Cryptographic check of public key validity
@@ -51,6 +77,24 @@ module SharedEd25519PublicKey {
         );
         shared_key.key = new_public_key;
     }
+    spec fun rotate_key_ {
+        include RotateKey_AbortsIf;
+        include RotateKey_Ensures;
+    }
+    spec schema RotateKey_AbortsIf {
+        shared_key: SharedEd25519PublicKey;
+        new_public_key: vector<u8>;
+        aborts_if !Signature::ed25519_validate_pubkey(new_public_key) with Errors::INVALID_ARGUMENT;
+        include LibraAccount::RotateAuthenticationKeyAbortsIf {
+            cap: shared_key.rotation_cap,
+            new_authentication_key: Authenticator::spec_ed25519_authentication_key(new_public_key)
+        };
+    }
+    spec schema RotateKey_Ensures {
+        shared_key: SharedEd25519PublicKey;
+        new_public_key: vector<u8>;
+        ensures shared_key.key == new_public_key;
+    }
 
     /// (1) rotate the public key stored `account`'s `SharedEd25519PublicKey` resource to
     /// `new_public_key`
@@ -62,6 +106,23 @@ module SharedEd25519PublicKey {
         let addr = Signer::address_of(account);
         assert(exists<SharedEd25519PublicKey>(addr), Errors::not_published(ESHARED_KEY));
         rotate_key_(borrow_global_mut<SharedEd25519PublicKey>(addr), new_public_key);
+    }
+    spec fun rotate_key {
+        include RotateKeyAbortsIf;
+        include RotateKeyEnsures;
+    }
+    spec schema RotateKeyAbortsIf {
+        account: signer;
+        new_public_key: vector<u8>;
+        let addr = Signer::spec_address_of(account);
+        aborts_if !exists<SharedEd25519PublicKey>(addr) with Errors::NOT_PUBLISHED;
+        include RotateKey_AbortsIf {shared_key: global<SharedEd25519PublicKey>(addr)};
+    }
+    spec schema RotateKeyEnsures {
+        account: signer;
+        new_public_key: vector<u8>;
+        let addr = Signer::spec_address_of(account);
+        include RotateKey_Ensures {shared_key: global<SharedEd25519PublicKey>(addr)};
     }
 
     /// Return the public key stored under `addr`.

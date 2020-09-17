@@ -42,4 +42,10 @@ fun rotate_dual_attestation_info(account: &signer, new_url: vector<u8>, new_key:
     DualAttestation::rotate_base_url(account, new_url);
     DualAttestation::rotate_compliance_public_key(account, new_key)
 }
+spec fun rotate_dual_attestation_info {
+    include DualAttestation::RotateBaseUrlAbortsIf;
+    include DualAttestation::RotateBaseUrlEnsures;
+    include DualAttestation::RotateCompliancePublicKeyAbortsIf;
+    include DualAttestation::RotateCompliancePublicKeyEnsures;
+}
 }

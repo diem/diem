@@ -2291,12 +2291,45 @@ Must abort if the account does not have the MintCapability [B11].
 
 
 
+
+<pre><code><b>include</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_BurnAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
+    account: signer;
+    preburn_address: address;
+}
+</code></pre>
+
+
 Must abort if the account does not have the BurnCapability [B12].
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
-<b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<b>include</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_BurnEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt; {
+    account: signer;
+    preburn_address: address;
+    <b>include</b> <a href="#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+}
 </code></pre>
 
 
@@ -2368,7 +2401,7 @@ aborts_with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</
 <pre><code><b>schema</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt; {
     value: u64;
     result: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_currency_info$49"></a>
+    <a name="0x1_Libra_currency_info$51"></a>
     <b>let</b> currency_info = <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>ensures</b> exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>ensures</b> currency_info
@@ -2500,9 +2533,9 @@ Preburn is published under the DesignatedDealer account.
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
     account: signer;
     amount: u64;
-    <a name="0x1_Libra_account_addr$50"></a>
+    <a name="0x1_Libra_account_addr$52"></a>
     <b>let</b> account_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <a name="0x1_Libra_preburn$51"></a>
+    <a name="0x1_Libra_preburn$53"></a>
     <b>let</b> preburn = <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr);
 }
 </code></pre>
@@ -2531,8 +2564,8 @@ Must abort if the account does have the Preburn [B13].
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<b>include</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
-<b>include</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+<b>include</b> <a href="#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+<b>include</b> <a href="#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 </code></pre>
 
 
@@ -2548,22 +2581,22 @@ Must abort if the account does have the Preburn [B13].
 
 
 
-<pre><code><b>include</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt;;
-<b>include</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt;;
+<pre><code><b>include</b> <a href="#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt;;
 </code></pre>
 
 
 
 
-<a name="0x1_Libra_BurnAbortsIf"></a>
+<a name="0x1_Libra_BurnWithResourceCapAbortsIf"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>include</b> <a href="#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;CoinType&gt;;
-    <a name="0x1_Libra_to_burn$52"></a>
+    <a name="0x1_Libra_to_burn$49"></a>
     <b>let</b> to_burn = preburn.to_burn.value;
-    <a name="0x1_Libra_info$53"></a>
+    <a name="0x1_Libra_info$50"></a>
     <b>let</b> info = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
     <b>aborts_if</b> to_burn == 0 with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>;
     <b>aborts_if</b> info.total_value &lt; to_burn with <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
@@ -2574,10 +2607,10 @@ Must abort if the account does have the Preburn [B13].
 
 
 
-<a name="0x1_Libra_BurnEnsures"></a>
+<a name="0x1_Libra_BurnWithResourceCapEnsures"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt; {
+<pre><code><b>schema</b> <a href="#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value
             == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) - <b>old</b>(preburn.to_burn.value);

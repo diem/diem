@@ -62,6 +62,13 @@ module Authenticator {
         Vector::push_back(&mut public_key, SINGLE_ED25519_SCHEME_ID);
         Hash::sha3_256(public_key)
     }
+    spec fun ed25519_authentication_key {
+        pragma opaque = true;
+        pragma verify = false;
+        aborts_if false;
+        ensures result == spec_ed25519_authentication_key(public_key);
+    }
+    spec define spec_ed25519_authentication_key(public_key: vector<u8>): vector<u8>;
 
     /// Compute a multied25519 account authentication key for the policy `k`
     public fun multi_ed25519_authentication_key(k: &MultiEd25519PublicKey): vector<u8> {

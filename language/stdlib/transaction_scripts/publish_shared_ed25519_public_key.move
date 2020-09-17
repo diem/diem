@@ -31,4 +31,8 @@ use 0x1::SharedEd25519PublicKey;
 fun publish_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
     SharedEd25519PublicKey::publish(account, public_key)
 }
+spec fun publish_shared_ed25519_public_key {
+    include SharedEd25519PublicKey::PublishAbortsIf{key: public_key};
+    include SharedEd25519PublicKey::PublishEnsures{key: public_key};
+}
 }
