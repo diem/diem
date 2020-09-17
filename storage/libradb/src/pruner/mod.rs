@@ -12,7 +12,6 @@ use crate::{
     schema::{
         jellyfish_merkle_node::JellyfishMerkleNodeSchema, stale_node_index::StaleNodeIndexSchema,
     },
-    OP_COUNTER,
 };
 use anyhow::Result;
 use libra_jellyfish_merkle::StaleNodeIndex;
@@ -184,10 +183,6 @@ impl Worker {
                     // Log the progress.
                     self.least_readable_version
                         .store(least_readable_version, Ordering::Relaxed);
-                    OP_COUNTER.set(
-                        "pruner.least_readable_state_version",
-                        least_readable_version as usize,
-                    );
                     LIBRA_STORAGE_PRUNER_LEAST_READABLE_STATE_VERSION
                         .set(least_readable_version as i64);
 

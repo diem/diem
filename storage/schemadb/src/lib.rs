@@ -26,16 +26,12 @@ use crate::{
     schema::{KeyCodec, Schema, SeekKeyCodec, ValueCodec},
 };
 use anyhow::{ensure, format_err, Result};
-use libra_metrics::OpMetrics;
-use once_cell::sync::Lazy;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     iter::Iterator,
     marker::PhantomData,
     path::Path,
 };
-
-static OP_COUNTER: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("schemadb"));
 
 /// Type alias to `rocksdb::ReadOptions`. See [`rocksdb doc`](https://github.com/pingcap/rust-rocksdb/blob/master/src/rocksdb_options.rs)
 pub type ReadOptions = rocksdb::ReadOptions;
@@ -150,7 +146,6 @@ where
     }
 
     fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
-        let __timer = OP_COUNTER.timer(&format!("db_iter_time_{}", S::COLUMN_FAMILY_NAME));
         let _timer = LIBRA_SCHEMADB_ITER_LATENCY_SECONDS
             .with_label_values(&[S::COLUMN_FAMILY_NAME])
             .start_timer();
@@ -162,10 +157,6 @@ where
 
         let raw_key = self.db_iter.key().expect("Iterator must be valid.");
         let raw_value = self.db_iter.value().expect("Iterator must be valid.");
-        OP_COUNTER.observe(
-            &format!("db_iter_bytes_{}", S::COLUMN_FAMILY_NAME),
-            (raw_key.len() + raw_value.len()) as f64,
-        );
         LIBRA_SCHEMADB_ITER_BYTES
             .with_label_values(&[S::COLUMN_FAMILY_NAME])
             .observe((raw_key.len() + raw_value.len()) as f64);
@@ -332,7 +323,6 @@ impl DB {
 
     /// Reads single record by key.
     pub fn get<S: Schema>(&self, schema_key: &S::Key) -> Result<Option<S::Value>> {
-        let __timer = OP_COUNTER.timer(&format!("db_get_time_{}", S::COLUMN_FAMILY_NAME));
         let _timer = LIBRA_SCHEMADB_GET_LATENCY_SECONDS
             .with_label_values(&[S::COLUMN_FAMILY_NAME])
             .start_timer();
@@ -341,10 +331,6 @@ impl DB {
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
 
         let result = self.inner.get_cf(cf_handle, &k)?;
-        OP_COUNTER.observe(
-            &format!("db_get_bytes_{}", S::COLUMN_FAMILY_NAME),
-            result.as_ref().map_or(0.0, |v| v.len() as f64),
-        );
         LIBRA_SCHEMADB_GET_BYTES
             .with_label_values(&[S::COLUMN_FAMILY_NAME])
             .observe(result.as_ref().map_or(0.0, |v| v.len() as f64));
@@ -356,7 +342,7 @@ impl DB {
 
     /// Writes single record.
     pub fn put<S: Schema>(&self, key: &S::Key, value: &S::Value) -> Result<()> {
-        // Not necessary to use a batch, but we'd like a central place to bump OP_COUNTERS.
+        // Not necessary to use a batch, but we'd like a central place to bump counters.
         // Used in tests only anyway.
         let mut batch = SchemaBatch::new();
         batch.put::<S>(key, value)?;
@@ -405,7 +391,6 @@ impl DB {
 
     /// Writes a group of records wrapped in a [`SchemaBatch`].
     pub fn write_schemas(&self, batch: SchemaBatch) -> Result<()> {
-        let __timer = OP_COUNTER.timer(&format!("db_batch_commit_time_{}", self.name));
         let _timer = LIBRA_SCHEMADB_BATCH_COMMIT_LATENCY_SECONDS
             .with_label_values(&[self.name])
             .start_timer();
@@ -429,25 +414,16 @@ impl DB {
             for (key, write_op) in rows {
                 match write_op {
                     WriteOp::Value(value) => {
-                        OP_COUNTER.observe(
-                            &format!("db_put_bytes_{}", cf_name),
-                            (key.len() + value.len()) as f64,
-                        );
                         LIBRA_SCHEMADB_PUT_BYTES
                             .with_label_values(&[cf_name])
                             .observe((key.len() + value.len()) as f64);
                     }
                     WriteOp::Deletion => {
-                        OP_COUNTER.inc(&format!("db_delete_{}", cf_name));
                         LIBRA_SCHEMADB_DELETES.with_label_values(&[cf_name]).inc();
                     }
                 }
             }
         }
-        OP_COUNTER.observe(
-            &format!("db_batch_commit_bytes_{}", self.name),
-            serialized_size as f64,
-        );
         LIBRA_SCHEMADB_BATCH_COMMIT_BYTES
             .with_label_values(&[self.name])
             .observe(serialized_size as f64);

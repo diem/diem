@@ -55,7 +55,6 @@ use libra_types::{
     write_set::{WriteOp, WriteSet},
 };
 use libra_vm::VMExecutor;
-use once_cell::sync::Lazy;
 use scratchpad::SparseMerkleTree;
 use std::{
     collections::{hash_map, HashMap, HashSet},
@@ -64,9 +63,6 @@ use std::{
     sync::Arc,
 };
 use storage_interface::{state_view::VerifiedStateView, DbReaderWriter, TreeState};
-
-static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
-    Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("executor"));
 
 /// `Executor` implements all functionalities the execution module needs to provide.
 pub struct Executor<V> {
@@ -446,7 +442,6 @@ where
             self.cache.synced_trees().state_tree(),
         );
         let vm_outputs = {
-            let __timer = OP_COUNTERS.timer("vm_execute_chunk_time_s");
             let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
             fail_point!("executor::vm_execute_chunk", |_| {
                 Err(anyhow::anyhow!("Injected error in execute_chunk"))
@@ -679,7 +674,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                 "execute_block"
             );
 
-            let __timer = OP_COUNTERS.timer("block_execute_time_s");
             let _timer = LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS.start_timer();
 
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
@@ -691,7 +685,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});
-                let __timer = OP_COUNTERS.timer("vm_execute_block_time_s");
                 let _timer = LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS.start_timer();
                 fail_point!("executor::vm_execute_block", |_| {
                     Err(Error::from(anyhow::anyhow!(
@@ -844,9 +837,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
         let num_txns_to_commit = txns_to_commit.len() as u64;
         {
-            let __timer = OP_COUNTERS.timer("storage_save_transactions_time_s");
             let _timer = LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS.start_timer();
-            OP_COUNTERS.observe("storage_save_transactions.count", num_txns_to_commit as f64);
             LIBRA_EXECUTOR_TRANSACTIONS_SAVED.observe(num_txns_to_commit as f64);
 
             assert_eq!(first_version_to_commit, num_txns_in_li - num_txns_to_commit);
