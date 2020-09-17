@@ -200,5 +200,5 @@ const MEMPOOL_SUBSCRIBED_CONFIGS: &[ConfigID] = &[LibraVersion::CONFIG_ID, VMCon
 /// Creates mempool's subscription bundle for on-chain reconfiguration
 pub fn gen_mempool_reconfig_subscription(
 ) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    ReconfigSubscription::subscribe_all(MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![])
+    ReconfigSubscription::subscribe_all("mempool", MEMPOOL_SUBSCRIBED_CONFIGS.to_vec(), vec![])
 }

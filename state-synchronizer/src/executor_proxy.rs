@@ -228,8 +228,8 @@ impl ExecutorProxyTrait for ExecutorProxy {
             {
                 if let Err(e) = subscription.publish(new_configs.clone()) {
                     error!(
-                        "[state sync] failed to publish individual reconfig subscription: {}",
-                        e
+                        "[state sync] failed to publish individual reconfig subscription {}: {}",
+                        subscription.name, e
                     );
                 }
             }

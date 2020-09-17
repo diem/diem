@@ -57,7 +57,7 @@ pub struct ConfigurationChangeListener {
 
 pub fn gen_simple_discovery_reconfig_subscription(
 ) -> (ReconfigSubscription, Receiver<(), OnChainConfigPayload>) {
-    ReconfigSubscription::subscribe_all(ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
+    ReconfigSubscription::subscribe_all("network", ON_CHAIN_CONFIG_REGISTRY.to_vec(), vec![])
 }
 
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.

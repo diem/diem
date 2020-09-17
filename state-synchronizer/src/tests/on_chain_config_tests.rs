@@ -32,7 +32,7 @@ fn test_on_chain_config_pub_sub() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     // set up reconfig subscription
     let (subscription, mut reconfig_receiver) =
-        ReconfigSubscription::subscribe_all(vec![VMPublishingOption::CONFIG_ID], vec![]);
+        ReconfigSubscription::subscribe_all("test", vec![VMPublishingOption::CONFIG_ID], vec![]);
 
     let (config, genesis_key) = config_builder::test_config();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
