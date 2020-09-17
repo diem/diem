@@ -1,5 +1,5 @@
 ### Production Image ###
-FROM libra_e2e:latest as validator_with_config
+FROM libra/validator:latest as validator_with_config
 COPY docker/validator-dynamic/docker-run-dynamic.sh /
 COPY docker/validator-dynamic/docker-run-dynamic-fullnode.sh /
 
