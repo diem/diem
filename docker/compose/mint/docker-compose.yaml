@@ -1,0 +1,49 @@
+# This compose file supports running a faucet node that connects to the `validator-testnet`
+# compose's json-rpc endpoint. This should be started after that compose has been started.
+# The mint / faucet can be accessed at 127.0.0.1:8000
+#
+# Place the following files into the same directory:
+# * mint.key (also known as the libra_root_key)
+# * waypoint.txt
+#
+# Additional notes:
+# * Images can be found at https://hub.docker.com/r/libra/mint/tags, obtain the latest tag and
+# update below.
+version: "3.8"
+services:
+    mint:
+        image: libra/mint:master_6c5c58eb
+        environment:
+            AC_HOST: "172.16.1.3"
+            AC_PORT: "8080"
+            CFG_CHAIN_ID: "TESTING"
+        networks:
+            shared:
+                ipv4_address: 172.16.1.2
+        volumes:
+            - type: bind
+              source: ./mint.key
+              target: /opt/libra/etc/mint.key
+            - type: bind
+              source: ./waypoint.txt
+              target: /opt/libra/etc/waypoint.txt
+        command: [
+            "gunicorn",
+            "--bind",
+            "0.0.0.0:8000",
+            "--access-logfile",
+            "-",
+            "--error-logfile",
+            "-",
+            "--log-level",
+            "info",
+            "--pythonpath",
+            "/opt/libra/bin",
+            "server",
+        ]
+        ports:
+            - "8000:8000"
+networks:
+    shared:
+        external: true
+        name: "libra-docker-compose-shared"

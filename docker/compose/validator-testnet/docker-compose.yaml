@@ -12,10 +12,17 @@
 # the container will fail to start.
 # * If you would like to use the current Libra version within this repository, execute the
 # `build.sh` in `docker/validator` and change the image tag below to libra_e2e:latest
+# * Images can be found at https://hub.docker.com/r/libra/validator/tags, obtain the latest tag and
+# update below.
 version: "3.8"
 services:
     validator:
-        image: libra/validator
+        # Note this image currently does not support this, will update to the appropriate minimum
+        # version shortly
+        image: libra/validator:master_6c5c58eb
+        networks:
+            shared:
+                ipv4_address: 172.16.1.3
         volumes:
             - type: volume
               source: db
@@ -32,5 +39,11 @@ services:
         command: ["/opt/libra/bin/libra-node", "--test", "--config", "/opt/libra/var"]
         ports:
             - "8080:8080"
+networks:
+    shared:
+        name: "libra-docker-compose-shared"
+        ipam:
+          config:
+            - subnet: 172.16.1.0/24
 volumes:
     db:
