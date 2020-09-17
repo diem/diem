@@ -129,7 +129,8 @@ fn check_primitive_script_arg(
         } else {
             let msg = mk_msg();
             let tmsg = format!(
-                "{}s must be a prefix of the arguments to a script--they must come before any non-signer types",
+                "{}s must be a prefix of the arguments to a script--they must come before any \
+                 non-signer types",
                 core::error_format(&signer_ref, &Subst::empty()),
             );
             context.error(vec![(mloc, msg), (loc, tmsg)]);
@@ -175,8 +176,8 @@ fn function(
             || {
                 let tu = core::error_format_(&Type_::Unit, &Subst::empty());
                 format!(
-                    "Invalid 'script' function return type. \
-                    The function entry point to a 'script' must have the return type {}",
+                    "Invalid 'script' function return type. The function entry point to a \
+                     'script' must have the return type {}",
                     tu
                 )
             },
@@ -872,10 +873,10 @@ fn exp_(context: &mut Context, initial_ne: N::Exp) -> T::Exp {
                             let msg = format!("Invalid arguments to '{}'", &bop);
                             context.add_single_type_constraint(loc, msg, ty.clone());
                             let msg = format!(
-                            "Cannot use '{}' on resource values. This would destroy the resource. Try \
-                             borrowing the values with '&' first.'",
-                            &bop
-                        );
+                                "Cannot use '{}' on resource values. This would destroy the \
+                                 resource. Try borrowing the values with '&' first.'",
+                                &bop
+                            );
                             context.add_copyable_constraint(loc, msg, ty.clone());
                             (Type_::bool(loc), ty)
                         }

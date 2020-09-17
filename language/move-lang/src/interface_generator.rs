@@ -32,8 +32,13 @@ pub fn write_to_string(compiled_module_file_input_path: &str) -> Result<(ModuleI
     let mut out = String::new();
 
     let file_contents = fs::read(compiled_module_file_input_path)?;
-    let module = CompiledModule::deserialize(&file_contents)
-        .map_err(|e| anyhow!("Unable to deserialize module: {}", e))?;
+    let module = CompiledModule::deserialize(&file_contents).map_err(|e| {
+        anyhow!(
+            "Unable to deserialize module at '{}': {}",
+            compiled_module_file_input_path,
+            e
+        )
+    })?;
 
     let id = module.self_id();
     push_line!(
@@ -118,8 +123,8 @@ impl<'a> Context<'a> {
     }
 }
 
-const DISCLAIMER: &str = "// NOTE: Functions are 'native' for simplicity. They may or \
-                          may not be native in actuality.";
+const DISCLAIMER: &str =
+    "// NOTE: Functions are 'native' for simplicity. They may or may not be native in actuality.";
 
 fn write_struct_def(ctx: &mut Context, sdef: &StructDefinition) -> String {
     let mut out = String::new();

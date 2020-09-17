@@ -53,7 +53,7 @@ pub fn run_spec_lang_compiler(
     all_sources.extend(deps.clone());
     let mut env = GlobalEnv::new();
     // First pass: compile Move code.
-    let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
+    let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt, None)?;
     // Enter sources into env, remember file ids as
     for fname in files.keys().sorted() {
         let fsrc = &files[fname];
@@ -73,7 +73,7 @@ pub fn run_spec_lang_compiler(
                 // The alternative to do a second parse and expansion pass is to make the expansion
                 // AST clonable and tee it somehow out of the regular compile chain.
                 let (_, eprog_or_errors) =
-                    move_compile_to_expansion_no_report(&all_sources, &[], address_opt)?;
+                    move_compile_to_expansion_no_report(&all_sources, &[], address_opt, None)?;
                 let (eprog, comment_map) = eprog_or_errors.expect("no compilation errors");
                 // Add any documentation comments found by the Move compiler to the env.
                 for (fname, documentation) in comment_map {

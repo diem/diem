@@ -167,8 +167,8 @@ fn compile_file(addr: &[u8; AccountAddress::LENGTH]) -> Vec<CompiledModule> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("src/unit_tests/modules.move");
     let s = path.to_str().expect("no path specified").to_owned();
-    let (_, modules) =
-        move_lang::move_compile(&[s], &[], Some(Address::new(*addr))).expect("Error compiling...");
+    let (_, modules) = move_lang::move_compile(&[s], &[], Some(Address::new(*addr)), None)
+        .expect("Error compiling...");
 
     let mut compiled_modules = vec![];
     for module in modules {

@@ -63,8 +63,8 @@ pub fn run_move_prover<W: WriteColor>(
     options: Options,
 ) -> anyhow::Result<()> {
     let now = Instant::now();
-    let sources = find_move_filenames(&options.move_sources)?;
-    let deps = calculate_deps(&sources, &find_move_filenames(&options.move_deps)?)?;
+    let sources = find_move_filenames(&options.move_sources, true)?;
+    let deps = calculate_deps(&sources, &find_move_filenames(&options.move_deps, true)?)?;
     let address = Some(options.account_address.as_ref());
     debug!("parsing and checking sources");
     let mut env: GlobalEnv = run_spec_lang_compiler(sources, deps, address)?;

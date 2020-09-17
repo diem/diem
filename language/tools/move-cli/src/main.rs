@@ -114,7 +114,7 @@ fn compile(
 
     // TODO: prevent cyclic dep?
     let mut user_move_src_files = if Path::new(&args.move_src).exists() {
-        move_lang::find_move_filenames(&[args.move_src.clone()])?
+        move_lang::find_move_filenames(&[args.move_src.clone()], true)?
     } else {
         vec![]
     };
@@ -137,7 +137,7 @@ fn compile(
     let deps = stdlib::stdlib_files();
     let code_address = Some(MOVE_SRC_ADDRESS);
     let (_, compilation_units) =
-        move_lang::move_compile(&user_move_src_files, &deps, code_address)?;
+        move_lang::move_compile(&user_move_src_files, &deps, code_address, None)?;
 
     let mut modules: Vec<CompiledModule> = stdlib::stdlib_bytecode_files()
         .iter()

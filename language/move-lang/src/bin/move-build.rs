@@ -59,6 +59,13 @@ pub fn main() -> anyhow::Result<()> {
         out_dir,
         emit_source_map,
     } = Options::from_args();
-    let (files, compiled_units) = move_lang::move_compile(&source_files, &dependencies, sender)?;
+
+    let interface_files_dir = format!("{}/generated_interface_files", out_dir);
+    let (files, compiled_units) = move_lang::move_compile(
+        &source_files,
+        &dependencies,
+        sender,
+        Some(interface_files_dir),
+    )?;
     move_lang::output_compiled_units(emit_source_map, files, compiled_units, &out_dir)
 }

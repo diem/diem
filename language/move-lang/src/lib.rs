@@ -36,6 +36,7 @@ use std::{
     path::{Path, PathBuf},
     str::Chars,
 };
+use tempfile::NamedTempFile;
 
 pub const MOVE_EXTENSION: &str = "move";
 pub const MOVE_COMPILED_EXTENSION: &str = "mv";
@@ -54,8 +55,9 @@ pub fn move_check(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<()> {
-    let (files, errors) = move_check_no_report(targets, deps, sender_opt)?;
+    let (files, errors) = move_check_no_report(targets, deps, sender_opt, interface_files_dir_opt)?;
     if !errors.is_empty() {
         errors::report_errors(files, errors)
     }
@@ -67,8 +69,11 @@ pub fn move_check_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(FilesSourceText, Errors)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let mut deps = deps.to_vec();
+    generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     match check_program(pprog_res, sender_opt) {
         Err(errors) => Ok((files, errors)),
@@ -85,10 +90,11 @@ pub fn move_compile(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(FilesSourceText, Vec<CompiledUnit>)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
-    let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
-    match compile_program(pprog_res, sender_opt) {
+    let (files, compiled_units_or_errors) =
+        move_compile_no_report(targets, deps, sender_opt, interface_files_dir_opt)?;
+    match compiled_units_or_errors {
         Err(errors) => errors::report_errors(files, errors),
         Ok(compiled_units) => Ok((files, compiled_units)),
     }
@@ -99,8 +105,11 @@ pub fn move_compile_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(FilesSourceText, Result<Vec<CompiledUnit>, Errors>)> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let mut deps = deps.to_vec();
+    generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
     let pprog_res = pprog_and_comments_res.map(|(pprog, _)| pprog);
     Ok(match compile_program(pprog_res, sender_opt) {
         Err(errors) => (files, Err(errors)),
@@ -115,11 +124,14 @@ pub fn move_compile_to_expansion_no_report(
     targets: &[String],
     deps: &[String],
     sender_opt: Option<Address>,
+    interface_files_dir_opt: Option<String>,
 ) -> anyhow::Result<(
     FilesSourceText,
     Result<(expansion::ast::Program, CommentMap), Errors>,
 )> {
-    let (files, pprog_and_comments_res) = parse_program(targets, deps)?;
+    let mut deps = deps.to_vec();
+    generate_interface_files_for_deps(&mut deps, interface_files_dir_opt)?;
+    let (files, pprog_and_comments_res) = parse_program(targets, &deps)?;
     let res = pprog_and_comments_res.and_then(|(pprog, comment_map)| {
         let (eprog, errors) = expansion::translate::program(pprog, sender_opt);
         check_errors(errors)?;
@@ -198,6 +210,113 @@ pub fn output_compiled_units(
     Ok(())
 }
 
+fn generate_interface_files_for_deps(
+    deps: &mut Vec<String>,
+    interface_files_dir_opt: Option<String>,
+) -> anyhow::Result<()> {
+    if let Some(dir) = generate_interface_files(deps, interface_files_dir_opt)? {
+        deps.push(dir)
+    }
+    Ok(())
+}
+
+pub fn generate_interface_files(
+    mv_file_locations: &[String],
+    interface_files_dir_opt: Option<String>,
+) -> anyhow::Result<Option<String>> {
+    let mv_files = {
+        let mut v = vec![];
+        let (mv_magic_files, other_file_locations): (Vec<_>, Vec<_>) = mv_file_locations
+            .iter()
+            .cloned()
+            .partition(|s| Path::new(s).is_file() && has_compiled_module_magic_number(s));
+        v.extend(mv_magic_files);
+        let mv_ext_files = find_filenames(&other_file_locations, |path| {
+            extension_equals(path, MOVE_COMPILED_EXTENSION)
+        })?;
+        v.extend(mv_ext_files);
+        v
+    };
+    if mv_files.is_empty() {
+        return Ok(None);
+    }
+
+    let interface_files_dir =
+        interface_files_dir_opt.unwrap_or_else(|| command_line::DEFAULT_OUTPUT_DIR.to_string());
+    let hash_dir = {
+        use std::{
+            collections::hash_map::DefaultHasher,
+            hash::{Hash, Hasher},
+        };
+
+        let mut hasher = DefaultHasher::new();
+        for mv_file in &mv_files {
+            std::fs::read(mv_file)?.hash(&mut hasher)
+        }
+        // TODO might want a better temp file setup here
+        let dir = format!(
+            "{}/{}_interfaces/{:020}",
+            interface_files_dir,
+            MOVE_COMPILED_EXTENSION,
+            hasher.finish(),
+        );
+
+        dir
+    };
+
+    for mv_file in mv_files {
+        let (id, interface_contents) = interface_generator::write_to_string(&mv_file)?;
+        let addr_dir = format!("{}/{:#x}", hash_dir, id.address());
+        let file_path = format!("{}/{}.{}", addr_dir, id.name(), MOVE_EXTENSION);
+        // it's possible some files exist but not others due to multithreaded environments
+        if Path::new(&file_path).is_file() {
+            continue;
+        }
+
+        let mut tmp = NamedTempFile::new()?;
+        tmp.write_all(interface_contents.as_bytes())?;
+
+        std::fs::create_dir_all(addr_dir)?;
+        // it's possible some files exist but not others due to multithreaded environments
+        // Check for the file existing and then safely move the tmp file there if
+        // it does not
+        if Path::new(&file_path).is_file() {
+            continue;
+        }
+        std::fs::rename(tmp.path(), file_path)?;
+    }
+
+    Ok(Some(hash_dir))
+}
+
+fn has_compiled_module_magic_number(path: &str) -> bool {
+    use move_vm::file_format_common::BinaryConstants;
+    let mut file = match File::open(path) {
+        Err(_) => return false,
+        Ok(f) => f,
+    };
+    let mut magic = [0u8; BinaryConstants::LIBRA_MAGIC_SIZE];
+    let num_bytes_read = match file.read(&mut magic) {
+        Err(_) => return false,
+        Ok(n) => n,
+    };
+    num_bytes_read == BinaryConstants::LIBRA_MAGIC_SIZE && magic == BinaryConstants::LIBRA_MAGIC
+}
+
+fn path_to_string(path: &Path) -> anyhow::Result<String> {
+    match path.to_str() {
+        Some(p) => Ok(p.to_string()),
+        None => Err(anyhow!("non-Unicode file name")),
+    }
+}
+
+fn extension_equals(path: &Path, target_ext: &str) -> bool {
+    match path.extension().and_then(|s| s.to_str()) {
+        Some(extension) => extension == target_ext,
+        None => false,
+    }
+}
+
 //**************************************************************************************************
 // Translations
 //**************************************************************************************************
@@ -235,11 +354,11 @@ fn parse_program(
     FilesSourceText,
     Result<(parser::ast::Program, CommentMap), Errors>,
 )> {
-    let targets = find_move_filenames(targets)?
+    let targets = find_move_filenames(targets, true)?
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
-    let deps = find_move_filenames(deps)?
+    let deps = find_move_filenames(deps, true)?
         .iter()
         .map(|s| leak_str(s))
         .collect::<Vec<&'static str>>();
@@ -276,21 +395,45 @@ fn parse_program(
     Ok((files, res))
 }
 
-pub fn find_move_filenames(files: &[String]) -> anyhow::Result<Vec<String>> {
+/// - For each directory in `paths`, it will return all files with the `MOVE_EXTENSION` found
+///   recursively in that directory
+/// - If `keep_specified_files` any file explicitly passed in `paths`, will be added to the result
+///   Otherwise, they will be discarded
+pub fn find_move_filenames(
+    paths: &[String],
+    keep_specified_files: bool,
+) -> anyhow::Result<Vec<String>> {
+    if keep_specified_files {
+        let (mut files, other_paths): (Vec<String>, Vec<String>) =
+            paths.iter().cloned().partition(|s| Path::new(s).is_file());
+        files.extend(find_filenames(&other_paths, |path| {
+            extension_equals(path, MOVE_EXTENSION)
+        })?);
+        Ok(files)
+    } else {
+        find_filenames(paths, |path| extension_equals(path, MOVE_EXTENSION))
+    }
+}
+
+/// - For each directory in `paths`, it will return all files that satisfy the predicate
+/// - Any file explicitly passed in `paths`, it will include that file in the result, regardless
+///   of the file extension
+fn find_filenames<Predicate: FnMut(&Path) -> bool>(
+    paths: &[String],
+    mut is_file_desired: Predicate,
+) -> anyhow::Result<Vec<String>> {
     let mut result = vec![];
-    let has_move_extension = |path: &Path| match path.extension().and_then(|s| s.to_str()) {
-        Some(extension) => extension == MOVE_EXTENSION,
-        None => false,
-    };
-    for file in files {
-        let path = Path::new(file);
+
+    for s in paths {
+        let path = Path::new(s);
         if !path.exists() {
-            return Err(anyhow!(format!("No such file or directory '{}'", file)));
+            return Err(anyhow!(format!("No such file or directory '{}'", s)));
+        }
+        if path.is_file() && is_file_desired(path) {
+            result.push(path_to_string(path)?);
+            continue;
         }
         if !path.is_dir() {
-            // If the filename is specified directly, add it to the list, regardless
-            // of whether it has a ".move" extension.
-            result.push(file.clone());
             continue;
         }
         for entry in walkdir::WalkDir::new(path)
@@ -298,15 +441,11 @@ pub fn find_move_filenames(files: &[String]) -> anyhow::Result<Vec<String>> {
             .filter_map(|e| e.ok())
         {
             let entry_path = entry.path();
-            if !entry.file_type().is_file() || !has_move_extension(&entry_path) {
+            if !entry.file_type().is_file() || !is_file_desired(&entry_path) {
                 continue;
             }
-            match entry_path.to_str() {
-                Some(p) => result.push(p.to_string()),
-                None => {
-                    return Err(anyhow!("non-Unicode file name"));
-                }
-            }
+
+            result.push(path_to_string(entry_path)?);
         }
     }
     Ok(result)

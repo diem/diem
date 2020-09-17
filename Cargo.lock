@@ -3904,6 +3904,7 @@ dependencies = [
  "petgraph",
  "regex",
  "structopt 0.3.18",
+ "tempfile",
  "vm",
  "walkdir",
 ]

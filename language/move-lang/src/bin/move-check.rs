@@ -35,6 +35,15 @@ pub struct Options {
         parse(try_from_str = cli::parse_address)
     )]
     pub sender: Option<Address>,
+
+    /// The output directory for saved artifacts, namely any 'move' interface files generated from
+    /// 'mv' files
+    #[structopt(
+        name = "PATH_TO_OUTPUT_DIRECTORY",
+        short = cli::OUT_DIR_SHORT,
+        long = cli::OUT_DIR,
+    )]
+    pub out_dir: Option<String>,
 }
 
 pub fn main() -> anyhow::Result<()> {
@@ -42,6 +51,8 @@ pub fn main() -> anyhow::Result<()> {
         source_files,
         dependencies,
         sender,
+        out_dir,
     } = Options::from_args();
-    move_lang::move_check(&source_files, &dependencies, sender)
+
+    move_lang::move_check(&source_files, &dependencies, sender, out_dir)
 }
