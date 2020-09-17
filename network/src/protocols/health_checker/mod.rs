@@ -184,6 +184,10 @@ where
 
     pub async fn start(mut self) {
         let mut tick_handlers = FuturesUnordered::new();
+        info!(
+            NetworkSchema::new(&self.network_context),
+            "{} Health checker actor started", self.network_context
+        );
         loop {
             futures::select! {
                 event = self.network_rx.select_next_some() => {

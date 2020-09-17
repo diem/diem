@@ -232,8 +232,16 @@ impl Rpc {
 
     /// Start the [`Rpc`] actor's event loop.
     pub async fn start(mut self) {
+        let peer_id = self.peer_handle.peer_id();
         let mut inbound_rpc_tasks = InboundRpcTasks::new();
         let mut outbound_rpc_tasks = OutboundRpcTasks::new();
+
+        info!(
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
+            "{} Rpc actor for '{}' started",
+            self.network_context,
+            peer_id.short_str()
+        );
         loop {
             ::futures::select! {
                 notif = self.peer_notifs_rx.select_next_some() => {
@@ -258,10 +266,10 @@ impl Rpc {
             }
         }
         info!(
-            NetworkSchema::new(&self.network_context).remote_peer(&self.peer_handle.peer_id()),
+            NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
             "{} Rpc actor for '{}' terminated",
             self.network_context,
-            self.peer_handle.peer_id().short_str()
+            peer_id.short_str()
         );
     }
 

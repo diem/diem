@@ -170,6 +170,10 @@ impl ConfigurationChangeListener {
 
     /// Starts the listener to wait on reconfiguration events.  Creates an infinite loop.
     pub async fn start(mut self) {
+        info!(
+            NetworkSchema::new(&self.network_context),
+            "{} Starting OnChain Discovery actor", self.network_context
+        );
         loop {
             let start_idle_time = Instant::now();
             let payload = self.reconfig_events.select_next_some().await;

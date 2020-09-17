@@ -256,7 +256,7 @@ where
 
         info!(
             NetworkSchema::new(&self.network_context),
-            "{} Starting ConnectivityManager loop", self.network_context
+            "{} Starting ConnectivityManager actor", self.network_context
         );
 
         loop {
@@ -289,7 +289,7 @@ where
 
         warn!(
             NetworkSchema::new(&self.network_context),
-            "{} ConnectivityManager loop terminated", self.network_context
+            "{} ConnectivityManager actor terminated", self.network_context
         );
     }
 
