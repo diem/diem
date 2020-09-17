@@ -5,6 +5,7 @@ use crate::{counters, SynchronizerState};
 use anyhow::{format_err, Result};
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use itertools::Itertools;
+use libra_logger::prelude::*;
 use libra_types::{
     account_state::AccountState,
     contract_event::ContractEvent,
@@ -156,7 +157,13 @@ impl ExecutorProxyTrait for ExecutorProxy {
             intermediate_end_of_epoch_li,
         )?;
         timer.stop_and_record();
-        self.publish_on_chain_config_updates(reconfig_events)
+        if let Err(e) = self.publish_on_chain_config_updates(reconfig_events) {
+            error!(
+                "[state sync] failed to publish reconfig notification in execute_chunk: {}",
+                e
+            );
+        }
+        Ok(())
     }
 
     fn get_chunk(
@@ -219,7 +226,12 @@ impl ExecutorProxyTrait for ExecutorProxy {
             if !changed_configs.is_disjoint(&subscribed_items.configs)
                 || !event_keys.is_disjoint(&subscribed_items.events)
             {
-                subscription.publish(new_configs.clone())?;
+                if let Err(e) = subscription.publish(new_configs.clone()) {
+                    error!(
+                        "[state sync] failed to publish individual reconfig subscription: {}",
+                        e
+                    );
+                }
             }
         }
 
