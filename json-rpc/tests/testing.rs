@@ -143,7 +143,7 @@ impl Env {
         let seq = self
             .get_account_sequence(account.address.to_string())
             .expect("account should exist onchain for create transaction");
-        let txn = libra_types::transaction::helpers::create_user_txn(
+        libra_types::transaction::helpers::create_user_txn(
             account,
             libra_types::transaction::TransactionPayload::Script(script),
             account.address,
@@ -154,8 +154,7 @@ impl Env {
             30,
             ChainId::test(),
         )
-        .unwrap();
-        txn
+        .unwrap()
     }
 
     pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> JsonRpcResponse {
