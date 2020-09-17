@@ -7,16 +7,38 @@ use libra_types::account_config::{
     testnet_dd_account_address, treasury_compliance_account_address, type_tag_for_currency_code,
     LBR_NAME,
 };
-use std::convert::From;
+use std::{convert::From, fmt};
+
+#[derive(Debug)]
+pub enum Response {
+    DDAccountNextSeqNum(u64),
+    SubmittedTxns(Vec<libra_types::transaction::SignedTransaction>),
+}
+
+impl std::fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Response::DDAccountNextSeqNum(v1) => write!(f, "{}", v1),
+            Response::SubmittedTxns(v2) => {
+                write!(f, "{}", hex::encode(lcs::to_bytes(&v2).unwrap()))
+            }
+        }
+    }
+}
 
 #[derive(serde_derive::Deserialize)]
 pub struct MintParams {
-    amount: u64,
-    currency_code: move_core_types::identifier::Identifier,
-    auth_key: libra_types::transaction::authenticator::AuthenticationKey,
+    pub amount: u64,
+    pub currency_code: move_core_types::identifier::Identifier,
+    pub auth_key: libra_types::transaction::authenticator::AuthenticationKey,
+    pub return_txns: Option<bool>,
 }
 
 impl MintParams {
+    fn currency_code(&self) -> move_core_types::language_storage::TypeTag {
+        type_tag_for_currency_code(self.currency_code.to_owned())
+    }
+
     fn create_parent_vasp_account_script(
         &self,
         seq: u64,
@@ -24,7 +46,7 @@ impl MintParams {
         let receiver = self.auth_key.derived_address();
         libra_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
-                type_tag_for_currency_code(self.currency_code.to_owned()),
+                self.currency_code(),
                 0, // sliding nonce
                 receiver,
                 self.auth_key.prefix().to_vec(),
@@ -38,7 +60,7 @@ impl MintParams {
         let receiver = self.auth_key.derived_address();
         libra_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
-                type_tag_for_currency_code(self.currency_code.to_owned()),
+                self.currency_code(),
                 receiver,
                 self.amount,
                 vec![],
@@ -70,7 +92,7 @@ impl Service {
         }
     }
 
-    pub async fn process(&self, params: &MintParams) -> Result<String> {
+    pub async fn process(&self, params: &MintParams) -> Result<Response> {
         let (tc_seq, dd_seq) = self.sequences().await?;
 
         let create_account_txn = self.create_txn(
@@ -82,11 +104,19 @@ impl Service {
             self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?;
 
         let mut batch = libra_json_rpc_client::JsonRpcBatch::new();
-        batch.add_submit_request(create_account_txn)?;
-        batch.add_submit_request(transfer_txn)?;
+        batch.add_submit_request(create_account_txn.clone())?;
+        batch.add_submit_request(transfer_txn.clone())?;
         self.client.execute(batch).await?;
 
-        Ok(format!("{}", dd_seq + 1,))
+        if let Some(return_txns) = params.return_txns {
+            if return_txns {
+                return Ok(Response::SubmittedTxns(vec![
+                    create_account_txn,
+                    transfer_txn,
+                ]));
+            }
+        }
+        Ok(Response::DDAccountNextSeqNum(dd_seq + 1))
     }
 
     fn create_txn(

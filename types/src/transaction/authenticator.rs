@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use anyhow::{Error, Result};
+use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
@@ -272,7 +272,10 @@ impl FromStr for AuthenticationKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        assert!(!s.is_empty());
+        ensure!(
+            !s.is_empty(),
+            "authentication key string should not be empty.",
+        );
         let bytes_out = ::hex::decode(s)?;
         let key = AuthenticationKey::try_from(bytes_out.as_slice())?;
         Ok(key)
