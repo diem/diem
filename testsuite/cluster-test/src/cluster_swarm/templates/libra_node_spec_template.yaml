@@ -43,6 +43,7 @@ spec:
     resources:
       requests:
         cpu: 7800m
+    command: ["/opt/libra/bin/libra-node", "-f", "/opt/libra/etc/node.yaml"]
     ports:
     - containerPort: 6180
     - containerPort: 6181

@@ -32,7 +32,6 @@ RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
-COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY --from=builder /libra/target/release/db-backup /opt/libra/bin
 COPY --from=builder /libra/target/release/db-bootstrapper /opt/libra/bin
 COPY --from=builder /libra/target/release/db-restore /opt/libra/bin
@@ -48,10 +47,6 @@ EXPOSE 6186
 
 # Capture backtrace on error
 ENV RUST_BACKTRACE 1
-
-# Define SEED_PEERS, NODE_CONFIG, NETWORK_KEYPAIRS, CONSENSUS_KEYPAIR, GENESIS_BLOB and PEER_ID environment variables when running
-COPY docker/validator/docker-run.sh /
-CMD /docker-run.sh
 
 ARG BUILD_DATE
 ARG GIT_REV

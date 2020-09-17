@@ -19,7 +19,6 @@ ${CARGO} ${CARGOFLAGS} build --release \
          -p libra-genesis-tool \
          -p libra-operational-tool \
          -p libra-node \
-         -p config-builder \
          -p libra-key-manager \
          -p safety-rules \
          -p db-bootstrapper \

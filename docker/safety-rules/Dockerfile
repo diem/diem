@@ -31,15 +31,10 @@ RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data
 
-COPY docker/safety-rules/key-manager.sh /
-COPY docker/safety-rules/safety-rules.sh /
-
-COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY --from=builder /libra/target/release/libra-key-manager /opt/libra/bin
 COPY --from=builder /libra/target/release/safety-rules /opt/libra/bin
 
 ENV RUST_BACKTRACE 1
-CMD /safety-rules.sh
 
 ARG BUILD_DATE
 ARG GIT_REV

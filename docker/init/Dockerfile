@@ -30,7 +30,6 @@ RUN cd /usr/local/bin && busybox wget "https://storage.googleapis.com/kubernetes
 RUN cd /usr/local/bin && busybox wget "https://releases.hashicorp.com/vault/1.5.0/vault_1.5.0_linux_amd64.zip" -O - | busybox unzip - && chmod +x vault
 
 RUN mkdir -p /opt/libra/bin
-COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
 
