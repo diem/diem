@@ -25,17 +25,23 @@ use libra_types::{
     proof::{SparseMerkleProof, SparseMerkleRangeProof},
     transaction::Version,
 };
+use lru::LruCache;
 use schemadb::{SchemaBatch, DB};
+use std::sync::Mutex;
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Debug)]
 pub(crate) struct StateStore {
     db: Arc<DB>,
+    lru: Mutex<LruCache<NodeKey, Option<Node>>>,
 }
 
 impl StateStore {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db }
+        Self {
+            db,
+            lru: Mutex::new(LruCache::new(10000)),
+        }
     }
 
     /// Get the account state blob given account address and root hash of state Merkle tree
@@ -141,7 +147,15 @@ impl StateStore {
 
 impl TreeReader for StateStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
-        Ok(self.db.get::<JellyfishMerkleNodeSchema>(node_key)?)
+        let mut cache = self.lru.lock().unwrap();
+        if let Some(hit) = cache.get(node_key) {
+            Ok(hit.clone())
+        } else {
+            let miss = self.db.get::<JellyfishMerkleNodeSchema>(node_key)?;
+            cache.put(node_key.clone(), miss.clone());
+            Ok(miss)
+        }
+        // Ok(self.db.get::<JellyfishMerkleNodeSchema>(node_key)?)
     }
 
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {

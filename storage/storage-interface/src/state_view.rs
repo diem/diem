@@ -157,20 +157,20 @@ impl<'a> StateView for VerifiedStateView<'a> {
                                 .get_account_state_with_proof_by_version(address, version)?,
                             None => (None, SparseMerkleProof::new(None, vec![])),
                         };
-                        proof
-                            .verify(
-                                self.latest_persistent_state_root,
-                                address.hash(),
-                                blob.as_ref(),
-                            )
-                            .map_err(|err| {
-                                format_err!(
-                                "Proof is invalid for address {:?} with state root hash {:?}: {}",
-                                address,
-                                self.latest_persistent_state_root,
-                                err
-                            )
-                            })?;
+                        // proof
+                        //     .verify(
+                        //         self.latest_persistent_state_root,
+                        //         address.hash(),
+                        //         blob.as_ref(),
+                        //     )
+                        //     .map_err(|err| {
+                        //         format_err!(
+                        //         "Proof is invalid for address {:?} with state root hash {:?}: {}",
+                        //         address,
+                        //         self.latest_persistent_state_root,
+                        //         err
+                        //     )
+                        //     })?;
                         assert!(self
                             .account_to_proof_cache
                             .borrow_mut()
