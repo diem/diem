@@ -36,6 +36,7 @@ use libra_types::{
     waypoint::Waypoint,
 };
 use num_traits::cast::FromPrimitive;
+use rand::random;
 use regex::Regex;
 use rust_decimal::Decimal;
 use std::{
@@ -2053,7 +2054,8 @@ fn parse_waypoint(db_bootstrapper_output: &str) -> Waypoint {
 
 #[test]
 fn test_db_restore() {
-    let (mut env, mut client1) = setup_swarm_and_client_proxy(4, 1);
+    let (mut env, mut client1) = setup_swarm_and_client_proxy(7, 1);
+
     // pre-build tools
     workspace_builder::get_bin("db-backup");
     workspace_builder::get_bin("db-restore");
@@ -2084,13 +2086,13 @@ fn test_db_restore() {
     let transfer_quit = Arc::new(AtomicBool::new(false));
     let transfer_quit_clone = transfer_quit.clone();
     let transfer_thread = std::thread::spawn(|| {
-        transfer_continuously(client1, 999999.0, 1000001.0, transfer_quit_clone)
+        transfer_and_reconfig(client1, 999999.0, 1000001.0, transfer_quit_clone)
     });
 
     // make a backup from node 1
     let node1_config =
         NodeConfig::load(env.validator_swarm.config.config_files.get(1).unwrap()).unwrap();
-    let backup_path = db_backup(node1_config.storage.backup_service_address.port(), 0, 50);
+    let backup_path = db_backup(node1_config.storage.backup_service_address.port(), 1, 50);
 
     // take down node 0
     env.validator_swarm.kill_node(0);
@@ -2105,13 +2107,13 @@ fn test_db_restore() {
     // restore db from backup
     db_restore(backup_path.path(), db_dir.as_path());
 
-    // stop transferring
-    transfer_quit.store(true, Ordering::Relaxed);
-    let transferred = transfer_thread.join().unwrap();
-
     // start node 0 on top of restored db
     // (add_node() waits for it to connect to peers)
     env.validator_swarm.add_node(0, false).unwrap();
+
+    // stop transferring
+    transfer_quit.store(true, Ordering::Relaxed);
+    let transferred = transfer_thread.join().unwrap();
 
     // verify it's caught up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
@@ -2236,7 +2238,7 @@ fn db_restore(backup_path: &Path, db_path: &Path) {
     println!("Backup restored in {} seconds.", now.elapsed().as_secs());
 }
 
-fn transfer_continuously(
+fn transfer_and_reconfig(
     mut client: ClientProxy,
     balance0: f64,
     balance1: f64,
@@ -2245,6 +2247,17 @@ fn transfer_continuously(
     let now = Instant::now();
     let mut transferred = 0f64;
     while !quit.load(Ordering::Relaxed) {
+        if random::<u16>() % 10 == 0 {
+            println!(
+                "Changing libra version to {}: {:?}",
+                transferred,
+                client.change_libra_version(
+                    &["change_libra_version", &transferred.to_string()],
+                    true
+                )
+            );
+        }
+
         client
             .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
             .unwrap();

@@ -584,17 +584,50 @@ proptest! {
                 0..num_txns
             )
         })) {
-            let mut block = TestBlock::new(0..num_txns, 10, gen_block_id(1));
+            let block_id = gen_block_id(1);
+            let mut block = TestBlock::new(0..num_txns, 10, block_id);
             block.txns[reconfig_txn_index as usize] = encode_reconfiguration_transaction(gen_address(reconfig_txn_index));
             let mut executor = TestExecutor::new();
-            let parent_block_id = executor.committed_block_id();
 
+            let parent_block_id = executor.committed_block_id();
             let output = executor.execute_block(
-                (block.id, block.txns), parent_block_id
+                (block_id, block.txns.clone()), parent_block_id
             ).unwrap();
+
+            // assert: txns after the reconfiguration are with status "Retry"
             let retry_iter = output.compute_status().iter()
             .skip_while(|status| matches!(*status, TransactionStatus::Keep(_)));
             prop_assert_eq!(retry_iter.take_while(|status| matches!(*status,TransactionStatus::Retry)).count() as u64, num_txns - reconfig_txn_index - 1);
+
+            // commit
+            let ledger_info = gen_ledger_info(reconfig_txn_index + 1 /* version */, output.root_hash(), block_id, 1 /* timestamp */);
+            executor.commit_blocks(vec![block_id], ledger_info).unwrap();
+            let parent_block_id = executor.committed_block_id();
+
+            // retry txns after reconfiguration
+            let retry_block_id = gen_block_id(2);
+            let retry_output = executor.execute_block(
+                (retry_block_id, block.txns.iter().skip(reconfig_txn_index as usize + 1).cloned().collect()), parent_block_id
+            ).unwrap();
+            prop_assert!(retry_output.compute_status().iter().all(|s| matches!(*s, TransactionStatus::Keep(_))));
+
+            // commit
+            let ledger_info = gen_ledger_info(num_txns  /* version */, retry_output.root_hash(), retry_block_id, 12345 /* timestamp */);
+            executor.commit_blocks(vec![retry_block_id], ledger_info).unwrap();
+
+            // get txn_infos from db
+            let db = executor.db.reader.clone();
+            prop_assert_eq!(db.get_latest_version().unwrap(), num_txns as Version);
+            let txn_list = db.get_transactions(1 /* start version */, num_txns, num_txns as Version /* ledger version */, false /* fetch events */).unwrap();
+            prop_assert_eq!(&block.txns, &txn_list.transactions);
+            let (_, txn_infos) = txn_list.proof.unpack();
+
+            // replay txns in one batch across epoch boundary,
+            // and the replayer should deal with `Retry`s automatically
+            let mut replayer = TestExecutor::new();
+            replayer.replay_chunk(1 /* first version */, block.txns, txn_infos).unwrap();
+            let replayed_db = replayer.db.reader.clone();
+            prop_assert_eq!(replayed_db.get_latest_state_root().unwrap(), db.get_latest_state_root().unwrap())
         }
 
     #[test]

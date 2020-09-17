@@ -27,7 +27,7 @@ pub struct LibraNode {
     role: RoleType,
     debug_client: NodeDebugClient,
     port: u16,
-    log: PathBuf,
+    pub log: PathBuf,
 }
 
 impl Drop for LibraNode {

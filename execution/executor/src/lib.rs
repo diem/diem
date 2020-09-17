@@ -634,9 +634,9 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
 impl<V: VMExecutor> TransactionReplayer for Executor<V> {
     fn replay_chunk(
         &mut self,
-        first_version: Version,
-        txns: Vec<Transaction>,
-        txn_infos: Vec<TransactionInfo>,
+        mut first_version: Version,
+        mut txns: Vec<Transaction>,
+        mut txn_infos: Vec<TransactionInfo>,
     ) -> Result<()> {
         ensure!(
             first_version == self.cache.synced_trees().txn_accumulator().num_leaves(),
@@ -644,13 +644,24 @@ impl<V: VMExecutor> TransactionReplayer for Executor<V> {
             self.cache.synced_trees().txn_accumulator().num_leaves(),
             first_version,
         );
-        let (output, txns_to_commit, _) = self.execute_chunk(first_version, txns, txn_infos)?;
-        self.db
-            .writer
-            .save_transactions(&txns_to_commit, first_version, None)?;
+        while !txns.is_empty() {
+            let num_txns = txns.len();
 
-        self.cache
-            .update_synced_trees(output.executed_trees().clone());
+            let (output, txns_to_commit, _, txns_to_retry, txn_infos_to_retry) =
+                self.replay_transactions_impl(first_version, txns, txn_infos)?;
+            assert!(txns_to_retry.len() < num_txns);
+
+            self.db
+                .writer
+                .save_transactions(&txns_to_commit, first_version, None)?;
+
+            self.cache
+                .update_synced_trees(output.executed_trees().clone());
+
+            txns = txns_to_retry;
+            txn_infos = txn_infos_to_retry;
+            first_version += txns_to_commit.len() as u64;
+        }
         Ok(())
     }
 
