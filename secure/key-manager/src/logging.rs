@@ -42,10 +42,12 @@ pub enum LogEntry {
     Initialized,
     FullKeyRotation,
     KeyRotatedInStorage,
+    KeyStillFresh,
     TransactionSubmission,
     NoAction,
     Sleep,
     WaitForReconfiguration,
+    WaitForTransactionExecution,
 }
 
 #[derive(Clone, Copy, Serialize)]

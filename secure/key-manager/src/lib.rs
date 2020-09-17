@@ -309,6 +309,8 @@ where
             return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
+                info!(LogSchema::new(LogEntry::WaitForTransactionExecution));
+                counters::increment_state("consensus_key", "waiting_on_transaction_execution");
                 Ok(Action::NoAction)
             };
         }
@@ -316,6 +318,8 @@ where
         if last_rotation + self.rotation_period_secs <= self.time_service.now() {
             Ok(Action::FullKeyRotation)
         } else {
+            info!(LogSchema::new(LogEntry::KeyStillFresh));
+            counters::increment_state("consensus_key", "key_still_fresh");
             Ok(Action::NoAction)
         }
     }
