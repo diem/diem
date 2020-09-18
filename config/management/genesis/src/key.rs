@@ -98,10 +98,7 @@ pub struct OwnerKey {
 
 impl OwnerKey {
     pub fn execute(self) -> Result<Ed25519PublicKey, Error> {
-        self.key.submit_key(
-            libra_global_constants::OWNER_KEY,
-            Some(libra_global_constants::OWNER_ACCOUNT),
-        )
+        self.key.submit_key(libra_global_constants::OWNER_KEY, None)
     }
 }
 
