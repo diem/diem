@@ -52,7 +52,7 @@ impl LibraHandle {
         //      at network/simple-onchain-discovery/src/lib.rs:175
         //    ......
         // Other runtimes don't have same problem.
-        while self.network_runtimes.len() > 0 {
+        while !self.network_runtimes.is_empty() {
             self.network_runtimes.remove(0).shutdown_background();
         }
     }
