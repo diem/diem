@@ -10,12 +10,11 @@ use executor_test_helpers::{
 };
 use executor_types::BlockExecutor;
 use futures::{future::FutureExt, stream::StreamExt};
-use libra_config::utils::get_genesis_txn;
 use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_address,
     account_config::{lbr_type_tag, libra_root_address},
     on_chain_config::{OnChainConfig, VMPublishingOption},
+    transaction::{Transaction, WriteSetPayload},
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -34,9 +33,13 @@ fn test_on_chain_config_pub_sub() {
     let (subscription, mut reconfig_receiver) =
         ReconfigSubscription::subscribe_all("test", vec![VMPublishingOption::CONFIG_ID], vec![]);
 
-    let (config, genesis_key) = config_builder::test_config();
-    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
-    bootstrap_genesis::<LibraVM>(&db_rw, get_genesis_txn(&config).unwrap()).unwrap();
+    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = vm_genesis::GENESIS_KEYPAIR.0.clone();
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
+    let db_path = libra_temppath::TempPath::new();
+    db_path.create_as_dir().unwrap();
+    let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(db_path.path()));
+    bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
     let mut block_executor = Box::new(Executor::<LibraVM>::new(db_rw.clone()));
     let chunk_executor = Box::new(Executor::<LibraVM>::new(db_rw));
@@ -72,18 +75,10 @@ fn test_on_chain_config_pub_sub() {
     // Case 2: publish if subscribed config changed //
     //////////////////////////////////////////////////
     let genesis_account = libra_root_address();
-    let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id();
-    let operator_key = config
-        .test
-        .as_ref()
-        .unwrap()
-        .operator_key
-        .as_ref()
-        .unwrap()
-        .private_key();
+    let validator_account = validators[0].owner_address;
+    let operator_key = validators[0].key.clone();
     let operator_public_key = operator_key.public_key();
-    let operator_account = account_address::from_public_key(&operator_public_key);
+    let operator_account = validators[0].operator_address;
 
     // Create a dummy block prologue transaction that will bump the timer.
     let txn1 = encode_block_prologue_script(gen_block_metadata(1, validator_account));

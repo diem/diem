@@ -167,7 +167,7 @@ impl SynchronizerEnv {
         let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
         // set up config
-        let mut config = config_builder::test_config().0;
+        let mut config = libra_config::config::NodeConfig::default_for_validator();
         config.base.role = role;
         config.state_sync.sync_request_timeout_ms = timeout_ms;
         config.state_sync.multicast_timeout_ms = multicast_timeout_ms;
