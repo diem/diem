@@ -155,22 +155,42 @@ where
     S: 'a + TreeReader + TreeWriter,
 {
     pub fn new(store: &'a S, version: Version, expected_root_hash: HashValue) -> Result<Self> {
-        let (partial_nodes, previous_leaf) = match store.get_rightmost_leaf()? {
-            Some((node_key, leaf_node)) => {
+        Self::new_impl(
+            store,
+            version,
+            expected_root_hash,
+            true, /* try_resume */
+        )
+    }
+
+    pub fn new_overwrite(
+        store: &'a S,
+        version: Version,
+        expected_root_hash: HashValue,
+    ) -> Result<Self> {
+        Self::new_impl(
+            store,
+            version,
+            expected_root_hash,
+            false, /* try_resume */
+        )
+    }
+
+    fn new_impl(
+        store: &'a S,
+        version: Version,
+        expected_root_hash: HashValue,
+        try_resume: bool,
+    ) -> Result<Self> {
+        let mut partial_nodes = vec![InternalInfo::new_empty(NodeKey::new_empty_path(version))];
+        let mut previous_leaf = None;
+        if try_resume {
+            if let Some((node_key, leaf_node)) = store.get_rightmost_leaf()? {
+                // TODO: confirm rightmost leaf is at the desired version
                 // If the system crashed in the middle of the previous restoration attempt, we need
                 // to recover the partial nodes to the state right before the crash.
-                (
-                    Self::recover_partial_nodes(store, version, node_key)?,
-                    Some(leaf_node),
-                )
-            }
-            None => {
-                // If no rightmost leaf exists, it means this is the first time we start and
-                // storage is still empty. We use a single root node in this case.
-                (
-                    vec![InternalInfo::new_empty(NodeKey::new_empty_path(version))],
-                    None,
-                )
+                partial_nodes = Self::recover_partial_nodes(store, version, node_key)?;
+                previous_leaf = Some(leaf_node);
             }
         };
 
