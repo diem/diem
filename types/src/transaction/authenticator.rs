@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::account_address::AccountAddress;
-use anyhow::{Error, Result};
+use anyhow::{ensure, Error, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
@@ -272,7 +272,10 @@ impl FromStr for AuthenticationKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        assert!(!s.is_empty());
+        ensure!(
+            !s.is_empty(),
+            "authentication key string should not be empty.",
+        );
         let bytes_out = ::hex::decode(s)?;
         let key = AuthenticationKey::try_from(bytes_out.as_slice())?;
         Ok(key)
@@ -295,5 +298,16 @@ impl fmt::Display for AuthenticationKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
         // Forward to the LowerHex impl with a "0x" prepended (the # flag).
         write!(f, "{:#x}", self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::transaction::authenticator::AuthenticationKey;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_from_str_should_not_panic_by_given_empty_string() {
+        assert!(AuthenticationKey::from_str("").is_err());
     }
 }

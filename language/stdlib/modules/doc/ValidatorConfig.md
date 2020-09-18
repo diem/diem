@@ -799,7 +799,7 @@ Returns the config published under addr.
 
 
 
-<pre><code>pragma verify = <b>true</b>, aborts_if_is_strict = <b>true</b>;
+<pre><code>pragma aborts_if_is_strict = <b>true</b>;
 </code></pre>
 
 

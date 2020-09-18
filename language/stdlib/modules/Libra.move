@@ -1059,11 +1059,6 @@ module Libra {
     /// # Module Specification
 
     spec module {
-        /// Verify all functions in this module.
-        pragma verify = true;
-    }
-
-    spec module {
         /// Checks whether currency is registered. Mirrors `Self::is_currency<CoinType>`.
         define spec_is_currency<CoinType>(): bool {
             exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
@@ -1174,9 +1169,8 @@ module Libra {
         /// Only TreasuryCompliance can have MintCapability [B11].
         /// If an account has MintCapability, it is a TreasuryCompliance account.
         invariant [global] forall coin_type: type:
-            forall addr: address:
-                exists<MintCapability<coin_type>>(addr) ==>
-                    Roles::spec_has_treasury_compliance_role_addr(addr);
+            forall mint_cap_owner: address where exists<MintCapability<coin_type>>(mint_cap_owner):
+                Roles::spec_has_treasury_compliance_role_addr(mint_cap_owner);
 
         /// MintCapability is not transferrable [D11].
         apply PreserveMintCapExistence<CoinType> to *<CoinType>;
@@ -1185,9 +1179,10 @@ module Libra {
         /// At most one address has a mint capability for SCS CoinType
         invariant [global, isolated]
             forall coin_type: type where spec_is_SCS_currency<coin_type>():
-                forall addr1: address, addr2: address
-                     where exists<MintCapability<coin_type>>(addr1) && exists<MintCapability<coin_type>>(addr2):
-                          addr1 == addr2;
+                forall mint_cap_owner1: address, mint_cap_owner2: address
+                     where exists<MintCapability<coin_type>>(mint_cap_owner1)
+                                && exists<MintCapability<coin_type>>(mint_cap_owner2):
+                          mint_cap_owner1 == mint_cap_owner2;
         /// If an address has a mint capability, it is an SCS currency.
         invariant [global]
             forall coin_type: type, addr3: address where spec_has_mint_capability<coin_type>(addr3):

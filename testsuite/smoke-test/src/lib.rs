@@ -3,3 +3,6 @@
 
 #[cfg(test)]
 mod smoke_test;
+
+#[cfg(test)]
+mod workspace_builder;

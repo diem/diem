@@ -75,7 +75,7 @@ fun peer_to_peer_with_metadata<Currency>(
 }
 
 spec fun peer_to_peer_with_metadata {
-	pragma verify = false; // TODO: times out
+    pragma verify = false; // TODO: times out
     let payer_addr = Signer::spec_address_of(payer);
 
     /// ## Post conditions
@@ -106,7 +106,7 @@ spec fun peer_to_peer_with_metadata {
 }
 
 spec module {
-    pragma verify = true, aborts_if_is_strict = true;
+    pragma aborts_if_is_strict = true;
 
     /// Returns the value of balance under addr.
     define spec_balance_of<Currency>(addr: address): u64 {
@@ -163,7 +163,4 @@ spec schema AbortsIfAmountExceedsLimit<Currency> {
                     );
 }
 
-spec module {
-    pragma verify = true;
-}
 }

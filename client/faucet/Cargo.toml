@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.32"
+hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking"], default-features = false }
 serde = "1.0.116"
 serde_derive = "1.0.115"
@@ -19,6 +20,7 @@ tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.5"
 
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
+lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../../crypto/crypto/", version = "0.1.0"}
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-json-rpc-client = { path = "../json-rpc", version = "0.1.0" }
@@ -28,9 +30,7 @@ move-core-types = { path = "../../language/move-core/types", version = "0.1.0" }
 transaction-builder-generated = { path = "../transaction-builder", version = "0.1.0" }
 
 [dev-dependencies]
-hex = "0.4.2"
 serde_json = "1.0.57"
 tempfile = "3.1.0"
 
-lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-config = { path = "../../config", version = "0.1.0" }

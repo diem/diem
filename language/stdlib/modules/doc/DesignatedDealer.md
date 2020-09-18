@@ -902,9 +902,3 @@ that amount that can be minted according to the bounds for the <code>tier_index<
 
 <pre><code><b>modifies</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_TierInfo">TierInfo</a>&lt;CoinType&gt;&gt;(dd_addr);
 </code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>

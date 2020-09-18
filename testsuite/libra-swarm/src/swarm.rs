@@ -50,16 +50,8 @@ impl Drop for LibraNode {
 }
 
 impl LibraNode {
-    /// Prior to using LibraSwarm this should be run. LibraSwarm will acquire ephemeral networking
-    /// ports that are only reserved in a safe state for a brief period of time.
-    /// workspace_builder::get_bin actually compiles all of the Libra code base which can take
-    /// substantially longer time than the networking ports are reserved. Calling prior to
-    /// reserving those ports will reduce the likelihood of issues.
-    pub fn prepare() {
-        Command::new(workspace_builder::get_libra_node_with_failpoints());
-    }
-
     pub fn launch(
+        libra_node_bin_path: &Path,
         node_id: String,
         role: RoleType,
         config_path: &Path,
@@ -74,11 +66,8 @@ impl LibraNode {
             RoleType::Validator => Some(config.validator_network.as_ref().unwrap().peer_id()),
             RoleType::FullNode => None,
         };
-        let mut node_command = Command::new(workspace_builder::get_libra_node_with_failpoints());
-        node_command
-            .current_dir(workspace_builder::workspace_root())
-            .arg("-f")
-            .arg(config_path);
+        let mut node_command = Command::new(libra_node_bin_path);
+        node_command.arg("-f").arg(config_path);
         if env::var("RUST_LOG").is_err() {
             // Only set our RUST_LOG if its not present in environment
             node_command.env("RUST_LOG", "debug");
@@ -218,6 +207,7 @@ impl AsRef<Path> for LibraSwarmDir {
 
 /// Struct holding instances and information of Libra Swarm
 pub struct LibraSwarm {
+    libra_node_bin_path: PathBuf,
     // Output log, LibraNodes' config file, libradb etc, into this dir.
     pub dir: LibraSwarmDir,
     // Maps the node id of a node to the LibraNode struct
@@ -264,6 +254,7 @@ impl LibraSwarm {
     }
 
     pub fn configure_fn_swarm(
+        libra_node_bin_path: &Path,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
         upstream_config: &SwarmConfig,
@@ -287,6 +278,7 @@ impl LibraSwarm {
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
+            libra_node_bin_path: libra_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
@@ -295,12 +287,11 @@ impl LibraSwarm {
     }
 
     pub fn configure_validator_swarm(
+        libra_node_bin_path: &Path,
         num_nodes: usize,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
     ) -> Result<LibraSwarm> {
-        LibraNode::prepare();
-
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
         info!("logs for validator at {:?}", swarm_config_dir);
 
@@ -311,6 +302,7 @@ impl LibraSwarm {
         let config = SwarmConfig::build(&builder, config_path)?;
 
         Ok(Self {
+            libra_node_bin_path: libra_node_bin_path.to_path_buf(),
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
@@ -337,6 +329,7 @@ impl LibraSwarm {
             // Use index as node id.
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
+                &self.libra_node_bin_path,
                 node_id.clone(),
                 self.role,
                 &path,
@@ -544,6 +537,7 @@ impl LibraSwarm {
             .join(format!("{}.struct.log", idx));
         let node_id = format!("{}", idx);
         let mut node = LibraNode::launch(
+            &self.libra_node_bin_path,
             node_id.clone(),
             self.role,
             path,

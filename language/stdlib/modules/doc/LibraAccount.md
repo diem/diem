@@ -3161,11 +3161,6 @@ Can only rotate the authentication_key of cap.account_address [B26].
 
 
 
-
-<pre><code>pragma verify;
-</code></pre>
-
-
 Returns field <code>key_rotation_capability</code> of the LibraAccount under <code>addr</code>.
 
 

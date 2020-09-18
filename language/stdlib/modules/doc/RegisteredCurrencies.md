@@ -212,11 +212,6 @@ The resulting currency_codes is the one before this function is called, with the
 
 
 
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
 Helper to get the currency code vector.
 
 

@@ -510,7 +510,7 @@ Aborts if <code>t</code> holds a value
 
 
 
-<pre><code>pragma verify, aborts_if_is_strict;
+<pre><code>pragma aborts_if_is_strict;
 </code></pre>
 
 

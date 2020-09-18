@@ -199,9 +199,5 @@ module TransactionFee {
         /// tc_account retrieves BurnCapability [B12]. BurnCapability is not transferrable [D12].
         ensures exists<Libra::BurnCapability<CoinType>>(Signer::spec_address_of(tc_account));
     }
-
-    spec module {
-        pragma verify;
-    }
 }
 }

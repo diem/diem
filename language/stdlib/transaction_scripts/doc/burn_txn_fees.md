@@ -12,6 +12,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `burn_txn_fees`](#SCRIPT_Specification_burn_txn_fees)
 
 
 
@@ -97,3 +99,22 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_burn_txn_fees"></a>
+
+### Function `burn_txn_fees`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>

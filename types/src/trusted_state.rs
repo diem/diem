@@ -7,7 +7,7 @@ use crate::{
     transaction::Version,
     waypoint::Waypoint,
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use std::{convert::TryFrom, sync::Arc};
 
 /// `TrustedState` keeps track of our latest trusted state, including the latest
@@ -94,17 +94,25 @@ impl TrustedState {
                     )
                 })?;
 
-            // Verify the latest ledger info inside the latest epoch.
+            // If the latest ledger info is in the same epoch as the new verifier, verify it and
+            // use it as latest state, otherwise fallback to the epoch change ledger info.
+            let new_epoch = new_epoch_state.epoch;
             let new_verifier = Arc::new(new_epoch_state);
 
-            // If these are the same, then we do not have a LI for the next Epoch and hence there
-            // is nothing to verify.
-            if epoch_change_li != latest_li {
+            let verified_ledger_info = if epoch_change_li == latest_li {
+                latest_li
+            } else if latest_li.ledger_info().epoch() == new_epoch {
                 new_verifier.verify(latest_li)?;
-            }
+                latest_li
+            } else if latest_li.ledger_info().epoch() > new_epoch && epoch_change_proof.more {
+                epoch_change_li
+            } else {
+                bail!("Inconsistent epoch change proof and latest ledger info");
+            };
+            let verified_state = Waypoint::new_any(verified_ledger_info.ledger_info());
 
             let new_state = TrustedState {
-                verified_state: Waypoint::new_any(latest_li.ledger_info()),
+                verified_state,
                 verifier: new_verifier,
             };
 

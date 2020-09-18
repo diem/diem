@@ -317,9 +317,3 @@ The below counter overflow is assumed to be excluded from verification of caller
 
 <pre><code><b>aborts_if</b> [<b>assume</b>] <a href="#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>() + 1 &gt; MAX_U64 with EXECUTION_FAILURE;
 </code></pre>
-
-
-
-
-<pre><code>pragma verify;
-</code></pre>

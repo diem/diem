@@ -16,7 +16,6 @@ use log::{debug, warn};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
-const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--dependency=../stdlib/modules", "--verify=none"];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
@@ -72,7 +71,7 @@ fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Optio
     // Determine the way how to configure tests based on directory of the path.
     let path_str = path.to_string_lossy();
     let (base_flags, baseline_path, modifier) = if path_str.contains("../stdlib/") {
-        (STDLIB_FLAGS_UNVERIFIED, None, "std_")
+        (STDLIB_FLAGS, None, "std_")
     } else if path_str.contains("tests/sources/functional/")
         || path_str.contains("tests/sources/regression/")
     {

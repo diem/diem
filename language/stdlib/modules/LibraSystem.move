@@ -153,6 +153,7 @@ module LibraSystem {
     spec fun add_validator {
         modifies global<LibraConfig::LibraConfig<LibraSystem>>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include LibraConfig::ReconfigureAbortsIf;
         aborts_if !ValidatorConfig::spec_is_valid(account_address) with Errors::INVALID_ARGUMENT;
         aborts_if spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
@@ -433,8 +434,6 @@ module LibraSystem {
     // the ValidatorInfo for its validator (only), and set the config for the
     // modified validator set to the new validator set and trigger a reconfiguration.
     spec module {
-        pragma verify;
-
         define spec_get_validators(): vector<ValidatorInfo> {
             LibraConfig::get<LibraSystem>().validators
         }

@@ -15,11 +15,6 @@ module LibraVersion {
     const EINVALID_MAJOR_VERSION_NUMBER: u64 = 0;
 
 
-    spec module {
-        /// Verify all functions in this module.
-        pragma verify;
-    }
-
     public fun initialize(
         lr_account: &signer,
     ) {

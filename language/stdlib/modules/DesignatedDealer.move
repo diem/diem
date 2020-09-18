@@ -369,9 +369,5 @@ module DesignatedDealer {
             tier_info.window_inflow = 0;
         }
     }
-
-    spec module {
-        pragma verify = true;
-    }
 }
 }

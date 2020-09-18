@@ -23,10 +23,6 @@ module LBR {
     };
     use 0x1::LibraTimestamp;
 
-    spec module {
-        pragma verify;
-    }
-
     /// The type tag representing the `LBR` currency on-chain.
     resource struct LBR { }
 
@@ -156,6 +152,9 @@ module LBR {
         assert(amount1 != MAX_U64, Errors::limit_exceeded(ECOIN1));
         assert(amount2 != MAX_U64, Errors::limit_exceeded(ECOIN2));
         (amount1 + 1, amount2 + 1)
+    }
+    spec fun calculate_component_amounts_for_lbr {
+        pragma verify = false; // TODO: timeout
     }
 
     spec fun calculate_component_amounts_for_lbr {

@@ -1305,8 +1305,6 @@ module LibraAccount {
     // ****************** SPECIFICATIONS *******************
 
     spec module {
-        pragma verify;
-
         /// Returns field `key_rotation_capability` of the LibraAccount under `addr`.
         define spec_get_key_rotation_cap_field(addr: address): Option<KeyRotationCapability> {
             global<LibraAccount>(addr).key_rotation_capability

@@ -340,13 +340,6 @@ Helper function to assert operating (!genesis) state.
 ## Specification
 
 
-Verify all functions in this module.
-
-
-<pre><code>pragma verify;
-</code></pre>
-
-
 All functions which do not have an <code><b>aborts_if</b></code> specification in this module are implicitly declared
 to never abort.
 

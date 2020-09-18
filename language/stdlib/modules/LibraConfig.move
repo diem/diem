@@ -235,18 +235,42 @@ module LibraConfig {
             },
         );
     }
+    spec define spec_reconfigure_omitted(): bool {
+       LibraTimestamp::is_genesis() || LibraTimestamp::spec_now_microseconds() == 0
+    }
     spec fun reconfigure_ {
         pragma opaque;
-        include ReconfigureAbortsIf;
-        aborts_if [assume] global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS()).epoch == MAX_U64;
         modifies global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        let epoch = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS()).epoch;
-        ensures if (LibraTimestamp::is_genesis() || LibraTimestamp::spec_now_microseconds() == 0 || old(epoch) == MAX_U64) { epoch == old(epoch) } else { epoch == old(epoch) + 1 };
+
+        let config = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        let now = LibraTimestamp::spec_now_microseconds();
+        let epoch = config.epoch;
+
+        include !spec_reconfigure_omitted() ==> InternalReconfigureAbortsIf && ReconfigureAbortsIf;
+
+        ensures spec_reconfigure_omitted() ==> config == old(config);
+        ensures !spec_reconfigure_omitted() ==> config ==
+            update_field(
+            update_field(old(config),
+                epoch, old(config.epoch) + 1),
+                last_reconfiguration_time, now);
+    }
+    /// The following schema describes aborts conditions which we do not want to be propagated to the verification
+    /// of callers, and which are therefore marked as `concrete` to be only verified against the implementation.
+    /// These conditions are unlikely to happen in reality, and excluding them avoids formal noise.
+    spec schema InternalReconfigureAbortsIf {
+        let config = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        let current_time = LibraTimestamp::spec_now_microseconds();
+        aborts_if [concrete] current_time <= config.last_reconfiguration_time with Errors::INVALID_STATE;
+        aborts_if [concrete] config.epoch == MAX_U64 with EXECUTION_FAILURE;
     }
     spec schema ReconfigureAbortsIf {
         let config = global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let current_time = LibraTimestamp::spec_now_microseconds();
-        aborts_if LibraTimestamp::is_operating() && LibraTimestamp::spec_now_microseconds() > 0 && config.epoch < MAX_U64 && current_time == config.last_reconfiguration_time with Errors::INVALID_STATE;
+        aborts_if LibraTimestamp::is_operating()
+            && LibraTimestamp::spec_now_microseconds() > 0
+            && config.epoch < MAX_U64
+            && current_time == config.last_reconfiguration_time with Errors::INVALID_STATE;
     }
 
     // Emit a reconfiguration event. This function will be invoked by genesis directly to generate the very first
@@ -268,25 +292,19 @@ module LibraConfig {
     // **************** Specifications ****************
 
     spec module {
-        pragma verify = true;
-
         define spec_has_config(): bool {
             exists<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
-
-        invariant [global] LibraTimestamp::is_operating() ==> spec_has_config();
-
-        invariant [global] global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS()).last_reconfiguration_time <= LibraTimestamp::spec_now_microseconds();
 
         define spec_is_published<Config>(): bool {
             exists<LibraConfig<Config>>(CoreAddresses::LIBRA_ROOT_ADDRESS())
         }
 
-        invariant [global] (LibraTimestamp::is_genesis() || LibraTimestamp::spec_now_microseconds() == 0) ==>
-                                global<Configuration>(CoreAddresses::LIBRA_ROOT_ADDRESS()).epoch < MAX_U64;
+        /// After genesis, the `Configuration` is published.
+        invariant [global] LibraTimestamp::is_operating() ==> spec_has_config();
 
         /// Configurations are only stored at the libra root address.
-        invariant
+        invariant [global]
             forall config_address: address, config_type: type where exists<LibraConfig<config_type>>(config_address):
                 config_address == CoreAddresses::LIBRA_ROOT_ADDRESS();
 

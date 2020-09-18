@@ -429,12 +429,6 @@ A function to create an error from from a category and a reason.
 ## Specification
 
 
-
-<pre><code>pragma verify;
-</code></pre>
-
-
-
 <a name="0x1_Errors_Specification_make"></a>
 
 ### Function `make`

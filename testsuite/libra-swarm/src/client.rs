@@ -37,6 +37,7 @@ impl Drop for InteractiveClient {
 
 impl InteractiveClient {
     pub fn new_with_inherit_io(
+        cli_bin_path: &Path,
         port: u16,
         libra_root_key_path: &Path,
         mnemonic_file_path: &Path,
@@ -48,8 +49,7 @@ impl InteractiveClient {
         // unless we convert it to an absolute path
         Self {
             client: Some(
-                Command::new(workspace_builder::get_bin("cli"))
-                    .current_dir(workspace_builder::workspace_root())
+                Command::new(cli_bin_path)
                     .arg("-u")
                     .arg(format!("http://localhost:{}", port))
                     .arg("-m")
@@ -81,11 +81,15 @@ impl InteractiveClient {
         }
     }
 
-    pub fn new_with_inherit_io_faucet(port: u16, faucet_url: String, waypoint: Waypoint) -> Self {
+    pub fn new_with_inherit_io_faucet(
+        cli_bin_path: &Path,
+        port: u16,
+        faucet_url: String,
+        waypoint: Waypoint,
+    ) -> Self {
         Self {
             client: Some(
-                Command::new(workspace_builder::get_bin("cli"))
-                    .current_dir(workspace_builder::workspace_root())
+                Command::new(cli_bin_path)
                     .arg("-u")
                     .arg(format!("http://localhost:{}", port))
                     .arg("-f")

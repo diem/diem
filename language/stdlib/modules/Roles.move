@@ -371,10 +371,6 @@ module Roles {
 
     //**************** Specifications ****************
 
-    spec module {
-        pragma verify = true;
-    }
-
     /// ## Helper Functions and Schemas
 
     spec module {

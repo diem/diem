@@ -184,13 +184,6 @@ Currently, the only other module that depends on this module is LibraConfig, whe
 pass a capability to an account that allows it to modify a config.
 
 
-Verify all functions in this module
-
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
 Helper function that returns whether or not the <code>recipient</code> is an intended
 recipient of the offered struct in the <code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> resource at the address <code>offer_address</code>
 Returns true if the recipient is allowed to redeem <code><a href="#0x1_Offer">Offer</a>&lt;Offered&gt;</code> at <code>offer_address</code>

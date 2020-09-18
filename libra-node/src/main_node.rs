@@ -36,10 +36,26 @@ pub struct LibraHandle {
     _rpc: Runtime,
     _mempool: Runtime,
     _state_synchronizer: StateSynchronizer,
-    _network_runtimes: Vec<Runtime>,
+    network_runtimes: Vec<Runtime>,
     _consensus_runtime: Option<Runtime>,
     _debug: NodeDebugService,
     _backup: Runtime,
+}
+
+impl LibraHandle {
+    pub fn shutdown(&mut self) {
+        // Shutdown network runtimes to avoid panic error log after LibraHandle is dropped:
+        // thread ‘network-’ panicked at ‘SelectNextSome polled after terminated’,...
+        // stack backtrace:
+        //    ......
+        //    8: network_simple_onchain_discovery::ConfigurationChangeListener::start::{{closure}}
+        //      at network/simple-onchain-discovery/src/lib.rs:175
+        //    ......
+        // Other runtimes don't have same problem.
+        while !self.network_runtimes.is_empty() {
+            self.network_runtimes.remove(0).shutdown_background();
+        }
+    }
 }
 
 // Fetch chain ID from on-chain resource
@@ -295,7 +311,7 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     }
 
     LibraHandle {
-        _network_runtimes: network_runtimes,
+        network_runtimes,
         _rpc: rpc_runtime,
         _mempool: mempool,
         _state_synchronizer: state_synchronizer,

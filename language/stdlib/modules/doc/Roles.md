@@ -1321,12 +1321,6 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-
 <a name="0x1_Roles_@Helper_Functions_and_Schemas"></a>
 
 #### Helper Functions and Schemas

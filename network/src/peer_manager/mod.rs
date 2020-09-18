@@ -422,7 +422,7 @@ where
 
         warn!(
             NetworkSchema::new(&self.network_context),
-            "PeerManager loop terminated"
+            "PeerManager actor terminated"
         );
     }
 
@@ -528,7 +528,7 @@ where
                         warn!(
                             NetworkSchema::new(&self.network_context)
                                 .remote_peer(&requested_peer_id),
-                            "{} Receiver for DialPeer {} dropped",
+                            "{} Receiver for DialPeer {} dropped sending error message",
                             self.network_context,
                             requested_peer_id.short_str()
                         );
@@ -578,11 +578,11 @@ where
         self.sample_connected_peers();
         match request {
             PeerManagerRequest::SendMessage(peer_id, msg) => {
-                if let Some((_, sender)) = self.active_peers.get_mut(&peer_id) {
+                if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
                     if let Err(err) = sender.push(msg.protocol_id, NetworkRequest::SendMessage(msg))
                     {
                         info!(
-                            NetworkSchema::new(&self.network_context).debug_error(&err),
+                            NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata).debug_error(&err),
                             "{} Failed to forward outbound message to downstream actor. Error: {:?}",
                             self.network_context, err
                         );
@@ -597,10 +597,11 @@ where
                 }
             }
             PeerManagerRequest::SendRpc(peer_id, req) => {
-                if let Some((_, sender)) = self.active_peers.get_mut(&peer_id) {
+                if let Some((conn_metadata, sender)) = self.active_peers.get_mut(&peer_id) {
                     if let Err(err) = sender.push(req.protocol_id, NetworkRequest::SendRpc(req)) {
                         info!(
-                            NetworkSchema::new(&self.network_context),
+                            NetworkSchema::new(&self.network_context)
+                                .connection_metadata(conn_metadata),
                             "{} Failed to forward outbound rpc to downstream actor. Error: {:?}",
                             self.network_context,
                             err

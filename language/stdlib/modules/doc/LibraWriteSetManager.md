@@ -289,6 +289,11 @@ The <code><a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a></code> wa
 
 
 
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
 Must abort if the signer does not have the LibraRoot role [B18].
 
 

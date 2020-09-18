@@ -299,7 +299,7 @@ module ValidatorConfig {
     }
 
     spec module {
-        pragma verify = true, aborts_if_is_strict = true;
+        pragma aborts_if_is_strict = true;
     }
 
     /// Specifies that only set_operator and remove_operator may change the operator for a

@@ -1,0 +1,39 @@
+[[env_vars]]
+key = "ACCOUNT"
+value = "libra-backup"
+
+[[env_vars]]
+key = "FOLDER"
+value = "backup-1"
+
+[[env_vars]]
+key = "SAS"
+value = "?a=blah&b=blah&c=blah"
+
+[commands]
+create_backup = '''
+    echo "$BACKUP_NAME"  # backup handle is the same with input backup name, output to stdout
+'''
+
+create_for_write = '''
+    FILE_HANDLE=https://$ACCOUNT.blob.core.windows.net/$FOLDER/$BACKUP_HANDLE/$FILE_NAME  # file handle is the file name under the folder with the name of the backup handle
+    echo "$FILE_HANDLE"  # output file handle to stdout
+    exec 1>&-  # close stdout
+    azcopy cp --from-to PipeBlob "$FILE_HANDLE$SAS" > /dev/null # route stdin to file handle
+'''
+
+open_for_read = '''
+    # need to close stdin by "</dev/null" since azcopy gets confused about the direction of the pipe, even though we supply --from-to
+    azcopy cp --from-to BlobPipe "$FILE_HANDLE$SAS" < /dev/null # route file handle content to stdout
+'''
+
+save_metadata_line= '''
+    azcopy cp --from-to PipeBlob "https://$ACCOUNT.blob.core.windows.net/$FOLDER/metadata/$FILE_NAME$SAS" # save the line to a new file under the metadata folder
+'''
+
+list_metadata_files = '''
+    # list files under the metadata folder
+    (azcopy ls "https://$ACCOUNT.blob.core.windows.net/$FOLDER/metadata$SAS" ||:) \
+    | sed -ne "s/INFO: \(.*\); Content Length:.*/\1/p" \
+    | xargs -I{} echo https://$ACCOUNT.blob.core.windows.net/$FOLDER/metadata/{}
+'''

@@ -34,11 +34,15 @@ impl Drop for Process {
 }
 
 impl Process {
-    pub fn start(port: u16, server_port: u16, libra_root_key_path: &Path) -> Self {
+    pub fn start(
+        faucet_bin_path: &Path,
+        port: u16,
+        server_port: u16,
+        libra_root_key_path: &Path,
+    ) -> Self {
         Self {
             port,
-            process: Command::new(workspace_builder::get_bin("libra-faucet"))
-                .current_dir(workspace_builder::workspace_root())
+            process: Command::new(faucet_bin_path)
                 .arg("-s")
                 .arg(format!("http://localhost:{}", server_port))
                 .arg("-p")

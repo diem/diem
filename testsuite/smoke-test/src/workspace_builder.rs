@@ -1,6 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! DO NOT USE OUTSIDE OF SMOKE_TEST CRATE
+//!
+//! This utility is to only be used inside of smoke test.
+
 use libra_logger::prelude::*;
 use once_cell::sync::Lazy;
 use std::{env, path::PathBuf, process::Command};

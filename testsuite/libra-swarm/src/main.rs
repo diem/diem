@@ -36,6 +36,16 @@ struct Args {
     /// Used for manual testing faucet service integration.
     #[structopt(short = "m", long)]
     pub start_faucet: bool,
+    /// Path to the libra-node binary
+    #[structopt(long, default_value = "libra-node")]
+    pub libra_node: String,
+
+    /// Path to the cli binary
+    #[structopt(long, default_value = "cli")]
+    pub cli_path: String,
+    /// Path to the faucet binary
+    #[structopt(long, default_value = "libra-faucet")]
+    pub faucet_path: String,
 }
 
 fn main() {
@@ -45,13 +55,18 @@ fn main() {
 
     libra_logger::Logger::new().init();
 
-    let mut validator_swarm =
-        LibraSwarm::configure_validator_swarm(num_nodes, args.config_dir.clone(), None)
-            .expect("Failed to configure validator swarm");
+    let mut validator_swarm = LibraSwarm::configure_validator_swarm(
+        args.libra_node.as_ref(),
+        num_nodes,
+        args.config_dir.clone(),
+        None,
+    )
+    .expect("Failed to configure validator swarm");
 
     let mut full_node_swarm = if num_full_nodes > 0 {
         Some(
             LibraSwarm::configure_fn_swarm(
+                args.libra_node.as_ref(),
                 None, /* config dir */
                 None,
                 &validator_swarm.config,
@@ -78,7 +93,7 @@ fn main() {
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
 
     println!(
-        "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {:?}",
+        "\tcli -u {} -m {:?} --waypoint {} --chain-id {:?}",
         format!("http://localhost:{}", validator_config.rpc.address.port()),
         libra_root_key_path,
         waypoint,
@@ -102,7 +117,7 @@ fn main() {
 
     println!("To run transaction generator run:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --emit-tx --workers-per-ac 1",
         libra_root_key_path, node_address_list,
     );
 
@@ -113,7 +128,7 @@ fn main() {
 
     println!("To run health check:");
     println!(
-        "\tcargo run -p cluster-test -- --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
+        "\tcluster-test --mint-file {:?} --swarm --peers {:?} --health-check --duration 30",
         libra_root_key_path, node_address_list,
     );
 
@@ -121,7 +136,7 @@ fn main() {
         let full_node_config = NodeConfig::load(&swarm.config.config_files[0]).unwrap();
         println!("To connect to the full nodes you just spawned, use this command:");
         println!(
-            "\tcargo run --bin cli -- -u {} -m {:?} --waypoint {} --chain-id {}",
+            "\tcli -u {} -m {:?} --waypoint {} --chain-id {}",
             format!("http://localhost:{}", full_node_config.rpc.address.port()),
             libra_root_key_path,
             waypoint,
@@ -133,8 +148,12 @@ fn main() {
         let faucet_port = libra_config::utils::get_available_port();
         let server_port = validator_swarm.get_client_port(0);
         println!("Starting faucet service at port: {}", faucet_port);
-        let process =
-            faucet::Process::start(faucet_port, server_port, Path::new(&libra_root_key_path));
+        let process = faucet::Process::start(
+            args.faucet_path.as_ref(),
+            faucet_port,
+            server_port,
+            Path::new(&libra_root_key_path),
+        );
         println!("Waiting for faucet connectivity");
         process
             .wait_for_connectivity()
@@ -150,9 +169,15 @@ fn main() {
 
         let port = validator_swarm.get_client_port(0);
         let client = if let Some(ref f) = faucet {
-            client::InteractiveClient::new_with_inherit_io_faucet(port, f.mint_url(), waypoint)
+            client::InteractiveClient::new_with_inherit_io_faucet(
+                args.cli_path.as_ref(),
+                port,
+                f.mint_url(),
+                waypoint,
+            )
         } else {
             client::InteractiveClient::new_with_inherit_io(
+                args.cli_path.as_ref(),
                 port,
                 Path::new(&libra_root_key_path),
                 &tmp_mnemonic_file.path(),

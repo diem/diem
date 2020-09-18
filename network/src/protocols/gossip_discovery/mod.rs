@@ -197,9 +197,9 @@ where
         // Ensure our metrics counter has an initial value.
         self.record_num_discovery_notes();
 
-        debug!(
+        info!(
             NetworkSchema::new(&self.network_context),
-            "{} Starting Discovery actor event loop", self.network_context
+            "{} Starting Gossip Discovery actor event loop", self.network_context
         );
         loop {
             futures::select! {
@@ -210,15 +210,14 @@ where
                     self.handle_tick();
                 }
                 complete => {
-                    warn!(
-                        NetworkSchema::new(&self.network_context),
-                        "{} Discovery actor terminated",
-                        self.network_context
-                    );
                     break;
                 }
             }
         }
+        warn!(
+            NetworkSchema::new(&self.network_context),
+            "{} Gossip Discovery actor terminated", self.network_context
+        );
     }
 
     // Handles a clock "tick" by:

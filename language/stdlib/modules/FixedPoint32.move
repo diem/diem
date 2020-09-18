@@ -153,7 +153,6 @@ module FixedPoint32 {
     // **************** SPECIFICATIONS ****************
 
     spec module {
-        pragma verify;
         pragma aborts_if_is_strict = true;
     }
 

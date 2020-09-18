@@ -546,9 +546,10 @@ pragma opaque = <b>true</b>;
 
 
 
-<pre><code>pragma verify = <b>true</b>;
 <a name="0x1_AccountFreezing_spec_account_is_frozen"></a>
-<b>define</b> <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
     exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && <b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
 }
 <a name="0x1_AccountFreezing_spec_account_is_not_frozen"></a>

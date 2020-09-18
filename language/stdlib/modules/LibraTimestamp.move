@@ -29,9 +29,6 @@ module LibraTimestamp {
     const ETIMESTAMP: u64 = 2;
 
     spec module {
-        /// Verify all functions in this module.
-        pragma verify;
-
         /// All functions which do not have an `aborts_if` specification in this module are implicitly declared
         /// to never abort.
         pragma aborts_if_is_strict;

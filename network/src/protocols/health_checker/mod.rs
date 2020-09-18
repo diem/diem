@@ -184,6 +184,10 @@ where
 
     pub async fn start(mut self) {
         let mut tick_handlers = FuturesUnordered::new();
+        info!(
+            NetworkSchema::new(&self.network_context),
+            "{} Health checker actor started", self.network_context
+        );
         loop {
             futures::select! {
                 event = self.network_rx.select_next_some() => {
@@ -198,7 +202,7 @@ where
                             match msg {
                             HealthCheckerMsg::Ping(ping) => self.handle_ping_request(peer_id, ping, res_tx),
                             _ => {
-                                error!(
+                                warn!(
                                     SecurityEvent::InvalidHealthCheckerMsg,
                                     NetworkSchema::new(&self.network_context)
                                         .remote_peer(&peer_id),
@@ -221,7 +225,7 @@ where
                             debug_assert!(false, "Unexpected network event");
                         },
                         Err(err) => {
-                            error!(
+                            warn!(
                                 SecurityEvent::InvalidNetworkEventHC,
                                 NetworkSchema::new(&self.network_context)
                                     .debug_error(&err),
@@ -277,7 +281,7 @@ where
                 }
             }
         }
-        error!(
+        warn!(
             NetworkSchema::new(&self.network_context),
             "{} Health checker actor terminated", self.network_context
         );
@@ -337,7 +341,7 @@ where
                             }
                         });
                 } else {
-                    error!(
+                    warn!(
                         SecurityEvent::InvalidHealthCheckerMsg,
                         NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
                         "{} Pong nonce doesn't match Ping nonce. Round: {}, Pong: {}, Ping: {}",

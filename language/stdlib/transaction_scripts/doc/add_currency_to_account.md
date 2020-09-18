@@ -104,11 +104,6 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 
 
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
 This publishes a <code>Balance&lt;Currency&gt;</code> to the caller's account
 
 

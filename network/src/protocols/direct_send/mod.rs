@@ -133,7 +133,7 @@ impl DirectSend {
         }
         info!(
             NetworkSchema::new(&self.network_context).remote_peer(&peer_id),
-            "{} Terminating direct send actor for peer: {}",
+            "{} Direct send actor for '{}' terminated",
             self.network_context,
             peer_id.short_str()
         );
@@ -187,7 +187,7 @@ impl DirectSend {
                     );
                 }
             }
-            _ => warn!(
+            _ => error!(
                 NetworkSchema::new(&self.network_context),
                 "{} Unexpected PeerNotification: {:?}", self.network_context, notif
             ),

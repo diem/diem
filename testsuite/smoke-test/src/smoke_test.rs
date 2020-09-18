@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::workspace_builder;
 use anyhow::{anyhow, bail, Result};
 use backup_cli::metadata::view::BackupStorageState;
 use cli::client_proxy::ClientProxy;
@@ -74,8 +75,13 @@ impl TestEnvironment {
         let mut template = NodeConfig::default_for_validator();
         template.state_sync.chunk_limit = chunk_limit;
 
-        let validator_swarm =
-            LibraSwarm::configure_validator_swarm(num_validators, None, Some(template)).unwrap();
+        let validator_swarm = LibraSwarm::configure_validator_swarm(
+            &workspace_builder::get_libra_node_with_failpoints(),
+            num_validators,
+            None,
+            Some(template),
+        )
+        .unwrap();
 
         let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
@@ -105,6 +111,7 @@ impl TestEnvironment {
     fn setup_vfn_swarm(&mut self) {
         self.vfn_swarm = Some(
             LibraSwarm::configure_fn_swarm(
+                &workspace_builder::get_libra_node_with_failpoints(),
                 None,
                 None,
                 &self.validator_swarm.config,
@@ -117,6 +124,7 @@ impl TestEnvironment {
     fn setup_public_fn_swarm(&mut self, num_nodes: usize) {
         self.public_fn_swarm = Some(
             LibraSwarm::configure_fn_swarm(
+                &workspace_builder::get_libra_node_with_failpoints(),
                 None,
                 None,
                 &self.validator_swarm.config,

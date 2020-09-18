@@ -21,14 +21,18 @@ use tokio::{
 
 pub(super) struct Command {
     cmd_str: String,
-    env_vars: Vec<EnvVar>,
+    // API parameters, like $FILE_HANDLE for `open_for_read()`
+    param_env_vars: Vec<EnvVar>,
+    // Env vars defined in the config file.
+    config_env_vars: Vec<EnvVar>,
 }
 
 impl Command {
-    pub fn new(raw_cmd: &str, env_vars: Vec<EnvVar>) -> Self {
+    pub fn new(raw_cmd: &str, param_env_vars: Vec<EnvVar>, config_env_vars: Vec<EnvVar>) -> Self {
         Self {
             cmd_str: format!("set -o nounset -o errexit -o pipefail; {}", raw_cmd),
-            env_vars,
+            param_env_vars,
+            config_env_vars,
         }
     }
 
@@ -41,9 +45,9 @@ impl Debug for Command {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            r#""{}" with env vars [{}]"#,
+            r#""{}" with params [{}]"#,
             self.cmd_str,
-            self.env_vars
+            self.param_env_vars
                 .iter()
                 .map(|v| format!("{}={}", v.key, v.value))
                 .collect::<Vec<_>>()
@@ -66,7 +70,11 @@ impl SpawnedCommand {
         cmd.stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
-        for v in &command.env_vars {
+        for v in command
+            .config_env_vars
+            .iter()
+            .chain(command.param_env_vars.iter())
+        {
             cmd.env(&v.key, &v.value);
         }
         let child = cmd.spawn()?;

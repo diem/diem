@@ -4,7 +4,7 @@
 use crate::{errors::JsonRpcError, views::AccountView, JsonRpcResponse};
 use anyhow::{ensure, format_err, Error, Result};
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
-use reqwest::{Client, ClientBuilder, Url};
+use reqwest::{Client, ClientBuilder, StatusCode, Url};
 use serde_json::{json, Value};
 use std::{collections::HashSet, convert::TryFrom, fmt, time::Duration};
 
@@ -139,9 +139,15 @@ impl JsonRpcBatch {
 
 #[derive(Debug)]
 pub enum JsonRpcAsyncClientError {
+    // Errors surfaced by the http client - connection errors, etc
     ClientError(reqwest::Error),
+    // Error constructing the request
     InvalidArgument(String),
+    // Failed to parse response from server
     InvalidServerResponse(String),
+    // Received a non 200 OK HTTP Code
+    HTTPError(StatusCode),
+    // An error code returned by the JSON RPC Server
     JsonRpcError(JsonRpcError),
 }
 
@@ -158,6 +164,7 @@ impl JsonRpcAsyncClientError {
                 }
                 false
             }
+            JsonRpcAsyncClientError::HTTPError(status) => status.is_server_error(),
             _ => false,
         }
     }
@@ -178,6 +185,7 @@ impl std::fmt::Display for JsonRpcAsyncClientError {
                 write!(f, "InvalidServerResponse {}", e)
             }
             JsonRpcAsyncClientError::JsonRpcError(e) => write!(f, "JsonRpcError {}", e),
+            JsonRpcAsyncClientError::HTTPError(e) => write!(f, "HTTPError. Status Code: {}", e),
         }
     }
 }
@@ -268,10 +276,7 @@ impl JsonRpcAsyncClient {
             .map_err(JsonRpcAsyncClientError::ClientError)?;
 
         if resp.status() != 200 {
-            return Err(JsonRpcAsyncClientError::InvalidServerResponse(format!(
-                "Http error code {}",
-                resp.status()
-            )));
+            return Err(JsonRpcAsyncClientError::HTTPError(resp.status()));
         }
 
         let json: Value = resp
@@ -379,6 +384,7 @@ pub mod tests {
 
     #[test]
     fn test_error_is_retriable() {
+        let http_status_code_err = JsonRpcAsyncClientError::HTTPError(StatusCode::BAD_GATEWAY);
         let server_err = JsonRpcAsyncClientError::InvalidServerResponse(
             "test invalid server response".to_string(),
         );
@@ -397,6 +403,7 @@ pub mod tests {
         // Make sure display is implemented correctly for error enum
         println!("{}", client_err);
         assert_eq!(server_err.is_retriable(), false);
+        assert_eq!(http_status_code_err.is_retriable(), true);
         assert_eq!(arg_err.is_retriable(), false);
         assert_eq!(client_err.is_retriable(), true);
     }

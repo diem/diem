@@ -14,8 +14,6 @@ address 0x1 {
 ///     framework evolves. TODO(wrwg): determine what kind of stability guarantees we give about reasons/
 ///     associated module.
 module Errors {
-    spec module { pragma verify; }
-
     /// A function to create an error from from a category and a reason.
     fun make(category: u8, reason: u64): u64 {
         (category as u64) + (reason << 8)
