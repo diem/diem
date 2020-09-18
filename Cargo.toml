@@ -29,7 +29,6 @@ members = [
     "common/temppath",
     "common/time",
     "common/trace",
-    "common/workspace-builder",
     "common/workspace-hack",
     "config",
     "config/config-builder",

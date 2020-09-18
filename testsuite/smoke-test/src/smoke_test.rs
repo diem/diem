@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::workspace_builder;
 use anyhow::{anyhow, bail, Result};
 use backup_cli::metadata::view::BackupStorageState;
 use cli::client_proxy::ClientProxy;
