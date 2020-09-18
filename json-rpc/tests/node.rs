@@ -9,8 +9,14 @@ use libra_genesis_tool::config_builder::ValidatorBuilder;
 pub struct Node {
     pub config: NodeConfig,
     pub root_key: libra_crypto::ed25519::Ed25519PrivateKey,
-    _node: libra_node::main_node::LibraHandle,
+    node: libra_node::main_node::LibraHandle,
     _temp_dir: libra_temppath::TempPath,
+}
+
+impl Drop for Node {
+    fn drop(&mut self) {
+        self.node.shutdown();
+    }
 }
 
 impl Node {
@@ -34,7 +40,7 @@ impl Node {
         Ok(Self {
             root_key,
             config,
-            _node: node,
+            node,
             _temp_dir: temp_dir,
         })
     }

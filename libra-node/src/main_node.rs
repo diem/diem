@@ -42,8 +42,16 @@ pub struct LibraHandle {
     _backup: Runtime,
 }
 
-impl Drop for LibraHandle {
-    fn drop(&mut self) {
+impl LibraHandle {
+    pub fn shutdown(&mut self) {
+        // Shutdown network runtimes to avoid panic error log after LibraHandle is dropped:
+        // thread ‘network-’ panicked at ‘SelectNextSome polled after terminated’,...
+        // stack backtrace:
+        //    ......
+        //    8: network_simple_onchain_discovery::ConfigurationChangeListener::start::{{closure}}
+        //      at network/simple-onchain-discovery/src/lib.rs:175
+        //    ......
+        // Other runtimes don't have same problem.
         while self.network_runtimes.len() > 0 {
             self.network_runtimes.remove(0).shutdown_background();
         }
