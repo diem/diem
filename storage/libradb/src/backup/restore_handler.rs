@@ -16,7 +16,7 @@ use libra_types::{
 };
 use schemadb::DB;
 use std::sync::Arc;
-use storage_interface::TreeState;
+use storage_interface::{DbReader, TreeState};
 
 /// Provides functionalities for LibraDB data restore.
 #[derive(Clone)]
@@ -144,5 +144,12 @@ impl RestoreHandler {
             frozen_subtrees,
             state_root_hash,
         ))
+    }
+
+    pub fn get_next_expected_transaction_version(&self) -> Result<Version> {
+        Ok(self
+            .libradb
+            .get_latest_transaction_info_option()?
+            .map_or(0, |(ver, _txn_info)| ver + 1))
     }
 }
