@@ -37,10 +37,11 @@ config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 executor-test-helpers = { path = "../../execution/executor-test-helpers", version = "0.1.0" }
 executor-types = { path = "../../execution/executor-types", version = "0.1.0" }
-libradb = { path = "../../storage/libradb", version = "0.1.0" }
+libra-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
 libra-json-rpc = { path = "../../json-rpc", version = "0.1.0", features = ["fuzzing"] }
 libra-secure-storage = { path = "../../secure/storage", version = "0.1.0", features = ["testing"] }
 libra-vm = { path = "../../language/libra-vm", version = "0.1.0" }
+libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface= { path = "../../storage/storage-interface", version = "0.1.0" }
 vm-validator = { path = "../../vm-validator", version = "0.1.0" }
 

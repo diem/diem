@@ -308,7 +308,7 @@ impl LibraInterface for MockLibraInterface {
 
 // Creates and returns NodeConfig and KeyManagerConfig structs that are consistent for testing.
 fn get_test_configs() -> (NodeConfig, KeyManagerConfig) {
-    let (node_config, _) = config_builder::test_config();
+    let (node_config, _) = libra_genesis_tool::test_config();
     let key_manager_config = KeyManagerConfig::default();
     (node_config, key_manager_config)
 }
