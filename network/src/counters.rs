@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::protocols::wire::handshake::v1::ProtocolId;
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
     register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, Histogram,
@@ -177,7 +178,7 @@ pub fn rpc_bytes(
 pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_rpc_latency_seconds",
-        "RPC request latency in seconds",
+        "Outbound RPC request latency in seconds",
         &["role_type", "network_id", "peer_id"]
     )
     .unwrap()
@@ -188,6 +189,27 @@ pub fn rpc_latency(network_context: &NetworkContext) -> Histogram {
         network_context.role().as_str(),
         network_context.network_id().as_str(),
         network_context.peer_id().short_str().as_str(),
+    ])
+}
+
+pub static LIBRA_NETWORK_INBOUND_RPC_HANDLER_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_network_inbound_rpc_handler_latency_seconds",
+        "Inbound RPC request application handler latency in seconds",
+        &["role_type", "network_id", "peer_id", "protocol_id"]
+    )
+    .unwrap()
+});
+
+pub fn inbound_rpc_handler_latency(
+    network_context: &NetworkContext,
+    protocol_id: ProtocolId,
+) -> Histogram {
+    LIBRA_NETWORK_INBOUND_RPC_HANDLER_LATENCY.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        protocol_id.as_str(),
     ])
 }
 
