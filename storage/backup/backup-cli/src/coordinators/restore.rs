@@ -64,6 +64,15 @@ impl RestoreCoordinator {
         };
         COORDINATOR_TARGET_VERSION.set(actual_target_version as i64);
         info!("Planned to restore to version {}.", actual_target_version);
+        let txn_resume_point = self
+            .restore_handler
+            .get_next_expected_transaction_version()?;
+        if txn_resume_point > 0 {
+            warn!(
+                "DB has existing transactions, will skip transaction backups before version {}",
+                txn_resume_point
+            );
+        }
 
         for backup in epoch_endings {
             EpochEndingRestoreController::new(
@@ -93,6 +102,11 @@ impl RestoreCoordinator {
         }
 
         for backup in transactions {
+            if backup.last_version < txn_resume_point {
+                info!("Skipping {} due to non-empty DB.", backup.manifest);
+                continue;
+            }
+
             TransactionRestoreController::new(
                 TransactionRestoreOpt {
                     manifest_handle: backup.manifest,
