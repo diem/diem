@@ -35,6 +35,9 @@ pub enum SecurityEvent {
     /// Consensus received an invalid message (not well-formed or incorrect signature)
     ConsensusInvalidMessage,
 
+    /// Consensus received non-NIL votes with different vote data hash for the same round
+    ConsensusContradictingVote,
+
     /// Consensus received an equivocating vote
     ConsensusEquivocatingVote,
 

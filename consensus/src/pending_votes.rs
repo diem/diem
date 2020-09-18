@@ -54,6 +54,8 @@ pub struct PendingVotes {
     maybe_partial_tc: Option<TimeoutCertificate>,
     /// Map of Author to vote. This is useful to discard multiple votes.
     author_to_vote: HashMap<Author, Vote>,
+    /// Byzantine-detection cache (see detect_byzantine_behavior)
+    vote_data_hash_to_vote: HashMap<HashValue, Vec<Vote>>,
 }
 
 impl PendingVotes {
@@ -63,6 +65,7 @@ impl PendingVotes {
             li_digest_to_votes: HashMap::new(),
             maybe_partial_tc: None,
             author_to_vote: HashMap::new(),
+            vote_data_hash_to_vote: HashMap::new(),
         }
     }
 
@@ -108,6 +111,9 @@ impl PendingVotes {
         //
 
         self.author_to_vote.insert(vote.author(), vote.clone());
+
+        // attempt to detect byzantine behavior
+        self.detect_byzantine_behavior(&vote);
 
         //
         // 3. Let's check if we can create a QC
@@ -189,6 +195,43 @@ impl PendingVotes {
         //
 
         VoteReceptionResult::VoteAdded(voting_power)
+    }
+
+    /// If the block voted on is not a NIL-block,
+    /// we check if it is different from any other non-NIL blocks seen in this round.
+    /// If it is, this would mean that either the proposer proposed different blocks,
+    /// or voters have somehow reached different execution states
+    fn detect_byzantine_behavior(&mut self, vote: &Vote) {
+        if vote.vote_data().block_type_proposal() {
+            // two proposal blocks can differ by execution state, version, block id, and timestamp
+            // but we can easily check these differences by comparing the consensus data hash instead
+            let vote_data_hash = vote.ledger_info().consensus_data_hash();
+            match self.vote_data_hash_to_vote.len() {
+                0 => {
+                    // no non-NIL vote recorded yet, store the vote
+                    self.vote_data_hash_to_vote
+                        .insert(vote_data_hash, vec![vote.clone()]);
+                }
+                _ => {
+                    // we check that the previously recorded votes were on the same key and record the current one.
+                    if let Some(votes) = self.vote_data_hash_to_vote.get_mut(&vote_data_hash) {
+                        votes.push(vote.clone());
+                    } else {
+                        // we have a new consensus hash data in a vote, so we report it
+                        error!(
+                            SecurityEvent::ConsensusContradictingVote,
+                            "from_peer" = vote.author(),
+                            "vote" = &vote,
+                            "other_vote" = &self.vote_data_hash_to_vote,
+                        );
+
+                        // store the vote
+                        self.vote_data_hash_to_vote
+                            .insert(vote_data_hash, vec![vote.clone()]);
+                    }
+                }
+            };
+        }
     }
 }
 

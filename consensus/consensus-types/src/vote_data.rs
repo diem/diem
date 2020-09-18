@@ -41,6 +41,35 @@ impl VoteData {
         &self.proposed
     }
 
+    /// Returns true if the vote is on a proposal block
+    pub fn block_type_proposal(&self) -> bool {
+        if self.proposed.timestamp_usecs() == self.parent.timestamp_usecs() {
+            // NIL or genesis block
+            return false;
+        }
+        // proposals always have a block metadata transaction
+        self.proposed.version() >= self.parent.version().saturating_add(1)
+    }
+
+    /// Returns true if the vote is on a NIL block
+    pub fn block_type_nil(&self) -> bool {
+        if self.proposed.timestamp_usecs() != self.parent.timestamp_usecs() {
+            // proposal block
+            return false;
+        }
+        // NIL block always have a block metadata transaction
+        let (with_blockmetadata_transaction, overflowed) = self.parent.version().overflowing_add(1);
+        if overflowed {
+            return false;
+        }
+        self.proposed.version() == with_blockmetadata_transaction
+    }
+
+    /// Returns true if the block is a reconfig block
+    pub fn block_type_reconfig(&self) -> bool {
+        self.proposed.has_reconfiguration()
+    }
+
     /// Well-formedness checks that are independent of the current state.
     pub fn verify(&self) -> anyhow::Result<()> {
         anyhow::ensure!(
