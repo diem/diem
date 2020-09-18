@@ -34,6 +34,8 @@ RUN apt-get update && \
     rm -r /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
+COPY docker/tools/boto.cfg /etc
+
 RUN cd /usr/local/bin && busybox wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
 RUN busybox wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
 
