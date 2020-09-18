@@ -60,12 +60,13 @@ pub fn start_consensus(
         txn_manager,
         state_computer,
         storage,
+        reconfig_events,
     );
 
     let (network_task, network_receiver) = NetworkTask::new(network_events, self_receiver);
 
     runtime.spawn(network_task.start());
-    runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver, reconfig_events));
+    runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
 
     debug!("Consensus started.");
     runtime
