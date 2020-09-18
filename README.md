@@ -4,7 +4,7 @@
 
 ---
 
-[![Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://libra.github.io/libra/)
+[![Libra Rust Crate Documentation (master)](https://img.shields.io/badge/docs-master-59f)](https://developers.libra.org/docs/rustdocs/)
 [![CircleCI](https://circleci.com/gh/libra/libra.svg?style=shield)](https://circleci.com/gh/libra/libra)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE)
 [![grcov](https://img.shields.io/badge/Coverage-grcov-green)](https://ci-artifacts.libra.org/coverage/unit-coverage/latest/index.html)
