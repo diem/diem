@@ -50,7 +50,7 @@ impl RestoreHandler {
         version: Version,
         expected_root_hash: HashValue,
     ) -> Result<JellyfishMerkleRestore<impl TreeReader + TreeWriter>> {
-        JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)
+        JellyfishMerkleRestore::new_overwrite(&*self.state_store, version, expected_root_hash)
     }
 
     pub fn save_ledger_infos(&self, ledger_infos: &[LedgerInfoWithSignatures]) -> Result<()> {
