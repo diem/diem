@@ -26,7 +26,7 @@ fn malformed_simple() {
     );
 
     // bad magic
-    binary = vec![0u8; 15];
+    binary = vec![0u8; 4];
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected bad magic").major_status(),
@@ -41,28 +41,235 @@ fn malformed_simple() {
         StatusCode::MALFORMED
     );
 
-    // bad major version
+    // bad version
     binary = BinaryConstants::LIBRA_MAGIC.to_vec();
-    binary.push(2); // major version
-    binary.push(0); // minor version
+    binary.push(2); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
     binary.push(10); // table count
-    binary.push(0); // rest of binary ;)
+    binary.push(0); // rest of binary
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
         res.expect_err("Expected unknown version").major_status(),
         StatusCode::UNKNOWN_VERSION
     );
 
-    // bad minor version
+    // bad version
     binary = BinaryConstants::LIBRA_MAGIC.to_vec();
-    binary.push(1); // major version
-    binary.push(1); // minor version
+    binary.push(2); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
     binary.push(10); // table count
-    binary.push(0); // rest of binary ;)
-    let res1 = CompiledModule::deserialize(&binary);
+    binary.push(0); // rest of binary
+    let res = CompiledModule::deserialize(&binary);
     assert_eq!(
-        res1.expect_err("Expected unknown version").major_status(),
+        res.expect_err("Expected unknown version").major_status(),
         StatusCode::UNKNOWN_VERSION
+    );
+
+    // bad uleb (more than allowed for table count)
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(150); // table count (high bit 1)
+    binary.push(150); // table count (high bit 1)
+    binary.push(1);
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad uleb").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // bad uleb (too big)
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(150); // table count (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(150); // table count again (high bit 1)
+    binary.push(0); // table count again
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad uleb").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // no tables
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(0); // table count
+    let res = CompiledModule::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected no table count").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // missing tables
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(10); // table count
+    let res = CompiledModule::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected no table header").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // missing table content
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(1); // table count
+    binary.push(1); // table type
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected no table content").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // bad table header (bad offset)
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(1); // table count
+    binary.push(1); // table type
+    binary.push(100); // bad table offset
+    binary.push(10); // table length
+    let res = CompiledModule::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad table offset").major_status(),
+        StatusCode::BAD_HEADER_TABLE
+    );
+
+    // bad table header (bad offset)
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(2); // table count
+    binary.push(1); // table type
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    binary.push(2); // table type
+    binary.push(100); // bad table offset
+    binary.push(10); // table length
+    for _ in 0..5000 {
+        binary.push(0);
+    }
+    let res = CompiledModule::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad table offset").major_status(),
+        StatusCode::BAD_HEADER_TABLE
+    );
+
+    // incomplete table
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(1); // table count
+    binary.push(1); // table type
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    for _ in 0..5 {
+        binary.push(0);
+    }
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected bad table content").major_status(),
+        StatusCode::MALFORMED
+    );
+
+    // unknown table
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(1); // table count
+    binary.push(100); // table type
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    for _ in 0..10 {
+        binary.push(0);
+    }
+    let res = CompiledModule::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected unknown table").major_status(),
+        StatusCode::UNKNOWN_TABLE_TYPE
+    );
+
+    // duplicate table
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(3); // table count
+    binary.push(1); // table type
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    binary.push(2); // table type
+    binary.push(10); // table offset
+    binary.push(10); // table length
+    binary.push(1); // table type
+    binary.push(20); // table offset
+    binary.push(10); // table length
+    for _ in 0..5000 {
+        binary.push(0);
+    }
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected table offset overflow")
+            .major_status(),
+        StatusCode::DUPLICATE_TABLE
+    );
+
+    // bad table in script
+    binary = BinaryConstants::LIBRA_MAGIC.to_vec();
+    binary.push(1); // version
+    binary.push(0);
+    binary.push(0);
+    binary.push(0);
+    binary.push(1); // table count
+    binary.push(0xD); // table type - FieldHandle not good for script
+    binary.push(0); // table offset
+    binary.push(10); // table length
+    for _ in 0..5000 {
+        binary.push(0);
+    }
+    let res = CompiledScript::deserialize(&binary);
+    assert_eq!(
+        res.expect_err("Expected table offset overflow")
+            .major_status(),
+        StatusCode::MALFORMED
     );
 }
 

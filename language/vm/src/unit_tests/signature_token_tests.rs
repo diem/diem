@@ -14,29 +14,32 @@ fn serialize_and_deserialize_nested_types_max() {
     let mut ty = SignatureToken::Struct(StructHandleIndex::new(0));
     for _ in 1..SIGNATURE_TOKEN_DEPTH_MAX {
         ty = SignatureToken::Vector(Box::new(ty));
+        let mut binary = BinaryData::new();
+        serialize_signature_token(&mut binary, &ty).expect("serialization should succeed");
+
+        let mut cursor = Cursor::new(binary.as_inner());
+        load_signature_token(&mut cursor).expect("deserialization should succeed");
     }
-
-    let mut binary = BinaryData::new();
-    serialize_signature_token(&mut binary, &ty).expect("serialization should succeed");
-
-    let mut cursor = Cursor::new(binary.as_inner());
-    load_signature_token(&mut cursor).expect("deserialization should succeed");
 }
 
 #[test]
 fn serialize_nested_types_too_deep() {
     let mut ty = SignatureToken::Struct(StructHandleIndex::new(0));
-    for _ in 0..SIGNATURE_TOKEN_DEPTH_MAX {
+    for _ in 1..SIGNATURE_TOKEN_DEPTH_MAX {
         ty = SignatureToken::Vector(Box::new(ty));
     }
 
-    let mut binary = BinaryData::new();
-    serialize_signature_token(&mut binary, &ty).expect_err("serialization should fail");
+    for _ in 0..10 {
+        ty = SignatureToken::Vector(Box::new(ty));
 
-    let mut binary = BinaryData::new();
-    serialize_signature_token_unchecked(&mut binary, &ty)
-        .expect("serialization (unchecked) should succeed");
+        let mut binary = BinaryData::new();
+        serialize_signature_token(&mut binary, &ty).expect_err("serialization should fail");
 
-    let mut cursor = Cursor::new(binary.as_inner());
-    load_signature_token(&mut cursor).expect_err("deserialization should fail");
+        let mut binary = BinaryData::new();
+        serialize_signature_token_unchecked(&mut binary, &ty)
+            .expect("serialization (unchecked) should succeed");
+
+        let mut cursor = Cursor::new(binary.as_inner());
+        load_signature_token(&mut cursor).expect_err("deserialization should fail");
+    }
 }

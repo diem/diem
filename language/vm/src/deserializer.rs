@@ -88,7 +88,8 @@ where
         PartialVMError::new(StatusCode::MALFORMED).with_message("Bad Uleb".to_string())
     })?;
     if x > max {
-        return Err(PartialVMError::new(StatusCode::MALFORMED).with_message("Bad Uleb".to_string()));
+        return Err(PartialVMError::new(StatusCode::MALFORMED)
+            .with_message("Uleb greater than max requested".to_string()));
     }
 
     x.try_into().map_err(|_| {
