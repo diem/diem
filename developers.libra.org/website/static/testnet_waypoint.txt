@@ -1,1 +1,1 @@
-0:445374586e150ae0f57989d60161b548d294228523fedf0870cc73c24c584e4a
+https://testnet.libra.org/waypoint.txt
