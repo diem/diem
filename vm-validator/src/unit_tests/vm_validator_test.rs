@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::vm_validator::{TransactionValidation, VMValidator};
-use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address, account_config,
@@ -21,21 +20,27 @@ use transaction_builder::encode_peer_to_peer_with_metadata_script;
 
 struct TestValidator {
     vm_validator: VMValidator,
+    _db_path: libra_temppath::TempPath,
 }
 
 impl TestValidator {
-    fn new(config: &NodeConfig) -> Self {
-        let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));
+    fn new() -> Self {
+        let _db_path = libra_temppath::TempPath::new();
+        _db_path.create_as_dir().unwrap();
+        let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(_db_path.path()));
         executor_test_helpers::bootstrap_genesis::<LibraVM>(
             &db_rw,
-            get_genesis_txn(config).unwrap(),
+            &vm_genesis::test_genesis_transaction(),
         )
         .expect("Db-bootstrapper should not fail.");
 
         // Create another client for the vm_validator since the one used for the executor will be
         // run on another runtime which will be dropped before this function returns.
         let vm_validator = VMValidator::new(db);
-        TestValidator { vm_validator }
+        TestValidator {
+            vm_validator,
+            _db_path,
+        }
     }
 }
 
@@ -69,8 +74,7 @@ impl std::ops::Deref for TestValidator {
 
 #[test]
 fn test_validate_transaction() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let program =
@@ -78,8 +82,8 @@ fn test_validate_transaction() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -88,8 +92,7 @@ fn test_validate_transaction() {
 
 #[test]
 fn test_validate_invalid_signature() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
     let other_private_key = Ed25519PrivateKey::generate(&mut rng);
@@ -102,7 +105,7 @@ fn test_validate_invalid_signature() {
         address,
         1,
         &other_private_key,
-        key.public_key(),
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -111,15 +114,14 @@ fn test_validate_invalid_signature() {
 
 #[test]
 fn test_validate_known_script_too_large_args() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(Script::new(
             vec![42; MAX_TRANSACTION_SIZE_IN_BYTES],
             vec![],
@@ -142,15 +144,14 @@ fn test_validate_known_script_too_large_args() {
 
 #[test]
 fn test_validate_max_gas_units_above_max() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
         0,                   /* max gas price */
@@ -166,15 +167,14 @@ fn test_validate_max_gas_units_above_max() {
 
 #[test]
 fn test_validate_max_gas_units_below_min() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
         0,                   /* max gas price */
@@ -190,15 +190,14 @@ fn test_validate_max_gas_units_below_min() {
 
 #[test]
 fn test_validate_max_gas_price_above_bounds() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,
         0,
         u64::MAX,            /* max gas price */
@@ -217,8 +216,7 @@ fn test_validate_max_gas_price_above_bounds() {
 // out assertion and remove the current failing assertion in this case.
 #[test]
 fn test_validate_max_gas_price_below_bounds() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let program =
@@ -226,8 +224,8 @@ fn test_validate_max_gas_price_below_bounds() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
         // Initial Time was set to 0 with a TTL 86400 secs.
         40000,
@@ -243,38 +241,34 @@ fn test_validate_max_gas_price_below_bounds() {
     //);
 }
 
-#[cfg(not(feature = "allow_custom_transaction_scripts"))]
 #[test]
 fn test_validate_unknown_script() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::testnet_dd_account_address();
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(Script::new(vec![], vec![], vec![])),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
+    println!("{:?}", ret);
     assert_eq!(ret.status().unwrap(), StatusCode::UNKNOWN_SCRIPT);
 }
 
 // Make sure that we can publish non-allowlisted modules from the association address
-#[cfg(not(feature = "allow_custom_transaction_scripts"))]
-#[cfg(not(feature = "custom_modules"))]
 #[test]
 fn test_validate_module_publishing() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Module::new(vec![]),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -282,19 +276,16 @@ fn test_validate_module_publishing() {
 }
 
 // Make sure that we can't publish non-allowlisted modules
-#[cfg(not(feature = "allow_custom_transaction_scripts"))]
-#[cfg(not(feature = "custom_modules"))]
 #[test]
 fn test_validate_module_publishing_non_association() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::treasury_compliance_account_address();
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Module::new(vec![]),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -303,8 +294,7 @@ fn test_validate_module_publishing_non_association() {
 
 #[test]
 fn test_validate_invalid_auth_key() {
-    let (config, _) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let mut rng = ::rand::rngs::StdRng::from_seed([1u8; 32]);
     let other_private_key = Ed25519PrivateKey::generate(&mut rng);
@@ -326,8 +316,7 @@ fn test_validate_invalid_auth_key() {
 
 #[test]
 fn test_validate_account_doesnt_exist() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let random_account_addr = account_address::AccountAddress::random();
@@ -336,8 +325,8 @@ fn test_validate_account_doesnt_exist() {
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         random_account_addr,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
         0,
         1,                   /* max gas price */
@@ -353,8 +342,7 @@ fn test_validate_account_doesnt_exist() {
 
 #[test]
 fn test_validate_sequence_number_too_new() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let program =
@@ -362,8 +350,8 @@ fn test_validate_sequence_number_too_new() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -372,8 +360,7 @@ fn test_validate_sequence_number_too_new() {
 
 #[test]
 fn test_validate_invalid_arguments() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let (program_script, _) =
@@ -383,8 +370,8 @@ fn test_validate_invalid_arguments() {
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         Some(program),
     );
     let _ret = vm_validator.validate_transaction(transaction).unwrap();
@@ -394,28 +381,31 @@ fn test_validate_invalid_arguments() {
 
 #[test]
 fn test_validate_non_genesis_write_set() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
-    let transaction =
-        transaction_test_helpers::get_write_set_txn(address, 2, &key, key.public_key(), None)
-            .into_inner();
+    let transaction = transaction_test_helpers::get_write_set_txn(
+        address,
+        2,
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
+        None,
+    )
+    .into_inner();
     let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(ret.status().unwrap(), StatusCode::REJECTED_WRITE_SET);
 }
 
 #[test]
 fn test_validate_expiration_time() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1, /* sequence_number */
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None, /* script */
         0,    /* expiration_time */
         0,    /* gas_unit_price */
@@ -428,15 +418,14 @@ fn test_validate_expiration_time() {
 
 #[test]
 fn test_validate_chain_id() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_txn_with_chain_id(
         address,
         0, /* sequence_number */
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         // all tests use ChainId::test() for chain_id, so pick something different
         ChainId::new(ChainId::test().id() + 1),
     );
@@ -446,15 +435,14 @@ fn test_validate_chain_id() {
 
 #[test]
 fn test_validate_gas_currency_with_bad_identifier() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1, /* sequence_number */
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,     /* script */
         u64::MAX, /* expiration_time */
         0,        /* gas_unit_price */
@@ -469,15 +457,14 @@ fn test_validate_gas_currency_with_bad_identifier() {
 
 #[test]
 fn test_validate_gas_currency_code() {
-    let (config, key) = config_builder::test_config();
-    let vm_validator = TestValidator::new(&config);
+    let vm_validator = TestValidator::new();
 
     let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1, /* sequence_number */
-        &key,
-        key.public_key(),
+        &vm_genesis::GENESIS_KEYPAIR.0,
+        vm_genesis::GENESIS_KEYPAIR.1.clone(),
         None,     /* script */
         u64::MAX, /* expiration_time */
         0,        /* gas_unit_price */
