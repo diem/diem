@@ -406,13 +406,16 @@ jobs:
           name: shell lints
           command: |
             shellcheck scripts/dev_setup.sh && \
-            shellcheck .circleci/get_pr_info.sh
+            shellcheck scripts/dockerhub_prune.sh && \
+            shellcheck .circleci/get_pr_info.sh && \
+            shellcheck docker/build_push.sh && \
+            shellcheck docker/dockerhub_to_novi_ecr.sh
       - run:
           name: docker lints
           command: |
             hadolint docker/ci/circleci/Dockerfile && \
-            hadolint docker/ci/arch/Dockerfile  && \
-            hadolint docker/ci/alpine/Dockerfile  && \
+            hadolint docker/ci/arch/Dockerfile && \
+            hadolint docker/ci/alpine/Dockerfile && \
             hadolint docker/ci/centos/Dockerfile
       - save_sccache
   build-dev:
@@ -808,13 +811,11 @@ jobs:
           command: |
             docker/build_push.sh -u -p -b ${BRANCH} -n client
             docker/build_push.sh -u -p -b ${BRANCH} -n init
-            docker/build_push.sh -u -p -b ${BRANCH} -n mint
+            docker/build_push.sh -u -p -b ${BRANCH} -n faucet
             docker/build_push.sh -u -p -b ${BRANCH} -n tools
             docker/build_push.sh -u -p -b ${BRANCH} -n validator
             docker/build_push.sh -u -p -b ${BRANCH} -n validator-tcb
             docker/build_push.sh -u -p -b ${BRANCH} -n cluster-test
-            #build but don't publish
-            docker/build_push.sh -p -b ${BRANCH} -n validator-dynamic
 
   ######################################################################################################
   # Docker Builds:                                                                                     #
@@ -833,7 +834,7 @@ jobs:
             BRANCH=${CIRCLE_BRANCH}
             docker/build_push.sh -u -b ${BRANCH} -n client
             docker/build_push.sh -u -b ${BRANCH} -n init
-            docker/build_push.sh -u -b ${BRANCH} -n mint
+            docker/build_push.sh -u -b ${BRANCH} -n faucet
             docker/build_push.sh -u -b ${BRANCH} -n tools
             docker/build_push.sh -u -b ${BRANCH} -n validator
             docker/build_push.sh -u -b ${BRANCH} -n validator-tcb
