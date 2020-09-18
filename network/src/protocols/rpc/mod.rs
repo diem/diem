@@ -547,7 +547,6 @@ async fn handle_outbound_rpc_inner(
 ) -> Result<Bytes, RpcError> {
     let req_len = req_data.len();
     let peer_id = peer_handle.peer_id();
-    let peer_id_str = peer_id.short_str();
 
     // Create NetworkMessage to be sent over the wire.
     let request = NetworkMessage::RpcRequest(RpcRequest {
@@ -562,13 +561,14 @@ async fn handle_outbound_rpc_inner(
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Sending outbound rpc request with request_id {} to peer: {:?}",
+        "{} Sending outbound rpc request with request_id {} and protocol_id {} to peer {}",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
     );
     // Start timer to collect RPC latency.
-    let timer = counters::rpc_latency(network_context).start_timer();
+    let timer = counters::outbound_rpc_request_latency(network_context, protocol_id).start_timer();
     peer_handle.send_message(request, protocol_id).await?;
 
     // Collect counters for requests sent.
@@ -579,10 +579,11 @@ async fn handle_outbound_rpc_inner(
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Waiting to receive response for request_id {} from peer: {:?}",
+        "{} Waiting to receive response for request_id {} and protocol_id {} from peer {}",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
     );
     let response = response_rx.await?;
     let latency = timer.stop_and_record();
@@ -590,13 +591,13 @@ async fn handle_outbound_rpc_inner(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
         protocol_id = protocol_id,
-        "{} Received response for request_id {} from peer: {:?} \
-        with {:.6} seconds of latency. Request protocol_id: {}",
+        "{} Received response for request_id {} and protocol_id {} from peer {} \
+        with {:.6} seconds of latency",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
         latency,
-        protocol_id.as_str(),
     );
 
     // Collect counters for received response.
