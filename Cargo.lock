@@ -1650,6 +1650,7 @@ dependencies = [
  "termcolor 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "vm 0.1.0",
+ "vm-genesis 0.1.0",
 ]
 
 [[package]]

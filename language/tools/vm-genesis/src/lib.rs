@@ -8,13 +8,9 @@ mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform,
-};
-use libra_network_address::encrypted::{
-    TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
 };
 use libra_types::{
     account_address, account_config,
@@ -543,103 +539,114 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
 
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) -> ChangeSet {
-    let stdlib_modules = stdlib_modules(stdlib_options);
-    let swarm = libra_config::generator::validator_swarm_for_testing(10);
-
-    encode_genesis_change_set(
-        &GENESIS_KEYPAIR.1,
-        &GENESIS_KEYPAIR.1,
-        &operator_assignments(&swarm.nodes),
-        &operator_registrations(&swarm.nodes),
-        stdlib_modules,
+    generate_test_genesis(
+        &stdlib_modules(stdlib_options),
         VMPublishingOption::open(),
-        ChainId::test(),
+        None,
     )
     .0
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
-    let stdlib_modules = stdlib_modules(StdLibOptions::Compiled);
-    let swarm = libra_config::generator::validator_swarm_for_testing(10);
-
-    encode_genesis_change_set(
-        &GENESIS_KEYPAIR.1,
-        &GENESIS_KEYPAIR.1,
-        &operator_assignments(&swarm.nodes),
-        &operator_registrations(&swarm.nodes),
-        stdlib_modules,
+    generate_test_genesis(
+        &stdlib_modules(StdLibOptions::Compiled),
         VMPublishingOption::open(),
-        ChainId::test(),
+        None,
     )
     .1
 }
 
-/// Generates an artificial set of OperatorAssignments using the given node configurations for
-/// testing.
-pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorAssignment> {
-    node_configs
-        .iter()
-        .enumerate()
-        .map(|(idx, n)| {
-            let test_config = n.test.as_ref().unwrap();
-            let owner_key = test_config.owner_key.as_ref().unwrap().public_key();
-            let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
-            let operator_account = account_address::from_public_key(&operator_key);
-            let name = idx.to_string().as_bytes().to_vec();
-            let set_operator_script = transaction_builder::encode_set_validator_operator_script(
-                name.clone(),
-                operator_account,
-            );
-
-            (Some(owner_key), name, set_operator_script)
-        })
-        .collect::<Vec<_>>()
+pub fn test_genesis_transaction() -> Transaction {
+    let changeset = test_genesis_change_set_and_validators(None).0;
+    Transaction::GenesisTransaction(WriteSetPayload::Direct(changeset))
 }
 
-/// Generates an artificial set of OperatorRegistrations using the given node configurations for
-/// testing.
-pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegistration> {
-    node_configs
-        .iter()
-        .enumerate()
-        .map(|(idx, n)| {
-            let test_config = n.test.as_ref().unwrap();
-            let name = idx.to_string().as_bytes().to_vec();
-            let owner_account = libra_config::utils::validator_owner_account_from_name(&name);
-            let operator_key = test_config.operator_key.as_ref().unwrap().public_key();
+pub fn test_genesis_change_set_and_validators(count: Option<usize>) -> (ChangeSet, Vec<Validator>) {
+    let genesis = generate_test_genesis(
+        &stdlib_modules(StdLibOptions::Compiled),
+        VMPublishingOption::locked(StdlibScript::allowlist()),
+        count,
+    );
+    (genesis.0, genesis.2)
+}
 
-            let sr_test = n.consensus.safety_rules.test.as_ref().unwrap();
-            let consensus_key = sr_test.consensus_key.as_ref().unwrap().public_key();
+pub struct Validator {
+    pub index: usize,
+    pub key: Ed25519PrivateKey,
+    pub name: Vec<u8>,
+    pub operator_address: AccountAddress,
+    pub owner_address: AccountAddress,
+}
 
-            let network = n.validator_network.as_ref().unwrap();
-            let identity_key = network.identity_key().public_key();
+impl Validator {
+    pub fn new_set(count: Option<usize>) -> Vec<Validator> {
+        let mut rng: rand::rngs::StdRng = rand::SeedableRng::from_seed([1u8; 32]);
+        (0..count.unwrap_or(10))
+            .map(|idx| Validator::gen(idx, &mut rng))
+            .collect()
+    }
 
-            let addr = network
-                .discovery_method
-                .advertised_address()
-                .append_prod_protos(identity_key, HANDSHAKE_VERSION);
+    fn gen(index: usize, rng: &mut rand::rngs::StdRng) -> Self {
+        let name = index.to_string().as_bytes().to_vec();
+        let key = Ed25519PrivateKey::generate(rng);
+        let operator_address = account_address::from_public_key(&key.public_key());
+        let owner_address = libra_config::utils::validator_owner_account_from_name(&name);
 
-            let seq_num = 0;
-            let addr_idx = 0;
-            let enc_addr = addr.clone().encrypt(
-                &TEST_SHARED_VAL_NETADDR_KEY,
-                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
-                &owner_account,
-                seq_num,
-                addr_idx,
-            );
+        Self {
+            index,
+            key,
+            name,
+            operator_address,
+            owner_address,
+        }
+    }
 
-            // TODO(philiphayes): do something with n.full_node_networks instead
-            // of ignoring them?
+    fn operator_assignment(&self) -> OperatorAssignment {
+        let set_operator_script = transaction_builder::encode_set_validator_operator_script(
+            self.name.clone(),
+            self.operator_address,
+        );
 
-            let script = transaction_builder::encode_register_validator_config_script(
-                owner_account,
-                consensus_key.to_bytes().to_vec(),
-                lcs::to_bytes(&vec![enc_addr.unwrap()]).unwrap(),
-                lcs::to_bytes(&vec![addr]).unwrap(),
-            );
-            (operator_key, name, script)
-        })
-        .collect::<Vec<_>>()
+        (
+            Some(self.key.public_key()),
+            self.name.clone(),
+            set_operator_script,
+        )
+    }
+
+    fn operator_registration(&self) -> OperatorRegistration {
+        let script = transaction_builder::encode_register_validator_config_script(
+            self.owner_address,
+            self.key.public_key().to_bytes().to_vec(),
+            lcs::to_bytes(&[0u8; 0]).unwrap(),
+            lcs::to_bytes(&[0u8; 0]).unwrap(),
+        );
+        (self.key.public_key(), self.name.clone(), script)
+    }
+}
+
+pub fn generate_test_genesis(
+    stdlib_modules: &[CompiledModule],
+    vm_publishing_option: VMPublishingOption,
+    count: Option<usize>,
+) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>, Vec<Validator>) {
+    let validators = Validator::new_set(count);
+
+    let genesis = encode_genesis_change_set(
+        &GENESIS_KEYPAIR.1,
+        &GENESIS_KEYPAIR.1,
+        &validators
+            .iter()
+            .map(|v| v.operator_assignment())
+            .collect::<Vec<_>>(),
+        &validators
+            .iter()
+            .map(|v| v.operator_registration())
+            .collect::<Vec<_>>(),
+        stdlib_modules,
+        vm_publishing_option,
+        ChainId::test(),
+    );
+    (genesis.0, genesis.1, validators)
 }

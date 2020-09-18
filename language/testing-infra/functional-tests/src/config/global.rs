@@ -9,7 +9,6 @@ use language_e2e_tests::{
     account::{Account, AccountData, AccountRoleSpecifier},
     keygen::KeyGen,
 };
-use libra_config::generator;
 use libra_crypto::PrivateKey;
 use libra_types::account_config;
 use move_core_types::identifier::Identifier;
@@ -177,23 +176,10 @@ impl Config {
 
         // generate a validator set with |validator_accounts| validators
         let validators = if validator_accounts > 0 {
-            let mut swarm = generator::validator_swarm_for_testing(validator_accounts);
-            swarm
-                .nodes
-                .iter_mut()
-                .map(|c| {
-                    let account = c.consensus.safety_rules.test.as_ref().unwrap().author;
-                    let key = c
-                        .test
-                        .as_ref()
-                        .unwrap()
-                        .owner_key
-                        .as_ref()
-                        .unwrap()
-                        .private_key();
-                    (account, key)
-                })
-                .collect::<Vec<_>>()
+            vm_genesis::Validator::new_set(Some(validator_accounts))
+                .into_iter()
+                .map(|v| (v.owner_address, v.key))
+                .collect()
         } else {
             vec![]
         };

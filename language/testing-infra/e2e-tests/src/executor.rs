@@ -8,14 +8,12 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
 };
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
-use libra_config::generator;
 use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
-    chain_id::ChainId,
     on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
@@ -39,7 +37,6 @@ use move_vm_types::{
     values::Value,
 };
 use vm::CompiledModule;
-use vm_genesis::GENESIS_KEYPAIR;
 
 /// Provides an environment to run a VM instance.
 ///
@@ -119,22 +116,12 @@ impl FakeExecutor {
         validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {
-        let genesis_change_set = {
-            let validator_count = validator_accounts.map_or(10, |s| s);
-            let swarm = generator::validator_swarm_for_testing(validator_count);
-
-            vm_genesis::encode_genesis_change_set(
-                &GENESIS_KEYPAIR.1,
-                &GENESIS_KEYPAIR.1,
-                &vm_genesis::operator_assignments(&swarm.nodes),
-                &vm_genesis::operator_registrations(&swarm.nodes),
-                &genesis_modules,
-                publishing_options,
-                ChainId::test(),
-            )
-            .0
-        };
-        Self::from_genesis(genesis_change_set.write_set())
+        let genesis = vm_genesis::generate_test_genesis(
+            &genesis_modules,
+            publishing_options,
+            validator_accounts,
+        );
+        Self::from_genesis(genesis.0.write_set())
     }
 
     /// Creates a number of [`Account`] instances all with the same balance and sequence number,
