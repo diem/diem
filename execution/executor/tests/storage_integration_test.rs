@@ -3,8 +3,7 @@
 
 use compiler::Compiler;
 use executor_test_helpers::{
-    extract_signer, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
-    get_test_signed_transaction,
+    gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
     integration_test_impl::{
         create_db_and_executor, test_execution_with_storage_impl, verify_committed_txn_status,
     },
@@ -12,11 +11,11 @@ use executor_test_helpers::{
 use executor_types::BlockExecutor;
 use libra_crypto::{ed25519::*, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_address,
     account_config::{coin1_tag, libra_root_address, treasury_compliance_account_address},
     account_state::AccountState,
-    transaction::Script,
+    transaction::{Script, Transaction, WriteSetPayload},
     trusted_state::{TrustedState, TrustedStateChange},
+    validator_signer::ValidatorSigner,
 };
 use std::convert::TryFrom;
 use transaction_builder::{
@@ -26,13 +25,15 @@ use transaction_builder::{
 
 #[test]
 fn test_genesis() {
-    let (config, _genesis_key) = config_builder::test_config();
-    let (_, db, _executor) = create_db_and_executor(&config);
+    let path = libra_temppath::TempPath::new();
+    path.create_as_dir().unwrap();
+    let genesis = vm_genesis::test_genesis_transaction();
+    let (_, db, _executor, waypoint) = create_db_and_executor(path.path(), &genesis);
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
 
-    let trusted_state = TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
+    let trusted_state = TrustedState::from(waypoint);
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
@@ -53,13 +54,15 @@ fn test_reconfiguration() {
     // When executing a transaction emits a validator set change,
     // storage should propagate the new validator set
 
-    let (mut config, genesis_key) = config_builder::test_config();
-    let (_, db, mut executor) = create_db_and_executor(&config);
+    let path = libra_temppath::TempPath::new();
+    path.create_as_dir().unwrap();
+    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
+    let (_, db, mut executor, _waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
-    let signer = extract_signer(&mut config);
-
-    let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id();
+    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
+    let validator_account = signer.author();
 
     // test the current keys in the validator's account equals to the key in the validator set
     let (li, _epoch_change_proof, _accumulator_consistency_proof) =
@@ -109,15 +112,8 @@ fn test_reconfiguration() {
     let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
     // txn3 = rotate the validator's consensus pubkey
-    let operator_key = config
-        .test
-        .as_ref()
-        .unwrap()
-        .operator_key
-        .as_ref()
-        .unwrap()
-        .private_key();
-    let operator_account = account_address::from_public_key(&operator_key.public_key());
+    let operator_key = validators[0].key.clone();
+    let operator_account = validators[0].operator_address;
 
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
     let txn3 = get_test_signed_transaction(
@@ -228,27 +224,22 @@ fn test_reconfiguration() {
 
 #[test]
 fn test_change_publishing_option_to_custom() {
-    // Publishing Option is set to locked at genesis.
-    let (mut config, genesis_key) = config_builder::test_config();
+    let path = libra_temppath::TempPath::new();
+    path.create_as_dir().unwrap();
+    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
 
-    let (_, db, mut executor) = create_db_and_executor(&config);
+    let (_, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
     let genesis_account = libra_root_address();
-    let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id();
-    let validator_privkey = config
-        .test
-        .as_ref()
-        .unwrap()
-        .owner_key
-        .as_ref()
-        .unwrap()
-        .private_key();
-    let validator_pubkey = validator_privkey.public_key();
 
-    let signer = extract_signer(&mut config);
+    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
+    let validator_account = signer.author();
+    let validator_privkey = signer.private_key();
+    let validator_pubkey = validator_privkey.public_key();
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -339,8 +330,7 @@ fn test_change_publishing_option_to_custom() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state =
-        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
+    let mut trusted_state = TrustedState::from(waypoint);
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),
@@ -372,7 +362,7 @@ fn test_change_publishing_option_to_custom() {
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
-        validator_privkey,
+        validator_privkey.clone(),
         validator_pubkey,
         Some(script2),
     );
@@ -415,26 +405,22 @@ fn test_change_publishing_option_to_custom() {
 
 #[test]
 fn test_extend_allowlist() {
-    // Publishing Option is set to locked at genesis.
-    let (mut config, genesis_key) = config_builder::test_config();
+    let path = libra_temppath::TempPath::new();
+    path.create_as_dir().unwrap();
+    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
 
-    let (_, db, mut executor) = create_db_and_executor(&config);
+    let (_, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
     let genesis_account = libra_root_address();
-    let network_config = config.validator_network.as_ref().unwrap();
-    let validator_account = network_config.peer_id();
-    let validator_privkey = config
-        .test
-        .as_ref()
-        .unwrap()
-        .owner_key
-        .as_ref()
-        .unwrap()
-        .private_key();
+
+    let signer = ValidatorSigner::new(validators[0].owner_address, validators[0].key.clone());
+    let validator_account = signer.author();
+    let validator_privkey = signer.private_key();
     let validator_pubkey = validator_privkey.public_key();
-    let signer = extract_signer(&mut config);
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
@@ -509,8 +495,7 @@ fn test_extend_allowlist() {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state =
-        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
+    let mut trusted_state = TrustedState::from(waypoint);
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),
@@ -545,7 +530,7 @@ fn test_extend_allowlist() {
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 1,
-        validator_privkey,
+        validator_privkey.clone(),
         validator_pubkey,
         Some(script2),
     );

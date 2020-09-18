@@ -41,10 +41,7 @@ pub fn bootstrap_genesis<V: VMExecutor>(
 }
 
 pub fn start_storage_service() -> (NodeConfig, JoinHandle<()>, Arc<dyn DbReader>) {
-    let (mut config, _genesis_key) = config_builder::test_config();
-    let tmp_dir = libra_temppath::TempPath::new();
-    config.storage.dir = tmp_dir.path().to_path_buf();
-
+    let (mut config, _genesis_key) = libra_genesis_tool::test_config();
     let server_port = utils::get_available_port();
     config.storage.address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&config.storage.dir()));

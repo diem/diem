@@ -39,16 +39,16 @@ proptest = { version = "0.10.1", optional = true }
 proptest = "0.10.1"
 rand = "0.7.3"
 
-config-builder = { path = "../../config/config-builder", version = "0.1.0" }
+compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
+compiler = { path = "../../language/compiler", version = "0.1.0" }
 executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
+libra-genesis-tool = {path = "../../config/management/genesis", version = "0.1.0", features = ["testing"] }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
-compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
+storage-interface = { path = "../../storage/storage-interface", version = "0.1.0", features=["fuzzing"] }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
-storage-interface = { path = "../../storage/storage-interface", version = "0.1.0", features=["fuzzing"] }
-compiler = { path = "../../language/compiler", version = "0.1.0" }
 
 [features]
 default = []

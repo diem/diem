@@ -4,19 +4,15 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use config_builder::test_config;
 use executor::{
     db_bootstrapper::{generate_waypoint, maybe_bootstrap},
     Executor,
 };
 use executor_test_helpers::{
-    bootstrap_genesis, extract_signer, gen_ledger_info_with_sigs, get_test_signed_transaction,
+    bootstrap_genesis, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use executor_types::BlockExecutor;
-use libra_config::utils::get_genesis_txn;
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform,
-};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
 use libra_temppath::TempPath;
 use libra_types::{
     access_path::AccessPath,
@@ -52,7 +48,8 @@ use transaction_builder::{
 
 #[test]
 fn test_empty_db() {
-    let (config, _) = test_config();
+    let genesis = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis.0));
     let tmp_dir = TempPath::new();
     let db_rw = DbReaderWriter::new(LibraDB::new_for_test(&tmp_dir));
 
@@ -60,9 +57,8 @@ fn test_empty_db() {
     assert!(db_rw.reader.get_startup_info().unwrap().is_none());
 
     // Bootstrap empty DB.
-    let genesis_txn = get_genesis_txn(&config).unwrap();
-    let waypoint = generate_waypoint::<LibraVM>(&db_rw, genesis_txn).expect("Should not fail.");
-    maybe_bootstrap::<LibraVM>(&db_rw, genesis_txn, waypoint).unwrap();
+    let waypoint = generate_waypoint::<LibraVM>(&db_rw, &genesis_txn).expect("Should not fail.");
+    maybe_bootstrap::<LibraVM>(&db_rw, &genesis_txn, waypoint).unwrap();
     let startup_info = db_rw
         .reader
         .get_startup_info()
@@ -79,7 +75,7 @@ fn test_empty_db() {
         .unwrap();
 
     // `maybe_bootstrap()` does nothing on non-empty DB.
-    assert!(!maybe_bootstrap::<LibraVM>(&db_rw, genesis_txn, waypoint).unwrap());
+    assert!(!maybe_bootstrap::<LibraVM>(&db_rw, &genesis_txn, waypoint).unwrap());
 }
 
 fn execute_and_commit(txns: Vec<Transaction>, db: &DbReaderWriter, signer: &ValidatorSigner) {
@@ -105,11 +101,8 @@ fn get_demo_accounts() -> (
     AccountAddress,
     Ed25519PrivateKey,
 ) {
-    let seed = [1u8; 32];
-    // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
-    // in this random validator set gets created in genesis. If one of {account1, account2,
-    // account3} already exists in genesis, the code below will fail.
-    assert!(seed != TEST_SEED);
+    // This seed avoids collisions with other accounts
+    let seed = [3u8; 32];
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
 
     let privkey1 = Ed25519PrivateKey::generate(&mut rng);
@@ -254,21 +247,22 @@ fn restore_state_to_db(
 
 #[test]
 fn test_pre_genesis() {
-    let (mut config, genesis_key) = config_builder::test_config();
+    let genesis = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis.0));
 
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let (db, db_rw) = DbReaderWriter::wrap(LibraDB::new_for_test(&tmp_dir));
-    let signer = extract_signer(&mut config);
-    let genesis_txn = get_genesis_txn(&config).unwrap().clone();
+    let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
     let waypoint = bootstrap_genesis::<LibraVM>(&db_rw, &genesis_txn).unwrap();
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_account_transaction(&genesis_key, 0, &account1, &account1_key);
-    let txn2 = get_account_transaction(&genesis_key, 1, &account2, &account2_key);
+    let txn1 = get_account_transaction(genesis_key, 0, &account1, &account1_key);
+    let txn2 = get_account_transaction(genesis_key, 1, &account2, &account2_key);
     let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2000);
-    let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2000);
+    let txn4 = get_mint_transaction(genesis_key, 1, &account2, 2000);
     execute_and_commit(vec![txn1, txn2, txn3, txn4], &db_rw, &signer);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
@@ -324,22 +318,21 @@ fn test_pre_genesis() {
 
 #[test]
 fn test_new_genesis() {
-    let (mut config, genesis_key) = config_builder::test_config();
+    let genesis = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis.0));
     // Create bootstrapped DB.
     let tmp_dir = TempPath::new();
     let db = DbReaderWriter::new(LibraDB::new_for_test(&tmp_dir));
-    let waypoint = {
-        let genesis_txn = get_genesis_txn(&config).unwrap();
-        bootstrap_genesis::<LibraVM>(&db, genesis_txn).unwrap()
-    };
-    let signer = extract_signer(&mut config);
+    let waypoint = bootstrap_genesis::<LibraVM>(&db, &genesis_txn).unwrap();
+    let signer = ValidatorSigner::new(genesis.1[0].owner_address, genesis.1[0].key.clone());
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_account_transaction(&genesis_key, 0, &account1, &account1_key);
-    let txn2 = get_account_transaction(&genesis_key, 1, &account2, &account2_key);
-    let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2_000_000);
-    let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2_000_000);
+    let txn1 = get_account_transaction(genesis_key, 0, &account1, &account1_key);
+    let txn2 = get_account_transaction(genesis_key, 1, &account2, &account2_key);
+    let txn3 = get_mint_transaction(genesis_key, 0, &account1, 2_000_000);
+    let txn4 = get_mint_transaction(genesis_key, 1, &account2, 2_000_000);
     execute_and_commit(vec![txn1, txn2, txn3, txn4], &db, &signer);
     assert_eq!(get_balance(&account1, &db), 2_000_000);
     assert_eq!(get_balance(&account2, &db), 2_000_000);

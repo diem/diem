@@ -1527,6 +1527,7 @@ dependencies = [
  "storage-service 0.1.0",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "transaction-builder 0.1.0",
+ "vm-genesis 0.1.0",
 ]
 
 [[package]]

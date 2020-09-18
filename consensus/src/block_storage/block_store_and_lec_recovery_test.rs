@@ -13,9 +13,8 @@ use execution_correctness::{ExecutionCorrectness, ExecutionCorrectnessManager};
 use executor_test_helpers::start_storage_service;
 use executor_types::ExecutedTrees;
 use futures::channel::mpsc;
-use libra_config::config::{NodeConfig, PersistableConfig};
+use libra_config::config::NodeConfig;
 use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
-use libra_temppath::TempPath;
 use libra_types::validator_signer::ValidatorSigner;
 use state_synchronizer::StateSyncClient;
 use std::sync::Arc;
@@ -89,13 +88,7 @@ fn build_inserter(
 #[test]
 fn test_executor_restart() {
     // Start storage service
-    let (mut config, _handle, db) = start_storage_service();
-
-    // Store the config
-    let config_path = TempPath::new();
-    config_path.create_as_file().unwrap();
-    config.save_config(&config_path).unwrap();
-
+    let (config, _handle, db) = start_storage_service();
     let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
     let (initial_data, qc) = get_initial_data_and_qc(&*db);
@@ -122,7 +115,6 @@ fn test_executor_restart() {
     // Crash LEC.
     drop(execution_correctness_manager);
 
-    config = NodeConfig::load(&config_path).unwrap();
     // Restart LEC and make sure we can continue to append to the current tree.
     let _execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
@@ -137,12 +129,7 @@ fn test_executor_restart() {
 #[test]
 fn test_block_store_restart() {
     // Start storage service
-    let (mut config, _handle, db) = start_storage_service();
-
-    // Store the config
-    let config_path = TempPath::new();
-    config_path.create_as_file().unwrap();
-    config.save_config(&config_path).unwrap();
+    let (config, _handle, db) = start_storage_service();
 
     let execution_correctness_manager = ExecutionCorrectnessManager::new(&config);
 
@@ -170,7 +157,6 @@ fn test_block_store_restart() {
 
     // Restart block_store
     {
-        config = NodeConfig::load(&config_path).unwrap();
         let (initial_data, qc) = get_initial_data_and_qc(&*db);
         let mut inserter = build_inserter(
             &config,

@@ -101,7 +101,7 @@ pub fn calculate_genesis<V: VMExecutor>(
     genesis_txn: &Transaction,
 ) -> Result<GenesisCommitter<V>> {
     // DB bootstrapper works on either an empty transaction accumulator or an existing block chain.
-    // In the very exetreme and sad situation of losing quorum among validators, we refer to the
+    // In the very extreme and sad situation of losing quorum among validators, we refer to the
     // second use case said above.
     let genesis_version = tree_state.num_transactions;
     let mut executor = Executor::<V>::new_on_unbootstrapped_db(db.clone(), tree_state);

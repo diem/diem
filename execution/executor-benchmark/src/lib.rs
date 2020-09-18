@@ -331,7 +331,7 @@ pub fn run_benchmark(
     num_transfer_blocks: usize,
     db_dir: Option<PathBuf>,
 ) {
-    let (mut config, genesis_key) = config_builder::test_config();
+    let (mut config, genesis_key) = libra_genesis_tool::test_config();
     if let Some(path) = db_dir {
         config.storage.dir = path;
     }

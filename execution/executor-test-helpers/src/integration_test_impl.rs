@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    bootstrap_genesis, extract_signer, gen_block_id, gen_ledger_info_with_sigs,
-    get_test_signed_transaction,
+    bootstrap_genesis, gen_block_id, gen_ledger_info_with_sigs, get_test_signed_transaction,
 };
 use anyhow::{anyhow, ensure, Result};
 use executor::Executor;
 use executor_types::BlockExecutor;
-use libra_config::{config::NodeConfig, utils::get_genesis_txn};
-use libra_crypto::{ed25519::Ed25519PrivateKey, test_utils::TEST_SEED, PrivateKey, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
         coin1_tag, from_currency_code_string, testnet_dd_account_address,
@@ -20,9 +18,10 @@ use libra_types::{
     event::EventKey,
     transaction::{
         authenticator::AuthenticationKey, Transaction, TransactionListWithProof,
-        TransactionWithProof,
+        TransactionWithProof, WriteSetPayload,
     },
     trusted_state::{TrustedState, TrustedStateChange},
+    waypoint::Waypoint,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
@@ -34,16 +33,22 @@ use transaction_builder::{
 };
 
 pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
-    let (mut config, genesis_key) = config_builder::test_config();
-    let (libradb, db, mut executor) = create_db_and_executor(&config);
-    let parent_block_id = executor.committed_block_id();
-    let signer = extract_signer(&mut config);
+    let (genesis, validators) = vm_genesis::test_genesis_change_set_and_validators(Some(1));
+    let genesis_txn = Transaction::GenesisTransaction(WriteSetPayload::Direct(genesis));
+    let genesis_key = &vm_genesis::GENESIS_KEYPAIR.0;
 
-    let seed = [1u8; 32];
-    // TEST_SEED is also used to generate a random validator set in get_test_config. Each account
-    // in this random validator set gets created in genesis. If one of {account1, account2,
-    // account3} already exists in genesis, the code below will fail.
-    assert!(seed != TEST_SEED);
+    let path = libra_temppath::TempPath::new();
+    path.create_as_dir().unwrap();
+    let (libra_db, db, mut executor, waypoint) = create_db_and_executor(path.path(), &genesis_txn);
+
+    let parent_block_id = executor.committed_block_id();
+    let signer = libra_types::validator_signer::ValidatorSigner::new(
+        validators[0].owner_address,
+        validators[0].key.clone(),
+    );
+
+    // This generates accounts that do not overlap with genesis
+    let seed = [3u8; 32];
     let mut rng = ::rand::rngs::StdRng::from_seed(seed);
 
     let privkey1 = Ed25519PrivateKey::generate(&mut rng);
@@ -241,8 +246,7 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
 
     let (li, epoch_change_proof, _accumulator_consistency_proof) =
         db.reader.get_state_proof(0).unwrap();
-    let mut trusted_state =
-        TrustedState::from(config.base.waypoint.waypoint_from_config().unwrap());
+    let mut trusted_state = TrustedState::from(waypoint);
     match trusted_state.verify_and_ratchet(&li, &epoch_change_proof) {
         Ok(TrustedStateChange::Epoch { new_state, .. }) => trusted_state = new_state,
         _ => panic!("unexpected state change"),
@@ -502,17 +506,18 @@ pub fn test_execution_with_storage_impl() -> Arc<LibraDB> {
     assert_eq!(account3_received_events_batch2.len(), 7);
     assert_eq!(account3_received_events_batch2[0].1.sequence_number(), 6);
 
-    libradb
+    libra_db
 }
 
-pub fn create_db_and_executor(
-    config: &NodeConfig,
-) -> (Arc<LibraDB>, DbReaderWriter, Executor<LibraVM>) {
-    let (db, dbrw) = DbReaderWriter::wrap(LibraDB::new_for_test(config.storage.dir()));
-    bootstrap_genesis::<LibraVM>(&dbrw, get_genesis_txn(config).unwrap()).unwrap();
+pub fn create_db_and_executor<P: AsRef<std::path::Path>>(
+    path: P,
+    genesis: &Transaction,
+) -> (Arc<LibraDB>, DbReaderWriter, Executor<LibraVM>, Waypoint) {
+    let (db, dbrw) = DbReaderWriter::wrap(LibraDB::new_for_test(&path));
+    let waypoint = bootstrap_genesis::<LibraVM>(&dbrw, genesis).unwrap();
     let executor = Executor::<LibraVM>::new(dbrw.clone());
 
-    (db, dbrw, executor)
+    (db, dbrw, executor, waypoint)
 }
 
 pub fn verify_account_balance<F>(
