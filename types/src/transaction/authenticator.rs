@@ -300,3 +300,14 @@ impl fmt::Display for AuthenticationKey {
         write!(f, "{:#x}", self)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::transaction::authenticator::AuthenticationKey;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_from_str_should_not_panic_by_given_empty_string() {
+        assert!(AuthenticationKey::from_str("").is_err());
+    }
+}
