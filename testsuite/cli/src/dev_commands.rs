@@ -14,7 +14,7 @@ pub struct DevCommand {}
 
 impl Command for DevCommand {
     fn get_aliases(&self) -> Vec<&'static str> {
-        vec!["dev"]
+        vec!["dev", "d"]
     }
     fn get_description(&self) -> &'static str {
         "Local Move development"
