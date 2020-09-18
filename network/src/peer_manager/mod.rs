@@ -895,7 +895,7 @@ where
         debug!(
             NetworkSchema::new(&network_context),
             listen_address = listen_addr,
-            "{} listening on {:?}",
+            "{} listening on '{}'",
             network_context,
             listen_addr
         );
@@ -937,6 +937,13 @@ where
                                 self.network_context,
                                 addr
                             );
+
+                            counters::pending_connection_upgrades(
+                                &self.network_context,
+                                ConnectionOrigin::Inbound,
+                            )
+                            .inc();
+
                             let start_time = Instant::now();
                             pending_inbound_connections.push(upgrade.map(move |out| (out, addr, start_time)));
                         }
@@ -986,6 +993,12 @@ where
             TransportRequest::DialPeer(peer_id, addr, response_tx) => {
                 match self.transport.dial(peer_id, addr.clone()) {
                     Ok(upgrade) => {
+                        counters::pending_connection_upgrades(
+                            &self.network_context,
+                            ConnectionOrigin::Outbound,
+                        )
+                        .inc();
+
                         let start_time = Instant::now();
                         Some(
                             upgrade
@@ -1020,6 +1033,9 @@ where
         start_time: Instant,
         response_tx: oneshot::Sender<Result<(), PeerManagerError>>,
     ) {
+        counters::pending_connection_upgrades(&self.network_context, ConnectionOrigin::Outbound)
+            .dec();
+
         let elapsed_time = start_time.elapsed().as_secs_f64();
         let upgrade = match upgrade {
             Ok(connection) => {
@@ -1103,6 +1119,9 @@ where
         addr: NetworkAddress,
         start_time: Instant,
     ) {
+        counters::pending_connection_upgrades(&self.network_context, ConnectionOrigin::Inbound)
+            .dec();
+
         let elapsed_time = start_time.elapsed().as_secs_f64();
         match upgrade {
             Ok(connection) => {

@@ -71,6 +71,27 @@ pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId,
     }
 }
 
+pub static LIBRA_NETWORK_PENDING_CONNECTION_UPGRADES: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_network_pending_connection_upgrades",
+        "Number of concurrent inbound or outbound connections we're currently negotiating",
+        &["role_type", "network_id", "peer_id", "direction"]
+    )
+    .unwrap()
+});
+
+pub fn pending_connection_upgrades(
+    network_context: &NetworkContext,
+    direction: ConnectionOrigin,
+) -> IntGauge {
+    LIBRA_NETWORK_PENDING_CONNECTION_UPGRADES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        direction.as_str(),
+    ])
+}
+
 pub static LIBRA_NETWORK_CONNECTION_UPGRADE_TIME: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
         "libra_network_connection_upgrade_time_seconds",
