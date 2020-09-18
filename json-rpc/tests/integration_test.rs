@@ -10,11 +10,7 @@ mod testing;
 
 #[test]
 fn test_interface() {
-    let temp_dir = libra_temppath::TempPath::new();
-    temp_dir
-        .create_as_dir()
-        .expect("unable to create temporary config dir");
-    let fullnode = node::Node::start(temp_dir.path()).unwrap();
+    let fullnode = node::Node::start().unwrap();
     fullnode.wait_for_jsonrpc_connectivity();
 
     let mut env = testing::Env::gen(fullnode.root_key.clone(), fullnode.url());

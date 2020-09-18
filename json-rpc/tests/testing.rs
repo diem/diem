@@ -154,7 +154,7 @@ impl Env {
             30,
             ChainId::test(),
         )
-        .unwrap()
+        .expect("user signed transaction")
     }
 
     pub fn submit_and_wait(&mut self, txn: SignedTransaction) -> JsonRpcResponse {

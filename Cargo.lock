@@ -2796,6 +2796,7 @@ dependencies = [
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",
+ "libra-node 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-temppath 0.1.0",
  "libra-trace 0.1.0",
@@ -2818,7 +2819,6 @@ dependencies = [
  "vm-genesis 0.1.0",
  "vm-validator 0.1.0",
  "warp 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "workspace-builder 0.1.0",
 ]
 
 [[package]]

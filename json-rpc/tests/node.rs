@@ -1,64 +1,41 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use config_builder::BuildSwarm;
 use libra_config::config::NodeConfig;
 use libra_genesis_tool::config_builder::ValidatorBuilder;
-use std::process::{Child, Command};
 
 pub struct Node {
-    node: Child,
     pub config: NodeConfig,
     pub root_key: libra_crypto::ed25519::Ed25519PrivateKey,
-}
-
-impl Drop for Node {
-    // When the LibraNode struct goes out of scope we need to kill the child process
-    fn drop(&mut self) {
-        // check if the process has already been terminated
-        match self.node.try_wait() {
-            // The child process has already terminated, perhaps due to a crash
-            Ok(Some(_)) => {}
-
-            // The node is still running so we need to attempt to kill it
-            _ => {
-                if let Err(e) = self.node.kill() {
-                    panic!("LibraNode process could not be killed: '{}'", e);
-                }
-            }
-        }
-    }
+    _node: libra_node::main_node::LibraHandle,
+    _temp_dir: libra_temppath::TempPath,
 }
 
 impl Node {
-    pub fn start(node_dir: &std::path::Path) -> Result<Self> {
-        let config_path = node_dir.join("node.yaml");
-        let struct_log_path = node_dir.join("struct.log");
-        let log_path = node_dir.join("log");
+    pub fn start() -> Result<Self> {
+        let temp_dir = libra_temppath::TempPath::new();
+        temp_dir
+            .create_as_dir()
+            .expect("unable to create temporary config dir");
+        let node_dir = temp_dir.path();
 
-        // TODO: test with default_for_validator_full_node?
+        let config_path = node_dir.join("node.yaml");
+
         let builder = ValidatorBuilder::new(1, NodeConfig::default_for_validator(), node_dir);
         let (mut configs, root_key) = builder.build_swarm()?;
-        configs[0].set_data_dir(node_dir.to_path_buf());
-        configs[0].save(&config_path)?;
+        let mut config = configs.pop().unwrap();
+        config.set_data_dir(node_dir.to_path_buf());
+        config.save(&config_path)?;
 
-        let mut cmd = Command::new(workspace_builder::get_libra_node_with_failpoints());
-        cmd.current_dir(workspace_builder::workspace_root())
-            .arg("-f")
-            .arg(config_path);
-        cmd.env("STRUCT_LOG_FILE", struct_log_path);
-
-        let log_file = std::fs::File::create(&log_path)?;
-        cmd.stdout(log_file.try_clone()?)
-            .stderr(log_file.try_clone()?);
-
-        let node = cmd.spawn().context("Error launching node process")?;
+        let node = libra_node::main_node::setup_environment(&config, None);
 
         Ok(Self {
-            node,
             root_key,
-            config: configs.pop().unwrap(),
+            config,
+            _node: node,
+            _temp_dir: temp_dir,
         })
     }
 
