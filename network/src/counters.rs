@@ -17,9 +17,10 @@ pub const RESPONSE_LABEL: &str = "response";
 // some state labels
 pub const CANCELED_LABEL: &str = "canceled";
 pub const DECLINED_LABEL: &str = "declined";
-pub const FAILED_LABEL: &str = "failed";
 pub const RECEIVED_LABEL: &str = "received";
 pub const SENT_LABEL: &str = "sent";
+pub const SUCCEEDED_LABEL: &str = "succeeded";
+pub const FAILED_LABEL: &str = "failed";
 
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -57,17 +58,40 @@ pub static LIBRA_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub fn peer_connected(network_context: &NetworkContext, peer_id: &PeerId, v: i64) {
+pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId, v: i64) {
     if network_context.role().is_validator() {
         LIBRA_NETWORK_PEER_CONNECTED
             .with_label_values(&[
                 network_context.role().as_str(),
                 network_context.network_id().as_str(),
                 network_context.peer_id().short_str().as_str(),
-                peer_id.short_str().as_str(),
+                remote_peer_id.short_str().as_str(),
             ])
             .set(v)
     }
+}
+
+pub static LIBRA_NETWORK_CONNECTION_UPGRADE_TIME: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_network_connection_upgrade_time_seconds",
+        "Time to complete a new inbound or outbound connection upgrade",
+        &["role_type", "network_id", "peer_id", "direction", "state"]
+    )
+    .unwrap()
+});
+
+pub fn connection_upgrade_time(
+    network_context: &NetworkContext,
+    direction: ConnectionOrigin,
+    state: &'static str,
+) -> Histogram {
+    LIBRA_NETWORK_CONNECTION_UPGRADE_TIME.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        direction.as_str(),
+        state,
+    ])
 }
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
