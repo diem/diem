@@ -100,6 +100,14 @@ impl SafetyRulesTestConfig {
         }
     }
 
+    pub fn consensus_key(&mut self, key: Ed25519PrivateKey) {
+        self.consensus_key = Some(ConfigKey::new(key));
+    }
+
+    pub fn execution_key(&mut self, key: Ed25519PrivateKey) {
+        self.execution_key = Some(ConfigKey::new(key));
+    }
+
     pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate(rng);
         self.consensus_key = Some(ConfigKey::<Ed25519PrivateKey>::new(privkey));

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #![forbid(unsafe_code)]
+
 pub mod command;
 mod genesis;
 mod key;
@@ -16,3 +17,6 @@ mod storage_helper;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod config_builder;
+
+#[cfg(any(test, feature = "testing"))]
+pub use ::config_builder::test_config;

@@ -12,7 +12,7 @@ use libra_config::{
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_management::constants::{COMMON_NS, LAYOUT};
-use libra_secure_storage::{CryptoStorage, KVStorage};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::path::{Path, PathBuf};
@@ -354,4 +354,57 @@ impl BuildSwarm for FullnodeBuilder {
         let libra_root_key_path = generate_key::load_key(&self.libra_root_key_path);
         Ok((configs, libra_root_key_path))
     }
+}
+
+pub fn test_config() -> (NodeConfig, Ed25519PrivateKey) {
+    let path = TempPath::new();
+    path.create_as_dir().unwrap();
+    let builder = ValidatorBuilder::new(1, NodeConfig::default_for_validator(), path.path());
+    let (mut configs, key) = builder.build_swarm().unwrap();
+
+    let mut config = configs.swap_remove(0);
+    config.set_data_dir(path.path().to_path_buf());
+    let backend = &config
+        .validator_network
+        .as_ref()
+        .unwrap()
+        .identity_from_storage()
+        .backend;
+    let storage: Storage = std::convert::TryFrom::try_from(backend).unwrap();
+    let mut test = libra_config::config::TestConfig::new_with_temp_dir(Some(path));
+    test.execution_key(
+        storage
+            .export_private_key(libra_global_constants::EXECUTION_KEY)
+            .unwrap(),
+    );
+    test.operator_key(
+        storage
+            .export_private_key(libra_global_constants::OPERATOR_KEY)
+            .unwrap(),
+    );
+    test.owner_key(
+        storage
+            .export_private_key(libra_global_constants::OWNER_KEY)
+            .unwrap(),
+    );
+    config.test = Some(test);
+
+    let owner_account = storage
+        .get(libra_global_constants::OWNER_ACCOUNT)
+        .unwrap()
+        .value;
+    let mut sr_test = libra_config::config::SafetyRulesTestConfig::new(owner_account);
+    sr_test.consensus_key(
+        storage
+            .export_private_key(libra_global_constants::CONSENSUS_KEY)
+            .unwrap(),
+    );
+    sr_test.execution_key(
+        storage
+            .export_private_key(libra_global_constants::EXECUTION_KEY)
+            .unwrap(),
+    );
+    config.consensus.safety_rules.test = Some(sr_test);
+
+    (config, key)
 }

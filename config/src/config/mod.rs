@@ -289,7 +289,7 @@ impl NodeConfig {
     }
 
     fn random_internal(&mut self, idx: u32, rng: &mut StdRng) {
-        let mut test = TestConfig::new_with_temp_dir();
+        let mut test = TestConfig::new_with_temp_dir(None);
 
         if self.base.role == RoleType::Validator {
             test.random_account_key(rng);
