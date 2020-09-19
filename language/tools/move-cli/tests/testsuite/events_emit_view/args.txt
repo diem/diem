@@ -1,0 +1,4 @@
+run emit.move --signers 0xA --args 5 -c
+view move_data/0x0000000000000000000000000000000a/events/0
+run emit.move --signers 0xA --args 6 -c
+view move_data/0x0000000000000000000000000000000a/events/0

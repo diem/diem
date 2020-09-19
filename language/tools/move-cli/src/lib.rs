@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use disassembler::disassembler::Disassembler;
+// TODO: do we want to make these Move core types or allow this to be customizable?
+use libra_types::{contract_event::ContractEvent, event::EventKey};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -13,7 +15,7 @@ use move_core_types::{
 use move_lang::shared::Address;
 use move_vm_runtime::data_cache::RemoteCache;
 use move_vm_types::values::Value;
-use resource_viewer::{AnnotatedMoveStruct, MoveValueAnnotator};
+use resource_viewer::{AnnotatedMoveStruct, AnnotatedMoveValue, MoveValueAnnotator};
 use vm::{
     access::ModuleAccess,
     errors::*,
@@ -23,6 +25,7 @@ use vm::{
 use anyhow::{anyhow, bail, Result};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -30,12 +33,23 @@ use std::{
 
 pub mod test;
 
-pub const MOVE_SRC: &str = "move_src";
+/// Default directory where saved Move resources live
 pub const MOVE_DATA: &str = "move_data";
+
+/// Default directory where Move modules live
+pub const MOVE_SRC: &str = "move_src";
+
 /// Store modules under move_src without an explicit `address {}` block under 0x2.
 pub const MOVE_SRC_ADDRESS: Address = Address::new([
     0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 2u8,
 ]);
+
+/// subdirectory of `MOVE_DATA`/<addr> where resources are stored
+const RESOURCES_DIR: &str = "resources";
+/// subdirectory of `MOVE_DATA`/<addr> where modules are stored
+const MODULES_DIR: &str = "modules";
+/// subdirectory of `MOVE_DATA`/<addr> where events are stored
+const EVENTS_DIR: &str = "events";
 
 #[derive(Debug)]
 pub struct OnDiskStateView {
@@ -50,7 +64,7 @@ impl OnDiskStateView {
     pub fn create(move_data_dir: PathBuf, compiled_modules: &[CompiledModule]) -> Result<Self> {
         if !move_data_dir.exists() || !move_data_dir.is_dir() {
             bail!(
-                "Attempting to create OnDiskStateView from non-directory {:?}",
+                "Attempting to create OnDiskStateView from bad data directory {:?}",
                 move_data_dir
             )
         }
@@ -69,6 +83,30 @@ impl OnDiskStateView {
         })
     }
 
+    fn is_data_path(&self, p: &Path, parent_dir: &str) -> bool {
+        if !p.exists() {
+            return false;
+        }
+        let p = p.canonicalize().unwrap();
+        p.starts_with(&self.move_data_dir)
+            && match p.parent() {
+                Some(parent) => parent.ends_with(parent_dir),
+                None => false,
+            }
+    }
+
+    pub fn is_resource_path(&self, p: &Path) -> bool {
+        self.is_data_path(p, RESOURCES_DIR)
+    }
+
+    pub fn is_event_path(&self, p: &Path) -> bool {
+        self.is_data_path(p, EVENTS_DIR)
+    }
+
+    pub fn is_module_path(&self, p: &Path) -> bool {
+        self.is_data_path(p, MODULES_DIR)
+    }
+
     fn get_addr_path(&self, addr: &AccountAddress) -> PathBuf {
         let mut path = self.move_data_dir.clone();
         path.push(format!("0x{}", addr.to_string()));
@@ -77,12 +115,22 @@ impl OnDiskStateView {
 
     fn get_resource_path(&self, addr: AccountAddress, tag: StructTag) -> PathBuf {
         let mut path = self.get_addr_path(&addr);
+        path.push(RESOURCES_DIR);
         path.push(StructID(tag).to_string());
+        path
+    }
+
+    // Events are stored under address/handle creation number
+    pub fn get_event_path(&self, key: &EventKey) -> PathBuf {
+        let mut path = self.get_addr_path(&key.get_creator_address());
+        path.push(EVENTS_DIR);
+        path.push(key.get_creation_number().to_string());
         path
     }
 
     fn get_module_path(&self, module_id: &ModuleId) -> PathBuf {
         let mut path = self.get_addr_path(module_id.address());
+        path.push(MODULES_DIR);
         path.push(module_id.name().to_string());
         path
     }
@@ -160,6 +208,25 @@ impl OnDiskStateView {
         }
     }
 
+    fn get_events(&self, events_path: &Path) -> Result<Vec<ContractEvent>> {
+        Ok(if events_path.exists() {
+            match Self::get_bytes(events_path)? {
+                Some(events_data) => lcs::from_bytes::<Vec<ContractEvent>>(&events_data)?,
+                None => vec![],
+            }
+        } else {
+            vec![]
+        })
+    }
+
+    pub fn view_events(&self, events_path: &Path) -> Result<Vec<AnnotatedMoveValue>> {
+        let annotator = MoveValueAnnotator::new_no_stdlib(self);
+        self.get_events(events_path)?
+            .iter()
+            .map(|event| annotator.view_contract_event(event))
+            .collect()
+    }
+
     pub fn view_module(&self, module_path: &Path) -> Result<Option<String>> {
         type Loc = u64;
         if module_path.is_dir() {
@@ -201,11 +268,10 @@ impl OnDiskStateView {
         layout: MoveTypeLayout,
         resource: Value,
     ) -> Result<()> {
-        let mut path = self.get_addr_path(&addr);
+        let path = self.get_resource_path(addr, tag);
         if !path.exists() {
-            fs::create_dir(path.clone())?
+            fs::create_dir_all(path.parent().unwrap())?;
         }
-        path.push(StructID(tag).to_string());
         let lcs = resource
             .simple_serialize(&layout)
             .ok_or_else(|| anyhow!("Failed to serialize resource"))?;
@@ -213,13 +279,38 @@ impl OnDiskStateView {
         Ok(f.write_all(&lcs)?)
     }
 
+    pub fn save_event(
+        &self,
+        event_key: &[u8],
+        event_sequence_number: u64,
+        event_type: TypeTag,
+        event_layout: &MoveTypeLayout,
+        event_value: Value,
+    ) -> Result<()> {
+        let key = EventKey::try_from(event_key)?;
+        let event_data = event_value
+            .simple_serialize(event_layout)
+            .ok_or_else(|| anyhow!("Failed to serialize event"))?;
+        let event = ContractEvent::new(key, event_sequence_number, event_type, event_data);
+
+        // save event data in handle_address/EVENTS_DIR/handle_number
+        let path = self.get_event_path(&key);
+        if !path.exists() {
+            fs::create_dir_all(path.parent().unwrap())?;
+        }
+        // grab the old event log (if any) and append this event to it
+        let mut event_log = self.get_events(&path)?;
+        event_log.push(event);
+        let mut f = fs::File::create(path)?;
+        Ok(f.write_all(&lcs::to_bytes(&event_log)?)?)
+    }
+
     /// Save `module` on disk under the path `module.address()`/`module.name()`
     fn save_module(&self, module_id: &ModuleId, module_bytes: &[u8]) -> Result<()> {
-        let mut path = self.get_addr_path(module_id.address());
+        let path = self.get_module_path(module_id);
         if !path.exists() {
-            fs::create_dir(path.clone())?
+            fs::create_dir_all(path.parent().unwrap())?
         }
-        path.push(module_id.name().to_string());
         let mut f = fs::File::create(path)?;
         Ok(f.write_all(&module_bytes)?)
     }

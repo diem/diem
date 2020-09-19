@@ -75,14 +75,14 @@ Committed changes.
 If we take a look under `move_data`, we will now see the published bytecodes for our test module:
 
 ```
-λ ls move_data/0x00000000000000000000000000000002/
+λ ls move_data/0x00000000000000000000000000000002/modules
 Test
 ```
 
 We can also inspect the compiled bytecode using `move view`:
 
 ```
-λ move view move_data/0x00000000000000000000000000000002/Test
+λ move view move_data/0x00000000000000000000000000000002/modules/Test
 module 00000000.Test {
 resource Resource {
 	i: u64
@@ -142,7 +142,7 @@ Committed changes.
 We can also inspect this newly published resource using `move view`:
 
 ```
-λ move view move_data/0x0000000000000000000000000000000f/0x00000000000000000000000000000002\:\:Test\:\:Resource
+λ move view move_data/0x0000000000000000000000000000000f/resources/0x00000000000000000000000000000002\:\:Test\:\:Resource
 resource 00000000::Test::Resource {
     i: 10
 }

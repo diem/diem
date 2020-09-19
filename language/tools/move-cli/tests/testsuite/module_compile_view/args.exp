@@ -1,7 +1,7 @@
 Command `compile -c`:
 Compiling 1 module(s)
 Committed changes.
-Command `view move_data/0x00000000000000000000000000000002/Module`:
+Command `view move_data/0x00000000000000000000000000000002/modules/Module`:
 module 00000000.Module {
 resource S {
 	i: u64
