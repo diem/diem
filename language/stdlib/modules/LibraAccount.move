@@ -334,6 +334,7 @@ module LibraAccount {
             metadata: x"",
             metadata_signature: x"",
         };
+        aborts_if global<Balance<LBR>>(cap.account_address).coin.value + amount_lbr > max_u64() with Errors::LIMIT_EXCEEDED;
     }
 
     spec schema StapleLBREnsures {
@@ -455,6 +456,7 @@ module LibraAccount {
         ensures global<LibraAccount>(payee).withdrawal_capability
             == old(global<LibraAccount>(payee).withdrawal_capability);
         include DepositAbortsIf<Token>{amount: to_deposit.value};
+        aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64() with Errors::LIMIT_EXCEEDED;
         include DepositEnsures<Token>{amount: to_deposit.value};
     }
     spec schema DepositAbortsIf<Token> {
@@ -477,7 +479,7 @@ module LibraAccount {
                 !AccountLimits::spec_update_deposit_limits<Token>(amount, VASP::spec_parent_address(payee))
             with Errors::LIMIT_EXCEEDED;
         aborts_if !exists<Balance<Token>>(payee) with Errors::INVALID_ARGUMENT;
-        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+//        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
         aborts_if !exists_at(payee) with Errors::NOT_PUBLISHED;
         include Libra::AbortsIfNoCurrency<Token>;
     }
@@ -521,6 +523,7 @@ module LibraAccount {
         include DesignatedDealer::TieredMintAbortsIf<Token>{dd_addr: designated_dealer_address, amount: mint_amount};
         include DepositAbortsIf<Token>{payer: CoreAddresses::VM_RESERVED_ADDRESS(),
             payee: designated_dealer_address, amount: mint_amount, metadata: x"", metadata_signature: x""};
+        aborts_if global<Balance<Token>>(designated_dealer_address).coin.value + mint_amount > max_u64() with Errors::LIMIT_EXCEEDED;
     }
 
     spec schema TieredMintEnsures<Token> {
@@ -637,11 +640,12 @@ module LibraAccount {
     }
 
     spec fun withdraw_from {
-        pragma opaque;
+//        pragma opaque;
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
         modifies global<LibraAccount>(payer);
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payer));
+//        ensures exists<AccountLimits::Window<Token>>(VASP::spec_parent_address(payer));
         ensures exists<LibraAccount>(payer);
         ensures global<LibraAccount>(payer).withdrawal_capability
                     == old(global<LibraAccount>(payer).withdrawal_capability);
@@ -781,6 +785,16 @@ module LibraAccount {
             metadata,
             metadata_signature
         );
+    }
+
+    spec fun pay_from {
+        requires cap.account_address != payee;
+        requires VASP::spec_parent_address(cap.account_address) != VASP::spec_parent_address(payee);
+        include DepositAbortsIf<Token>{payer: cap.account_address};
+        aborts_if cap.account_address != payee &&
+            global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+//        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
+        include WithdrawFromAbortsIf<Token>;
     }
 
     /// Rotate the authentication key for the account under cap.account_address
