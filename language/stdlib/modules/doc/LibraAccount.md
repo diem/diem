@@ -14,6 +14,7 @@
 -  [Struct <code><a href="LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">SentPaymentEvent</a></code>](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct <code><a href="LibraAccount.md#0x1_LibraAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a></code>](#0x1_LibraAccount_ReceivedPaymentEvent)
 -  [Struct <code><a href="LibraAccount.md#0x1_LibraAccount_UpgradeEvent">UpgradeEvent</a></code>](#0x1_LibraAccount_UpgradeEvent)
+-  [Struct <code><a href="LibraAccount.md#0x1_LibraAccount_CreateAccountEvent">CreateAccountEvent</a></code>](#0x1_LibraAccount_CreateAccountEvent)
 -  [Const <code><a href="LibraAccount.md#0x1_LibraAccount_MAX_U64">MAX_U64</a></code>](#0x1_LibraAccount_MAX_U64)
 -  [Const <code><a href="LibraAccount.md#0x1_LibraAccount_EACCOUNT">EACCOUNT</a></code>](#0x1_LibraAccount_EACCOUNT)
 -  [Const <code><a href="LibraAccount.md#0x1_LibraAccount_ESEQUENCE_NUMBER">ESEQUENCE_NUMBER</a></code>](#0x1_LibraAccount_ESEQUENCE_NUMBER)
@@ -274,6 +275,12 @@ and to record freeze/unfreeze events.
 <dd>
 
 </dd>
+<dt>
+<code>creation_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_CreateAccountEvent">LibraAccount::CreateAccountEvent</a>&gt;</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -421,6 +428,40 @@ Message for committed WriteSet transaction.
 </dt>
 <dd>
 
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_LibraAccount_CreateAccountEvent"></a>
+
+## Struct `CreateAccountEvent`
+
+Message for creation of a new account
+
+
+<pre><code><b>struct</b> <a href="LibraAccount.md#0x1_LibraAccount_CreateAccountEvent">CreateAccountEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+<code>created: address</code>
+</dt>
+<dd>
+ Address of the created account
+</dd>
+<dt>
+<code>role_id: u64</code>
+</dt>
+<dd>
+ Role of the created account
 </dd>
 </dl>
 
@@ -812,39 +853,17 @@ Initialize this module. This is only callable from genesis.
 <pre><code><b>public</b> <b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_initialize">initialize</a>(
     lr_account: &signer,
     dummy_auth_key_prefix: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     // Operational constraint, not a privilege constraint.
     <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(lr_account);
+
     <a href="LibraAccount.md#0x1_LibraAccount_create_libra_root_account">create_libra_root_account</a>(
         <b>copy</b> dummy_auth_key_prefix,
     );
-    // Create the treasury compliance account
     <a href="LibraAccount.md#0x1_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>(
         lr_account,
         <b>copy</b> dummy_auth_key_prefix,
-    );
-
-    <b>assert</b>(
-        !<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="LibraAccount.md#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY">EACCOUNT_OPERATIONS_CAPABILITY</a>)
-    );
-    move_to(
-        lr_account,
-        <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(lr_account),
-        }
-    );
-
-    <b>assert</b>(
-        !<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
-        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="LibraAccount.md#0x1_LibraAccount_EWRITESET_MANAGER">EWRITESET_MANAGER</a>)
-    );
-    move_to(
-        lr_account,
-        <a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a> {
-            upgrade_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_UpgradeEvent">Self::UpgradeEvent</a>&gt;(lr_account),
-        }
     );
 }
 </code></pre>
@@ -2318,7 +2337,7 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 <pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_make_account">make_account</a>(
     new_account: signer,
     auth_key_prefix: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_account_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(&new_account);
     // cannot create an account at the reserved address 0x0
     <b>assert</b>(
@@ -2354,6 +2373,11 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
         }
     );
     <a href="AccountFreezing.md#0x1_AccountFreezing_create">AccountFreezing::create</a>(&new_account);
+
+    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>(
+        &<b>mut</b> borrow_global_mut&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).creation_events,
+        <a href="LibraAccount.md#0x1_LibraAccount_CreateAccountEvent">CreateAccountEvent</a> { created: new_account_addr, role_id: <a href="Roles.md#0x1_Roles_get_role_id">Roles::get_role_id</a>(new_account_addr) },
+    );
     <a href="LibraAccount.md#0x1_LibraAccount_destroy_signer">destroy_signer</a>(new_account);
 }
 </code></pre>
@@ -2392,6 +2416,7 @@ Needed to prove invariant
     addr: address;
     auth_key_prefix: vector&lt;u8&gt;;
     <b>aborts_if</b> addr == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>() <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_exists_at">exists_at</a>(addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
     <b>aborts_if</b> <a href="Vector.md#0x1_Vector_length">Vector::length</a>(auth_key_prefix) + <a href="Vector.md#0x1_Vector_length">Vector::length</a>(<a href="LCS.md#0x1_LCS_serialize">LCS::serialize</a>(addr)) != 32
         <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
@@ -2421,14 +2446,37 @@ Creates the libra root account in genesis.
 
 <pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_create_libra_root_account">create_libra_root_account</a>(
     auth_key_prefix: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
-    <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(&new_account);
-    <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(&new_account);
-    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(&new_account, &new_account);
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
+    <b>let</b> lr_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_libra_root">CoreAddresses::assert_libra_root</a>(&lr_account);
+    <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(&lr_account);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(&lr_account, &lr_account);
+    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&lr_account);
+
+    <b>assert</b>(
+        !<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="LibraAccount.md#0x1_LibraAccount_EACCOUNT_OPERATIONS_CAPABILITY">EACCOUNT_OPERATIONS_CAPABILITY</a>)
+    );
+    move_to(
+        &lr_account,
+        <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(&lr_account),
+            creation_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_CreateAccountEvent">CreateAccountEvent</a>&gt;(&lr_account),
+        }
+    );
+    <b>assert</b>(
+        !<b>exists</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()),
+        <a href="Errors.md#0x1_Errors_already_published">Errors::already_published</a>(<a href="LibraAccount.md#0x1_LibraAccount_EWRITESET_MANAGER">EWRITESET_MANAGER</a>)
+    );
+    move_to(
+        &lr_account,
+        <a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a> {
+            upgrade_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_UpgradeEvent">Self::UpgradeEvent</a>&gt;(&lr_account),
+        }
+    );
+
+    <a href="LibraAccount.md#0x1_LibraAccount_make_account">make_account</a>(lr_account, auth_key_prefix)
 }
 </code></pre>
 
@@ -2456,7 +2504,7 @@ Create a treasury/compliance account at <code>new_account_address</code> with au
 <pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>(
     lr_account: &signer,
     auth_key_prefix: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_genesis">LibraTimestamp::assert_genesis</a>();
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     <b>let</b> new_account_address = <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
@@ -2496,7 +2544,7 @@ Creates Preburn resource under account 'new_account_address'
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
     add_all_currencies: bool,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_dd_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
     <a href="Roles.md#0x1_Roles_new_designated_dealer_role">Roles::new_designated_dealer_role</a>(creator_account, &new_dd_account);
@@ -2535,7 +2583,7 @@ all available currencies in the system will also be added.
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
     add_all_currencies: bool
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
     <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(&new_account, creator_account);
@@ -2574,7 +2622,7 @@ also be added. This account will be a child of <code>creator</code>, which must 
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     add_all_currencies: bool,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_child_vasp_role">Roles::new_child_vasp_role</a>(parent, &new_account);
     <a href="VASP.md#0x1_VASP_publish_child_vasp_credential">VASP::publish_child_vasp_credential</a>(
@@ -3789,7 +3837,7 @@ Epilogue for WriteSet trasnaction
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     // The lr_account account is verified <b>to</b> have the libra root role in `<a href="Roles.md#0x1_Roles_new_validator_role">Roles::new_validator_role</a>`
     <a href="Roles.md#0x1_Roles_new_validator_role">Roles::new_validator_role</a>(lr_account, &new_account);
@@ -3823,7 +3871,7 @@ Epilogue for WriteSet trasnaction
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
-) {
+) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> new_account = <a href="LibraAccount.md#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     // The lr_account is verified <b>to</b> have the libra root role in `<a href="Roles.md#0x1_Roles_new_validator_operator_role">Roles::new_validator_operator_role</a>`
     <a href="Roles.md#0x1_Roles_new_validator_operator_role">Roles::new_validator_operator_role</a>(lr_account, &new_account);

@@ -1,22 +1,26 @@
 Command `run genesis.move --signers 0xA550C18 0xB1E55ED -c`:
 Compiling transaction script
+Emitted 2 events:
+Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000a550c18), U64(0)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000b1e55ed), U64(1)] }))) as the 1th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Warning: saving events to disk is currently not supported. Discarding events.
 Changed resource(s) under 2 address(es):
   Changed 33 resource(s) under address 0000000000000000000000000a550c18:
-    Added type 00000000::Event::EventHandleGenerator: [U64(22), Address(00000000)]
+    Added type 00000000::Event::EventHandleGenerator: [U64(23), Address(00000000)]
     Added type 00000000::LibraTimestamp::CurrentTimeMicroseconds: [U64(0)]
     Added type 00000000::Roles::RoleId: [U64(0)]
-    Added type 00000000::AccountFreezing::FreezeEventsHolder: [[U64(0), [19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::AccountFreezing::FreezeEventsHolder: [[U64(0), [20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::AccountFreezing::FreezingBit: [false]
     Added type 00000000::ChainId::ChainId: [U8(0)]
-    Added type 00000000::LibraConfig::Configuration: [U64(0), U64(0), [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::LibraConfig::Configuration: [U64(0), U64(0), [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::LBR::Reserve: [[false], [false], [[U64(0)]], [[U64(2147483648)], [U64(0)]], [[U64(2147483648)], [U64(0)]]]
     Added type 00000000::DualAttestation::Limit: [U64(1000000000)]
     Added type 00000000::SlidingNonce::SlidingNonce: [U64(0), U128(0)]
-    Added type 00000000::LibraAccount::AccountOperationsCapability: [[false]]
-    Added type 00000000::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], U64(0)]
-    Added type 00000000::LibraAccount::LibraWriteSetManager: [[U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(2), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::LibraAccount::LibraAccount: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [[[Address(00000000)]]], [[[Address(00000000)]]], [U64(0), [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], U64(0)]
+    Added type 00000000::LibraAccount::LibraWriteSetManager: [[U64(0), [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::LibraSystem::CapabilityHolder: [[false]]
-    Added type 00000000::LibraBlock::BlockMetadata: [U64(0), [U64(0), [21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::LibraBlock::BlockMetadata: [U64(0), [U64(0), [22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::AccountLimits::LimitsDefinition<00000000::Coin1::Coin1>: [U64(18446744073709551615), U64(18446744073709551615), U64(86400000000), U64(18446744073709551615)]
     Added type 00000000::AccountLimits::LimitsDefinition<00000000::Coin2::Coin2>: [U64(18446744073709551615), U64(18446744073709551615), U64(86400000000), U64(18446744073709551615)]
     Added type 00000000::AccountLimits::LimitsDefinition<00000000::LBR::LBR>: [U64(18446744073709551615), U64(18446744073709551615), U64(86400000000), U64(18446744073709551615)]
@@ -29,9 +33,9 @@ Changed resource(s) under 2 address(es):
     Added type 00000000::LibraConfig::ModifyConfigCapability<00000000::LibraTransactionPublishingOption::LibraTransactionPublishingOption>: [false]
     Added type 00000000::LibraConfig::ModifyConfigCapability<00000000::LibraVMConfig::LibraVMConfig>: [false]
     Added type 00000000::LibraConfig::ModifyConfigCapability<00000000::LibraVersion::LibraVersion>: [false]
-    Added type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(0), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-    Added type 00000000::Libra::CurrencyInfo<00000000::Coin2::Coin2>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 50], true, [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-    Added type 00000000::Libra::CurrencyInfo<00000000::LBR::LBR>: [U128(0), U64(0), [U64(4294967296)], true, U64(1000000), U64(1000), [76, 66, 82], true, [U64(0), [14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(0), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::Libra::CurrencyInfo<00000000::Coin2::Coin2>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 50], true, [U64(0), [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Added type 00000000::Libra::CurrencyInfo<00000000::LBR::LBR>: [U128(0), U64(0), [U64(4294967296)], true, U64(1000000), U64(1000), [76, 66, 82], true, [U64(0), [15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::TransactionFee::TransactionFee<00000000::Coin1::Coin1>: [[U64(0)], [[U64(0)]]]
     Added type 00000000::TransactionFee::TransactionFee<00000000::Coin2::Coin2>: [[U64(0)], [[U64(0)]]]
     Added type 00000000::TransactionFee::TransactionFee<00000000::LBR::LBR>: [[U64(0)], [[U64(0)]]]
@@ -48,7 +52,10 @@ Changed resource(s) under 2 address(es):
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -c`:
 Compiling transaction script
-Changed resource(s) under 1 address(es):
+Emitted 1 events:
+Emitted Value(Container(StructC(RefCell { value: [Address(000000000000000000000000000000dd), U64(2)] }))) as the 2th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Warning: saving events to disk is currently not supported. Discarding events.
+Changed resource(s) under 2 address(es):
   Changed 13 resource(s) under address 000000000000000000000000000000dd:
     Added type 00000000::Event::EventHandleGenerator: [U64(5), Address(00000000)]
     Added type 00000000::Roles::RoleId: [U64(2)]
@@ -63,10 +70,15 @@ Changed resource(s) under 1 address(es):
     Added type 00000000::LibraAccount::Balance<00000000::Coin1::Coin1>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::Coin2::Coin2>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::LBR::LBR>: [[U64(0)]]
+  Changed 1 resource(s) under address 0000000000000000000000000a550c18:
+    Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(3), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xA x"00000000000000000000000000000000" b"VASP_A" true -c`:
 Compiling transaction script
-Changed resource(s) under 1 address(es):
+Emitted 1 events:
+Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000a), U64(5)] }))) as the 3th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Warning: saving events to disk is currently not supported. Discarding events.
+Changed resource(s) under 2 address(es):
   Changed 9 resource(s) under address 0000000000000000000000000000000a:
     Added type 00000000::Event::EventHandleGenerator: [U64(4), Address(00000000)]
     Added type 00000000::Roles::RoleId: [U64(5)]
@@ -77,10 +89,15 @@ Changed resource(s) under 1 address(es):
     Added type 00000000::LibraAccount::Balance<00000000::Coin1::Coin1>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::Coin2::Coin2>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::LBR::LBR>: [[U64(0)]]
+  Changed 1 resource(s) under address 0000000000000000000000000a550c18:
+    Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(4), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/create_parent_vasp_account.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xB x"00000000000000000000000000000000" b"VASP_B" true -c`:
 Compiling transaction script
-Changed resource(s) under 1 address(es):
+Emitted 1 events:
+Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000000000b), U64(5)] }))) as the 4th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Warning: saving events to disk is currently not supported. Discarding events.
+Changed resource(s) under 2 address(es):
   Changed 9 resource(s) under address 0000000000000000000000000000000b:
     Added type 00000000::Event::EventHandleGenerator: [U64(4), Address(00000000)]
     Added type 00000000::Roles::RoleId: [U64(5)]
@@ -91,12 +108,14 @@ Changed resource(s) under 1 address(es):
     Added type 00000000::LibraAccount::Balance<00000000::Coin1::Coin1>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::Coin2::Coin2>: [[U64(0)]]
     Added type 00000000::LibraAccount::Balance<00000000::LBR::LBR>: [[U64(0)]]
+  Changed 1 resource(s) under address 0000000000000000000000000a550c18:
+    Changed type 00000000::LibraAccount::AccountOperationsCapability: [[false], [U64(5), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/tiered_mint.move --type-args 0x1::Coin1::Coin1 --signers 0xB1E55ED --args 0 0xDD 1000 0 -c`:
 Compiling transaction script
 Emitted 3 events:
 Emitted Value(Container(StructC(RefCell { value: [Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(000000000000000000000000000000dd), U64(1000)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
-Emitted Value(Container(StructC(RefCell { value: [U64(1000), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] }))] }))) as the 0th event to stream [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
+Emitted Value(Container(StructC(RefCell { value: [U64(1000), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] }))] }))) as the 0th event to stream [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Emitted Value(Container(StructC(RefCell { value: [U64(1000), Container(VecU8(RefCell { value: [67, 111, 105, 110, 49] })), Address(00000000000000000000000000000000), Container(VecU8(RefCell { value: [] }))] }))) as the 0th event to stream [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 221]
 Warning: saving events to disk is currently not supported. Discarding events.
 Changed resource(s) under 2 address(es):
@@ -106,7 +125,7 @@ Changed resource(s) under 2 address(es):
     Changed type 00000000::DesignatedDealer::TierInfo<00000000::Coin1::Coin1>: [U64(0), U64(1000), [500000000000, 5000000000000, 50000000000000, 500000000000000]]
     Changed type 00000000::LibraAccount::Balance<00000000::Coin1::Coin1>: [[U64(1000)]]
   Changed 1 resource(s) under address 0000000000000000000000000a550c18:
-    Changed type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(1000), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(1), [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
+    Changed type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(1000), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(1), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/peer_to_peer_with_metadata.move --type-args 0x1::Coin1::Coin1 --signers 0xDD --args 0xA 700 x"" x"" -c`:
 Compiling transaction script

@@ -183,9 +183,11 @@ fun main(account: &signer) {
 //! sender: libraroot
 script {
 use 0x1::Roles;
+use 0x1::Signer;
 fun main(account: &signer) {
     assert(!Roles::has_validator_role(account), 1);
     assert(!Roles::has_validator_operator_role(account), 1);
+    assert(Roles::get_role_id(Signer::address_of(account)) == 0, 1);
 }
 }
 // check: "Keep(EXECUTED)"
@@ -194,8 +196,19 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::Roles;
+use 0x1::Signer;
 fun main(account: &signer) {
     assert(Roles::has_treasury_compliance_role(account), 0);
+    assert(Roles::get_role_id(Signer::address_of(account)) == 1, 1);
 }
 }
 // check: "Keep(EXECUTED)"
+
+//! new-transaction
+script {
+use 0x1::Roles;
+fun main(_account: &signer) {
+    let _ = Roles::get_role_id(0x7); // does not exist, should abort
+}
+}
+// check: "Keep(ABORTED"

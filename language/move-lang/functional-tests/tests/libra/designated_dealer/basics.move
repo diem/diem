@@ -63,6 +63,7 @@ fun main(account: &signer) {
 //! args: 0, {{bob}}, {{bob::auth_key}}, x"", false
 
 stdlib_script::create_designated_dealer
+// check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 
 //! new-transaction

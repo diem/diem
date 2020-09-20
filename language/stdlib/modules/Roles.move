@@ -238,6 +238,11 @@ module Roles {
         has_role(account, CHILD_VASP_ROLE_ID)
     }
 
+    public fun get_role_id(a: address): u64 acquires RoleId {
+        assert(exists<RoleId>(a), Errors::not_published(EROLE_ID));
+        borrow_global<RoleId>(a).role_id
+    }
+
     /// Return true if `addr` is allowed to receive and send `Libra<T>` for any T
     public fun can_hold_balance(account: &signer): bool acquires RoleId {
         // VASP accounts and designated_dealers can hold balances.

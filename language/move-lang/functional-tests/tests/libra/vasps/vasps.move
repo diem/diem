@@ -36,6 +36,7 @@ fun main(lr_account: &signer) {
 
 }
 }
+// check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 
 // create some child VASP accounts
@@ -61,6 +62,7 @@ fun main(parent_vasp: &signer) {
     assert(VASP::parent_address(0xBB) == {{parent}}, 2014);
 }
 }
+// check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 
 //! new-transaction

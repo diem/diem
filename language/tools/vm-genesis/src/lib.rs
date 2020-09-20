@@ -13,10 +13,14 @@ use libra_crypto::{
     PrivateKey, Uniform,
 };
 use libra_types::{
-    account_address, account_config,
+    account_address,
+    account_config::{
+        self,
+        events::{CreateAccountEvent, NewEpochEvent},
+    },
     chain_id::ChainId,
     contract_event::ContractEvent,
-    on_chain_config::{new_epoch_event_key, VMPublishingOption},
+    on_chain_config::VMPublishingOption,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
         WriteSetPayload,
@@ -259,7 +263,6 @@ fn create_and_initialize_main_accounts(
             Value::transaction_argument_signer_reference(root_libra_root_address),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::vector_u8(libra_root_auth_key.to_vec()),
-            Value::address(tc_account_address),
             Value::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
             Value::bool(publishing_option.is_open_module),
@@ -512,35 +515,31 @@ fn reconfigure(session: &mut Session<StateViewCache>) {
 
 /// Verify the consistency of the genesis `WriteSet`
 fn verify_genesis_write_set(events: &[ContractEvent]) {
-    // Sanity checks on emitted events:
-    // (1) The genesis tx should emit 1 event: a NewEpochEvent.
+    // (1) first event is account creation event for LibraRoot
+    let create_libra_root_event = &events[0];
     assert_eq!(
-        events.len(),
-        //1, // This is the proper number of events for mainnet. Once we have a good layering
-        // strategy for mainnet/testnet genesis writesets uncomment this and remove the line
-        // below.
-        10, // XXX/TODO(tzakian). For testnet only!
-        "Genesis transaction should emit one event, but found {} events: {:?}",
-        events.len(),
-        events,
+        *create_libra_root_event.key(),
+        CreateAccountEvent::event_key(),
     );
 
-    // (2) The first event should be the new epoch event
-    let new_epoch_event = &events[0];
+    // (2) second event is account creation event for TreasuryCompliance
+    let create_treasury_compliance_event = &events[1];
     assert_eq!(
-        *new_epoch_event.key(),
-        new_epoch_event_key(),
-        "Key of emitted event {:?} does not match change event key {:?}",
-        *new_epoch_event.key(),
-        new_epoch_event_key(),
+        *create_treasury_compliance_event.key(),
+        CreateAccountEvent::event_key(),
     );
-    // (3) This should be the first new_epoch_event
-    assert_eq!(
-        new_epoch_event.sequence_number(),
-        0,
-        "Expected sequence number 0 for validator set change event but got {}",
-        new_epoch_event.sequence_number()
+
+    // (3) The first non-account creation event should be the new epoch event
+    let new_epoch_events: Vec<&ContractEvent> = events
+        .iter()
+        .filter(|e| e.key() == &NewEpochEvent::event_key())
+        .collect();
+    assert!(
+        new_epoch_events.len() == 1,
+        "There should only be one NewEpochEvent"
     );
+    // (4) This should be the first new_epoch_event
+    assert_eq!(new_epoch_events[0].sequence_number(), 0,);
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing

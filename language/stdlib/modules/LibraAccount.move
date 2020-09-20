@@ -78,6 +78,7 @@ module LibraAccount {
     /// and to record freeze/unfreeze events.
     resource struct AccountOperationsCapability {
         limits_cap: AccountLimitMutationCapability,
+        creation_events: Event::EventHandle<CreateAccountEvent>,
     }
 
     /// A resource that holds the event handle for all the past WriteSet transactions that have been committed on chain.
@@ -121,6 +122,14 @@ module LibraAccount {
     /// Message for committed WriteSet transaction.
     struct UpgradeEvent {
         writeset_payload: vector<u8>,
+    }
+
+    /// Message for creation of a new account
+    struct CreateAccountEvent {
+        /// Address of the created account
+        created: address,
+        /// Role of the created account
+        role_id: u64
     }
 
     const MAX_U64: u128 = 18446744073709551615;
@@ -186,39 +195,17 @@ module LibraAccount {
     public fun initialize(
         lr_account: &signer,
         dummy_auth_key_prefix: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         LibraTimestamp::assert_genesis();
         // Operational constraint, not a privilege constraint.
         CoreAddresses::assert_libra_root(lr_account);
+
         create_libra_root_account(
             copy dummy_auth_key_prefix,
         );
-        // Create the treasury compliance account
         create_treasury_compliance_account(
             lr_account,
             copy dummy_auth_key_prefix,
-        );
-
-        assert(
-            !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
-            Errors::already_published(EACCOUNT_OPERATIONS_CAPABILITY)
-        );
-        move_to(
-            lr_account,
-            AccountOperationsCapability {
-                limits_cap: AccountLimits::grant_mutation_capability(lr_account),
-            }
-        );
-
-        assert(
-            !exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
-            Errors::already_published(EWRITESET_MANAGER)
-        );
-        move_to(
-            lr_account,
-            LibraWriteSetManager {
-                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(lr_account),
-            }
         );
     }
 
@@ -974,7 +961,7 @@ module LibraAccount {
     fun make_account(
         new_account: signer,
         auth_key_prefix: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
         assert(
@@ -1010,6 +997,11 @@ module LibraAccount {
             }
         );
         AccountFreezing::create(&new_account);
+
+        Event::emit_event(
+            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).creation_events,
+            CreateAccountEvent { created: new_account_addr, role_id: Roles::get_role_id(new_account_addr) },
+        );
         destroy_signer(new_account);
     }
 
@@ -1024,6 +1016,7 @@ module LibraAccount {
         addr: address;
         auth_key_prefix: vector<u8>;
         aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
+        aborts_if !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         aborts_if exists_at(addr) with Errors::ALREADY_PUBLISHED;
         aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
             with Errors::INVALID_ARGUMENT;
@@ -1033,14 +1026,37 @@ module LibraAccount {
     /// Creates the libra root account in genesis.
     fun create_libra_root_account(
         auth_key_prefix: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         LibraTimestamp::assert_genesis();
-        let new_account = create_signer(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        CoreAddresses::assert_libra_root(&new_account);
-        Roles::grant_libra_root_role(&new_account);
-        SlidingNonce::publish_nonce_resource(&new_account, &new_account);
-        Event::publish_generator(&new_account);
-        make_account(new_account, auth_key_prefix)
+        let lr_account = create_signer(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        CoreAddresses::assert_libra_root(&lr_account);
+        Roles::grant_libra_root_role(&lr_account);
+        SlidingNonce::publish_nonce_resource(&lr_account, &lr_account);
+        Event::publish_generator(&lr_account);
+
+        assert(
+            !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::already_published(EACCOUNT_OPERATIONS_CAPABILITY)
+        );
+        move_to(
+            &lr_account,
+            AccountOperationsCapability {
+                limits_cap: AccountLimits::grant_mutation_capability(&lr_account),
+                creation_events: Event::new_event_handle<CreateAccountEvent>(&lr_account),
+            }
+        );
+        assert(
+            !exists<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
+            Errors::already_published(EWRITESET_MANAGER)
+        );
+        move_to(
+            &lr_account,
+            LibraWriteSetManager {
+                upgrade_events: Event::new_event_handle<Self::UpgradeEvent>(&lr_account),
+            }
+        );
+
+        make_account(lr_account, auth_key_prefix)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
@@ -1048,7 +1064,7 @@ module LibraAccount {
     fun create_treasury_compliance_account(
         lr_account: &signer,
         auth_key_prefix: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         LibraTimestamp::assert_genesis();
         Roles::assert_libra_root(lr_account);
         let new_account_address = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
@@ -1072,7 +1088,7 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         add_all_currencies: bool,
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
@@ -1095,7 +1111,7 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
         add_all_currencies: bool
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
         VASP::publish_parent_vasp_credential(&new_account, creator_account);
@@ -1114,7 +1130,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_account = create_signer(new_account_address);
         Roles::new_child_vasp_role(parent, &new_account);
         VASP::publish_child_vasp_credential(
@@ -1637,7 +1653,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_account = create_signer(new_account_address);
         // The lr_account account is verified to have the libra root role in `Roles::new_validator_role`
         Roles::new_validator_role(lr_account, &new_account);
@@ -1651,7 +1667,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
-    ) {
+    ) acquires AccountOperationsCapability {
         let new_account = create_signer(new_account_address);
         // The lr_account is verified to have the libra root role in `Roles::new_validator_operator_role`
         Roles::new_validator_operator_role(lr_account, &new_account);

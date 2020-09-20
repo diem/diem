@@ -24,6 +24,7 @@ script {
 //! sender: libraroot
 //! args: 0, {{alice}}, {{alice::auth_key}}, b"alice"
 stdlib_script::create_validator_operator_account
+// check: CreateAccountEvent
 // check: "Keep(EXECUTED)"
 
 //! new-transaction

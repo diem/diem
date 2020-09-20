@@ -14,7 +14,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, lr_auth_key: vector&lt;u8&gt;, _tc_addr: address, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
+<pre><code><b>fun</b> <a href="Genesis.md#0x1_Genesis_initialize">initialize</a>(lr_account: &signer, tc_account: &signer, lr_auth_key: vector&lt;u8&gt;, tc_auth_key: vector&lt;u8&gt;, initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, is_open_module: bool, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;, chain_id: u8)
 </code></pre>
 
 
@@ -27,7 +27,6 @@
     lr_account: &signer,
     tc_account: &signer,
     lr_auth_key: vector&lt;u8&gt;,
-    _tc_addr: address,
     tc_auth_key: vector&lt;u8&gt;,
     initial_script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
     is_open_module: bool,

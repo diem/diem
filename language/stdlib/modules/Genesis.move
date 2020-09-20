@@ -25,7 +25,6 @@ module Genesis {
         lr_account: &signer,
         tc_account: &signer,
         lr_auth_key: vector<u8>,
-        _tc_addr: address,
         tc_auth_key: vector<u8>,
         initial_script_allow_list: vector<vector<u8>>,
         is_open_module: bool,

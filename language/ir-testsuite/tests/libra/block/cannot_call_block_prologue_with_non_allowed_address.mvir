@@ -4,7 +4,7 @@
 //! proposer: vivian
 //! block-time: 1000000
 
-// check: EventKey([21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24])
+// check: EventKey([22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24])
 // check: NewBlockEvent
 // check: 1000000
 
