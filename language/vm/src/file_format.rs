@@ -739,6 +739,13 @@ impl SignatureToken {
         matches!(self, MutableReference(_))
     }
 
+    /// Returns true if the `SignatureToken` is a signer
+    pub fn is_signer(&self) -> bool {
+        use SignatureToken::*;
+
+        matches!(self, Signer)
+    }
+
     /// Returns true if the `SignatureToken` can represent a constant (as in representable in
     /// the constants table).
     pub fn is_valid_for_constant(&self) -> bool {

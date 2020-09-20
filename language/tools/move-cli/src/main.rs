@@ -15,8 +15,9 @@ use move_lang::{self, compiled_unit::CompiledUnit};
 use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
+    access::ScriptAccess,
     errors::VMError,
-    file_format::{CompiledModule, CompiledScript},
+    file_format::{CompiledModule, CompiledScript, SignatureToken},
 };
 
 use anyhow::{anyhow, bail, Result};
@@ -173,15 +174,15 @@ fn run(
     commit: bool,
 ) -> Result<()> {
     let (state, script_opt) = compile(args, &Some(script_file.to_string()))?;
-    let mut script_bytes = vec![];
-    if let Some(script) = script_opt {
-        script.serialize(&mut script_bytes)?
-    } else {
-        bail!(
+    let script = match script_opt {
+        Some(s) => s,
+        None => bail!(
             "Script file {:?} contains module instead of script",
             script_file
-        )
-    }
+        ),
+    };
+    let mut script_bytes = vec![];
+    script.serialize(&mut script_bytes)?;
 
     let vm = MoveVM::new();
     // TODO: use nonzero schedule and pick reasonable max default gas price
@@ -208,21 +209,26 @@ fn run(
 
     let res = session.execute_script(
         script_bytes,
-        vm_type_args,
+        vm_type_args.clone(),
         vm_args,
-        signer_addresses,
+        signer_addresses.clone(),
         &mut cost_strategy,
     );
 
     if let Err(err) = res {
-        explain_error(err, &state)?
+        explain_error(
+            err,
+            &state,
+            &script,
+            &vm_type_args,
+            &signer_addresses,
+            txn_args,
+        )
     } else {
         let effects = session.finish().map_err(|e| e.into_vm_status())?;
         explain_effects(&effects, &state)?;
-        maybe_commit_effects(commit, Some(effects), &state)?;
+        maybe_commit_effects(commit, Some(effects), &state)
     }
-
-    Ok(())
 }
 
 fn explain_effects(effects: &TransactionEffects, state: &OnDiskStateView) -> Result<()> {
@@ -306,8 +312,56 @@ fn maybe_commit_effects(
     Ok(())
 }
 
+fn explain_type_error(
+    script: &CompiledScript,
+    signers: &[AccountAddress],
+    txn_args: &[TransactionArgument],
+) {
+    use SignatureToken::*;
+    let script_params = script.signature_at(script.as_inner().parameters);
+    let expected_num_signers = script_params
+        .0
+        .iter()
+        .filter(|t| match t {
+            Reference(r) => r.is_signer(),
+            _ => false,
+        })
+        .count();
+    if expected_num_signers != signers.len() {
+        println!(
+            "Execution failed with incorrect number of signers: script expected {:?}, but found {:?}",
+            expected_num_signers,
+            signers.len()
+        );
+        return;
+    }
+
+    // TODO: printing type(s) of missing arguments could be useful
+    let expected_num_args = script_params.len() - signers.len();
+    if expected_num_args != txn_args.len() {
+        println!(
+            "Execution failed with incorrect number of arguments: script expected {:?}, but found {:?}",
+	    expected_num_args,
+            txn_args.len()
+        );
+        return;
+    }
+
+    // TODO: print more helpful error message pinpointing the (argument, type)
+    // pair that didn't match
+    println!("Execution failed with type error when binding type arguments to type parameters")
+}
+
 /// Explain an execution error
-fn explain_error(error: VMError, state: &OnDiskStateView) -> Result<()> {
+fn explain_error(
+    error: VMError,
+    state: &OnDiskStateView,
+    script: &CompiledScript,
+    vm_type_args: &[TypeTag],
+    signers: &[AccountAddress],
+    txn_args: &[TransactionArgument],
+) -> Result<()> {
+    use StatusCode::*;
     match error.into_vm_status() {
         VMStatus::MoveAbort(AbortLocation::Module(id), abort_code) => {
             // try to use move-explain to explain the abort
@@ -346,12 +400,12 @@ fn explain_error(error: VMError, state: &OnDiskStateView) -> Result<()> {
             code_offset,
         } => {
             let status_explanation = match status_code {
-                    StatusCode::RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`)".to_string(),
-                    StatusCode::MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`)".to_string(),
-                    StatusCode::ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or divide-by-zero)".to_string(),
-                    StatusCode::EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
-                    StatusCode::CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
-                    StatusCode::OUT_OF_GAS => "an out of gas error".to_string(),
+                    RESOURCE_ALREADY_EXISTS => "a RESOURCE_ALREADY_EXISTS error (i.e., `move_to<T>(account)` when there is already a resource of type `T` under `account`)".to_string(),
+                    MISSING_DATA => "a RESOURCE_DOES_NOT_EXIST error (i.e., `move_from<T>(a)`, `borrow_global<T>(a)`, or `borrow_global_mut<T>(a)` when there is no resource of type `T` at address `a`)".to_string(),
+                    ARITHMETIC_ERROR => "an arithmetic error (i.e., integer overflow, underflow, or divide-by-zero)".to_string(),
+                    EXECUTION_STACK_OVERFLOW => "an execution stack overflow".to_string(),
+                    CALL_STACK_OVERFLOW => "a call stack overflow".to_string(),
+                    OUT_OF_GAS => "an out of gas error".to_string(),
                     _ => format!("a {} error", status_code.status_type()),
                 };
             // TODO: map to source code location
@@ -369,6 +423,16 @@ fn explain_error(error: VMError, state: &OnDiskStateView) -> Result<()> {
                 status_explanation, location_explanation, code_offset
             )
         }
+        VMStatus::Error(NUMBER_OF_TYPE_ARGUMENTS_MISMATCH) => {
+	    println!("Execution failed with incorrect number of type arguments: script expected {:?}, but found {:?}", &script.as_inner().type_parameters.len(), vm_type_args.len())
+	}
+        VMStatus::Error(TYPE_MISMATCH) => {
+	    explain_type_error(script, signers, txn_args)
+        }
+	VMStatus::Error(LINKER_ERROR) => {
+	    // TODO: is this the only reason we can see LINKER_ERROR? Can we also see it if someone manually deletes modules in move_data?
+	    println!("Execution failed due to unresolved type argument(s) (i.e., `--type-args 0x1::M:T` when there is no module named M at 0x1 or no type named T in module 0x1::M)");
+	}
         VMStatus::Error(status_code) => {
             println!("Execution failed with unexpected error {:?}", status_code)
         }
