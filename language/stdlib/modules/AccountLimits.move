@@ -320,6 +320,7 @@ module AccountLimits {
         amount: u64,
         receiving: &mut Window<CoinType>,
     ): bool acquires LimitsDefinition {
+        assert(exists<LimitsDefinition<CoinType>>(receiving.limit_address), Errors::not_published(ELIMITS_DEFINITION));
         let limits_definition = borrow_global<LimitsDefinition<CoinType>>(receiving.limit_address);
         // If the limits are unrestricted then don't do any more work.
         if (is_unrestricted(limits_definition)) return true;
@@ -345,7 +346,7 @@ module AccountLimits {
     spec schema CanReceiveAbortsIf<CoinType> {
         amount: num;
         receiving: Window<CoinType>;
-        aborts_if !exists<LimitsDefinition<CoinType>>(receiving.limit_address);
+        aborts_if !exists<LimitsDefinition<CoinType>>(receiving.limit_address) with Errors::NOT_PUBLISHED;
         include !spec_window_unrestricted<CoinType>(receiving) ==> CanReceiveRestrictedAbortsIf<CoinType>;
     }
     spec schema CanReceiveRestrictedAbortsIf<CoinType> {

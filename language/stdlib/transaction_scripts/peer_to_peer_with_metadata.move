@@ -73,94 +73,100 @@ fun peer_to_peer_with_metadata<Currency>(
     );
     LibraAccount::restore_withdraw_capability(payer_withdrawal_cap);
 }
-
 spec fun peer_to_peer_with_metadata {
-    pragma verify = false; // TODO: times out
-    let payer_addr = Signer::spec_address_of(payer);
-
-    /// ## Post conditions
-    /// The balances of payer and payee are changed correctly if payer and payee are different.
-    ensures payer_addr != payee
-                ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee)) + amount;
-    ensures payer_addr != payee
-                ==> spec_balance_of<Currency>(payer_addr) == old(spec_balance_of<Currency>(payer_addr)) - amount;
-
-    /// If payer and payee are the same, the balance does not change.
-    ensures payer_addr == payee ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee));
-
-
-    /// ## Abort conditions
-    include AbortsIfPayerInvalid<Currency>{payer: payer_addr};
-    include AbortsIfPayeeInvalid<Currency>;
-    include AbortsIfAmountInvalid<Currency>{payer: payer_addr};
-    include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: payer_addr, value: amount};
-    include AbortsIfAmountExceedsLimit<Currency>{payer: payer_addr};
-    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, false) ==>
-                AccountLimits::UpdateDepositLimitsAbortsIf<Currency> {
-                    addr: VASP::spec_parent_address(payee),
-                };
-    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, true) ==>
-                AccountLimits::UpdateWithdrawalLimitsAbortsIf<Currency> {
-                    addr: VASP::spec_parent_address(payer_addr),
-                };
+    use 0x1::Signer;
+    pragma verify;
+    let account_addr = Signer::spec_address_of(account);
+    let cap = LibraAccount::spec_get_withdraw_cap(account_addr);
+    include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
 }
-
-spec module {
-    pragma aborts_if_is_strict = true;
-
-    /// Returns the value of balance under addr.
-    define spec_balance_of<Currency>(addr: address): u64 {
-        global<Balance<Currency>>(addr).coin.value
-    }
-}
-
-spec schema AbortsIfPayerInvalid<Currency> {
-    payer: address;
-    aborts_if !exists<LibraAccount>(payer);
-    aborts_if AccountFreezing::account_is_frozen(payer);
-    aborts_if !exists<Balance<Currency>>(payer);
-    /// Aborts if payer's withdrawal_capability has been delegated.
-    aborts_if LibraAccount::delegated_withdraw_capability(payer);
-}
-
-spec schema AbortsIfPayeeInvalid<Currency> {
-    payee: address;
-    aborts_if !exists<LibraAccount>(payee);
-    aborts_if AccountFreezing::account_is_frozen(payee);
-    aborts_if !exists<Balance<Currency>>(payee);
-}
-
-spec schema AbortsIfAmountInvalid<Currency> {
-    payer: address;
-    payee: address;
-    amount: u64;
-    aborts_if amount == 0;
-    /// Aborts if arithmetic overflow happens.
-    aborts_if global<Balance<Currency>>(payer).coin.value < amount;
-    aborts_if payer != payee
-            && global<Balance<Currency>>(payee).coin.value + amount > max_u64();
-}
-
-spec schema AbortsIfAmountExceedsLimit<Currency> {
-    payer: address;
-    payee: address;
-    amount: u64;
-    /// Aborts if the amount exceeds payee's deposit limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, false)
-                && (!LibraAccount::spec_has_account_operations_cap()
-                    || !AccountLimits::spec_update_deposit_limits<Currency>(
-                            amount,
-                            VASP::spec_parent_address(payee)
-                        )
-                    );
-    /// Aborts if the amount exceeds payer's withdraw limit.
-    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, true)
-                && (!LibraAccount::spec_has_account_operations_cap()
-                    || !AccountLimits::spec_update_withdrawal_limits<Currency>(
-                            amount,
-                            VASP::spec_parent_address(payer)
-                        )
-                    );
-}
+//spec fun peer_to_peer_with_metadata {
+////    pragma verify = false; // TODO: times out
+//    let payer_addr = Signer::spec_address_of(payer);
+//
+//    /// ## Post conditions
+//    /// The balances of payer and payee are changed correctly if payer and payee are different.
+//    ensures payer_addr != payee
+//                ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee)) + amount;
+//    ensures payer_addr != payee
+//                ==> spec_balance_of<Currency>(payer_addr) == old(spec_balance_of<Currency>(payer_addr)) - amount;
+//
+//    /// If payer and payee are the same, the balance does not change.
+//    ensures payer_addr == payee ==> spec_balance_of<Currency>(payee) == old(spec_balance_of<Currency>(payee));
+//
+//
+//    /// ## Abort conditions
+//    include AbortsIfPayerInvalid<Currency>{payer: payer_addr};
+//    include AbortsIfPayeeInvalid<Currency>;
+//    include AbortsIfAmountInvalid<Currency>{payer: payer_addr};
+//    include DualAttestation::AssertPaymentOkAbortsIf<Currency>{payer: payer_addr, value: amount};
+//    include AbortsIfAmountExceedsLimit<Currency>{payer: payer_addr};
+//    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, false) ==>
+//                AccountLimits::UpdateDepositLimitsAbortsIf<Currency> {
+//                    addr: VASP::spec_parent_address(payee),
+//                };
+//    include LibraAccount::spec_should_track_limits_for_account<Currency>(payer_addr, payee, true) ==>
+//                AccountLimits::UpdateWithdrawalLimitsAbortsIf<Currency> {
+//                    addr: VASP::spec_parent_address(payer_addr),
+//                };
+//}
+//
+//spec module {
+//    pragma aborts_if_is_strict = true;
+//
+//    /// Returns the value of balance under addr.
+//    define spec_balance_of<Currency>(addr: address): u64 {
+//        global<Balance<Currency>>(addr).coin.value
+//    }
+//}
+//
+//spec schema AbortsIfPayerInvalid<Currency> {
+//    payer: address;
+//    aborts_if !exists<LibraAccount>(payer);
+//    aborts_if AccountFreezing::account_is_frozen(payer);
+//    aborts_if !exists<Balance<Currency>>(payer);
+//    /// Aborts if payer's withdrawal_capability has been delegated.
+//    aborts_if LibraAccount::delegated_withdraw_capability(payer);
+//}
+//
+//spec schema AbortsIfPayeeInvalid<Currency> {
+//    payee: address;
+//    aborts_if !exists<LibraAccount>(payee);
+//    aborts_if AccountFreezing::account_is_frozen(payee);
+//    aborts_if !exists<Balance<Currency>>(payee);
+//}
+//
+//spec schema AbortsIfAmountInvalid<Currency> {
+//    payer: address;
+//    payee: address;
+//    amount: u64;
+//    aborts_if amount == 0;
+//    /// Aborts if arithmetic overflow happens.
+//    aborts_if global<Balance<Currency>>(payer).coin.value < amount;
+//    aborts_if payer != payee
+//            && global<Balance<Currency>>(payee).coin.value + amount > max_u64();
+//}
+//
+//spec schema AbortsIfAmountExceedsLimit<Currency> {
+//    payer: address;
+//    payee: address;
+//    amount: u64;
+//    /// Aborts if the amount exceeds payee's deposit limit.
+//    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, false)
+//                && (!LibraAccount::spec_has_account_operations_cap()
+//                    || !AccountLimits::spec_update_deposit_limits<Currency>(
+//                            amount,
+//                            VASP::spec_parent_address(payee)
+//                        )
+//                    );
+//    /// Aborts if the amount exceeds payer's withdraw limit.
+//    aborts_if LibraAccount::spec_should_track_limits_for_account<Currency>(payer, payee, true)
+//                && (!LibraAccount::spec_has_account_operations_cap()
+//                    || !AccountLimits::spec_update_withdrawal_limits<Currency>(
+//                            amount,
+//                            VASP::spec_parent_address(payer)
+//                        )
+//                    );
+//}
 
 }
