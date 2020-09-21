@@ -68,7 +68,7 @@ fn test_remove_requests() {
 
     assert!(request_manager.get_last_request_time(1).is_none());
     assert!(request_manager.get_last_request_time(3).is_none());
-    assert!(request_manager.get_last_request_time(5).is_none());
+    assert!(request_manager.get_last_request_time(5).is_some());
     assert!(request_manager.get_last_request_time(10).is_some());
     assert!(request_manager.get_last_request_time(12).is_some());
 }

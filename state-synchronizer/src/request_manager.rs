@@ -238,7 +238,7 @@ impl RequestManager {
             bail!("No peers to send chunk request to");
         }
 
-        let req_info = self.add_request(req.known_version + 1, peers.clone());
+        let req_info = self.add_request(req.known_version, peers.clone());
         debug!(
             "[state sync] request next chunk - chunk req info: {:?}",
             req_info
@@ -362,8 +362,7 @@ impl RequestManager {
             .map(|req_info| req_info.multicast_start_time)
     }
 
-    /// Removes requests for all versions before `version` (inclusive) if they are older than
-    /// now - `timeout`
+    /// Removes requests whose known_version < `version` if they are older than now - `timeout`
     /// We keep the requests that have not timed out so we don't penalize
     /// peers who send chunks after the first peer who sends the first successful chunk response for a
     /// multicasted request
@@ -372,7 +371,7 @@ impl RequestManager {
         // that still came back on time, based on per-peer timeout
         let versions_to_remove = self
             .requests
-            .range(..version + 1)
+            .range(..version)
             .filter_map(|(version, req)| {
                 if Self::is_timeout(req.last_request_time, self.request_timeout) {
                     Some(*version)
@@ -387,8 +386,8 @@ impl RequestManager {
         }
     }
 
-    /// Checks whether the request sent for this version is timed out
-    /// Returns true if request for this version timed out or there is no request for this, else false
+    /// Checks whether the request sent with known_version = `version` has timed out
+    /// Returns true if such a request timed out or does not exist, else false
     pub fn check_timeout(&mut self, version: u64) -> bool {
         let last_request_time = self.get_last_request_time(version).unwrap_or(UNIX_EPOCH);
 

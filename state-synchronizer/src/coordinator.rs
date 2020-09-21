@@ -1023,7 +1023,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         let known_version = self.local_state.highest_version_in_local_storage();
 
         // if coordinator didn't make progress by expected time, issue new request
-        if self.request_manager.check_timeout(known_version + 1) {
+        if self.request_manager.check_timeout(known_version) {
             if let Err(e) = self.send_chunk_request(known_version, self.local_state.epoch()) {
                 error!("[state sync] Failed to send chunk request: {}", e);
             }
