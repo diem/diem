@@ -29,7 +29,7 @@ mod state_replication;
 #[cfg(any(test, feature = "fuzzing"))]
 mod test_utils;
 #[cfg(test)]
-mod twins_test;
+mod twins;
 mod txn_manager;
 mod util;
 
