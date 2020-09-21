@@ -3,6 +3,7 @@
 
 use crate::{
     access_path_cache::AccessPathCache,
+    counters::*,
     data_cache::{RemoteStorage, StateViewCache},
     errors::{
         convert_normal_prologue_error, convert_normal_success_epilogue_error,
@@ -84,6 +85,7 @@ impl LibraVMImpl {
 
     pub(crate) fn publishing_option(&self) -> Result<&VMPublishingOption, VMStatus> {
         self.publishing_option.as_ref().ok_or_else(|| {
+            CRITICAL_ERRORS.inc();
             error!("VM Startup Failed. PublishingOption Not Found");
             VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
         })
@@ -100,6 +102,7 @@ impl LibraVMImpl {
             .as_ref()
             .map(|config| &config.gas_schedule)
             .ok_or_else(|| {
+                CRITICAL_ERRORS.inc();
                 error!("VM Startup Failed. Gas Schedule Not Found");
                 VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
             })
@@ -107,6 +110,7 @@ impl LibraVMImpl {
 
     pub fn get_libra_version(&self) -> Result<LibraVersion, VMStatus> {
         self.version.clone().ok_or_else(|| {
+            CRITICAL_ERRORS.inc();
             error!("VM Startup Failed. Libra Version Not Found");
             VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
         })

@@ -69,3 +69,9 @@ pub static TXN_GAS_USAGE: Lazy<Histogram> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+/// Count the number of critical errors. This is not intended for display
+/// on a dashboard but rather for triggering alerts.
+pub static CRITICAL_ERRORS: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!("libra_vm_critical_errors", "Number of critical errors").unwrap()
+});
