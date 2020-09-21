@@ -21,11 +21,11 @@ pub const IR_EXTENSION: &str = "mvir";
 pub const DEBUG_MODULE_FILE_NAME: &str = "debug.move";
 
 pub const COMPLETED_DIRECTORIES: &[&str; 5] = &[
-    "borrow_tests",
-    "commands",
-    "generics/instantiation_loops",
-    "signer",
-    "operators",
+    "move/borrow_tests",
+    "move/commands",
+    "move/generics/instantiation_loops",
+    "move/signer",
+    "move/operators",
 ];
 
 /// We need to replicate the specification of the (non-compiled) stdlib files here since we can't
@@ -117,17 +117,30 @@ pub fn ir_tests() -> impl Iterator<Item = (String, String)> {
 }
 
 pub fn translated_ir_test_name(has_main: bool, subdir: &str, name: &str) -> Option<String> {
-    let fmt = |dir, subdir, basename, ext| {
-        format!(
+    let fmt = |dir, migration_subdir, subdir, basename, ext| match migration_subdir {
+        Some(migration_subdir) => format!(
             "{}/{}/{}/{}.{}",
-            dir, MIGRATION_SUB_DIR, subdir, basename, ext
-        )
+            dir, migration_subdir, subdir, basename, ext
+        ),
+        None => format!("{}/{}/{}.{}", dir, subdir, basename, ext),
     };
     let check = |x| Path::new(x).is_file();
-    let ft = fmt(FUNCTIONAL_TEST_DIR, subdir, name, MOVE_EXTENSION);
-    let ft_todo = fmt(FUNCTIONAL_TEST_DIR, subdir, name, TODO_EXTENSION);
-    let mc = fmt(MOVE_CHECK_DIR, subdir, name, MOVE_EXTENSION);
-    let mc_todo = fmt(MOVE_CHECK_DIR, subdir, name, TODO_EXTENSION);
+    let ft = fmt(FUNCTIONAL_TEST_DIR, None, subdir, name, MOVE_EXTENSION);
+    let ft_todo = fmt(FUNCTIONAL_TEST_DIR, None, subdir, name, TODO_EXTENSION);
+    let mc = fmt(
+        MOVE_CHECK_DIR,
+        Some(MIGRATION_SUB_DIR),
+        subdir,
+        name,
+        MOVE_EXTENSION,
+    );
+    let mc_todo = fmt(
+        MOVE_CHECK_DIR,
+        Some(MIGRATION_SUB_DIR),
+        subdir,
+        name,
+        TODO_EXTENSION,
+    );
     if check(&ft) || check(&ft_todo) || check(&mc) || check(&mc_todo) {
         None
     } else if has_main {
