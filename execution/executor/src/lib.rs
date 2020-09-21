@@ -1007,3 +1007,4 @@ fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_o
         WriteOp::Deletion => account_state.remove(&path),
     };
 }
+
