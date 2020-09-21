@@ -1,3 +1,8 @@
+tools = [
+   ["sccache", "0.2.13"],
+   ["grcov", "0.5.15"],
+]
+
 [system-tests]
 smoke-test = { path = "smoke-test" }
 

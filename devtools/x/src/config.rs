@@ -25,6 +25,7 @@ pub struct Config {
     fix: Fix,
     /// Cargo configuration
     cargo: CargoConfig,
+    tools: Vec<(String, String)>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -151,5 +152,9 @@ impl Config {
 
     pub fn warn_clippy_lints(&self) -> &[String] {
         &self.clippy.warn
+    }
+
+    pub fn tools(&self) -> &[(String, String)] {
+        &self.tools
     }
 }

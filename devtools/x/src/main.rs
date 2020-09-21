@@ -19,8 +19,10 @@ mod diff_summary;
 mod fix;
 mod fmt;
 mod generate_summaries;
+mod installer;
 mod lint;
 mod test;
+mod tools;
 mod utils;
 
 type Result<T> = anyhow::Result<T>;
@@ -51,6 +53,9 @@ enum Command {
     #[structopt(name = "test")]
     /// Run tests
     Test(test::Args),
+    #[structopt(name = "tools")]
+    /// Run tests
+    Tools(tools::Args),
     #[structopt(name = "lint")]
     /// Run lints
     Lint(lint::Args),
@@ -88,6 +93,7 @@ fn main() -> Result<()> {
     let xctx = context::XContext::new()?;
 
     match args.cmd {
+        Command::Tools(args) => tools::run(args, xctx),
         Command::Test(args) => test::run(args, xctx),
         Command::Check(args) => check::run(args, xctx),
         Command::Clippy(args) => clippy::run(args, xctx),
