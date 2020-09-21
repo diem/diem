@@ -104,6 +104,11 @@ impl ExtendedPrivKey {
         libra_types::account_address::from_public_key(&self.get_public())
     }
 
+    /// Get private key
+    pub fn get_private_key(&self) -> Ed25519PrivateKey {
+        self.private_key.clone()
+    }
+
     /// Compute the authentication key for this account's public key
     pub fn get_authentication_key(&self) -> AuthenticationKey {
         AuthenticationKey::ed25519(&self.get_public())

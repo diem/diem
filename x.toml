@@ -102,6 +102,8 @@ members = [
     "language/vm/serializer-tests",
     "network/memsocket",
     "network/socket-bench-server",
+    "testsuite/cli",
+    "testsuite/cli/libra-wallet",
     "testsuite/cluster-test",
     "testsuite/generate-format",
     "testsuite/libra-fuzzer",

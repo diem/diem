@@ -159,7 +159,6 @@ default-members = [
     "client/swiss-knife",
     "execution/db-bootstrapper",
     "execution/execution-correctness",
-    "testsuite/cli",
     "language/compiler",
     "language/move-prover",
     "language/move-prover/diagen",

@@ -18,6 +18,7 @@ use crate::{
     mnemonic::Mnemonic,
 };
 use anyhow::Result;
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
@@ -171,6 +172,15 @@ impl WalletLibrary {
                 "Well, that address is nowhere to be found... This is awkward".to_string(),
             )
             .into())
+        }
+    }
+
+    /// Return private key for an address in the wallet
+    pub fn get_private_key(&self, address: &AccountAddress) -> Result<Ed25519PrivateKey> {
+        if let Some(child) = self.addr_map.get(&address) {
+            Ok(self.key_factory.private_child(*child)?.get_private_key())
+        } else {
+            Err(WalletError::LibraWalletGeneric("missing address".to_string()).into())
         }
     }
 }
