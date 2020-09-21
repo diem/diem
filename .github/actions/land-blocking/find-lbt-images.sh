@@ -4,7 +4,7 @@
 
 # adapted from --build-all-cti option from libra/docker/build-aws.sh, which is how
 # land blocking test builds images before running cluster-test
-REPOS=(libra_validator libra_cluster_test libra_init libra_safety_rules)
+REPOS=(libra/validator libra_cluster_test libra_init libra_safety_rules)
 # the number of commits backwards we want to look
 END=50
 
