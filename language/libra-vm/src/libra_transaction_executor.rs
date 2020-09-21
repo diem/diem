@@ -124,12 +124,16 @@ impl LibraVM {
         account_currency_symbol: &IdentStr,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
         let mut cost_strategy = CostStrategy::system(gas_schedule, gas_left);
-        self.0.run_success_epilogue(
-            &mut session,
-            &mut cost_strategy,
-            txn_data,
-            account_currency_symbol,
-        )?;
+
+        {
+            let _timer = LIBRA_VM_USER_TRANSACTION_EPILOGUE_SECONDS.start_timer();
+            self.0.run_success_epilogue(
+                &mut session,
+                &mut cost_strategy,
+                txn_data,
+                account_currency_symbol,
+            )?;
+        }
 
         Ok((
             VMStatus::Executed,
@@ -156,6 +160,7 @@ impl LibraVM {
 
         // Run the validation logic
         {
+            let _timer = LIBRA_VM_USER_TRANSACTION_PROLOGUE_SECONDS.start_timer();
             cost_strategy.disable_metering();
             self.0.check_gas(txn_data)?;
             self.0.run_script_prologue(
@@ -168,6 +173,7 @@ impl LibraVM {
 
         // Run the execution logic
         {
+            let _timer = LIBRA_VM_USER_TRANSACTION_EXECUTION_SECONDS.start_timer();
             cost_strategy.enable_metering();
             cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
@@ -394,6 +400,7 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         block_metadata: BlockMetadata,
     ) -> Result<(VMStatus, TransactionOutput), VMStatus> {
+        let _timer = LIBRA_VM_PROCESS_BLOCK_PROLOGUE_SECONDS.start_timer();
         let mut txn_data = TransactionMetadata::default();
         txn_data.sender = account_config::reserved_vm_address();
 
