@@ -117,15 +117,16 @@ fn execute_function_in_module<S: StateView>(
             txn_context
                 .publish_module(mod_blob, sender, &mut cost_strategy)
                 .map_err(|e| e.into_vm_status())?;
-            txn_context.execute_function(
-                &module_id,
-                &entry_name,
-                ty_args,
-                args,
-                sender,
-                &mut cost_strategy,
-                |e| e,
-            )
+            txn_context
+                .execute_function(
+                    &module_id,
+                    &entry_name,
+                    ty_args,
+                    args,
+                    sender,
+                    &mut cost_strategy,
+                )
+                .map_err(|e| e.into_vm_status())
         })
     }
 }

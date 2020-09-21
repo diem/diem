@@ -9,7 +9,6 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
-    vm_status::VMStatus,
 };
 use move_vm_types::{gas_schedule::CostStrategy, values::Value};
 use vm::errors::*;
@@ -20,7 +19,7 @@ pub struct Session<'r, 'l, R> {
 }
 
 impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
-    pub fn execute_function<F: FnOnce(VMStatus) -> VMStatus>(
+    pub fn execute_function(
         &mut self,
         module: &ModuleId,
         function_name: &IdentStr,
@@ -28,18 +27,15 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Value>,
         _sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
-        error_specializer: F,
-    ) -> Result<(), VMStatus> {
-        self.runtime
-            .execute_function(
-                module,
-                function_name,
-                ty_args,
-                args,
-                &mut self.data_cache,
-                cost_strategy,
-            )
-            .map_err(|e| error_specializer(e.into_vm_status()))
+    ) -> VMResult<()> {
+        self.runtime.execute_function(
+            module,
+            function_name,
+            ty_args,
+            args,
+            &mut self.data_cache,
+            cost_strategy,
+        )
     }
 
     pub fn execute_script(

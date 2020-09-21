@@ -409,15 +409,16 @@ impl LibraVM {
                 Value::vector_address(previous_vote),
                 Value::address(proposer),
             ];
-            session.execute_function(
-                &LIBRA_BLOCK_MODULE,
-                &BLOCK_PROLOGUE,
-                vec![],
-                args,
-                txn_data.sender,
-                &mut cost_strategy,
-                expect_only_successful_execution(BLOCK_PROLOGUE.as_str()),
-            )?
+            session
+                .execute_function(
+                    &LIBRA_BLOCK_MODULE,
+                    &BLOCK_PROLOGUE,
+                    vec![],
+                    args,
+                    txn_data.sender,
+                    &mut cost_strategy,
+                )
+                .or_else(|e| expect_only_successful_execution(e, BLOCK_PROLOGUE.as_str()))?
         } else {
             return Err(VMStatus::Error(StatusCode::MALFORMED));
         };

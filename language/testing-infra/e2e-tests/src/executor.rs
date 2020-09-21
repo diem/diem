@@ -323,10 +323,14 @@ impl FakeExecutor {
                     args,
                     *sender,
                     &mut cost_strategy,
-                    |e| e,
                 )
                 .unwrap_or_else(|e| {
-                    panic!("Error calling {}.{}: {}", module_name, function_name, e)
+                    panic!(
+                        "Error calling {}.{}: {}",
+                        module_name,
+                        function_name,
+                        e.into_vm_status()
+                    )
                 });
             let effects = session.finish().expect("Failed to generate txn effects");
             let (writeset, _events) =
@@ -349,15 +353,16 @@ impl FakeExecutor {
         let vm = MoveVM::new();
         let remote_view = RemoteStorage::new(&self.data_store);
         let mut session = vm.new_session(&remote_view);
-        session.execute_function(
-            &Self::module(module_name),
-            &Self::name(function_name),
-            type_params,
-            args,
-            *sender,
-            &mut cost_strategy,
-            |e| e,
-        )?;
+        session
+            .execute_function(
+                &Self::module(module_name),
+                &Self::name(function_name),
+                type_params,
+                args,
+                *sender,
+                &mut cost_strategy,
+            )
+            .map_err(|e| e.into_vm_status())?;
         let effects = session.finish().expect("Failed to generate txn effects");
         let (writeset, _events) =
             txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");

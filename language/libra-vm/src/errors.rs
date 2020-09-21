@@ -3,6 +3,7 @@
 
 use libra_logger::prelude::*;
 use move_core_types::vm_status::{known_locations, StatusCode, VMStatus};
+use vm::errors::VMError;
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
 /// they are raised during the prologue.
@@ -34,8 +35,9 @@ fn error_split(code: u64) -> (u8, u64) {
 /// Converts particular Move abort codes to specific validation error codes for the prologue
 /// Any non-abort non-execution code is considered an invariant violation, specifically
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
-    match status {
+pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
+    let status = error.into_vm_status();
+    Err(match status {
         VMStatus::Executed => VMStatus::Executed,
         VMStatus::MoveAbort(location, code)
             if location != known_locations::account_module_abort() =>
@@ -75,7 +77,9 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
                         (Category: {:?} Reason: {:?})",
                         location, code, category, reason
                     );
-                    return VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION);
+                    return Err(VMStatus::Error(
+                        StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION,
+                    ));
                 }
             };
             VMStatus::Error(new_major_status)
@@ -84,14 +88,15 @@ pub fn convert_normal_prologue_error(status: VMStatus) -> VMStatus {
             error!("[libra_vm] Unexpected prologue error: {:?}", status);
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
-    }
+    })
 }
 
 /// Checks for only Move aborts or successful execution.
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
-    match status {
+pub fn convert_normal_success_epilogue_error(error: VMError) -> Result<(), VMStatus> {
+    let status = error.into_vm_status();
+    Err(match status {
         VMStatus::Executed => VMStatus::Executed,
         VMStatus::MoveAbort(location, code)
             if location != known_locations::account_module_abort() =>
@@ -121,14 +126,15 @@ pub fn convert_normal_success_epilogue_error(status: VMStatus) -> VMStatus {
             error!("[libra_vm] Unexpected success epilogue error: {:?}", status);
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
-    }
+    })
 }
 
 /// Converts Move aborts or execution failures to `REJECTED_WRITE_SET`
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
-    match status {
+pub fn convert_write_set_prologue_error(error: VMError) -> Result<(), VMStatus> {
+    let status = error.into_vm_status();
+    Err(match status {
         VMStatus::Executed => VMStatus::Executed,
         VMStatus::MoveAbort(location, code)
             if location != known_locations::account_module_abort() =>
@@ -166,26 +172,26 @@ pub fn convert_write_set_prologue_error(status: VMStatus) -> VMStatus {
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
-    }
+    })
 }
 
 /// Checks for only successful execution
 /// Any errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn expect_only_successful_execution<'a>(
-    function_name: &'a str,
-) -> Box<dyn FnOnce(VMStatus) -> VMStatus + 'a> {
-    Box::new(move |status: VMStatus| -> VMStatus {
-        match status {
-            VMStatus::Executed => VMStatus::Executed,
+pub fn expect_only_successful_execution(
+    error: VMError,
+    function_name: &str,
+) -> Result<(), VMStatus> {
+    let status = error.into_vm_status();
+    Err(match status {
+        VMStatus::Executed => VMStatus::Executed,
 
-            status => {
-                error!(
-                    "[libra_vm] Unexpected error from known Move function, '{}'. Error: {:?}",
-                    function_name, status
-                );
-                VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
-            }
+        status => {
+            error!(
+                "[libra_vm] Unexpected error from known Move function, '{}'. Error: {:?}",
+                function_name, status
+            );
+            VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
     })
 }

@@ -98,7 +98,6 @@ impl Adapter {
                             vec![],
                             WORKING_ACCOUNT,
                             &mut cost_strategy,
-                            |e| e,
                         )
                         .unwrap_or_else(|_| {
                             panic!("Failure executing {:?}::{:?}", module_id, name)
@@ -123,7 +122,6 @@ impl Adapter {
                 vec![],
                 WORKING_ACCOUNT,
                 &mut cost_strategy,
-                |e| e,
             )
             .unwrap_or_else(|_| panic!("Failure executing {:?}::{:?}", module, name));
     }

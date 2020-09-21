@@ -206,24 +206,25 @@ impl LibraVMImpl {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
         let chain_id = txn_data.chain_id();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &SCRIPT_PROLOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::vector_u8(txn_public_key),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(txn_expiration_timestamp_secs),
-                Value::u8(chain_id.id()),
-                Value::vector_u8(txn_data.script_hash.clone()),
-            ],
-            txn_data.sender,
-            cost_strategy,
-            convert_normal_prologue_error,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &SCRIPT_PROLOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::vector_u8(txn_public_key),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(txn_expiration_timestamp_secs),
+                    Value::u8(chain_id.id()),
+                    Value::vector_u8(txn_data.script_hash.clone()),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .or_else(convert_normal_prologue_error)
     }
 
     /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
@@ -243,23 +244,24 @@ impl LibraVMImpl {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let txn_expiration_timestamp_secs = txn_data.expiration_timestamp_secs();
         let chain_id = txn_data.chain_id();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &MODULE_PROLOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::vector_u8(txn_public_key),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(txn_expiration_timestamp_secs),
-                Value::u8(chain_id.id()),
-            ],
-            txn_data.sender,
-            cost_strategy,
-            convert_normal_prologue_error,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &MODULE_PROLOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::vector_u8(txn_public_key),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(txn_expiration_timestamp_secs),
+                    Value::u8(chain_id.id()),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .or_else(convert_normal_prologue_error)
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -277,21 +279,22 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &USER_EPILOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(gas_remaining),
-            ],
-            txn_data.sender,
-            cost_strategy,
-            convert_normal_success_epilogue_error,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &USER_EPILOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(gas_remaining),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .or_else(convert_normal_success_epilogue_error)
     }
 
     /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
@@ -309,21 +312,22 @@ impl LibraVMImpl {
         let txn_gas_price = txn_data.gas_unit_price().get();
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &USER_EPILOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(gas_remaining),
-            ],
-            txn_data.sender,
-            cost_strategy,
-            expect_only_successful_execution(USER_EPILOGUE_NAME.as_str()),
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &USER_EPILOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(gas_remaining),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .or_else(|e| expect_only_successful_execution(e, USER_EPILOGUE_NAME.as_str()))
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -340,21 +344,22 @@ impl LibraVMImpl {
 
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &WRITESET_PROLOGUE_NAME,
-            vec![],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::vector_u8(txn_public_key),
-                Value::u64(txn_expiration_timestamp_secs),
-                Value::u8(chain_id.id()),
-            ],
-            txn_data.sender,
-            &mut cost_strategy,
-            convert_write_set_prologue_error,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &WRITESET_PROLOGUE_NAME,
+                vec![],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::vector_u8(txn_public_key),
+                    Value::u64(txn_expiration_timestamp_secs),
+                    Value::u8(chain_id.id()),
+                ],
+                txn_data.sender,
+                &mut cost_strategy,
+            )
+            .or_else(convert_write_set_prologue_error)
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
@@ -369,19 +374,20 @@ impl LibraVMImpl {
             .map_err(|_| VMStatus::Error(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &WRITESET_EPILOGUE_NAME,
-            vec![],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::vector_u8(change_set_bytes),
-                Value::u64(txn_data.sequence_number),
-            ],
-            txn_data.sender,
-            &mut cost_strategy,
-            expect_only_successful_execution(WRITESET_EPILOGUE_NAME.as_str()),
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &WRITESET_EPILOGUE_NAME,
+                vec![],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::vector_u8(change_set_bytes),
+                    Value::u64(txn_data.sequence_number),
+                ],
+                txn_data.sender,
+                &mut cost_strategy,
+            )
+            .or_else(|e| expect_only_successful_execution(e, WRITESET_EPILOGUE_NAME.as_str()))
     }
 
     pub fn new_session<'r, R: RemoteCache>(&self, r: &'r R) -> Session<'r, '_, R> {
