@@ -36,9 +36,9 @@ use spec_lang::{
     env::{
         ConditionInfo, ConditionTag, GlobalEnv, GlobalId, QualifiedId, SpecVarId,
         ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_ABORT_ASSERT_PROP,
-        CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CONCRETE_PROP,
-        CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP, CONDITION_ISOLATED, EXPORT_ENSURES_PRAGMA,
-        OPAQUE_PRAGMA, REQUIRES_IF_ABORTS,
+        CONDITION_ABORT_ASSUME_PROP, CONDITION_ABSTRACT_PROP, CONDITION_CHECK_ABORT_CODES_PROP,
+        CONDITION_CONCRETE_PROP, CONDITION_EXPORT_PROP, CONDITION_INJECTED_PROP,
+        CONDITION_ISOLATED_PROP, EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS_PRAGMA,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -49,6 +49,7 @@ const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
 const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
 const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
 const ABORTS_NOT_COVERED: &str = "abort not covered by any of the `aborts_if` clauses";
+const ABORTS_WITH_CHECK_FAILS_MESSAGE: &str = "abort not covered by this check";
 const WRONG_ABORTS_CODE: &str = "function does not abort with any of the expected codes";
 const SUCCEEDS_IF_FAILS_MESSAGE: &str = "function does not succeed under this condition";
 const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
@@ -56,6 +57,10 @@ const INVARIANT_FAILS_FOR_REF_MESSAGE: &str =
     "data invariant does not hold for value extracted from reference";
 const GLOBAL_INVARIANT_FAILS_MESSAGE: &str = "global memory invariant does not hold";
 const MODIFY_TARGET_FAILS_MESSAGE: &str = "caller does not have permission for this modify target";
+
+fn aborts_with_negative_check_fails_message(code: &dyn std::fmt::Display) -> String {
+    format!("abort with {} does never occur", code)
+}
 
 pub enum SpecEnv<'env> {
     Module(ModuleEnv<'env>),
@@ -627,6 +632,7 @@ impl<'env> SpecTranslator<'env> {
             for_entry_point,
             Definition | VerificationDefinition
         ));
+        let env = self.global_env();
         let func_target = self.function_target();
         let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
         let spec = func_target.get_spec();
@@ -640,7 +646,7 @@ impl<'env> SpecTranslator<'env> {
         // emit preconditions for modifies
         // TODO: implement optimization to make sure that modifies checking is done once and not repeatedly
         for (ty, targets) in func_target.get_modify_targets() {
-            let ty_name = boogie_caller_resource_memory_domain_name(func_target.global_env(), *ty);
+            let ty_name = boogie_caller_resource_memory_domain_name(env, *ty);
             for target in targets {
                 let loc = self.module_env().get_node_loc(target.node_id());
                 self.writer.set_location(&loc);
@@ -650,7 +656,6 @@ impl<'env> SpecTranslator<'env> {
                 let args = target.call_args();
                 let rty = &self.module_env().get_node_instantiation(node_id)[0];
                 let (_, _, targs) = rty.require_struct();
-                let env = self.global_env();
                 let type_args = boogie_type_value_array(env, targs);
                 emit!(self.writer, "{}[{}, a#$Address(", ty_name, type_args);
                 self.translate_exp(&args[0]);
@@ -680,15 +685,20 @@ impl<'env> SpecTranslator<'env> {
         // (P1 || .. || Pn) <==> abort_flag. However, we generate different code to get
         // better error positions. We also need to respect the pragma `aborts_if_is_partial`
         // which changes the iff above into an implies.
-        let aborts_with = distribution
+        let all_aborts_with = distribution
             .ensures
             .iter()
             .filter(kind_filter(ConditionKind::AbortsWith))
             .copied()
             .collect_vec();
+        let (check_aborts_with, aborts_with): (Vec<&Condition>, Vec<&Condition>) =
+            all_aborts_with.iter().partition(|cond| {
+                env.is_property_true(&cond.properties, CONDITION_CHECK_ABORT_CODES_PROP)
+                    .unwrap_or(false)
+            });
         let aborts_if_is_partial =
             func_target.is_pragma_true(ABORTS_IF_IS_PARTIAL_PRAGMA, || false);
-        if aborts_if.is_empty() && aborts_with.is_empty() {
+        if aborts_if.is_empty() && aborts_with.is_empty() && !self.options.prover.negative_checks {
             if !aborts_if_is_partial
                 && func_target.is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
                 && for_entry_point == Verification
@@ -708,12 +718,14 @@ impl<'env> SpecTranslator<'env> {
             // good error positions which Pi is expected to cause failure but doesn't. (Boogie
             // reports positions only back per entire ensures, not individual sub-expression.)
             for c in &aborts_if {
-                self.writer.set_location(&c.loc);
-                self.set_condition_info(&c.loc, ConditionTag::Ensures, ABORTS_IF_FAILS_MESSAGE);
-                let (exp, _) = c.exp.extract_cond_and_aborts_code();
-                emit!(self.writer, "ensures b#$Boolean(old(");
-                self.translate_exp(exp);
-                emitln!(self.writer, ")) ==> $abort_flag;");
+                if !self.options.prover.negative_checks {
+                    self.writer.set_location(&c.loc);
+                    self.set_condition_info(&c.loc, ConditionTag::Ensures, ABORTS_IF_FAILS_MESSAGE);
+                    let (exp, _) = c.exp.extract_cond_and_aborts_code();
+                    emit!(self.writer, "ensures b#$Boolean(old(");
+                    self.translate_exp(exp);
+                    emitln!(self.writer, ")) ==> $abort_flag;");
+                }
             }
 
             // If aborts_if is configured to be total,
@@ -721,7 +733,10 @@ impl<'env> SpecTranslator<'env> {
             // is reported on this condition, we catch the case where the function aborts but no
             // conditions covers it. We use as a position for the ensures the function itself,
             // because reporting on (non-covering) aborts_if conditions is misleading.
-            if !aborts_if_is_partial && !aborts_if.is_empty() {
+            if !aborts_if_is_partial
+                && !aborts_if.is_empty()
+                && !self.options.prover.negative_checks
+            {
                 self.writer.set_location(&func_target.get_loc());
                 self.set_condition_info(
                     &func_target.get_loc(),
@@ -767,40 +782,83 @@ impl<'env> SpecTranslator<'env> {
                     // aborts code specification is meaningless, because the unspecified
                     // aborts conditions can produce arbitrary codes. We better report an
                     // error in this case instead of silently ignoring the aborts code spec.
-                    self.global_env().error(
+                    env.error(
                         &abort_code_loc,
                         "`aborts_if_is_partial` is set but \
                             there are no abort codes specified with `aborts_with` to cover \
                             the codes of the unspecified abort cases",
                     );
                 }
-                self.writer.set_location(&abort_code_loc);
-                self.set_condition_info(&abort_code_loc, ConditionTag::Ensures, WRONG_ABORTS_CODE);
-                emit!(self.writer, "ensures $abort_flag ==> (");
-                self.translate_seq(aborts_if.iter().copied(), "\n    ||", |c: &Condition| {
-                    let (exp, code_opt) = c.exp.extract_cond_and_aborts_code();
-                    emit!(self.writer, "(b#$Boolean(old(");
-                    self.translate_exp(exp);
-                    if let Some(code) = code_opt {
-                        emit!(self.writer, ")) &&\n       $abort_code == i#$Integer(");
-                        self.translate_exp(code);
-                        emit!(self.writer, "))");
-                    } else {
-                        emit!(self.writer, ")))");
-                    }
-                });
-                if !aborts_if.is_empty() && !aborts_with.is_empty() {
-                    emit!(self.writer, "\n    ||");
-                }
-                self.translate_seq(aborts_with.iter().copied(), "\n    ||", |c: &Condition| {
-                    let codes = c.exp.extract_abort_codes();
-                    self.translate_seq(codes.iter(), " || ", |code| {
-                        emit!(self.writer, "$abort_code == i#$Integer(");
-                        self.translate_exp(code);
-                        emit!(self.writer, ")");
+                if !self.options.prover.negative_checks {
+                    self.writer.set_location(&abort_code_loc);
+                    self.set_condition_info(
+                        &abort_code_loc,
+                        ConditionTag::Ensures,
+                        WRONG_ABORTS_CODE,
+                    );
+                    emit!(self.writer, "ensures $abort_flag ==> (");
+                    self.translate_seq(aborts_if.iter().copied(), "\n    ||", |c: &Condition| {
+                        let (exp, code_opt) = c.exp.extract_cond_and_aborts_code();
+                        emit!(self.writer, "(b#$Boolean(old(");
+                        self.translate_exp(exp);
+                        if let Some(code) = code_opt {
+                            emit!(self.writer, ")) &&\n       $abort_code == i#$Integer(");
+                            self.translate_exp(code);
+                            emit!(self.writer, "))");
+                        } else {
+                            emit!(self.writer, ")))");
+                        }
                     });
+                    if !aborts_if.is_empty() && !aborts_with.is_empty() {
+                        emit!(self.writer, "\n    ||");
+                    }
+                    self.translate_seq(aborts_with.iter().copied(), "\n    ||", |c: &Condition| {
+                        let codes = c.exp.extract_abort_codes();
+                        self.translate_seq(codes.iter(), " || ", |code| {
+                            emit!(self.writer, "$abort_code == i#$Integer(");
+                            self.translate_exp(code);
+                            emit!(self.writer, ")");
+                        });
+                    });
+                    emitln!(self.writer, ");");
+                }
+            }
+        }
+
+        // Generate standalone aborts code checks for `aborts_with [check]` conditions.
+        for c in check_aborts_with {
+            let codes = c.exp.extract_abort_codes();
+            // Generate positive check
+            if !self.options.prover.negative_checks {
+                self.writer.set_location(&c.loc);
+                self.set_condition_info(
+                    &c.loc,
+                    ConditionTag::Ensures,
+                    ABORTS_WITH_CHECK_FAILS_MESSAGE,
+                );
+                emit!(self.writer, "ensures $abort_flag ==> (");
+                self.translate_seq(codes.iter(), " || ", |code| {
+                    emit!(self.writer, "$abort_code == i#$Integer(");
+                    self.translate_exp(code);
+                    emit!(self.writer, ")");
                 });
                 emitln!(self.writer, ");");
+            }
+            // Generate negative checks
+            if self.options.prover.negative_checks {
+                for code in codes {
+                    let loc = self.module_env().get_node_loc(code.node_id());
+                    self.writer.set_location(&loc);
+                    self.set_negative_condition_info(
+                        &loc,
+                        ConditionTag::NegativeTest,
+                        &aborts_with_negative_check_fails_message(&code.display(env)),
+                    );
+                    emit!(self.writer, "ensures $abort_flag ==> ");
+                    emit!(self.writer, "$abort_code != i#$Integer(");
+                    self.translate_exp(code);
+                    emitln!(self.writer, ");")
+                }
             }
         }
 
@@ -860,7 +918,7 @@ impl<'env> SpecTranslator<'env> {
                     // The invariant is not guaranteed to hold.
                     WellFormedMode::WithoutInvariant
                 };
-                let check = boogie_well_formed_expr(self.global_env(), &result_name, ty, mode);
+                let check = boogie_well_formed_expr(env, &result_name, ty, mode);
                 if !check.is_empty() {
                     emitln!(self.writer, "ensures {};", check)
                 }
@@ -894,7 +952,7 @@ impl<'env> SpecTranslator<'env> {
             if !matches!(
                 cond.kind,
                 ConditionKind::AbortsIf | ConditionKind::SucceedsIf
-            ) && func_target.is_pragma_true(REQUIRES_IF_ABORTS, || false)
+            ) && func_target.is_pragma_true(REQUIRES_IF_ABORTS_PRAGMA, || false)
             {
                 for aborts in aborts_if {
                     let (exp, _) = aborts.exp.extract_cond_and_aborts_code();
@@ -1064,6 +1122,15 @@ impl<'env> SpecTranslator<'env> {
     fn set_condition_info(&self, loc: &Loc, tag: ConditionTag, message: &str) {
         self.global_env()
             .set_condition_info(loc.clone(), tag, ConditionInfo::for_message(message));
+    }
+
+    /// Sets info for negative verification condition.
+    fn set_negative_condition_info(&self, loc: &Loc, tag: ConditionTag, message: &str) {
+        self.global_env().set_condition_info(
+            loc.clone(),
+            tag,
+            ConditionInfo::for_message(message).negative(),
+        );
     }
 }
 
@@ -1511,7 +1578,7 @@ impl<'env> SpecTranslator<'env> {
                 .get_global_invariant(*id)
                 .and_then(|inv| {
                     self.global_env()
-                        .is_property_true(&inv.properties, CONDITION_ISOLATED)
+                        .is_property_true(&inv.properties, CONDITION_ISOLATED_PROP)
                 })
                 .unwrap_or(false)
         };

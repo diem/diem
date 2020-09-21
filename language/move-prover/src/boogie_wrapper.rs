@@ -214,7 +214,7 @@ impl<'env> BoogieWrapper<'env> {
             // Expected error did not happen, report it.
             let diag = Diagnostic::new(
                 Severity::Error,
-                info.message.clone(),
+                format!("{} (negative error)", info.message),
                 Label::new(loc.file_id(), loc.span(), ""),
             );
             self.env.add_diag(diag);

@@ -1,0 +1,17 @@
+Move prover returns: exiting with boogie verification errors
+error: abort not covered by this check
+
+    ┌── tests/sources/functional/aborts_with_check.move:31:9 ───
+    │
+ 31 │         aborts_with [check] 2;
+    │         ^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 24 │             abort 3
+    │             ------- abort happened here with code `0x3`
+    │
+    =     at tests/sources/functional/aborts_with_check.move:19:4: aborts_with_check_missing_incorrect
+    =         x = <redacted>,
+    =         y = <redacted>
+    =     at tests/sources/functional/aborts_with_check.move:20:9: aborts_with_check_missing_incorrect
+    =     at tests/sources/functional/aborts_with_check.move:23:9: aborts_with_check_missing_incorrect
+    =     at tests/sources/functional/aborts_with_check.move:24:13: aborts_with_check_missing_incorrect (ABORTED)

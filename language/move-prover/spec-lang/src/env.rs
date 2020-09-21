@@ -37,10 +37,11 @@ use vm::{
 
 use crate::{
     ast::{
-        GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl, SpecVarDecl,
-        Value,
+        ConditionKind, GlobalInvariant, ModuleName, PropertyBag, Spec, SpecBlockInfo, SpecFunDecl,
+        SpecVarDecl, Value,
     },
     symbol::{Symbol, SymbolPool},
+    translate::SpecBlockContext,
     ty::{PrimitiveType, Type},
 };
 use std::{
@@ -87,7 +88,7 @@ pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
 pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
 
 /// Pragma indicating that requires are also enforced if the aborts condition is true.
-pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
+pub const REQUIRES_IF_ABORTS_PRAGMA: &str = "requires_if_aborts";
 
 /// Pragma indicating that the function will run smoke tests
 pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
@@ -98,6 +99,41 @@ pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecke
 
 /// Pragma indicating that aborts from this function shall be ignored.
 pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
+
+/// Pragma which indicates that the function's abort and ensure conditions shall be exported
+/// to the verification context even if the implementation of the function is inlined.
+pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
+
+/// Checks whether a pragma is valid in a specific spec block.
+pub fn is_pragma_valid_for_block(target: &SpecBlockContext<'_>, pragma: &str) -> bool {
+    use SpecBlockContext::*;
+    match target {
+        Module => matches!(
+            pragma,
+            VERIFY_PRAGMA
+                | ABORTS_IF_IS_STRICT_PRAGMA
+                | ABORTS_IF_IS_PARTIAL_PRAGMA
+                | INTRINSIC_PRAGMA
+        ),
+        Function(..) => matches!(
+            pragma,
+            VERIFY_PRAGMA
+                | TIMEOUT_PRAGMA
+                | SEED_PRAGMA
+                | VERIFY_DURATION_ESTIMATE_PRAGMA
+                | INTRINSIC_PRAGMA
+                | OPAQUE_PRAGMA
+                | ABORTS_IF_IS_PARTIAL_PRAGMA
+                | ABORTS_IF_IS_STRICT_PRAGMA
+                | REQUIRES_IF_ABORTS_PRAGMA
+                | ALWAYS_ABORTS_TEST_PRAGMA
+                | ADDITION_OVERFLOW_UNCHECKED_PRAGMA
+                | ASSUME_NO_ABORT_FROM_HERE_PRAGMA
+                | EXPORT_ENSURES_PRAGMA
+        ),
+        _ => false,
+    }
+}
 
 /// Internal property attached to conditions if they are injected via an apply or a module
 /// invariant.
@@ -115,7 +151,7 @@ pub const CONDITION_GLOBAL_PROP: &str = "global";
 /// nonoperational constraints on system behavior, i.e. the systems "works" whether the
 /// invariant holds or not. Invariant marked as such are not assumed when
 /// memory is accessed, but only in the pre-state of a memory update.
-pub const CONDITION_ISOLATED: &str = "isolated";
+pub const CONDITION_ISOLATED_PROP: &str = "isolated";
 
 /// Abstract property which can be used together with an opaque specification. An abstract
 /// property is not verified against the implementation, but will be used for the
@@ -137,13 +173,43 @@ pub const CONDITION_ABORT_ASSUME_PROP: &str = "assume";
 /// an assertion.
 pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
 
-/// Pragma which indicates that the functions aborts and ensure conditions shall be exported
-/// to the verification context even if the implementation of the function is inlined.
-pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
-
 /// A property which can be attached to any condition to exclude it from verification. The
 /// condition will still be type checked.
-pub const CONDITION_DEACTIVATED: &str = "deactivated";
+pub const CONDITION_DEACTIVATED_PROP: &str = "deactivated";
+
+/// A property which can be attached to an aborts_with to indicate that it should act as check
+/// whether the function produces exactly the provided number of error codes.
+pub const CONDITION_CHECK_ABORT_CODES_PROP: &str = "check";
+
+/// A function which determines whether a property is valid for a given condition kind.
+pub fn is_property_valid_for_condition(kind: &ConditionKind, prop: &str) -> bool {
+    if matches!(
+        prop,
+        CONDITION_INJECTED_PROP
+            | CONDITION_EXPORT_PROP
+            | CONDITION_ABSTRACT_PROP
+            | CONDITION_CONCRETE_PROP
+            | CONDITION_DEACTIVATED_PROP
+    ) {
+        // Applicable everywhere.
+        return true;
+    }
+    use ConditionKind::*;
+    match kind {
+        Invariant | InvariantUpdate => {
+            matches!(prop, CONDITION_GLOBAL_PROP | CONDITION_ISOLATED_PROP)
+        }
+        SucceedsIf | AbortsIf => matches!(
+            prop,
+            CONDITION_ABORT_ASSERT_PROP | CONDITION_ABORT_ASSUME_PROP
+        ),
+        AbortsWith => matches!(prop, CONDITION_CHECK_ABORT_CODES_PROP),
+        _ => {
+            // every other condition can only take general properties
+            false
+        }
+    }
+}
 
 // =================================================================================================
 /// # Locations
@@ -480,6 +546,11 @@ impl ConditionInfo {
             omit_trace: false,
             negative_cond: false,
         }
+    }
+
+    pub fn negative(mut self) -> Self {
+        self.negative_cond = true;
+        self
     }
 }
 

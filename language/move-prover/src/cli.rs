@@ -27,9 +27,6 @@ const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
     "-printVerifiedProceduresCount:0",
     "-printModel:4",
-    // Right now, we let boogie only produce one error per procedure. The boogie wrapper isn't
-    // capable to sort out multiple errors and associate them with models otherwise.
-    "-errorLimit:1",
 ];
 
 /// Atomic used to prevent re-initialization of logging.
@@ -138,6 +135,8 @@ pub struct ProverOptions {
     pub dump_bytecode: bool,
     /// Number of Boogie instances to be run concurrently.
     pub num_instances: usize,
+    /// Run negative verification checks.
+    pub negative_checks: bool,
 }
 
 impl Default for ProverOptions {
@@ -157,6 +156,7 @@ impl Default for ProverOptions {
             assume_invariant_on_access: false,
             dump_bytecode: false,
             num_instances: 1,
+            negative_checks: false,
         }
     }
 }
@@ -332,6 +332,10 @@ impl Options {
                     .help("keep intermediate artifacts of the backend around")
             )
             .arg(
+                Arg::with_name("negative")
+                    .long("negative")
+                    .help("run negative verification checks")
+            ).arg(
                 Arg::with_name("seed")
                     .long("seed")
                     .short("s")
@@ -542,6 +546,9 @@ impl Options {
         if matches.is_present("keep") {
             options.backend.keep_artifacts = true;
         }
+        if matches.is_present("negative") {
+            options.prover.negative_checks = true;
+        }
         if matches.is_present("seed") {
             options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
         }
@@ -600,6 +607,11 @@ impl Options {
         let mut result = vec![self.backend.boogie_exe.clone()];
         let mut add = |sl: &[&str]| result.extend(sl.iter().map(|s| (*s).to_string()));
         add(DEFAULT_BOOGIE_FLAGS);
+        if !self.prover.negative_checks {
+            // Right now, we let boogie only produce one error per procedure. The boogie wrapper isn't
+            // capable to sort out multiple errors and associate them with models otherwise.
+            add(&["-errorLimit:1"]);
+        }
         if self.backend.use_cvc4 {
             add(&[
                 "-proverOpt:SOLVER=cvc4",

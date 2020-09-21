@@ -44,10 +44,11 @@ use crate::{
         SpecVarDecl, Value,
     },
     env::{
-        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc,
-        NamedConstantData, NamedConstantId, NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId,
-        StructData, StructId, TypeConstraint, TypeParameter, CONDITION_DEACTIVATED,
-        CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
+        is_pragma_valid_for_block, is_property_valid_for_condition, FieldId, FunId, FunctionData,
+        GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc, NamedConstantData, NamedConstantId, NodeId,
+        QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
+        TypeParameter, CONDITION_DEACTIVATED_PROP, CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP,
+        SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -935,7 +936,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 /// A value which we pass in to spec block analyzers, describing the resolved target of the spec
 /// block.
 #[derive(Debug)]
-enum SpecBlockContext<'a> {
+pub enum SpecBlockContext<'a> {
     Module,
     Struct(QualifiedSymbol),
     Function(QualifiedSymbol),
@@ -1427,10 +1428,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                                 qsym.clone(),
                                 &fun_spec_info[spec_id],
                             );
-                            let properties = self.translate_properties(properties);
                             if let Some((kind, exp)) =
                                 self.extract_condition_kind(&context, kind, exp)
                             {
+                                let properties = self.translate_properties(properties, &|prop| {
+                                    if !is_property_valid_for_condition(&kind, prop) {
+                                        Some(loc.clone())
+                                    } else {
+                                        None
+                                    }
+                                });
                                 self.def_ana_condition(
                                     loc,
                                     &context,
@@ -1648,7 +1655,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     additional_exps,
                 } => {
                     if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
-                        let properties = self.translate_properties(properties);
+                        let properties = self.translate_properties(properties, &|prop| {
+                            if !is_property_valid_for_condition(&kind, prop) {
+                                Some(loc.clone())
+                            } else {
+                                None
+                            }
+                        });
                         self.def_ana_condition(loc, context, kind, properties, exp, additional_exps)
                     }
                 }
@@ -1668,7 +1681,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     patterns,
                     exclusion_patterns,
                 } => self.def_ana_schema_apply(loc, context, exp, patterns, exclusion_patterns),
-                Pragma { properties } => self.def_ana_pragma(context, properties),
+                Pragma { properties } => self.def_ana_pragma(loc, context, properties),
                 Variable { .. } => { /* nothing to do right now */ }
             }
         }
@@ -1786,18 +1799,46 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     /// Definition analysis for a pragma.
-    fn def_ana_pragma(&mut self, context: &SpecBlockContext, properties: &[EA::PragmaProperty]) {
-        let properties = self.translate_properties(properties);
+    fn def_ana_pragma(
+        &mut self,
+        loc: &Loc,
+        context: &SpecBlockContext,
+        properties: &[EA::PragmaProperty],
+    ) {
+        let properties = self.translate_properties(properties, &|prop| {
+            if !is_pragma_valid_for_block(context, prop) {
+                Some(loc.clone())
+            } else {
+                None
+            }
+        });
         self.update_spec(context, move |spec| {
             spec.properties.extend(properties);
         });
     }
 
-    fn translate_properties(&mut self, properties: &[EA::PragmaProperty]) -> PropertyBag {
+    /// Translate properties (of conditions or in pragmas), using the provided function
+    /// to check their validness.
+    fn translate_properties<F>(
+        &mut self,
+        properties: &[EA::PragmaProperty],
+        check_prop: &F,
+    ) -> PropertyBag
+    where
+        // Returns the location if not valid
+        F: Fn(&str) -> Option<Loc>,
+    {
         // For now we pass properties just on. We may want to check against a set of known
         // property names and types in the future.
         let mut props = PropertyBag::default();
         for prop in properties {
+            let prop_str = prop.value.name.value.as_str();
+            if let Some(loc) = check_prop(prop_str) {
+                self.parent.error(
+                    &loc,
+                    &format!("property `{}` is not valid in this context", prop_str),
+                );
+            }
             let prop_name = self.symbol_pool().make(&prop.value.name.value);
             let value = if let Some(pv) = &prop.value.value {
                 let mut et = ExpTranslator::new(self);
@@ -2146,7 +2187,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     && !self
                         .parent
                         .env
-                        .is_property_true(&derived_cond.properties, CONDITION_DEACTIVATED)
+                        .is_property_true(&derived_cond.properties, CONDITION_DEACTIVATED_PROP)
                         .unwrap_or(false)
                 {
                     self.update_spec(context, |spec| spec.conditions.push(derived_cond));
@@ -2533,7 +2574,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 } => {
                     let context = SpecBlockContext::Schema(name.clone());
                     if let Some((kind, exp)) = self.extract_condition_kind(&context, kind, exp) {
-                        let properties = self.translate_properties(properties);
+                        let properties = self.translate_properties(properties, &|prop| {
+                            if !is_property_valid_for_condition(&kind, prop) {
+                                Some(member_loc.clone())
+                            } else {
+                                None
+                            }
+                        });
                         self.def_ana_condition(
                             &member_loc,
                             &context,
