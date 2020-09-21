@@ -39,7 +39,7 @@ use tokio::runtime::Handle;
 
 /// `TwinId` is used by the NetworkPlayground to uniquely identify
 /// nodes, even if they have the same `AccountAddress` (e.g. for Twins)
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TwinId {
     /// Node's ID
     pub id: usize,
@@ -73,11 +73,11 @@ pub struct NetworkPlayground {
     /// Allow test code to drop direct-send messages between peers.
     drop_config: Arc<RwLock<DropConfig>>,
     /// Allow test code to drop direct-send messages between peers per round.
-    drop_config_round: Arc<RwLock<DropConfigRound>>,
+    drop_config_round: DropConfigRound,
     /// An executor for spawning node outbound network event handlers
     executor: Handle,
-    // Maps authors to twins IDs
-    // An author may have multiple twin IDs for Twins
+    /// Maps authors to twins IDs
+    /// An author may have multiple twin IDs for Twins
     author_to_twin_ids: Arc<RwLock<AuthorToTwinIds>>,
 }
 
@@ -89,10 +89,10 @@ impl NetworkPlayground {
             node_consensus_txs: Arc::new(Mutex::new(HashMap::new())),
             outbound_msgs_tx,
             outbound_msgs_rx,
-            drop_config: Arc::new(RwLock::new(DropConfig(HashMap::new()))),
-            drop_config_round: Arc::new(RwLock::new(DropConfigRound(HashMap::new()))),
+            drop_config: Arc::new(RwLock::new(DropConfig::default())),
+            drop_config_round: DropConfigRound::default(),
             executor,
-            author_to_twin_ids: Arc::new(RwLock::new(AuthorToTwinIds(HashMap::new()))),
+            author_to_twin_ids: Arc::new(RwLock::new(AuthorToTwinIds::default())),
         }
     }
 
@@ -214,7 +214,7 @@ impl NetworkPlayground {
         src_twin_id: TwinId,
         dst_twin_id: TwinId,
         msg_notif: PeerManagerNotification,
-    ) -> ((Author, ConsensusMsg), bool) {
+    ) -> (Author, ConsensusMsg) {
         let mut node_consensus_tx = self
             .node_consensus_txs
             .lock()
@@ -234,22 +234,13 @@ impl NetworkPlayground {
                 msg_notif
             ),
         };
-
-        let msg_round = self.get_message_round(msg_copy.1.clone());
-        let dropped = match msg_round {
-            Some(round) => self.is_message_dropped_round(&src_twin_id, &dst_twin_id, round),
-            _ => false,
-        };
-
-        if !dropped {
-            node_consensus_tx
-                .push(
-                    (src_twin_id.author, ProtocolId::ConsensusDirectSend),
-                    msg_notif,
-                )
-                .unwrap();
-        }
-        (msg_copy, !dropped)
+        node_consensus_tx
+            .push(
+                (src_twin_id.author, ProtocolId::ConsensusDirectSend),
+                msg_notif,
+            )
+            .unwrap();
+        msg_copy
     }
 
     /// Wait for exactly `num_messages` to be enqueued and delivered. Return a
@@ -284,17 +275,18 @@ impl NetworkPlayground {
 
             let dst_twin_ids = self.get_twin_ids(dst);
             for (idx, dst_twin_id) in dst_twin_ids.iter().enumerate() {
-                let msg_notif =
-                    PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
+                let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
 
                 // Deliver and copy message if it's not dropped
-                if !self.is_message_dropped(&src_twin_id, dst_twin_id) {
-                    let (msg_copy, delivered) = self
+                if !self.is_message_dropped(&src_twin_id, dst_twin_id, consensus_msg) {
+                    let msg_notif =
+                        PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
+                    let msg_copy = self
                         .deliver_message(src_twin_id, *dst_twin_id, msg_notif)
                         .await;
 
                     // Only insert msg_copy once for twins (if delivered)
-                    if delivered && idx == 0 && msg_inspector(&msg_copy) {
+                    if idx == 0 && msg_inspector(&msg_copy) {
                         msg_copies.push(msg_copy);
                     }
                 }
@@ -305,7 +297,7 @@ impl NetworkPlayground {
     }
 
     /// Return the round of a given message
-    fn get_message_round(&self, msg: ConsensusMsg) -> Option<u64> {
+    fn get_message_round(msg: ConsensusMsg) -> Option<u64> {
         match msg {
             ConsensusMsg::ProposalMsg(proposal_msg) => Some(proposal_msg.proposal().round()),
             ConsensusMsg::VoteMsg(vote_msg) => Some(vote_msg.vote().vote_data().proposed().round()),
@@ -339,38 +331,30 @@ impl NetworkPlayground {
         self.author_to_twin_ids.read().unwrap().get_twin_ids(author)
     }
 
-    fn is_message_dropped(&self, src_twin_id: &TwinId, dst_twin_id: &TwinId) -> bool {
+    fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, msg: ConsensusMsg) -> bool {
         self.drop_config
             .read()
             .unwrap()
-            .is_message_dropped(src_twin_id, dst_twin_id)
+            .is_message_dropped(src, dst)
+            || Self::get_message_round(msg).map_or(false, |r| {
+                self.drop_config_round.is_message_dropped(src, dst, r)
+            })
     }
 
     pub fn split_network(
-        &mut self,
+        &self,
         partition_first: Vec<TwinId>,
         partition_second: Vec<TwinId>,
     ) -> bool {
         self.drop_config
             .write()
             .unwrap()
-            .split_network(partition_first, partition_second)
+            .split_network(&partition_first, &partition_second)
     }
 
     /// Check if the message from 'src_twin_id' to 'dst_twin_id' should be dropped in the given round
     pub fn is_message_dropped_round(&self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
-        self.drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(src, dst, round)
-    }
-
-    /// Drop messages from 'src_twin_id' to 'dst_twin_id' in the given round
-    pub fn drop_message_for_round(&mut self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
-        self.drop_config_round
-            .write()
-            .unwrap()
-            .drop_message_for(src, dst, round)
+        self.drop_config_round.is_message_dropped(src, dst, round)
     }
 
     /// Creates the given per round network partitions
@@ -381,20 +365,13 @@ impl NetworkPlayground {
         let mut ret = true;
 
         for (round, partitions) in round_partitions.iter() {
-            partitions
-                .iter()
-                .enumerate()
-                .flat_map(|(i, v1)| {
-                    partitions.iter().skip(i + 1).flat_map(move |v2| {
-                        v1.iter()
-                            .flat_map(move |src| v2.iter().map(move |dst| (src, dst)))
-                    })
+            partitions.iter().enumerate().for_each(|(i, p1)| {
+                partitions.iter().skip(i + 1).for_each(|p2| {
+                    ret &= self
+                        .drop_config_round
+                        .drop_message_for_round(*round, p1, p2)
                 })
-                .for_each(|(src, dst)| {
-                    // Drop messages in both directions i.e. src->dst and dst->src
-                    ret &= self.drop_message_for_round(src, dst, *round);
-                    ret &= self.drop_message_for_round(dst, src, *round);
-                });
+            })
         }
         ret
     }
@@ -419,9 +396,10 @@ impl NetworkPlayground {
             for dst_twin_id in dst_twin_ids.iter() {
                 let msg_notif =
                     PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
+                let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
 
                 // Deliver and copy message it if it's not dropped
-                if !self.is_message_dropped(&src_twin_id, &dst_twin_id) {
+                if !self.is_message_dropped(&src_twin_id, &dst_twin_id, consensus_msg) {
                     self.deliver_message(src_twin_id, *dst_twin_id, msg_notif)
                         .await;
                 }
@@ -430,6 +408,7 @@ impl NetworkPlayground {
     }
 }
 
+#[derive(Default)]
 struct AuthorToTwinIds(HashMap<Author, Vec<TwinId>>);
 
 impl AuthorToTwinIds {
@@ -444,31 +423,34 @@ impl AuthorToTwinIds {
     }
 }
 
+#[derive(Default)]
 struct DropConfig(HashMap<TwinId, HashSet<TwinId>>);
 
 impl DropConfig {
     pub fn is_message_dropped(&self, src: &TwinId, dst: &TwinId) -> bool {
-        self.0.get(src).unwrap().contains(&dst)
+        self.0.get(src).map_or(false, |set| set.contains(dst))
     }
 
     pub fn drop_message_for(&mut self, src: &TwinId, dst: &TwinId) -> bool {
-        self.0.get_mut(src).unwrap().insert(*dst)
+        self.0
+            .entry(*src)
+            .or_insert_with(|| HashSet::new())
+            .insert(*dst)
     }
 
     pub fn split_network(
         &mut self,
-        partition_first: Vec<TwinId>,
-        partition_second: Vec<TwinId>,
+        partition_first: &[TwinId],
+        partition_second: &[TwinId],
     ) -> bool {
-        let mut done = true;
-        for node_first in partition_first.iter() {
-            for node_second in partition_second.iter() {
-                // drop messages in both directions
-                done &= self.drop_message_for(node_first, node_second);
-                done &= self.drop_message_for(node_second, node_first);
-            }
-        }
-        done
+        partition_first
+            .iter()
+            .flat_map(move |n1| partition_second.iter().map(move |n2| (n1, n2)))
+            .fold(true, |mut done, (n1, n2)| {
+                done &= self.drop_message_for(n1, n2);
+                done &= self.drop_message_for(n2, n1);
+                done
+            })
     }
 
     fn add_node(&mut self, src: TwinId) {
@@ -477,34 +459,26 @@ impl DropConfig {
 }
 
 /// Table of per round message dropping rules
+#[derive(Default)]
 struct DropConfigRound(HashMap<u64, DropConfig>);
 
 impl DropConfigRound {
     /// Check if the message from 'src' to 'dst' should be dropped in the given round
-    pub fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
+    fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
         self.0
             .get(&round)
-            .and_then(|config| config.0.get(src).and_then(|set| set.get(dst)))
-            .is_some()
+            .map_or(false, |config| config.is_message_dropped(src, dst))
     }
 
-    /// Drop messages from 'src' to 'dst' in the given round
-    pub fn drop_message_for(&mut self, src: &TwinId, dst: &TwinId, round: u64) -> bool {
-        self.0
-            .entry(round)
-            .or_insert_with(|| DropConfig(HashMap::new()));
-
-        if !self.0.get_mut(&round).unwrap().0.contains_key(src) {
-            self.0.get_mut(&round).unwrap().add_node(*src);
-        }
-
-        self.0
-            .get_mut(&round)
-            .unwrap()
-            .0
-            .get_mut(src)
-            .unwrap()
-            .insert(*dst)
+    /// Create partition for the round
+    fn drop_message_for_round(
+        &mut self,
+        round: u64,
+        partition_first: &[TwinId],
+        partition_second: &[TwinId],
+    ) -> bool {
+        let config = self.0.entry(round).or_insert_with(|| DropConfig::default());
+        config.split_network(partition_first, partition_second)
     }
 }
 
@@ -519,47 +493,6 @@ mod tests {
     use libra_types::validator_verifier::random_validator_verifier;
 
     #[test]
-    fn test_drop_message_for_round() {
-        let runtime = consensus_runtime();
-        let mut playground = NetworkPlayground::new(runtime.handle().clone());
-
-        let num_nodes = 4;
-        let (signers, _validator_verifier) = random_validator_verifier(num_nodes, None, false);
-
-        let mut nodes = Vec::new();
-        for signer in signers.iter() {
-            nodes.push(TwinId {
-                id: 0,
-                author: signer.author(),
-            });
-        }
-
-        // Round 1 drop messages from: 0 -> 1
-        playground.drop_message_for_round(&nodes[0], &nodes[1], 1);
-        // Round 2 drop messages from: 2 -> 3
-        playground.drop_message_for_round(&nodes[2], &nodes[3], 2);
-
-        // Round 1: Messages from 0 to 1 should be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[0], &nodes[1], 1));
-        // Round 2: Messages from 2 to 3 should be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[2], &nodes[3], 2));
-        // Round 2: Messages from 0 to 1 should not be dropped
-        assert!(!playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[0], &nodes[1], 2));
-    }
-
-    #[test]
     fn test_split_network_round() {
         let runtime = consensus_runtime();
         let mut playground = NetworkPlayground::new(runtime.handle().clone());
@@ -568,9 +501,9 @@ mod tests {
         let (signers, _validator_verifier) = random_validator_verifier(num_nodes, None, false);
 
         let mut nodes = Vec::new();
-        for signer in signers.iter() {
+        for (i, signer) in signers.iter().enumerate() {
             nodes.push(TwinId {
-                id: 0,
+                id: i,
                 author: signer.author(),
             });
         }
@@ -588,55 +521,23 @@ mod tests {
 
         // Round 1 checks (partitions: [0], [1,2])
         // Messages from 0 to 1 should be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[0], &nodes[1], 1));
+        assert!(playground.is_message_dropped_round(&nodes[0], &nodes[1], 1));
         // Messages from 1 to 0 should also be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[1], &nodes[0], 1));
+        assert!(playground.is_message_dropped_round(&nodes[1], &nodes[0], 1));
         // Messages from 1 to 2 should not be dropped
-        assert!(!playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[1], &nodes[2], 1));
+        assert!(!playground.is_message_dropped_round(&nodes[1], &nodes[2], 1));
         // Messages from 3 to 1 should not be dropped
-        assert!(!playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[3], &nodes[0], 1));
+        assert!(!playground.is_message_dropped_round(&nodes[3], &nodes[0], 1));
 
         // Round 2 checks (partitions: [1], [2], [3,4])
         // Messages from 2 to 4 should be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[2], &nodes[4], 2));
+        assert!(playground.is_message_dropped_round(&nodes[2], &nodes[4], 2));
         // Messages from 1 to 2 should be dropped
-        assert!(playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[1], &nodes[2], 2));
+        assert!(playground.is_message_dropped_round(&nodes[1], &nodes[2], 2));
         // Messages from 3 to 4 should not be dropped
-        assert!(!playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[3], &nodes[4], 2));
+        assert!(!playground.is_message_dropped_round(&nodes[3], &nodes[4], 2));
         // Messages from 0 to 3 should not be dropped
-        assert!(!playground
-            .drop_config_round
-            .read()
-            .unwrap()
-            .is_message_dropped(&nodes[0], &nodes[3], 2));
+        assert!(!playground.is_message_dropped_round(&nodes[0], &nodes[3], 2));
     }
 
     #[test]

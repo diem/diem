@@ -36,12 +36,12 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
-use std::{cmp::Ordering, collections::HashMap, num::NonZeroUsize, sync::Arc};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
 
 /// Auxiliary struct that is preparing SMR for the test
 struct SMRNode {
-    author: Author,
+    id: TwinId,
     _runtime: Runtime,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
     storage: Arc<MockStorage>,
@@ -49,31 +49,14 @@ struct SMRNode {
     _state_sync: mpsc::UnboundedReceiver<Payload>,
 }
 
-impl Eq for SMRNode {}
-
-impl PartialEq for SMRNode {
-    fn eq(&self, other: &SMRNode) -> bool {
-        self.author == other.author
-    }
-}
-
-impl PartialOrd for SMRNode {
-    fn partial_cmp(&self, other: &SMRNode) -> Option<Ordering> {
-        self.author.partial_cmp(&other.author)
-    }
-}
-
-impl Ord for SMRNode {
-    fn cmp(&self, other: &SMRNode) -> Ordering {
-        self.author.cmp(&other.author)
-    }
+fn author_from_config(config: &NodeConfig) -> Author {
+    config.validator_network.as_ref().unwrap().peer_id()
 }
 
 impl SMRNode {
     fn start(
         playground: &mut NetworkPlayground,
         config: NodeConfig,
-        smr_id: usize,
         storage: Arc<MockStorage>,
         twin_id: TwinId,
     ) -> Self {
@@ -116,7 +99,7 @@ impl SMRNode {
         reconfig_sender.push((), payload).unwrap();
 
         let runtime = Builder::new()
-            .thread_name(format!("node-{}", smr_id))
+            .thread_name(format!("node-{}", twin_id.id))
             .threaded_scheduler()
             .enable_all()
             .build()
@@ -144,7 +127,7 @@ impl SMRNode {
         runtime.spawn(network_task.start());
         runtime.spawn(epoch_mgr.start(timeout_receiver, network_receiver));
         Self {
-            author: twin_id.author,
+            id: twin_id,
             _runtime: runtime,
             commit_cb_receiver,
             storage,
@@ -154,14 +137,13 @@ impl SMRNode {
     }
 
     /// Starts a given number of nodes and their twins
-    #[cfg(any(test, feature = "fuzzing"))]
     fn start_num_nodes_with_twins(
         num_nodes: usize,
         num_twins: usize,
         playground: &mut NetworkPlayground,
         proposer_type: ConsensusProposerType,
         round_proposers_idx: Option<HashMap<Round, usize>>,
-    ) -> (Vec<Self>, Vec<Author>) {
+    ) -> Vec<Self> {
         assert!(num_nodes >= num_twins);
         let ValidatorSwarm { mut nodes } = generator::validator_swarm_for_testing(num_nodes);
 
@@ -178,19 +160,18 @@ impl SMRNode {
                 })
                 .collect(),
         );
+        // sort by the peer id
+        nodes.sort_by(|n1, n2| author_from_config(n1).cmp(&author_from_config(n2)));
 
         let proposer_type = match proposer_type {
             RoundProposer(_) => {
                 let mut round_proposers: HashMap<Round, Author> = HashMap::new();
 
-                if let Some(round_proposers_idx) = round_proposers_idx {
-                    for (round, idx) in round_proposers_idx.iter() {
-                        round_proposers.insert(
-                            *round,
-                            nodes[*idx].validator_network.as_ref().unwrap().peer_id(),
-                        );
-                    }
-                }
+                round_proposers_idx.map(|proposers| {
+                    proposers.iter().for_each(|(round, idx)| {
+                        round_proposers.insert(*round, author_from_config(&nodes[*idx]));
+                    })
+                });
                 RoundProposer(round_proposers)
             }
             _ => proposer_type,
@@ -205,7 +186,6 @@ impl SMRNode {
         }
 
         let mut smr_nodes = vec![];
-        let mut node_authors = vec![];
 
         for (smr_id, mut config) in nodes.into_iter().enumerate() {
             let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
@@ -226,14 +206,13 @@ impl SMRNode {
             // suggests that 1s is too small for twins testing
             config.consensus.round_initial_timeout_ms = 2000;
 
-            let author = config.validator_network.as_ref().unwrap().peer_id();
+            let author = author_from_config(&config);
 
             let twin_id = TwinId { id: smr_id, author };
 
-            smr_nodes.push(Self::start(playground, config, smr_id, storage, twin_id));
-            node_authors.push(author);
+            smr_nodes.push(Self::start(playground, config, storage, twin_id));
         }
-        (smr_nodes, node_authors)
+        smr_nodes
     }
 }
 
@@ -252,7 +231,7 @@ fn basic_start_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 0;
-    let (nodes, _) = SMRNode::start_num_nodes_with_twins(
+    let nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
@@ -303,7 +282,7 @@ fn drop_config_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 0;
-    let (mut nodes, mut node_authors) = SMRNode::start_num_nodes_with_twins(
+    let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
@@ -311,16 +290,11 @@ fn drop_config_test() {
         None,
     );
 
-    // Sort nodes by author, because FixedProposer chooses
-    // the node with the smallest author as the leader
-    nodes.sort();
-    node_authors.sort();
-
     // 4 honest nodes
-    let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
-    let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
-    let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
-    let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
+    let n0_twin_id = nodes[0].id;
+    let n1_twin_id = nodes[1].id;
+    let n2_twin_id = nodes[2].id;
+    let n3_twin_id = nodes[3].id;
 
     assert!(playground.split_network(vec![n2_twin_id], vec![n0_twin_id, n1_twin_id, n3_twin_id]));
 
@@ -373,7 +347,7 @@ fn twins_vote_dedup_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 1;
-    let (mut nodes, node_authors) = SMRNode::start_num_nodes_with_twins(
+    let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
@@ -382,12 +356,13 @@ fn twins_vote_dedup_test() {
     );
 
     // 4 honest nodes
-    let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
-    // twin of n0 has same author as node_authors[0]
-    let twin0_twin_id = *playground.get_twin_ids(node_authors[0]).get(1).unwrap();
-    let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
-    let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
-    let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
+    let n0_twin_id = nodes[0].id;
+    // twin of n0 has same author as node[0]
+    let twin0_twin_id = nodes[4].id;
+    assert_eq!(n0_twin_id.author, twin0_twin_id.author);
+    let n1_twin_id = nodes[1].id;
+    let n2_twin_id = nodes[2].id;
+    let n3_twin_id = nodes[3].id;
 
     assert!(playground.split_network(
         vec![n1_twin_id, n3_twin_id],
@@ -448,7 +423,7 @@ fn twins_proposer_test() {
         round_proposers.insert(i, 0);
     }
 
-    let (mut nodes, node_authors) = SMRNode::start_num_nodes_with_twins(
+    let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
@@ -457,14 +432,16 @@ fn twins_proposer_test() {
     );
 
     // 4 honest nodes
-    let n0_twin_id = *playground.get_twin_ids(node_authors[0]).get(0).unwrap();
+    let n0_twin_id = nodes[0].id;
     // twin of n0 has same author as node_authors[0]
-    let twin0_twin_id = *playground.get_twin_ids(node_authors[0]).get(1).unwrap();
-    let n1_twin_id = *playground.get_twin_ids(node_authors[1]).get(0).unwrap();
+    let twin0_twin_id = nodes[4].id;
+    assert_eq!(n0_twin_id.author, twin0_twin_id.author);
+    let n1_twin_id = nodes[1].id;
     // twin of n1 has same author as node_authors[1]
-    let twin1_twin_id = *playground.get_twin_ids(node_authors[1]).get(1).unwrap();
-    let n2_twin_id = *playground.get_twin_ids(node_authors[2]).get(0).unwrap();
-    let n3_twin_id = *playground.get_twin_ids(node_authors[3]).get(0).unwrap();
+    let twin1_twin_id = nodes[5].id;
+    assert_eq!(n1_twin_id.author, twin1_twin_id.author);
+    let n2_twin_id = nodes[2].id;
+    let n3_twin_id = nodes[3].id;
 
     // Create per round partitions
     let mut round_partitions: HashMap<u64, Vec<Vec<TwinId>>> = HashMap::new();
@@ -537,7 +514,7 @@ fn twins_commit_test() {
         round_proposers.insert(i, 0);
     }
 
-    let (mut nodes, _node_authors) = SMRNode::start_num_nodes_with_twins(
+    let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
