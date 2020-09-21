@@ -28,7 +28,7 @@ RUN ./docker/build-common.sh
 FROM debian-base AS pre-test
 
 # TODO: Unsure which of these are needed exactly for client
-RUN apt-get update && apt-get install -y python3-pip nano net-tools tcpdump iproute2 netcat \
+RUN apt-get update && apt-get install -y libssl1.1 python3-pip nano net-tools tcpdump iproute2 netcat \
     && apt-get clean && rm -r /var/lib/apt/lists/*
 
 # RUN apt-get install python3

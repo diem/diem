@@ -23,4 +23,4 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 
 [features]
 default = ["tls"]
-tls = ["reqwest/rustls-tls"]
+tls = ["reqwest/native-tls"]

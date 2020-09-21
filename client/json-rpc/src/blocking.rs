@@ -20,7 +20,7 @@ pub struct JsonRpcClient {
 impl JsonRpcClient {
     pub fn new(url: Url) -> Result<Self> {
         Ok(Self {
-            client: ClientBuilder::new().use_rustls_tls().build()?,
+            client: ClientBuilder::new().use_native_tls().build()?,
             url,
         })
     }
