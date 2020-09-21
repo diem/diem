@@ -7,7 +7,7 @@ use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
-    language_storage::{ModuleId, StructTag},
+    language_storage::{ModuleId, StructTag, TypeTag},
 };
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
@@ -166,19 +166,22 @@ impl RemoteCache for RemoteStore {
     }
 }
 
-fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
+fn call_script_with_args_ty_args_signers(
+    script: Vec<u8>,
+    args: Vec<Value>,
+    ty_args: Vec<TypeTag>,
+    signers: Vec<AccountAddress>,
+) -> VMResult<()> {
     let move_vm = MoveVM::new();
     let remote_view = RemoteStore {};
     let mut session = move_vm.new_session(&remote_view);
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
-    session.execute_script(
-        script,
-        vec![],
-        args,
-        vec![AccountAddress::random()],
-        &mut cost_strategy,
-    )
+    session.execute_script(script, ty_args, args, signers, &mut cost_strategy)
+}
+
+fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {
+    call_script_with_args_ty_args_signers(script, args, vec![], vec![])
 }
 
 #[test]
@@ -335,9 +338,11 @@ fn check_main_signature() {
         SignatureToken::Bool,
         SignatureToken::Address,
     ]));
-    call_script(
+    call_script_with_args_ty_args_signers(
         script,
         vec![Value::bool(false), Value::address(AccountAddress::random())],
+        vec![],
+        vec![AccountAddress::random()],
     )
     .expect("&Signer first argument is good");
     let script = make_script(Signature(vec![
@@ -473,4 +478,69 @@ fn check_constant_args() {
             .major_status(),
         StatusCode::TYPE_MISMATCH,
     );
+}
+
+#[test]
+fn check_signer_args() {
+    let two_signer_script = make_script(Signature(vec![
+        SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+        SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+    ]));
+    // too few signers (0)
+    assert_eq!(
+        call_script_with_args_ty_args_signers(two_signer_script.clone(), vec![], vec![], vec![])
+            .err()
+            .unwrap()
+            .major_status(),
+        StatusCode::TYPE_MISMATCH
+    );
+
+    // too few signers (1)
+    let one_signer = vec![AccountAddress::random()];
+    assert_eq!(
+        call_script_with_args_ty_args_signers(
+            two_signer_script.clone(),
+            vec![],
+            vec![],
+            one_signer,
+        )
+        .err()
+        .unwrap()
+        .major_status(),
+        StatusCode::TYPE_MISMATCH
+    );
+
+    // too many signers (3)
+    let three_signers = vec![
+        AccountAddress::random(),
+        AccountAddress::random(),
+        AccountAddress::random(),
+    ];
+    assert_eq!(
+        call_script_with_args_ty_args_signers(
+            two_signer_script.clone(),
+            vec![],
+            vec![],
+            three_signers
+        )
+        .err()
+        .unwrap()
+        .major_status(),
+        StatusCode::TYPE_MISMATCH
+    );
+
+    // correct number of signers (2)
+    let two_signers = vec![AccountAddress::random(), AccountAddress::random()];
+    call_script_with_args_ty_args_signers(two_signer_script, vec![], vec![], two_signers)
+        .expect("Expected two signers, passing two should work");
+
+    // too many signers (1) in a script that expects 0 is ok
+    let no_signer_script = make_script(Signature(vec![SignatureToken::U8]));
+    call_script_with_args_ty_args_signers(
+        no_signer_script,
+        vec![Value::u8(10)],
+        vec![],
+        vec![AccountAddress::random()],
+    )
+    .expect("Ok to pass oo many signers");
 }
