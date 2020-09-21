@@ -276,11 +276,24 @@ module Libra {
         )
     }
     spec fun burn {
+        include BurnAbortsIf<CoinType>;
+        include BurnEnsures<CoinType>;
+    }
+    spec schema BurnAbortsIf<CoinType> {
+        account: signer;
+        preburn_address: address;
+
         /// Must abort if the account does not have the BurnCapability [B12].
         aborts_if !exists<BurnCapability<CoinType>>(Signer::spec_address_of(account)) with Errors::REQUIRES_CAPABILITY;
 
         aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
-        include BurnAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+    }
+    spec schema BurnEnsures<CoinType> {
+        account: signer;
+        preburn_address: address;
+
+        include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
     /// Cancels the current burn request in the `Preburn` resource held
@@ -504,8 +517,8 @@ module Libra {
     }
     spec fun burn_with_capability {
         aborts_if !exists<Preburn<CoinType>>(preburn_address) with Errors::NOT_PUBLISHED;
-        include BurnAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
-        include BurnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnWithResourceCapEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
     /// Permanently removes the coins held in the `Preburn` resource (in to_burn field)
@@ -545,11 +558,11 @@ module Libra {
         };
     }
     spec fun burn_with_resource_cap {
-        include BurnAbortsIf<CoinType>;
-        include BurnEnsures<CoinType>;
+        include BurnWithResourceCapAbortsIf<CoinType>;
+        include BurnWithResourceCapEnsures<CoinType>;
     }
 
-    spec schema BurnAbortsIf<CoinType> {
+    spec schema BurnWithResourceCapAbortsIf<CoinType> {
         preburn: Preburn<CoinType>;
         include AbortsIfNoCurrency<CoinType>;
         let to_burn = preburn.to_burn.value;
@@ -559,7 +572,7 @@ module Libra {
         aborts_if info.preburn_value < to_burn with Errors::LIMIT_EXCEEDED;
     }
 
-    spec schema BurnEnsures<CoinType> {
+    spec schema BurnWithResourceCapEnsures<CoinType> {
         preburn: Preburn<CoinType>;
         ensures spec_currency_info<CoinType>().total_value
                 == old(spec_currency_info<CoinType>().total_value) - old(preburn.to_burn.value);
@@ -1158,11 +1171,10 @@ module Libra {
         /// required. MintCapability must be only granted to a TreasuryCompliance account [B11].
         /// Only `register_SCS_currency` creates MintCapability, which must abort if the account
         /// does not have the TreasuryCompliance role [B17].
-        // TODO(jkpark): This kind of spec needs to be rewritten later. The problem of this spec is
-        // that it is in the form of the schema application, so verified against all the functions
-        // only in this module. Even though this is verified, there might be a function in an other
-        // module that violates this property (by obtaining a MintCapability from `register_currency`
-        // and publishing it somewhere inappropriate).
+        // TODO(jkpark): this spec does not cover the following two scenarios:
+        // a function (possibly in an other module) obtains a MintCapability from `register_currency`, and
+        // (1) uses the MintCapability for minting without publishing it, and/or
+        // (2) stashes the MintCapability inside of an other struct in the global memory.
         apply PreserveMintCapAbsence<CoinType> to *<CoinType> except register_SCS_currency<CoinType>;
         apply Roles::AbortsIfNotTreasuryCompliance{account: tc_account} to register_SCS_currency<CoinType>;
 

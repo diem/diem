@@ -49,6 +49,10 @@ impl AccountAddress {
         self.0.to_vec()
     }
 
+    pub fn to_u8(self) -> [u8; Self::LENGTH] {
+        self.0
+    }
+
     pub fn from_hex_literal(literal: &str) -> Result<Self> {
         ensure!(literal.starts_with("0x"), "literal must start with 0x.");
 

@@ -14,45 +14,55 @@ module ValidatorOperatorConfig {
     const EVALIDATOR_OPERATOR_CONFIG: u64 = 0;
 
     public fun publish(
-        account: &signer,
+        validator_operator_account: &signer,
         lr_account: &signer,
         human_name: vector<u8>,
     ) {
         Roles::assert_libra_root(lr_account);
-        Roles::assert_validator_operator(account);
+        Roles::assert_validator_operator(validator_operator_account);
         assert(
-            !has_validator_operator_config(Signer::address_of(account)),
+            !has_validator_operator_config(Signer::address_of(validator_operator_account)),
             Errors::already_published(EVALIDATOR_OPERATOR_CONFIG)
         );
 
-        move_to(account, ValidatorOperatorConfig {
+        move_to(validator_operator_account, ValidatorOperatorConfig {
             human_name,
         });
     }
     spec fun publish {
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
         include Roles::AbortsIfNotValidatorOperator;
-        aborts_if has_validator_operator_config(Signer::spec_address_of(account)) with Errors::ALREADY_PUBLISHED;
-        ensures has_validator_operator_config(Signer::spec_address_of(account));
+        aborts_if has_validator_operator_config(Signer::spec_address_of(validator_operator_account))
+            with Errors::ALREADY_PUBLISHED;
+        ensures has_validator_operator_config(Signer::spec_address_of(validator_operator_account));
     }
 
 
     /// Get validator's account human name
     /// Aborts if there is no ValidatorOperatorConfig resource
-    public fun get_human_name(addr: address): vector<u8> acquires ValidatorOperatorConfig {
-        assert(has_validator_operator_config(addr), Errors::not_published(EVALIDATOR_OPERATOR_CONFIG));
-        *&borrow_global<ValidatorOperatorConfig>(addr).human_name
+    public fun get_human_name(validator_operator_addr: address): vector<u8> acquires ValidatorOperatorConfig {
+        assert(has_validator_operator_config(validator_operator_addr), Errors::not_published(EVALIDATOR_OPERATOR_CONFIG));
+        *&borrow_global<ValidatorOperatorConfig>(validator_operator_addr).human_name
     }
     spec fun get_human_name {
         pragma opaque;
-        aborts_if !has_validator_operator_config(addr) with Errors::NOT_PUBLISHED;
-        ensures result == get_human_name(addr);
+        aborts_if !has_validator_operator_config(validator_operator_addr) with Errors::NOT_PUBLISHED;
+        ensures result == get_human_name(validator_operator_addr);
     }
-    public fun has_validator_operator_config(addr: address): bool {
-        exists<ValidatorOperatorConfig>(addr)
+    public fun has_validator_operator_config(validator_operator_addr: address): bool {
+        exists<ValidatorOperatorConfig>(validator_operator_addr)
     }
     spec fun has_validator_operator_config {
-        ensures result == has_validator_operator_config(addr);
+        ensures result == has_validator_operator_config(validator_operator_addr);
     }
+
+    /// If address has a ValidatorOperatorConfig, it has a validator operator role.
+    /// This invariant is useful in LibraSystem so we don't have to check whether
+    /// every validator address has a validator role.
+    spec module {
+        invariant [global] forall addr1:address where has_validator_operator_config(addr1):
+            Roles::spec_has_validator_operator_role_addr(addr1);
+    }
+
 }
 }

@@ -16,7 +16,7 @@ use libra_types::{
 };
 use schemadb::DB;
 use std::sync::Arc;
-use storage_interface::TreeState;
+use storage_interface::{DbReader, TreeState};
 
 /// Provides functionalities for LibraDB data restore.
 #[derive(Clone)]
@@ -50,7 +50,7 @@ impl RestoreHandler {
         version: Version,
         expected_root_hash: HashValue,
     ) -> Result<JellyfishMerkleRestore<impl TreeReader + TreeWriter>> {
-        JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)
+        JellyfishMerkleRestore::new_overwrite(&*self.state_store, version, expected_root_hash)
     }
 
     pub fn save_ledger_infos(&self, ledger_infos: &[LedgerInfoWithSignatures]) -> Result<()> {
@@ -144,5 +144,12 @@ impl RestoreHandler {
             frozen_subtrees,
             state_root_hash,
         ))
+    }
+
+    pub fn get_next_expected_transaction_version(&self) -> Result<Version> {
+        Ok(self
+            .libradb
+            .get_latest_transaction_info_option()?
+            .map_or(0, |(ver, _txn_info)| ver + 1))
     }
 }

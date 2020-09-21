@@ -17,8 +17,6 @@ use move_vm_types::{
 };
 use std::collections::btree_map::BTreeMap;
 use vm::errors::*;
-use libra_metrics::{register_histogram, Histogram};
-use once_cell::sync::Lazy;
 
 /// Trait for the Move VM to abstract `StateView` operations.
 ///
@@ -168,7 +166,6 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         addr: AccountAddress,
         ty: &Type,
     ) -> PartialVMResult<&mut GlobalValue> {
-        let _timer = LIBRA_MOVEVM_LOAD_RESOURCE_SECONDS.start_timer();
         let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
             (addr, AccountDataCache::new())
         });
@@ -220,7 +217,6 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
     }
 
     fn load_module(&self, module_id: &ModuleId) -> VMResult<Vec<u8>> {
-        let _timer = LIBRA_MOVEVM_LOAD_MODULE_SECONDS.start_timer();
         if let Some(account_cache) = self.account_map.get(module_id.address()) {
             if let Some(blob) = account_cache.module_map.get(module_id) {
                 return Ok(blob.clone());
@@ -265,19 +261,3 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         Ok(self.event_data.push((guid, seq_num, ty, ty_layout, val)))
     }
 }
-
-pub static LIBRA_MOVEVM_LOAD_RESOURCE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_movevm_load_resource_seconds",
-        "The time spent in seconds to load resource"
-    )
-    .unwrap()
-});
-
-pub static LIBRA_MOVEVM_LOAD_MODULE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_movevm_load_module_seconds",
-        "The time spent in seconds to load module"
-    )
-    .unwrap()
-});

@@ -11,6 +11,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `publish_shared_ed25519_public_key`](#SCRIPT_Specification_publish_shared_ed25519_public_key)
 
 
 
@@ -83,3 +85,23 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_publish_shared_ed25519_public_key"></a>
+
+### Function `publish_shared_ed25519_public_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishAbortsIf">SharedEd25519PublicKey::PublishAbortsIf</a>{key: public_key};
+<b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishEnsures">SharedEd25519PublicKey::PublishEnsures</a>{key: public_key};
+</code></pre>

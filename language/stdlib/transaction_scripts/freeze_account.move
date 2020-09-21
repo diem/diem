@@ -18,6 +18,7 @@ use 0x1::SlidingNonce;
 /// e.g., freezing a Parent VASP will not effect the status any of its child
 /// accounts and vice versa.
 ///
+///
 /// ## Events
 /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
 /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published

@@ -75,6 +75,8 @@ pub struct Options {
     /// Options for the ABI generator.
     pub abigen: AbigenOptions,
     /// Options for the error map generator.
+    /// TODO: this currently create errors during deserialization, so skip them for this.
+    #[serde(skip_serializing)]
     pub errmapgen: ErrmapOptions,
 }
 

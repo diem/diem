@@ -617,6 +617,7 @@ pub enum ScriptCall {
     /// e.g., freezing a Parent VASP will not effect the status any of its child
     /// accounts and vice versa.
     ///
+
     /// ## Events
     /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
     /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published
@@ -2429,6 +2430,7 @@ pub fn encode_create_validator_operator_account_script(
 /// e.g., freezing a Parent VASP will not effect the status any of its child
 /// accounts and vice versa.
 ///
+
 /// ## Events
 /// Successful execution of this transaction will emit a `AccountFreezing::FreezeAccountEvent` on
 /// the `freeze_event_handle` held in the `AccountFreezing::FreezeEventsHolder` resource published

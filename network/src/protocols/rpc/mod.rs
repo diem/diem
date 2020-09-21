@@ -547,7 +547,6 @@ async fn handle_outbound_rpc_inner(
 ) -> Result<Bytes, RpcError> {
     let req_len = req_data.len();
     let peer_id = peer_handle.peer_id();
-    let peer_id_str = peer_id.short_str();
 
     // Create NetworkMessage to be sent over the wire.
     let request = NetworkMessage::RpcRequest(RpcRequest {
@@ -562,13 +561,14 @@ async fn handle_outbound_rpc_inner(
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Sending outbound rpc request with request_id {} to peer: {:?}",
+        "{} Sending outbound rpc request with request_id {} and protocol_id {} to peer {}",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
     );
     // Start timer to collect RPC latency.
-    let timer = counters::rpc_latency(network_context).start_timer();
+    let timer = counters::outbound_rpc_request_latency(network_context, protocol_id).start_timer();
     peer_handle.send_message(request, protocol_id).await?;
 
     // Collect counters for requests sent.
@@ -579,10 +579,11 @@ async fn handle_outbound_rpc_inner(
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Waiting to receive response for request_id {} from peer: {:?}",
+        "{} Waiting to receive response for request_id {} and protocol_id {} from peer {}",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
     );
     let response = response_rx.await?;
     let latency = timer.stop_and_record();
@@ -590,13 +591,13 @@ async fn handle_outbound_rpc_inner(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
         protocol_id = protocol_id,
-        "{} Received response for request_id {} from peer: {:?} \
-        with {:.6} seconds of latency. Request protocol_id: {}",
+        "{} Received response for request_id {} and protocol_id {} from peer {} \
+        with {:.6} seconds of latency",
         network_context,
         request_id,
-        peer_id_str,
+        protocol_id,
+        peer_id.short_str(),
         latency,
-        protocol_id.as_str(),
     );
 
     // Collect counters for received response.
@@ -615,26 +616,29 @@ async fn handle_inbound_request_inner(
 ) -> Result<(), RpcError> {
     let req_data = request.raw_request;
     let request_id = request.request_id;
+    let protocol_id = request.protocol_id;
     let peer_id = peer_handle.peer_id();
-    let peer_id_str = peer_id.short_str();
 
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Received inbound request with request_id {} from peer: {:?}",
+        "{} Received inbound request with request_id {} and protocol_id {} from peer {}",
         network_context,
         request_id,
-        peer_id_str
+        protocol_id,
+        peer_id.short_str(),
     );
+
     // Collect counters for received request.
     counters::rpc_messages(network_context, REQUEST_LABEL, RECEIVED_LABEL).inc();
     counters::rpc_bytes(network_context, REQUEST_LABEL, RECEIVED_LABEL)
         .inc_by(req_data.len() as i64);
+    let timer = counters::inbound_rpc_handler_latency(network_context, protocol_id).start_timer();
 
     // Forward request to upper layer.
     let (res_tx, res_rx) = oneshot::channel();
     let notification = RpcNotification::RecvRpc(InboundRpcRequest {
-        protocol_id: request.protocol_id,
+        protocol_id,
         data: Bytes::from(req_data),
         res_tx,
     });
@@ -644,22 +648,26 @@ async fn handle_inbound_request_inner(
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Waiting for upstream response for inbound request with request_id {} from peer: {:?}",
+        "{} Waiting for upstream response for inbound request with request_id {} and protocol_id {} from peer {}",
         network_context,
         request_id,
-        peer_id_str
+        protocol_id,
+        peer_id.short_str(),
     );
     let res_data = res_rx.await??;
     let res_len = res_data.len();
+    let latency = timer.stop_and_record();
 
     // Send response to remote peer.
     trace!(
         NetworkSchema::new(&network_context).remote_peer(&peer_id),
         request_id = request_id,
-        "{} Sending response for request_id {} to peer: {:?}",
+        "{} Sending response for request_id {} and protocol_id {} to peer {}. Upstream handler took {:.6} seconds.",
         network_context,
         request_id,
-        peer_id_str
+        protocol_id,
+        peer_id.short_str(),
+        latency,
     );
     let response = RpcResponse {
         raw_response: Vec::from(res_data.as_ref()),
@@ -667,7 +675,7 @@ async fn handle_inbound_request_inner(
         priority: request.priority,
     };
     peer_handle
-        .send_message(NetworkMessage::RpcResponse(response), request.protocol_id)
+        .send_message(NetworkMessage::RpcResponse(response), protocol_id)
         .await?;
 
     // Collect counters for sent response.
