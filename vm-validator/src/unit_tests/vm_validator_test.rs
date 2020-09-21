@@ -458,10 +458,9 @@ fn test_validate_gas_currency_with_bad_identifier() {
         None,     /* script */
         u64::MAX, /* expiration_time */
         0,        /* gas_unit_price */
-        // The gas currency code is treated as a Move identifier, so it needs to follow
-        // the rules about starting with a letter or underscore and containing only
-        // alphanumeric and underscore characters.
-        "1BadID".to_string(),
+        // The gas currency code must be composed of alphanumeric characters and the
+        // first character must be a letter.
+        "Bad_ID".to_string(),
         None, /* max_gas_amount */
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();

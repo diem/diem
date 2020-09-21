@@ -105,7 +105,7 @@ impl Experiment for Reconfiguration {
         let mut full_node_client = full_node.json_rpc_client();
         let mut libra_root_account = context
             .tx_emitter
-            .load_libra_root_account(&full_node)
+            .load_libra_root_account(&full_node_client)
             .await?;
         let allowed_nonce = 0;
         let emit_job = if self.emit_txn {

@@ -78,6 +78,7 @@ pub struct EpochManager {
     storage: Arc<dyn PersistentLivenessStorage>,
     safety_rules_manager: SafetyRulesManager,
     processor: Option<RoundProcessor>,
+    reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 }
 
 impl EpochManager {
@@ -90,6 +91,7 @@ impl EpochManager {
         txn_manager: Arc<dyn TxnManager>,
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
+        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
@@ -107,6 +109,7 @@ impl EpochManager {
             storage,
             safety_rules_manager,
             processor: None,
+            reconfig_events,
         }
     }
 
@@ -263,8 +266,10 @@ impl EpochManager {
             .context(format!(
                 "[EpochManager] State sync to new epoch {}",
                 ledger_info
-            ))
-        // state_computer notifies reconfiguration in another channel
+            ))?;
+
+        monitor!("reconfig", self.expect_new_epoch().await);
+        Ok(())
     }
 
     async fn start_round_manager(&mut self, recovery_data: RecoveryData, epoch_state: EpochState) {
@@ -362,7 +367,7 @@ impl EpochManager {
         info!("SyncProcessor started");
     }
 
-    pub async fn start_processor(&mut self, payload: OnChainConfigPayload) {
+    async fn start_processor(&mut self, payload: OnChainConfigPayload) {
         let validator_set: ValidatorSet = payload
             .get()
             .expect("failed to get ValidatorSet from payload");
@@ -382,7 +387,7 @@ impl EpochManager {
         }
     }
 
-    pub async fn process_message(
+    async fn process_message(
         &mut self,
         peer_id: AccountAddress,
         consensus_msg: ConsensusMsg,
@@ -496,7 +501,7 @@ impl EpochManager {
             .expect("[EpochManager] not started yet")
     }
 
-    pub async fn process_block_retrieval(
+    async fn process_block_retrieval(
         &mut self,
         request: IncomingBlockRetrievalRequest,
     ) -> anyhow::Result<()> {
@@ -506,10 +511,18 @@ impl EpochManager {
         }
     }
 
-    pub async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
+    async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
         match self.processor_mut() {
             RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
             _ => unreachable!("RoundManager not started yet"),
+        }
+    }
+
+    async fn expect_new_epoch(&mut self) {
+        if let Some(payload) = self.reconfig_events.next().await {
+            self.start_processor(payload).await;
+        } else {
+            panic!("Reconfig sender dropped, unable to start new epoch.");
         }
     }
 
@@ -517,20 +530,13 @@ impl EpochManager {
         mut self,
         mut round_timeout_sender_rx: channel::Receiver<Round>,
         mut network_receivers: NetworkReceivers,
-        mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) {
         // initial start of the processor
-        if let Some(payload) = reconfig_events.next().await {
-            self.start_processor(payload).await;
-        }
+        self.expect_new_epoch().await;
         loop {
             let result = monitor!(
                 "main_loop",
                 select! {
-                    payload = reconfig_events.select_next_some() => {
-                        monitor!("reconfig", self.start_processor(payload).await);
-                        Ok(())
-                    }
                     msg = network_receivers.consensus_messages.select_next_some() => {
                         monitor!("process_message", self.process_message(msg.0, msg.1).await)
                     }

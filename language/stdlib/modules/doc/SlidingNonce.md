@@ -10,6 +10,7 @@
 -  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
 -  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
 -  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
+-  [Const `ENONCE_ALREADY_PUBLISHED`](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
 -  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
@@ -104,6 +105,18 @@ The nonce was already recorded previously
 
 
 <pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
+</code></pre>
+
+
+
+<a name="0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED"></a>
+
+## Const `ENONCE_ALREADY_PUBLISHED`
+
+The sliding nonce resource was already published
+
+
+<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>: u64 = 4;
 </code></pre>
 
 
@@ -219,6 +232,7 @@ This is required before other functions in this module can be called for `accoun
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer) {
+    <b>assert</b>(!exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
     move_to(account, <a href="#0x1_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
 }
 </code></pre>
@@ -253,7 +267,9 @@ Only the libra root account can create this resource for different accounts
         min_nonce: 0,
         nonce_mask: 0,
     };
-    move_to(account, new_resource)
+    <b>assert</b>(!exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
+    move_to(account, new_resource);
 }
 </code></pre>
 

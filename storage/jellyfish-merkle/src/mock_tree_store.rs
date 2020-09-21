@@ -13,15 +13,18 @@ use std::{
 };
 
 #[derive(Default)]
-pub struct MockTreeStore(RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>);
+pub struct MockTreeStore {
+    data: RwLock<(HashMap<NodeKey, Node>, BTreeSet<StaleNodeIndex>)>,
+    allow_overwrite: bool,
+}
 
 impl TreeReader for MockTreeStore {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
-        Ok(self.0.read().unwrap().0.get(node_key).cloned())
+        Ok(self.data.read().unwrap().0.get(node_key).cloned())
     }
 
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
-        let locked = self.0.read().unwrap();
+        let locked = self.data.read().unwrap();
         let mut node_key_and_node: Option<(NodeKey, LeafNode)> = None;
 
         for (key, value) in locked.0.iter() {
@@ -40,17 +43,26 @@ impl TreeReader for MockTreeStore {
 
 impl TreeWriter for MockTreeStore {
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
-        let mut locked = self.0.write().unwrap();
+        let mut locked = self.data.write().unwrap();
         for (node_key, node) in node_batch.clone() {
-            assert_eq!(locked.0.insert(node_key, node), None);
+            let replaced = locked.0.insert(node_key, node);
+            if !self.allow_overwrite {
+                assert_eq!(replaced, None);
+            }
         }
         Ok(())
     }
 }
 
 impl MockTreeStore {
+    pub fn new(allow_overwrite: bool) -> Self {
+        let mut res = Self::default();
+        res.allow_overwrite = allow_overwrite;
+        res
+    }
+
     pub fn put_node(&self, node_key: NodeKey, node: Node) -> Result<()> {
-        match self.0.write().unwrap().0.entry(node_key) {
+        match self.data.write().unwrap().0.entry(node_key) {
             Entry::Occupied(o) => bail!("Key {:?} exists.", o.key()),
             Entry::Vacant(v) => {
                 v.insert(node);
@@ -60,7 +72,7 @@ impl MockTreeStore {
     }
 
     fn put_stale_node_index(&self, index: StaleNodeIndex) -> Result<()> {
-        let is_new_entry = self.0.write().unwrap().1.insert(index);
+        let is_new_entry = self.data.write().unwrap().1.insert(index);
         ensure!(is_new_entry, "Duplicated retire log.");
         Ok(())
     }
@@ -80,7 +92,7 @@ impl MockTreeStore {
     }
 
     pub fn purge_stale_nodes(&self, least_readable_version: Version) -> Result<()> {
-        let mut wlocked = self.0.write().unwrap();
+        let mut wlocked = self.data.write().unwrap();
 
         // Only records retired before or at `least_readable_version` can be purged in order
         // to keep that version still readable.
@@ -101,6 +113,6 @@ impl MockTreeStore {
     }
 
     pub fn num_nodes(&self) -> usize {
-        self.0.read().unwrap().0.len()
+        self.data.read().unwrap().0.len()
     }
 }

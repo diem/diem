@@ -12,6 +12,7 @@ pub mod compiled_unit;
 pub mod errors;
 pub mod expansion;
 pub mod hlir;
+pub mod interface_generator;
 pub mod ir_translation;
 pub mod naming;
 pub mod parser;

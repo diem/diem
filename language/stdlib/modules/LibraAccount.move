@@ -172,10 +172,20 @@ module LibraAccount {
     /// Initialize this module. This is only callable from genesis.
     public fun initialize(
         lr_account: &signer,
+        dummy_auth_key_prefix: vector<u8>,
     ) {
         LibraTimestamp::assert_genesis();
         // Operational constraint, not a privilege constraint.
         CoreAddresses::assert_libra_root(lr_account);
+        create_libra_root_account(
+            copy dummy_auth_key_prefix,
+        );
+        // Create the treasury compliance account
+        create_treasury_compliance_account(
+            lr_account,
+            copy dummy_auth_key_prefix,
+        );
+
         assert(
             !exists<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()),
             Errors::already_published(EACCOUNT_OPERATIONS_CAPABILITY)
@@ -900,28 +910,36 @@ module LibraAccount {
         destroy_signer(new_account);
     }
 
+    spec fun make_account {
+        /// Needed to prove invariant
+        let new_account_addr = Signer::address_of(new_account);
+        requires exists<Roles::RoleId>(new_account_addr);
+    }
+
     /// Creates the libra root account in genesis.
-    public fun create_libra_root_account(
-        new_account_address: address,
+    fun create_libra_root_account(
         auth_key_prefix: vector<u8>,
     ) {
         LibraTimestamp::assert_genesis();
-        let new_account = create_signer(new_account_address);
+        let new_account = create_signer(CoreAddresses::LIBRA_ROOT_ADDRESS());
         CoreAddresses::assert_libra_root(&new_account);
+        Roles::grant_libra_root_role(&new_account);
         SlidingNonce::publish_nonce_resource(&new_account, &new_account);
+        Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
-    public fun create_treasury_compliance_account(
+    fun create_treasury_compliance_account(
         lr_account: &signer,
-        new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
         LibraTimestamp::assert_genesis();
         Roles::assert_libra_root(lr_account);
+        let new_account_address = CoreAddresses::TREASURY_COMPLIANCE_ADDRESS();
         let new_account = create_signer(new_account_address);
+        Roles::grant_treasury_compliance_role(&new_account, lr_account);
         SlidingNonce::publish_nonce_resource(lr_account, &new_account);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
@@ -1271,30 +1289,30 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     public fun create_validator_account(
-        creator_account: &signer,
+        lr_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) {
         let new_account = create_signer(new_account_address);
-        // The creator account is verified to have the libra root role in `Roles::new_validator_role`
-        Roles::new_validator_role(creator_account, &new_account);
+        // The lr_account account is verified to have the libra root role in `Roles::new_validator_role`
+        Roles::new_validator_role(lr_account, &new_account);
         Event::publish_generator(&new_account);
-        ValidatorConfig::publish(&new_account, creator_account, human_name);
+        ValidatorConfig::publish(&new_account, lr_account, human_name);
         make_account(new_account, auth_key_prefix)
     }
 
     public fun create_validator_operator_account(
-        creator_account: &signer,
+        lr_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
     ) {
         let new_account = create_signer(new_account_address);
-        // The creator account is verified to have the libra root role in `Roles::new_validator_operator_role`
-        Roles::new_validator_operator_role(creator_account, &new_account);
+        // The lr_account is verified to have the libra root role in `Roles::new_validator_operator_role`
+        Roles::new_validator_operator_role(lr_account, &new_account);
         Event::publish_generator(&new_account);
-        ValidatorOperatorConfig::publish(&new_account, creator_account, human_name);
+        ValidatorOperatorConfig::publish(&new_account, lr_account, human_name);
         make_account(new_account, auth_key_prefix)
     }
 
@@ -1373,7 +1391,8 @@ module LibraAccount {
         /// Only `make_account` creates KeyRotationCap [B26][C26]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_key_rotation_capability` restores KeyRotationCap, and does not create new one.
-        apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account, restore_key_rotation_capability;
+        apply PreserveKeyRotationCapAbsence to * except make_account, create_*_account,
+              restore_key_rotation_capability, initialize;
 
         /// Every account holds either no key rotation capability (because KeyRotationCapability has been delegated)
         /// or the key rotation capability for addr itself [B26].
@@ -1400,12 +1419,21 @@ module LibraAccount {
         /// Only `make_account` creates WithdrawCap [B27][C27]. `create_*_account` only calls
         /// `make_account`, and does not pack KeyRotationCap by itself.
         /// `restore_withdraw_capability` restores WithdrawCap, and does not create new one.
-        apply PreserveWithdrawCapAbsence to * except make_account, create_*_account, restore_withdraw_capability;
+        apply PreserveWithdrawCapAbsence to * except make_account, create_*_account,
+                restore_withdraw_capability, initialize;
 
         /// Every account holds either no withdraw capability (because withdraw cap has been delegated)
         /// or the withdraw capability for addr itself [B27].
         invariant [global] forall addr1: address where exists_at(addr1):
             delegated_withdraw_capability(addr1) || spec_holds_own_withdraw_cap(addr1);
+    }
+
+    // TODO (dd): For each account type, specify that it is set up properly, including other
+    // published resources.
+
+    spec module {
+        /// Every address that has a published RoleId also has a published Account.
+        invariant [global] forall addr1: address where exists_at(addr1): exists<Roles::RoleId>(addr1);
     }
 
     /// only rotate_authentication_key can rotate authentication_key [B26].

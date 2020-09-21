@@ -16,24 +16,11 @@ proptest! {
     #[test]
     fn test_restore_without_interruption(
         btree in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
+        target_version in 0u64..2000,
     ) {
-        let (db, version) = init_mock_db(&btree.clone().into_iter().collect());
-        let tree = JellyfishMerkleTree::new(&db);
-        let expected_root_hash = tree.get_root_hash(version).unwrap();
-
-        // For this test, restore everything without interruption.
         let restore_db = MockTreeStore::default();
-        let mut restore =
-            JellyfishMerkleRestore::new(&restore_db, version, expected_root_hash).unwrap();
-        for (key, value) in &btree {
-            let proof = tree.get_range_proof(*key, version).unwrap();
-            restore
-                .add_chunk(vec![(*key, value.clone())], proof)
-                .unwrap();
-        }
-        restore.finish().unwrap();
-
-        assert_success(&restore_db, expected_root_hash, &btree, version);
+        // For this test, restore everything without interruption.
+        restore_without_interruption(&btree, target_version, &restore_db, true);
     }
 
     #[test]
@@ -88,6 +75,18 @@ proptest! {
 
         assert_success(&restore_db, expected_root_hash, &all, version);
     }
+
+    #[test]
+    fn test_overwrite(
+        btree1 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
+        btree2 in btree_map(any::<HashValue>(), any::<AccountStateBlob>(), 1..1000),
+        target_version in 0u64..2000,
+    ) {
+        let restore_db = MockTreeStore::new(true /* allow_overwrite */);
+        restore_without_interruption(&btree1, target_version, &restore_db, true);
+        // overwrite, an entirely different tree
+        restore_without_interruption(&btree2, target_version, &restore_db, false);
+    }
 }
 
 fn assert_success(
@@ -103,4 +102,28 @@ fn assert_success(
 
     let actual_root_hash = tree.get_root_hash(version).unwrap();
     assert_eq!(actual_root_hash, expected_root_hash);
+}
+
+fn restore_without_interruption(
+    btree: &BTreeMap<HashValue, AccountStateBlob>,
+    target_version: Version,
+    target_db: &MockTreeStore,
+    try_resume: bool,
+) {
+    let (db, source_version) = init_mock_db(&btree.iter().map(|(k, v)| (*k, v.clone())).collect());
+    let tree = JellyfishMerkleTree::new(&db);
+    let expected_root_hash = tree.get_root_hash(source_version).unwrap();
+
+    let mut restore =
+        JellyfishMerkleRestore::new_impl(target_db, target_version, expected_root_hash, try_resume)
+            .unwrap();
+    for (key, value) in btree {
+        let proof = tree.get_range_proof(*key, source_version).unwrap();
+        restore
+            .add_chunk(vec![(*key, value.clone())], proof)
+            .unwrap();
+    }
+    restore.finish().unwrap();
+
+    assert_success(&target_db, expected_root_hash, &btree, target_version);
 }

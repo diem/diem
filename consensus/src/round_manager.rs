@@ -199,6 +199,9 @@ impl RoundManager {
         storage: Arc<dyn PersistentLivenessStorage>,
         sync_only: bool,
     ) -> Self {
+        counters::OP_COUNTERS
+            .gauge("sync_only")
+            .set(sync_only as i64);
         Self {
             epoch_state,
             block_store,
