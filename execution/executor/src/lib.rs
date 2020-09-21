@@ -447,7 +447,6 @@ where
             self.cache.synced_trees().state_tree(),
         );
         let vm_outputs = {
-            // Timer for execute block
             let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
             fail_point!("executor::vm_execute_chunk", |_| {
                 Err(anyhow::anyhow!("Injected error in execute_chunk"))
