@@ -30,4 +30,8 @@ use 0x1::SharedEd25519PublicKey;
 fun rotate_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
     SharedEd25519PublicKey::rotate_key(account, public_key)
 }
+spec fun rotate_shared_ed25519_public_key {
+    include SharedEd25519PublicKey::RotateKeyAbortsIf{new_public_key: public_key};
+    include SharedEd25519PublicKey::RotateKeyEnsures{new_public_key: public_key};
+}
 }

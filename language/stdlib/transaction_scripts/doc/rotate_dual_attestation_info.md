@@ -12,6 +12,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `rotate_dual_attestation_info`](#SCRIPT_Specification_rotate_dual_attestation_info)
 
 
 
@@ -99,3 +101,25 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_rotate_dual_attestation_info"></a>
+
+### Function `rotate_dual_attestation_info`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateBaseUrlAbortsIf">DualAttestation::RotateBaseUrlAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">DualAttestation::RotateBaseUrlEnsures</a>;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">DualAttestation::RotateCompliancePublicKeyAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">DualAttestation::RotateCompliancePublicKeyEnsures</a>;
+</code></pre>

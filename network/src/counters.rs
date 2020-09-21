@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::protocols::wire::handshake::v1::ProtocolId;
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
     register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, Histogram,
@@ -17,9 +18,10 @@ pub const RESPONSE_LABEL: &str = "response";
 // some state labels
 pub const CANCELED_LABEL: &str = "canceled";
 pub const DECLINED_LABEL: &str = "declined";
-pub const FAILED_LABEL: &str = "failed";
 pub const RECEIVED_LABEL: &str = "received";
 pub const SENT_LABEL: &str = "sent";
+pub const SUCCEEDED_LABEL: &str = "succeeded";
+pub const FAILED_LABEL: &str = "failed";
 
 pub static LIBRA_NETWORK_PEERS: Lazy<IntGaugeVec> = Lazy::new(|| {
     register_int_gauge_vec!(
@@ -57,17 +59,61 @@ pub static LIBRA_NETWORK_PEER_CONNECTED: Lazy<IntGaugeVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub fn peer_connected(network_context: &NetworkContext, peer_id: &PeerId, v: i64) {
+pub fn peer_connected(network_context: &NetworkContext, remote_peer_id: &PeerId, v: i64) {
     if network_context.role().is_validator() {
         LIBRA_NETWORK_PEER_CONNECTED
             .with_label_values(&[
                 network_context.role().as_str(),
                 network_context.network_id().as_str(),
                 network_context.peer_id().short_str().as_str(),
-                peer_id.short_str().as_str(),
+                remote_peer_id.short_str().as_str(),
             ])
             .set(v)
     }
+}
+
+pub static LIBRA_NETWORK_PENDING_CONNECTION_UPGRADES: Lazy<IntGaugeVec> = Lazy::new(|| {
+    register_int_gauge_vec!(
+        "libra_network_pending_connection_upgrades",
+        "Number of concurrent inbound or outbound connections we're currently negotiating",
+        &["role_type", "network_id", "peer_id", "direction"]
+    )
+    .unwrap()
+});
+
+pub fn pending_connection_upgrades(
+    network_context: &NetworkContext,
+    direction: ConnectionOrigin,
+) -> IntGauge {
+    LIBRA_NETWORK_PENDING_CONNECTION_UPGRADES.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        direction.as_str(),
+    ])
+}
+
+pub static LIBRA_NETWORK_CONNECTION_UPGRADE_TIME: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_network_connection_upgrade_time_seconds",
+        "Time to complete a new inbound or outbound connection upgrade",
+        &["role_type", "network_id", "peer_id", "direction", "state"]
+    )
+    .unwrap()
+});
+
+pub fn connection_upgrade_time(
+    network_context: &NetworkContext,
+    direction: ConnectionOrigin,
+    state: &'static str,
+) -> Histogram {
+    LIBRA_NETWORK_CONNECTION_UPGRADE_TIME.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        direction.as_str(),
+        state,
+    ])
 }
 
 pub static LIBRA_NETWORK_DISCOVERY_NOTES: Lazy<IntGaugeVec> = Lazy::new(|| {
@@ -125,24 +171,48 @@ pub fn rpc_bytes(
     ])
 }
 
-// TODO(philiphayes): specify that this is outbound rpc only
 // TODO(philiphayes): somehow get per-peer latency metrics without using a
 // separate peer_id label ==> cardinality explosion.
 
-pub static LIBRA_NETWORK_RPC_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+pub static LIBRA_NETWORK_OUTBOUND_RPC_REQUEST_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
     register_histogram_vec!(
-        "libra_network_rpc_latency_seconds",
-        "RPC request latency in seconds",
-        &["role_type", "network_id", "peer_id"]
+        "libra_network_outbound_rpc_request_latency_seconds",
+        "Outbound RPC request latency in seconds",
+        &["role_type", "network_id", "peer_id", "protocol_id"]
     )
     .unwrap()
 });
 
-pub fn rpc_latency(network_context: &NetworkContext) -> Histogram {
-    LIBRA_NETWORK_RPC_LATENCY.with_label_values(&[
+pub fn outbound_rpc_request_latency(
+    network_context: &NetworkContext,
+    protocol_id: ProtocolId,
+) -> Histogram {
+    LIBRA_NETWORK_OUTBOUND_RPC_REQUEST_LATENCY.with_label_values(&[
         network_context.role().as_str(),
         network_context.network_id().as_str(),
         network_context.peer_id().short_str().as_str(),
+        protocol_id.as_str(),
+    ])
+}
+
+pub static LIBRA_NETWORK_INBOUND_RPC_HANDLER_LATENCY: Lazy<HistogramVec> = Lazy::new(|| {
+    register_histogram_vec!(
+        "libra_network_inbound_rpc_handler_latency_seconds",
+        "Inbound RPC request application handler latency in seconds",
+        &["role_type", "network_id", "peer_id", "protocol_id"]
+    )
+    .unwrap()
+});
+
+pub fn inbound_rpc_handler_latency(
+    network_context: &NetworkContext,
+    protocol_id: ProtocolId,
+) -> Histogram {
+    LIBRA_NETWORK_INBOUND_RPC_HANDLER_LATENCY.with_label_values(&[
+        network_context.role().as_str(),
+        network_context.network_id().as_str(),
+        network_context.peer_id().short_str().as_str(),
+        protocol_id.as_str(),
     ])
 }
 

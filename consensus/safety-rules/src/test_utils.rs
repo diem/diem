@@ -220,6 +220,7 @@ pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
         signer.private_key().clone(),
         Ed25519PrivateKey::generate_for_testing(),
         waypoint,
+        true,
     )
 }
 

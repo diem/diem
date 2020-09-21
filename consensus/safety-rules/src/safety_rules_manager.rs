@@ -45,9 +45,10 @@ pub fn storage(config: &SafetyRulesConfig) -> PersistentSafetyStorage {
             consensus_private_key,
             execution_private_key,
             waypoint,
+            config.enable_cached_safety_data,
         )
     } else {
-        PersistentSafetyStorage::new(internal_storage)
+        PersistentSafetyStorage::new(internal_storage, config.enable_cached_safety_data)
     }
 }
 

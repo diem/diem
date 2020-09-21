@@ -17,6 +17,8 @@
 -  [Function `multi_ed25519_authentication_key`](#0x1_Authenticator_multi_ed25519_authentication_key)
 -  [Function `public_keys`](#0x1_Authenticator_public_keys)
 -  [Function `threshold`](#0x1_Authenticator_threshold)
+-  [Specification](#0x1_Authenticator_Specification)
+    -  [Function `ed25519_authentication_key`](#0x1_Authenticator_Specification_ed25519_authentication_key)
 
 Move representation of the authenticator types used in Libra:
 - Ed25519 (single-sig)
@@ -288,3 +290,34 @@ Return the threshold for the multisig policy <code>k</code>
 
 
 </details>
+
+<a name="0x1_Authenticator_Specification"></a>
+
+## Specification
+
+
+
+<a name="0x1_Authenticator_spec_ed25519_authentication_key"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Authenticator_spec_ed25519_authentication_key">spec_ed25519_authentication_key</a>(public_key: vector&lt;u8&gt;): vector&lt;u8&gt;;
+</code></pre>
+
+
+
+<a name="0x1_Authenticator_Specification_ed25519_authentication_key"></a>
+
+### Function `ed25519_authentication_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Authenticator_ed25519_authentication_key">ed25519_authentication_key</a>(public_key: vector&lt;u8&gt;): vector&lt;u8&gt;
+</code></pre>
+
+
+
+
+<pre><code>pragma opaque = <b>true</b>;
+pragma verify = <b>false</b>;
+<b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_Authenticator_spec_ed25519_authentication_key">spec_ed25519_authentication_key</a>(public_key);
+</code></pre>

@@ -23,7 +23,6 @@ use crate::{
         LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
         LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
         LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
-        LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -750,8 +749,6 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             };
 
             trace_code_block!("executor::process_vm_outputs", {"block", block_id});
-            let _timer = LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS.start_timer();
-
             let status: Vec<_> = vm_outputs
                 .iter()
                 .map(TransactionOutput::status)

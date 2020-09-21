@@ -21,8 +21,6 @@ use vm::{
     file_format::SignatureToken,
     CompiledModule, IndexKind,
 };
-use libra_metrics::{register_histogram, Histogram};
-use once_cell::sync::Lazy;
 
 /// An instantiation of the MoveVM.
 pub(crate) struct VMRuntime {
@@ -133,7 +131,6 @@ impl VMRuntime {
         check_args(&signers_and_args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script
-        let _timer = LIBRA_MOVEVM_INTERPRETER_RUN_SCRIPT_SECONDS.start_timer();
         Interpreter::entrypoint(
             main,
             type_params,
@@ -155,10 +152,9 @@ impl VMRuntime {
     ) -> VMResult<()> {
         // load the function in the given module, perform verification of the module and
         // its dependencies if the module was not loaded
-        let (func, type_params) = {
+        let (func, type_params) =
             self.loader
-                .load_function(function_name, module, &ty_args, data_store)?
-        };
+                .load_function(function_name, module, &ty_args, data_store)?;
 
         // check the arguments provided are of restricted types
         check_args(&args).map_err(|e| e.finish(Location::Module(module.clone())))?;
@@ -187,11 +183,3 @@ fn check_args(args: &[Value]) -> PartialVMResult<()> {
     }
     Ok(())
 }
-
-pub static LIBRA_MOVEVM_INTERPRETER_RUN_SCRIPT_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_movevm_interpreter_run_script_seconds",
-        "The time spent in seconds by interpreter to run the script"
-    )
-    .unwrap()
-});

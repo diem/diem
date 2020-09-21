@@ -18,8 +18,6 @@ use move_core_types::{
 use move_vm_runtime::data_cache::RemoteCache;
 use std::collections::btree_map::BTreeMap;
 use vm::errors::*;
-use libra_metrics::{register_histogram, Histogram};
-use once_cell::sync::Lazy;
 
 /// A local cache for a given a `StateView`. The cache is private to the Libra layer
 /// but can be used as a one shot cache for systems that need a simple `RemoteCache`
@@ -70,7 +68,6 @@ impl<'a> StateViewCache<'a> {
 impl<'block> StateView for StateViewCache<'block> {
     // Get some data either through the cache or the `StateView` on a cache miss.
     fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
-        let _timer = LIBRA_VM_STATEVIEW_GET_SECONDS.start_timer();
         match self.data_map.get(access_path) {
             Some(opt_data) => Ok(opt_data.clone()),
             None => match self.data_view.get(&access_path) {
@@ -150,11 +147,3 @@ impl<'a, S: StateView> ConfigStorage for RemoteStorage<'a, S> {
         self.get(&access_path).ok()?
     }
 }
-
-pub static LIBRA_VM_STATEVIEW_GET_SECONDS: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_stateviewm_get_seconds",
-        "The time spent in seconds to fetch the data either from the cache or StateView"
-    )
-    .unwrap()
-});

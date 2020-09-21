@@ -25,6 +25,7 @@ pub struct SafetyRulesConfig {
     pub verify_vote_proposal_signature: bool,
     // Read/Write/Connect networking operation timeout in milliseconds.
     pub network_timeout_ms: u64,
+    pub enable_cached_safety_data: bool,
 }
 
 impl Default for SafetyRulesConfig {
@@ -37,6 +38,7 @@ impl Default for SafetyRulesConfig {
             verify_vote_proposal_signature: true,
             // Default value of 30seconds for a timeout
             network_timeout_ms: 30_000,
+            enable_cached_safety_data: true,
         }
     }
 }

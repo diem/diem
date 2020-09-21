@@ -163,7 +163,10 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("5. Send a transaction to activate such feature");
-        let mut faucet_account = context.tx_emitter.load_faucet_account(&full_node).await?;
+        let mut faucet_account = context
+            .tx_emitter
+            .load_faucet_account(&full_node.json_rpc_client())
+            .await?;
         let allowed_nonce = 0;
         let update_txn = create_user_txn(
             &faucet_account.key_pair,

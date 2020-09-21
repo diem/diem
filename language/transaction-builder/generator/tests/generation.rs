@@ -97,6 +97,15 @@ fn test_that_python_code_parses_and_passes_pyre_check() {
 
     let status = Command::new("pyre")
         .current_dir(dir.path())
+        // Work around configuration issue with Pyre 0.0.53
+        .arg("--typeshed")
+        .arg(
+            which::which("pyre")
+                .unwrap()
+                .parent()
+                .unwrap()
+                .join("../lib/pyre_check/typeshed"),
+        )
         .arg("check")
         .status()
         .unwrap();

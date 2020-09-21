@@ -906,7 +906,7 @@ Assert that the account has the designated dealer role.
 Assert that the account has the validator role.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(validator_account: &signer)
 </code></pre>
 
 
@@ -915,11 +915,11 @@ Assert that the account has the validator role.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(account: &signer) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_Roles_EROLE_ID">EROLE_ID</a>));
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(validator_account: &signer) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> validator_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_Roles_EROLE_ID">EROLE_ID</a>));
     <b>assert</b>(
-        borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>,
+        borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_addr).role_id == <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>,
         <a href="Errors.md#0x1_Errors_requires_role">Errors::requires_role</a>(<a href="#0x1_Roles_EVALIDATOR">EVALIDATOR</a>)
     )
 }
@@ -936,7 +936,7 @@ Assert that the account has the validator role.
 Assert that the account has the validator operator role.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(validator_operator_account: &signer)
 </code></pre>
 
 
@@ -945,11 +945,11 @@ Assert that the account has the validator operator role.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(account: &signer) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_Roles_EROLE_ID">EROLE_ID</a>));
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(validator_operator_account: &signer) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> validator_operator_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(validator_operator_account);
+    <b>assert</b>(exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_operator_addr), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_Roles_EROLE_ID">EROLE_ID</a>));
     <b>assert</b>(
-        borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>,
+        borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_operator_addr).role_id == <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>,
         <a href="Errors.md#0x1_Errors_requires_role">Errors::requires_role</a>(<a href="#0x1_Roles_EVALIDATOR_OPERATOR">EVALIDATOR_OPERATOR</a>)
     )
 }
@@ -1160,6 +1160,10 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 <pre><code>pragma opaque;
 <b>include</b> <a href="#0x1_Roles_GrantRole">GrantRole</a>;
+<a name="0x1_Roles_addr$46"></a>
+<b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<b>requires</b> role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
+<b>requires</b> role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
 </code></pre>
 
 
@@ -1173,8 +1177,6 @@ Assert that the account has either the parent vasp or designated dealer role.
     role_id: num;
     <a name="0x1_Roles_addr$37"></a>
     <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>requires</b> role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
-    <b>requires</b> role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a> ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>();
     <b>aborts_if</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
     <b>ensures</b> exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr);
     <b>ensures</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id == role_id;
@@ -1258,7 +1260,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 ### Function `assert_validator`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator">assert_validator</a>(validator_account: &signer)
 </code></pre>
 
 
@@ -1275,7 +1277,7 @@ Assert that the account has either the parent vasp or designated dealer role.
 ### Function `assert_validator_operator`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_assert_validator_operator">assert_validator_operator</a>(validator_operator_account: &signer)
 </code></pre>
 
 
@@ -1492,11 +1494,11 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotValidator">AbortsIfNotValidator</a> {
-    account: signer;
-    <a name="0x1_Roles_addr$44"></a>
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id != <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a> with <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    validator_account: signer;
+    <a name="0x1_Roles_validator_addr$44"></a>
+    <b>let</b> validator_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_account);
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_addr).role_id != <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a> with <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 }
 </code></pre>
 
@@ -1507,11 +1509,12 @@ Assert that the account has either the parent vasp or designated dealer role.
 
 
 <pre><code><b>schema</b> <a href="#0x1_Roles_AbortsIfNotValidatorOperator">AbortsIfNotValidatorOperator</a> {
-    account: signer;
-    <a name="0x1_Roles_addr$45"></a>
-    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id != <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a> with <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+    validator_operator_account: signer;
+    <a name="0x1_Roles_validator_operator_addr$45"></a>
+    <b>let</b> validator_operator_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(validator_operator_account);
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_operator_addr) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(validator_operator_addr).role_id != <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>
+        with <a href="Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
 }
 </code></pre>
 

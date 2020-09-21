@@ -538,7 +538,8 @@ impl Loader {
         data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
         self.load_module_expect_no_missing_dependencies(module_id, data_store)?;
-        let idx = self.module_cache
+        let idx = self
+            .module_cache
             .lock()
             .unwrap()
             .resolve_function_by_name(function_name, module_id)
@@ -730,7 +731,6 @@ impl Loader {
         if let Some(module) = self.module_cache.lock().unwrap().module_at(id) {
             return Ok(module);
         }
-        
 
         let bytes = match data_store.load_module(id) {
             Ok(bytes) => bytes,

@@ -51,6 +51,11 @@ struct Args {
         help = "If set, tries to connect to a libra-swarm instead of aws"
     )]
     swarm: bool,
+    #[structopt(
+        long,
+        help = "If set, tries to use premainnet peer instead of localhost"
+    )]
+    premainnet: bool,
 
     #[structopt(long, group = "action")]
     run: Option<String>,
@@ -123,7 +128,7 @@ pub async fn main() {
 
     if args.diag {
         let util = BasicSwarmUtil::setup(&args);
-        exit_on_error(util.diag().await);
+        exit_on_error(util.diag(args.premainnet).await);
         return;
     } else if args.emit_tx && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
@@ -311,7 +316,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
         wait_committed: !args.burst,
     };
     let duration = Duration::from_secs(args.duration);
-    let mut emitter = TxEmitter::new(cluster);
+    let mut emitter = TxEmitter::new(cluster, args.premainnet);
     let job = emitter
         .start_job(EmitJobRequest {
             instances: cluster.validator_instances().to_vec(),
@@ -370,20 +375,32 @@ impl BasicSwarmUtil {
             .map(|peer| parse_host_port(peer).expect("Failed to parse host_port"))
             .collect();
 
-        let cluster = Cluster::from_host_port(parsed_peers, &args.mint_file, args.chain_id);
+        let cluster = Cluster::from_host_port(
+            parsed_peers,
+            &args.mint_file,
+            args.chain_id,
+            args.premainnet,
+        );
         Self { cluster }
     }
 
-    pub async fn diag(&self) -> Result<()> {
-        let emitter = TxEmitter::new(&self.cluster);
+    pub async fn diag(&self, premainnet: bool) -> Result<()> {
+        let emitter = TxEmitter::new(&self.cluster, premainnet);
         let mut faucet_account: Option<AccountData> = None;
         let instances: Vec<_> = self.cluster.validator_and_fullnode_instances().collect();
         for instance in &instances {
+            let client = instance.json_rpc_client();
             print!("Getting faucet account sequence number on {}...", instance);
-            let account = emitter
-                .load_faucet_account(instance)
-                .await
-                .map_err(|e| format_err!("Failed to get faucet account sequence number: {}", e))?;
+            let account = if premainnet {
+                emitter
+                    .load_dd_account(&client)
+                    .await
+                    .map_err(|e| format_err!("Failed to get dd account: {}", e))?
+            } else {
+                emitter.load_faucet_account(&client).await.map_err(|e| {
+                    format_err!("Failed to get faucet account sequence number: {}", e)
+                })?
+            };
             println!("seq={}", account.sequence_number);
             if let Some(faucet_account) = &faucet_account {
                 if account.sequence_number != faucet_account.sequence_number {
@@ -402,8 +419,17 @@ impl BasicSwarmUtil {
         let faucet_account_address = faucet_account.address;
         for instance in &instances {
             print!("Submitting txn through {}...", instance);
+            let receiver_address = if premainnet {
+                faucet_account_address
+            } else {
+                let tc_account = emitter
+                    .load_vasp_account(&instance.json_rpc_client())
+                    .await
+                    .map_err(|e| format_err!("Failed to load vasp account: {}", e))?;
+                tc_account.address
+            };
             let deadline = emitter
-                .submit_single_transaction(instance, &mut faucet_account)
+                .submit_single_transaction(instance, &mut faucet_account, &receiver_address, 10)
                 .await
                 .map_err(|e| format_err!("Failed to submit txn through {}: {}", instance, e))?;
             println!("seq={}", faucet_account.sequence_number);
@@ -495,7 +521,7 @@ impl ClusterTestRunner {
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
-        let tx_emitter = TxEmitter::new(&cluster);
+        let tx_emitter = TxEmitter::new(&cluster, args.premainnet);
         let github = GitHub::new();
         let report = SuiteReport::new();
         let global_emit_job_request = EmitJobRequest {
