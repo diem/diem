@@ -42,3 +42,41 @@ pub fn lbr_type_tag() -> TypeTag {
         type_params: vec![],
     })
 }
+
+/// Return `Some(struct_name)` if `t` is a `StructTag` representing one of the current Libra coin
+/// types (LBR, Coin1, Coin2), `None` otherwise.
+pub fn coin_name(t: &TypeTag) -> Option<String> {
+    match t {
+        TypeTag::Struct(StructTag {
+            address,
+            module,
+            name,
+            ..
+        }) if *address == CORE_CODE_ADDRESS && module == name => {
+            let name_str = name.to_string();
+            if name_str == LBR_NAME || name_str == COIN1_NAME || name_str == COIN2_NAME {
+                Some(name_str)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+#[test]
+fn coin_names() {
+    assert!(coin_name(&coin1_tag()).unwrap() == COIN1_NAME);
+    assert!(coin_name(&coin2_tag()).unwrap() == COIN2_NAME);
+    assert!(coin_name(&lbr_type_tag()).unwrap() == LBR_NAME);
+
+    assert!(coin_name(&TypeTag::U64) == None);
+    let bad_name = Identifier::new("NotACoin").unwrap();
+    let bad_coin = TypeTag::Struct(StructTag {
+        address: CORE_CODE_ADDRESS,
+        module: bad_name.clone(),
+        name: bad_name,
+        type_params: vec![],
+    });
+    assert!(coin_name(&bad_coin) == None);
+}
