@@ -67,3 +67,43 @@ pub static LIBRA_EXECUTOR_TRANSACTIONS_SAVED: Lazy<Histogram> = Lazy::new(|| {
     )
     .unwrap()
 });
+
+pub static LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_process_vm_outputs_seconds",
+        // metric description
+        "The time spent in seconds by Libra executor to process vm outputs"
+    )
+    .unwrap()
+});
+
+pub static LIBRA_EXECUTOR_PROCESS_WRITE_SETS_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_process_write_sets_seconds",
+        // metric description
+        "The time spent in seconds by Libra executor to process write sets"
+    )
+    .unwrap()
+});
+
+pub static LIBRA_EXECUTOR_EVENT_ACCUMULATOR_HASHER_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_event_accumulator_hasher_seconds",
+        // metric description
+        "The time spent in seconds by Libra executor to caculate hash for EventAccumulator"
+    )
+    .unwrap()
+});
+
+pub static LIBRA_EXECUTOR_TRANSACTION_HASH_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!(
+        // metric name
+        "libra_executor_transaction_hash_seconds",
+        // metric description
+        "The time spent in seconds by Libra executor to calculate hash for transactions"
+    )
+    .unwrap()
+});

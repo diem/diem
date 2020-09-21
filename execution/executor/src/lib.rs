@@ -23,6 +23,10 @@ use crate::{
         LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
         LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
         LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+        LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS,
+        LIBRA_EXECUTOR_PROCESS_WRITE_SETS_SECONDS,
+        LIBRA_EXECUTOR_EVENT_ACCUMULATOR_HASHER_SECONDS,
+        LIBRA_EXECUTOR_TRANSACTION_HASH_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -286,20 +290,25 @@ where
                 ));
                 continue;
             }
-            let (blobs, state_tree) = process_write_set(
-                txn,
-                &mut account_to_state,
-                &proof_reader,
-                vm_output.write_set().clone(),
-                &current_state_tree,
-            )?;
+            let (blobs, state_tree) = {
+                let _timer = LIBRA_EXECUTOR_PROCESS_WRITE_SETS_SECONDS.start_timer();
+                process_write_set(
+                    txn,
+                    &mut account_to_state,
+                    &proof_reader,
+                    vm_output.write_set().clone(),
+                    &current_state_tree,
+                )?
+            };
 
             let event_tree = {
+                let _timer = LIBRA_EXECUTOR_EVENT_ACCUMULATOR_HASHER_SECONDS.start_timer();
                 let event_hashes: Vec<_> =
                     vm_output.events().iter().map(CryptoHash::hash).collect();
                 InMemoryAccumulator::<EventAccumulatorHasher>::from_leaves(&event_hashes)
             };
 
+            let _timer = LIBRA_EXECUTOR_TRANSACTION_HASH_SECONDS.start_timer();
             let mut txn_info_hash = None;
             match vm_output.status() {
                 TransactionStatus::Keep(status) => {
@@ -759,14 +768,17 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
             }
 
             let (account_to_state, account_to_proof) = state_view.into();
-            let output = Self::process_vm_outputs(
-                account_to_state,
-                account_to_proof,
-                &transactions,
-                vm_outputs,
-                &parent_block_executed_trees,
-            )
-            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
+            let output = {
+                let _timer = LIBRA_EXECUTOR_PROCESS_VM_OUTPUTS_SECONDS.start_timer();
+                Self::process_vm_outputs(
+                    account_to_state,
+                    account_to_proof,
+                    &transactions,
+                    vm_outputs,
+                    &parent_block_executed_trees,
+                )
+                .map_err(|err| format_err!("Failed to execute block: {}", err))?
+            };
 
             let parent_accu = parent_block_executed_trees.txn_accumulator();
 
@@ -1007,4 +1019,3 @@ fn update_account_state(account_state: &mut AccountState, path: Vec<u8>, write_o
         WriteOp::Deletion => account_state.remove(&path),
     };
 }
-
