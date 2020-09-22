@@ -370,14 +370,6 @@ impl FunctionTargetData {
             + 1
     }
 
-    /// Adds a spec block to this function target data and returns a fresh id for it.
-    pub fn add_spec_block(&mut self, spec: Spec) -> SpecBlockId {
-        let id = SpecBlockId::new(self.next_free_spec_block_id);
-        self.next_free_spec_block_id += 1;
-        self.generated_spec_blocks_on_impl.insert(id, spec);
-        id
-    }
-
     /// Return the set of callees invoked by this function, including native functions
     pub fn get_callees(&self) -> Vec<QualifiedId<FunId>> {
         use Bytecode::*;
