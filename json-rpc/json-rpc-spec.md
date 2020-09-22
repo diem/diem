@@ -18,6 +18,10 @@ List of released stable methods (unless specifically mentioned, all parameters a
 
 > For implementing a client, please checkout our [Client Implementation Guide](docs/client_implementation_guide.md)
 
+## Official Client SDKs
+
+* [Go] (https://github.com/libra/libra-client-sdk-go)
+
 
 ## JSON-RPC specification
 

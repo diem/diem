@@ -18,7 +18,9 @@ A transaction on the blockchain.
 | vm_status                 | [VMStatus](#type-vmstatus)               | The returned status of the transaction after being processed by the VM                     |
 | gas_used                  | unsigned int64 | Amount of gas used by this transaction, to know how much you paid for the transaction, you need multiply it with your RawTransaction#gas_unit_price |
 
-Note: For the gas_used, internally within the VM we scale the gas units down by 1000 in order to allow granularity of costing for instruction, but without having to use floating point numbers, but we do round-up the gas used to the nearest "1" when we convert back out.
+Note:
+* For the gas_used, internally within the VM we scale the gas units down by 1000 in order to allow granularity of costing for instruction, but without having to use floating point numbers, but we do round-up the gas used to the nearest "1" when we convert back out.
+* Formula to create hash for a signed transaction before it is executed: hex-encode(sha3-256([]byte("LIBRA::Transaction")) + []byte(0) + signed transaction bytes) ([implementation example](https://github.com/libra/libra-client-sdk-go/blob/master/libratypes/hash.go#L27))
 
 
 ### Example
@@ -78,6 +80,7 @@ User submitted transaction.
 | chain_id                  | unsigned int8          | Chain ID of the Libra network this transaction is intended for        |
 | max_gas_amount            | unsigned int64         | Maximum amount of gas that can be spent for this transaction          |
 | gas_unit_price            | unsigned int64         | Maximum gas price to be paid per unit of gas                          |
+| gas_currency              | string                 | Gas price currency code                                               |
 | expiration_timestamp_secs | unsigned int64         | The expiration time (Unix Epoch in seconds) for this transaction      |
 | script_hash               | string                 | Hex-encoded hash of the script used in this transaction               |
 | script_bytes              | string                 | Hex-encoded string of the bytes of the script                         |
