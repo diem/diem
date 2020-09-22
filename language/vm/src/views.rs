@@ -57,16 +57,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |module_handle| ModuleHandleView::new(module, module_handle))
     }
 
-    pub fn struct_instantiations(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = StructInstantiationView<'a, T>> + Send {
-        let module = self.module;
-        module
-            .struct_instantiations()
-            .iter()
-            .map(move |struct_inst| StructInstantiationView::new(module, struct_inst))
-    }
-
     pub fn function_instantiations(
         &self,
     ) -> impl DoubleEndedIterator<Item = FunctionInstantiationView<'a, T>> + Send {
