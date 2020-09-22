@@ -45,6 +45,13 @@ macro_rules! debug_writeln {
     };
 }
 
+macro_rules! set_err_info {
+    ($frame:ident, $e:expr) => {{
+        $e.at_code_offset($frame.function.index(), $frame.pc)
+            .finish($frame.location())
+    }};
+}
+
 /// `Interpreter` instances can execute Move functions.
 ///
 /// An `Interpreter` instance is a stand alone execution context for a function.
@@ -124,12 +131,6 @@ impl Interpreter {
 
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
-            macro_rules! set_err_info {
-                ($frame:ident, $e:expr) => {{
-                    self.set_location($e.at_code_offset($frame.function.index(), $frame.pc))
-                }};
-            }
-
             let resolver = current_frame.resolver(loader);
             let exit_code =
                 current_frame //self

@@ -3,18 +3,15 @@
 //! new-transaction
 //! gas-price: 1
 //! gas-currency: Coin1
-//! max-gas: 10000
+//! max-gas: 700
 //! sender: default
 main() {
     loop {}
     return;
 }
-
-// TODO(status_migration) Test fails if OUT_OF_GAS is last of the 3
-// check: OUT_OF_GAS
-// check: gas_used
-// check: 10000
-
+// check: "EXECUTION_FAILURE { status_code: OUT_OF_GAS,"
+// check: "gas_used: 700,"
+// check: "Keep(OUT_OF_GAS)"
 
 //! new-transaction
 //! sender: default
@@ -25,8 +22,7 @@ import 0x1.Signer;
 main(account: &signer) {
     let sender: address;
     sender = Signer.address_of(move(account));
-    assert(LibraAccount.balance<Coin1.Coin1>(move(sender)) == 90000, 42);
+    assert(LibraAccount.balance<Coin1.Coin1>(move(sender)) == 100000 - 700, 42);
     return;
 }
-
 // check: "Keep(EXECUTED)"

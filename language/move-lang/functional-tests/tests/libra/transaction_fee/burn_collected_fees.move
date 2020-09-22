@@ -2,13 +2,15 @@
 
 //! new-transaction
 //! sender: bob
-//! max-gas: 1000
+//! max-gas: 700
 //! gas-price: 1
 //! gas-currency: Coin1
 script {
     fun main() { while (true) {} }
 }
-// check: OUT_OF_GAS
+// check: "EXECUTION_FAILURE { status_code: OUT_OF_GAS,"
+// check: "gas_used: 700,"
+// check: "Keep(OUT_OF_GAS)"
 
 //! new-transaction
 //! sender: blessed

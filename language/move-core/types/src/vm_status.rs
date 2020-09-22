@@ -149,6 +149,11 @@ impl VMStatus {
             VMStatus::Executed => Ok(KeptVMStatus::Executed),
             VMStatus::MoveAbort(location, code) => Ok(KeptVMStatus::MoveAbort(location, code)),
             VMStatus::ExecutionFailure {
+                status_code: StatusCode::OUT_OF_GAS,
+                ..
+            }
+            | VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
+            VMStatus::ExecutionFailure {
                 status_code: _status_code,
                 location,
                 function,
@@ -158,7 +163,6 @@ impl VMStatus {
                 function,
                 code_offset,
             }),
-            VMStatus::Error(StatusCode::OUT_OF_GAS) => Ok(KeptVMStatus::OutOfGas),
             VMStatus::Error(code) => {
                 match code.status_type() {
                     // Any unknown error should be discarded
