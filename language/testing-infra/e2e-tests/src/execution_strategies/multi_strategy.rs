@@ -63,10 +63,9 @@ impl<TxnType: Clone, E: Error> Executor for MultiExecutor<TxnType, E> {
     fn execute_block(&mut self, block: Block<Self::Txn>) -> ExecutorResult<Self::BlockResult> {
         let mut results = BTreeMap::new();
         for executor in self.executors.iter_mut() {
-            let block = match executor.execute_block(block.clone()) {
-                Err(err) => return Err(MultiResult::OtherResult(err)),
-                Ok(block) => block,
-            };
+            let block = executor
+                .execute_block(block.clone())
+                .map_err(MultiResult::OtherResult)?;
             for (index, output) in block.into_iter().enumerate() {
                 match results.get(&index) {
                     None => {

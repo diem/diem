@@ -222,12 +222,11 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                 return Ok(blob.clone());
             }
         }
-        match self.remote.get_module(module_id)? {
-            Some(bytes) => Ok(bytes),
-            None => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
+        self.remote.get_module(module_id)?.ok_or_else(|| {
+            PartialVMError::new(StatusCode::LINKER_ERROR)
                 .with_message(format!("Cannot find {:?} in data cache", module_id))
-                .finish(Location::Undefined)),
-        }
+                .finish(Location::Undefined)
+        })
     }
 
     fn publish_module(&mut self, module_id: &ModuleId, blob: Vec<u8>) -> VMResult<()> {

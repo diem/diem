@@ -129,13 +129,12 @@ impl BytecodeContext {
         let nodes = cfg.blocks();
         let edges: Vec<(BlockId, BlockId)> = nodes
             .iter()
-            .map(|x| {
+            .flat_map(|x| {
                 cfg.successors(*x)
                     .iter()
                     .map(|y| (*x, *y))
                     .collect::<Vec<(BlockId, BlockId)>>()
             })
-            .flatten()
             .collect();
         let graph = Graph::new(entry, nodes, edges);
         let mut loop_targets = BTreeMap::new();
@@ -146,14 +145,13 @@ impl BytecodeContext {
         {
             let block_id_to_label: BTreeMap<BlockId, Label> = loop_headers
                 .iter()
-                .map(|x| {
+                .flat_map(|x| {
                     if let Label(_, label) = code[cfg.block_start(*x) as usize] {
                         Some((*x, label))
                     } else {
                         None
                     }
                 })
-                .flatten()
                 .collect();
             for (back_edge, natural_loop) in natural_loops {
                 let loop_header_label = block_id_to_label[&back_edge.1];
@@ -162,13 +160,12 @@ impl BytecodeContext {
                     .or_insert_with(BTreeSet::new);
                 let natural_loop_targets = natural_loop
                     .iter()
-                    .map(|block_id| {
+                    .flat_map(|block_id| {
                         cfg.instr_indexes(*block_id)
                             .map(|x| Self::targets(&code[x as usize]))
                             .flatten()
                             .collect::<BTreeSet<usize>>()
                     })
-                    .flatten()
                     .collect::<BTreeSet<usize>>();
                 for target in natural_loop_targets {
                     loop_targets.entry(loop_header_label).and_modify(|x| {

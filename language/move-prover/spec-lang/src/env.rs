@@ -914,11 +914,10 @@ impl GlobalEnv {
         tag: &language_storage::StructTag,
     ) -> Option<QualifiedId<StructId>> {
         self.find_module(&self.to_module_name(&tag.module_id()))
-            .map(|menv| {
+            .and_then(|menv| {
                 menv.find_struct_by_identifier(tag.name.clone())
                     .map(|sid| menv.get_id().qualified(sid))
             })
-            .flatten()
     }
 
     /// Return the module enclosing this location.

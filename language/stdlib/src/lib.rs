@@ -97,8 +97,7 @@ pub fn stdlib_bytecode_files() -> Vec<String> {
                         .unwrap();
                 if path
                     .file_name()
-                    .map(|f| f.to_str())
-                    .flatten()
+                    .and_then(|f| f.to_str())
                     .map_or(false, |s| s.ends_with(&suffix))
                 {
                     return true;

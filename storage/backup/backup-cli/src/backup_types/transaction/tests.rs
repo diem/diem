@@ -39,8 +39,7 @@ fn end_to_end() {
     assert_eq!(latest_version as usize + 1, total_txns);
     let txns = blocks
         .iter()
-        .map(|(txns, _li)| txns)
-        .flatten()
+        .flat_map(|(txns, _li)| txns)
         .map(|txn_to_commit| txn_to_commit.transaction())
         .collect::<Vec<_>>();
     let max_chunk_size = txns

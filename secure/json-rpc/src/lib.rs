@@ -192,14 +192,12 @@ pub fn process_account_state_response(response: Response) -> Result<AccountState
             {
                 let account_state_blob =
                     AccountStateBlob::from(lcs::from_bytes::<Vec<u8>>(&*blob_bytes.into_bytes()?)?);
-                if let Ok(account_state) = AccountState::try_from(&account_state_blob) {
-                    Ok(account_state)
-                } else {
-                    Err(Error::SerializationError(format!(
+                AccountState::try_from(&account_state_blob).map_err(|_| {
+                    Error::SerializationError(format!(
                         "Unable to convert account_state_blob to AccountState: {:?}",
                         account_state_blob
-                    )))
-                }
+                    ))
+                })
             } else {
                 Err(Error::MissingData("AccountState".into()))
             }

@@ -259,11 +259,7 @@ impl<'env> BoogieWrapper<'env> {
                             return Some((!info.omit_trace, info.message, call_loc));
                         }
                     }
-                    if let Some(info) = ensures_info {
-                        Some((!info.omit_trace, info.message, None))
-                    } else {
-                        None
-                    }
+                    ensures_info.map(|info| (!info.omit_trace, info.message, None))
                 }
             })
             .unwrap_or_else(|| (true, error.message.clone(), None));
@@ -1176,10 +1172,8 @@ impl ModelValue {
             }
         }) {
             Some(value)
-        } else if let Ok(n) = self.extract_literal()?.parse::<i128>() {
-            Some(n)
         } else {
-            None
+            self.extract_literal()?.parse::<i128>().ok()
         }
     }
 

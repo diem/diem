@@ -4,7 +4,7 @@
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 
-use anyhow::bail;
+use anyhow::{anyhow, bail};
 use heck::SnakeCase;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
@@ -134,10 +134,8 @@ impl<'env> Abigen<'env> {
                 .file_name()
                 .expect("file name"),
         );
-        let mut f = match std::fs::File::open(path.clone()) {
-            Ok(f) => f,
-            Err(error) => bail!("Failed to open compiled file {:?}: {}", path, error),
-        };
+        let mut f = std::fs::File::open(path.clone())
+            .map_err(|error| anyhow!("Failed to open compiled file {:?}: {}", path, error))?;
         let mut bytes = Vec::new();
         f.read_to_end(&mut bytes)?;
         Ok(bytes)
