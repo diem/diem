@@ -154,8 +154,4 @@ impl StacklessControlFlowGraph {
     ) -> Box<dyn DoubleEndedIterator<Item = CodeOffset>> {
         Box::new(self.block_start(block_id)..=self.block_end(block_id))
     }
-
-    pub fn num_blocks(&self) -> u16 {
-        self.blocks.len() as u16
-    }
 }
