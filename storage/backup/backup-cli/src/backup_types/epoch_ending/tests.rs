@@ -71,6 +71,7 @@ fn end_to_end() {
             },
             store,
             Arc::new(tgt_db.get_restore_handler()),
+            None,
         )
         .run(),
     )

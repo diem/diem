@@ -86,6 +86,7 @@ async fn main_impl() -> Result<()> {
                 global_opt,
                 storage.init_storage().await?,
                 restore_handler,
+                None,
             )
             .run()
             .await?;
@@ -96,6 +97,7 @@ async fn main_impl() -> Result<()> {
                 global_opt,
                 storage.init_storage().await?,
                 restore_handler,
+                None, /* epoch_history */
             )
             .run()
             .await?;
@@ -106,6 +108,7 @@ async fn main_impl() -> Result<()> {
                 global_opt,
                 storage.init_storage().await?,
                 restore_handler,
+                None, /* epoch_history */
             )
             .run()
             .await?;

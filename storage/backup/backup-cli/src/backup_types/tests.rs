@@ -120,6 +120,7 @@ fn test_end_to_end_impl(d: TestData) {
                 global_restore_opt.clone(),
                 Arc::clone(&store),
                 Arc::new(tgt_db.get_restore_handler()),
+                None, /* epoch_history */
             )
             .run(),
         )
@@ -136,6 +137,7 @@ fn test_end_to_end_impl(d: TestData) {
             global_restore_opt,
             store,
             Arc::new(tgt_db.get_restore_handler()),
+            None, /* epoch_history */
         )
         .run(),
     )

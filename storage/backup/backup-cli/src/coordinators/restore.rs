@@ -3,7 +3,7 @@
 
 use crate::{
     backup_types::{
-        epoch_ending::restore::{EpochEndingRestoreController, EpochEndingRestoreOpt},
+        epoch_ending::restore::EpochHistoryRestoreController,
         state_snapshot::restore::{StateSnapshotRestoreController, StateSnapshotRestoreOpt},
         transaction::restore::{TransactionRestoreController, TransactionRestoreOpt},
     },
@@ -74,18 +74,19 @@ impl RestoreCoordinator {
             );
         }
 
-        for backup in epoch_endings {
-            EpochEndingRestoreController::new(
-                EpochEndingRestoreOpt {
-                    manifest_handle: backup.manifest,
-                },
+        let epoch_history = Arc::new(
+            EpochHistoryRestoreController::new(
+                epoch_endings
+                    .into_iter()
+                    .map(|backup| backup.manifest)
+                    .collect(),
                 self.global_opt.clone(),
-                Arc::clone(&self.storage),
-                Arc::clone(&self.restore_handler),
+                self.storage.clone(),
+                self.restore_handler.clone(),
             )
             .run()
-            .await?;
-        }
+            .await?,
+        );
 
         if let Some(backup) = state_snapshot {
             StateSnapshotRestoreController::new(
@@ -96,6 +97,7 @@ impl RestoreCoordinator {
                 self.global_opt.clone(),
                 Arc::clone(&self.storage),
                 Arc::clone(&self.restore_handler),
+                Some(Arc::clone(&epoch_history)),
             )
             .run()
             .await?;
@@ -115,6 +117,7 @@ impl RestoreCoordinator {
                 self.global_opt.clone(),
                 Arc::clone(&self.storage),
                 Arc::clone(&self.restore_handler),
+                Some(Arc::clone(&epoch_history)),
             )
             .run()
             .await?;

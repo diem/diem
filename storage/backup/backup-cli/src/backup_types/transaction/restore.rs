@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    backup_types::transaction::manifest::{TransactionBackup, TransactionChunk},
+    backup_types::{
+        epoch_ending::restore::EpochHistory,
+        transaction::manifest::{TransactionBackup, TransactionChunk},
+    },
     metrics::restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
@@ -50,6 +53,7 @@ pub struct TransactionRestoreController {
     manifest_handle: FileHandle,
     target_version: Version,
     replay_from_version: Version,
+    epoch_history: Option<Arc<EpochHistory>>,
     state: State,
 }
 
@@ -68,7 +72,11 @@ struct LoadedChunk {
 }
 
 impl LoadedChunk {
-    async fn load(manifest: TransactionChunk, storage: &Arc<dyn BackupStorage>) -> Result<Self> {
+    async fn load(
+        manifest: TransactionChunk,
+        storage: &Arc<dyn BackupStorage>,
+        epoch_history: Option<&Arc<EpochHistory>>,
+    ) -> Result<Self> {
         let mut file = storage.open_for_read(&manifest.transactions).await?;
         let mut txns = Vec::new();
         let mut txn_infos = Vec::new();
@@ -92,7 +100,9 @@ impl LoadedChunk {
                 &manifest.proof,
             )
             .await?;
-        // TODO: verify signatures
+        if let Some(epoch_history) = epoch_history {
+            epoch_history.verify_ledger_info(&ledger_info)?;
+        }
 
         // make a `TransactionListWithProof` to reuse its verification code.
         let txn_list_with_proof = TransactionListWithProof::new(
@@ -122,6 +132,7 @@ impl TransactionRestoreController {
         global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
+        epoch_history: Option<Arc<EpochHistory>>,
     ) -> Self {
         Self {
             storage,
@@ -129,6 +140,7 @@ impl TransactionRestoreController {
             replay_from_version: opt.replay_from_version(),
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version(),
+            epoch_history,
             state: State::default(),
         }
     }
@@ -164,7 +176,9 @@ impl TransactionRestoreController {
                 break;
             }
 
-            let mut chunk = LoadedChunk::load(chunk_manifest, &self.storage).await?;
+            let mut chunk =
+                LoadedChunk::load(chunk_manifest, &self.storage, self.epoch_history.as_ref())
+                    .await?;
             self.maybe_save_frozen_subtrees(&chunk)?;
 
             let last = min(self.target_version, chunk.manifest.last_version);

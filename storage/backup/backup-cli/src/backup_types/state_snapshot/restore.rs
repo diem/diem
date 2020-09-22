@@ -2,17 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    backup_types::state_snapshot::manifest::StateSnapshotBackup,
+    backup_types::{
+        epoch_ending::restore::EpochHistory, state_snapshot::manifest::StateSnapshotBackup,
+    },
     metrics::restore::{
         STATE_SNAPSHOT_LEAF_INDEX, STATE_SNAPSHOT_TARGET_LEAF_INDEX, STATE_SNAPSHOT_VERSION,
     },
     storage::{BackupStorage, FileHandle},
     utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{account_state_blob::AccountStateBlob, transaction::Version};
+use libra_types::{
+    account_state_blob::AccountStateBlob, ledger_info::LedgerInfoWithSignatures,
+    proof::TransactionInfoWithProof, transaction::Version,
+};
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -34,6 +39,7 @@ pub struct StateSnapshotRestoreController {
     /// Global "target_version" for the entire restore process, if `version` is newer than this,
     /// nothing will be done, otherwise, this has no effect.
     target_version: Version,
+    epoch_history: Option<Arc<EpochHistory>>,
 }
 
 impl StateSnapshotRestoreController {
@@ -42,6 +48,7 @@ impl StateSnapshotRestoreController {
         global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
+        epoch_history: Option<Arc<EpochHistory>>,
     ) -> Self {
         Self {
             storage,
@@ -49,6 +56,7 @@ impl StateSnapshotRestoreController {
             version: opt.version,
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version(),
+            epoch_history,
         }
     }
 
@@ -78,6 +86,18 @@ impl StateSnapshotRestoreController {
 
         let manifest: StateSnapshotBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
+        let (txn_info_with_proof, li): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
+            self.storage.load_lcs_file(&manifest.proof).await?;
+        txn_info_with_proof.verify(li.ledger_info(), manifest.version)?;
+        ensure!(
+            txn_info_with_proof.transaction_info().state_root_hash() == manifest.root_hash,
+            "Root hash mismatch with that in proof. root hash: {}, expected: {}",
+            manifest.root_hash,
+            txn_info_with_proof.transaction_info().state_root_hash(),
+        );
+        if let Some(epoch_history) = self.epoch_history.as_ref() {
+            epoch_history.verify_ledger_info(&li)?;
+        }
 
         let mut receiver = self
             .restore_handler

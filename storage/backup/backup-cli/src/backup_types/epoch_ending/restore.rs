@@ -10,7 +10,10 @@ use crate::{
 use anyhow::{anyhow, ensure, Result};
 use libra_logger::prelude::*;
 use libra_types::{
-    ledger_info::LedgerInfoWithSignatures, transaction::Version, waypoint::Waypoint,
+    epoch_change::Verifier,
+    ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
+    transaction::Version,
+    waypoint::Waypoint,
 };
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
@@ -27,6 +30,7 @@ pub struct EpochEndingRestoreController {
     restore_handler: Arc<RestoreHandler>,
     manifest_handle: FileHandle,
     target_version: Version,
+    previous_epoch_ending_ledger_info: Option<LedgerInfo>,
 }
 
 impl EpochEndingRestoreController {
@@ -35,30 +39,33 @@ impl EpochEndingRestoreController {
         global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
+        previous_epoch_ending_ledger_info: Option<LedgerInfo>,
     ) -> Self {
         Self {
             storage,
             restore_handler,
             manifest_handle: opt.manifest_handle,
             target_version: global_opt.target_version(),
+            previous_epoch_ending_ledger_info,
         }
     }
 
-    pub async fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<Vec<LedgerInfo>> {
         info!(
             "Epoch ending restore started. Manifest: {}",
             self.manifest_handle
         );
-        self.run_impl()
+        let res = self
+            .run_impl()
             .await
             .map_err(|e| anyhow!("Epoch ending restore failed: {}", e))?;
         info!("Epoch ending restore succeeded.");
-        Ok(())
+        Ok(res)
     }
 }
 
 impl EpochEndingRestoreController {
-    async fn run_impl(self) -> Result<()> {
+    async fn run_impl(self) -> Result<Vec<LedgerInfo>> {
         let manifest: EpochEndingBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
         manifest.verify()?;
@@ -66,8 +73,21 @@ impl EpochEndingRestoreController {
         let mut next_epoch = manifest.first_epoch;
         let mut waypoint_iter = manifest.waypoints.iter();
 
+        let mut previous_li = self.previous_epoch_ending_ledger_info.clone();
+        if let Some(li) = &previous_li {
+            ensure!(
+                li.next_block_epoch() == next_epoch,
+                "Previous epoch ending LedgerInfo is not the one expected. \
+                My first epoch: {}, previous LedgerInfo next_block_epoch: {}",
+                next_epoch,
+                li.next_block_epoch(),
+            );
+        }
+
+        let mut output_lis = Vec::new();
+
         for chunk in manifest.chunks {
-            let lis = self.read_chunk(chunk.ledger_infos).await?;
+            let mut lis = self.read_chunk(chunk.ledger_infos).await?;
             ensure!(
                 chunk.first_epoch + lis.len() as u64 == chunk.last_epoch + 1,
                 "Number of items in chunks doesn't match that in manifest. first_epoch: {}, last_epoch: {}, items in chunk: {}",
@@ -76,6 +96,7 @@ impl EpochEndingRestoreController {
                 lis.len(),
             );
             // verify
+            let mut previous_li_ref = previous_li.as_ref();
             for li in lis.iter() {
                 ensure!(
                     li.ledger_info().epoch() == next_epoch,
@@ -87,15 +108,27 @@ impl EpochEndingRestoreController {
                     anyhow!("More LedgerInfo's found than waypoints in manifest.")
                 })?;
                 let wp_li = Waypoint::new_epoch_boundary(li.ledger_info())?;
-                // TODO: verify signature on li
                 ensure!(
                     *wp_manifest == wp_li,
                     "Waypoints don't match. In manifest: {}, In chunk: {}",
                     wp_manifest,
                     wp_li,
                 );
+                if let Some(pre_li) = &previous_li_ref {
+                    pre_li
+                        .next_epoch_state()
+                        .ok_or_else(|| {
+                            anyhow!(
+                                "Next epoch state not found from LI at epoch {}.",
+                                pre_li.epoch()
+                            )
+                        })?
+                        .verify(li)?;
+                }
+                previous_li_ref = Some(li.ledger_info());
                 next_epoch += 1;
             }
+            previous_li = previous_li_ref.cloned();
 
             let mut end = lis.len(); // To apply: "[0, end)"
             if let Some(_end) = lis
@@ -110,21 +143,33 @@ impl EpochEndingRestoreController {
                 );
                 end = _end;
             }
+            let should_skip_next = lis.drain(end..).count() > 0;
 
             // write to db
-            if end != 0 {
-                self.restore_handler.save_ledger_infos(&lis[..end])?;
-                EPOCH_ENDING_EPOCH.set(lis[end - 1].ledger_info().epoch() as i64);
-                EPOCH_ENDING_VERSION.set(lis[end - 1].ledger_info().version() as i64);
+            if !lis.is_empty() {
+                self.restore_handler.save_ledger_infos(&lis)?;
+                EPOCH_ENDING_EPOCH.set(
+                    lis.last()
+                        .expect("Verified not empty.")
+                        .ledger_info()
+                        .epoch() as i64,
+                );
+                EPOCH_ENDING_VERSION.set(
+                    lis.last()
+                        .expect("Verified not empty.")
+                        .ledger_info()
+                        .version() as i64,
+                );
+                output_lis.extend(lis.into_iter().map(|x| x.ledger_info().clone()));
             }
 
             // skip remaining chunks if beyond target_version
-            if end < lis.len() {
+            if should_skip_next {
                 break;
             }
         }
 
-        Ok(())
+        Ok(output_lis)
     }
 
     async fn read_chunk(&self, file_handle: FileHandle) -> Result<Vec<LedgerInfoWithSignatures>> {
@@ -136,5 +181,124 @@ impl EpochEndingRestoreController {
         }
 
         Ok(chunk)
+    }
+}
+
+/// Represents a history of epoch changes since epoch 0.
+#[derive(Clone)]
+pub struct EpochHistory {
+    epoch_endings: Vec<LedgerInfo>,
+}
+
+impl EpochHistory {
+    pub fn verify_ledger_info(&self, li_with_sigs: &LedgerInfoWithSignatures) -> Result<()> {
+        let epoch = li_with_sigs.ledger_info().epoch();
+        ensure!(!self.epoch_endings.is_empty(), "Empty epoch history.",);
+        ensure!(
+            epoch <= self.epoch_endings.len() as u64,
+            "History until epoch {} can't varify epoch {}",
+            self.epoch_endings.len(),
+            epoch,
+        );
+        if epoch == 0 {
+            ensure!(
+                li_with_sigs.ledger_info() == &self.epoch_endings[0],
+                "Genesis epoch LedgerInfo info doesn't match.",
+            );
+            Ok(())
+        } else {
+            self.epoch_endings[epoch as usize - 1]
+                .next_epoch_state()
+                .ok_or_else(|| anyhow!("Shouldn't contain non- epoch bumping LIs."))?
+                .verify(li_with_sigs)
+        }
+    }
+}
+
+pub struct EpochHistoryRestoreController {
+    storage: Arc<dyn BackupStorage>,
+    restore_handler: Arc<RestoreHandler>,
+    manifest_handles: Vec<FileHandle>,
+    global_opt: GlobalRestoreOpt,
+}
+
+impl EpochHistoryRestoreController {
+    pub fn new(
+        manifest_handles: Vec<FileHandle>,
+        global_opt: GlobalRestoreOpt,
+        storage: Arc<dyn BackupStorage>,
+        restore_handler: Arc<RestoreHandler>,
+    ) -> Self {
+        Self {
+            storage,
+            restore_handler,
+            manifest_handles,
+            global_opt,
+        }
+    }
+
+    pub async fn run(self) -> Result<EpochHistory> {
+        info!(
+            "Epoch history restore started. Trying to restore epoch endings for epoch 0 till {} (inclusive)",
+            self.manifest_handles.len() - 1,
+        );
+        let res = self
+            .run_impl()
+            .await
+            .map_err(|e| anyhow!("Epoch history restore failed: {}", e))?;
+        info!("Epoch history restore succeeded.");
+        Ok(res)
+    }
+}
+
+impl EpochHistoryRestoreController {
+    async fn run_impl(self) -> Result<EpochHistory> {
+        let mut next_epoch = 0u64;
+        let mut previous_li = None;
+        let mut epoch_endings = Vec::new();
+
+        for manifest_handle in &self.manifest_handles {
+            let lis = EpochEndingRestoreController::new(
+                EpochEndingRestoreOpt {
+                    manifest_handle: manifest_handle.clone(),
+                },
+                self.global_opt.clone(),
+                self.storage.clone(),
+                self.restore_handler.clone(),
+                previous_li.clone(),
+            )
+            .run()
+            .await?;
+
+            ensure!(
+                !lis.is_empty(),
+                "No epochs restored from {}",
+                manifest_handle,
+            );
+            for li in &lis {
+                ensure!(
+                    li.epoch() == next_epoch,
+                    "Restored LedgerInfo has epoch {}, expecting {}.",
+                    li.epoch(),
+                    next_epoch,
+                );
+                ensure!(
+                    li.ends_epoch(),
+                    "LedgerInfo is not one at an epoch ending. epoch: {}",
+                    li.epoch(),
+                );
+                next_epoch += 1;
+            }
+
+            previous_li = Some(lis.last().expect("Verified not empty.").clone());
+            epoch_endings.extend(lis);
+        }
+        ensure!(
+            !epoch_endings.is_empty(),
+            "No epochs restored from {} manifests",
+            self.manifest_handles.len(),
+        );
+
+        Ok(EpochHistory { epoch_endings })
     }
 }
