@@ -14,7 +14,6 @@
 use std::iter::DoubleEndedIterator;
 
 use crate::{access::ModuleAccess, file_format::*, SignatureTokenKind};
-use std::collections::BTreeSet;
 
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use std::collections::BTreeMap;
@@ -25,6 +24,7 @@ use std::collections::BTreeMap;
 pub struct ModuleView<'a, T> {
     module: &'a T,
     name_to_function_definition_view: BTreeMap<&'a IdentStr, FunctionDefinitionView<'a, T>>,
+    #[allow(dead_code)]
     name_to_struct_definition_view: BTreeMap<&'a IdentStr, StructDefinitionView<'a, T>>,
 }
 
@@ -205,13 +205,6 @@ impl<'a, T: ModuleAccess> FunctionHandleView<'a, T> {
     pub fn return_count(&self) -> usize {
         self.module
             .signature_at(self.function_handle.return_)
-            .0
-            .len()
-    }
-
-    pub fn arg_count(&self) -> usize {
-        self.module
-            .signature_at(self.function_handle.parameters)
             .0
             .len()
     }
@@ -403,10 +396,6 @@ impl<'a, T: ModuleAccess> FunctionDefinitionView<'a, T> {
 
     pub fn return_count(&self) -> usize {
         self.function_handle_view.return_count()
-    }
-
-    pub fn arg_count(&self) -> usize {
-        self.function_handle_view.arg_count()
     }
 
     pub fn code(&self) -> Option<&'a CodeUnit> {
