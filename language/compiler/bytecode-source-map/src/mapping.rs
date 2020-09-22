@@ -45,10 +45,6 @@ impl<Location: Clone + Eq> SourceMapping<Location> {
         Self::new(source_map, bytecode.into_module().1)
     }
 
-    pub fn with_marks(&mut self, marks: MarkedSourceMapping) {
-        self.marks = Some(marks);
-    }
-
     pub fn with_source_code(&mut self, source_code: (String, String)) {
         self.source_code = Some(source_code);
     }
