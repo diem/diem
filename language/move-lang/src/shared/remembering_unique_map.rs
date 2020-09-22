@@ -47,14 +47,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.remove(key)
     }
 
-    pub fn iter(&self) -> Iter<K, V> {
-        self.into_iter()
-    }
-
-    pub fn iter_mut(&mut self) -> IterMut<K, V> {
-        self.into_iter()
-    }
-
     pub fn maybe_from_opt_iter(
         iter: impl Iterator<Item = Option<(K, V)>>,
     ) -> Option<Result<RememberingUniqueMap<K, V>, (K::Key, K::Loc, K::Loc)>> {
