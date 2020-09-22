@@ -479,19 +479,6 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         Ok(())
     }
 
-    pub fn get_struct_type_parameter_name(
-        &self,
-        struct_def_idx: StructDefinitionIndex,
-        type_parameter_idx: usize,
-    ) -> Result<SourceName<Location>> {
-        self.struct_map
-            .get(&struct_def_idx.0)
-            .and_then(|struct_source_map| {
-                struct_source_map.get_type_parameter_name(type_parameter_idx)
-            })
-            .ok_or_else(|| format_err!("Unable to get struct type parameter name"))
-    }
-
     pub fn get_function_source_map(
         &self,
         fdef_idx: FunctionDefinitionIndex,
