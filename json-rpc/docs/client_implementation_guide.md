@@ -45,7 +45,7 @@ However, if you implemented [Testnet Faucet Service](service_testnet_faucet.md),
 
 Similarly, we can test our [get_account_transaction](method_get_account_transaction.md) implementation with `root account address`.
 
-> We need call [get_account](method_get_account.md) and [get_account_transaction](method_get_account_transaction.md) when we implement and test [Submit Transaction](#submit_transaction) method.
+> We need call [get_account](method_get_account.md) and [get_account_transaction](method_get_account_transaction.md) when we implement and test [Submit Transaction](#submit-transaction) method.
 > So you should at least implement and confirm these two methods are working as expected.
 
 ### Submit Transaction
@@ -170,7 +170,7 @@ String signedTxnData = bytesToHex(toLCS(st));
 
 ```
 
-For more details related to Libra crypto, please checkout [Crypto Spec](../../specifications/crypto/spec.md).
+For more details related to Libra crypto, please checkout [Crypto Spec](../../specifications/crypto/README.md).
 
 When you implement above logic, you may extract `createRawTransaction` and `createSignedTransaction` methods and use the following data to confirm their logic is correct:
 
@@ -330,8 +330,8 @@ To make a production quality client, please checkout our [Client CHECKLIST](clie
 [5]: https://libra.github.io/libra/libra_canonical_serialization/index.html "LCS"
 [6]: ./../../client/swiss-knife#generate-a-ed25519-keypair "Swiss Knife Gen Keys"
 [7]: ./../../language/stdlib/transaction_scripts/doc/peer_to_peer_with_metadata.md#function-peer_to_peer_with_metadata-1 "P2P script doc"
-[8]: ./../../client/swiss-knife/readme.md#examples-for-generate-raw-txn-and-generate-signed-txn-operations "Swiss Knife gen txn"
-[9]: ./../../client/swiss-knife/readme.md#building-the-binary-in-a-release-optimized-mode "Swiss Knife binary"
+[8]: ./../../client/swiss-knife/README.md#examples-for-generate-raw-txn-and-generate-signed-txn-operations "Swiss Knife gen txn"
+[9]: ./../../client/swiss-knife/README.md#building-the-binary-in-a-release-optimized-mode "Swiss Knife binary"
 [10]: ../../language/transaction-builder/generator/README.md#supported-languages "Transaction Builder Generator supports"
 [11]: ./../../client/libra-dev/include/data.h "C binding head file"
 [12]: ../../language/transaction-builder/generator/README.md#java "Generate Java Txn Builder"
