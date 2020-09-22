@@ -70,15 +70,6 @@ impl CompiledUnit {
         serialized
     }
 
-    #[allow(dead_code)]
-    pub fn serialize_debug(self) -> Vec<u8> {
-        match self {
-            CompiledUnit::Module { module, .. } => format!("{:?}", module),
-            CompiledUnit::Script { script, .. } => format!("{:?}", script),
-        }
-        .into()
-    }
-
     pub fn serialize_source_map(&self) -> Vec<u8> {
         match self {
             CompiledUnit::Module { source_map, .. } => lcs::to_bytes(source_map).unwrap(),
