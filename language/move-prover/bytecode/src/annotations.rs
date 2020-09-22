@@ -13,12 +13,6 @@ pub struct Annotations {
 }
 
 impl Annotations {
-    /// Tests whether annotation of type T is present.
-    pub fn has<T: Any>(&self) -> bool {
-        let id = TypeId::of::<T>();
-        self.map.contains_key(&id)
-    }
-
     /// Gets annotation of type T.
     pub fn get<T: Any>(&self) -> Option<&T> {
         let id = TypeId::of::<T>();
