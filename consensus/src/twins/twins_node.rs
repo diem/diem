@@ -39,6 +39,7 @@ pub struct SMRNode {
     pub id: TwinId,
     pub storage: Arc<MockStorage>,
     pub commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
+    pub timeout_sender: channel::Sender<u64>,
     _runtime: Runtime,
     _shared_mempool: MockSharedMempool,
     _state_sync: mpsc::UnboundedReceiver<Payload>,
@@ -111,7 +112,7 @@ impl SMRNode {
             time_service,
             self_sender,
             network_sender,
-            timeout_sender,
+            timeout_sender.clone(),
             txn_manager,
             state_computer,
             storage.clone(),
@@ -124,6 +125,7 @@ impl SMRNode {
         Self {
             id: twin_id,
             _runtime: runtime,
+            timeout_sender,
             commit_cb_receiver,
             storage,
             _shared_mempool: shared_mempool,
@@ -199,9 +201,8 @@ impl SMRNode {
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type.clone();
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
-            // Change initial timeout from default 1s to 2s. Our experience
-            // suggests that 1s is too small for twins testing
-            config.consensus.round_initial_timeout_ms = 2000;
+            // No auto timeout, it should be triggered by the timeout_sender.
+            config.consensus.round_initial_timeout_ms = 2_000_000;
 
             let author = author_from_config(&config);
 

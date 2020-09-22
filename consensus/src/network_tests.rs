@@ -234,12 +234,11 @@ impl NetworkPlayground {
                 msg_notif
             ),
         };
-        node_consensus_tx
-            .push(
-                (src_twin_id.author, ProtocolId::ConsensusDirectSend),
-                msg_notif,
-            )
-            .unwrap();
+        // ignore send error during shutdown
+        let _ = node_consensus_tx.push(
+            (src_twin_id.author, ProtocolId::ConsensusDirectSend),
+            msg_notif,
+        );
         msg_copy
     }
 
@@ -376,7 +375,7 @@ impl NetworkPlayground {
         ret
     }
 
-    pub async fn start(mut self) {
+    pub async fn start_until<F: Fn(&ConsensusMsg) -> bool>(mut self, f: F) {
         // Take the next queued message
         while let Some((src_twin_id, net_req)) = self.outbound_msgs_rx.next().await {
             // Convert PeerManagerRequest to corresponding PeerManagerNotification,
@@ -397,6 +396,10 @@ impl NetworkPlayground {
                 let msg_notif =
                     PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
                 let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
+                if f(&consensus_msg) {
+                    println!("Stop playground");
+                    return;
+                }
 
                 // Deliver and copy message it if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, &dst_twin_id, consensus_msg) {
@@ -405,6 +408,10 @@ impl NetworkPlayground {
                 }
             }
         }
+    }
+
+    pub async fn start(self) {
+        self.start_until(|_| false).await
     }
 }
 
