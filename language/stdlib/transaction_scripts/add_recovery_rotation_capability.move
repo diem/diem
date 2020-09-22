@@ -47,4 +47,32 @@ fun add_recovery_rotation_capability(to_recover_account: &signer, recovery_addre
         LibraAccount::extract_key_rotation_capability(to_recover_account), recovery_address
     )
 }
+spec fun add_recovery_rotation_capability {
+    use 0x1::Signer;
+    use 0x1::Errors;
+
+    include LibraAccount::ExtractKeyRotationCapabilityAbortsIf{account: to_recover_account};
+    include LibraAccount::ExtractKeyRotationCapabilityEnsures{account: to_recover_account};
+
+    let addr = Signer::spec_address_of(to_recover_account);
+    let rotation_cap = LibraAccount::spec_get_key_rotation_cap(addr);
+
+    include RecoveryAddress::AddRotationCapabilityAbortsIf{
+        to_recover: rotation_cap
+    };
+
+    // TODO: Commented out due to the unsupported feature below.
+    // include RecoveryAddress::AddRotationCapabilityEnsures{
+    //     to_recover: old(rotation_cap) //! error: `old(..)` expression not allowed in this context
+    // };
+
+    // Instead, the postconditions in RecoveryAddress::AddRotationCapabilityEnsures are expanded here.
+    ensures RecoveryAddress::spec_get_rotation_caps(recovery_address)[
+        len(RecoveryAddress::spec_get_rotation_caps(recovery_address)) - 1] == old(rotation_cap);
+
+    aborts_with [check]
+        Errors::INVALID_STATE,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_ARGUMENT;
+}
 }

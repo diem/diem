@@ -104,29 +104,11 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 
 
-This publishes a <code>Balance&lt;Currency&gt;</code> to the caller's account
 
-
-<pre><code><b>ensures</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-</code></pre>
-
-
-<code>Currency</code> must be valid
-
-
-<pre><code><b>aborts_if</b> !<a href="../../modules/doc/Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;Currency&gt;();
-</code></pre>
-
-
-<code>account</code> must be allowed to hold balances
-
-
-<pre><code><b>aborts_if</b> !<a href="../../modules/doc/Roles.md#0x1_Roles_spec_can_hold_balance_addr">Roles::spec_can_hold_balance_addr</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
-</code></pre>
-
-
-<code>account</code> cannot have an existing balance in <code>Currency</code>
-
-
-<pre><code><b>aborts_if</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;&gt;(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyAbortsIf">LibraAccount::AddCurrencyAbortsIf</a>&lt;Currency&gt;;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyEnsures">LibraAccount::AddCurrencyEnsures</a>&lt;Currency&gt;;
+aborts_with [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 </code></pre>

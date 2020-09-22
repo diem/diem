@@ -35,4 +35,36 @@ use 0x1::RecoveryAddress;
 fun create_recovery_address(account: &signer) {
     RecoveryAddress::publish(account, LibraAccount::extract_key_rotation_capability(account))
 }
+spec fun create_recovery_address {
+    use 0x1::Signer;
+    use 0x1::Errors;
+
+    include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
+    include LibraAccount::ExtractKeyRotationCapabilityEnsures;
+
+    let addr = Signer::spec_address_of(account);
+    let rotation_cap = LibraAccount::spec_get_key_rotation_cap(addr);
+
+    include RecoveryAddress::PublishAbortsIf{
+        recovery_account: account,
+        rotation_cap: rotation_cap
+    };
+
+    // TODO: Commented out due to the unsupported feature below.
+    // include RecoveryAddress::PublishEnsures{
+    //     recovery_account: account,
+    //     rotation_cap: old(rotation_cap) //! error: `old(..)` expression not allowed in this context
+    // };
+
+    // Instead, the postconditions in RecoveryAddress::PublishEnsures are expanded here.
+    ensures RecoveryAddress::spec_is_recovery_address(addr);
+    ensures len(RecoveryAddress::spec_get_rotation_caps(addr)) == 1;
+    ensures RecoveryAddress::spec_get_rotation_caps(addr)[0] == old(rotation_cap);
+
+    aborts_with [check]
+        Errors::INVALID_STATE,
+        Errors::INVALID_ARGUMENT,
+        Errors::ALREADY_PUBLISHED,
+        Errors::NOT_PUBLISHED; // TODO: Prover cannot prove `account` has LibraAccount published.
+}
 }

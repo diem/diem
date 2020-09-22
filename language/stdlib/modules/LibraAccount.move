@@ -293,7 +293,7 @@ module LibraAccount {
     }
 
     spec fun staple_lbr {
-        pragma verify=false; // TODO: disabled due to timeout
+        pragma verify=false; /// > TODO: disabled due to timeout
         pragma opaque;
         // Verification of this function is unstable (butterfly effect).
         pragma verify_duration_estimate = 100;
@@ -1069,9 +1069,22 @@ module LibraAccount {
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
     spec fun add_currency {
+        include AddCurrencyAbortsIf<Token>;
+        include AddCurrencyEnsures<Token>;
+    }
+    spec schema AddCurrencyAbortsIf<Token> {
+        account: signer;
+        /// `Currency` must be valid
         include Libra::AbortsIfNoCurrency<Token>;
-        aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT; // Aborts if the predicate "can_hold_balance" returns false [E2][E3][E4][E5][E6][E7][E8].
+        /// `account` must be allowed to hold balances. This function must abort if the predicate
+        /// `can_hold_balance` for `account` returns false [E2][E3][E4][E5][E6][E7][E8].
+        aborts_if !Roles::can_hold_balance(account) with Errors::INVALID_ARGUMENT;
+        /// `account` cannot have an existing balance in `Currency`
         aborts_if exists<Balance<Token>>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
+    }
+    spec schema AddCurrencyEnsures<Token> {
+        account: signer;
+        /// This publishes a `Balance<Currency>` to the caller's account
         ensures exists<Balance<Token>>(Signer::address_of(account));
         ensures global<Balance<Token>>(Signer::address_of(account)) == Balance<Token>{ coin: Libra<Token> { value: 0 } };
     }

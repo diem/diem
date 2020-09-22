@@ -1,9 +1,5 @@
 script {
 use 0x1::LibraAccount;
-// Prover deps:
-use 0x1::Libra;
-use 0x1::Roles;
-use 0x1::Signer;
 
 /// # Summary
 /// Adds a zero `Currency` balance to the sending `account`. This will enable `account` to
@@ -39,14 +35,14 @@ fun add_currency_to_account<Currency>(account: &signer) {
     LibraAccount::add_currency<Currency>(account);
 }
 spec fun add_currency_to_account {
-    /// This publishes a `Balance<Currency>` to the caller's account
-    ensures exists<LibraAccount::Balance<Currency>>(Signer::spec_address_of(account));
+    use 0x1::Errors;
 
-    /// `Currency` must be valid
-    aborts_if !Libra::spec_is_currency<Currency>();
-    /// `account` must be allowed to hold balances
-    aborts_if !Roles::spec_can_hold_balance_addr(Signer::spec_address_of(account));
-    /// `account` cannot have an existing balance in `Currency`
-    aborts_if exists<LibraAccount::Balance<Currency>>(Signer::spec_address_of(account));
+    include LibraAccount::AddCurrencyAbortsIf<Currency>;
+    include LibraAccount::AddCurrencyEnsures<Currency>;
+
+    aborts_with [check]
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_ARGUMENT,
+        Errors::ALREADY_PUBLISHED;
 }
 }

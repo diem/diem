@@ -300,15 +300,43 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
 
 
 
-<a name="0x1_RecoveryAddress_addr$6"></a>
+<pre><code><b>include</b> <a href="#0x1_RecoveryAddress_PublishAbortsIf">PublishAbortsIf</a>;
+<b>include</b> <a href="#0x1_RecoveryAddress_PublishEnsures">PublishEnsures</a>;
+</code></pre>
 
 
-<pre><code><b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(rotation_cap) != addr
-    with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+
+
+<a name="0x1_RecoveryAddress_PublishAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_PublishAbortsIf">PublishAbortsIf</a> {
+    recovery_account: signer;
+    rotation_cap: KeyRotationCapability;
+    <a name="0x1_RecoveryAddress_addr$6"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
+    <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(addr) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(rotation_cap) != addr
+        with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_RecoveryAddress_PublishEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_PublishEnsures">PublishEnsures</a> {
+    recovery_account: signer;
+    rotation_cap: KeyRotationCapability;
+    <a name="0x1_RecoveryAddress_addr$7"></a>
+    <b>let</b> addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account);
+    <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr);
+    <b>ensures</b> len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr)) == 1;
+    <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr)[0] == rotation_cap;
+}
 </code></pre>
 
 
@@ -374,15 +402,41 @@ Aborts if <code>to_recover.address</code> and <code>recovery_address belong <b>t
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-<a name="0x1_RecoveryAddress_to_recover_address$7"></a>
-<b>let</b> to_recover_address = <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(to_recover);
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(to_recover_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(to_recover_address)
-    with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[
-    len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1] == to_recover;
+<pre><code><b>include</b> <a href="#0x1_RecoveryAddress_AddRotationCapabilityAbortsIf">AddRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="#0x1_RecoveryAddress_AddRotationCapabilityEnsures">AddRotationCapabilityEnsures</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_RecoveryAddress_AddRotationCapabilityAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_AddRotationCapabilityAbortsIf">AddRotationCapabilityAbortsIf</a> {
+    to_recover: KeyRotationCapability;
+    recovery_address: address;
+    <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <a name="0x1_RecoveryAddress_to_recover_address$8"></a>
+    <b>let</b> to_recover_address = <a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(to_recover);
+    <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(recovery_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(to_recover_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(to_recover_address)
+        with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_RecoveryAddress_AddRotationCapabilityEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_AddRotationCapabilityEnsures">AddRotationCapabilityEnsures</a> {
+    to_recover: KeyRotationCapability;
+    recovery_address: address;
+    <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[
+        len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1] == to_recover;
+}
 </code></pre>
 
 

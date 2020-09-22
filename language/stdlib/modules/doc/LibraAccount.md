@@ -2622,7 +2622,13 @@ After genesis, the <code><a href="#0x1_LibraAccount_LibraWriteSetManager">LibraW
 
 
 <pre><code>pragma verify=<b>false</b>;
-pragma opaque;
+</code></pre>
+
+
+> TODO: disabled due to timeout
+
+
+<pre><code>pragma opaque;
 pragma verify_duration_estimate = 100;
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
 <b>modifies</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;&gt;(cap.account_address);
@@ -3294,11 +3300,68 @@ Needed to prove invariant
 
 
 
-<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>aborts_if</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>ensures</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) == <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt; { value: 0 } };
+<pre><code><b>include</b> <a href="#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt;;
+<b>include</b> <a href="#0x1_LibraAccount_AddCurrencyEnsures">AddCurrencyEnsures</a>&lt;Token&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_AddCurrencyAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt; {
+    account: signer;
+}
+</code></pre>
+
+
+<code>Currency</code> must be valid
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt; {
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">Libra::AbortsIfNoCurrency</a>&lt;Token&gt;;
+}
+</code></pre>
+
+
+<code>account</code> must be allowed to hold balances. This function must abort if the predicate
+<code>can_hold_balance</code> for <code>account</code> returns false [E2][E3][E4][E5][E6][E7][E8].
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> !<a href="Roles.md#0x1_Roles_can_hold_balance">Roles::can_hold_balance</a>(account) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+}
+</code></pre>
+
+
+<code>account</code> cannot have an existing balance in <code>Currency</code>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyAbortsIf">AddCurrencyAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) with <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_LibraAccount_AddCurrencyEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyEnsures">AddCurrencyEnsures</a>&lt;Token&gt; {
+    account: signer;
+}
+</code></pre>
+
+
+This publishes a <code><a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Currency&gt;</code> to the caller's account
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraAccount_AddCurrencyEnsures">AddCurrencyEnsures</a>&lt;Token&gt; {
+    <b>ensures</b> exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+    <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)) == <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt; { value: 0 } };
+}
 </code></pre>
 
 

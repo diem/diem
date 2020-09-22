@@ -554,6 +554,13 @@ type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 
 
 
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+> TODO: disabled due to timeout.
+
+
 <pre><code>pragma opaque;
 <a name="0x1_LBR_reserve$13"></a>
 <b>let</b> reserve = <b>global</b>&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());

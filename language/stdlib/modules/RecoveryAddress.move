@@ -55,14 +55,26 @@ module RecoveryAddress {
         )
     }
     spec fun publish {
+        include PublishAbortsIf;
+        include PublishEnsures;
+    }
+    spec schema PublishAbortsIf {
+        recovery_account: signer;
+        rotation_cap: KeyRotationCapability;
         let addr = Signer::spec_address_of(recovery_account);
         aborts_if !VASP::is_vasp(addr) with Errors::INVALID_ARGUMENT;
         aborts_if spec_is_recovery_address(addr) with Errors::ALREADY_PUBLISHED;
         aborts_if LibraAccount::key_rotation_capability_address(rotation_cap) != addr
             with Errors::INVALID_ARGUMENT;
-        ensures spec_is_recovery_address(Signer::spec_address_of(recovery_account));
     }
-
+    spec schema PublishEnsures {
+        recovery_account: signer;
+        rotation_cap: KeyRotationCapability;
+        let addr = Signer::spec_address_of(recovery_account);
+        ensures spec_is_recovery_address(addr);
+        ensures len(spec_get_rotation_caps(addr)) == 1;
+        ensures spec_get_rotation_caps(addr)[0] == rotation_cap;
+    }
 
     /// Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either
     /// `recovery_address` or `to_recover`.
@@ -151,15 +163,27 @@ module RecoveryAddress {
         );
     }
     spec fun add_rotation_capability {
+        include AddRotationCapabilityAbortsIf;
+        include AddRotationCapabilityEnsures;
+    }
+    spec schema AddRotationCapabilityAbortsIf {
+        to_recover: KeyRotationCapability;
+        recovery_address: address;
         aborts_if !spec_is_recovery_address(recovery_address) with Errors::NOT_PUBLISHED;
         let to_recover_address = LibraAccount::key_rotation_capability_address(to_recover);
         aborts_if !VASP::is_vasp(recovery_address) with Errors::INVALID_ARGUMENT;
         aborts_if !VASP::is_vasp(to_recover_address) with Errors::INVALID_ARGUMENT;
         aborts_if VASP::spec_parent_address(recovery_address) != VASP::spec_parent_address(to_recover_address)
             with Errors::INVALID_ARGUMENT;
+    }
+    spec schema AddRotationCapabilityEnsures {
+        to_recover: KeyRotationCapability;
+        recovery_address: address;
+
         ensures spec_get_rotation_caps(recovery_address)[
             len(spec_get_rotation_caps(recovery_address)) - 1] == to_recover;
     }
+
     // ****************** SPECIFICATIONS *******************
 
     /// # Module specifications

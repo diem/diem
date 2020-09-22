@@ -11,6 +11,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `create_recovery_address`](#SCRIPT_Specification_create_recovery_address)
 
 
 
@@ -86,3 +88,39 @@ may be used as a recovery account for those accounts.
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_create_recovery_address"></a>
+
+### Function `create_recovery_address`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_recovery_address">create_recovery_address</a>(account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">LibraAccount::ExtractKeyRotationCapabilityEnsures</a>;
+<a name="SCRIPT_addr$1"></a>
+<b>let</b> addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
+<a name="SCRIPT_rotation_cap$2"></a>
+<b>let</b> rotation_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(addr);
+<b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_PublishAbortsIf">RecoveryAddress::PublishAbortsIf</a>{
+    recovery_account: account,
+    rotation_cap: rotation_cap
+};
+<b>ensures</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">RecoveryAddress::spec_is_recovery_address</a>(addr);
+<b>ensures</b> len(<a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(addr)) == 1;
+<b>ensures</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(addr)[0] == <b>old</b>(rotation_cap);
+aborts_with [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+</code></pre>

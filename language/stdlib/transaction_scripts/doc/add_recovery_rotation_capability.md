@@ -11,6 +11,8 @@
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
+-  [Specification](#SCRIPT_Specification)
+    -  [Function `add_recovery_rotation_capability`](#SCRIPT_Specification_add_recovery_rotation_capability)
 
 
 
@@ -98,3 +100,36 @@ resource stored under the account at <code>recovery_address</code>.
 
 
 </details>
+
+<a name="SCRIPT_Specification"></a>
+
+## Specification
+
+
+<a name="SCRIPT_Specification_add_recovery_rotation_capability"></a>
+
+### Function `add_recovery_rotation_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityAbortsIf">LibraAccount::ExtractKeyRotationCapabilityAbortsIf</a>{account: to_recover_account};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractKeyRotationCapabilityEnsures">LibraAccount::ExtractKeyRotationCapabilityEnsures</a>{account: to_recover_account};
+<a name="SCRIPT_addr$1"></a>
+<b>let</b> addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account);
+<a name="SCRIPT_rotation_cap$2"></a>
+<b>let</b> rotation_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_key_rotation_cap">LibraAccount::spec_get_key_rotation_cap</a>(addr);
+<b>include</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_AddRotationCapabilityAbortsIf">RecoveryAddress::AddRotationCapabilityAbortsIf</a>{
+    to_recover: rotation_cap
+};
+<b>ensures</b> <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(recovery_address)[
+    len(<a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">RecoveryAddress::spec_get_rotation_caps</a>(recovery_address)) - 1] == <b>old</b>(rotation_cap);
+aborts_with [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+</code></pre>
