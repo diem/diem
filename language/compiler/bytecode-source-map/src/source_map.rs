@@ -353,19 +353,6 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         Ok(())
     }
 
-    pub fn get_function_type_parameter_name(
-        &self,
-        fdef_idx: FunctionDefinitionIndex,
-        type_parameter_idx: usize,
-    ) -> Result<SourceName<Location>> {
-        self.function_map
-            .get(&fdef_idx.0)
-            .and_then(|function_source_map| {
-                function_source_map.get_type_parameter_name(type_parameter_idx)
-            })
-            .ok_or_else(|| format_err!("Unable to get function type parameter name"))
-    }
-
     pub fn add_code_mapping(
         &mut self,
         fdef_idx: FunctionDefinitionIndex,
