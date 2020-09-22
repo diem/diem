@@ -601,12 +601,6 @@ impl Kind_ {
     }
 }
 
-impl Type_ {
-    pub fn unit(loc: Loc) -> Type {
-        sp(loc, Type_::Unit)
-    }
-}
-
 impl UnaryOp_ {
     pub const NOT: &'static str = "!";
 
