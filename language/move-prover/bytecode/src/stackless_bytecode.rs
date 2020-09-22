@@ -262,10 +262,6 @@ impl Bytecode {
         matches!(self, Bytecode::Ret(..) | Bytecode::Abort(..))
     }
 
-    pub fn is_return(&self) -> bool {
-        matches!(self, Bytecode::Ret(..))
-    }
-
     pub fn is_unconditional_branch(&self) -> bool {
         matches!(
             self,
