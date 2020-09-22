@@ -21,10 +21,6 @@ pub struct PreburnResource {
 }
 
 impl PreburnResource {
-    pub fn new(coin: u64) -> Self {
-        Self { coin }
-    }
-
     pub fn coin(&self) -> u64 {
         self.coin
     }
