@@ -91,18 +91,6 @@ impl MarkedSourceMapping {
         }
     }
 
-    pub fn mark_struct_field(
-        &mut self,
-        struct_definition_index: StructDefinitionIndex,
-        field_index: MemberCount,
-        message: String,
-    ) {
-        self.struct_marks
-            .entry(struct_definition_index.0)
-            .or_insert_with(StructMarking::new)
-            .field(field_index, message)
-    }
-
     pub fn mark_struct_type_param(
         &mut self,
         struct_definition_index: StructDefinitionIndex,
