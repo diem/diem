@@ -1209,11 +1209,6 @@ impl<'env> ModuleEnv<'env> {
         }
     }
 
-    /// Gets the number of named constants in this module.
-    pub fn get_named_constant_count(&self) -> usize {
-        self.data.named_constants.len()
-    }
-
     /// Returns iterator over `NamedConstantEnv`s in this module.
     pub fn get_named_constants(&'env self) -> impl Iterator<Item = NamedConstantEnv<'env>> {
         self.clone().into_named_constants()
@@ -1251,11 +1246,6 @@ impl<'env> ModuleEnv<'env> {
             module_env: self,
             data,
         }
-    }
-
-    /// Gets the number of functions in this module.
-    pub fn get_function_count(&self) -> usize {
-        self.data.function_data.len()
     }
 
     /// Returns iterator over FunctionEnvs in this module.
