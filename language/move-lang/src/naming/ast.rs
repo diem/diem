@@ -377,19 +377,6 @@ impl BuiltinFunction_ {
             _ => None,
         }
     }
-
-    pub fn display_name(&self) -> &'static str {
-        use BuiltinFunction_ as BF;
-        match self {
-            BF::MoveTo(_) => BF::MOVE_TO,
-            BF::MoveFrom(_) => BF::MOVE_FROM,
-            BF::BorrowGlobal(false, _) => BF::BORROW_GLOBAL,
-            BF::BorrowGlobal(true, _) => BF::BORROW_GLOBAL_MUT,
-            BF::Exists(_) => BF::EXISTS,
-            BF::Freeze(_) => BF::FREEZE,
-            BF::Assert => BF::ASSERT,
-        }
-    }
 }
 
 impl Type_ {
