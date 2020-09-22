@@ -157,14 +157,6 @@ impl Type {
         }
     }
 
-    /// If this is a struct type, replace the type instantiation.
-    pub fn replace_struct_instantiation(&self, inst: &[Type]) -> Type {
-        match self {
-            Type::Struct(mid, sid, _) => Type::Struct(*mid, *sid, inst.to_vec()),
-            _ => self.clone(),
-        }
-    }
-
     /// If this is a struct type, return the associated struct env and type parameters.
     pub fn get_struct<'env>(
         &'env self,
