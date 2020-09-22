@@ -64,10 +64,6 @@ impl Metadata {
         self.file
     }
 
-    pub fn line(&self) -> u32 {
-        self.line
-    }
-
     pub fn location(&self) -> &'static str {
         self.location
     }
