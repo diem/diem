@@ -31,6 +31,8 @@ const NUM_SEND_RETRIES: u8 = 1;
 pub struct LogEntry {
     #[serde(flatten)]
     metadata: Metadata,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    thread_name: Option<String>,
     timestamp: String,
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     data: BTreeMap<&'static str, serde_json::Value>,
@@ -39,7 +41,7 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
-    fn new(event: &Event) -> Self {
+    fn new(event: &Event, thread_name: Option<&str>) -> Self {
         use crate::{Key, Value, Visitor};
 
         struct JsonVisitor<'a>(&'a mut BTreeMap<&'static str, serde_json::Value>);
@@ -57,6 +59,7 @@ impl LogEntry {
         }
 
         let metadata = *event.metadata();
+        let thread_name = thread_name.map(ToOwned::to_owned);
         let message = event.message().map(fmt::format);
 
         let mut data = BTreeMap::new();
@@ -66,6 +69,7 @@ impl LogEntry {
 
         Self {
             metadata,
+            thread_name,
             timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Micros, true),
             data,
             message,
@@ -222,7 +226,7 @@ impl Logger for LibraLogger {
     }
 
     fn record(&self, event: &Event) {
-        let entry = LogEntry::new(event);
+        let entry = LogEntry::new(event, ::std::thread::current().name());
 
         self.send_entry(entry)
     }
@@ -367,9 +371,12 @@ mod tests {
     };
     use chrono::{DateTime, Utc};
     use serde_json::Value as JsonValue;
-    use std::sync::{
-        mpsc::{self, Receiver, SyncSender},
-        Arc,
+    use std::{
+        sync::{
+            mpsc::{self, Receiver, SyncSender},
+            Arc,
+        },
+        thread,
     };
 
     #[derive(serde::Serialize)]
@@ -405,7 +412,8 @@ mod tests {
         }
 
         fn record(&self, event: &Event) {
-            self.0.send(LogEntry::new(event)).unwrap();
+            let entry = LogEntry::new(event, ::std::thread::current().name());
+            self.0.send(entry).unwrap();
         }
     }
 
@@ -486,5 +494,15 @@ mod tests {
             let entry = receiver.recv().unwrap();
             assert_eq!(entry.metadata.level(), *level);
         }
+
+        // Verify that the thread name is properly included
+        let handler = thread::Builder::new()
+            .name("named thread".into())
+            .spawn(|| info!("thread"))
+            .unwrap();
+
+        handler.join().unwrap();
+        let entry = receiver.recv().unwrap();
+        assert_eq!(entry.thread_name.as_deref(), Some("named thread"));
     }
 }
