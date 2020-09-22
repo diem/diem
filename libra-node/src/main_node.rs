@@ -128,7 +128,6 @@ pub fn setup_environment(node_config: &NodeConfig, logger: Option<Arc<Logger>>) 
     );
 
     let waypoint = node_config.base.waypoint.waypoint();
-    println!("WWWW1111: {}", waypoint);
     // if there's genesis txn and waypoint, commit it if the result matches.
     if let Some(genesis) = get_genesis_txn(&node_config) {
         maybe_bootstrap::<LibraVM>(&db_rw, genesis, waypoint)
