@@ -935,17 +935,6 @@ impl GlobalEnv {
         None
     }
 
-    /// Returns the struct enclosing this location.
-    pub fn get_enclosing_struct(&self, loc: Loc) -> Option<StructEnv<'_>> {
-        let module_env = self.get_enclosing_module(loc.clone())?;
-        for struct_env in module_env.into_structs() {
-            if Self::enclosing_span(struct_env.get_loc().span(), loc.span()) {
-                return Some(struct_env);
-            }
-        }
-        None
-    }
-
     fn enclosing_span(outer: Span, inner: Span) -> bool {
         inner.start() >= outer.start() && inner.end() <= outer.end()
     }
