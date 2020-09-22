@@ -5,7 +5,7 @@ use crate::protocols::wire::handshake::v1::ProtocolId;
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
     register_histogram_vec, register_int_counter_vec, register_int_gauge, register_int_gauge_vec,
-    Histogram, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+    Histogram, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec,
 };
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
@@ -309,27 +309,45 @@ pub static PENDING_PEER_MANAGER_REQUESTS: Lazy<IntCounterVec> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static OP_COUNTERS: Lazy<OpMetrics> = Lazy::new(|| OpMetrics::new_and_registered("network"));
-
 ///
 /// Channel Counters
 ///
 
 /// Counter of pending requests in Connectivity Manager
-pub static PENDING_CONNECTIVITY_MANAGER_REQUESTS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_connectivity_manager_requests"));
+pub static PENDING_CONNECTIVITY_MANAGER_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_connectivity_manager_requests",
+        "Number of pending connectivity manager requests"
+    )
+    .unwrap()
+});
 
 /// Counter of pending Connection Handler notifications to PeerManager.
-pub static PENDING_CONNECTION_HANDLER_NOTIFICATIONS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_connection_handler_notifications"));
+pub static PENDING_CONNECTION_HANDLER_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_connection_handler_notifications",
+        "Number of pending connection handler notifications"
+    )
+    .unwrap()
+});
 
 /// Counter of pending dial requests in Peer Manager
-pub static PENDING_PEER_MANAGER_DIAL_REQUESTS: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_peer_manager_dial_requests"));
+pub static PENDING_PEER_MANAGER_DIAL_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_peer_manager_dial_requests",
+        "Number of pending peer manager dial requests"
+    )
+    .unwrap()
+});
 
 /// Counter of messages pending in queue to be sent out on the wire.
-pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> =
-    Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_wire_messages"));
+pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_wire_messages",
+        "Number of pending wire messages"
+    )
+    .unwrap()
+});
 
 /// Counter of pending requests in Direct Send
 pub static PENDING_DIRECT_SEND_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
