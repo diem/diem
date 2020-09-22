@@ -254,10 +254,6 @@ impl EncNetworkAddress {
     pub fn key_version(&self) -> KeyVersion {
         self.key_version
     }
-
-    pub fn seq_num(&self) -> u64 {
-        self.seq_num
-    }
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
