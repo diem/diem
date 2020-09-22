@@ -719,10 +719,6 @@ impl GlobalEnv {
     }
 
     /// Returns true if a spec fun is used in specs.
-    pub fn is_spec_fun_used(&self, module_id: ModuleId, spec_fun_id: SpecFunId) -> bool {
-        self.used_spec_funs
-            .contains(&module_id.qualified(spec_fun_id))
-    }
 
     /// Adds a new module to the environment. StructData and FunctionData need to be provided
     /// in definition index order. See `create_function_data` and `create_struct_data` for how
