@@ -13,14 +13,7 @@ use spec_lang::{
     env::{GlobalEnv, ModuleEnv, NamedConstantEnv},
     symbol::Symbol,
 };
-use std::{
-    collections::BTreeMap,
-    convert::TryFrom,
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-    rc::Rc,
-};
+use std::{collections::BTreeMap, convert::TryFrom, fs::File, io::Write, path::Path, rc::Rc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ErrmapOptions {
@@ -107,12 +100,6 @@ impl ErrorMapping {
             ))
         }
         Ok(())
-    }
-
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Self {
-        let mut bytes = Vec::new();
-        File::open(path).unwrap().read_to_end(&mut bytes).unwrap();
-        lcs::from_bytes(&bytes).unwrap()
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) {
