@@ -3,7 +3,7 @@
 
 use crate::account_address::AccountAddress;
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_network_address::{encrypted::EncNetworkAddress, NetworkAddress};
+use libra_network_address::NetworkAddress;
 use move_core_types::move_resource::MoveResource;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
@@ -56,9 +56,5 @@ impl ValidatorConfig {
 
     pub fn fullnode_network_addresses(&self) -> Result<Vec<NetworkAddress>, lcs::Error> {
         lcs::from_bytes(&self.fullnode_network_addresses)
-    }
-
-    pub fn validator_network_addresses(&self) -> Result<Vec<EncNetworkAddress>, lcs::Error> {
-        lcs::from_bytes(&self.validator_network_addresses)
     }
 }
