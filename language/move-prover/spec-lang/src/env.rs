@@ -1322,15 +1322,6 @@ impl<'env> ModuleEnv<'env> {
         self.get_struct(self.get_struct_id(idx))
     }
 
-    /// Gets the function id from a definition index which must be valid for this environment.
-    pub fn get_function_id(&self, idx: FunctionDefinitionIndex) -> FunId {
-        *self
-            .data
-            .function_idx_to_id
-            .get(&idx)
-            .expect("undefined function definition index")
-    }
-
     /// Gets a StructEnv by id, consuming this module env.
     pub fn into_struct(self, id: StructId) -> StructEnv<'env> {
         let data = self.data.struct_data.get(&id).expect("StructId undefined");
