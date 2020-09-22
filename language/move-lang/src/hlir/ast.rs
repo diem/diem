@@ -398,10 +398,6 @@ impl BaseType_ {
         Self::builtin(loc, BuiltinTypeName_::Bool, vec![])
     }
 
-    pub fn u8(loc: Loc) -> BaseType {
-        Self::builtin(loc, BuiltinTypeName_::U8, vec![])
-    }
-
     pub fn u64(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U64, vec![])
     }
@@ -418,10 +414,6 @@ impl SingleType_ {
 
     pub fn bool(loc: Loc) -> SingleType {
         Self::base(BaseType_::bool(loc))
-    }
-
-    pub fn u8(loc: Loc) -> SingleType {
-        Self::base(BaseType_::u8(loc))
     }
 
     pub fn u64(loc: Loc) -> SingleType {
@@ -451,10 +443,6 @@ impl Type_ {
 
     pub fn bool(loc: Loc) -> Type {
         Self::single(SingleType_::bool(loc))
-    }
-
-    pub fn u8(loc: Loc) -> Type {
-        Self::single(SingleType_::u8(loc))
     }
 
     pub fn u64(loc: Loc) -> Type {
