@@ -90,18 +90,6 @@ impl<Loc: Copy, Lbl: Clone + Ord> BorrowGraph<Loc, Lbl> {
         returned_edges
     }
 
-    /// Return the incoming edges into id
-    pub fn in_edges(&self, id: RefID) -> Vec<(Loc, RefID, Path<Lbl>, bool)> {
-        let mut returned_edges = vec![];
-        let borrows_from = &self.0.get(&id).unwrap().borrows_from;
-        for src in borrows_from {
-            for edge in self.between_edges(*src, id) {
-                returned_edges.push((edge.0, *src, edge.1, edge.2));
-            }
-        }
-        returned_edges
-    }
-
     //**********************************************************************************************
     // Edges/Borrows
     //**********************************************************************************************
