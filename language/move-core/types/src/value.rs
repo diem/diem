@@ -61,13 +61,6 @@ impl MoveKind {
         }
     }
 
-    pub fn is_copyable(&self) -> bool {
-        match self {
-            Self::Resource => false,
-            Self::Copyable => true,
-        }
-    }
-
     pub fn from_bool(is_resource: bool) -> Self {
         if is_resource {
             Self::Resource
@@ -80,10 +73,6 @@ impl MoveKind {
 impl MoveKindInfo {
     pub fn is_resource(&self) -> bool {
         self.kind().is_resource()
-    }
-
-    pub fn is_copyable(&self) -> bool {
-        self.kind().is_copyable()
     }
 
     pub fn kind(&self) -> MoveKind {
