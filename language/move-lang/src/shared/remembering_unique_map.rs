@@ -47,10 +47,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.remove(key)
     }
 
-    pub fn into_inner(self) -> UniqueMap<K, V> {
-        self.map
-    }
-
     pub fn remember(self) -> BTreeSet<K> {
         self.gotten_keys
     }
