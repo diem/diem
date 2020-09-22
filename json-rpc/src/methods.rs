@@ -155,14 +155,14 @@ impl JsonRpcRequest {
         Ok(EventKey::try_from(&hex::decode(raw)?[..])?)
     }
 
-    fn _parse_signed_trasaction(&self, val: Value) -> Result<SignedTransaction> {
+    fn _parse_signed_transaction(&self, val: Value) -> Result<SignedTransaction> {
         let raw: String = serde_json::from_value(val)?;
         Ok(lcs::from_bytes(&hex::decode(raw)?)?)
     }
 
     fn parse_signed_transaction(&self, index: usize, name: &str) -> Result<SignedTransaction> {
         Ok(self
-            ._parse_signed_trasaction(self.get_param(index))
+            ._parse_signed_transaction(self.get_param(index))
             .map_err(|_| invalid_param(index, name))?)
     }
 
