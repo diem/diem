@@ -537,11 +537,6 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     }
 
     #[inline]
-    pub fn signature_token_kind(&self) -> SignatureTokenKind {
-        self.token.signature_token_kind()
-    }
-
-    #[inline]
     pub fn is_reference(&self) -> bool {
         self.token.is_reference()
     }
