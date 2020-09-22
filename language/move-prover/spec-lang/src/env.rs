@@ -1331,11 +1331,6 @@ impl<'env> ModuleEnv<'env> {
         }
     }
 
-    /// Gets the number of structs in this module.
-    pub fn get_struct_count(&self) -> usize {
-        self.data.struct_data.len()
-    }
-
     /// Returns iterator over structs in this module.
     pub fn get_structs(&'env self) -> impl Iterator<Item = StructEnv<'env>> {
         self.clone().into_structs()
