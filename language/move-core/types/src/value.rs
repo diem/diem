@@ -108,10 +108,6 @@ impl MoveStruct {
     pub fn fields(&self) -> &[MoveValue] {
         &self.0
     }
-
-    pub fn into_inner(self) -> Vec<MoveValue> {
-        self.0
-    }
 }
 
 impl MoveStructLayout {
