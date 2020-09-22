@@ -21,7 +21,7 @@ struct Args {
     #[structopt(short = "l", long)]
     pub enable_logging: bool,
     /// Start client
-    #[structopt(short = "s", long)]
+    #[structopt(short = "s", long, requires("cli-path"))]
     pub start_client: bool,
     /// Directory used by launch_swarm to output LibraNodes' config files, logs, libradb, etc,
     /// such that user can still inspect them after exit.
@@ -34,18 +34,18 @@ struct Args {
     pub num_full_nodes: usize,
     /// Start with faucet service for minting coins, this flag disables cli's dev commands.
     /// Used for manual testing faucet service integration.
-    #[structopt(short = "m", long)]
+    #[structopt(short = "m", long, requires("faucet-path"))]
     pub start_faucet: bool,
     /// Path to the libra-node binary
-    #[structopt(long, default_value = "libra-node")]
+    #[structopt(long)]
     pub libra_node: String,
 
     /// Path to the cli binary
-    #[structopt(long, default_value = "cli")]
-    pub cli_path: String,
+    #[structopt(long)]
+    pub cli_path: Option<String>,
     /// Path to the faucet binary
-    #[structopt(long, default_value = "libra-faucet")]
-    pub faucet_path: String,
+    #[structopt(long)]
+    pub faucet_path: Option<String>,
 }
 
 fn main() {
@@ -149,7 +149,7 @@ fn main() {
         let server_port = validator_swarm.get_client_port(0);
         println!("Starting faucet service at port: {}", faucet_port);
         let process = faucet::Process::start(
-            args.faucet_path.as_ref(),
+            args.faucet_path.as_ref().unwrap().as_ref(),
             faucet_port,
             server_port,
             Path::new(&libra_root_key_path),
@@ -170,14 +170,14 @@ fn main() {
         let port = validator_swarm.get_client_port(0);
         let client = if let Some(ref f) = faucet {
             client::InteractiveClient::new_with_inherit_io_faucet(
-                args.cli_path.as_ref(),
+                args.cli_path.as_ref().unwrap().as_ref(),
                 port,
                 f.mint_url(),
                 waypoint,
             )
         } else {
             client::InteractiveClient::new_with_inherit_io(
-                args.cli_path.as_ref(),
+                args.cli_path.as_ref().unwrap().as_ref(),
                 port,
                 Path::new(&libra_root_key_path),
                 &tmp_mnemonic_file.path(),
