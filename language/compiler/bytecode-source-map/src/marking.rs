@@ -93,18 +93,6 @@ impl MarkedSourceMapping {
         }
     }
 
-    pub fn mark_code_offset(
-        &mut self,
-        function_definition_index: FunctionDefinitionIndex,
-        code_offset: CodeOffset,
-        message: String,
-    ) {
-        self.function_marks
-            .entry(function_definition_index.0)
-            .or_insert_with(FunctionMarking::new)
-            .code_offset(code_offset, message)
-    }
-
     pub fn mark_function_type_param(
         &mut self,
         function_definition_index: FunctionDefinitionIndex,
