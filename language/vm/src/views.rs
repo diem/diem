@@ -57,14 +57,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |module_handle| ModuleHandleView::new(module, module_handle))
     }
 
-    pub fn field_handles(&self) -> impl DoubleEndedIterator<Item = FieldHandleView<'a, T>> + Send {
-        let module = self.module;
-        module
-            .field_handles()
-            .iter()
-            .map(move |field_handle| FieldHandleView::new(module, field_handle))
-    }
-
     pub fn struct_instantiations(
         &self,
     ) -> impl DoubleEndedIterator<Item = StructInstantiationView<'a, T>> + Send {
