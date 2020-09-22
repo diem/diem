@@ -980,12 +980,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             return Ok(());
         }
 
-        self.executor_proxy.execute_chunk(
-            txn_list_with_proof,
-            target,
-            intermediate_end_of_epoch_li,
-        )?;
-        Ok(())
+        self.executor_proxy
+            .execute_chunk(txn_list_with_proof, target, intermediate_end_of_epoch_li)
     }
 
     /// Ensures that StateSynchronizer is making progress:
