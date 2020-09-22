@@ -23,14 +23,14 @@ Steps to create "data" parameters:
 4. Create [SignedTransaction][3]
 5. Serialize [SignedTransaction][3] into bytes, and then hex-encode into string as Signed transaction data parameter.
 
-See more related at [Croypto Spec](../../specifications/crypto/spec.md)
+See more related at [Crypto Spec](../../specifications/crypto/README.md)
 
 ### Returns
 
 Null - on success
 
 Note:
-* Although submit returns errors immediatelly for the invalid transaction submitted, but success submit does not mean the transaction will be executed successfully.
+* Although submit returns errors immediately for the invalid transaction submitted, but success submit does not mean the transaction will be executed successfully.
 * Client should call [get_account_transaction](method_get_account_transaction.md) with the sender account address and the RawTransaction sequence_number to find out whether transaction is executed.
 * After transaction is submitted, but not executed yet, calling [get_account_transaction](method_get_account_transaction.md) will return null.
 * If [get_account_transaction](method_get_account_transaction.md) returns a Transaction, client should validate [Transaction#signature](type_transaction.md#user) == the SignedTransaction signature as it is possible there is another Transaction submitted with same account sequence number.
