@@ -126,10 +126,6 @@ impl AccountState {
         self.get_resource(&ValidatorSet::CONFIG_ID.access_path().path)
     }
 
-    pub fn get_libra_version(&self) -> Result<Option<LibraVersion>> {
-        self.get_resource(&LibraVersion::CONFIG_ID.access_path().path)
-    }
-
     pub fn get_registered_currency_info_resources(&self) -> Result<Vec<CurrencyInfoResource>> {
         let path = RegisteredCurrencies::CONFIG_ID.access_path().path;
         let currencies: Option<RegisteredCurrencies> = self.get_resource(&path)?;
