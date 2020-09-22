@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::collections::{BTreeMap, HashMap};
-use vm::file_format::{
-    CodeOffset, FunctionDefinitionIndex, MemberCount, StructDefinitionIndex, TableIndex,
-};
+use vm::file_format::{CodeOffset, MemberCount, StructDefinitionIndex, TableIndex};
 
 /// A data structure used to track any markings or extra information that is desired to be exposed
 /// in the disassembled function definition. Every marking can have multiple messages associated with it.
@@ -91,18 +89,6 @@ impl MarkedSourceMapping {
             function_marks: HashMap::new(),
             struct_marks: HashMap::new(),
         }
-    }
-
-    pub fn mark_function_type_param(
-        &mut self,
-        function_definition_index: FunctionDefinitionIndex,
-        type_param_offset: usize,
-        message: String,
-    ) {
-        self.function_marks
-            .entry(function_definition_index.0)
-            .or_insert_with(FunctionMarking::new)
-            .type_param(type_param_offset, message)
     }
 
     pub fn mark_struct_field(
