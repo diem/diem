@@ -185,17 +185,6 @@ where
             .get_range_proof(first_leaf_index, num_leaves)
     }
 
-    /// See `get_range_proof`. This is the version of it that returns `Position`s only.
-    pub fn get_range_proof_positions(
-        reader: &R,
-        full_acc_leaves: LeafCount,
-        first_leaf_index: Option<u64>,
-        num_leaves: LeafCount,
-    ) -> Result<(Vec<Position>, Vec<Position>)> {
-        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
-            .get_range_proof_positions(first_leaf_index, num_leaves)
-    }
-
     /// From left to right, gets frozen subtree root hashes of the accumulator. For example, if the
     /// accumulator has 5 leaves, `x` and `e` are returned.
     /// ```text
