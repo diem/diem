@@ -1603,11 +1603,6 @@ impl<'env> StructEnv<'env> {
         self.module_env.env.get_doc(&self.data.loc)
     }
 
-    /// Returns properties from pragmas.
-    pub fn get_properties(&self) -> &PropertyBag {
-        &self.data.spec.properties
-    }
-
     /// Gets the id associated with this struct.
     pub fn get_id(&self) -> StructId {
         StructId(self.data.name)
