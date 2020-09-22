@@ -54,7 +54,10 @@ impl TestCase {
             let leader = nodes[*leader_idx].author;
             round_proposers.insert(*round, leader);
             for partition in self.round_partitions.get(&round).unwrap() {
-                let with_leader = partition.iter().find(|idx| **idx == *leader_idx).is_some();
+                let with_leader = partition
+                    .iter()
+                    .find(|idx| nodes[**idx].author == leader)
+                    .is_some();
                 if !with_leader {
                     for node_idx in partition {
                         timeouts[*node_idx].insert(*round);
@@ -91,18 +94,20 @@ impl TestCase {
 fn test_case_conversion() {
     let round_leaders: HashMap<_, _> = vec![(1, 0), (2, 1), (3, 2)].into_iter().collect();
     let round_partitions = vec![
-        (1, vec![vec![0, 1], vec![2, 3]]),
-        (2, vec![vec![0], vec![1, 2, 3]]),
-        (3, vec![vec![0, 3], vec![2], vec![1]]),
+        (1, vec![vec![0, 1], vec![2, 3, 4]]),
+        (2, vec![vec![0, 4], vec![1, 2, 3]]),
+        (3, vec![vec![0, 3], vec![2, 4], vec![1]]),
     ]
     .into_iter()
     .collect();
-    let nodes_id: Vec<_> = (0..4)
+    let mut nodes_id: Vec<_> = (0..4)
         .map(|id| TwinId {
             id,
             author: AccountAddress::random(),
         })
         .collect();
+    // create one twins
+    nodes_id.push(nodes_id[0]);
     let expected_leaders: HashMap<Round, Author> = round_leaders
         .iter()
         .map(|(r, idx)| (*r, nodes_id[*idx].author))
@@ -118,6 +123,7 @@ fn test_case_conversion() {
 
     assert_eq!(configs[0].timeout_rounds, vec![2, 3].into_iter().collect());
     assert_eq!(configs[1].timeout_rounds, vec![3].into_iter().collect());
-    assert_eq!(configs[2].timeout_rounds, vec![1].into_iter().collect());
-    assert_eq!(configs[3].timeout_rounds, vec![1, 3].into_iter().collect());
+    assert_eq!(configs[2].timeout_rounds, vec![].into_iter().collect());
+    assert_eq!(configs[3].timeout_rounds, vec![3].into_iter().collect());
+    assert_eq!(configs[4].timeout_rounds, vec![2].into_iter().collect());
 }
