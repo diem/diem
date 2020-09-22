@@ -47,16 +47,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.remove(key)
     }
 
-    pub fn ref_map<V2, F>(&self, f: F) -> RememberingUniqueMap<K, V2>
-    where
-        F: FnMut(K, &V) -> V2,
-    {
-        RememberingUniqueMap {
-            map: self.map.ref_map(f),
-            gotten_keys: self.gotten_keys.clone(),
-        }
-    }
-
     pub fn union_with<F>(&self, other: &Self, f: F) -> Self
     where
         V: Clone,
