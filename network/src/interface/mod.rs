@@ -80,34 +80,16 @@ where
         let peer_id = connection.metadata.remote_peer_id;
 
         // Setup and start Peer actor.
-        let (peer_reqs_tx, peer_reqs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_PEER_REQUESTS,
-                peer_id.short_str().as_str(),
-            ),
-        );
-        let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_PEER_RPC_NOTIFICATIONS,
-                peer_id.short_str().as_str(),
-            ),
-        );
+        let (peer_reqs_tx, peer_reqs_rx) =
+            channel::new(channel_size, &counters::PENDING_PEER_REQUESTS);
+        let (peer_rpc_notifs_tx, peer_rpc_notifs_rx) =
+            channel::new(channel_size, &counters::PENDING_PEER_RPC_NOTIFICATIONS);
         let (peer_ds_notifs_tx, peer_ds_notifs_rx) = channel::new(
             channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_PEER_DIRECT_SEND_NOTIFICATIONS,
-                peer_id.short_str().as_str(),
-            ),
+            &counters::PENDING_PEER_DIRECT_SEND_NOTIFICATIONS,
         );
-        let (peer_notifs_tx, peer_notifs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_PEER_NETWORK_NOTIFICATIONS,
-                peer_id.short_str().as_str(),
-            ),
-        );
+        let (peer_notifs_tx, peer_notifs_rx) =
+            channel::new(channel_size, &counters::PENDING_PEER_NETWORK_NOTIFICATIONS);
         let peer_handle = PeerHandle::new(
             network_context.clone(),
             connection.metadata.clone(),
@@ -126,20 +108,10 @@ where
         executor.spawn(peer.start());
 
         // Setup and start RPC actor.
-        let (rpc_notifs_tx, rpc_notifs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_RPC_NOTIFICATIONS,
-                peer_id.short_str().as_str(),
-            ),
-        );
-        let (rpc_reqs_tx, rpc_reqs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_RPC_REQUESTS,
-                peer_id.short_str().as_str(),
-            ),
-        );
+        let (rpc_notifs_tx, rpc_notifs_rx) =
+            channel::new(channel_size, &counters::PENDING_RPC_NOTIFICATIONS);
+        let (rpc_reqs_tx, rpc_reqs_rx) =
+            channel::new(channel_size, &counters::PENDING_RPC_REQUESTS);
         let rpc = Rpc::new(
             Arc::clone(&network_context),
             peer_handle.clone(),
@@ -153,20 +125,10 @@ where
         executor.spawn(rpc.start());
 
         // Setup and start DirectSend actor.
-        let (ds_notifs_tx, ds_notifs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_DIRECT_SEND_NOTIFICATIONS,
-                peer_id.short_str().as_str(),
-            ),
-        );
-        let (ds_reqs_tx, ds_reqs_rx) = channel::new(
-            channel_size,
-            &counters::OP_COUNTERS.peer_gauge(
-                &counters::PENDING_DIRECT_SEND_REQUESTS,
-                peer_id.short_str().as_str(),
-            ),
-        );
+        let (ds_notifs_tx, ds_notifs_rx) =
+            channel::new(channel_size, &counters::PENDING_DIRECT_SEND_NOTIFICATIONS);
+        let (ds_reqs_tx, ds_reqs_rx) =
+            channel::new(channel_size, &counters::PENDING_DIRECT_SEND_REQUESTS);
         let ds = DirectSend::new(
             network_context.clone(),
             peer_handle.clone(),

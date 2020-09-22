@@ -4,8 +4,8 @@
 use crate::protocols::wire::handshake::v1::ProtocolId;
 use libra_config::network_id::NetworkContext;
 use libra_metrics::{
-    register_histogram_vec, register_int_counter_vec, register_int_gauge_vec, Histogram,
-    HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
+    register_histogram_vec, register_int_counter_vec, register_int_gauge, register_int_gauge_vec,
+    Histogram, HistogramVec, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, OpMetrics,
 };
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
@@ -332,27 +332,73 @@ pub static PENDING_WIRE_MESSAGES: Lazy<IntGauge> =
     Lazy::new(|| OP_COUNTERS.gauge("libra_network_pending_wire_messages"));
 
 /// Counter of pending requests in Direct Send
-pub static PENDING_DIRECT_SEND_REQUESTS: &str = "libra_network_pending_direct_send_requests";
+pub static PENDING_DIRECT_SEND_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_direct_send_requests",
+        "Number of pending direct send requests"
+    )
+    .unwrap()
+});
 
 /// Counter of pending Direct Send notifications to Network Provider
-pub static PENDING_DIRECT_SEND_NOTIFICATIONS: &str =
-    "libra_network_pending_direct_send_notifications";
+pub static PENDING_DIRECT_SEND_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_direct_send_notifications",
+        "Number of pending direct send notifications"
+    )
+    .unwrap()
+});
 
 /// Counter of pending requests in RPC
-pub static PENDING_RPC_REQUESTS: &str = "libra_network_pending_rpc_requests";
+pub static PENDING_RPC_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_rpc_requests",
+        "Number of pending rpc requests"
+    )
+    .unwrap()
+});
 
 /// Counter of pending RPC notifications to Network Provider
-pub static PENDING_RPC_NOTIFICATIONS: &str = "libra_network_pending_rpc_notifications";
+pub static PENDING_RPC_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_rpc_notifications",
+        "Number of pending rpc notifications"
+    )
+    .unwrap()
+});
 
 /// Counter of pending requests for each remote peer
-pub static PENDING_PEER_REQUESTS: &str = "libra_network_pending_peer_requests";
+pub static PENDING_PEER_REQUESTS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_peer_requests",
+        "Number of pending peer requests"
+    )
+    .unwrap()
+});
 
 /// Counter of pending RPC events from Peer to Rpc actor.
-pub static PENDING_PEER_RPC_NOTIFICATIONS: &str = "libra_network_pending_peer_rpc_notifications";
+pub static PENDING_PEER_RPC_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_peer_rpc_notifications",
+        "Number of pending peer rpc notifications"
+    )
+    .unwrap()
+});
 
 /// Counter of pending DirectSend events from Peer to DirectSend actor..
-pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: &str =
-    "libra_network_pending_peer_direct_send_notifications";
+pub static PENDING_PEER_DIRECT_SEND_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_peer_direct_send_notifications",
+        "Number of pending peer direct send notifications"
+    )
+    .unwrap()
+});
 
 /// Counter of pending connection notifications from Peer to NetworkProvider.
-pub static PENDING_PEER_NETWORK_NOTIFICATIONS: &str = "libra_network_pending_peer_notifications";
+pub static PENDING_PEER_NETWORK_NOTIFICATIONS: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_network_pending_peer_network_notifications",
+        "Number of pending peer network notifications"
+    )
+    .unwrap()
+});

@@ -4,7 +4,14 @@
 #![forbid(unsafe_code)]
 
 //! Provides an mpsc (multi-producer single-consumer) channel wrapped in an
-//! [`IntGauge`](libra_metrics::IntGauge)
+//! [`IntGauge`](libra_metrics::IntGauge) that counts the number of currently
+//! queued items. While there is only one [`channel::Receiver`], there can be
+//! many [`channel::Sender`]s, which are also cheap to clone.
+//!
+//! This channel differs from our other channel implementation, [`channel::libra_channel`],
+//! in that it is just a single queue (vs. different queues for different keys)
+//! with backpressure (senders will block if the queue is full instead of evicting
+//! another item in the queue) that only implements FIFO (vs. LIFO or KLAST).
 
 use futures::{
     channel::mpsc,
@@ -13,7 +20,6 @@ use futures::{
     task::{Context, Poll},
 };
 use libra_metrics::IntGauge;
-use once_cell::sync::Lazy;
 use std::pin::Pin;
 
 #[cfg(test)]
@@ -27,25 +33,27 @@ pub mod message_queues;
 #[cfg(test)]
 mod message_queues_test;
 
-/// Similar to `mpsc::Sender`, but with an `IntGauge`
+/// An [`mpsc::Sender`](futures::channel::mpsc::Sender) with an [`IntGauge`]
+/// counting the number of currently queued items.
 pub struct Sender<T> {
     inner: mpsc::Sender<T>,
     gauge: IntGauge,
 }
 
+/// An [`mpsc::Receiver`](futures::channel::mpsc::Receiver) with an [`IntGauge`]
+/// counting the number of currently queued items.
+pub struct Receiver<T> {
+    inner: mpsc::Receiver<T>,
+    gauge: IntGauge,
+}
+
 impl<T> Clone for Sender<T> {
     fn clone(&self) -> Self {
-        Sender {
+        Self {
             inner: self.inner.clone(),
             gauge: self.gauge.clone(),
         }
     }
-}
-
-/// Similar to `mpsc::Receiver`, but with an `IntGauge`
-pub struct Receiver<T> {
-    inner: mpsc::Receiver<T>,
-    gauge: IntGauge,
 }
 
 /// `Sender` implements `Sink` in the same way as `mpsc::Sender`, but it increments the
@@ -119,9 +127,7 @@ pub fn new<T>(size: usize, gauge: &IntGauge) -> (Sender<T>, Receiver<T>) {
     )
 }
 
-pub static TEST_COUNTER: Lazy<IntGauge> =
-    Lazy::new(|| IntGauge::new("TEST_COUNTER", "Counter of network tests").unwrap());
-
 pub fn new_test<T>(size: usize) -> (Sender<T>, Receiver<T>) {
-    new(size, &TEST_COUNTER)
+    let gauge = IntGauge::new("TEST_COUNTER", "test").unwrap();
+    new(size, &gauge)
 }
