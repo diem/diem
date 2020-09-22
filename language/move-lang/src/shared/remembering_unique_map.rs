@@ -47,16 +47,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.remove(key)
     }
 
-    pub fn maybe_from_iter(
-        iter: impl Iterator<Item = (K, V)>,
-    ) -> Result<RememberingUniqueMap<K, V>, (K::Key, K::Loc, K::Loc)> {
-        let map = UniqueMap::maybe_from_iter(iter)?;
-        Ok(RememberingUniqueMap {
-            map,
-            gotten_keys: BTreeSet::new(),
-        })
-    }
-
     pub fn into_inner(self) -> UniqueMap<K, V> {
         self.map
     }
