@@ -2,6 +2,27 @@
 # Copyright (c) The Libra Core Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+run_smoke_test_with_retry() {
+  set +e
+  flake=0
+  RUST_BACKTRACE=1 ${CARGO} ${CARGOFLAGS} xtest --package smoke-test -- --list | grep "::" | sed 's/: .*$//' > /tmp/e2e_tests
+  for target in $(cat /tmp/e2e_tests) ; do
+    retry=0
+    status=1
+    while [[ $status != 0 && $retry < 3 ]]; do
+      RUST_BACKTRACE=1 $CARGO $CARGOFLAGS xtest --package smoke-test -- $target --test-threads 1 --exact --nocapture
+      status=$?
+      retry=$((retry + 1))
+      if [[ $status != 0 ]] ; then
+        echo Failed to execute $target, $retry times
+      fi
+      sleep 10
+    done
+    flake=$((flake + retry))
+  done
+  exit $flake
+}
+
 # Check that the test directory and report path arguments are provided
 if [ $# -lt 2 ] || ! [ -d "$1" ]
 then
@@ -107,6 +128,8 @@ while read -r line; do
         if [ "${subdir}" == "." ]; then
           echo "Not running coverage for root crate"
           continue
+        elif [ "${subdir}" == "smoke-test" ]; then
+          run_smoke_test_with_retry || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
         fi
         # Don't fail out of the loop here. We just want to run the test binary
         # to collect its profile data.  Also note which crates fail under coverage.
