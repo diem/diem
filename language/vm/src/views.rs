@@ -57,16 +57,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |module_handle| ModuleHandleView::new(module, module_handle))
     }
 
-    pub fn function_handles(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = FunctionHandleView<'a, T>> + Send {
-        let module = self.module;
-        module
-            .function_handles()
-            .iter()
-            .map(move |function_handle| FunctionHandleView::new(module, function_handle))
-    }
-
     pub fn field_handles(&self) -> impl DoubleEndedIterator<Item = FieldHandleView<'a, T>> + Send {
         let module = self.module;
         module
