@@ -161,9 +161,6 @@ impl<'env> FunctionTarget<'env> {
     }
 
     /// Returns true if this function mutates any references (i.e. has &mut parameters).
-    pub fn is_mutating(&self) -> bool {
-        self.func_env.is_mutating()
-    }
 
     /// Returns the type parameters associated with this function.
     pub fn get_type_parameters(&self) -> Vec<TypeParameter> {
