@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use libra_types::chain_id::ChainId;
 use reqwest::{blocking, StatusCode, Url};
 use std::{
@@ -61,6 +61,12 @@ impl Process {
                 .stdout(Stdio::inherit())
                 .stderr(Stdio::inherit())
                 .spawn()
+                .with_context(|| {
+                    format!(
+                        "Error launching faucet process with binary: {:?}",
+                        faucet_bin_path
+                    )
+                })
                 .expect("Failed to spawn faucet process"),
         }
     }

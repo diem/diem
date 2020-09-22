@@ -82,9 +82,12 @@ impl LibraNode {
         node_command
             .stdout(log_file.try_clone()?)
             .stderr(log_file.try_clone()?);
-        let node = node_command
-            .spawn()
-            .context("Error launching node process")?;
+        let node = node_command.spawn().with_context(|| {
+            format!(
+                "Error launching node process with binary: {:?}",
+                libra_node_bin_path
+            )
+        })?;
         let debug_client = NodeDebugClient::new(
             "localhost",
             config.debug_interface.admission_control_node_debug_port,

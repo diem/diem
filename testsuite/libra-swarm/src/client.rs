@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::Context;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::{
     io,
@@ -76,6 +77,12 @@ impl InteractiveClient {
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
                     .spawn()
+                    .with_context(|| {
+                        format!(
+                            "Error launching client process with binary: {:?}",
+                            cli_bin_path
+                        )
+                    })
                     .expect("Failed to spawn client process"),
             ),
         }
@@ -102,6 +109,12 @@ impl InteractiveClient {
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())
                     .spawn()
+                    .with_context(|| {
+                        format!(
+                            "Error launching client process with binary: {:?}",
+                            cli_bin_path
+                        )
+                    })
                     .expect("Failed to spawn client process"),
             ),
         }
