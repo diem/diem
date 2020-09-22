@@ -92,7 +92,7 @@ fn start(no_logging: bool, config: &NodeConfig, log_file: Option<PathBuf>) {
         warn!("failpoints is set in config, but the binary doesn't compile with this feature");
     }
 
-    let _node_handle = libra_node::main_node::setup_environment(&config, logger);
+    let _node_handle = libra_node::setup_environment(&config, logger);
     let term = Arc::new(AtomicBool::new(false));
 
     while !term.load(Ordering::Acquire) {

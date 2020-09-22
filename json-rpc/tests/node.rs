@@ -8,7 +8,7 @@ use libra_genesis_tool::{config_builder::ValidatorBuilder, swarm_config::BuildSw
 pub struct Node {
     pub config: NodeConfig,
     pub root_key: libra_crypto::ed25519::Ed25519PrivateKey,
-    node: libra_node::main_node::LibraHandle,
+    node: libra_node::LibraHandle,
     _temp_dir: libra_temppath::TempPath,
 }
 
@@ -34,7 +34,7 @@ impl Node {
         config.set_data_dir(node_dir.to_path_buf());
         config.save(&config_path)?;
 
-        let node = libra_node::main_node::setup_environment(&config, None);
+        let node = libra_node::setup_environment(&config, None);
 
         Ok(Self {
             root_key,
