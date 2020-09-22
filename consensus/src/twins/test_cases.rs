@@ -1,23 +1,25 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::network_tests::TwinId;
 use consensus_types::common::{Author, Round};
 use libra_config::config::RoundProposerConfig;
 use libra_types::account_address::AccountAddress;
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 type Idx = usize;
 
 #[derive(Serialize, Deserialize)]
-struct TestCase {
-    round_leaders: HashMap<Round, Idx>,
-    round_partitions: HashMap<Round, Vec<Vec<Idx>>>,
+/// Specify the leaders and partitions for each round.
+/// Default is FixedProposer and no partitions.
+pub struct TestCase {
+    pub round_leaders: HashMap<Round, Idx>,
+    pub round_partitions: HashMap<Round, Vec<Vec<Idx>>>,
 }
 
 #[derive(Serialize, Deserialize)]
-struct TestCases {
+pub struct TestCases {
     num_of_nodes: u64,
     num_of_twins: u64,
     scenarios: Vec<TestCase>,
@@ -45,11 +47,11 @@ fn test_case_format() {
 }
 
 impl TestCase {
-    fn to_round_proposer_config(&self, authors: &Vec<Author>) -> Vec<RoundProposerConfig> {
+    pub fn to_round_proposer_config(&self, nodes: &[TwinId]) -> Vec<RoundProposerConfig> {
         let mut round_proposers = HashMap::new();
-        let mut timeouts: Vec<_> = authors.iter().map(|_| HashSet::new()).collect();
+        let mut timeouts: Vec<_> = nodes.iter().map(|_| HashSet::new()).collect();
         for (round, leader_idx) in &self.round_leaders {
-            let leader = authors[*leader_idx];
+            let leader = nodes[*leader_idx].author;
             round_proposers.insert(*round, leader);
             for partition in self.round_partitions.get(&round).unwrap() {
                 let with_leader = partition.iter().find(|idx| **idx == *leader_idx).is_some();
@@ -68,6 +70,21 @@ impl TestCase {
             })
             .collect()
     }
+
+    pub fn to_partitions(self, nodes: &[TwinId]) -> HashMap<Round, Vec<Vec<TwinId>>> {
+        self.round_partitions
+            .into_iter()
+            .map(|(r, partitions)| {
+                (
+                    r,
+                    partitions
+                        .into_iter()
+                        .map(|p| p.into_iter().map(|idx| nodes[idx]).collect())
+                        .collect(),
+                )
+            })
+            .collect()
+    }
 }
 
 #[test]
@@ -80,16 +97,21 @@ fn test_case_conversion() {
     ]
     .into_iter()
     .collect();
-    let authors: Vec<_> = (0..4).map(|_| AccountAddress::random()).collect();
+    let nodes_id: Vec<_> = (0..4)
+        .map(|id| TwinId {
+            id,
+            author: AccountAddress::random(),
+        })
+        .collect();
     let expected_leaders: HashMap<Round, Author> = round_leaders
         .iter()
-        .map(|(r, idx)| (*r, authors[*idx]))
+        .map(|(r, idx)| (*r, nodes_id[*idx].author))
         .collect();
     let test_case = TestCase {
         round_leaders,
         round_partitions,
     };
-    let configs = test_case.to_round_proposer_config(&authors);
+    let configs = test_case.to_round_proposer_config(&nodes_id);
     for config in &configs {
         assert_eq!(config.round_proposers, expected_leaders);
     }

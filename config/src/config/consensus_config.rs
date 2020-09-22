@@ -4,8 +4,10 @@
 use crate::config::SafetyRulesConfig;
 use libra_types::{account_address::AccountAddress, block_info::Round};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]

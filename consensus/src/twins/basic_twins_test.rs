@@ -3,16 +3,13 @@
 
 use crate::{
     network_interface::ConsensusMsg,
-    network_tests::{NetworkPlayground, TwinId},
+    network_tests::NetworkPlayground,
     test_utils::{consensus_runtime, timed_block_on},
-    twins::twins_node::SMRNode,
+    twins::{test_cases::TestCase, twins_node::SMRNode},
 };
 use consensus_types::{block::Block, common::Round};
 use futures::StreamExt;
-use libra_config::config::ConsensusProposerType::{FixedProposer, RotatingProposer, RoundProposer};
-use libra_config::config::RoundProposerConfig;
-use std::collections::{HashMap, HashSet};
-use std::time::Duration;
+use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
 
 #[test]
@@ -30,13 +27,7 @@ fn basic_start_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 0;
-    let nodes = SMRNode::start_num_nodes_with_twins(
-        num_nodes,
-        num_twins,
-        &mut playground,
-        RotatingProposer,
-        None,
-    );
+    let nodes = SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, None);
     let genesis = Block::make_genesis_block_from_ledger_info(&nodes[0].storage.get_ledger_info());
     timed_block_on(&mut runtime, async {
         let msg = playground
@@ -81,13 +72,8 @@ fn drop_config_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 0;
-    let mut nodes = SMRNode::start_num_nodes_with_twins(
-        num_nodes,
-        num_twins,
-        &mut playground,
-        FixedProposer,
-        None,
-    );
+    let mut nodes =
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, None);
 
     // 4 honest nodes
     let n0_twin_id = nodes[0].id;
@@ -138,13 +124,8 @@ fn twins_vote_dedup_test() {
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
     let num_nodes = 4;
     let num_twins = 1;
-    let mut nodes = SMRNode::start_num_nodes_with_twins(
-        num_nodes,
-        num_twins,
-        &mut playground,
-        RotatingProposer,
-        None,
-    );
+    let mut nodes =
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, None);
 
     // 4 honest nodes
     let n0_twin_id = nodes[0].id;
@@ -203,50 +184,22 @@ fn twins_proposer_test() {
 
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
-    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
     // Leaders are n0 (and implicitly twin0) for round 1..10
-    for i in 1..10 {
-        round_proposers.insert(i, 0);
-    }
+    let round_leaders: HashMap<Round, usize> = (1..10).map(|r| (r, 0)).collect();
+    // Round 1 to 10 partitions: [node0, node1, node2], [node3, twin0, twin1]
+    let round_partitions = (1..10)
+        .map(|r| (r, vec![vec![0, 1, 2], vec![3, 4, 5]]))
+        .collect();
 
-    let config = RoundProposerConfig {
-        round_proposers: HashMap::new(),
-        timeout_rounds: HashSet::new(),
+    let test_case = TestCase {
+        round_leaders,
+        round_partitions,
     };
 
-    let mut nodes = SMRNode::start_num_nodes_with_twins(
-        num_nodes,
-        num_twins,
-        &mut playground,
-        RoundProposer(config),
-        Some(round_proposers),
-    );
+    let mut nodes =
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, Some(test_case));
 
-    // 4 honest nodes
-    let n0_twin_id = nodes[0].id;
-    // twin of n0 has same author as node_authors[0]
-    let twin0_twin_id = nodes[4].id;
-    assert_eq!(n0_twin_id.author, twin0_twin_id.author);
-    let n1_twin_id = nodes[1].id;
-    // twin of n1 has same author as node_authors[1]
-    let twin1_twin_id = nodes[5].id;
-    assert_eq!(n1_twin_id.author, twin1_twin_id.author);
-    let n2_twin_id = nodes[2].id;
-    let n3_twin_id = nodes[3].id;
-
-    // Create per round partitions
-    let mut round_partitions: HashMap<u64, Vec<Vec<TwinId>>> = HashMap::new();
-    // Round 1 to 10 partitions: [node0, node1, node2], [node3, twin0, twin1]
-    for i in 1..10 {
-        round_partitions.insert(
-            i,
-            vec![
-                vec![n0_twin_id, n1_twin_id, n2_twin_id],
-                vec![n3_twin_id, twin0_twin_id, twin1_twin_id],
-            ],
-        );
-    }
-    assert!(playground.split_network_round(&round_partitions));
+    // assert!(playground.split_network_round(&round_partitions));
     runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
@@ -290,23 +243,17 @@ fn twins_commit_test() {
 
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
-    let mut round_proposers: HashMap<Round, usize> = HashMap::new();
     // Leaders are n0 and twin0 for round 1..10
-    for i in 1..10 {
-        round_proposers.insert(i, 0);
-    }
-    let config = RoundProposerConfig {
-        round_proposers: HashMap::new(),
-        timeout_rounds: HashSet::new(),
+    let round_leaders: HashMap<Round, usize> = (1..10).map(|r| (r, 0)).collect();
+    // Round 1 to 10 partitions: [node0, node1, node2, node3, twin0]
+    let round_partitions = (1..10).map(|r| (r, vec![vec![0, 1, 2, 3, 4]])).collect();
+    let test_case = TestCase {
+        round_leaders,
+        round_partitions,
     };
 
-    let mut nodes = SMRNode::start_num_nodes_with_twins(
-        num_nodes,
-        num_twins,
-        &mut playground,
-        RoundProposer(config),
-        Some(round_proposers),
-    );
+    let mut nodes =
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, Some(test_case));
 
     runtime.spawn(playground.start());
 

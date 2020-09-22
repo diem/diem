@@ -8,16 +8,14 @@ use crate::{
     network_interface::{ConsensusNetworkEvents, ConsensusNetworkSender},
     network_tests::{NetworkPlayground, TwinId},
     test_utils::{MockStateComputer, MockStorage, MockTransactionManager},
+    twins::test_cases::TestCase,
     util::time_service::ClockTimeService,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use consensus_types::common::{Author, Payload, Round};
+use consensus_types::common::{Author, Payload};
 use futures::channel::mpsc;
 use libra_config::{
-    config::{
-        ConsensusProposerType::{self, RoundProposer},
-        NodeConfig, WaypointConfig,
-    },
+    config::{ConsensusProposerType, NodeConfig, WaypointConfig},
     generator::{self, ValidatorSwarm},
 };
 use libra_mempool::mocks::MockSharedMempool;
@@ -138,8 +136,7 @@ impl SMRNode {
         num_nodes: usize,
         num_twins: usize,
         playground: &mut NetworkPlayground,
-        mut proposer_type: ConsensusProposerType,
-        round_proposers_idx: Option<HashMap<Round, usize>>,
+        test_case: Option<TestCase>,
     ) -> Vec<Self> {
         assert!(num_nodes >= num_twins);
         let ValidatorSwarm {
@@ -162,20 +159,6 @@ impl SMRNode {
         // sort by the peer id
         node_configs.sort_by(|n1, n2| author_from_config(n1).cmp(&author_from_config(n2)));
 
-        match &mut proposer_type {
-            RoundProposer(config) => {
-                let mut round_proposers: HashMap<Round, Author> = HashMap::new();
-
-                if let Some(proposers) = round_proposers_idx {
-                    proposers.iter().for_each(|(round, idx)| {
-                        round_proposers.insert(*round, author_from_config(&node_configs[*idx]));
-                    })
-                }
-                config.round_proposers = round_proposers;
-            }
-            _ => (),
-        };
-
         // We don't add twins to ValidatorSet or round_proposers above
         // because a node with twins should be treated the same at the
         // consensus level
@@ -184,9 +167,35 @@ impl SMRNode {
             node_configs.push(twin);
         }
 
+        let proposer_configs: Vec<_> = match test_case {
+            Some(test_case) => {
+                let nodes_id: Vec<_> = node_configs
+                    .iter()
+                    .enumerate()
+                    .map(|(id, config)| TwinId {
+                        id,
+                        author: author_from_config(config),
+                    })
+                    .collect();
+                let configs = test_case
+                    .to_round_proposer_config(&nodes_id)
+                    .into_iter()
+                    .map(|config| ConsensusProposerType::RoundProposer(config))
+                    .collect();
+                assert!(playground.split_network_round(&test_case.to_partitions(&nodes_id)));
+                configs
+            }
+            None => node_configs
+                .iter()
+                .map(|_| ConsensusProposerType::FixedProposer)
+                .collect(),
+        };
+
         let mut smr_nodes = vec![];
 
-        for (smr_id, mut config) in node_configs.into_iter().enumerate() {
+        for ((smr_id, mut config), proposer_type) in
+            node_configs.into_iter().enumerate().zip(proposer_configs)
+        {
             let (_, storage) = MockStorage::start_for_testing(validator_set.clone());
 
             let waypoint = Waypoint::new_epoch_boundary(&storage.get_ledger_info())
@@ -199,7 +208,7 @@ impl SMRNode {
                 .unwrap()
                 .waypoint = Some(waypoint);
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
-            config.consensus.proposer_type = proposer_type.clone();
+            config.consensus.proposer_type = proposer_type;
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
             // No auto timeout, it should be triggered by the timeout_sender.
             config.consensus.round_initial_timeout_ms = 2_000_000;
