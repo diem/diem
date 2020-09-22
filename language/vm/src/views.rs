@@ -71,10 +71,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
     ) -> Option<&FunctionDefinitionView<'a, T>> {
         self.name_to_function_definition_view.get(name)
     }
-
-    pub fn id(&self) -> ModuleId {
-        self.module.self_id()
-    }
 }
 
 pub struct ModuleHandleView<'a, T> {
