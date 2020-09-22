@@ -13,7 +13,7 @@
 
 use std::iter::DoubleEndedIterator;
 
-use crate::{access::ModuleAccess, file_format::*, SignatureTokenKind};
+use crate::{access::ModuleAccess, file_format::*};
 
 use move_core_types::{identifier::IdentStr, language_storage::ModuleId};
 use std::collections::BTreeMap;
@@ -534,11 +534,6 @@ impl<'a, T: ModuleAccess> SignatureTokenView<'a, T> {
     #[inline]
     pub fn signature_token(&self) -> &SignatureToken {
         self.token
-    }
-
-    #[inline]
-    pub fn is_reference(&self) -> bool {
-        self.token.is_reference()
     }
 
     #[inline]
