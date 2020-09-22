@@ -47,21 +47,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.remove(key)
     }
 
-    pub fn union_with<F>(&self, other: &Self, f: F) -> Self
-    where
-        V: Clone,
-        F: FnMut(&K, &V, &V) -> V,
-    {
-        RememberingUniqueMap {
-            map: self.map.union_with(&other.map, f),
-            gotten_keys: self
-                .gotten_keys
-                .union(&other.gotten_keys)
-                .cloned()
-                .collect(),
-        }
-    }
-
     pub fn iter(&self) -> Iter<K, V> {
         self.into_iter()
     }
