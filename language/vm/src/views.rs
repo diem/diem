@@ -57,16 +57,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |module_handle| ModuleHandleView::new(module, module_handle))
     }
 
-    pub fn field_instantiations(
-        &self,
-    ) -> impl DoubleEndedIterator<Item = FieldInstantiationView<'a, T>> + Send {
-        let module = self.module;
-        module
-            .field_instantiations()
-            .iter()
-            .map(move |field_inst| FieldInstantiationView::new(module, field_inst))
-    }
-
     pub fn signatures(&self) -> impl DoubleEndedIterator<Item = SignatureView<'a, T>> + Send {
         let module = self.module;
         module
