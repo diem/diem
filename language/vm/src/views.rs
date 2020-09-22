@@ -72,25 +72,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         self.name_to_function_definition_view.get(name)
     }
 
-    pub fn function_acquired_resources(
-        &self,
-        function_handle: &FunctionHandle,
-    ) -> BTreeSet<StructDefinitionIndex> {
-        if function_handle.module != self.module.self_handle_idx() {
-            return BTreeSet::new();
-        }
-
-        // TODO these unwraps should be VMInvariantViolations
-        let function_name = self.as_inner().identifier_at(function_handle.name);
-        let function_def = self.function_definition(function_name).unwrap();
-        function_def
-            .as_inner()
-            .acquires_global_resources
-            .iter()
-            .cloned()
-            .collect()
-    }
-
     pub fn id(&self) -> ModuleId {
         self.module.self_id()
     }
