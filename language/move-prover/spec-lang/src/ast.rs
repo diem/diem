@@ -195,10 +195,6 @@ impl Spec {
     {
         self.conditions.iter().any(pred)
     }
-
-    pub fn any_kind(&self, kind: ConditionKind) -> bool {
-        self.any(move |c| c.kind == kind)
-    }
 }
 
 /// Information about a specification block in the source. This is used for documentation
