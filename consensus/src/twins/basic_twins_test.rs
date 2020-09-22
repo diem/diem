@@ -10,7 +10,8 @@ use crate::{
 use consensus_types::{block::Block, common::Round};
 use futures::StreamExt;
 use libra_config::config::ConsensusProposerType::{FixedProposer, RotatingProposer, RoundProposer};
-use std::collections::HashMap;
+use libra_config::config::RoundProposerConfig;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::time::delay_for;
 
@@ -208,11 +209,16 @@ fn twins_proposer_test() {
         round_proposers.insert(i, 0);
     }
 
+    let config = RoundProposerConfig {
+        round_proposers: HashMap::new(),
+        timeout_rounds: HashSet::new(),
+    };
+
     let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
-        RoundProposer(HashMap::new()),
+        RoundProposer(config),
         Some(round_proposers),
     );
 
@@ -289,12 +295,16 @@ fn twins_commit_test() {
     for i in 1..10 {
         round_proposers.insert(i, 0);
     }
+    let config = RoundProposerConfig {
+        round_proposers: HashMap::new(),
+        timeout_rounds: HashSet::new(),
+    };
 
     let mut nodes = SMRNode::start_num_nodes_with_twins(
         num_nodes,
         num_twins,
         &mut playground,
-        RoundProposer(HashMap::new()),
+        RoundProposer(config),
         Some(round_proposers),
     );
 

@@ -176,12 +176,14 @@ impl EpochManager {
                 ));
                 Box::new(LeaderReputation::new(proposers, backend, heuristic))
             }
-            ConsensusProposerType::RoundProposer(round_proposers) => {
+            ConsensusProposerType::RoundProposer(config) => {
                 // Hardcoded to the first proposer
                 let default_proposer = proposers.get(0).unwrap();
                 Box::new(RoundProposer::new(
-                    round_proposers.clone(),
+                    config.round_proposers.clone(),
                     *default_proposer,
+                    config.timeout_rounds.clone(),
+                    self.timeout_sender.clone(),
                 ))
             }
         }

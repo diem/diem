@@ -138,7 +138,7 @@ impl SMRNode {
         num_nodes: usize,
         num_twins: usize,
         playground: &mut NetworkPlayground,
-        proposer_type: ConsensusProposerType,
+        mut proposer_type: ConsensusProposerType,
         round_proposers_idx: Option<HashMap<Round, usize>>,
     ) -> Vec<Self> {
         assert!(num_nodes >= num_twins);
@@ -162,8 +162,8 @@ impl SMRNode {
         // sort by the peer id
         node_configs.sort_by(|n1, n2| author_from_config(n1).cmp(&author_from_config(n2)));
 
-        let proposer_type = match proposer_type {
-            RoundProposer(_) => {
+        match &mut proposer_type {
+            RoundProposer(config) => {
                 let mut round_proposers: HashMap<Round, Author> = HashMap::new();
 
                 if let Some(proposers) = round_proposers_idx {
@@ -171,9 +171,9 @@ impl SMRNode {
                         round_proposers.insert(*round, author_from_config(&node_configs[*idx]));
                     })
                 }
-                RoundProposer(round_proposers)
+                config.round_proposers = round_proposers;
             }
-            _ => proposer_type,
+            _ => (),
         };
 
         // We don't add twins to ValidatorSet or round_proposers above

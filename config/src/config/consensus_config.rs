@@ -4,6 +4,7 @@
 use crate::config::SafetyRulesConfig;
 use libra_types::{account_address::AccountAddress, block_info::Round};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -55,7 +56,7 @@ pub enum ConsensusProposerType {
     // Pre-specified proposers for each round,
     // or default proposer if round proposer not
     // specified
-    RoundProposer(HashMap<Round, AccountAddress>),
+    RoundProposer(RoundProposerConfig),
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -63,4 +64,11 @@ pub enum ConsensusProposerType {
 pub struct LeaderReputationConfig {
     pub active_weights: u64,
     pub inactive_weights: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoundProposerConfig {
+    pub round_proposers: HashMap<Round, AccountAddress>,
+    pub timeout_rounds: HashSet<Round>,
 }

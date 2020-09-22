@@ -8,10 +8,11 @@ use consensus_types::block::{block_test_utils::certificate_for_genesis, Block};
 use libra_types::validator_signer::ValidatorSigner;
 
 use consensus_types::common::{Author, Round};
-use std::collections::HashMap;
+use futures::StreamExt;
+use std::collections::{HashMap, HashSet};
 
-#[test]
-fn test_round_proposer() {
+#[tokio::test]
+async fn test_round_proposer() {
     let chosen_validator_signer_round1 = ValidatorSigner::random([0u8; 32]);
     let chosen_author_round1 = chosen_validator_signer_round1.author();
     let chosen_validator_signer_round2 = ValidatorSigner::random([0u8; 32]);
@@ -21,11 +22,18 @@ fn test_round_proposer() {
 
     // A map that specifies the proposer per round
     let mut round_proposers: HashMap<Round, Author> = HashMap::new();
+    let (tx, mut rx) = channel::new_test(10);
+    let mut timeout_round = HashSet::new();
+    timeout_round.insert(5);
     round_proposers.insert(1, chosen_author_round1);
     round_proposers.insert(2, chosen_author_round2);
 
-    let pe: Box<dyn ProposerElection> =
-        Box::new(RoundProposer::new(round_proposers, chosen_author_round1));
+    let pe: Box<dyn ProposerElection> = Box::new(RoundProposer::new(
+        round_proposers,
+        chosen_author_round1,
+        timeout_round,
+        tx,
+    ));
 
     // Send a proposal from both chosen author and another author, the only winning proposals
     // follow the round-proposers mapping
@@ -67,4 +75,7 @@ fn test_round_proposer() {
     assert_eq!(pe.get_valid_proposer(1), chosen_author_round1);
     assert_eq!(pe.get_valid_proposer(2), chosen_author_round2);
     assert_eq!(pe.get_valid_proposer(3), chosen_author_round1);
+
+    pe.get_valid_proposer(5);
+    assert_eq!(rx.next().await.unwrap(), 5);
 }
