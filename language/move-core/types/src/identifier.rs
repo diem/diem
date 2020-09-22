@@ -161,11 +161,6 @@ impl IdentStr {
         is_valid(s.as_ref())
     }
 
-    /// Returns the length of `self` in bytes.
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
     /// Returns `true` if `self` has a length of zero bytes.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
