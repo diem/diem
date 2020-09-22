@@ -114,10 +114,6 @@ impl VMError {
         &self.location
     }
 
-    pub fn indices(&self) -> &Vec<(IndexKind, TableIndex)> {
-        &self.indices
-    }
-
     pub fn offsets(&self) -> &Vec<(FunctionDefinitionIndex, CodeOffset)> {
         &self.offsets
     }
