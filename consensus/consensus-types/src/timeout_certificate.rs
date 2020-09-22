@@ -65,8 +65,4 @@ impl TimeoutCertificate {
     pub fn add_signature(&mut self, author: Author, signature: Ed25519Signature) {
         self.signatures.entry(author).or_insert(signature);
     }
-
-    pub fn remove_signature(&mut self, author: Author) {
-        self.signatures.remove(&author);
-    }
 }
