@@ -232,10 +232,6 @@ impl LedgerInfoWithV0 {
         self.signatures.entry(validator).or_insert(signature);
     }
 
-    pub fn remove_signature(&mut self, validator: AccountAddress) {
-        self.signatures.remove(&validator);
-    }
-
     pub fn signatures(&self) -> &BTreeMap<AccountAddress, Ed25519Signature> {
         &self.signatures
     }
