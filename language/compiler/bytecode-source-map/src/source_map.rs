@@ -467,16 +467,6 @@ impl<Location: Clone + Eq> SourceMap<Location> {
         Ok(())
     }
 
-    pub fn get_struct_field_name(
-        &self,
-        struct_def_idx: StructDefinitionIndex,
-        field_idx: MemberCount,
-    ) -> Option<Location> {
-        self.struct_map
-            .get(&struct_def_idx.0)
-            .and_then(|struct_source_map| struct_source_map.get_field_location(field_idx))
-    }
-
     pub fn add_struct_type_parameter_mapping(
         &mut self,
         struct_def_idx: StructDefinitionIndex,
