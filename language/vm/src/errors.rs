@@ -114,10 +114,6 @@ impl VMError {
         &self.location
     }
 
-    pub fn offsets(&self) -> &Vec<(FunctionDefinitionIndex, CodeOffset)> {
-        &self.offsets
-    }
-
     pub fn status_type(&self) -> StatusType {
         self.major_status.status_type()
     }
