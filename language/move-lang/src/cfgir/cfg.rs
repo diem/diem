@@ -119,10 +119,6 @@ impl<'a> BlockCFG<'a> {
         self.blocks.get(&label).unwrap()
     }
 
-    pub fn block_mut(&mut self, label: Label) -> &mut BasicBlock {
-        self.blocks.get_mut(&label).unwrap()
-    }
-
     pub fn display_blocks(&self) {
         for (lbl, block) in self.blocks() {
             println!("--BLOCK {}--", lbl);
