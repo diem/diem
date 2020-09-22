@@ -43,12 +43,11 @@ impl MintParams {
         &self,
         seq: u64,
     ) -> libra_types::transaction::TransactionPayload {
-        let receiver = self.auth_key.derived_address();
         libra_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_create_parent_vasp_account_script(
                 self.currency_code(),
                 0, // sliding nonce
-                receiver,
+                self.receiver(),
                 self.auth_key.prefix().to_vec(),
                 format!("No. {}", seq).as_bytes().to_vec(),
                 false, /* add all currencies */
@@ -57,16 +56,19 @@ impl MintParams {
     }
 
     fn p2p_script(&self) -> libra_types::transaction::TransactionPayload {
-        let receiver = self.auth_key.derived_address();
         libra_types::transaction::TransactionPayload::Script(
             transaction_builder_generated::stdlib::encode_peer_to_peer_with_metadata_script(
                 self.currency_code(),
-                receiver,
+                self.receiver(),
                 self.amount,
                 vec![],
                 vec![],
             ),
         )
+    }
+
+    fn receiver(&self) -> libra_types::account_address::AccountAddress {
+        self.auth_key.derived_address()
     }
 }
 
@@ -93,27 +95,27 @@ impl Service {
     }
 
     pub async fn process(&self, params: &MintParams) -> Result<Response> {
-        let (tc_seq, dd_seq) = self.sequences().await?;
+        let (tc_seq, dd_seq, receiver_seq) = self.sequences(params.receiver()).await?;
 
-        let create_account_txn = self.create_txn(
-            params.create_parent_vasp_account_script(tc_seq),
-            treasury_compliance_account_address(),
-            tc_seq,
-        )?;
-        let transfer_txn =
-            self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?;
+        let mut txns = vec![];
+        if receiver_seq.is_none() {
+            txns.push(self.create_txn(
+                params.create_parent_vasp_account_script(tc_seq),
+                treasury_compliance_account_address(),
+                tc_seq,
+            )?);
+        }
+        txns.push(self.create_txn(params.p2p_script(), testnet_dd_account_address(), dd_seq)?);
 
         let mut batch = libra_json_rpc_client::JsonRpcBatch::new();
-        batch.add_submit_request(create_account_txn.clone())?;
-        batch.add_submit_request(transfer_txn.clone())?;
+        for txn in &txns {
+            batch.add_submit_request(txn.clone())?;
+        }
         self.client.execute(batch).await?;
 
         if let Some(return_txns) = params.return_txns {
             if return_txns {
-                return Ok(Response::SubmittedTxns(vec![
-                    create_account_txn,
-                    transfer_txn,
-                ]));
+                return Ok(Response::SubmittedTxns(txns));
             }
         }
         Ok(Response::DDAccountNextSeqNum(dd_seq + 1))
@@ -138,10 +140,14 @@ impl Service {
         )
     }
 
-    async fn sequences(&self) -> Result<(u64, u64)> {
+    async fn sequences(
+        &self,
+        receiver: libra_types::account_address::AccountAddress,
+    ) -> Result<(u64, u64, Option<u64>)> {
         let accounts = vec![
             treasury_compliance_account_address(),
             testnet_dd_account_address(),
+            receiver,
         ];
         let responses = self.client.get_accounts(&accounts).await?;
 
@@ -161,7 +167,17 @@ impl Service {
             .as_ref()
             .ok_or_else(|| anyhow::format_err!("designated dealer account not found"))?
             .sequence_number;
-        Ok((treasury_compliance, designated_dealer))
+        let receiver = responses
+            .get(2)
+            .as_ref()
+            .ok_or_else(|| anyhow::format_err!("get receiver account response not found"))?
+            .as_ref();
+        let receiver_seq_num = if let Some(account) = receiver {
+            Some(account.sequence_number)
+        } else {
+            None
+        };
+        Ok((treasury_compliance, designated_dealer, receiver_seq_num))
     }
 }
 
