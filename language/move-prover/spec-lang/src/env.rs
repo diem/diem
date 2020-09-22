@@ -1433,12 +1433,6 @@ impl<'env> ModuleEnv<'env> {
         self.data.module.address()
     }
 
-    /// Retrieve an address identifier from the pool
-    pub fn get_address_identifier(&self, idx: AddressIdentifierIndex) -> BigUint {
-        let addr = &self.data.module.address_identifiers()[idx.0 as usize];
-        Self::addr_to_big_uint(addr)
-    }
-
     /// Converts an address identifier to a number representing the address.
     pub fn addr_to_big_uint(addr: &AccountAddress) -> BigUint {
         BigUint::from_str_radix(&addr.to_string(), 16).unwrap()
