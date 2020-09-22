@@ -8,7 +8,6 @@ use crate::{
     },
     event::EventHandle,
 };
-use anyhow::Result;
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag},
@@ -77,10 +76,6 @@ impl CurrencyInfoResource {
             CurrencyInfoResource::struct_tag_for(currency_code),
         );
         AccessPath::resource_access_path(&resource_key)
-    }
-
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes(bytes).map_err(Into::into)
     }
 
     pub fn mint_events(&self) -> &EventHandle {
