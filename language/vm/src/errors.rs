@@ -106,10 +106,6 @@ impl VMError {
         self.major_status
     }
 
-    pub fn sub_status(&self) -> Option<u64> {
-        self.sub_status
-    }
-
     pub fn message(&self) -> Option<&String> {
         self.message.as_ref()
     }
