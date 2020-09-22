@@ -34,18 +34,6 @@ pub struct CostStrategy<'a> {
 }
 
 impl<'a> CostStrategy<'a> {
-    /// A transaction `CostStrategy`. Charge for every operation and fail when there
-    /// is no more gas to pay for operations.
-    ///
-    /// This is the instantiation that must be used when executing a user script.
-    pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
-        Self {
-            gas_left: gas_left.map(|x| x * cost_table.gas_constants.gas_unit_scaling_factor),
-            cost_table,
-            charge: true,
-        }
-    }
-
     /// A system `CostStrategy` does not charge for operations.
     ///
     /// It should be used by clients in very specific cases and when executing system
