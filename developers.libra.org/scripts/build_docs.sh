@@ -107,7 +107,9 @@ if [[ $BUILD_RUSTDOCS == true ]]; then
   # This is needed in order to generate a landing page `index.html` for workspaces
   export PATH="$PATH:$HOME/.cargo/bin"
   RUSTC_BOOTSTRAP=1 RUSTDOCFLAGS="-Z unstable-options --enable-index-page" cargo doc --no-deps --workspace --lib || exit 1
-  RUSTDOC_DIR='../target/doc/'
+  # Use the '.' to make sure we only copy the content from the doc dir, not the doc dir itself too.
+  # Avoids having developers.libra.org/docs/rustdocs/doc. We want developers.libra.org/docs/rustdocs/
+  RUSTDOC_DIR='../target/doc/.'
   DOCUSAURUS_RUSTDOC_DIR='website/static/docs/rustdocs/'
   cd developers.libra.org || exit
 
