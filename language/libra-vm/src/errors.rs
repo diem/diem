@@ -3,6 +3,7 @@
 
 use libra_logger::prelude::*;
 use move_core_types::vm_status::{known_locations, StatusCode, VMStatus};
+use move_vm_runtime::logging::LogContext;
 use vm::errors::VMError;
 
 /// Error codes that can be emitted by the prologue. These have special significance to the VM when
@@ -35,7 +36,10 @@ fn error_split(code: u64) -> (u8, u64) {
 /// Converts particular Move abort codes to specific validation error codes for the prologue
 /// Any non-abort non-execution code is considered an invariant violation, specifically
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
+pub fn convert_normal_prologue_error(
+    error: VMError,
+    log_context: &impl LogContext,
+) -> Result<(), VMStatus> {
     let status = error.into_vm_status();
     Err(match status {
         VMStatus::Executed => VMStatus::Executed,
@@ -43,10 +47,11 @@ pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
             if location != known_locations::account_module_abort() =>
         {
             let (category, reason) = error_split(code);
+            log_context.alert();
             error!(
-                "[libra_vm] Unexpected prologue Move abort: {:?}::{:?} \
-                (Category: {:?} Reason: {:?})",
-                location, code, category, reason
+                *log_context,
+                "[libra_vm] Unexpected prologue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                location, code, category, reason,
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
@@ -72,10 +77,11 @@ pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
                 (INVALID_STATE, ESCRIPT_NOT_ALLOWED) => StatusCode::UNKNOWN_SCRIPT,
                 (INVALID_STATE, EMODULE_NOT_ALLOWED) => StatusCode::INVALID_MODULE_PUBLISHER,
                 (category, reason) => {
+                    log_context.alert();
                     error!(
-                        "[libra_vm] Unexpected prologue Move abort: {:?}::{:?} \
-                        (Category: {:?} Reason: {:?})",
-                        location, code, category, reason
+                        *log_context,
+                        "[libra_vm] Unexpected prologue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                        location, code, category, reason,
                     );
                     return Err(VMStatus::Error(
                         StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION,
@@ -85,7 +91,11 @@ pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
             VMStatus::Error(new_major_status)
         }
         status @ VMStatus::ExecutionFailure { .. } | status @ VMStatus::Error(_) => {
-            error!("[libra_vm] Unexpected prologue error: {:?}", status);
+            log_context.alert();
+            error!(
+                *log_context,
+                "[libra_vm] Unexpected prologue error: {:?}", status
+            );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
     })
@@ -94,7 +104,10 @@ pub fn convert_normal_prologue_error(error: VMError) -> Result<(), VMStatus> {
 /// Checks for only Move aborts or successful execution.
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_normal_success_epilogue_error(error: VMError) -> Result<(), VMStatus> {
+pub fn convert_normal_success_epilogue_error(
+    error: VMError,
+    log_context: &impl LogContext,
+) -> Result<(), VMStatus> {
     let status = error.into_vm_status();
     Err(match status {
         VMStatus::Executed => VMStatus::Executed,
@@ -102,10 +115,11 @@ pub fn convert_normal_success_epilogue_error(error: VMError) -> Result<(), VMSta
             if location != known_locations::account_module_abort() =>
         {
             let (category, reason) = error_split(code);
+            log_context.alert();
             error!(
-                "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?} \
-                (Category: {:?} Reason: {:?})",
-                location, code, category, reason
+                *log_context,
+                "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                location, code, category, reason,
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
@@ -113,17 +127,22 @@ pub fn convert_normal_success_epilogue_error(error: VMError) -> Result<(), VMSta
         VMStatus::MoveAbort(location, code) => match error_split(code) {
             (LIMIT_EXCEEDED, ECANT_PAY_GAS_DEPOSIT) => VMStatus::MoveAbort(location, code),
             (category, reason) => {
+                log_context.alert();
                 error!(
-                    "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?} \
-                    (Category: {:?} Reason: {:?})",
-                    location, code, category, reason
+                    *log_context,
+                    "[libra_vm] Unexpected success epilogue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                    location, code, category, reason,
                 );
                 VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
             }
         },
 
         status => {
-            error!("[libra_vm] Unexpected success epilogue error: {:?}", status);
+            log_context.alert();
+            error!(
+                *log_context,
+                "[libra_vm] Unexpected success epilogue error: {:?}", status,
+            );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
     })
@@ -132,7 +151,10 @@ pub fn convert_normal_success_epilogue_error(error: VMError) -> Result<(), VMSta
 /// Converts Move aborts or execution failures to `REJECTED_WRITE_SET`
 /// Any other errors are mapped to the invariant violation
 /// `UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION`
-pub fn convert_write_set_prologue_error(error: VMError) -> Result<(), VMStatus> {
+pub fn convert_write_set_prologue_error(
+    error: VMError,
+    log_context: &impl LogContext,
+) -> Result<(), VMStatus> {
     let status = error.into_vm_status();
     Err(match status {
         VMStatus::Executed => VMStatus::Executed,
@@ -140,10 +162,11 @@ pub fn convert_write_set_prologue_error(error: VMError) -> Result<(), VMStatus> 
             if location != known_locations::account_module_abort() =>
         {
             let (category, reason) = error_split(code);
+            log_context.alert();
             error!(
-                "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?} \
-                (Category: {:?} Reason: {:?})",
-                location, code, category, reason
+                *log_context,
+                "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                location, code, category, reason,
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
@@ -156,19 +179,21 @@ pub fn convert_write_set_prologue_error(error: VMError) -> Result<(), VMStatus> 
             | (INVALID_ARGUMENT, ETRANSACTION_EXPIRED)
             | (INVALID_ARGUMENT, EBAD_CHAIN_ID) => VMStatus::Error(StatusCode::REJECTED_WRITE_SET),
             (category, reason) => {
+                log_context.alert();
                 error!(
-                    "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?} \
-                    (Category: {:?} Reason: {:?})",
-                    location, code, category, reason
+                    *log_context,
+                    "[libra_vm] Unexpected write set prologue Move abort: {:?}::{:?} (Category: {:?} Reason: {:?})",
+                    location, code, category, reason,
                 );
                 VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
             }
         },
 
         status => {
+            log_context.alert();
             error!(
-                "[libra_vm] Unexpected write set prologue error: {:?}",
-                status
+                *log_context,
+                "[libra_vm] Unexpected write set prologue error: {:?}", status
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }
@@ -181,15 +206,19 @@ pub fn convert_write_set_prologue_error(error: VMError) -> Result<(), VMStatus> 
 pub fn expect_only_successful_execution(
     error: VMError,
     function_name: &str,
+    log_context: &impl LogContext,
 ) -> Result<(), VMStatus> {
     let status = error.into_vm_status();
     Err(match status {
         VMStatus::Executed => VMStatus::Executed,
 
         status => {
+            log_context.alert();
             error!(
+                *log_context,
                 "[libra_vm] Unexpected error from known Move function, '{}'. Error: {:?}",
-                function_name, status
+                function_name,
+                status,
             );
             VMStatus::Error(StatusCode::UNEXPECTED_ERROR_FROM_KNOWN_MOVE_FUNCTION)
         }

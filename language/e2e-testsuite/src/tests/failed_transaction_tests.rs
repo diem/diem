@@ -9,6 +9,7 @@ use language_e2e_tests::{
 use libra_types::vm_status::{KeptVMStatus, StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
+use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::gas_schedule::zero_cost_schedule;
 
 #[test]
@@ -17,6 +18,7 @@ fn failed_transaction_cleanup_test() {
     let sender = AccountData::new(1_000_000, 10);
     fake_executor.add_account_data(&sender);
 
+    let log_context = NoContextLog::new();
     let libra_vm = LibraVM::new(fake_executor.get_state_view());
     let data_cache = StateViewCache::new(fake_executor.get_state_view());
 
@@ -37,6 +39,7 @@ fn failed_transaction_cleanup_test() {
         &txn_data,
         &data_cache,
         &account::lbr_currency_code(),
+        &log_context,
     );
     assert!(!out1.write_set().is_empty());
     assert_eq!(out1.gas_used(), 90_000);
@@ -55,6 +58,7 @@ fn failed_transaction_cleanup_test() {
         &txn_data,
         &data_cache,
         &account::lbr_currency_code(),
+        &log_context,
     );
     assert!(out2.write_set().is_empty());
     assert!(out2.gas_used() == 0);

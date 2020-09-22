@@ -13,7 +13,7 @@ use move_core_types::{
     vm_status::{AbortLocation, StatusCode, VMStatus},
 };
 use move_lang::{self, compiled_unit::CompiledUnit, MOVE_COMPILED_INTERFACES_DIR};
-use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM};
+use move_vm_runtime::{data_cache::TransactionEffects, logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::{gas_schedule, values::Value};
 use vm::{
     access::ScriptAccess,
@@ -270,6 +270,7 @@ fn run(
         })
         .collect();
 
+    let log_context = NoContextLog::new();
     let mut session = vm.new_session(&state);
 
     let res = session.execute_script(
@@ -278,6 +279,7 @@ fn run(
         vm_args,
         signer_addresses.clone(),
         &mut cost_strategy,
+        &log_context,
     );
 
     if let Err(err) = res {

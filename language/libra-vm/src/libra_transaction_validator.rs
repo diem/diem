@@ -9,6 +9,7 @@ use crate::{
     transaction_metadata::TransactionMetadata,
     VMValidator,
 };
+use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
     account_address::AccountAddress,
@@ -26,6 +27,7 @@ use move_core_types::{
     move_resource::MoveResource,
 };
 
+use crate::logging::AdapterLogSchema;
 use move_vm_types::gas_schedule::CostStrategy;
 
 #[derive(Clone)]
@@ -33,6 +35,10 @@ pub struct LibraVMValidator(LibraVMImpl);
 
 impl LibraVMValidator {
     pub fn new<S: StateView>(state: &S) -> Self {
+        info!(
+            AdapterLogSchema::new(state.id(), 0),
+            "Adapter created for Validation"
+        );
         Self(LibraVMImpl::new(state))
     }
 
@@ -41,6 +47,7 @@ impl LibraVMValidator {
         on_chain_config: VMConfig,
         publishing_option: VMPublishingOption,
     ) -> Self {
+        info!("Adapter restarted for Validation");
         LibraVMValidator(LibraVMImpl::init_with_config(
             version,
             on_chain_config,
@@ -56,28 +63,33 @@ impl LibraVMValidator {
     ) -> Result<(), VMStatus> {
         let txn_data = TransactionMetadata::new(transaction);
         let mut session = self.0.new_session(remote_cache);
-        let mut cost_strategy = CostStrategy::system(self.0.get_gas_schedule()?, GasUnits::new(0));
+        let log_context = AdapterLogSchema::new(remote_cache.id(), 0);
+        let mut cost_strategy =
+            CostStrategy::system(self.0.get_gas_schedule(&log_context)?, GasUnits::new(0));
         match transaction.payload() {
             TransactionPayload::Script(_script) => {
-                self.0.check_gas(&txn_data)?;
+                self.0.check_gas(&txn_data, &log_context)?;
                 self.0.run_script_prologue(
                     &mut session,
                     &mut cost_strategy,
                     &txn_data,
                     account_currency_symbol,
+                    &log_context,
                 )
             }
             TransactionPayload::Module(_module) => {
-                self.0.check_gas(&txn_data)?;
+                self.0.check_gas(&txn_data, &log_context)?;
                 self.0.run_module_prologue(
                     &mut session,
                     &mut cost_strategy,
                     &txn_data,
                     account_currency_symbol,
+                    &log_context,
                 )
             }
             TransactionPayload::WriteSet(_cs) => {
-                self.0.run_writeset_prologue(&mut session, &txn_data)
+                self.0
+                    .run_writeset_prologue(&mut session, &txn_data, &log_context)
             }
         }
     }

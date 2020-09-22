@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{data_cache::RemoteCache, move_vm::MoveVM};
+use crate::{data_cache::RemoteCache, logging::NoContextLog, move_vm::MoveVM};
 use libra_types::vm_status::StatusCode;
 use move_core_types::{
     account_address::AccountAddress,
@@ -174,10 +174,18 @@ fn call_script_with_args_ty_args_signers(
 ) -> VMResult<()> {
     let move_vm = MoveVM::new();
     let remote_view = RemoteStore {};
+    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&remote_view);
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
-    session.execute_script(script, ty_args, args, signers, &mut cost_strategy)
+    session.execute_script(
+        script,
+        ty_args,
+        args,
+        signers,
+        &mut cost_strategy,
+        &log_context,
+    )
 }
 
 fn call_script(script: Vec<u8>, args: Vec<Value>) -> VMResult<()> {

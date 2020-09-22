@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, loader::Resolver};
+use crate::{interpreter::Interpreter, loader::Resolver, logging::LogContext};
 use libra_types::account_config::CORE_CODE_ADDRESS;
 use move_core_types::{
     account_address::AccountAddress, gas_schedule::CostTable, value::MoveTypeLayout,
@@ -117,20 +117,20 @@ impl NativeFunction {
     }
 }
 
-pub(crate) struct FunctionContext<'a> {
-    interpreter: &'a mut Interpreter,
+pub(crate) struct FunctionContext<'a, L: LogContext> {
+    interpreter: &'a mut Interpreter<L>,
     data_store: &'a mut dyn DataStore,
     cost_strategy: &'a CostStrategy<'a>,
     resolver: &'a Resolver<'a>,
 }
 
-impl<'a> FunctionContext<'a> {
+impl<'a, L: LogContext> FunctionContext<'a, L> {
     pub(crate) fn new(
-        interpreter: &'a mut Interpreter,
+        interpreter: &'a mut Interpreter<L>,
         data_store: &'a mut dyn DataStore,
         cost_strategy: &'a mut CostStrategy,
         resolver: &'a Resolver<'a>,
-    ) -> FunctionContext<'a> {
+    ) -> FunctionContext<'a, L> {
         FunctionContext {
             interpreter,
             data_store,
@@ -140,7 +140,7 @@ impl<'a> FunctionContext<'a> {
     }
 }
 
-impl<'a> NativeContext for FunctionContext<'a> {
+impl<'a, L: LogContext> NativeContext for FunctionContext<'a, L> {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, self.resolver.loader())

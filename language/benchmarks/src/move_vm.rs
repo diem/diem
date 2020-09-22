@@ -12,7 +12,7 @@ use move_core_types::{
     language_storage::ModuleId,
 };
 use move_lang::{compiled_unit::CompiledUnit, shared::Address};
-use move_vm_runtime::move_vm::MoveVM;
+use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use std::path::PathBuf;
 use vm::CompiledModule;
@@ -54,6 +54,7 @@ fn execute(
     let state = EmptyStateView;
     let gas_schedule = zero_cost_schedule();
     let data_cache = StateViewCache::new(&state);
+    let log_context = NoContextLog::new();
     let mut session = move_vm.new_session(&data_cache);
     let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(100_000_000));
 
@@ -62,7 +63,7 @@ fn execute(
         .serialize(&mut mod_blob)
         .expect("Module serialization error");
     session
-        .publish_module(mod_blob, sender, &mut cost_strategy)
+        .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
         .expect("Module must load");
 
     // module and function to call
@@ -80,6 +81,7 @@ fn execute(
                     vec![],
                     sender,
                     &mut cost_strategy,
+                    &log_context,
                 )
                 .unwrap_or_else(|err| {
                     panic!(

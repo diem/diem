@@ -31,6 +31,7 @@ use move_core_types::{
     language_storage::TypeTag,
     vm_status::VMStatus,
 };
+use move_vm_runtime::logging::NoContextLog;
 use move_vm_types::{gas_schedule::CostStrategy, values::Value};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{fs, io::Write, panic, thread};
@@ -106,7 +107,8 @@ fn execute_function_in_module<S: StateView>(
 
         let internals = libra_vm.internals();
 
-        let gas_schedule = internals.gas_schedule()?;
+        let log_context = NoContextLog::new();
+        let gas_schedule = internals.gas_schedule(&log_context)?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
             let sender = AccountAddress::random();
             let mut mod_blob = vec![];
@@ -115,7 +117,7 @@ fn execute_function_in_module<S: StateView>(
                 .expect("Module serialization error");
             let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
             txn_context
-                .publish_module(mod_blob, sender, &mut cost_strategy)
+                .publish_module(mod_blob, sender, &mut cost_strategy, &log_context)
                 .map_err(|e| e.into_vm_status())?;
             txn_context
                 .execute_function(
@@ -125,6 +127,7 @@ fn execute_function_in_module<S: StateView>(
                     args,
                     sender,
                     &mut cost_strategy,
+                    &log_context,
                 )
                 .map_err(|e| e.into_vm_status())
         })

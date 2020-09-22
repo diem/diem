@@ -10,7 +10,7 @@ use move_core_types::{
     vm_status::StatusType,
 };
 use move_lang::compiled_unit::CompiledUnit;
-use move_vm_runtime::move_vm::MoveVM;
+use move_vm_runtime::{logging::NoContextLog, move_vm::MoveVM};
 use move_vm_test_utils::{convert_txn_effects_to_move_changeset_and_events, InMemoryStorage};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use vm::file_format::{CompiledModule, CompiledScript};
@@ -98,6 +98,7 @@ fn test_malformed_resource() {
 
     let vm = MoveVM::new();
 
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
 
@@ -111,6 +112,7 @@ fn test_malformed_resource() {
         vec![],
         vec![TEST_ADDR],
         &mut cost_strategy,
+        &log_context,
     )
     .unwrap();
     let (changeset, _) =
@@ -130,6 +132,7 @@ fn test_malformed_resource() {
             vec![],
             vec![TEST_ADDR],
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -157,6 +160,7 @@ fn test_malformed_resource() {
                 vec![],
                 vec![TEST_ADDR],
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
         assert!(err.status_type() == StatusType::InvariantViolation);
@@ -182,6 +186,7 @@ fn test_malformed_module() {
 
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
     let fun_name = Identifier::new("foo").unwrap();
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
 
@@ -198,6 +203,7 @@ fn test_malformed_module() {
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -225,6 +231,7 @@ fn test_malformed_module() {
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
         assert!(err.status_type() == StatusType::InvariantViolation);
@@ -243,6 +250,7 @@ fn test_unverifiable_module() {
     let mut units = compile_units(TEST_ADDR, &code).unwrap();
     let m = as_module(units.pop().unwrap());
 
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
     let module_id = ModuleId::new(TEST_ADDR, Identifier::new("M").unwrap());
@@ -266,6 +274,7 @@ fn test_unverifiable_module() {
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -293,6 +302,7 @@ fn test_unverifiable_module() {
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
 
@@ -324,6 +334,7 @@ fn test_missing_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
 
@@ -347,6 +358,7 @@ fn test_missing_module_dependency() {
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -368,6 +380,7 @@ fn test_missing_module_dependency() {
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
 
@@ -399,6 +412,7 @@ fn test_malformed_module_denpency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
 
@@ -422,6 +436,7 @@ fn test_malformed_module_denpency() {
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -449,6 +464,7 @@ fn test_malformed_module_denpency() {
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
 
@@ -478,6 +494,7 @@ fn test_unverifiable_module_dependency() {
     let mut blob_n = vec![];
     n.serialize(&mut blob_n).unwrap();
 
+    let log_context = NoContextLog::new();
     let cost_table = zero_cost_schedule();
     let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(0));
 
@@ -504,6 +521,7 @@ fn test_unverifiable_module_dependency() {
             vec![],
             TEST_ADDR,
             &mut cost_strategy,
+            &log_context,
         )
         .unwrap();
     }
@@ -532,6 +550,7 @@ fn test_unverifiable_module_dependency() {
                 vec![],
                 TEST_ADDR,
                 &mut cost_strategy,
+                &log_context,
             )
             .unwrap_err();
 

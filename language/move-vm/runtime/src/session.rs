@@ -3,6 +3,7 @@
 
 use crate::{
     data_cache::{RemoteCache, TransactionDataCache, TransactionEffects},
+    logging::LogContext,
     runtime::VMRuntime,
 };
 use move_core_types::{
@@ -27,6 +28,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Value>,
         _sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()> {
         self.runtime.execute_function(
             module,
@@ -35,6 +37,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             args,
             &mut self.data_cache,
             cost_strategy,
+            log_context,
         )
     }
 
@@ -45,6 +48,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         args: Vec<Value>,
         senders: Vec<AccountAddress>,
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()> {
         self.runtime.execute_script(
             script,
@@ -53,6 +57,7 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
             senders,
             &mut self.data_cache,
             cost_strategy,
+            log_context,
         )
     }
 
@@ -61,9 +66,15 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
         module: Vec<u8>,
         sender: AccountAddress,
         cost_strategy: &mut CostStrategy,
+        log_context: &impl LogContext,
     ) -> VMResult<()> {
-        self.runtime
-            .publish_module(module, sender, &mut self.data_cache, cost_strategy)
+        self.runtime.publish_module(
+            module,
+            sender,
+            &mut self.data_cache,
+            cost_strategy,
+            log_context,
+        )
     }
 
     pub fn num_mutated_accounts(&self) -> u64 {

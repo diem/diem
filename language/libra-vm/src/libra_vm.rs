@@ -12,7 +12,6 @@ use crate::{
     system_module_names::*,
     transaction_metadata::TransactionMetadata,
 };
-
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
@@ -31,6 +30,7 @@ use move_core_types::{
 
 use move_vm_runtime::{
     data_cache::{RemoteCache, TransactionEffects},
+    logging::LogContext,
     move_vm::MoveVM,
     session::Session,
 };
@@ -83,10 +83,16 @@ impl LibraVMImpl {
         LibraVMInternals(self)
     }
 
-    pub(crate) fn publishing_option(&self) -> Result<&VMPublishingOption, VMStatus> {
+    pub(crate) fn publishing_option(
+        &self,
+        log_context: &impl LogContext,
+    ) -> Result<&VMPublishingOption, VMStatus> {
         self.publishing_option.as_ref().ok_or_else(|| {
-            CRITICAL_ERRORS.inc();
-            error!("VM Startup Failed. PublishingOption Not Found");
+            log_context.alert();
+            error!(
+                *log_context,
+                "VM Startup Failed. PublishingOption Not Found"
+            );
             VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
         })
     }
@@ -97,13 +103,13 @@ impl LibraVMImpl {
         self.publishing_option = VMPublishingOption::fetch_config(data_cache);
     }
 
-    pub fn get_gas_schedule(&self) -> Result<&CostTable, VMStatus> {
+    pub fn get_gas_schedule(&self, log_context: &impl LogContext) -> Result<&CostTable, VMStatus> {
         self.on_chain_config
             .as_ref()
             .map(|config| &config.gas_schedule)
             .ok_or_else(|| {
-                CRITICAL_ERRORS.inc();
-                error!("VM Startup Failed. Gas Schedule Not Found");
+                log_context.alert();
+                error!(*log_context, "VM Startup Failed. Gas Schedule Not Found");
                 VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
             })
     }
@@ -116,15 +122,20 @@ impl LibraVMImpl {
         })
     }
 
-    pub fn check_gas(&self, txn_data: &TransactionMetadata) -> Result<(), VMStatus> {
-        let gas_constants = &self.get_gas_schedule()?.gas_constants;
+    pub fn check_gas(
+        &self,
+        txn_data: &TransactionMetadata,
+        log_context: &impl LogContext,
+    ) -> Result<(), VMStatus> {
+        let gas_constants = &self.get_gas_schedule(log_context)?.gas_constants;
         let raw_bytes_len = txn_data.transaction_size;
         // The transaction is too large.
         if txn_data.transaction_size.get() > gas_constants.max_transaction_size_in_bytes {
             warn!(
+                *log_context,
                 "[VM] Transaction size too big {} (max {})",
                 raw_bytes_len.get(),
-                gas_constants.max_transaction_size_in_bytes
+                gas_constants.max_transaction_size_in_bytes,
             );
             return Err(VMStatus::Error(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE));
         }
@@ -138,9 +149,10 @@ impl LibraVMImpl {
         // transaction.
         if txn_data.max_gas_amount().get() > gas_constants.maximum_number_of_gas_units.get() {
             warn!(
+                *log_context,
                 "[VM] Gas unit error; max {}, submitted {}",
                 gas_constants.maximum_number_of_gas_units.get(),
-                txn_data.max_gas_amount().get()
+                txn_data.max_gas_amount().get(),
             );
             return Err(VMStatus::Error(
                 StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
@@ -153,9 +165,10 @@ impl LibraVMImpl {
         let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
         if txn_data.max_gas_amount().get() < min_txn_fee.get() {
             warn!(
+                *log_context,
                 "[VM] Gas unit error; min {}, submitted {}",
                 min_txn_fee.get(),
-                txn_data.max_gas_amount().get()
+                txn_data.max_gas_amount().get(),
             );
             return Err(VMStatus::Error(
                 StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
@@ -170,9 +183,10 @@ impl LibraVMImpl {
             txn_data.gas_unit_price().get() < gas_constants.min_price_per_gas_unit.get();
         if below_min_bound {
             warn!(
+                *log_context,
                 "[VM] Gas unit error; min {}, submitted {}",
                 gas_constants.min_price_per_gas_unit.get(),
-                txn_data.gas_unit_price().get()
+                txn_data.gas_unit_price().get(),
             );
             return Err(VMStatus::Error(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND));
         }
@@ -180,9 +194,10 @@ impl LibraVMImpl {
         // The submitted gas price is greater than the maximum gas unit price set by the VM.
         if txn_data.gas_unit_price().get() > gas_constants.max_price_per_gas_unit.get() {
             warn!(
+                *log_context,
                 "[VM] Gas unit error; min {}, submitted {}",
                 gas_constants.max_price_per_gas_unit.get(),
-                txn_data.gas_unit_price().get()
+                txn_data.gas_unit_price().get(),
             );
             return Err(VMStatus::Error(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND));
         }
@@ -197,6 +212,7 @@ impl LibraVMImpl {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
@@ -223,8 +239,9 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 cost_strategy,
+                log_context,
             )
-            .or_else(convert_normal_prologue_error)
+            .or_else(|err| convert_normal_prologue_error(err, log_context))
     }
 
     /// Run the prologue of a transaction by calling into `MODULE_PROLOGUE_NAME` function stored
@@ -235,6 +252,7 @@ impl LibraVMImpl {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
@@ -260,8 +278,9 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 cost_strategy,
+                log_context,
             )
-            .or_else(convert_normal_prologue_error)
+            .or_else(|err| convert_normal_prologue_error(err, log_context))
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -272,6 +291,7 @@ impl LibraVMImpl {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
@@ -293,8 +313,9 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 cost_strategy,
+                log_context,
             )
-            .or_else(convert_normal_success_epilogue_error)
+            .or_else(|err| convert_normal_success_epilogue_error(err, log_context))
     }
 
     /// Run the failure epilogue of a transaction by calling into `USER_EPILOGUE_NAME` function
@@ -305,6 +326,7 @@ impl LibraVMImpl {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
@@ -326,8 +348,11 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 cost_strategy,
+                log_context,
             )
-            .or_else(|e| expect_only_successful_execution(e, USER_EPILOGUE_NAME.as_str()))
+            .or_else(|e| {
+                expect_only_successful_execution(e, USER_EPILOGUE_NAME.as_str(), log_context)
+            })
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -336,6 +361,7 @@ impl LibraVMImpl {
         &self,
         session: &mut Session<R>,
         txn_data: &TransactionMetadata,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
@@ -358,8 +384,9 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 &mut cost_strategy,
+                log_context,
             )
-            .or_else(convert_write_set_prologue_error)
+            .or_else(|err| convert_write_set_prologue_error(err, log_context))
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
@@ -370,6 +397,7 @@ impl LibraVMImpl {
         change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
         should_trigger_reconfiguration: bool,
+        log_context: &impl LogContext,
     ) -> Result<(), VMStatus> {
         let change_set_bytes = lcs::to_bytes(change_set)
             .map_err(|_| VMStatus::Error(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES))?;
@@ -388,8 +416,11 @@ impl LibraVMImpl {
                 ],
                 txn_data.sender,
                 &mut cost_strategy,
+                log_context,
             )
-            .or_else(|e| expect_only_successful_execution(e, WRITESET_EPILOGUE_NAME.as_str()))
+            .or_else(|e| {
+                expect_only_successful_execution(e, WRITESET_EPILOGUE_NAME.as_str(), log_context)
+            })
     }
 
     pub fn new_session<'r, R: RemoteCache>(&self, r: &'r R) -> Session<'r, '_, R> {
@@ -412,8 +443,8 @@ impl<'a> LibraVMInternals<'a> {
     }
 
     /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
-    pub fn gas_schedule(self) -> Result<&'a CostTable, VMStatus> {
-        self.0.get_gas_schedule()
+    pub fn gas_schedule(self, log_context: &impl LogContext) -> Result<&'a CostTable, VMStatus> {
+        self.0.get_gas_schedule(log_context)
     }
 
     /// Returns the version of Move Runtime.

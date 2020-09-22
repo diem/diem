@@ -3,7 +3,6 @@
 
 use crate::loader::Loader;
 
-use libra_logger::prelude::*;
 use move_core_types::{
     account_address::AccountAddress,
     language_storage::{ModuleId, StructTag, TypeTag},
@@ -189,11 +188,6 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                         None => {
                             let msg =
                                 format!("Failed to deserialize resource {} at {}!", ty_tag, addr);
-                            error!(
-                                "[vm] Failed to deserialize resource {} at {}!",
-                                type_tag = ty_tag,
-                                account = addr
-                            );
                             return Err(PartialVMError::new(
                                 StatusCode::FAILED_TO_DESERIALIZE_RESOURCE,
                             )

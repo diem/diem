@@ -6,6 +6,7 @@ use crate::debug::DebugContext;
 use crate::{
     interpreter::Interpreter,
     loader::{Function, Loader},
+    logging::LogContext,
 };
 #[cfg(debug_assertions)]
 use move_vm_types::values::Locals;
@@ -56,13 +57,13 @@ static DEBUG_CONTEXT: Lazy<Mutex<DebugContext>> = Lazy::new(|| Mutex::new(DebugC
 
 // Only include in debug builds
 #[cfg(debug_assertions)]
-pub(crate) fn trace(
+pub(crate) fn trace<L: LogContext>(
     function_desc: &Function,
     locals: &Locals,
     pc: u16,
     instr: &Bytecode,
     loader: &Loader,
-    interp: &Interpreter,
+    interp: &Interpreter<L>,
 ) {
     if *TRACING_ENABLED {
         let f = &mut *LOGGING_FILE.lock().unwrap();

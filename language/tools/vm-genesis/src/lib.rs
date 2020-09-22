@@ -33,7 +33,12 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, StructTag, TypeTag},
 };
-use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM, session::Session};
+use move_vm_runtime::{
+    data_cache::TransactionEffects,
+    logging::{LogContext, NoContextLog},
+    move_vm::MoveVM,
+    session::Session,
+};
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
@@ -115,6 +120,7 @@ pub fn encode_genesis_change_set(
 
     let move_vm = MoveVM::new();
     let mut session = move_vm.new_session(&data_cache);
+    let log_context = NoContextLog::new();
 
     let lbr_ty = TypeTag::Struct(StructTag {
         address: *account_config::LBR_MODULE.address(),
@@ -125,6 +131,7 @@ pub fn encode_genesis_change_set(
 
     create_and_initialize_main_accounts(
         &mut session,
+        &log_context,
         &libra_root_key,
         &treasury_compliance_key,
         vm_publishing_option,
@@ -134,20 +141,21 @@ pub fn encode_genesis_change_set(
     // generate the genesis WriteSet
     create_and_initialize_owners_operators(
         &mut session,
+        &log_context,
         &operator_assignments,
         &operator_registrations,
     );
-    reconfigure(&mut session);
+    reconfigure(&mut session, &log_context);
 
     // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut session, &treasury_compliance_key);
+    create_and_initialize_testnet_minting(&mut session, &log_context, &treasury_compliance_key);
 
     let effects_1 = session.finish().unwrap();
 
     let state_view = GenesisStateView::new();
     let data_cache = StateViewCache::new(&state_view);
     let mut session = move_vm.new_session(&data_cache);
-    publish_stdlib(&mut session, stdlib_modules);
+    publish_stdlib(&mut session, &log_context, stdlib_modules);
     let effects_2 = session.finish().unwrap();
 
     let effects = merge_txn_effects(effects_1, effects_2);
@@ -175,6 +183,7 @@ fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
 
 fn exec_function(
     session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
     sender: AccountAddress,
     module_name: &str,
     function_name: &str,
@@ -192,6 +201,7 @@ fn exec_function(
             args,
             sender,
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            log_context,
         )
         .unwrap_or_else(|e| {
             panic!(
@@ -203,7 +213,12 @@ fn exec_function(
         })
 }
 
-fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, script: &Script) {
+fn exec_script(
+    session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
+    sender: AccountAddress,
+    script: &Script,
+) {
     session
         .execute_script(
             script.code().to_vec(),
@@ -211,6 +226,7 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
             convert_txn_args(script.args()),
             vec![sender],
             &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            log_context,
         )
         .unwrap()
 }
@@ -218,6 +234,7 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
 /// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
     libra_root_key: &Ed25519PublicKey,
     treasury_compliance_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
@@ -247,6 +264,7 @@ fn create_and_initialize_main_accounts(
 
     exec_function(
         session,
+        log_context,
         root_libra_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
@@ -270,6 +288,7 @@ fn create_and_initialize_main_accounts(
     // number 0
     exec_function(
         session,
+        log_context,
         root_libra_root_address,
         "LibraAccount",
         "epilogue",
@@ -286,6 +305,7 @@ fn create_and_initialize_main_accounts(
 
 fn create_and_initialize_testnet_minting(
     session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
     public_key: &Ed25519PublicKey,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
@@ -323,11 +343,13 @@ fn create_and_initialize_testnet_minting(
     // Create the DD account
     exec_script(
         session,
+        log_context,
         account_config::treasury_compliance_account_address(),
         &create_dd_script,
     );
     exec_function(
         session,
+        log_context,
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
@@ -344,6 +366,7 @@ fn create_and_initialize_testnet_minting(
 
     exec_function(
         session,
+        log_context,
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
@@ -364,11 +387,13 @@ fn create_and_initialize_testnet_minting(
     let treasury_compliance_account_address = account_config::treasury_compliance_account_address();
     exec_script(
         session,
+        log_context,
         treasury_compliance_account_address,
         &mint_max_coin1,
     );
     exec_script(
         session,
+        log_context,
         treasury_compliance_account_address,
         &mint_max_coin2,
     );
@@ -376,11 +401,13 @@ fn create_and_initialize_testnet_minting(
     let testnet_dd_account_address = account_config::testnet_dd_account_address();
     exec_script(
         session,
+        log_context,
         testnet_dd_account_address,
         &transaction_builder::encode_mint_lbr_script(std::u64::MAX / 2),
     );
     exec_script(
         session,
+        log_context,
         testnet_dd_account_address,
         &transaction_builder::encode_rotate_authentication_key_script(genesis_auth_key.to_vec()),
     );
@@ -391,6 +418,7 @@ fn create_and_initialize_testnet_minting(
 /// validator config on-chain.
 fn create_and_initialize_owners_operators(
     session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
     operator_assignments: &[OperatorAssignment],
     operator_registrations: &[OperatorRegistration],
 ) {
@@ -410,7 +438,12 @@ fn create_and_initialize_owners_operators(
             staged_owner_auth_key.prefix().to_vec(),
             owner_name.clone(),
         );
-        exec_script(session, libra_root_address, &create_owner_script);
+        exec_script(
+            session,
+            log_context,
+            libra_root_address,
+            &create_owner_script,
+        );
 
         // If there is a key, make it the auth key, otherwise use a zero auth key.
         let real_owner_auth_key = if let Some(owner_key) = owner_key {
@@ -421,6 +454,7 @@ fn create_and_initialize_owners_operators(
 
         exec_script(
             session,
+            log_context,
             owner_address,
             &transaction_builder::encode_rotate_authentication_key_script(real_owner_auth_key),
         );
@@ -437,19 +471,24 @@ fn create_and_initialize_owners_operators(
                 operator_auth_key.prefix().to_vec(),
                 operator_name.clone(),
             );
-        exec_script(session, libra_root_address, &create_operator_script);
+        exec_script(
+            session,
+            log_context,
+            libra_root_address,
+            &create_operator_script,
+        );
     }
 
     // Set the validator operator for each validator owner
     for (_owner_key, owner_name, op_assignment) in operator_assignments {
         let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
-        exec_script(session, owner_address, op_assignment);
+        exec_script(session, log_context, owner_address, op_assignment);
     }
 
     // Set the validator config for each validator
     for (operator_key, _, registration) in operator_registrations {
         let operator_account = account_address::from_public_key(operator_key);
-        exec_script(session, operator_account, registration);
+        exec_script(session, log_context, operator_account, registration);
     }
 
     // Add each validator to the validator set
@@ -457,6 +496,7 @@ fn create_and_initialize_owners_operators(
         let owner_address = libra_config::utils::validator_owner_account_from_name(owner_name);
         exec_function(
             session,
+            log_context,
             libra_root_address,
             "LibraSystem",
             "add_validator",
@@ -476,7 +516,11 @@ fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &Co
 }
 
 /// Publish the standard library.
-fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: &[CompiledModule]) {
+fn publish_stdlib(
+    session: &mut Session<StateViewCache>,
+    log_context: &impl LogContext,
+    stdlib: &[CompiledModule],
+) {
     for module in remove_genesis(stdlib) {
         assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
         let mut module_vec = vec![];
@@ -486,6 +530,7 @@ fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: &[CompiledModul
                 module_vec,
                 *module.self_id().address(),
                 &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+                log_context,
             )
             .unwrap_or_else(|e| {
                 panic!("Failure publishing module {:?}, {:?}", module.self_id(), e)
@@ -494,9 +539,10 @@ fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: &[CompiledModul
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
-fn reconfigure(session: &mut Session<StateViewCache>) {
+fn reconfigure(session: &mut Session<StateViewCache>, log_context: &impl LogContext) {
     exec_function(
         session,
+        log_context,
         account_config::libra_root_address(),
         "LibraConfig",
         "emit_genesis_reconfiguration_event",
