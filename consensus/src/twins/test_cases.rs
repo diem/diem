@@ -13,7 +13,7 @@ type Idx = usize;
 #[derive(Serialize, Deserialize)]
 /// Specify the leaders and partitions for each round.
 /// Default is FixedProposer and no partitions.
-/// In order to synchronize the round across all nodes, we have two hacks in NetworkPlayround:
+/// In order to synchronize the round across all nodes, we have two hacks in NetworkPlayground:
 /// 1. Do not drop timeout votes.
 /// 2. When a proposal is dropped, still send the sync info.
 pub struct TestCase {
@@ -23,9 +23,9 @@ pub struct TestCase {
 
 #[derive(Serialize, Deserialize)]
 pub struct TestCases {
-    num_of_nodes: u64,
-    num_of_twins: u64,
-    scenarios: Vec<TestCase>,
+    pub num_of_nodes: usize,
+    pub num_of_twins: usize,
+    pub scenarios: Vec<TestCase>,
 }
 
 #[test]
@@ -50,7 +50,8 @@ fn test_case_format() {
 }
 
 impl TestCase {
-    /// We decide whether a round should timeout based on if the leader partition is able to aggregate QC.
+    /// We decide whether a round should timeout based on if the current_leader and next_leader are
+    /// in the same partition and the partition is able to aggregate quorum.
     pub fn to_round_proposer_config(&self, nodes: &[TwinId]) -> Vec<RoundProposerConfig> {
         let mut round_proposers = HashMap::new();
         let total_size = nodes
@@ -66,8 +67,12 @@ impl TestCase {
             let next_leader = nodes[*next_leader_idx].author;
             round_proposers.insert(*round, leader);
             let mut should_timeout = true;
+            // if there's one partition which satisfies three conditions
+            // 1. has leader (to propose)
+            // 2. has next_leader (to aggregate votes)
+            // 3. has quorum (to move to next round)
+            // we don't timeout
             for partition in self.round_partitions.get(&round).unwrap() {
-                // if leader partition doesn't have quorum, everyone timeout, else no one timeout
                 let has_leader = partition.iter().any(|idx| nodes[*idx].author == leader);
                 let has_next_leader = partition
                     .iter()

@@ -17,14 +17,15 @@ use consensus_types::{
     vote_msg::VoteMsg,
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
+use libra_logger::prelude::*;
 use libra_types::{block_info::BlockInfo, PeerId};
-use network::protocols::direct_send::Message;
 use network::{
     peer_manager::{
         conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
         PeerManagerRequestSender,
     },
     protocols::{
+        direct_send::Message,
         network::{NewNetworkEvents, NewNetworkSender},
         rpc::InboundRpcRequest,
     },
@@ -332,7 +333,7 @@ impl NetworkPlayground {
             || Self::get_message_round(&msg).map_or(false, |r| {
                 match msg {
                     // HACK: Allow timeout messages to go through to synchronize round
-                    ConsensusMsg::VoteMsg(v) if v.vote().is_timeout() => return false,
+                    ConsensusMsg::VoteMsg(v) if v.vote().is_timeout() => false,
                     // HACK: Extract the sync info from proposal to synchronize round
                     ConsensusMsg::ProposalMsg(p) => {
                         if self.drop_config_round.is_message_dropped(src, dst, r) {
