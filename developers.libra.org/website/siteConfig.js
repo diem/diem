@@ -32,7 +32,7 @@ const siteConfig = {
 
   // used for publishing and more
   organizationName: 'libra',
-  projectName: 'website',
+  projectName: 'libra',
 
   // links that will be used in the header navigation bar
   headerLinks: [
@@ -123,7 +123,7 @@ const siteConfig = {
   docsSideNavCollapsible: false,
 
   // URL for editing docs
-  editUrl: 'https://github.com/libra/website/edit/master/docs/',
+  editUrl: 'https://github.com/libra/libra/edit/master/developers.libra.org/docs/',
 
   // Open Graph and Twitter card images
   ogImage: 'img/libra.png',

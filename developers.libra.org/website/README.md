@@ -44,9 +44,9 @@ unzip libra.zip
 
 ## Publishing
 
-The site is hosted on GitHub pages, via the `gh-pages` branch of the `website'
-[GitHub repo](https://github.com/libra/website).
+The site is hosted on GitHub pages, via the `gh-pages` branch of the `libra'
+[GitHub repo](https://github.com/libra/libra/developers.libra.org).
 
-The website is automatically built and published from CircleCI - see the
-[config file](https://github.com/libra/website/blob/master/.circleci/config.yml)
+The website is automatically built and published from GitHub Actions - see the
+[config file](https://github.com/libra/libra/blob/master/.github/workflows/developer-site-deploy.yml)
 for details.
