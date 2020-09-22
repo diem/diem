@@ -967,11 +967,6 @@ impl GlobalEnv {
     }
 
     /// Returns an iterator for all bytecode modules in the environment.
-    pub fn get_bytecode_modules(&self) -> impl Iterator<Item = &CompiledModule> {
-        self.module_data
-            .iter()
-            .map(|module_data| &module_data.module)
-    }
 
     /// Returns all structs in all modules which carry invariants.
     pub fn get_all_structs_with_conditions(&self) -> Vec<Type> {
