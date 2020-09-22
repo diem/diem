@@ -25,9 +25,9 @@ use serde::{Deserialize, Serialize};
 use vm::{
     access::ModuleAccess,
     file_format::{
-        AddressIdentifierIndex, Constant as VMConstant, ConstantPoolIndex, FunctionDefinitionIndex,
-        FunctionHandleIndex, Kind, SignatureIndex, SignatureToken, StructDefinitionIndex,
-        StructFieldInformation, StructHandleIndex,
+        Constant as VMConstant, ConstantPoolIndex, FunctionDefinitionIndex, FunctionHandleIndex,
+        Kind, SignatureIndex, SignatureToken, StructDefinitionIndex, StructFieldInformation,
+        StructHandleIndex,
     },
     views::{
         FunctionDefinitionView, FunctionHandleView, SignatureTokenView, StructDefinitionView,
@@ -1619,17 +1619,6 @@ impl<'env> StructEnv<'env> {
         def.field_information == StructFieldInformation::Native
     }
 
-    /// Determines whether this struct is the well-known vector type.
-    pub fn is_vector(&self) -> bool {
-        let name = self
-            .module_env
-            .env
-            .symbol_pool
-            .string(self.module_env.get_name().name());
-        let addr = self.module_env.get_name().addr();
-        name.as_ref() == "Vector" && addr == &BigUint::from(0 as u64)
-    }
-
     /// Determines whether this struct is a resource type.
     pub fn is_resource(&self) -> bool {
         let def = self.module_env.data.module.struct_def_at(self.data.def_idx);
@@ -1665,15 +1654,6 @@ impl<'env> StructEnv<'env> {
             struct_env: self.clone(),
             data,
         }
-    }
-
-    /// Find a field by its name.
-    pub fn find_field(&'env self, name: Symbol) -> Option<FieldEnv<'env>> {
-        let id = FieldId(name);
-        self.data.field_data.get(&id).map(|data| FieldEnv {
-            struct_env: self.clone(),
-            data,
-        })
     }
 
     /// Gets a field by its offset.
