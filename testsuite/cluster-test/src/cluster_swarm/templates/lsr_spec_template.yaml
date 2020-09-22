@@ -22,7 +22,7 @@ spec:
       - mountPath: /opt/libra/data
         name: libra-data
     - name: main
-      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_safety_rules:{image_tag}
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra/validator_tcb:{image_tag}
       imagePullPolicy: Always
       command: ["/opt/libra/bin/safety-rules", "/opt/libra/etc/node.yaml"]
       ports:
