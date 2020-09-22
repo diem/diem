@@ -966,31 +966,6 @@ impl GlobalEnv {
         })
     }
 
-    /// Returns an iterator for all bytecode modules in the environment.
-
-    /// Returns all structs in all modules which carry invariants.
-    pub fn get_all_structs_with_conditions(&self) -> Vec<Type> {
-        let mut res = vec![];
-        for module_env in self.get_modules() {
-            for struct_env in module_env.get_structs() {
-                if struct_env.has_conditions() {
-                    let formals = struct_env
-                        .get_type_parameters()
-                        .iter()
-                        .enumerate()
-                        .map(|(idx, _)| Type::TypeParameter(idx as u16))
-                        .collect_vec();
-                    res.push(Type::Struct(
-                        module_env.get_id(),
-                        struct_env.get_id(),
-                        formals,
-                    ));
-                }
-            }
-        }
-        res
-    }
-
     /// Converts a storage module id into an AST module name.
     fn to_module_name(&self, storage_id: &language_storage::ModuleId) -> ModuleName {
         ModuleName::from_str(
