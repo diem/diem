@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::on_chain_config::OnChainConfig;
-use anyhow::Result;
 use move_core_types::identifier::Identifier;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -25,10 +24,6 @@ impl fmt::Display for RegisteredCurrencies {
 impl RegisteredCurrencies {
     pub fn currency_codes(&self) -> &[Identifier] {
         &self.currency_codes
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        lcs::from_bytes(bytes).map_err(Into::into)
     }
 }
 
