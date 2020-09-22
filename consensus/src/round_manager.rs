@@ -413,6 +413,11 @@ impl RoundManager {
     /// is considered as error. It only returns Ok(()) when the timeout is stale.
     pub async fn process_local_timeout(&mut self, round: Round) -> anyhow::Result<()> {
         if !self.round_state.process_local_timeout(round) {
+            debug!(
+                "Round {} doesn't match local {}",
+                round,
+                self.round_state.current_round()
+            );
             return Ok(());
         }
 

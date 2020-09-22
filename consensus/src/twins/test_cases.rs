@@ -13,6 +13,9 @@ type Idx = usize;
 #[derive(Serialize, Deserialize)]
 /// Specify the leaders and partitions for each round.
 /// Default is FixedProposer and no partitions.
+/// In order to synchronize the round across all nodes, we have two hacks in NetworkPlayround:
+/// 1. Do not drop timeout votes.
+/// 2. When a proposal is dropped, still send the sync info.
 pub struct TestCase {
     pub round_leaders: HashMap<Round, Idx>,
     pub round_partitions: HashMap<Round, Vec<Vec<Idx>>>,
@@ -47,34 +50,52 @@ fn test_case_format() {
 }
 
 impl TestCase {
+    /// We decide whether a round should timeout based on if the leader partition is able to aggregate QC.
     pub fn to_round_proposer_config(&self, nodes: &[TwinId]) -> Vec<RoundProposerConfig> {
         let mut round_proposers = HashMap::new();
-        let mut timeouts: Vec<_> = nodes.iter().map(|_| HashSet::new()).collect();
+        let total_size = nodes
+            .iter()
+            .map(|id| id.author)
+            .collect::<HashSet<_>>()
+            .len();
+        let quorum_size = total_size * 2 / 3 + 1;
+        let mut timeout_rounds = HashSet::new();
         for (round, leader_idx) in &self.round_leaders {
             let leader = nodes[*leader_idx].author;
+            let next_leader_idx = self.round_leaders.get(&(*round + 1)).unwrap_or(&0);
+            let next_leader = nodes[*next_leader_idx].author;
             round_proposers.insert(*round, leader);
+            let mut should_timeout = true;
             for partition in self.round_partitions.get(&round).unwrap() {
-                let with_leader = partition
+                // if leader partition doesn't have quorum, everyone timeout, else no one timeout
+                let has_leader = partition.iter().any(|idx| nodes[*idx].author == leader);
+                let has_next_leader = partition
                     .iter()
-                    .find(|idx| nodes[**idx].author == leader)
-                    .is_some();
-                if !with_leader {
-                    for node_idx in partition {
-                        timeouts[*node_idx].insert(*round);
+                    .any(|idx| nodes[*idx].author == next_leader);
+                if has_leader && has_next_leader {
+                    let partition_size = partition
+                        .iter()
+                        .map(|idx| nodes[*idx].author)
+                        .collect::<HashSet<_>>()
+                        .len();
+                    if partition_size >= quorum_size {
+                        should_timeout = false;
                     }
                 }
             }
+            if should_timeout {
+                timeout_rounds.insert(*round);
+            }
         }
-        timeouts
-            .into_iter()
-            .map(|timeout_rounds| RoundProposerConfig {
-                round_proposers: round_proposers.clone(),
-                timeout_rounds,
-            })
-            .collect()
+        let config = RoundProposerConfig {
+            round_proposers,
+            timeout_rounds,
+        };
+
+        (0..nodes.len()).map(|_| config.clone()).collect()
     }
 
-    pub fn to_partitions(self, nodes: &[TwinId]) -> HashMap<Round, Vec<Vec<TwinId>>> {
+    pub fn into_partitions(self, nodes: &[TwinId]) -> HashMap<Round, Vec<Vec<TwinId>>> {
         self.round_partitions
             .into_iter()
             .map(|(r, partitions)| {
@@ -92,11 +113,12 @@ impl TestCase {
 
 #[test]
 fn test_case_conversion() {
-    let round_leaders: HashMap<_, _> = vec![(1, 0), (2, 1), (3, 2)].into_iter().collect();
+    let round_leaders: HashMap<_, _> = vec![(1, 0), (2, 1), (3, 2), (4, 0)].into_iter().collect();
     let round_partitions = vec![
         (1, vec![vec![0, 1], vec![2, 3, 4]]),
         (2, vec![vec![0, 4], vec![1, 2, 3]]),
         (3, vec![vec![0, 3], vec![2, 4], vec![1]]),
+        (4, vec![vec![0, 3, 4], vec![1, 2]]),
     ]
     .into_iter()
     .collect();
@@ -119,11 +141,6 @@ fn test_case_conversion() {
     let configs = test_case.to_round_proposer_config(&nodes_id);
     for config in &configs {
         assert_eq!(config.round_proposers, expected_leaders);
+        assert_eq!(config.timeout_rounds, vec![1, 3, 4].into_iter().collect());
     }
-
-    assert_eq!(configs[0].timeout_rounds, vec![2, 3].into_iter().collect());
-    assert_eq!(configs[1].timeout_rounds, vec![3].into_iter().collect());
-    assert_eq!(configs[2].timeout_rounds, vec![].into_iter().collect());
-    assert_eq!(configs[3].timeout_rounds, vec![3].into_iter().collect());
-    assert_eq!(configs[4].timeout_rounds, vec![2].into_iter().collect());
 }

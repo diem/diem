@@ -345,10 +345,11 @@ fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
     let mut w = String::new();
     write!(
         w,
-        "{} {} {}",
+        "thread[{}] {} {} {}",
+        entry.thread_name.as_deref().unwrap_or(""),
         entry.metadata.level(),
         entry.timestamp,
-        entry.metadata.location()
+        entry.metadata.location(),
     )?;
 
     if let Some(message) = &entry.message {

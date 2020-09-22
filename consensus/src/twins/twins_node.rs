@@ -180,9 +180,9 @@ impl SMRNode {
                 let configs = test_case
                     .to_round_proposer_config(&nodes_id)
                     .into_iter()
-                    .map(|config| ConsensusProposerType::RoundProposer(config))
+                    .map(ConsensusProposerType::RoundProposer)
                     .collect();
-                assert!(playground.split_network_round(&test_case.to_partitions(&nodes_id)));
+                assert!(playground.split_network_round(&test_case.into_partitions(&nodes_id)));
                 configs
             }
             None => node_configs

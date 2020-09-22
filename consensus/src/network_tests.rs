@@ -18,6 +18,7 @@ use consensus_types::{
 };
 use futures::{channel::mpsc, SinkExt, StreamExt};
 use libra_types::{block_info::BlockInfo, PeerId};
+use network::protocols::direct_send::Message;
 use network::{
     peer_manager::{
         conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
@@ -209,11 +210,11 @@ impl NetworkPlayground {
     /// Deliver a `PeerManagerRequest` from peer `src` to the destination peer.
     /// Returns a copy of the delivered message and the sending peer id, and
     /// whether the message was successfully delivered
-    async fn deliver_message(
-        &mut self,
+    fn deliver_message(
+        &self,
         src_twin_id: TwinId,
         dst_twin_id: TwinId,
-        msg_notif: PeerManagerNotification,
+        msg: ConsensusMsg,
     ) -> (Author, ConsensusMsg) {
         let mut node_consensus_tx = self
             .node_consensus_txs
@@ -224,22 +225,19 @@ impl NetworkPlayground {
             .clone();
 
         // copy message data
-        let msg_copy = match &msg_notif {
-            PeerManagerNotification::RecvMessage(src, msg) => {
-                let msg: ConsensusMsg = lcs::from_bytes(&msg.mdata).unwrap();
-                (*src, msg)
-            }
-            msg_notif => panic!(
-                "[network playground] Unexpected PeerManagerNotification: {:?}",
-                msg_notif
-            ),
-        };
+        let msg_notif = PeerManagerNotification::RecvMessage(
+            src_twin_id.author,
+            Message {
+                protocol_id: ProtocolId::ConsensusDirectSend,
+                mdata: lcs::to_bytes(&msg).unwrap().into(),
+            },
+        );
         // ignore send error during shutdown
         let _ = node_consensus_tx.push(
             (src_twin_id.author, ProtocolId::ConsensusDirectSend),
             msg_notif,
         );
-        msg_copy
+        (src_twin_id.author, msg)
     }
 
     /// Wait for exactly `num_messages` to be enqueued and delivered. Return a
@@ -278,11 +276,7 @@ impl NetworkPlayground {
 
                 // Deliver and copy message if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, dst_twin_id, &consensus_msg) {
-                    let msg_notif =
-                        PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
-                    let msg_copy = self
-                        .deliver_message(src_twin_id, *dst_twin_id, msg_notif)
-                        .await;
+                    let msg_copy = self.deliver_message(src_twin_id, *dst_twin_id, consensus_msg);
 
                     // Only insert msg_copy once for twins (if delivered)
                     if idx == 0 && msg_inspector(&msg_copy) {
@@ -336,7 +330,24 @@ impl NetworkPlayground {
             .unwrap()
             .is_message_dropped(src, dst)
             || Self::get_message_round(&msg).map_or(false, |r| {
-                self.drop_config_round.is_message_dropped(src, dst, r)
+                match msg {
+                    // HACK: Allow timeout messages to go through to synchronize round
+                    ConsensusMsg::VoteMsg(v) if v.vote().is_timeout() => return false,
+                    // HACK: Extract the sync info from proposal to synchronize round
+                    ConsensusMsg::ProposalMsg(p) => {
+                        if self.drop_config_round.is_message_dropped(src, dst, r) {
+                            self.deliver_message(
+                                *src,
+                                *dst,
+                                ConsensusMsg::SyncInfo(Box::new(p.sync_info().clone())),
+                            );
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    _ => self.drop_config_round.is_message_dropped(src, dst, r),
+                }
             })
     }
 
@@ -375,7 +386,7 @@ impl NetworkPlayground {
         ret
     }
 
-    pub async fn start_until<F: Fn(&ConsensusMsg) -> bool>(mut self, f: F) {
+    pub async fn start_until<F: Fn(&ConsensusMsg) -> bool>(mut self, msg_inspector: F) {
         // Take the next queued message
         while let Some((src_twin_id, net_req)) = self.outbound_msgs_rx.next().await {
             // Convert PeerManagerRequest to corresponding PeerManagerNotification,
@@ -393,18 +404,37 @@ impl NetworkPlayground {
             let dst_twin_ids = self.get_twin_ids(dst);
 
             for dst_twin_id in dst_twin_ids.iter() {
-                let msg_notif =
-                    PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
                 let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
-                if f(&consensus_msg) {
-                    println!("Stop playground");
+                if msg_inspector(&consensus_msg) {
+                    debug!("Stop playground");
                     return;
                 }
+                let msg_type = match &consensus_msg {
+                    ConsensusMsg::ProposalMsg(_) => "proposal",
+                    ConsensusMsg::VoteMsg(v) if v.vote().is_timeout() => "timeout",
+                    ConsensusMsg::VoteMsg(_) => "vote",
+                    ConsensusMsg::SyncInfo(_) => "sync_info",
+                    _ => unreachable!(),
+                };
 
                 // Deliver and copy message it if it's not dropped
                 if !self.is_message_dropped(&src_twin_id, &dst_twin_id, &consensus_msg) {
-                    self.deliver_message(src_twin_id, *dst_twin_id, msg_notif)
-                        .await;
+                    debug!(
+                        "Deliver {}[@{}] from node_{} to node_{}",
+                        msg_type,
+                        Self::get_message_round(&consensus_msg).unwrap_or(0),
+                        src_twin_id.id,
+                        dst_twin_id.id
+                    );
+                    self.deliver_message(src_twin_id, *dst_twin_id, consensus_msg);
+                } else {
+                    debug!(
+                        "Drop {}[@{}] from node_{} to node_{}",
+                        msg_type,
+                        Self::get_message_round(&consensus_msg).unwrap_or(0),
+                        src_twin_id.id,
+                        dst_twin_id.id
+                    );
                 }
             }
         }
