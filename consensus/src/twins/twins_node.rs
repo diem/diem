@@ -210,7 +210,7 @@ impl SMRNode {
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type;
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
-            // No auto timeout, it should be triggered by the timeout_sender.
+            // NO AUTO TIMEOUT, it should be manually set by the RoundProposerConfig
             config.consensus.round_initial_timeout_ms = 2_000_000;
 
             let author = author_from_config(&config);

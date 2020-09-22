@@ -277,7 +277,7 @@ impl NetworkPlayground {
                 let consensus_msg = lcs::from_bytes(&msg.mdata).unwrap();
 
                 // Deliver and copy message if it's not dropped
-                if !self.is_message_dropped(&src_twin_id, dst_twin_id, consensus_msg) {
+                if !self.is_message_dropped(&src_twin_id, dst_twin_id, &consensus_msg) {
                     let msg_notif =
                         PeerManagerNotification::RecvMessage(src_twin_id.author, msg.clone());
                     let msg_copy = self
@@ -296,7 +296,7 @@ impl NetworkPlayground {
     }
 
     /// Return the round of a given message
-    fn get_message_round(msg: ConsensusMsg) -> Option<u64> {
+    pub fn get_message_round(msg: &ConsensusMsg) -> Option<u64> {
         match msg {
             ConsensusMsg::ProposalMsg(proposal_msg) => Some(proposal_msg.proposal().round()),
             ConsensusMsg::VoteMsg(vote_msg) => Some(vote_msg.vote().vote_data().proposed().round()),
@@ -330,12 +330,12 @@ impl NetworkPlayground {
         self.author_to_twin_ids.read().unwrap().get_twin_ids(author)
     }
 
-    fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, msg: ConsensusMsg) -> bool {
+    fn is_message_dropped(&self, src: &TwinId, dst: &TwinId, msg: &ConsensusMsg) -> bool {
         self.drop_config
             .read()
             .unwrap()
             .is_message_dropped(src, dst)
-            || Self::get_message_round(msg).map_or(false, |r| {
+            || Self::get_message_round(&msg).map_or(false, |r| {
                 self.drop_config_round.is_message_dropped(src, dst, r)
             })
     }
@@ -402,7 +402,7 @@ impl NetworkPlayground {
                 }
 
                 // Deliver and copy message it if it's not dropped
-                if !self.is_message_dropped(&src_twin_id, &dst_twin_id, consensus_msg) {
+                if !self.is_message_dropped(&src_twin_id, &dst_twin_id, &consensus_msg) {
                     self.deliver_message(src_twin_id, *dst_twin_id, msg_notif)
                         .await;
                 }

@@ -6,6 +6,7 @@ use consensus_types::common::{Author, Round};
 
 use futures::SinkExt;
 use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
 
 /// The round proposer maps a round to author (Twins only testing)
 pub struct RoundProposer {
@@ -15,7 +16,7 @@ pub struct RoundProposer {
     // We hardcode this to the first proposer
     default_proposer: Author,
     // The rounds that're supposed to timeout (when it's in a different partition than the proposer)
-    timeout_rounds: HashSet<Round>,
+    timeout_rounds: Mutex<HashSet<Round>>,
     timeout_sender: channel::Sender<Round>,
 }
 
@@ -29,7 +30,7 @@ impl RoundProposer {
         Self {
             proposers,
             default_proposer,
-            timeout_rounds,
+            timeout_rounds: Mutex::new(timeout_rounds),
             timeout_sender,
         }
     }
@@ -41,9 +42,11 @@ impl ProposerElection for RoundProposer {
             None => self.default_proposer,
             Some(round_proposer) => *round_proposer,
         };
-        if self.timeout_rounds.contains(&round) {
+        let mut timeout_rounds = self.timeout_rounds.lock().unwrap();
+        if timeout_rounds.contains(&round) {
             let mut sender = self.timeout_sender.clone();
             tokio::spawn(async move { sender.send(round).await });
+            timeout_rounds.remove(&round);
         }
         proposer
     }

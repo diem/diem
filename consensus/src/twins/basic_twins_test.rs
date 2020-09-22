@@ -7,9 +7,10 @@ use crate::{
     test_utils::{consensus_runtime, timed_block_on},
     twins::{test_cases::TestCase, twins_node::SMRNode},
 };
-use consensus_types::{block::Block, common::Round};
+use consensus_types::block::Block;
 use futures::StreamExt;
-use std::{collections::HashMap, time::Duration};
+use libra_types::block_info::GENESIS_TIMESTAMP_USECS;
+use std::time::Duration;
 use tokio::time::delay_for;
 
 #[test]
@@ -185,7 +186,7 @@ fn twins_proposer_test() {
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
     // Leaders are n0 (and implicitly twin0) for round 1..10
-    let round_leaders: HashMap<Round, usize> = (1..10).map(|r| (r, 0)).collect();
+    let round_leaders = (1..10).map(|r| (r, 0)).collect();
     // Round 1 to 10 partitions: [node0, node1, node2], [node3, twin0, twin1]
     let round_partitions = (1..10)
         .map(|r| (r, vec![vec![0, 1, 2], vec![3, 4, 5]]))
@@ -203,19 +204,14 @@ fn twins_proposer_test() {
     runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        let node0_commit = nodes[0].commit_cb_receiver.next().await;
-        let twin0_commit = nodes[4].commit_cb_receiver.next().await;
+        let node0_commit = nodes[0].commit_cb_receiver.next().await.unwrap();
+        let twin0_commit = nodes[4].commit_cb_receiver.next().await.unwrap();
 
-        match (node0_commit, twin0_commit) {
-            (Some(node0_commit_inner), Some(twin0_commit_inner)) => {
-                let node0_commit_id = node0_commit_inner.ledger_info().commit_info().id();
-                let twin0_commit_id = twin0_commit_inner.ledger_info().commit_info().id();
-                // Proposal from both node0 and twin_node0 are going to
-                // get committed in their respective partitions
-                assert_ne!(node0_commit_id, twin0_commit_id);
-            }
-            _ => panic!("[TwinsTest] Test failed due to no commit(s)"),
-        }
+        let node0_commit_id = node0_commit.ledger_info().commit_info().id();
+        let twin0_commit_id = twin0_commit.ledger_info().commit_info().id();
+        // Proposal from both node0 and twin_node0 are going to
+        // get committed in their respective partitions
+        assert_ne!(node0_commit_id, twin0_commit_id);
     });
 }
 
@@ -244,7 +240,7 @@ fn twins_commit_test() {
     // Specify round leaders
     // Will default to the first node, if no leader specified for given round
     // Leaders are n0 and twin0 for round 1..10
-    let round_leaders: HashMap<Round, usize> = (1..10).map(|r| (r, 0)).collect();
+    let round_leaders = (1..10).map(|r| (r, 0)).collect();
     // Round 1 to 10 partitions: [node0, node1, node2, node3, twin0]
     let round_partitions = (1..10).map(|r| (r, vec![vec![0, 1, 2, 3, 4]])).collect();
     let test_case = TestCase {
@@ -258,18 +254,55 @@ fn twins_commit_test() {
     runtime.spawn(playground.start());
 
     timed_block_on(&mut runtime, async {
-        let node0_commit = nodes[0].commit_cb_receiver.next().await;
-        let twin0_commit = nodes[4].commit_cb_receiver.next().await;
+        let node0_commit = nodes[0].commit_cb_receiver.next().await.unwrap();
+        let twin0_commit = nodes[4].commit_cb_receiver.next().await.unwrap();
 
-        match (node0_commit, twin0_commit) {
-            (Some(node0_commit_inner), Some(twin0_commit_inner)) => {
-                let node0_commit_id = node0_commit_inner.ledger_info().commit_info().id();
-                let twin0_commit_id = twin0_commit_inner.ledger_info().commit_info().id();
-                // Proposals from both node0 and twin_node0 are going to race,
-                // but only one of them will form a commit
-                assert_eq!(node0_commit_id, twin0_commit_id);
-            }
-            _ => panic!("[TwinsTest] Test failed due to no commit(s)"),
-        }
+        let node0_commit_id = node0_commit.ledger_info().commit_info().id();
+        let twin0_commit_id = twin0_commit.ledger_info().commit_info().id();
+        // Proposals from both node0 and twin_node0 are going to race,
+        // but only one of them will form a commit
+        assert_eq!(node0_commit_id, twin0_commit_id);
+    });
+}
+
+#[test]
+fn twins_timeout_test() {
+    let mut runtime = consensus_runtime();
+    let mut playground = NetworkPlayground::new(runtime.handle().clone());
+    let num_nodes = 4;
+    let num_twins = 0;
+
+    let round = 4;
+    // Node 3 is the leader
+    let round_leaders = (1..round).map(|r| (r, 3)).collect();
+    // Node 3 is in its own partitions
+    let round_partitions = (1..round)
+        .map(|r| (r, vec![vec![3], vec![0, 1, 2]]))
+        .collect();
+    let test_case = TestCase {
+        round_leaders,
+        round_partitions,
+    };
+    let mut nodes =
+        SMRNode::start_num_nodes_with_twins(num_nodes, num_twins, &mut playground, Some(test_case));
+
+    runtime.spawn(playground.start_until(move |msg| {
+        NetworkPlayground::get_message_round(msg).map_or(false, |r| r > round)
+    }));
+
+    timed_block_on(&mut runtime, async {
+        // Even [0, 1, 2] are in a partition without leaders, they should timeout and commit NIL blocks
+        let node0_commit = nodes[0].commit_cb_receiver.next().await.unwrap();
+        let node1_commit = nodes[1].commit_cb_receiver.next().await.unwrap();
+        let node2_commit = nodes[2].commit_cb_receiver.next().await.unwrap();
+        assert_eq!(node0_commit, node1_commit);
+        assert_eq!(node1_commit, node2_commit);
+        // Assert it's NIL block (timestamp not change)
+        assert!(
+            node0_commit.ledger_info().round() > 0
+                && node0_commit.ledger_info().timestamp_usecs() == GENESIS_TIMESTAMP_USECS
+        );
+        // No commit from node 3.
+        assert!(nodes[3].commit_cb_receiver.try_next().is_err());
     });
 }
