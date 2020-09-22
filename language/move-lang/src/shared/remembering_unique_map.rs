@@ -37,11 +37,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.get(key)
     }
 
-    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
-        self.gotten_keys.insert(key.clone());
-        self.map.get_mut(key)
-    }
-
     pub fn get_loc(&mut self, key: &K) -> Option<&K::Loc> {
         self.gotten_keys.insert(key.clone());
         self.map.get_loc(key)
