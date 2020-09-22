@@ -509,5 +509,35 @@ mod tests {
         handler.join().unwrap();
         let entry = receiver.recv().unwrap();
         assert_eq!(entry.thread_name.as_deref(), Some("named thread"));
+
+        // Test Debug and Display inputs
+        let debug_struct = DebugStruct {};
+        let display_struct = DisplayStruct {};
+
+        error!(identifier = ?debug_struct, "Debug test");
+        error!(identifier = ?debug_struct, other = "value", "Debug2 test");
+        error!(identifier = %display_struct, "Display test");
+        error!(identifier = %display_struct, other = "value", "Display2 test");
+        error!("Literal" = ?debug_struct, "Debug test");
+        error!("Literal" = ?debug_struct, other = "value", "Debug test");
+        error!("Literal" = %display_struct, "Display test");
+        error!("Literal" = %display_struct, other = "value", "Display2 test");
+        error!("Literal" = %display_struct, other = "value", identifier = ?debug_struct, "Mixed test");
+    }
+
+    struct DebugStruct {}
+
+    impl std::fmt::Debug for DebugStruct {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "DebugStruct!")
+        }
+    }
+
+    struct DisplayStruct {}
+
+    impl std::fmt::Display for DisplayStruct {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "DisplayStruct!")
+        }
     }
 }

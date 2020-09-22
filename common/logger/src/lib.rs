@@ -31,6 +31,12 @@
 //! let value2 = false;
 //! info!(key1 = value1, key2 = value2, "hello {}", world);
 //! // => '{"level":"info", "data": {"key1": 5, "key2": false}, "message": "hello world!"}'
+//!
+//! // Structured data can also use `Display` or `Debug` outputs instead.
+//! // Using the sigil `?` for debug and `%` for display.
+//! let value1 = 5;
+//! info!(debug_key = ?value1, display_key = %value1);
+//! // => '{"level":"info", "data": {"display_key": 5, "debug_key": 5}}'
 //! ```
 //!
 //! ### Note
