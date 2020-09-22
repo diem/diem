@@ -728,15 +728,6 @@ impl Script {
         }
     }
 
-    /// Accessor for the body of the 'main' procedure
-    pub fn body(&self) -> &Block_ {
-        match self.main.value.body {
-            FunctionBody::Move { ref code, .. } => &code,
-            FunctionBody::Bytecode { .. } => panic!("Invalid body access on bytecode main()"),
-            FunctionBody::Native => panic!("main() cannot be native"),
-        }
-    }
-
     /// Return a vector of `ModuleId` for the external dependencies.
     pub fn get_external_deps(&self) -> Vec<ModuleId> {
         get_external_deps(self.imports.as_slice())

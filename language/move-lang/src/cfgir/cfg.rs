@@ -118,16 +118,6 @@ impl<'a> BlockCFG<'a> {
     pub fn block(&self, label: Label) -> &BasicBlock {
         self.blocks.get(&label).unwrap()
     }
-
-    pub fn display_blocks(&self) {
-        for (lbl, block) in self.blocks() {
-            println!("--BLOCK {}--", lbl);
-            for cmd in block {
-                println!("{:#?}", cmd.value);
-            }
-            println!();
-        }
-    }
 }
 
 impl<'a> CFG for BlockCFG<'a> {
