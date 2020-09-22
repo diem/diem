@@ -32,10 +32,6 @@ impl<K: TName, V> RememberingUniqueMap<K, V> {
         self.map.add(key, value)
     }
 
-    pub fn key_gotten(&self, key: &K) -> bool {
-        self.gotten_keys.contains(key)
-    }
-
     pub fn contains_key(&self, key: &K) -> bool {
         self.map.contains_key(key)
     }
