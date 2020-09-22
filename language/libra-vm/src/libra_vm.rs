@@ -77,11 +77,6 @@ impl LibraVMImpl {
         }
     }
 
-    /// Provides access to some internal APIs of the Libra VM.
-    pub fn internals(&self) -> LibraVMInternals {
-        LibraVMInternals(self)
-    }
-
     pub(crate) fn publishing_option(&self) -> Result<&VMPublishingOption, VMStatus> {
         self.publishing_option.as_ref().ok_or_else(|| {
             error!("VM Startup Failed. PublishingOption Not Found");
