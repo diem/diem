@@ -585,12 +585,6 @@ impl GlobalEnv {
         self.unknown_loc.clone()
     }
 
-    /// Returns a Move IR version of the unknown location which is guaranteed to map to the
-    /// regular unknown location via `to_loc`.
-    pub fn unknown_move_ir_loc(&self) -> MoveIrLoc {
-        self.unknown_move_ir_loc
-    }
-
     /// Returns the internal location.
     pub fn internal_loc(&self) -> Loc {
         self.internal_loc.clone()
