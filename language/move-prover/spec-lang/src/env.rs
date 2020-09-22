@@ -1159,16 +1159,6 @@ impl<'env> ModuleEnv<'env> {
         self.env.source_files.name(file_id)
     }
 
-    /// Return the set of ModuleId's that this module depends on (including itself)
-    pub fn get_dependencies(&self) -> Vec<language_storage::ModuleId> {
-        let compiled_module = &self.data.module;
-        compiled_module
-            .module_handles()
-            .iter()
-            .map(|h| compiled_module.module_id_for_handle(h))
-            .collect()
-    }
-
     /// Returns documentation associated with this module.
     pub fn get_doc(&self) -> &str {
         self.env.get_doc(&self.data.loc)
