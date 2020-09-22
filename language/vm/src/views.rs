@@ -72,10 +72,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         self.name_to_function_definition_view.get(name)
     }
 
-    pub fn struct_definition(&self, name: &'a IdentStr) -> Option<&StructDefinitionView<'a, T>> {
-        self.name_to_struct_definition_view.get(name)
-    }
-
     pub fn function_acquired_resources(
         &self,
         function_handle: &FunctionHandle,
