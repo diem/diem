@@ -293,10 +293,6 @@ impl<'a, T: ModuleAccess> FieldDefinitionView<'a, T> {
     pub fn signature_token(&self) -> &'a SignatureToken {
         &self.field_def.signature.0
     }
-
-    pub fn signature_token_view(&self) -> SignatureTokenView<'a, T> {
-        SignatureTokenView::new(self.module, self.signature_token())
-    }
 }
 
 pub struct LocalsSignatureView<'a, T> {
