@@ -47,10 +47,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
         }
     }
 
-    pub fn self_handle_idx(&self) -> ModuleHandleIndex {
-        self.as_inner().self_handle_idx()
-    }
-
     pub fn module_handles(
         &self,
     ) -> impl DoubleEndedIterator<Item = ModuleHandleView<'a, T>> + Send {
