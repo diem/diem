@@ -65,14 +65,6 @@ impl<'a, T: ModuleAccess> ModuleView<'a, T> {
             .map(move |signature| SignatureView::new(module, signature))
     }
 
-    pub fn structs(&self) -> impl DoubleEndedIterator<Item = StructDefinitionView<'a, T>> + Send {
-        let module = self.module;
-        module
-            .struct_defs()
-            .iter()
-            .map(move |struct_def| StructDefinitionView::new(module, struct_def))
-    }
-
     pub fn functions(
         &self,
     ) -> impl DoubleEndedIterator<Item = FunctionDefinitionView<'a, T>> + Send {
