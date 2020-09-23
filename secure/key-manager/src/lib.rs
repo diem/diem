@@ -147,13 +147,13 @@ where
                 Err(Error::LivenessError(last_value, current_value)) => {
                     // Log the liveness error and continue to execute.
                     let error = Error::LivenessError(last_value, current_value);
-                    info!(LogSchema::new(LogEntry::CheckKeyStatus)
+                    error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .liveness_error(&error));
                 }
                 Err(e) => {
                     // Log the unexpected error and continue to execute.
-                    info!(LogSchema::new(LogEntry::CheckKeyStatus)
+                    error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .unexpected_error(&e));
                 }
@@ -297,7 +297,7 @@ where
 
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
-            info!(LogSchema::new(LogEntry::WaitForReconfiguration));
+            warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
             counters::increment_state("consensus_key", "waiting_on_reconfiguration");
             return Ok(Action::NoAction);
         }
@@ -309,7 +309,7 @@ where
             return if last_rotation + self.txn_expiration_secs <= self.time_service.now() {
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
-                info!(LogSchema::new(LogEntry::WaitForTransactionExecution));
+                warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
                 counters::increment_state("consensus_key", "waiting_on_transaction_execution");
                 Ok(Action::NoAction)
             };

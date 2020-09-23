@@ -6,7 +6,6 @@ use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_logger::Schema;
 use serde::Serialize;
 
-// TODO: Fix the leveling of these logs individually. https://github.com/libra/libra/issues/5615
 #[derive(Schema)]
 pub struct LogSchema<'a> {
     name: LogEntry,
