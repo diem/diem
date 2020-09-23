@@ -336,18 +336,23 @@ impl Writer for FileWriter {
 }
 
 /// Converts a record into a string representation:
-/// UNIX_TIMESTAMP LOG_LEVEL FILE:LINE MESSAGE
+/// UNIX_TIMESTAMP LOG_LEVEL [thread_name] FILE:LINE MESSAGE JSON_DATA
 /// Example:
-/// 2020-03-07 05:03:03 INFO common/libra-logger/src/lib.rs:261 Hello
+/// 2020-03-07 05:03:03 INFO [thread_name] common/libra-logger/src/lib.rs:261 Hello { "world": true }
 fn format(entry: &LogEntry) -> Result<String, fmt::Error> {
     use std::fmt::Write;
 
     let mut w = String::new();
+    write!(w, "{}", entry.timestamp)?;
+
+    if let Some(thread_name) = &entry.thread_name {
+        write!(w, " [{}]", thread_name)?;
+    }
+
     write!(
         w,
-        "{} {} {}",
+        " {} {}",
         entry.metadata.level(),
-        entry.timestamp,
         entry.metadata.location()
     )?;
 
