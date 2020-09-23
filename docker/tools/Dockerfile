@@ -29,15 +29,15 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
 
 RUN apt-get update && \
-    apt-get --no-install-recommends --yes install busybox libssl1.1 ca-certificates socat python3-botocore/bullseye awscli/bullseye && \
+    apt-get --no-install-recommends --yes install wget libssl1.1 ca-certificates socat python3-botocore/bullseye awscli/bullseye && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 COPY docker/tools/boto.cfg /etc
 
-RUN cd /usr/local/bin && busybox wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
-RUN busybox wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
+RUN cd /usr/local/bin && wget https://aka.ms/downloadazcopy-v10-linux -O- | tar --gzip --wildcards --extract '*/azcopy' --strip-components=1 --no-same-owner && chmod +x azcopy
+RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz -O- | tar --gzip --directory /opt --extract && ln -s /opt/gsutil/gsutil /usr/local/bin
 
 COPY --from=builder /libra/target/release/libra-genesis-tool /usr/local/bin
 COPY --from=builder /libra/target/release/libra-operational-tool /usr/local/bin
