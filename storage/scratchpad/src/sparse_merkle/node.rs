@@ -26,6 +26,8 @@ use libra_types::{
     proof::{SparseMerkleInternalNode, SparseMerkleLeafNode},
 };
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use libra_metrics::{Histogram, register_histogram};
+use once_cell::sync::Lazy;
 
 /// We wrap the node in `RwLock`. The only case when we will update the node is when we
 /// drop a subtree originated from this node and commit things to storage. In that case we will
@@ -211,11 +213,22 @@ pub struct LeafNode {
     /// The hash of this leaf node which is Hash(key || Hash(value)).
     hash: HashValue,
 }
+static LEAF_NODE_HASH: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!("leaf_node_hash", "bbb").unwrap()
+});
+
+static STATE_BLOB_SIZE: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!("state_blob_size", "ccc").unwrap()
+});
 
 impl LeafNode {
     pub fn new(key: HashValue, value: LeafValue) -> Self {
         let value_hash = match value {
-            LeafValue::Blob(ref val) => val.hash(),
+            LeafValue::Blob(ref val) => {
+                STATE_BLOB_SIZE.observe(val.as_ref().len() as f64);
+                let _timer = LEAF_NODE_HASH.start_timer();
+                val.hash()
+            },
             LeafValue::BlobHash(ref val_hash) => *val_hash,
         };
         let hash = SparseMerkleLeafNode::new(key, value_hash).hash();

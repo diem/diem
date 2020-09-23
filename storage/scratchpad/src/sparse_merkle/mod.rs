@@ -102,6 +102,12 @@ pub enum AccountStatus {
 pub struct SparseMerkleTree {
     root: Arc<SparseMerkleNode>,
 }
+use libra_metrics::{Histogram, register_histogram};
+use once_cell::sync::Lazy;
+
+static UPDATE_ONE: Lazy<Histogram> = Lazy::new(|| {
+    register_histogram!("smt_update_one", "aaa").unwrap()
+});
 
 impl SparseMerkleTree {
     /// Constructs a Sparse Merkle Tree with a root hash. This is often used when we restart and
@@ -138,6 +144,7 @@ impl SparseMerkleTree {
         new_blob: AccountStateBlob,
         proof_reader: &impl ProofRead,
     ) -> Result<Arc<SparseMerkleNode>, UpdateError> {
+        let _timer = UPDATE_ONE.start_timer();
         let mut current_node = root;
         let mut bits = key.iter_bits();
 
