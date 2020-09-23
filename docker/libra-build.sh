@@ -25,7 +25,7 @@ DIR="$( cd "$( dirname "$0" )" && pwd )"
 
 PROXY=""
 if [ "$https_proxy" ]; then
-    PROXY=" --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy"
+    PROXY=" --network host --build-arg https_proxy=$https_proxy --build-arg http_proxy=$http_proxy"
 fi
 
 if [ "$1" = "--incremental" ]; then

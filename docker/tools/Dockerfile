@@ -29,7 +29,7 @@ RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.lis
     echo "Package: *\nPin: release n=bullseye\nPin-Priority: 50" > /etc/apt/preferences.d/bullseye
 
 RUN apt-get update && \
-    apt-get --no-install-recommends --yes install busybox libssl1.1 socat python3-botocore/bullseye awscli/bullseye && \
+    apt-get --no-install-recommends --yes install busybox libssl1.1 ca-certificates socat python3-botocore/bullseye awscli/bullseye && \
     apt-get clean && \
     rm -r /var/lib/apt/lists/*
 
