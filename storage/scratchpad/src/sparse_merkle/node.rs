@@ -17,6 +17,7 @@
 //!
 //! - An `EmptyNode` represents an empty subtree with zero leaf.
 
+use crate::sparse_merkle::counters;
 use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
@@ -215,7 +216,11 @@ pub struct LeafNode {
 impl LeafNode {
     pub fn new(key: HashValue, value: LeafValue) -> Self {
         let value_hash = match value {
-            LeafValue::Blob(ref val) => val.hash(),
+            LeafValue::Blob(ref val) => {
+                counters::STATE_BLOB_SIZE.observe(val.as_ref().len() as f64);
+                let _timer = counters::LEAF_NODE_HASH.start_timer();
+                val.hash()
+            }
             LeafValue::BlobHash(ref val_hash) => *val_hash,
         };
         let hash = SparseMerkleLeafNode::new(key, value_hash).hash();

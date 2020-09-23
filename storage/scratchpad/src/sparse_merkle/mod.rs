@@ -67,6 +67,8 @@ mod node;
 #[cfg(test)]
 mod sparse_merkle_test;
 
+mod counters;
+
 use self::node::{LeafNode, LeafValue, Node, SparseMerkleNode};
 use libra_crypto::{
     hash::{HashValueBitIterator, SPARSE_MERKLE_PLACEHOLDER_HASH},
@@ -138,6 +140,7 @@ impl SparseMerkleTree {
         new_blob: AccountStateBlob,
         proof_reader: &impl ProofRead,
     ) -> Result<Arc<SparseMerkleNode>, UpdateError> {
+        let _timer = counters::SMT_UPDATE_ONE.start_timer();
         let mut current_node = root;
         let mut bits = key.iter_bits();
 
