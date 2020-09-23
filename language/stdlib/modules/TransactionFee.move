@@ -71,7 +71,7 @@ module TransactionFee {
     /// Sets ups the needed transaction fee state for a given `CoinType` currency by
     /// (1) configuring `lr_account` to accept `CoinType`
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `lr_account`
-    fun add_txn_fee_currency<CoinType>(
+    public fun add_txn_fee_currency<CoinType>(
         lr_account: &signer,
         tc_account: &signer,
     ) {

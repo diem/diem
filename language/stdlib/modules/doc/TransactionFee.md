@@ -188,7 +188,7 @@ Sets ups the needed transaction fee state for a given <code>CoinType</code> curr
 (2) publishing a wrapper of the <code>Preburn&lt;CoinType&gt;</code> resource under <code>lr_account</code>
 
 
-<pre><code><b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(lr_account: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(lr_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -197,7 +197,7 @@ Sets ups the needed transaction fee state for a given <code>CoinType</code> curr
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="TransactionFee.md#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(
     lr_account: &signer,
     tc_account: &signer,
 ) {

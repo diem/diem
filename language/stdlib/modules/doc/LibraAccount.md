@@ -3787,7 +3787,7 @@ based on the conditions checked in the prologue, should never fail.
 Epilogue for WriteSet trasnaction
 
 
-<pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_writeset_epilogue">writeset_epilogue</a>(lr_account: &signer, writeset_payload: vector&lt;u8&gt;, txn_sequence_number: u64)
+<pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_writeset_epilogue">writeset_epilogue</a>(lr_account: &signer, writeset_payload: vector&lt;u8&gt;, txn_sequence_number: u64, should_trigger_reconfiguration: bool)
 </code></pre>
 
 
@@ -3799,17 +3799,17 @@ Epilogue for WriteSet trasnaction
 <pre><code><b>fun</b> <a href="LibraAccount.md#0x1_LibraAccount_writeset_epilogue">writeset_epilogue</a>(
     lr_account: &signer,
     writeset_payload: vector&lt;u8&gt;,
-    txn_sequence_number: u64
+    txn_sequence_number: u64,
+    should_trigger_reconfiguration: bool,
 ) <b>acquires</b> <a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>, <a href="LibraAccount.md#0x1_LibraAccount">LibraAccount</a>, <a href="LibraAccount.md#0x1_LibraAccount_Balance">Balance</a> {
     <b>let</b> writeset_events_ref = borrow_global_mut&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="LibraAccount.md#0x1_LibraAccount_UpgradeEvent">UpgradeEvent</a>&gt;(
         &<b>mut</b> writeset_events_ref.upgrade_events,
         <a href="LibraAccount.md#0x1_LibraAccount_UpgradeEvent">UpgradeEvent</a> { writeset_payload },
     );
     // Currency code don't matter here <b>as</b> it won't be charged anyway.
     <a href="LibraAccount.md#0x1_LibraAccount_epilogue">epilogue</a>&lt;<a href="LBR.md#0x1_LBR_LBR">LBR::LBR</a>&gt;(lr_account, txn_sequence_number, 0, 0, 0);
-    <a href="LibraConfig.md#0x1_LibraConfig_reconfigure">LibraConfig::reconfigure</a>(lr_account)
+    <b>if</b> (should_trigger_reconfiguration) <a href="LibraConfig.md#0x1_LibraConfig_reconfigure">LibraConfig::reconfigure</a>(lr_account)
 }
 </code></pre>
 

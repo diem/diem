@@ -1630,19 +1630,18 @@ module LibraAccount {
     fun writeset_epilogue(
         lr_account: &signer,
         writeset_payload: vector<u8>,
-        txn_sequence_number: u64
+        txn_sequence_number: u64,
+        should_trigger_reconfiguration: bool,
     ) acquires LibraWriteSetManager, LibraAccount, Balance {
         let writeset_events_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-
         Event::emit_event<UpgradeEvent>(
             &mut writeset_events_ref.upgrade_events,
             UpgradeEvent { writeset_payload },
         );
         // Currency code don't matter here as it won't be charged anyway.
         epilogue<LBR::LBR>(lr_account, txn_sequence_number, 0, 0, 0);
-        LibraConfig::reconfigure(lr_account)
+        if (should_trigger_reconfiguration) LibraConfig::reconfigure(lr_account)
     }
-
 
     ///////////////////////////////////////////////////////////////////////////
     // Proof of concept code used for Validator and ValidatorOperator roles management

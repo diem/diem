@@ -312,6 +312,15 @@ pub enum TransactionPayload {
     Module(Module),
 }
 
+impl TransactionPayload {
+    pub fn should_trigger_reconfiguration_by_default(&self) -> bool {
+        match self {
+            Self::WriteSet(ws) => ws.should_trigger_reconfiguration_by_default(),
+            Self::Script(_) | Self::Module(_) => false,
+        }
+    }
+}
+
 /// Two different kinds of WriteSet transactions.
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum WriteSetPayload {
@@ -324,6 +333,15 @@ pub enum WriteSetPayload {
         /// Script body that gets executed.
         script: Script,
     },
+}
+
+impl WriteSetPayload {
+    pub fn should_trigger_reconfiguration_by_default(&self) -> bool {
+        match self {
+            Self::Direct(_) => true,
+            Self::Script { .. } => false,
+        }
+    }
 }
 
 /// A transaction that has been signed.

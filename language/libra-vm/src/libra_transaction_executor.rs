@@ -466,8 +466,12 @@ impl LibraVM {
         };
 
         // Emit the reconfiguration event
-        self.0
-            .run_writeset_epilogue(&mut session, &change_set, &txn_data)?;
+        self.0.run_writeset_epilogue(
+            &mut session,
+            &change_set,
+            &txn_data,
+            txn.payload().should_trigger_reconfiguration_by_default(),
+        )?;
 
         if let Err(e) = self.read_writeset(remote_cache, &change_set.write_set()) {
             // Any error at this point would be an invalid writeset

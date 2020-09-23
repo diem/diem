@@ -369,6 +369,7 @@ impl LibraVMImpl {
         session: &mut Session<R>,
         change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
+        should_trigger_reconfiguration: bool,
     ) -> Result<(), VMStatus> {
         let change_set_bytes = lcs::to_bytes(change_set)
             .map_err(|_| VMStatus::Error(StatusCode::FAILED_TO_SERIALIZE_WRITE_SET_CHANGES))?;
@@ -383,6 +384,7 @@ impl LibraVMImpl {
                     Value::transaction_argument_signer_reference(txn_data.sender),
                     Value::vector_u8(change_set_bytes),
                     Value::u64(txn_data.sequence_number),
+                    Value::bool(should_trigger_reconfiguration),
                 ],
                 txn_data.sender,
                 &mut cost_strategy,
