@@ -72,6 +72,7 @@ pub use tests::{fuzzing, mocks};
 
 mod core_mempool;
 mod counters;
+mod logging;
 mod shared_mempool;
 
 // module op counters

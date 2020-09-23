@@ -10,7 +10,9 @@ use crate::{
         transaction::{MempoolTransaction, TimelineState},
         ttl_cache::TtlCache,
     },
-    counters, OP_COUNTERS,
+    counters,
+    logging::MempoolSchema,
+    OP_COUNTERS,
 };
 use anyhow::{format_err, Result};
 use libra_config::config::MempoolConfig;
@@ -263,7 +265,11 @@ impl TransactionStore {
                     }
                 }
             }
-            trace!("[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
+            trace!(
+                MempoolSchema::new()
+                    .sender(address)
+                    .sequence_number(&current_sequence_number),
+                "[Mempool] txns for account {:?}. Current sequence_number: {}, length: {}, parking lot: {}",
                 address, current_sequence_number, txns.len(), parking_lot_txns,
             );
             self.track_indices();

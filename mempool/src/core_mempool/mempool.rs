@@ -10,7 +10,9 @@ use crate::{
         transaction_store::TransactionStore,
         ttl_cache::TtlCache,
     },
-    counters, OP_COUNTERS,
+    counters,
+    logging::MempoolSchema,
+    OP_COUNTERS,
 };
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
@@ -60,6 +62,9 @@ impl Mempool {
     ) {
         trace_event!("mempool:remove_transaction", {"txn", sender, sequence_number});
         trace!(
+            MempoolSchema::new()
+                .sender(sender)
+                .sequence_number(&sequence_number),
             "[Mempool] Removing transaction from mempool: {}:{}:{}",
             sender,
             sequence_number,
@@ -81,8 +86,10 @@ impl Mempool {
 
         if is_rejected {
             debug!(
-                "[Mempool] transaction is rejected: {}:{}",
-                sender, sequence_number
+                MempoolSchema::new()
+                    .sender(sender)
+                    .sequence_number(&sequence_number),
+                "[Mempool] transaction is rejected: {}:{}", sender, sequence_number
             );
             if sequence_number >= current_seq_number {
                 self.transactions
@@ -120,6 +127,9 @@ impl Mempool {
     ) -> MempoolStatus {
         trace_event!("mempool::add_txn", {"txn", txn.sender(), txn.sequence_number()});
         trace!(
+            MempoolSchema::new()
+                .sender(&txn.sender())
+                .sequence_number(&txn.sequence_number()),
             "[Mempool] Adding transaction to mempool: {}:{}:{}",
             &txn.sender(),
             txn.sequence_number(),
