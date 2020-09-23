@@ -487,9 +487,9 @@ Returns true if <code>recovery_address</code> holds the
 
 
 <pre><code><b>invariant</b> [<b>global</b>, isolated]
-    <b>forall</b> addr: address <b>where</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr):
-        len(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr)) &gt; 0 &&
-        <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr)[0].account_address == addr;
+    <b>forall</b> addr1: address <b>where</b> <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1):
+        len(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)) &gt; 0 &&
+        <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(addr1)[0].account_address == addr1;
 </code></pre>
 
 
@@ -501,8 +501,8 @@ Returns true if <code>recovery_address</code> holds the
 
 
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
-   <b>forall</b> addr: address:
-       <b>old</b>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr)) ==&gt; <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr);
+   <b>forall</b> addr1: address:
+       <b>old</b>(<a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1)) ==&gt; <a href="RecoveryAddress.md#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1);
 </code></pre>
 
 

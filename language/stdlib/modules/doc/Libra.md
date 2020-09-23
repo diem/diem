@@ -3146,9 +3146,9 @@ If an account has BurnCapability, it is a TreasuryCompliance account.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> coin_type: type:
-    <b>forall</b> addr: address:
-        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr) ==&gt;
-            <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr);
+    <b>forall</b> addr1: address:
+        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1) ==&gt;
+            <a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role_addr">Roles::spec_has_treasury_compliance_role_addr</a>(addr1);
 </code></pre>
 
 
@@ -3258,9 +3258,9 @@ If an account has Preburn, it is a DesignatedDealer account.
 
 
 <pre><code><b>invariant</b> [<b>global</b>] <b>forall</b> coin_type: type:
-    <b>forall</b> addr: address:
-        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(addr) ==&gt;
-            <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr);
+    <b>forall</b> addr1: address:
+        <b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;coin_type&gt;&gt;(addr1) ==&gt;
+            <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr1);
 </code></pre>
 
 

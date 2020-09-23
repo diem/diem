@@ -222,17 +222,17 @@ module RecoveryAddress {
 
     spec module {
         invariant [global, isolated]
-            forall addr: address where spec_is_recovery_address(addr):
-                len(spec_get_rotation_caps(addr)) > 0 &&
-                spec_get_rotation_caps(addr)[0].account_address == addr;
+            forall addr1: address where spec_is_recovery_address(addr1):
+                len(spec_get_rotation_caps(addr1)) > 0 &&
+                spec_get_rotation_caps(addr1)[0].account_address == addr1;
     }
 
     /// ## RecoveryAddress resource stays
 
     spec module {
         invariant update [global]
-           forall addr: address:
-               old(spec_is_recovery_address(addr)) ==> spec_is_recovery_address(addr);
+           forall addr1: address:
+               old(spec_is_recovery_address(addr1)) ==> spec_is_recovery_address(addr1);
     }
 
     /// ## RecoveryAddress remains same

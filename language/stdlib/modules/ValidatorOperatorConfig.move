@@ -4,6 +4,7 @@ module ValidatorOperatorConfig {
     use 0x1::Errors;
     use 0x1::Signer;
     use 0x1::Roles;
+    use 0x1::LibraTimestamp;
 
     resource struct ValidatorOperatorConfig {
         /// The human readable name of this entity. Immutable.
@@ -18,6 +19,7 @@ module ValidatorOperatorConfig {
         lr_account: &signer,
         human_name: vector<u8>,
     ) {
+        LibraTimestamp::assert_operating();
         Roles::assert_libra_root(lr_account);
         Roles::assert_validator_operator(validator_operator_account);
         assert(
@@ -31,12 +33,20 @@ module ValidatorOperatorConfig {
     }
     spec fun publish {
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
-        include Roles::AbortsIfNotValidatorOperator;
-        aborts_if has_validator_operator_config(Signer::spec_address_of(validator_operator_account))
-            with Errors::ALREADY_PUBLISHED;
+        include Roles::AbortsIfNotValidatorOperator{validator_operator_addr: Signer::address_of(validator_operator_account)};
+        include PublishAbortsIf {validator_operator_addr: Signer::spec_address_of(validator_operator_account)};
         ensures has_validator_operator_config(Signer::spec_address_of(validator_operator_account));
     }
 
+    spec schema PublishAbortsIf {
+        validator_operator_addr: address;
+        lr_account: signer;
+        include LibraTimestamp::AbortsIfNotOperating;
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include Roles::AbortsIfNotValidatorOperator;
+        aborts_if has_validator_operator_config(validator_operator_addr)
+            with Errors::ALREADY_PUBLISHED;
+    }
 
     /// Get validator's account human name
     /// Aborts if there is no ValidatorOperatorConfig resource
@@ -60,8 +70,8 @@ module ValidatorOperatorConfig {
     /// This invariant is useful in LibraSystem so we don't have to check whether
     /// every validator address has a validator role.
     spec module {
-        invariant [global] forall addr:address where has_validator_operator_config(addr):
-            Roles::spec_has_validator_operator_role_addr(addr);
+        invariant [global] forall addr1:address where has_validator_operator_config(addr1):
+            Roles::spec_has_validator_operator_role_addr(addr1);
     }
 
 }

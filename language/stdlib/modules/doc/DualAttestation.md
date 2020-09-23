@@ -478,8 +478,8 @@ The sender can only rotate its own base url [B25].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateBaseUrlEnsures">RotateBaseUrlEnsures</a> {
-    <b>ensures</b> <b>forall</b> addr:address <b>where</b> addr != sender:
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url);
+    <b>ensures</b> <b>forall</b> addr1:address <b>where</b> addr1 != sender:
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url);
 }
 </code></pre>
 
@@ -590,8 +590,8 @@ The sender only rotates its own compliance_public_key [B25].
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">RotateCompliancePublicKeyEnsures</a> {
-    <b>ensures</b> <b>forall</b> addr:address <b>where</b> addr != sender:
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key);
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> addr1 != sender:
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key);
 }
 </code></pre>
 
@@ -1348,9 +1348,9 @@ The existence of Preburn is preserved.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialExistence">PreserveCredentialExistence</a> {
-    <b>ensures</b> <b>forall</b> addr: address:
-        <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)) ==&gt;
-            <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr);
+    <b>ensures</b> <b>forall</b> addr1: address:
+        <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)) ==&gt;
+            <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1);
 }
 </code></pre>
 
@@ -1363,9 +1363,9 @@ The absence of Preburn is preserved.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialAbsence">PreserveCredentialAbsence</a> {
-    <b>ensures</b> <b>forall</b> addr: address:
-        <b>old</b>(!<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)) ==&gt;
-            !<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr);
+    <b>ensures</b> <b>forall</b> addr1: address:
+        <b>old</b>(!<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)) ==&gt;
+            !<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1);
 }
 </code></pre>
 
@@ -1384,10 +1384,10 @@ The permission "RotateDualAttestationInfo(addr)" is only granted to ParentVASP o
 
 <pre><code><b>apply</b> <a href="DualAttestation.md#0x1_DualAttestation_PreserveCredentialAbsence">PreserveCredentialAbsence</a> <b>to</b> * <b>except</b> publish_credential;
 <b>apply</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVaspOrDesignatedDealer">Roles::AbortsIfNotParentVaspOrDesignatedDealer</a>{account: created} <b>to</b> publish_credential;
-<b>invariant</b> [<b>global</b>] <b>forall</b> addr: address:
-    <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr) ==&gt;
-        (<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(addr) ||
-        <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr));
+<b>invariant</b> [<b>global</b>] <b>forall</b> addr1: address:
+    <b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1) ==&gt;
+        (<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(addr1) ||
+        <a href="Roles.md#0x1_Roles_spec_has_designated_dealer_role_addr">Roles::spec_has_designated_dealer_role_addr</a>(addr1));
 </code></pre>
 
 
@@ -1421,8 +1421,8 @@ The compliance public key stays constant.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_CompliancePublicKeyRemainsSame">CompliancePublicKeyRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)):
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).compliance_public_key);
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)):
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).compliance_public_key);
 }
 </code></pre>
 
@@ -1442,8 +1442,8 @@ The base url stays constant.
 
 
 <pre><code><b>schema</b> <a href="DualAttestation.md#0x1_DualAttestation_BaseURLRemainsSame">BaseURLRemainsSame</a> {
-    <b>ensures</b> <b>forall</b> addr: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr)):
-        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr).base_url);
+    <b>ensures</b> <b>forall</b> addr1: address <b>where</b> <b>old</b>(<b>exists</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1)):
+        <b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url == <b>old</b>(<b>global</b>&lt;<a href="DualAttestation.md#0x1_DualAttestation_Credential">Credential</a>&gt;(addr1).base_url);
 }
 </code></pre>
 

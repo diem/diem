@@ -61,12 +61,18 @@ module ValidatorConfig {
     }
 
     spec fun publish {
+        include PublishAbortsIf {validator_addr: Signer::spec_address_of(validator_account)};
+        ensures exists_config(Signer::spec_address_of(validator_account));
+    }
+
+    spec schema PublishAbortsIf {
+        validator_addr: address;
+        lr_account: signer;
         include LibraTimestamp::AbortsIfNotOperating;
         include Roles::AbortsIfNotLibraRoot{account: lr_account};
-        include Roles::AbortsIfNotValidator;
-        aborts_if exists_config(Signer::spec_address_of(validator_account))
+        include Roles::AbortsIfNotValidator{validator_addr: validator_addr};
+        aborts_if exists_config(validator_addr)
             with Errors::ALREADY_PUBLISHED;
-        ensures exists_config(Signer::spec_address_of(validator_account));
     }
 
     /// Returns true if a ValidatorConfig resource exists under addr.
@@ -101,11 +107,11 @@ module ValidatorConfig {
     }
     spec fun set_operator {
         /// Must abort if the signer does not have the Validator role [B24].
-        include Roles::AbortsIfNotValidator;
+        let sender = Signer::spec_address_of(validator_account);
+        include Roles::AbortsIfNotValidator{validator_addr: sender};
 
         aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account)
             with Errors::INVALID_ARGUMENT;
-        let sender = Signer::spec_address_of(validator_account);
         include AbortsIfNoValidatorConfig{addr: sender};
         aborts_if !ValidatorOperatorConfig::has_validator_operator_config(operator_account) with Errors::NOT_PUBLISHED;
         ensures spec_has_operator(sender);
@@ -150,9 +156,8 @@ module ValidatorConfig {
 
     spec fun remove_operator {
         /// Must abort if the signer does not have the Validator role [B24].
-        include Roles::AbortsIfNotValidator;
-
         let sender = Signer::spec_address_of(validator_account);
+        include Roles::AbortsIfNotValidator{validator_addr: sender};
         include AbortsIfNoValidatorConfig{addr: sender};
         ensures !spec_has_operator(Signer::spec_address_of(validator_account));
         ensures spec_get_operator(sender) == sender;
@@ -171,14 +176,14 @@ module ValidatorConfig {
     ///     of the LibraSystem's code
     /// label: ValidatorConfigRemainsValid
     public fun set_config(
-        signer: &signer,
-        validator_account: address,
+        validator_operator_account: &signer,
+        validator_addr: address,
         consensus_pubkey: vector<u8>,
         validator_network_addresses: vector<u8>,
         fullnode_network_addresses: vector<u8>,
     ) acquires ValidatorConfig {
         assert(
-            Signer::address_of(signer) == get_operator(validator_account),
+            Signer::address_of(validator_operator_account) == get_operator(validator_addr),
             Errors::invalid_argument(EINVALID_TRANSACTION_SENDER)
         );
         assert(
@@ -186,8 +191,8 @@ module ValidatorConfig {
             Errors::invalid_argument(EINVALID_CONSENSUS_KEY)
         );
         // TODO(valerini): verify the proof of posession for consensus_pubkey
-        assert(exists_config(validator_account), Errors::not_published(EVALIDATOR_CONFIG));
-        let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
+        assert(exists_config(validator_addr), Errors::not_published(EVALIDATOR_CONFIG));
+        let t_ref = borrow_global_mut<ValidatorConfig>(validator_addr);
         t_ref.config = Option::some(Config {
             consensus_pubkey,
             validator_network_addresses,
@@ -196,16 +201,18 @@ module ValidatorConfig {
     }
 
     spec fun set_config {
-        let sender = Signer::spec_address_of(signer);
-        aborts_if sender != spec_get_operator(validator_account) with Errors::INVALID_ARGUMENT;
-        include AbortsIfNoValidatorConfig{addr: validator_account};
-        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with Errors::INVALID_ARGUMENT;
-        ensures spec_has_config(validator_account);
+        include SetConfigAbortsIf;
+        ensures is_valid(validator_addr);
     }
 
-    /// Returns true if there a config published under addr.
-    spec define spec_has_config(addr: address): bool {
-        Option::is_some(global<ValidatorConfig>(addr).config)
+    spec schema SetConfigAbortsIf {
+        validator_operator_account: signer;
+        validator_addr: address;
+        consensus_pubkey: vector<u8>;
+        aborts_if Signer::address_of(validator_operator_account) != spec_get_operator(validator_addr)
+            with Errors::INVALID_ARGUMENT;
+        include AbortsIfNoValidatorConfig{addr: validator_addr};
+        aborts_if !Signature::ed25519_validate_pubkey(consensus_pubkey) with Errors::INVALID_ARGUMENT;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -306,20 +313,32 @@ module ValidatorConfig {
     /// owner via signing the transaction. But other functions in this module could also
     /// change the operator_account field of ValidatorConfig, and this shows that they do not.
     spec schema OperatorRemainsSame {
-        ensures forall addr: address where old(exists<ValidatorConfig>(addr)):
-            global<ValidatorConfig>(addr).operator_account == old(global<ValidatorConfig>(addr).operator_account);
+        ensures forall addr1: address where old(exists<ValidatorConfig>(addr1)):
+            global<ValidatorConfig>(addr1).operator_account == old(global<ValidatorConfig>(addr1).operator_account);
     }
     spec module {
         ///  set_operator, remove_operator can change the operator account [B24].
         apply OperatorRemainsSame to * except set_operator, remove_operator;
     }
 
-    /// LIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
-    /// in LibraSystem so we don't have to check whether every validator address has a validator role.
-    /// <a name="ValidatorConfigImpliesValidatorRole"></a>
     spec module {
-        invariant [global] forall addr: address where exists_config(addr):
-            Roles::spec_has_validator_role_addr(addr);
+
+        /// Every address that has a ValidatorConfig also has a validator role.
+        invariant [global] forall addr1: address where exists_config(addr1):
+            Roles::spec_has_validator_role_addr(addr1);
+
+        /// LIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
+        /// in LibraSystem so we don't have to check whether every validator address has a validator role.
+        /// ref: "ValidatorConfigImpliesValidatorRole"
+        invariant [global] forall addr1: address where exists_config(addr1):
+            Roles::spec_has_validator_role_addr(addr1);
+
+        /// LIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with
+        /// a config option that is "some") has a validator role. This is a trivial consequence
+        /// of the previous invariant, but it is not inductive and can't be proved without the
+        /// previous one as a helper.
+        invariant [global] forall addr1: address where is_valid(addr1):
+            Roles::spec_has_validator_role_addr(addr1);
     }
 }
 }

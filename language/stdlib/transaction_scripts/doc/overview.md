@@ -965,6 +965,7 @@ This script does not assign the validator operator to any validator accounts but
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | The sending account is not the Libra Root account or Treasury Compliance account           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
@@ -1006,6 +1007,30 @@ This script does not assign the validator operator to any validator accounts but
         human_name,
     );
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+Only Libra root may create Validator Operator accounts
+Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
+Checks that above table includes all error categories.
+The verifier find aborts that are not documented, and cannot occur in practice:
+* INVALID_STATE comes from <code>assert_operating()</code> in <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_publish">ValidatorOperatorConfig::publish</a></code>, which should
+always be true during a transaction.
+* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a></code>. However, assert_libra_root checks the literal
+Libra root address before checking the role, and the role abort is unreachable in practice, since
+only Libra root has the Libra root role.
+
+
+<pre><code><b>aborts_with</b> [check] <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorOperatorAccountAbortsIf">LibraAccount::CreateValidatorOperatorAccountAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorOperatorAccountEnsures">LibraAccount::CreateValidatorOperatorAccountEnsures</a>;
 </code></pre>
 
 
@@ -1064,6 +1089,7 @@ but only creates the account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">SlidingNonce::ENONCE_TOO_OLD</a></code>          | The <code>sliding_nonce</code> is too old and it's impossible to determine if it's duplicated or not. |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">SlidingNonce::ENONCE_TOO_NEW</a></code>          | The <code>sliding_nonce</code> is too far in the future.                                              |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">SlidingNonce::ENONCE_ALREADY_RECORDED</a></code> | The <code>sliding_nonce</code> has been previously recorded.                                          |
+| <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>     | <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">SlidingNonce::ESLIDING_NONCE</a></code>          | The sending account is not the Libra Root account or Treasury Compliance account           |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code>  | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                         |
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
@@ -1104,7 +1130,31 @@ but only creates the account.
         auth_key_prefix,
         human_name,
     );
-}
+  }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+Only Libra root may create Validator accounts
+Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
+Checks that above table includes all error categories.
+The verifier find aborts that are not documented, and cannot occur in practice:
+* INVALID_STATE comes from <code>assert_operating()</code> in <code><a href="../../modules/doc/ValidatorOperatorConfig.md#0x1_ValidatorOperatorConfig_publish">ValidatorOperatorConfig::publish</a></code>, which should
+always be true during a transaction.
+* REQUIRES_ROLE comes from <code><a href="../../modules/doc/Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a></code>. However, assert_libra_root checks the literal
+Libra root address before checking the role, and the role abort is unreachable in practice, since
+only Libra root has the Libra root role.
+
+
+<pre><code><b>aborts_with</b> [check] <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>;
+<b>include</b> <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">SlidingNonce::RecordNonceAbortsIf</a>{seq_nonce: sliding_nonce, account: lr_account};
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorAccountAbortsIf">LibraAccount::CreateValidatorAccountAbortsIf</a>;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateValidatorAccountEnsures">LibraAccount::CreateValidatorAccountEnsures</a>;
 </code></pre>
 
 
@@ -2893,6 +2943,7 @@ only "locally" under the <code>validator_account</code> account address.
 
 <pre><code><b>fun</b> <a href="overview.md#register_validator_config">register_validator_config</a>(
     validator_operator_account: &signer,
+    // TODO Rename <b>to</b> validator_addr, since it is an address.
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
     validator_network_addresses: vector&lt;u8&gt;,
@@ -2906,6 +2957,22 @@ only "locally" under the <code>validator_account</code> account address.
         fullnode_network_addresses
     );
  }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+Access control rule is that only the validator operator for a validator may set
+call this, but there is an aborts_if in SetConfigAbortsIf that tests that directly.
+
+
+<pre><code><b>aborts_with</b> [check] <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>include</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_SetConfigAbortsIf">ValidatorConfig::SetConfigAbortsIf</a> {validator_addr: validator_account};
+<b>ensures</b> <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_account);
 </code></pre>
 
 

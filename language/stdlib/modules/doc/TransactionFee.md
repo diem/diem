@@ -333,6 +333,11 @@ underlying fiat.
 <summary>Specification</summary>
 
 
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
 Must abort if the account does not have the TreasuryCompliance role [B12].
 
 
