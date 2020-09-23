@@ -2,36 +2,43 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This crates provides an API for logging in libra.
-//!
 //! # Instrumenting with Logs
+//! ## Basic instrumenting with Logs
 //!
 //! A set of logging macros (`info!`, `error!`, `warn!`, `debug!`, and `trace!`) is provided for
 //! emitting logs at different levels. All of these macros support the addition of providing
-//! structured data along with a formatted text message.
+//! structured data along with a formatted text message.  For guidelines on which level to use,
+//! see the [coding guidelines](https://developers.libra.org/docs/community/coding-guidelines#logging).
 //!
+//! The below examples do no type checking for structured log fields, and instead just serialize
+//! whatever is given.
 //! ```
 //! use libra_logger::info;
 //!
 //! let world = "world!";
 //!
-//! // formatted message
+//! // Formatted message, similar to `printf!`
 //! info!("hello {}", world);
+//! // => '{"level":"info", "message": "hello world!"}'
 //!
-//! // structured data can be logged using the format 'key = value'
-//! // where value implements Serialize
+//! // Structured data can be logged using the format 'key = value'
+//! // where value implements Serialize.  This can be used for indexing and search later.
 //! let value1 = 5;
 //! info!(key1 = value1);
+//! // => '{"level":"info", "data": {"key1": 5}}'
 //!
-//! // You can even set multiple key/value pairs and a format message
+//! // You can even set multiple key/value pairs and a format message together
 //! let value2 = false;
 //! info!(key1 = value1, key2 = value2, "hello {}", world);
+//! // => '{"level":"info", "data": {"key1": 5, "key2": false}, "message": "hello world!"}'
 //! ```
 //!
 //! ### Note
 //!
 //! Arguments used in a formatted message are **not** captured and included as structured data.
+//! Everything after the format string literal e.g. `"hello {}"` are only used in the format string.
 //!
-//! ## Typed Schema's
+//! ## Preferred instrumenting with Logs (Typed Schemas)
 //!
 //! The `Schema` trait can be used to implement typed logging schemas. This can either be
 //! implemented by hand or derived using the `Schema` derive proc-macro, implementing the `Schema`
@@ -54,9 +61,59 @@
 //!
 //! let log = LogSchema { a: 5, b: None, c: None };
 //!
+//! // Automatic setters are named based on the field names, and handle `Option`
+//! // None fields will be ignored
 //! info!(log.c("radiant"));
+//! // => '{"level":"info", "data": { "a": 5, "c": "radiant"}}'
+//!
+//!
+//! #[derive(Schema)]
+//! struct OtherSchema<'a> {
+//!   val: Option<&'a str>
+//! }
+//!
+//! let log = LogSchema { a: 5, b: None, c: None };
+//! let other = OtherSchema { val: None };
+//!
+//! // Schemas can be combined
+//! info!(
+//!   other.val("awesome"), // First schema
+//!   log // Second schema has fields added to it all
+//! );
+//! // => '{"level":"info", "data": { "a": 5, "val":"awesome"}}'
+//!
+//! let log = LogSchema { a: 5, b: None, c: None };
+//! let other = OtherSchema { val: None };
+//!
+//! // Schemas can be combined with one off fields and messages like above
+//! info!(
+//!    other.val("awesome"), // First schema
+//!    log, // Second schema has fields added to it all
+//!    new_field = "new", // Basic structured fields
+//!    "Message: {}", // Format messages
+//!    "Some message" // Format message fields (not added to indexed fields)
+//! );
+//! // => {"level":"info", "message": "Message: Some message",
+//! //     "data": { "a": 5, "val":"awesome", "new_field": "new"}}'
 //! ```
 //!
+//! ## Sampling logs
+//!
+//! Sometimes logging a large amount of data is expensive.  In order to log information only part
+//! of the time, we've added a `sample!` macro that's configurable on how often we want to execute some code.
+//!
+//! `SampleRate` determines how often the sampled statement will occur.
+//!
+//! ```
+//! use libra_logger::{info, sample, sample::{SampleRate, Sampling}};
+//! use std::time::Duration;
+//!
+//! // Sampled based on frequency of events, log only every 2 logs
+//! sample!(SampleRate::Frequency(2), info!("Long log"));
+//!
+//! // Sampled based on time passed, log at most once a minute
+//! sample!(SampleRate::Duration(Duration::from_secs(60)), info!("Long log"));
+//! ```
 //! # Configuration
 //!
 //! In order for logs to be captured and emitted a Logger needs to be instantiated. This can be
