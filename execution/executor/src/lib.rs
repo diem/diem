@@ -27,7 +27,7 @@ use crate::{
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
 };
-use anyhow::{anyhow, bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
     TransactionReplayer,
@@ -184,12 +184,10 @@ where
         let first_txn_version = match txn_list_with_proof.first_transaction_version {
             Some(tx) => tx as Version,
             None => {
-                error!(
-                    category = "MUST_FIX",
-                    "first_transaction_version should exist"
+                bail!(
+                    "first_transaction_version doesn't exist in {:?}",
+                    txn_list_with_proof
                 );
-                LIBRA_EXECUTOR_ERRORS.inc();
-                return Err(anyhow!("first_transaction_version should exist."));
             }
         };
 

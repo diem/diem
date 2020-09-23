@@ -25,7 +25,7 @@ pub static LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS: Lazy<Histogram> = Lazy::new(
 });
 
 pub static LIBRA_EXECUTOR_ERRORS: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!("libra_executor_error_count", "Cumulative number of errors").unwrap()
+    register_int_counter!("libra_executor_error_total", "Cumulative number of errors").unwrap()
 });
 
 pub static LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS: Lazy<Histogram> = Lazy::new(|| {
