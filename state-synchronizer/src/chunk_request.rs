@@ -39,13 +39,24 @@ pub enum TargetType {
     Waypoint(Version),
 }
 
+impl TargetType {
+    pub fn version(&self) -> Option<u64> {
+        match self {
+            TargetType::TargetLedgerInfo(li) => Some(li.ledger_info().version()),
+            TargetType::HighestAvailable { target_li, .. } => {
+                target_li.as_ref().map(|li| li.ledger_info().version())
+            }
+            TargetType::Waypoint(version) => Some(*version),
+        }
+    }
+}
+
 impl fmt::Debug for TargetType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self)
     }
 }
 
-// TODO: This cuts out LedgerInfo, do we need it logging?
 impl fmt::Display for TargetType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -57,12 +68,11 @@ impl fmt::Display for TargetType {
                 timeout_ms,
             } => write!(
                 f,
-                "HighestAvailable(timeout:{}, target_li_version:{})",
+                "HighestAvailable(timeout:{}, target_li:{})",
                 timeout_ms,
-                target_li.as_ref().map_or_else(
-                    || String::from("None"),
-                    |li| li.ledger_info().version().to_string()
-                )
+                target_li
+                    .as_ref()
+                    .map_or_else(|| String::from("None"), |li| li.to_string())
             ),
             TargetType::Waypoint(version) => write!(f, "Waypoint({})", version),
         }
@@ -106,7 +116,7 @@ impl fmt::Display for GetChunkRequest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[ChunkRequest: known version: {}, epoch: {}, limit: {}, target: {:?}]",
+            "[ChunkRequest: known version: {}, epoch: {}, limit: {}, target: {}]",
             self.known_version,
             self.current_epoch,
             self.limit,

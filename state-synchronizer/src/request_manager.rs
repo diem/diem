@@ -4,6 +4,7 @@
 use crate::{
     chunk_request::GetChunkRequest,
     counters,
+    logging::{LogEntry, LogEvent, LogSchema},
     network::{StateSynchronizerMsg, StateSynchronizerSender},
 };
 use anyhow::{bail, Result};
@@ -113,7 +114,12 @@ impl RequestManager {
     }
 
     pub fn enable_peer(&mut self, peer: PeerNetworkId, origin: ConnectionOrigin) {
-        if !self.is_upstream_peer(&peer, origin) {
+        let is_upstream_peer = self.is_upstream_peer(&peer, origin);
+        debug!(LogSchema::new(LogEntry::NewPeer)
+            .peer(&peer)
+            .is_upstream_peer(is_upstream_peer));
+
+        if !is_upstream_peer {
             return;
         }
 
@@ -127,10 +133,14 @@ impl RequestManager {
         debug!("[state sync] state after: {:?}", self.peers);
     }
 
-    pub fn disable_peer(&mut self, peer: &PeerNetworkId) {
+    pub fn disable_peer(&mut self, peer: &PeerNetworkId, origin: ConnectionOrigin) {
+        debug!(LogSchema::new(LogEntry::LostPeer)
+            .peer(&peer)
+            .is_upstream_peer(self.is_upstream_peer(&peer, origin)));
+
         if let Some(peer_info) = self.peers.get_mut(peer) {
             peer_info.is_alive = false;
-        };
+        }
         self.update_peer_selection_data();
     }
 
@@ -232,9 +242,12 @@ impl RequestManager {
     }
 
     pub fn send_chunk_request(&mut self, req: GetChunkRequest) -> Result<()> {
+        let log = LogSchema::new(LogEntry::SendChunkRequest).chunk_req(&req);
+
         // update internal state
         let peers = self.pick_peers();
         if peers.is_empty() {
+            warn!(log.event(LogEvent::MissingPeers));
             bail!("No peers to send chunk request to");
         }
 
@@ -245,6 +258,7 @@ impl RequestManager {
         );
 
         // actually execute network send
+        let target_version = req.target().version();
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
         let mut failed_peer_sends = vec![];
         for peer in peers {
@@ -254,17 +268,27 @@ impl RequestManager {
                 .expect("missing network sender for peer");
             let peer_id = peer.peer_id();
             let send_result = sender.send_to(peer_id, msg.clone());
-            let result_label = if send_result.is_err() {
-                failed_peer_sends.push((peer.clone(), send_result));
+            let curr_log = log.clone().peer(&peer);
+            let result_label = if let Err(e) = send_result {
+                failed_peer_sends.push(peer.clone());
+                error!(curr_log.event(LogEvent::NetworkSendError).error(&e.into()));
                 counters::SEND_FAIL_LABEL
             } else {
+                debug!(curr_log.event(LogEvent::Success));
                 counters::SEND_SUCCESS_LABEL
             };
             counters::REQUESTS_SENT
                 .with_label_values(&[&peer_id.to_string(), result_label])
                 .inc();
         }
+
+        // TODO set target version of chunk request in counter
         if failed_peer_sends.is_empty() {
+            if let Some(version) = target_version {
+                counters::VERSION
+                    .with_label_values(&[counters::TARGET_VERSION_LABEL])
+                    .set(version as i64);
+            }
             Ok(())
         } else {
             bail!("Failed to send chunk request to: {:?}", failed_peer_sends)
@@ -420,7 +444,7 @@ impl RequestManager {
         is_timeout
     }
 
-    fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
+    pub fn is_upstream_peer(&self, peer: &PeerNetworkId, origin: ConnectionOrigin) -> bool {
         let is_network_upstream = self
             .upstream_config
             .get_upstream_preference(peer.raw_network_id())

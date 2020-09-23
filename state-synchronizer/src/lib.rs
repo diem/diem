@@ -16,6 +16,7 @@ pub mod chunk_response;
 pub mod coordinator;
 mod counters;
 mod executor_proxy;
+mod logging;
 pub mod network;
 mod request_manager;
 mod synchronizer;
