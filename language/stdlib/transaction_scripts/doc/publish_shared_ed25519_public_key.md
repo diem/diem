@@ -1,38 +1,29 @@
 
-<a name="SCRIPT"></a>
+<a name="publish_shared_ed25519_public_key"></a>
 
-# Script `publish_shared_ed25519_public_key.move`
-
-### Table of Contents
-
--  [Function `publish_shared_ed25519_public_key`](#SCRIPT_publish_shared_ed25519_public_key)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `publish_shared_ed25519_public_key`](#SCRIPT_Specification_publish_shared_ed25519_public_key)
+# Script `publish_shared_ed25519_public_key`
 
 
 
-<a name="SCRIPT_publish_shared_ed25519_public_key"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `publish_shared_ed25519_public_key`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Rotates the authentication key of the sending account to the
 newly-specified public key and publishes a new shared authentication key
 under the sender's account. Any account can send this transaction.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Rotates the authentication key of the sending account to <code>public_key</code>,
 and publishes a <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey">SharedEd25519PublicKey::SharedEd25519PublicKey</a></code> resource
@@ -40,9 +31,9 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <code>account</code> under <code>account</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name         | Type         | Description                                                                               |
 | ------       | ------       | -------------                                                                             |
@@ -50,9 +41,9 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code>public_key</code> | <code>vector&lt;u8&gt;</code> | 32-byte Ed25519 public key for <code>account</code>' authentication key to be rotated to and stored. |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                                               | Description                                                                                         |
 | ----------------            | --------------                                             | -------------                                                                                       |
@@ -61,14 +52,14 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>  | <code><a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_EMALFORMED_PUBLIC_KEY">SharedEd25519PublicKey::EMALFORMED_PUBLIC_KEY</a></code>            | <code>public_key</code> is an invalid ed25519 public key.                                                      |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::rotate_shared_ed25519_public_key</code>
+* <code><a href="rotate_shared_ed25519_public_key.md#rotate_shared_ed25519_public_key">Script::rotate_shared_ed25519_public_key</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="publish_shared_ed25519_public_key.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -77,7 +68,7 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="publish_shared_ed25519_public_key.md#publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_publish">SharedEd25519PublicKey::publish</a>(account, public_key)
 }
 </code></pre>
@@ -86,22 +77,15 @@ containing the 32-byte ed25519 <code>public_key</code> and the <code><a href="..
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_publish_shared_ed25519_public_key"></a>
-
-### Function `publish_shared_ed25519_public_key`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_publish_shared_ed25519_public_key">publish_shared_ed25519_public_key</a>(account: &signer, public_key: vector&lt;u8&gt;)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishAbortsIf">SharedEd25519PublicKey::PublishAbortsIf</a>{key: public_key};
 <b>include</b> <a href="../../modules/doc/SharedEd25519PublicKey.md#0x1_SharedEd25519PublicKey_PublishEnsures">SharedEd25519PublicKey::PublishEnsures</a>{key: public_key};
 </code></pre>
+
+
+
+</details>

@@ -1,27 +1,20 @@
 
-<a name="SCRIPT"></a>
+<a name="update_exchange_rate"></a>
 
-# Script `update_exchange_rate.move`
-
-### Table of Contents
-
--  [Function `update_exchange_rate`](#SCRIPT_update_exchange_rate)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `update_exchange_rate`
 
 
 
-<a name="SCRIPT_update_exchange_rate"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `update_exchange_rate`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Update the rough on-chain exchange rate between a specified currency and LBR (as a conversion
 to micro-LBR). The transaction can only be sent by the Treasury Compliance account. After this
@@ -29,17 +22,17 @@ transaction the updated exchange rate will be used for normalization of gas pric
 dual attestation checking.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Updates the on-chain exchange rate from the given <code>Currency</code> to micro-LBR.  The exchange rate
 is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                            | Type      | Description                                                                                                                        |
 | ------                          | ------    | -------------                                                                                                                      |
@@ -50,9 +43,9 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code>new_exchange_rate_denominator</code> | <code>u64</code>     | The denominator for the new to micro-LBR exchange rate for <code>Currency</code>.                                                             |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                            | Description                                                                                |
 | ----------------           | --------------                          | -------------                                                                              |
@@ -65,15 +58,15 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>   | <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32_ERATIO_OUT_OF_RANGE">FixedPoint32::ERATIO_OUT_OF_RANGE</a></code>     | The quotient is unrepresentable as a <code><a href="../../modules/doc/FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a></code>.                                       |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
 * <code>Scripts::update_dual_attestation_limit</code>
 * <code>Scripts::update_minting_ability</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="update_exchange_rate.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_numerator: u64, new_exchange_rate_denominator: u64)
 </code></pre>
 
 
@@ -82,7 +75,7 @@ is given by <code>new_exchange_rate_numerator/new_exchange_rate_denominator</cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="update_exchange_rate.md#update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_numerator: u64,

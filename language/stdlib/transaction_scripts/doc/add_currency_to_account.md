@@ -1,29 +1,20 @@
 
-<a name="SCRIPT"></a>
+<a name="add_currency_to_account"></a>
 
-# Script `add_currency_to_account.move`
-
-### Table of Contents
-
--  [Function `add_currency_to_account`](#SCRIPT_add_currency_to_account)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `add_currency_to_account`](#SCRIPT_Specification_add_currency_to_account)
+# Script `add_currency_to_account`
 
 
 
-<a name="SCRIPT_add_currency_to_account"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `add_currency_to_account`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Adds a zero <code>Currency</code> balance to the sending <code>account</code>. This will enable <code>account</code> to
 send, receive, and hold <code><a href="../../modules/doc/Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Currency&gt;</code> coins. This transaction can be
@@ -31,9 +22,9 @@ successfully sent by any account that is allowed to hold balances
 (e.g., VASP, Designated Dealer).
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 After the successful execution of this transaction the sending account will have a
 <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;</code> resource with zero balance published under it. Only
@@ -41,9 +32,9 @@ accounts that can hold balances can send this transaction, the sending account c
 already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Currency&gt;</code> published under it.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name       | Type      | Description                                                                                                                                         |
 | ------     | ------    | -------------                                                                                                                                       |
@@ -51,9 +42,9 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 | <code>account</code>  | <code>&signer</code> | The signer of the sending account of the transaction.                                                                                               |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                             | Description                                                                |
 | ----------------            | --------------                           | -------------                                                              |
@@ -62,16 +53,16 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EADD_EXISTING_CURRENCY">LibraAccount::EADD_EXISTING_CURRENCY</a></code>   | A balance for <code>Currency</code> is already published under the sending <code>account</code>. |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_child_vasp_account</code>
-* <code>Script::create_parent_vasp_account</code>
-* <code>Script::peer_to_peer_with_metadata</code>
+* <code><a href="create_child_vasp_account.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
+* <code><a href="create_parent_vasp_account.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="add_currency_to_account.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
 </code></pre>
 
 
@@ -80,7 +71,7 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
+<pre><code><b>fun</b> <a href="add_currency_to_account.md#add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer) {
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
@@ -89,26 +80,19 @@ already have a <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_add_currency_to_account"></a>
-
-### Function `add_currency_to_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
 <pre><code><b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyAbortsIf">LibraAccount::AddCurrencyAbortsIf</a>&lt;Currency&gt;;
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_AddCurrencyEnsures">LibraAccount::AddCurrencyEnsures</a>&lt;Currency&gt;;
-aborts_with [check]
+<b>aborts_with</b> [check]
     <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
     <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 </code></pre>
+
+
+
+</details>

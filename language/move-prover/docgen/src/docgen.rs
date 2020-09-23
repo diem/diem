@@ -12,7 +12,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use spec_lang::{
     ast::{ModuleName, SpecBlockInfo, SpecBlockTarget},
-    code_writer::CodeWriter,
+    code_writer::{CodeWriter, CodeWriterLabel},
     emit, emitln,
     env::{
         FunctionEnv, GlobalEnv, Loc, ModuleEnv, ModuleId, NamedConstantEnv, Parameter, StructEnv,
@@ -24,6 +24,8 @@ use spec_lang::{
 use std::{
     cell::RefCell,
     collections::{BTreeMap, BTreeSet},
+    fs::File,
+    io::Read,
     path::PathBuf,
     rc::Rc,
 };
@@ -59,25 +61,30 @@ const KEYWORDS: &[&str] = &[
 ];
 
 const WEAK_KEYWORDS: &[&str] = &[
+    "aborts_if",
+    "aborts_with",
     "apply",
     "assert",
     "assume",
     "decreases",
-    "aborts_if",
+    "define",
+    "except",
+    "forall",
+    "global",
     "modifies",
     "ensures",
-    "requires",
+    "exists",
+    "include",
+    "mut",
+    "old",
     "pack",
     "unpack",
     "update",
-    "to",
+    "requires",
     "schema",
-    "include",
-    "old",
-    "except",
-    "global",
-    "mut",
-    "define",
+    "to",
+    "with",
+    "where",
 ];
 
 /// Options passed into the documentation generator.
@@ -104,13 +111,37 @@ pub struct DocgenOptions {
     pub output_directory: String,
     /// In which directories to look for references.
     pub doc_path: Vec<String>,
+    /// An optional path to a file containing a template for a root document for the generated
+    /// documentation.
+    ///
+    /// The root document is a markdown file which contains placeholders for generated
+    /// documentation content. It is also processed following the same rules than
+    /// documentation comments in Move, including creation of cross-references and
+    /// Move code highlighting.
+    ///
+    /// A placeholder is a single line starting with a markdown quotation marker
+    /// of the following form:
+    ///
+    /// ```notrust
+    /// > {{move-include NAME_OF_MODULE_OR_SCRIPT}}
+    /// > {{move-toc}}
+    /// > {{move-index}}
+    /// ```
+    ///
+    /// These lines will be replaced by the generated content of the module or script,
+    /// or a table of contents, respectively.
+    ///
+    /// For a module or script which is included in the root document, no
+    /// separate file is generated. References between the included and the standalone
+    /// module/script content work transparently.
+    pub root_doc_template: Option<String>,
 }
 
 impl Default for DocgenOptions {
     fn default() -> Self {
         Self {
             section_level_start: 1,
-            include_private_fun: false,
+            include_private_fun: true,
             include_specs: true,
             specs_inlined: true,
             include_impl: true,
@@ -118,6 +149,7 @@ impl Default for DocgenOptions {
             collapsed_sections: true,
             output_directory: "doc".to_string(),
             doc_path: vec!["doc".to_string()],
+            root_doc_template: None,
         }
     }
 }
@@ -129,20 +161,37 @@ pub struct Docgen<'env> {
     /// Mapping from module id to the set of schemas defined in this module.
     /// We currently do not have this information in the environment.
     declared_schemas: BTreeMap<ModuleId, BTreeSet<Symbol>>,
-    /// Map from module id to generated documentation.
-    output: BTreeMap<ModuleId, String>,
-    /// Map from module id to the file (relative to output dir) where module is documented.
-    ref_map: BTreeMap<ModuleId, String>,
+    /// A list of file names and output generated for those files.
+    output: Vec<(String, String)>,
+    /// Map from module id to information about this module.
+    infos: BTreeMap<ModuleId, ModuleInfo>,
     /// Current code writer.
     writer: CodeWriter,
     /// Current module.
     current_module: Option<ModuleEnv<'env>>,
+    /// A counter for labels.
+    label_counter: RefCell<usize>,
     /// A mapping from location to spec item defined at this location.
     loc_to_spec_item_map: BTreeMap<Loc, Symbol>,
     /// A table-of-contents list.
     toc: RefCell<Vec<(usize, TocEntry)>>,
     /// The current section next
     section_nest: RefCell<usize>,
+    /// The last user provided (via an explicit # header) section nest.
+    last_root_section_nest: RefCell<usize>,
+}
+
+/// Information about the generated documentation for a specific script or module.
+#[derive(Debug, Default, Clone)]
+struct ModuleInfo {
+    /// The file in which the generated content for this module is located. This has a path
+    /// relative to the `options.output_directory`.
+    target_file: String,
+    /// The label in this file.
+    label: String,
+    /// Whether this module is included in another document instead of living in its own file.
+    /// Among others, we do not generate table-of-contents for included modules.
+    is_included: bool,
 }
 
 /// A table-of-contents entry.
@@ -150,6 +199,14 @@ pub struct Docgen<'env> {
 struct TocEntry {
     label: String,
     title: String,
+}
+
+/// An element of the parsed root document template.
+enum TemplateElement {
+    Text(String),
+    IncludeModule(String),
+    IncludeToc,
+    Index,
 }
 
 /// A map from spec block targets to associated spec blocks.
@@ -163,39 +220,68 @@ impl<'env> Docgen<'env> {
             env,
             declared_schemas: Default::default(),
             output: Default::default(),
-            ref_map: Default::default(),
+            infos: Default::default(),
             writer: CodeWriter::new(env.unknown_loc()),
+            label_counter: RefCell::new(0),
             current_module: None,
             loc_to_spec_item_map: Default::default(),
             toc: RefCell::new(Default::default()),
             section_nest: RefCell::new(0),
+            last_root_section_nest: RefCell::new(0),
         }
     }
 
-    /// Returns the result of documentation generation, a vector of pairs of filenames
-    /// and content.
-    pub fn into_result(mut self) -> Vec<(String, String)> {
-        std::mem::take(&mut self.output)
-            .into_iter()
-            .map(|(id, content)| {
-                let fname = self.ref_map.remove(&id).expect("file");
-                let mut path = PathBuf::from(&self.options.output_directory);
-                path.push(fname);
-                (path.to_string_lossy().to_string(), content)
-            })
-            .collect_vec()
-    }
-
-    /// Generate documentation for all modules in the environment which are not in the dependency
-    /// set.
-    pub fn gen(&mut self) {
+    /// Generate documentation, returning a pair of output file names and generated content per
+    /// file.
+    pub fn gen(mut self) -> Vec<(String, String)> {
+        // Compute missing information about schemas.
         self.compute_declared_schemas();
-        self.compute_file_map();
-        for m in self.env.get_modules() {
-            if !m.is_dependency() {
-                self.gen_module(&m);
+
+        // If there is a root template, parse it.
+        let root_template = if let Some(file_name) = &self.options.root_doc_template {
+            let root_out_name = PathBuf::from(file_name)
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .replace("_template", "");
+            match self.parse_root_template(file_name) {
+                Ok(elements) => Some((root_out_name, elements)),
+                Err(_) => {
+                    self.env.error(
+                        &self.env.unknown_loc(),
+                        &format!("cannot read root template `{}`", file_name),
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // Compute module infos.
+        self.compute_module_infos(&root_template);
+
+        // If there is a root template, expand it.
+        if let Some((out_file, elements)) = root_template {
+            self.expand_root_template(&out_file, elements);
+        }
+
+        // Generate documentation for standalone modules which are not included in the template.
+        for (id, info) in self.infos.clone() {
+            let m = self.env.get_module(id);
+            if !info.is_included && !m.is_dependency() {
+                self.gen_module(&m, &info);
+                let mut path = PathBuf::from(&self.options.output_directory);
+                path.push(info.target_file);
+                self.output.push((
+                    path.to_string_lossy().to_string(),
+                    self.writer.extract_result(),
+                ));
             }
         }
+
+        self.output
     }
 
     /// Compute the schemas declared in all modules. This information is currently not directly
@@ -212,49 +298,205 @@ impl<'env> Docgen<'env> {
         }
     }
 
-    /// Computes file locations for all modules in the environment, so they are available
-    /// to generate reference links.
-    fn compute_file_map(&mut self) {
-        for module_env in self.env.get_modules() {
-            let output_path = PathBuf::from(&self.options.output_directory);
-            let file_name = PathBuf::from(module_env.get_source_path())
-                .with_extension("md")
-                .file_name()
-                .expect("file name")
-                .to_os_string();
-            let path_opt = if module_env.is_dependency() {
-                // Try to locate the file in the provided search path.
-                self.options.doc_path.iter().find_map(|dir| {
-                    let mut path = PathBuf::from(dir);
-                    path.push(&file_name);
-                    if path.exists() {
-                        Some(
-                            self.path_relative_to(&path, &output_path)
-                                .to_string_lossy()
-                                .to_string(),
-                        )
-                    } else {
-                        None
-                    }
-                })
+    /// Parse a root template.
+    fn parse_root_template(&self, file_name: &str) -> anyhow::Result<Vec<TemplateElement>> {
+        static REX: Lazy<Regex> = Lazy::new(|| {
+            Regex::new(
+                r"(?xm)^\s*>\s*\{\{
+                ( (?P<include>move-include\s+(?P<include_name>\w+))
+                | (?P<toc>move-toc)
+                | (?P<index>move-index)
+                )\s*}}.*$",
+            )
+            .unwrap()
+        });
+        let mut content = String::new();
+        let mut file = File::open(file_name)?;
+        file.read_to_string(&mut content)?;
+        let mut at = 0;
+        let mut res = vec![];
+        while let Some(cap) = REX.captures(&content[at..]) {
+            let start = cap.get(0).unwrap().start();
+            let end = cap.get(0).unwrap().end();
+            if start > 0 {
+                res.push(TemplateElement::Text(content[at..at + start].to_string()));
+            }
+            if cap.name("include").is_some() {
+                let name = cap.name("include_name").unwrap().as_str();
+                res.push(TemplateElement::IncludeModule(name.to_string()));
+            } else if cap.name("toc").is_some() {
+                res.push(TemplateElement::IncludeToc);
+            } else if cap.name("index").is_some() {
+                res.push(TemplateElement::Index);
             } else {
-                // We will generate this file in the provided output directory.
-                Some(file_name.to_string_lossy().to_string())
-            };
-            if let Some(path) = path_opt {
-                info!(
-                    "{} `{}` in file `{}`",
-                    if module_env.is_script_module() {
-                        "script"
+                unreachable!("regex misbehavior");
+            }
+            at += end;
+        }
+        if at < content.len() {
+            res.push(TemplateElement::Text(content[at..].to_string()));
+        }
+        Ok(res)
+    }
+
+    /// Expand the root template.
+    fn expand_root_template(&mut self, output_file_name: &str, elements: Vec<TemplateElement>) {
+        self.writer = CodeWriter::new(self.env.unknown_loc());
+        let mut toc_label = None;
+        for elem in elements {
+            match elem {
+                TemplateElement::Text(str) => self.doc_text_for_root(&str),
+                TemplateElement::IncludeModule(name) => {
+                    if let Some(module_env) = self
+                        .env
+                        .find_module_by_name(self.env.symbol_pool().make(&name))
+                    {
+                        let info = self
+                            .infos
+                            .get(&module_env.get_id())
+                            .expect("module defined")
+                            .clone();
+                        assert!(info.is_included);
+                        // Generate the module content in place, adjusting the section nest to
+                        // the last user provided one. This will nest the module underneath
+                        // whatever section is in the template.
+                        let saved_nest = *self.section_nest.borrow();
+                        *self.section_nest.borrow_mut() = *self.last_root_section_nest.borrow() + 1;
+                        self.gen_module(&module_env, &info);
+                        *self.section_nest.borrow_mut() = saved_nest;
                     } else {
-                        "module"
-                    },
-                    module_env.get_name().display_full(module_env.symbol_pool()),
-                    path
-                );
-                self.ref_map.insert(module_env.get_id(), path);
+                        emitln!(self.writer, "> undefined move-include `{}`", name);
+                    }
+                }
+                TemplateElement::IncludeToc => {
+                    if toc_label.is_none() {
+                        toc_label = Some(self.writer.create_label());
+                    } else {
+                        // CodeWriter can only maintain one label at a time.
+                        emitln!(self.writer, ">> duplicate move-toc (technical restriction)");
+                    }
+                }
+                TemplateElement::Index => {
+                    self.gen_index();
+                }
             }
         }
+        if let Some(label) = toc_label {
+            // Insert the TOC.
+            self.gen_toc(label);
+        }
+
+        // Add result to output.
+        self.output.push((
+            self.make_file_in_out_dir(output_file_name),
+            self.writer.extract_result(),
+        ));
+    }
+
+    /// Compute ModuleInfo for all modules, considering root template content.
+    fn compute_module_infos(&mut self, template: &Option<(String, Vec<TemplateElement>)>) {
+        let mut out_dir = self.options.output_directory.to_string();
+        if out_dir.is_empty() {
+            out_dir = ".".to_string();
+        }
+        let log = |m: &ModuleEnv<'_>, i: &ModuleInfo| {
+            info!(
+                "{} `{}` in file `{}/{}` {}",
+                Self::module_modifier(m.get_name()),
+                m.get_name().display_full(m.symbol_pool()),
+                out_dir,
+                i.target_file,
+                if m.is_dependency() {
+                    "exists"
+                } else {
+                    "will be generated"
+                }
+            );
+        };
+        // First process infos for modules included via template.
+        let mut included = BTreeSet::new();
+        if let Some((template_out_file, elements)) = template {
+            for element in elements {
+                if let TemplateElement::IncludeModule(name) = element {
+                    // TODO: currently we only support simple names, we may want to add support for
+                    //   address qualification.
+                    let sym = self.env.symbol_pool().make(name.as_str());
+                    if let Some(module_env) = self.env.find_module_by_name(sym) {
+                        let info = ModuleInfo {
+                            target_file: template_out_file.to_string(),
+                            label: self.make_label_for_module(&module_env),
+                            is_included: true,
+                        };
+                        log(&module_env, &info);
+                        self.infos.insert(module_env.get_id(), info);
+                        included.insert(module_env.get_id());
+                    } else {
+                        // If this is not defined, we continue anyway and will not expand
+                        // the placeholder in the generated root doc (following common template
+                        // practice).
+                    }
+                }
+            }
+        }
+        // Now process infos for all remaining modules.
+        for m in self.env.get_modules() {
+            if !included.contains(&m.get_id()) {
+                if let Some(file_name) = self.compute_output_file(&m) {
+                    let info = ModuleInfo {
+                        target_file: file_name,
+                        label: self.make_label_for_module(&m),
+                        is_included: false,
+                    };
+                    log(&m, &info);
+                    self.infos.insert(m.get_id(), info);
+                }
+            }
+        }
+    }
+
+    fn module_modifier(name: &ModuleName) -> &str {
+        if name.is_script() {
+            "Script"
+        } else {
+            "Module"
+        }
+    }
+
+    /// Computes file location for a module. This considers if the module is a dependency
+    /// and if so attempts to locate already generated documentation for it.
+    fn compute_output_file(&self, module_env: &ModuleEnv<'env>) -> Option<String> {
+        let output_path = PathBuf::from(&self.options.output_directory);
+        let file_name = PathBuf::from(module_env.get_source_path())
+            .with_extension("md")
+            .file_name()
+            .expect("file name")
+            .to_os_string();
+        if module_env.is_dependency() {
+            // Try to locate the file in the provided search path.
+            self.options.doc_path.iter().find_map(|dir| {
+                let mut path = PathBuf::from(dir);
+                path.push(&file_name);
+                if path.exists() {
+                    Some(
+                        self.path_relative_to(&path, &output_path)
+                            .to_string_lossy()
+                            .to_string(),
+                    )
+                } else {
+                    None
+                }
+            })
+        } else {
+            // We will generate this file in the provided output directory.
+            Some(file_name.to_string_lossy().to_string())
+        }
+    }
+
+    /// Make a file name in the output directory.
+    fn make_file_in_out_dir(&self, name: &str) -> String {
+        let mut path = PathBuf::from(&self.options.output_directory);
+        path.push(name);
+        path.to_string_lossy().to_string()
     }
 
     /// Make path relative to other path.
@@ -270,13 +512,19 @@ impl<'env> Docgen<'env> {
         }
     }
 
-    /// Generates documentation for a module.
-    fn gen_module(&mut self, module_env: &ModuleEnv<'env>) {
-        // (Re-) initialize state for this module.
-        self.writer = CodeWriter::new(self.env.unknown_loc());
-        self.toc = RefCell::new(Default::default());
-        self.section_nest = RefCell::new(0);
+    /// Generates documentation for a module. The result is written into the current code
+    /// writer. Writer and other state is initialized if this module is standalone.
+    fn gen_module(&mut self, module_env: &ModuleEnv<'env>, info: &ModuleInfo) {
+        if !info.is_included {
+            // (Re-) initialize state for this module.
+            self.writer = CodeWriter::new(self.env.unknown_loc());
+            self.toc = RefCell::new(Default::default());
+            *self.section_nest.borrow_mut() = 0;
+            *self.label_counter.borrow_mut() = 0;
+        }
         self.current_module = Some(module_env.clone());
+
+        // Initialize location to spec item map.
         self.loc_to_spec_item_map.clear();
         for (_, sfun) in module_env.get_spec_funs() {
             self.loc_to_spec_item_map
@@ -287,46 +535,29 @@ impl<'env> Docgen<'env> {
                 .insert(svar.loc.clone(), svar.name);
         }
 
-        let module_name = format!(
-            "{}",
-            module_env.get_name().display_full(module_env.symbol_pool())
+        // Print header
+        self.section_header(
+            &format!(
+                "{} `{}`",
+                Self::module_modifier(module_env.get_name()),
+                module_env.get_name().display_full(module_env.symbol_pool())
+            ),
+            &info.label,
         );
-        if module_env.is_script_module() {
-            let file = PathBuf::from(module_env.get_source_path())
-                .file_name()
-                .unwrap()
-                .to_string_lossy()
-                .to_string();
-            self.section_header(
-                &format!("Script `{}`", file),
-                &self.label_for_module(module_env),
-            );
-        } else {
-            self.section_header(
-                &format!("Module `{}`", module_name),
-                &self.label_for_module(module_env),
-            );
-        }
+
         self.increment_section_nest();
-        // Do TOC header manually so it does not appear in TOC.
-        emitln!(
-            self.writer,
-            "{} Table of Contents",
-            self.repeat_str("#", self.options.section_level_start + 2)
-        );
 
-        // Create label where we later can insert the TOC
-        emitln!(self.writer);
-        let toc_label = self.writer.create_label();
-        emitln!(self.writer);
+        // Document module overview.
+        self.doc_text(module_env.get_doc());
 
-        self.doc_text(module_env, module_env.get_doc());
+        // If this is a standalone doc, generate TOC header.
+        let toc_label = if !info.is_included {
+            Some(self.gen_toc_header())
+        } else {
+            None
+        };
 
         let spec_block_map = self.organize_spec_blocks(module_env);
-
-        if self.options.specs_inlined {
-            self.gen_spec_blocks(module_env, "", &SpecBlockTarget::Module, &spec_block_map);
-        }
 
         if !module_env.get_structs().count() > 0 {
             for s in module_env
@@ -357,11 +588,42 @@ impl<'env> Docgen<'env> {
 
         if !self.options.specs_inlined {
             self.gen_spec_section(module_env, &spec_block_map);
+        } else {
+            match spec_block_map.get(&SpecBlockTarget::Module) {
+                Some(blocks) if !blocks.is_empty() => {
+                    self.section_header(
+                        "Module Specification",
+                        &self.label_for_section("Module Specification"),
+                    );
+                    self.increment_section_nest();
+                    self.gen_spec_blocks(module_env, "", &SpecBlockTarget::Module, &spec_block_map);
+                    self.decrement_section_nest();
+                }
+                _ => {}
+            }
         }
+
         self.decrement_section_nest();
 
-        // Generate table of contents. We put this into a separate code writer which we then
-        // merge into the main one.
+        // Generate table of contents if this is standalone.
+        if let Some(label) = toc_label {
+            self.gen_toc(label);
+        }
+    }
+
+    /// Gen header for TOC, returning label where we can later insert the content after
+    /// file generation is done.
+    fn gen_toc_header(&mut self) -> CodeWriterLabel {
+        // Create label where we later can insert the TOC
+        emitln!(self.writer);
+        let toc_label = self.writer.create_label();
+        emitln!(self.writer);
+        toc_label
+    }
+
+    /// Generate table of content and insert it at label.
+    fn gen_toc(&mut self, label: CodeWriterLabel) {
+        // We put this into a separate code writer and insert its content at the label.
         let writer = std::mem::replace(&mut self.writer, CodeWriter::new(self.env.unknown_loc()));
         {
             let mut level = 0;
@@ -382,19 +644,42 @@ impl<'env> Docgen<'env> {
                     self.writer.unindent();
                     level -= 1;
                 }
-                self.item_text(None, &format!("[{}](#{})", entry.title, entry.label));
+                self.item_text(&format!("[{}](#{})", entry.title, entry.label));
             }
             while level > 0 {
                 self.end_items();
                 self.writer.unindent();
                 level -= 1;
             }
+            // Insert the result at label.
             self.writer
-                .process_result(|s| writer.insert_at_label(toc_label, s));
+                .process_result(|s| writer.insert_at_label(label, s));
         }
+        self.writer = writer;
+    }
 
-        // Store result in output map.
-        writer.process_result(|s| self.output.insert(module_env.get_id(), s.to_owned()));
+    /// Generate an index of all modules and scripts in the context. This includes generated
+    /// ones and those which are only dependencies.
+    fn gen_index(&self) {
+        // Sort all modules and script by simple name. (Perhaps we should include addresses?)
+        let sorted_infos = self.infos.iter().sorted_by(|(id1, _), (id2, _)| {
+            let name = |id: ModuleId| {
+                self.env
+                    .symbol_pool()
+                    .string(self.env.get_module(id).get_name().name())
+            };
+            Ord::cmp(name(**id1).as_str(), name(**id2).as_str())
+        });
+        self.begin_items();
+        for (id, _) in sorted_infos {
+            let module_env = self.env.get_module(*id);
+            self.item_text(&format!(
+                "[{}]({})",
+                module_env.get_name().display_full(module_env.symbol_pool()),
+                self.ref_for_module(&module_env)
+            ))
+        }
+        self.end_items();
     }
 
     /// Generates documentation for a named constant
@@ -405,11 +690,8 @@ impl<'env> Docgen<'env> {
             &self.label_for_module_item(&const_env.module_env, name),
         );
         self.increment_section_nest();
-        self.doc_text(&const_env.module_env, const_env.get_doc());
-        self.code_block(
-            &const_env.module_env,
-            &self.named_constant_display(const_env),
-        );
+        self.doc_text(const_env.get_doc());
+        self.code_block(&self.named_constant_display(const_env));
         self.decrement_section_nest();
     }
 
@@ -421,11 +703,8 @@ impl<'env> Docgen<'env> {
             &self.label_for_module_item(&struct_env.module_env, name),
         );
         self.increment_section_nest();
-        self.doc_text(&struct_env.module_env, struct_env.get_doc());
-        self.code_block(
-            &struct_env.module_env,
-            &self.struct_header_display(struct_env),
-        );
+        self.doc_text(struct_env.get_doc());
+        self.code_block(&self.struct_header_display(struct_env));
 
         if self.options.include_impl || (self.options.include_specs && self.options.specs_inlined) {
             // Include field documentation if either impls or specs are present and inlined,
@@ -499,7 +778,6 @@ impl<'env> Docgen<'env> {
         self.begin_definitions();
         for field in struct_env.get_fields() {
             self.definition_text(
-                Some(&struct_env.module_env),
                 &format!(
                     "`{}: {}`",
                     self.name_string(field.get_name()),
@@ -513,15 +791,23 @@ impl<'env> Docgen<'env> {
 
     /// Generates documentation for a function.
     fn gen_function(&self, spec_block_map: &SpecBlockMap<'_>, func_env: &FunctionEnv<'_>) {
+        let is_script = func_env.module_env.is_script_module();
         let name = func_env.get_name();
-        self.section_header(
-            &format!("Function `{}`", self.name_string(name)),
-            &self.label_for_module_item(&func_env.module_env, name),
-        );
-        self.increment_section_nest();
-        self.doc_text(&func_env.module_env, func_env.get_doc());
+        if !is_script {
+            self.section_header(
+                &format!("Function `{}`", self.name_string(name)),
+                &self.label_for_module_item(&func_env.module_env, name),
+            );
+            self.increment_section_nest();
+        }
+        self.doc_text(func_env.get_doc());
         let sig = self.function_header_display(func_env);
-        self.code_block(&func_env.module_env, &sig);
+        self.code_block(&sig);
+        if self.options.include_impl {
+            self.begin_collapsed("Implementation");
+            self.code_block(&self.get_source_with_indent(&func_env.get_loc()));
+            self.end_collapsed();
+        }
         if self.options.specs_inlined {
             self.gen_spec_blocks(
                 &func_env.module_env,
@@ -530,15 +816,9 @@ impl<'env> Docgen<'env> {
                 spec_block_map,
             )
         }
-        if self.options.include_impl {
-            self.begin_collapsed("Implementation");
-            self.code_block(
-                &func_env.module_env,
-                &self.get_source_with_indent(&func_env.get_loc()),
-            );
-            self.end_collapsed();
+        if !is_script {
+            self.decrement_section_nest();
         }
-        self.decrement_section_nest();
     }
 
     /// Generates documentation for a function signature.
@@ -587,7 +867,7 @@ impl<'env> Docgen<'env> {
             self.begin_collapsed(title);
         }
         for block in blocks {
-            self.doc_text(module_env, self.env.get_doc(&block.loc));
+            self.doc_text(self.env.get_doc(&block.loc));
             let mut in_code = false;
             let (is_schema, schema_header) =
                 if let SpecBlockTarget::Schema(_, sid, type_params) = &block.target {
@@ -611,7 +891,7 @@ impl<'env> Docgen<'env> {
                 if !*in_code {
                     self.begin_code();
                     if is_schema {
-                        self.code_text(module_env, &schema_header);
+                        self.code_text(&schema_header);
                         self.writer.indent();
                     }
                     *in_code = true;
@@ -621,7 +901,7 @@ impl<'env> Docgen<'env> {
                 if *in_code {
                     if is_schema {
                         self.writer.unindent();
-                        self.code_text(module_env, "}");
+                        self.code_text("}");
                     }
                     self.end_code();
                     *in_code = false;
@@ -631,7 +911,7 @@ impl<'env> Docgen<'env> {
                 let doc = self.env.get_doc(loc);
                 if !doc.is_empty() {
                     end_code(&mut in_code);
-                    self.doc_text(module_env, doc);
+                    self.doc_text(doc);
                 }
                 // Inject label for spec item definition.
                 if let Some(item) = self.loc_to_spec_item_map.get(loc) {
@@ -647,7 +927,7 @@ impl<'env> Docgen<'env> {
                     }
                 }
                 begin_code(&mut in_code);
-                self.code_text(module_env, &self.get_source_with_indent(loc));
+                self.code_text(&self.get_source_with_indent(loc));
             }
             end_code(&mut in_code);
         }
@@ -661,25 +941,50 @@ impl<'env> Docgen<'env> {
     fn organize_spec_blocks(&self, module_env: &'env ModuleEnv<'env>) -> SpecBlockMap<'env> {
         let mut result = BTreeMap::new();
         let mut current_target = SpecBlockTarget::Module;
+        let mut last_block_end: Option<ByteIndex> = None;
         for block in module_env.get_spec_block_infos() {
-            match &block.target {
-                SpecBlockTarget::Schema(..) => {}
+            let may_merge_with_current = match &block.target {
+                SpecBlockTarget::Schema(..) => true,
                 SpecBlockTarget::Module if !self.is_single_liner(&block.loc) => {
                     // This is a bit of a hack: if spec module is on a single line,
                     // we consider it as a marker to switch doc context back to module level.
+                    true
                 }
-                _ => {
-                    // Switch target if it's not a schema or module. Those will be associated with
-                    // the last target.
-                    current_target = block.target.clone();
-                }
+                _ => false,
+            };
+            if !may_merge_with_current
+                || last_block_end.is_none()
+                || self.has_move_code_inbetween(last_block_end.unwrap(), block.loc.span().start())
+            {
+                // Switch target if it's not a schema or module, or if there is any move code between
+                // this block and the last one.
+                current_target = block.target.clone();
             }
+            last_block_end = Some(block.loc.span().end());
             result
                 .entry(current_target.clone())
                 .or_insert_with(Vec::new)
                 .push(block);
         }
         result
+    }
+
+    /// Returns true if there is any move code (function or struct declaration)
+    /// between the start and end positions.
+    fn has_move_code_inbetween(&self, start: ByteIndex, end: ByteIndex) -> bool {
+        // TODO(wrwg): this might be a bit of inefficient for larger modules, and
+        //   we may want to precompute some of this if it becomses a bottleneck.
+        if let Some(m) = &self.current_module {
+            m.get_functions()
+                .map(|f| f.get_loc())
+                .chain(m.get_structs().map(|s| s.get_loc()))
+                .any(|loc| {
+                    let p = loc.span().start();
+                    p >= start && p < end
+                })
+        } else {
+            false
+        }
     }
 
     /// Check whether the location contains a single line of source.
@@ -695,7 +1000,7 @@ impl<'env> Docgen<'env> {
         if spec_block_map.is_empty() || !self.options.include_specs {
             return;
         }
-        let section_label = self.label_for_module_item_str(module_env, "Specification");
+        let section_label = self.label_for_section("Specification");
         self.section_header("Specification", &section_label);
         self.increment_section_nest();
         self.gen_spec_blocks(module_env, "", &SpecBlockTarget::Module, spec_block_map);
@@ -711,7 +1016,7 @@ impl<'env> Docgen<'env> {
                     &self.struct_title(&struct_env),
                     &format!("{}_{}", section_label, name),
                 );
-                self.code_block(module_env, &self.struct_header_display(&struct_env));
+                self.code_block(&self.struct_header_display(&struct_env));
                 self.gen_struct_fields(&struct_env);
                 self.gen_spec_blocks(module_env, "", &target, spec_block_map);
             }
@@ -727,10 +1032,7 @@ impl<'env> Docgen<'env> {
                     &format!("Function `{}`", name),
                     &format!("{}_{}", section_label, name),
                 );
-                self.code_block(
-                    &func_env.module_env,
-                    &self.function_header_display(&func_env),
-                );
+                self.code_block(&self.function_header_display(&func_env));
                 self.gen_spec_blocks(module_env, "", &target, spec_block_map);
             }
         }
@@ -843,8 +1145,8 @@ impl<'env> Docgen<'env> {
     }
 
     /// Outputs documentation text.
-    fn doc_text(&self, module_env: &ModuleEnv<'_>, text: &str) {
-        for line in self.decorate_text(module_env, text).lines() {
+    fn doc_text_general(&self, for_root: bool, text: &str) {
+        for line in self.decorate_text(text).lines() {
             let line = line.trim();
             if line.starts_with('#') {
                 let mut i = 1;
@@ -853,10 +1155,10 @@ impl<'env> Docgen<'env> {
                     self.increment_section_nest();
                 }
                 let header = line[i..].trim_start();
-                self.section_header(
-                    header,
-                    &self.label_for_module_item_str(module_env, &self.make_label_from_str(header)),
-                );
+                if for_root {
+                    *self.last_root_section_nest.borrow_mut() = *self.section_nest.borrow();
+                }
+                self.section_header(header, &self.label_for_section(header));
                 while i > 1 {
                     self.decrement_section_nest();
                     i -= 1;
@@ -869,6 +1171,14 @@ impl<'env> Docgen<'env> {
         emitln!(self.writer);
     }
 
+    fn doc_text_for_root(&self, text: &str) {
+        self.doc_text_general(true, text)
+    }
+
+    fn doc_text(&self, text: &str) {
+        self.doc_text_general(false, text)
+    }
+
     /// Makes a label from a string.
     fn make_label_from_str(&self, s: &str) -> String {
         format!("@{}", s.replace(' ', "_"))
@@ -876,7 +1186,7 @@ impl<'env> Docgen<'env> {
 
     /// Decorates documentation text, identifying code fragments and decorating them
     /// as code.
-    fn decorate_text(&self, module_env: &ModuleEnv<'_>, text: &str) -> String {
+    fn decorate_text(&self, text: &str) -> String {
         static REX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?m)`[^`]+`").unwrap());
         let mut r = String::new();
         let mut at = 0;
@@ -891,7 +1201,7 @@ impl<'env> Docgen<'env> {
             r += &text[at..at + m.start()];
             r += &format!(
                 "<code>{}</code>",
-                &self.decorate_code(module_env, &m.as_str()[1..&m.as_str().len() - 1])
+                &self.decorate_code(&m.as_str()[1..&m.as_str().len() - 1])
             );
             at += m.end();
         }
@@ -916,13 +1226,13 @@ impl<'env> Docgen<'env> {
     }
 
     /// Outputs decorated code text in context of a module.
-    fn code_text(&self, module_env: &ModuleEnv<'_>, code: &str) {
-        emitln!(self.writer, &self.decorate_code(module_env, code));
+    fn code_text(&self, code: &str) {
+        emitln!(self.writer, &self.decorate_code(code));
     }
 
     /// Decorates a code fragment, for use in an html block. Replaces < and >, bolds keywords and
     /// tries to resolve and cross-link references.
-    fn decorate_code(&self, module_env: &ModuleEnv<'_>, code: &str) -> String {
+    fn decorate_code(&self, code: &str) -> String {
         static REX: Lazy<Regex> = Lazy::new(|| {
             Regex::new(
                 r"(?P<ident>(\b\w+\b\s*::\s*)*\b\w+\b)(?P<call>\s*[(<])?|(?P<lt><)|(?P<gt>>)",
@@ -942,7 +1252,7 @@ impl<'env> Docgen<'env> {
                     let s = m.as_str();
                     if KEYWORDS.contains(&s) || WEAK_KEYWORDS.contains(&s) {
                         format!("<b>{}</b>", &code[at + m.start()..at + m.end()])
-                    } else if let Some(label) = self.resolve_to_label(module_env, s, is_call) {
+                    } else if let Some(label) = self.resolve_to_label(s, is_call) {
                         format!("<a href=\"{}\">{}</a>", label, s)
                     } else {
                         "".to_owned()
@@ -973,12 +1283,15 @@ impl<'env> Docgen<'env> {
     /// the label for the declaration inside of this documentation. This uses a
     /// heuristic and may not work in all cases or produce wrong results (for instance, it
     /// ignores aliases). To improve on this, we would need best direct support by the compiler.
-    fn resolve_to_label(
-        &self,
-        module_env: &ModuleEnv<'_>,
-        s: &str,
-        is_followed_by_open: bool,
-    ) -> Option<String> {
+    fn resolve_to_label(&self, mut s: &str, is_followed_by_open: bool) -> Option<String> {
+        // For clarity in documentation, we allow `script::` or `module::` as a prefix.
+        // However, right now it will be ignored for resolution.
+        let lower_s = s.to_lowercase();
+        if lower_s.starts_with("script::") {
+            s = &s["script::".len()..]
+        } else if lower_s.starts_with("module::") {
+            s = &s["module::".len()..]
+        }
         let parts_data: Vec<&str> = s.splitn(3, "::").collect();
         let mut parts = parts_data.as_slice();
         let module_opt = if parts[0].starts_with("0x") {
@@ -1029,15 +1342,21 @@ impl<'env> Docgen<'env> {
                 // A simple name. Resolve either to module or to item in current module.
                 if let Some(module) = self.env.find_module_by_name(parts_sym[0]) {
                     Some(self.ref_for_module(&module))
+                } else if let Some(module) = &self.current_module {
+                    try_func_struct_or_const(module, parts_sym[0], false)
                 } else {
-                    try_func_struct_or_const(module_env, parts_sym[0], false)
+                    None
                 }
             }
             (None, 2) => {
                 // A qualified name, but without the address. This must be an item in a module
                 // denoted by the first name.
                 let module_opt = if parts[0] == "Self" {
-                    Some(module_env.clone())
+                    if let Some(module) = &self.current_module {
+                        Some(module.clone())
+                    } else {
+                        None
+                    }
                 } else {
                     self.env.find_module_by_name(parts_sym[0])
                 };
@@ -1051,33 +1370,31 @@ impl<'env> Docgen<'env> {
         }
     }
 
+    /// Create label for a module.
+    fn make_label_for_module(&self, module_env: &ModuleEnv<'_>) -> String {
+        module_env
+            .get_name()
+            .display_full(self.env.symbol_pool())
+            .to_string()
+            .replace("::", "_")
+    }
+
     /// Return the label for a module.
-    fn label_for_module(&self, module_env: &ModuleEnv<'_>) -> String {
-        if module_env.is_script_module() {
-            "SCRIPT".to_string()
+    fn label_for_module(&self, module_env: &ModuleEnv<'_>) -> &str {
+        if let Some(info) = self.infos.get(&module_env.get_id()) {
+            &info.label
         } else {
-            module_env
-                .get_name()
-                .display_full(self.env.symbol_pool())
-                .to_string()
-                .replace("::", "_")
+            ""
         }
     }
 
     /// Return the reference for a module.
     fn ref_for_module(&self, module_env: &ModuleEnv<'_>) -> String {
-        let label = self.label_for_module(module_env);
-        if let Some(current) = &self.current_module {
-            if current.get_id() == module_env.get_id() {
-                return format!("#{}", label);
-            }
+        if let Some(info) = self.infos.get(&module_env.get_id()) {
+            format!("{}#{}", info.target_file, info.label)
+        } else {
+            "".to_string()
         }
-        let file = self
-            .ref_map
-            .get(&module_env.get_id())
-            .map(|s| s.as_ref())
-            .unwrap_or("");
-        format!("{}#{}", file, label)
     }
 
     /// Return the label for an item in a module.
@@ -1099,10 +1416,17 @@ impl<'env> Docgen<'env> {
         )
     }
 
+    /// Create a unique label for a section header.
+    fn label_for_section(&self, title: &str) -> String {
+        let counter = *self.label_counter.borrow();
+        *self.label_counter.borrow_mut() += 1;
+        self.make_label_from_str(&format!("{} {}", title, counter))
+    }
+
     /// Shortcut for code_block in a module context.
-    fn code_block(&self, module_env: &ModuleEnv<'_>, code: &str) {
+    fn code_block(&self, code: &str) {
         self.begin_code();
-        self.code_text(module_env, code);
+        self.code_text(code);
         self.end_code();
     }
 
@@ -1112,12 +1436,9 @@ impl<'env> Docgen<'env> {
     /// End an itemized list.
     fn end_items(&self) {}
 
-    /// Emit an item. With use the optional module env to do text decoration.
-    fn item_text(&self, module_env_opt: Option<&ModuleEnv<'_>>, text: &str) {
-        match module_env_opt {
-            Some(module_env) => emitln!(self.writer, "-  {}", self.decorate_text(module_env, text)),
-            None => emitln!(self.writer, "-  {}", text),
-        }
+    /// Emit an item.
+    fn item_text(&self, text: &str) {
+        emitln!(self.writer, "-  {}", self.decorate_text(text));
     }
 
     /// Begin a definition list.
@@ -1133,13 +1454,9 @@ impl<'env> Docgen<'env> {
     }
 
     /// Emit a definition.
-    fn definition_text(&self, module_env_opt: Option<&ModuleEnv<'_>>, term: &str, def: &str) {
-        let decorate = |s| match module_env_opt {
-            Some(m) => self.decorate_text(m, s),
-            None => s.to_string(),
-        };
-        emitln!(self.writer, "<dt>\n{}\n</dt>", decorate(term));
-        emitln!(self.writer, "<dd>\n{}\n</dd>", decorate(def));
+    fn definition_text(&self, term: &str, def: &str) {
+        emitln!(self.writer, "<dt>\n{}\n</dt>", self.decorate_text(term));
+        emitln!(self.writer, "<dd>\n{}\n</dd>", self.decorate_text(def));
     }
 
     /// Display a type parameter.

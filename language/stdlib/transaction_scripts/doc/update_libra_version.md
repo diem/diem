@@ -1,34 +1,27 @@
 
-<a name="SCRIPT"></a>
+<a name="update_libra_version"></a>
 
-# Script `update_libra_version.move`
-
-### Table of Contents
-
--  [Function `update_libra_version`](#SCRIPT_update_libra_version)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
+# Script `update_libra_version`
 
 
 
-<a name="SCRIPT_update_libra_version"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
 
-## Function `update_libra_version`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Updates the Libra major version that is stored on-chain and is used by the VM.  This
 transaction can only be sent from the Libra Root account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Updates the <code><a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion">LibraVersion</a></code> on-chain config and emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> to trigger
 a reconfiguration of the system. The <code>major</code> version that is passed in must be strictly greater
@@ -36,9 +29,9 @@ than the current major version held on-chain. The VM reads this information and 
 preserve backwards compatibility with previous major versions of the VM.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name            | Type      | Description                                                                |
 | ------          | ------    | -------------                                                              |
@@ -47,9 +40,9 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code>major</code>         | <code>u64</code>     | The <code>major</code> version of the VM to be used from this transaction on.         |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                  | Description                                                                                |
 | ----------------           | --------------                                | -------------                                                                              |
@@ -60,7 +53,7 @@ preserve backwards compatibility with previous major versions of the VM.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_EINVALID_MAJOR_VERSION_NUMBER">LibraVersion::EINVALID_MAJOR_VERSION_NUMBER</a></code> | <code>major</code> is less-than or equal to the current major version stored on-chain.                |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="update_libra_version.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64)
 </code></pre>
 
 
@@ -69,7 +62,7 @@ preserve backwards compatibility with previous major versions of the VM.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
+<pre><code><b>fun</b> <a href="update_libra_version.md#update_libra_version">update_libra_version</a>(account: &signer, sliding_nonce: u64, major: u64) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/LibraVersion.md#0x1_LibraVersion_set">LibraVersion::set</a>(account, major)
 }

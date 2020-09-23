@@ -1,36 +1,29 @@
 
-<a name="SCRIPT"></a>
+<a name="remove_validator_and_reconfigure"></a>
 
-# Script `remove_validator_and_reconfigure.move`
-
-### Table of Contents
-
--  [Function `remove_validator_and_reconfigure`](#SCRIPT_remove_validator_and_reconfigure)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `remove_validator_and_reconfigure`
 
 
 
-<a name="SCRIPT_remove_validator_and_reconfigure"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `remove_validator_and_reconfigure`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 This script removes a validator account from the validator set, and triggers a reconfiguration
 of the system to remove the validator from the system. This transaction can only be
 successfully called by the Libra Root account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 This script removes the account at <code>validator_address</code> from the validator set. This transaction
 emits a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code> event. Once the reconfiguration triggered by this event
@@ -39,9 +32,9 @@ validator in the network. This transaction will fail if the validator at <code>v
 is not in the validator set.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                | Type         | Description                                                                                                                        |
 | ------              | ------       | -------------                                                                                                                      |
@@ -51,9 +44,9 @@ is not in the validator set.
 | <code>validator_address</code> | <code>address</code>    | The validator account address to be removed from the validator set.                                                                |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                            | Description                                                                                     |
 | ----------------           | --------------                          | -------------                                                                                   |
@@ -65,20 +58,20 @@ is not in the validator set.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ELIBRA_ROOT">CoreAddresses::ELIBRA_ROOT</a></code>            | The sending account is not the Libra Root account.                                              |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_validator_account</code>
-* <code>Script::create_validator_operator_account</code>
-* <code>Script::register_validator_config</code>
-* <code>Script::add_validator_and_reconfigure</code>
-* <code>Script::set_validator_operator</code>
-* <code>Script::set_validator_operator_with_nonce_admin</code>
-* <code>Script::set_validator_config_and_reconfigure</code>
+* <code><a href="create_validator_account.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="create_validator_operator_account.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="register_validator_config.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="add_validator_and_reconfigure.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="set_validator_operator.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="set_validator_operator_with_nonce_admin.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="set_validator_config_and_reconfigure.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="remove_validator_and_reconfigure.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(lr_account: &signer, sliding_nonce: u64, validator_name: vector&lt;u8&gt;, validator_address: address)
 </code></pre>
 
 
@@ -87,7 +80,7 @@ is not in the validator set.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
+<pre><code><b>fun</b> <a href="remove_validator_and_reconfigure.md#remove_validator_and_reconfigure">remove_validator_and_reconfigure</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     validator_name: vector&lt;u8&gt;,

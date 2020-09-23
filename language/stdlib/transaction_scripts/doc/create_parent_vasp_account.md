@@ -1,34 +1,27 @@
 
-<a name="SCRIPT"></a>
+<a name="create_parent_vasp_account"></a>
 
-# Script `create_parent_vasp_account.move`
-
-### Table of Contents
-
--  [Function `create_parent_vasp_account`](#SCRIPT_create_parent_vasp_account)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `create_parent_vasp_account`
 
 
 
-<a name="SCRIPT_create_parent_vasp_account"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `create_parent_vasp_account`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Creates a Parent VASP account with the specified human name. Must be called by the Treasury Compliance account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Creates an account with the Parent VASP role at <code>address</code> with authentication key
 <code>auth_key_prefix</code> | <code>new_account_address</code> and a 0 balance of type <code>CoinType</code>. If
@@ -37,9 +30,9 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <code>sliding_nonce</code> is a unique nonce for operation, see <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> for details.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                  | Type         | Description                                                                                                                                                    |
 | ------                | ------       | -------------                                                                                                                                                  |
@@ -52,9 +45,9 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | <code>add_all_currencies</code>  | <code>bool</code>       | Whether to publish balance resources for all known currencies when the account is created.                                                                     |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                            | Description                                                                                |
 | ----------------            | --------------                          | -------------                                                                              |
@@ -66,19 +59,19 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_child_vasp_account</code>
+* <code><a href="create_child_vasp_account.md#create_child_vasp_account">Script::create_child_vasp_account</a></code>
 * <code>Script::add_currency</code>
-* <code>Script::rotate_authentication_key</code>
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::create_recovery_address</code>
-* <code>Script::rotate_dual_attestation_info</code>
+* <code><a href="rotate_authentication_key.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="add_recovery_rotation_capability.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
+* <code><a href="create_recovery_address.md#create_recovery_address">Script::create_recovery_address</a></code>
+* <code><a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="create_parent_vasp_account.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -87,7 +80,7 @@ also be added. This can only be invoked by an TreasuryCompliance account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="create_parent_vasp_account.md#create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,

@@ -1,28 +1,21 @@
 
-<a name="SCRIPT"></a>
+<a name="freeze_account"></a>
 
-# Script `freeze_account.move`
-
-### Table of Contents
-
--  [Function `freeze_account`](#SCRIPT_freeze_account)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `freeze_account`
 
 
 
-<a name="SCRIPT_freeze_account"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `freeze_account`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Freezes the account at <code>address</code>. The sending account of this transaction
 must be the Treasury Compliance account. The account being frozen cannot be
@@ -31,9 +24,9 @@ execution of this transaction no transactions may be sent from the frozen
 account, and the frozen account may not send or receive coins.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Sets the <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezingBit">AccountFreezing::FreezingBit</a></code> to <code><b>true</b></code> and emits a
 <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">AccountFreezing::FreezeAccountEvent</a></code>. The transaction sender must be the
@@ -45,18 +38,18 @@ accounts and vice versa.
 
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of this transaction will emit a <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeAccountEvent">AccountFreezing::FreezeAccountEvent</a></code> on
 the <code>freeze_event_handle</code> held in the <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_FreezeEventsHolder">AccountFreezing::FreezeEventsHolder</a></code> resource published
 under <code>0xA550C18</code> with the <code>frozen_address</code> being the <code>to_freeze_account</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name                | Type      | Description                                                                                               |
 | ------              | ------    | -------------                                                                                             |
@@ -65,9 +58,9 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code>to_freeze_account</code> | <code>address</code> | The account address to be frozen.                                                                         |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                 | Description                                                                                |
 | ----------------           | --------------                               | -------------                                                                              |
@@ -79,14 +72,14 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_ECANNOT_FREEZE_LIBRA_ROOT">AccountFreezing::ECANNOT_FREEZE_LIBRA_ROOT</a></code> | <code>to_freeze_account</code> was the Libra Root account (<code>0xA550C18</code>).                              |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
 * <code>Scripts::unfreeze_account</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="freeze_account.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address)
 </code></pre>
 
 
@@ -95,7 +88,7 @@ under <code>0xA550C18</code> with the <code>frozen_address</code> being the <cod
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
+<pre><code><b>fun</b> <a href="freeze_account.md#freeze_account">freeze_account</a>(tc_account: &signer, sliding_nonce: u64, to_freeze_account: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
     <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_freeze_account">AccountFreezing::freeze_account</a>(tc_account, to_freeze_account);
 }

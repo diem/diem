@@ -1544,6 +1544,7 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     // ****************** SPECIFICATIONS *******************
+    spec module {} // switch documentation context back to module level
 
     spec module {
         /// Returns field `key_rotation_capability` of the LibraAccount under `addr`.

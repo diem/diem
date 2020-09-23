@@ -1,30 +1,21 @@
 
-<a name="SCRIPT"></a>
+<a name="preburn"></a>
 
-# Script `preburn.move`
-
-### Table of Contents
-
--  [Function `preburn`](#SCRIPT_preburn)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `preburn`](#SCRIPT_Specification_preburn)
+# Script `preburn`
 
 
 
-<a name="SCRIPT_preburn"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `preburn`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Moves a specified number of coins in a given currency from the account's
 balance to its preburn area after which the coins may be burned. This
@@ -32,9 +23,9 @@ transaction may be sent by any account that holds a balance and preburn area
 in the specified currency.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Moves the specified <code>amount</code> of coins in <code>Token</code> currency from the sending <code>account</code>'s
 <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;</code> to the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> published under the same
@@ -42,9 +33,9 @@ Moves the specified <code>amount</code> of coins in <code>Token</code> currency 
 transaction in order for it to execute successfully.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of this script emits two events:
 * <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a> </code> on <code>account</code>'s <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>sent_events</code>
@@ -54,9 +45,9 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <code>preburn_address</code> set to <code>account</code>'s address.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name      | Type      | Description                                                                                                                      |
 | ------    | ------    | -------------                                                                                                                    |
@@ -65,9 +56,9 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code>amount</code>  | <code>u64</code>     | The amount in <code>Token</code> to be moved to the preburn area.                                                                           |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category           | Error Reason                                             | Description                                                                             |
 | ----------------         | --------------                                           | -------------                                                                           |
@@ -79,16 +70,16 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>  | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EPREBURN_OCCUPIED">Libra::EPREBURN_OCCUPIED</a></code>                               | The <code>value</code> field in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource under the sender is non-zero. |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::cancel_burn</code>
-* <code>Script::burn</code>
-* <code>Script::burn_txn_fees</code>
+* <code><a href="cancel_burn.md#cancel_burn">Script::cancel_burn</a></code>
+* <code><a href="burn.md#burn">Script::burn</a></code>
+* <code><a href="burn_txn_fees.md#burn_txn_fees">Script::burn_txn_fees</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="preburn.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
 </code></pre>
 
 
@@ -97,7 +88,7 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
+<pre><code><b>fun</b> <a href="preburn.md#preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_preburn">LibraAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);
@@ -108,28 +99,21 @@ handle with the <code>payee</code> and <code>payer</code> fields being <code>acc
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_preburn"></a>
-
-### Function `preburn`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
 <pre><code>pragma verify;
-<a name="SCRIPT_account_addr$1"></a>
+<a name="preburn_account_addr$1"></a>
 <b>let</b> account_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account);
-<a name="SCRIPT_cap$2"></a>
+<a name="preburn_cap$2"></a>
 <b>let</b> cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(account_addr);
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: account_addr};
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnAbortsIf">LibraAccount::PreburnAbortsIf</a>&lt;Token&gt;{dd: account, cap: cap};
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PreburnEnsures">LibraAccount::PreburnEnsures</a>&lt;Token&gt;{dd_addr: account_addr, payer: account_addr};
 </code></pre>
+
+
+
+</details>

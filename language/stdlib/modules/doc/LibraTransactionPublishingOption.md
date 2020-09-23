@@ -3,26 +3,18 @@
 
 # Module `0x1::LibraTransactionPublishingOption`
 
-### Table of Contents
 
--  [Struct `LibraTransactionPublishingOption`](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
--  [Const `SCRIPT_HASH_LENGTH`](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
--  [Const `EINVALID_SCRIPT_HASH`](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
--  [Const `EALLOWLIST_ALREADY_CONTAINS_SCRIPT`](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
--  [Function `initialize`](#0x1_LibraTransactionPublishingOption_initialize)
--  [Function `is_script_allowed`](#0x1_LibraTransactionPublishingOption_is_script_allowed)
--  [Function `is_module_allowed`](#0x1_LibraTransactionPublishingOption_is_module_allowed)
--  [Function `add_to_script_allow_list`](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
--  [Function `set_open_script`](#0x1_LibraTransactionPublishingOption_set_open_script)
--  [Function `set_open_module`](#0x1_LibraTransactionPublishingOption_set_open_module)
--  [Specification](#0x1_LibraTransactionPublishingOption_Specification)
-    -  [Function `initialize`](#0x1_LibraTransactionPublishingOption_Specification_initialize)
-    -  [Function `is_script_allowed`](#0x1_LibraTransactionPublishingOption_Specification_is_script_allowed)
-    -  [Function `is_module_allowed`](#0x1_LibraTransactionPublishingOption_Specification_is_module_allowed)
-    -  [Function `add_to_script_allow_list`](#0x1_LibraTransactionPublishingOption_Specification_add_to_script_allow_list)
-    -  [Function `set_open_script`](#0x1_LibraTransactionPublishingOption_Specification_set_open_script)
-    -  [Function `set_open_module`](#0x1_LibraTransactionPublishingOption_Specification_set_open_module)
 
+-  [Struct <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a></code>](#0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption)
+-  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a></code>](#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH)
+-  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a></code>](#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH)
+-  [Const <code><a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code>](#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT)
+-  [Function <code>initialize</code>](#0x1_LibraTransactionPublishingOption_initialize)
+-  [Function <code>is_script_allowed</code>](#0x1_LibraTransactionPublishingOption_is_script_allowed)
+-  [Function <code>is_module_allowed</code>](#0x1_LibraTransactionPublishingOption_is_module_allowed)
+-  [Function <code>add_to_script_allow_list</code>](#0x1_LibraTransactionPublishingOption_add_to_script_allow_list)
+-  [Function <code>set_open_script</code>](#0x1_LibraTransactionPublishingOption_set_open_script)
+-  [Function <code>set_open_module</code>](#0x1_LibraTransactionPublishingOption_set_open_module)
 
 
 <a name="0x1_LibraTransactionPublishingOption_LibraTransactionPublishingOption"></a>
@@ -36,7 +28,7 @@ Defines and holds the publishing policies for the VM. There are three possible c
 We represent these as the following resource.
 
 
-<pre><code><b>struct</b> <a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>
+<pre><code><b>struct</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>
 </code></pre>
 
 
@@ -69,7 +61,7 @@ We represent these as the following resource.
 
 
 
-<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>: u64 = 32;
+<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>: u64 = 32;
 </code></pre>
 
 
@@ -81,7 +73,7 @@ We represent these as the following resource.
 The script hash has an invalid length
 
 
-<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>: u64 = 0;
+<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>: u64 = 0;
 </code></pre>
 
 
@@ -93,7 +85,7 @@ The script hash has an invalid length
 The script hash already exists in the allowlist
 
 
-<pre><code><b>const</b> <a href="#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>: u64 = 1;
+<pre><code><b>const</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>: u64 = 1;
 </code></pre>
 
 
@@ -104,7 +96,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_initialize">initialize</a>(lr_account: &signer, script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, module_publishing_allowed: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_initialize">initialize</a>(lr_account: &signer, script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, module_publishing_allowed: bool)
 </code></pre>
 
 
@@ -113,7 +105,7 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_initialize">initialize</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_initialize">initialize</a>(
     lr_account: &signer,
     script_allow_list: vector&lt;vector&lt;u8&gt;&gt;,
     module_publishing_allowed: bool,
@@ -123,11 +115,31 @@ The script hash already exists in the allowlist
 
     <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>(
         lr_account,
-        <a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a> {
+        <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a> {
             script_allow_list, module_publishing_allowed
         }
     );
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+Must abort if the signer does not have the LibraRoot role [B20].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigAbortsIf">LibraConfig::PublishNewConfigAbortsIf</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;;
+<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigEnsures">LibraConfig::PublishNewConfigEnsures</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt; {
+    payload: <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a> {
+        script_allow_list, module_publishing_allowed
+    }};
 </code></pre>
 
 
@@ -140,7 +152,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool
 </code></pre>
 
 
@@ -149,13 +161,43 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool {
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool {
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
 
     <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&publish_option.script_allow_list)
         || <a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&publish_option.script_allow_list, hash)
         || <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account)
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption"></a>
+
+
+<pre><code><b>schema</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a> {
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;{};
+}
+</code></pre>
+
+
+
+
+<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
 </code></pre>
 
 
@@ -168,7 +210,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool
 </code></pre>
 
 
@@ -177,11 +219,23 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool {
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool {
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
 
     publish_option.module_publishing_allowed || <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account)
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a>;
 </code></pre>
 
 
@@ -194,7 +248,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -203,19 +257,39 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_hash) == <a href="#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>));
+    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&new_hash) == <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_SCRIPT_HASH_LENGTH">SCRIPT_HASH_LENGTH</a>, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EINVALID_SCRIPT_HASH">EINVALID_SCRIPT_HASH</a>));
 
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
     <b>if</b> (<a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&publish_option.script_allow_list, &new_hash)) {
-          <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>)
+          <b>abort</b> <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a>)
     };
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> publish_option.script_allow_list, new_hash);
 
-    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+Must abort if the signer does not have the LibraRoot role [B20].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -228,7 +302,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -237,13 +311,33 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
 
     publish_option.script_allow_list = <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>();
-    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code>pragma aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+Must abort if the signer does not have the LibraRoot role [B20].
+
+
+<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
+<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -256,7 +350,7 @@ The script hash already exists in the allowlist
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool)
 </code></pre>
 
 
@@ -265,13 +359,13 @@ The script hash already exists in the allowlist
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool) {
+<pre><code><b>public</b> <b>fun</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
 
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
 
     publish_option.module_publishing_allowed = open_module;
-    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;(lr_account, publish_option);
 }
 </code></pre>
 
@@ -279,93 +373,8 @@ The script hash already exists in the allowlist
 
 </details>
 
-<a name="0x1_LibraTransactionPublishingOption_Specification"></a>
-
-## Specification
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_initialize"></a>
-
-### Function `initialize`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_initialize">initialize</a>(lr_account: &signer, script_allow_list: vector&lt;vector&lt;u8&gt;&gt;, module_publishing_allowed: bool)
-</code></pre>
-
-
-
-Must abort if the signer does not have the LibraRoot role [B20].
-
-
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-<b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotGenesis">LibraTimestamp::AbortsIfNotGenesis</a>;
-<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigAbortsIf">LibraConfig::PublishNewConfigAbortsIf</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;;
-<b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_PublishNewConfigEnsures">LibraConfig::PublishNewConfigEnsures</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt; {
-    payload: <a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a> {
-        script_allow_list, module_publishing_allowed
-    }};
-</code></pre>
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_is_script_allowed"></a>
-
-### Function `is_script_allowed`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_script_allowed">is_script_allowed</a>(account: &signer, hash: &vector&lt;u8&gt;): bool
-</code></pre>
-
-
-
-
-<pre><code><b>include</b> <a href="#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a>;
-</code></pre>
-
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a> {
-    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>() ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_AbortsIfNotPublished">LibraConfig::AbortsIfNotPublished</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;{};
-}
-</code></pre>
-
-
-
-
-<pre><code><b>invariant</b> [<b>global</b>] <a href="LibraTimestamp.md#0x1_LibraTimestamp_is_operating">LibraTimestamp::is_operating</a>() ==&gt;
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
-</code></pre>
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_is_module_allowed"></a>
-
-### Function `is_module_allowed`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_is_module_allowed">is_module_allowed</a>(account: &signer): bool
-</code></pre>
-
-
-
-
-<pre><code><b>include</b> <a href="#0x1_LibraTransactionPublishingOption_AbortsIfNoTransactionPublishingOption">AbortsIfNoTransactionPublishingOption</a>;
-</code></pre>
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_add_to_script_allow_list"></a>
-
-### Function `add_to_script_allow_list`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, new_hash: vector&lt;u8&gt;)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
@@ -377,55 +386,7 @@ Must abort if the signer does not have the LibraRoot role [B20].
 
 
 <pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-</code></pre>
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_set_open_script"></a>
-
-### Function `set_open_script`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_script">set_open_script</a>(lr_account: &signer)
-</code></pre>
-
-
-
-
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
-Must abort if the signer does not have the LibraRoot role [B20].
-
-
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-</code></pre>
-
-
-
-<a name="0x1_LibraTransactionPublishingOption_Specification_set_open_module"></a>
-
-### Function `set_open_module`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionPublishingOption_set_open_module">set_open_module</a>(lr_account: &signer, open_module: bool)
-</code></pre>
-
-
-
-
-<pre><code>pragma aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
-Must abort if the signer does not have the LibraRoot role [B20].
-
-
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotLibraRoot">Roles::AbortsIfNotLibraRoot</a>{account: lr_account};
-aborts_with <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<b>aborts_with</b> <a href="Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>, <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>, <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>, <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -436,17 +397,17 @@ LibraTransactionPublishingOption config [B20]
 <a name="0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame">LibraVersionRemainsSame</a> {
-    <b>ensures</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;()) ==&gt;
-        <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) ==
-            <b>old</b>(<b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()));
+<pre><code><b>schema</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame">LibraVersionRemainsSame</a> {
+    <b>ensures</b> <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;()) ==&gt;
+        <b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) ==
+            <b>old</b>(<b>global</b>&lt;<a href="LibraConfig.md#0x1_LibraConfig">LibraConfig</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()));
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame">LibraVersionRemainsSame</a> <b>to</b> * <b>except</b> add_to_script_allow_list, set_open_script, set_open_module;
+<pre><code><b>apply</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_LibraVersionRemainsSame">LibraVersionRemainsSame</a> <b>to</b> * <b>except</b> add_to_script_allow_list, set_open_script, set_open_module;
 </code></pre>
 
 
@@ -455,15 +416,19 @@ LibraTransactionPublishingOption config [B20]
 <a name="0x1_LibraTransactionPublishingOption_spec_is_script_allowed"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraTransactionPublishingOption_spec_is_script_allowed">spec_is_script_allowed</a>(account: signer, hash: vector&lt;u8&gt;): bool {
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_spec_get_config">LibraConfig::spec_get_config</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+<pre><code><b>define</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_spec_is_script_allowed">spec_is_script_allowed</a>(account: signer, hash: vector&lt;u8&gt;): bool {
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_spec_get_config">LibraConfig::spec_get_config</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
     <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(publish_option.script_allow_list)
         || <a href="Vector.md#0x1_Vector_spec_contains">Vector::spec_contains</a>(publish_option.script_allow_list, hash)
         || <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account)
 }
 <a name="0x1_LibraTransactionPublishingOption_spec_is_module_allowed"></a>
-<b>define</b> <a href="#0x1_LibraTransactionPublishingOption_spec_is_module_allowed">spec_is_module_allowed</a>(account: signer): bool {
-    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_spec_get_config">LibraConfig::spec_get_config</a>&lt;<a href="#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
+<b>define</b> <a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_spec_is_module_allowed">spec_is_module_allowed</a>(account: signer): bool {
+    <b>let</b> publish_option = <a href="LibraConfig.md#0x1_LibraConfig_spec_get_config">LibraConfig::spec_get_config</a>&lt;<a href="LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption">LibraTransactionPublishingOption</a>&gt;();
     publish_option.module_publishing_allowed || <a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(account)
 }
 </code></pre>
+
+
+
+</details>

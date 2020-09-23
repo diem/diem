@@ -1,27 +1,20 @@
 
-<a name="SCRIPT"></a>
+<a name="register_validator_config"></a>
 
-# Script `register_validator_config.move`
-
-### Table of Contents
-
--  [Function `register_validator_config`](#SCRIPT_register_validator_config)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `register_validator_config`
 
 
 
-<a name="SCRIPT_register_validator_config"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `register_validator_config`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Updates a validator's configuration. This does not reconfigure the system and will not update
 the configuration in the validator set that is seen by other validators in the network. Can
@@ -29,19 +22,19 @@ only be successfully sent by a Validator Operator account that is already regist
 validator.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 This updates the fields with corresponding names held in the <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>
-config resource held under <code>validator_account</code>. It does not emit a <code>LibraConfig::NewEpochEvent</code>
+config resource held under <code>validator_account</code>. It does not emit a <code><a href="../../modules/doc/LibraConfig.md#0x1_LibraConfig_NewEpochEvent">LibraConfig::NewEpochEvent</a></code>
 so the copy of this config held in the validator set will not be updated, and the changes are
 only "locally" under the <code>validator_account</code> account address.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                          | Type         | Description                                                                                                                  |
 | ------                        | ------       | -------------                                                                                                                |
@@ -52,9 +45,9 @@ only "locally" under the <code>validator_account</code> account address.
 | <code>fullnode_network_addresses</code>  | <code>vector&lt;u8&gt;</code> | New set of <code>fullnode_network_addresses</code> to be used in the updated <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code>.                        |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                   | Description                                                                                           |
 | ----------------           | --------------                                 | -------------                                                                                         |
@@ -63,20 +56,20 @@ only "locally" under the <code>validator_account</code> account address.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EINVALID_CONSENSUS_KEY">ValidatorConfig::EINVALID_CONSENSUS_KEY</a></code>      | <code>consensus_pubkey</code> is not a valid ed25519 public key.                                                 |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_validator_account</code>
-* <code>Script::create_validator_operator_account</code>
-* <code>Script::add_validator_and_reconfigure</code>
-* <code>Script::remove_validator_and_reconfigure</code>
-* <code>Script::set_validator_operator</code>
-* <code>Script::set_validator_operator_with_nonce_admin</code>
-* <code>Script::set_validator_config_and_reconfigure</code>
+* <code><a href="create_validator_account.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="create_validator_operator_account.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="add_validator_and_reconfigure.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="remove_validator_and_reconfigure.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="set_validator_operator.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="set_validator_operator_with_nonce_admin.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="set_validator_config_and_reconfigure.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="register_validator_config.md#register_validator_config">register_validator_config</a>(validator_operator_account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_addresses: vector&lt;u8&gt;, fullnode_network_addresses: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -85,7 +78,7 @@ only "locally" under the <code>validator_account</code> account address.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_register_validator_config">register_validator_config</a>(
+<pre><code><b>fun</b> <a href="register_validator_config.md#register_validator_config">register_validator_config</a>(
     validator_operator_account: &signer,
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,

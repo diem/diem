@@ -5619,6 +5619,7 @@ dependencies = [
  "move-ir-types 0.1.0",
  "move-lang 0.0.1",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 1.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "test-utils 0.1.0",

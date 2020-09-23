@@ -201,6 +201,7 @@ module VASP {
     }
 
     // **************** SPECIFICATIONS ****************
+    spec module {} // switch documentation contex back to module level
 
     /// # Module specifications
 

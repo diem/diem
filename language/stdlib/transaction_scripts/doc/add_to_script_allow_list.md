@@ -1,35 +1,28 @@
 
-<a name="SCRIPT"></a>
+<a name="add_to_script_allow_list"></a>
 
-# Script `add_to_script_allow_list.move`
-
-### Table of Contents
-
--  [Function `add_to_script_allow_list`](#SCRIPT_add_to_script_allow_list)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
+# Script `add_to_script_allow_list`
 
 
 
-<a name="SCRIPT_add_to_script_allow_list"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
 
-## Function `add_to_script_allow_list`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Adds a script hash to the transaction allowlist. This transaction
 can only be sent by the Libra Root account. Scripts with this hash can be
 sent afterward the successful execution of this script.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 
 The sending account (<code>lr_account</code>) must be the Libra Root account. The script allow
@@ -41,9 +34,9 @@ successfully a reconfiguration will be initiated, and the on-chain config
 with this <code>hash</code> can be successfully sent to the network.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name            | Type         | Description                                                                                     |
 | ------          | ------       | -------------                                                                                   |
@@ -52,9 +45,9 @@ with this <code>hash</code> can be successfully sent to the network.
 | <code>sliding_nonce</code> | <code>u64</code>        | The <code>sliding_nonce</code> (see: <code><a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>) to be used for this transaction.                      |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                                           | Description                                                                                |
 | ----------------           | --------------                                                         | -------------                                                                              |
@@ -66,7 +59,7 @@ with this <code>hash</code> can be successfully sent to the network.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_EALLOWLIST_ALREADY_CONTAINS_SCRIPT">LibraTransactionPublishingOption::EALLOWLIST_ALREADY_CONTAINS_SCRIPT</a></code> | The on-chain allowlist already contains the script <code>hash</code>.                                 |
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="add_to_script_allow_list.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64)
 </code></pre>
 
 
@@ -75,7 +68,7 @@ with this <code>hash</code> can be successfully sent to the network.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
+<pre><code><b>fun</b> <a href="add_to_script_allow_list.md#add_to_script_allow_list">add_to_script_allow_list</a>(lr_account: &signer, hash: vector&lt;u8&gt;, sliding_nonce: u64,) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(lr_account, sliding_nonce);
     <a href="../../modules/doc/LibraTransactionPublishingOption.md#0x1_LibraTransactionPublishingOption_add_to_script_allow_list">LibraTransactionPublishingOption::add_to_script_allow_list</a>(lr_account, hash)
 }

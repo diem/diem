@@ -151,6 +151,7 @@ module FixedPoint32 {
     }
 
     // **************** SPECIFICATIONS ****************
+    spec module {} // switch documentation context back to module level
 
     spec module {
         pragma aborts_if_is_strict = true;

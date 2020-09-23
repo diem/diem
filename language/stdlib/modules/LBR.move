@@ -296,6 +296,7 @@ module LBR {
     }
 
     // **************** SPECIFICATIONS ****************
+    spec module {} // switch documentation context back to module level
 
     /*
     This module defines the synthetic coin type called LBR and the operations on LBR coins. A global property that this

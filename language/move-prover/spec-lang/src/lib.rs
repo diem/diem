@@ -15,7 +15,6 @@ use move_lang::{
     errors::Errors,
     expansion::ast::Program,
     move_compile_no_report, move_compile_to_expansion_no_report,
-    parser::ast::FunctionName,
     shared::Address,
 };
 
@@ -26,9 +25,8 @@ pub mod symbol;
 mod translate;
 pub mod ty;
 
-use crate::env::SCRIPT_MODULE_NAME;
-#[allow(unused_imports)]
 use itertools::Itertools;
+#[allow(unused_imports)]
 use log::warn;
 use move_ir_types::location::Spanned;
 use move_lang::{
@@ -164,23 +162,18 @@ fn run_spec_checker(
                         value: ModuleIdent_ {
                             name: move_lang::parser::ast::ModuleName(Name {
                                 loc,
-                                value: SCRIPT_MODULE_NAME.to_string(),
+                                value: function_name.0.value.clone(),
                             }),
                             address: Address::default(),
                         },
                     });
                     let mut function_infos = UniqueMap::new();
                     function_infos
-                        .add(FunctionName(Name { loc, value: key }), function_info)
+                        .add(function_name.clone(), function_info)
                         .unwrap();
                     // Construct a pseudo module definition.
                     let mut functions = UniqueMap::new();
-                    functions.add(function_name.clone(), function).unwrap();
-                    // As we now know the real function name and address, replace it in the
-                    // data we got from bytecode.
-                    let function_info = function_infos.into_iter().next().unwrap().1;
-                    function_infos = UniqueMap::new();
-                    function_infos.add(function_name, function_info).unwrap();
+                    functions.add(function_name, function).unwrap();
                     let expanded_module = ModuleDefinition {
                         loc,
                         is_source_module: true,

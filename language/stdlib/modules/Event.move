@@ -77,6 +77,7 @@ module Event {
     }
 
     // ****************** SPECIFICATIONS *******************
+    spec module {} // switch documentation context back to module level
 
     spec module {
         /// Functions of the event module are mocked out using the intrinsic

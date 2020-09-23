@@ -1,37 +1,30 @@
 
-<a name="SCRIPT"></a>
+<a name="cancel_burn"></a>
 
-# Script `cancel_burn.move`
-
-### Table of Contents
-
--  [Function `cancel_burn`](#SCRIPT_cancel_burn)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `cancel_burn`
 
 
 
-<a name="SCRIPT_cancel_burn"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `cancel_burn`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Cancels and returns all coins held in the preburn area under
 <code>preburn_address</code> and returns the funds to the <code>preburn_address</code>'s balance.
 Can only be successfully sent by an account with Treasury Compliance role.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Cancels and returns all coins held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_Preburn">Libra::Preburn</a>&lt;Token&gt;</code> resource under the <code>preburn_address</code> and
 return the funds to the <code>preburn_address</code> account's <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;</code>.
@@ -44,9 +37,9 @@ the entire balance held in the <code><a href="../../modules/doc/Libra.md#0x1_Lib
 before this script is called otherwise the transaction will fail.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 The successful execution of this transaction will emit:
 * A <code><a href="../../modules/doc/Libra.md#0x1_Libra_CancelBurnEvent">Libra::CancelBurnEvent</a></code> on the event handle held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;Token&gt;</code>
@@ -56,9 +49,9 @@ resource's <code>burn_events</code> published under <code>0xA550C18</code>.
 being <code>preburn_address</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name              | Type      | Description                                                                                                                          |
 | ------            | ------    | -------------                                                                                                                        |
@@ -67,9 +60,9 @@ being <code>preburn_address</code>.
 | <code>preburn_address</code> | <code>address</code> | The address where the coins to-be-burned are currently held.                                                                         |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category                | Error Reason                                     | Description                                                                                           |
 | ----------------              | --------------                                   | -------------                                                                                         |
@@ -80,16 +73,16 @@ being <code>preburn_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code> | The account at <code>preburn_address</code> doesn't have a balance resource for <code>Token</code>.                         |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::burn_txn_fees</code>
-* <code>Script::burn</code>
-* <code>Script::preburn</code>
+* <code><a href="burn_txn_fees.md#burn_txn_fees">Script::burn_txn_fees</a></code>
+* <code><a href="burn.md#burn">Script::burn</a></code>
+* <code><a href="preburn.md#preburn">Script::preburn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="cancel_burn.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
 </code></pre>
 
 
@@ -98,7 +91,7 @@ being <code>preburn_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
+<pre><code><b>fun</b> <a href="cancel_burn.md#cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address) {
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_cancel_burn">LibraAccount::cancel_burn</a>&lt;Token&gt;(account, preburn_address)
 }
 </code></pre>

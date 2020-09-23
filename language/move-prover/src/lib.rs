@@ -78,7 +78,7 @@ pub fn run_move_prover<W: WriteColor>(
 
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.run_docgen {
-        return run_docgen(&env, &options, now);
+        return run_docgen(&env, &options, error_writer, now);
     }
     // Same for ABI generator.
     if options.run_abigen {
@@ -160,12 +160,16 @@ pub fn run_move_prover_errors_to_stderr(options: Options) -> anyhow::Result<()> 
     run_move_prover(&mut error_writer, options)
 }
 
-fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
-    let mut generator = Docgen::new(env, &options.docgen);
+fn run_docgen<W: WriteColor>(
+    env: &GlobalEnv,
+    options: &Options,
+    error_writer: &mut W,
+    now: Instant,
+) -> anyhow::Result<()> {
+    let generator = Docgen::new(env, &options.docgen);
     let checking_elapsed = now.elapsed();
     info!("generating documentation");
-    generator.gen();
-    for (file, content) in generator.into_result() {
+    for (file, content) in generator.gen() {
         let path = PathBuf::from(&file);
         fs::create_dir_all(path.parent().unwrap())?;
         fs::write(path.as_path(), content)?;
@@ -176,7 +180,12 @@ fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Resul
         checking_elapsed.as_secs_f64(),
         (generating_elapsed - checking_elapsed).as_secs_f64()
     );
-    Ok(())
+    if env.has_errors() {
+        env.report_errors(error_writer);
+        Err(anyhow!("exiting with documentation generation errors"))
+    } else {
+        Ok(())
+    }
 }
 
 fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {

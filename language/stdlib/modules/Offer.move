@@ -39,6 +39,8 @@ module Offer {
   }
 
   // **************** SPECIFICATIONS ****************
+  spec module {} // switch documentation context back to module level
+
 
   /// # Module specification
 

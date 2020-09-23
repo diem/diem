@@ -491,6 +491,7 @@ module DualAttestation {
     }
 
     // **************************** SPECIFICATION ********************************
+    spec module {} // switch documentation context back to module level
 
     /// The Limit resource should be published after genesis
     spec module {

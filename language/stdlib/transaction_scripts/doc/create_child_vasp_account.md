@@ -1,38 +1,29 @@
 
-<a name="SCRIPT"></a>
+<a name="create_child_vasp_account"></a>
 
-# Script `create_child_vasp_account.move`
-
-### Table of Contents
-
--  [Function `create_child_vasp_account`](#SCRIPT_create_child_vasp_account)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `create_child_vasp_account`](#SCRIPT_Specification_create_child_vasp_account)
+# Script `create_child_vasp_account`
 
 
 
-<a name="SCRIPT_create_child_vasp_account"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `create_child_vasp_account`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Creates a Child VASP account with its parent being the sending account of the transaction.
 The sender of the transaction must be a Parent VASP account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Creates a <code>ChildVASP</code> account for the sender <code>parent_vasp</code> at <code>child_address</code> with a balance of
 <code>child_initial_balance</code> in <code>CoinType</code> and an initial authentication key of
@@ -46,9 +37,9 @@ Parent VASP account. The child account will be recorded against the limit of
 child accounts of the creating Parent VASP account.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution with a <code>child_initial_balance</code> greater than zero will emit:
 * A <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code> with the <code>payer</code> field being the Parent VASP's address,
@@ -59,9 +50,9 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a></code> <code>received_events</code> handle.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name                    | Type         | Description                                                                                                                                 |
 | ------                  | ------       | -------------                                                                                                                               |
@@ -73,9 +64,9 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | <code>child_initial_balance</code> | <code>u64</code>        | The initial balance in <code>CoinType</code> to give the child account when it's created.                                                              |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                                             | Description                                                                              |
 | ----------------            | --------------                                           | -------------                                                                            |
@@ -88,18 +79,18 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>                    | The sending account doesn't have at least <code>child_initial_balance</code> of <code>CoinType</code> balance. |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_parent_vasp_account</code>
+* <code><a href="create_parent_vasp_account.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
 * <code>Script::add_currency</code>
-* <code>Script::rotate_authentication_key</code>
-* <code>Script::add_recovery_rotation_capability</code>
-* <code>Script::create_recovery_address</code>
+* <code><a href="rotate_authentication_key.md#rotate_authentication_key">Script::rotate_authentication_key</a></code>
+* <code><a href="add_recovery_rotation_capability.md#add_recovery_rotation_capability">Script::add_recovery_rotation_capability</a></code>
+* <code><a href="create_recovery_address.md#create_recovery_address">Script::create_recovery_address</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="create_child_vasp_account.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
 </code></pre>
 
 
@@ -108,7 +99,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="create_child_vasp_account.md#create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
     parent_vasp: &signer,
     child_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
@@ -136,19 +127,8 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_create_child_vasp_account"></a>
-
-### Function `create_child_vasp_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
@@ -168,7 +148,7 @@ pragma aborts_if_is_partial = <b>true</b>;
 <code>child_address</code> must not be an existing account/vasp account
 
 
-<pre><code><b>aborts_if</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(child_address);
+<pre><code><b>aborts_if</b> <b>exists</b>&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(child_address);
 <b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(child_address);
 </code></pre>
 
@@ -178,3 +158,7 @@ pragma aborts_if_is_partial = <b>true</b>;
 
 <pre><code><b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_spec_get_num_children">VASP::spec_get_num_children</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)) + 1 &gt; 256;
 </code></pre>
+
+
+
+</details>

@@ -1,28 +1,21 @@
 
-<a name="SCRIPT"></a>
+<a name="unmint_lbr"></a>
 
-# Script `unmint_lbr.move`
-
-### Table of Contents
-
--  [Function `unmint_lbr`](#SCRIPT_unmint_lbr)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `unmint_lbr`
 
 
 
-<a name="SCRIPT_unmint_lbr"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `unmint_lbr`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Withdraws a specified amount of LBR from the transaction sender's account, and unstaples the
 withdrawn LBR into its constituent coins. Deposits each of the constituent coins to the
@@ -30,9 +23,9 @@ transaction sender's balances. Any account that can hold balances that has the c
 may send this transaction.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Withdraws <code>amount_lbr</code> LBR coins from the <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;<a href="../../modules/doc/LBR.md#0x1_LBR_LBR">LBR::LBR</a>&gt;</code> balance held under
 <code>account</code>. Withdraws the backing coins for the LBR coins from the on-chain reserve in the
@@ -40,18 +33,18 @@ Withdraws <code>amount_lbr</code> LBR coins from the <code><a href="../../module
 into balance resources published under <code>account</code>.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of this transaction will emit two <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_SentPaymentEvent">LibraAccount::SentPaymentEvent</a></code>s. One
 for each constituent currency that is unstapled and returned to the sending <code>account</code>'s
 balances.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name         | Type      | Description                                                     |
 | ------       | ------    | -------------                                                   |
@@ -59,9 +52,9 @@ balances.
 | <code>amount_lbr</code> | <code>u64</code>     | The amount of microlibra to unstaple.                           |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                             | Description                                                                               |
 | ----------------           | --------------                                           | -------------                                                                             |
@@ -74,14 +67,14 @@ balances.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EPAYEE_CANT_ACCEPT_CURRENCY_TYPE">LibraAccount::EPAYEE_CANT_ACCEPT_CURRENCY_TYPE</a></code>         | <code>account</code> doesn't hold a balance in one or both of the backing currencies of LBR.         |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::mint_lbr</code>
+* <code><a href="overview.md#mint_lbr">Script::mint_lbr</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_unmint_lbr">unmint_lbr</a>(account: &signer, amount_lbr: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="unmint_lbr.md#unmint_lbr">unmint_lbr</a>(account: &signer, amount_lbr: u64)
 </code></pre>
 
 
@@ -90,7 +83,7 @@ balances.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_unmint_lbr">unmint_lbr</a>(account: &signer, amount_lbr: u64) {
+<pre><code><b>fun</b> <a href="unmint_lbr.md#unmint_lbr">unmint_lbr</a>(account: &signer, amount_lbr: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_unstaple_lbr">LibraAccount::unstaple_lbr</a>(&withdraw_cap, amount_lbr);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);

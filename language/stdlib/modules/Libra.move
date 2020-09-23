@@ -1068,6 +1068,7 @@ module Libra {
 
 
     /// **************** MODULE SPECIFICATION ****************
+    spec module {} // switch documentation context back to module level
 
     /// # Module Specification
 

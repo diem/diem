@@ -1,30 +1,21 @@
 
-<a name="SCRIPT"></a>
+<a name="rotate_dual_attestation_info"></a>
 
-# Script `rotate_dual_attestation_info.move`
-
-### Table of Contents
-
--  [Function `rotate_dual_attestation_info`](#SCRIPT_rotate_dual_attestation_info)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `rotate_dual_attestation_info`](#SCRIPT_Specification_rotate_dual_attestation_info)
+# Script `rotate_dual_attestation_info`
 
 
 
-<a name="SCRIPT_rotate_dual_attestation_info"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `rotate_dual_attestation_info`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Updates the url used for off-chain communication, and the public key used to verify dual
 attestation on-chain. Transaction can be sent by any account that has dual attestation
@@ -32,17 +23,17 @@ information published under it. In practice the only such accounts are Designate
 Parent VASPs.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Updates the <code>base_url</code> and <code>compliance_public_key</code> fields of the <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code>
 resource published under <code>account</code>. The <code>new_key</code> must be a valid ed25519 public key.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of this transaction emits two events:
 * A <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_ComplianceKeyRotationEvent">DualAttestation::ComplianceKeyRotationEvent</a></code> containing the new compliance public key, and
@@ -53,9 +44,9 @@ off-chain communication, and the blockchain time at which the url was updated em
 <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Credential">DualAttestation::Credential</a></code> <code>base_url_rotation_events</code> handle published under <code>account</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name      | Type         | Description                                                               |
 | ------    | ------       | -------------                                                             |
@@ -64,9 +55,9 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code>new_key</code> | <code>vector&lt;u8&gt;</code> | New ed25519 public key to be used for on-chain dual attestation checking. |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                           | Description                                                                |
 | ----------------           | --------------                         | -------------                                                              |
@@ -74,16 +65,16 @@ off-chain communication, and the blockchain time at which the url was updated em
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_EINVALID_PUBLIC_KEY">DualAttestation::EINVALID_PUBLIC_KEY</a></code> | <code>new_key</code> is not a valid ed25519 public key.                               |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_parent_vasp_account</code>
-* <code>Script::create_designated_dealer</code>
-* <code>Script::rotate_dual_attestation_info</code>
+* <code><a href="create_parent_vasp_account.md#create_parent_vasp_account">Script::create_parent_vasp_account</a></code>
+* <code><a href="create_designated_dealer.md#create_designated_dealer">Script::create_designated_dealer</a></code>
+* <code><a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -92,7 +83,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_rotate_base_url">DualAttestation::rotate_base_url</a>(account, new_url);
     <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_rotate_compliance_public_key">DualAttestation::rotate_compliance_public_key</a>(account, new_key)
 }
@@ -102,19 +93,8 @@ off-chain communication, and the blockchain time at which the url was updated em
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_rotate_dual_attestation_info"></a>
-
-### Function `rotate_dual_attestation_info`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_dual_attestation_info">rotate_dual_attestation_info</a>(account: &signer, new_url: vector&lt;u8&gt;, new_key: vector&lt;u8&gt;)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
@@ -123,3 +103,7 @@ off-chain communication, and the blockchain time at which the url was updated em
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyAbortsIf">DualAttestation::RotateCompliancePublicKeyAbortsIf</a>;
 <b>include</b> <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_RotateCompliancePublicKeyEnsures">DualAttestation::RotateCompliancePublicKeyEnsures</a>;
 </code></pre>
+
+
+
+</details>

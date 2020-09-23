@@ -19,6 +19,7 @@ use vm::file_format::CodeOffset;
 
 use crate::env::{FunId, GlobalEnv, GlobalId, QualifiedId, SchemaId, TypeParameter};
 use itertools::Itertools;
+use once_cell::sync::Lazy;
 
 // =================================================================================================
 /// # Declarations
@@ -204,7 +205,7 @@ impl Spec {
 /// Information about a specification block in the source. This is used for documentation
 /// generation. In the object model, the original locations and documentation of spec blocks
 /// is reduced to conditions on a `Spec`, with expansion of schemas. This data structure
-/// allows us to disover the original spec blocks and their content.
+/// allows us to discover the original spec blocks and their content.
 #[derive(Debug, Clone)]
 pub struct SpecBlockInfo {
     /// The location of the entire spec block.
@@ -504,6 +505,15 @@ impl ModuleName {
     pub fn name(&self) -> Symbol {
         self.1
     }
+
+    /// Determine whether this is a script. The move-lang infrastructure uses MAX_ADDR
+    /// for pseudo modules created from scripts, so use this address to check.
+    pub fn is_script(&self) -> bool {
+        static MAX_ADDR: Lazy<BigUint> = Lazy::new(|| {
+            BigUint::from_str_radix("ffffffffffffffffffffffffffffffff", 16).expect("valid hex")
+        });
+        self.0 == *MAX_ADDR
+    }
 }
 
 impl ModuleName {
@@ -537,7 +547,7 @@ pub struct ModuleNameDisplay<'a> {
 
 impl<'a> fmt::Display for ModuleNameDisplay<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        if self.with_address {
+        if self.with_address && !self.name.is_script() {
             write!(f, "0x{}::", self.name.0.to_str_radix(16))?;
         }
         write!(f, "{}", self.name.1.display(self.pool))?;

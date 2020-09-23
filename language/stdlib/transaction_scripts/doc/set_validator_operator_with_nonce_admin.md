@@ -1,27 +1,20 @@
 
-<a name="SCRIPT"></a>
+<a name="set_validator_operator_with_nonce_admin"></a>
 
-# Script `set_validator_operator_with_nonce_admin.move`
-
-### Table of Contents
-
--  [Function `set_validator_operator_with_nonce_admin`](#SCRIPT_set_validator_operator_with_nonce_admin)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `set_validator_operator_with_nonce_admin`
 
 
 
-<a name="SCRIPT_set_validator_operator_with_nonce_admin"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `set_validator_operator_with_nonce_admin`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Sets the validator operator for a validator in the validator's configuration resource "locally"
 and does not reconfigure the system. Changes from this transaction will not picked up by the
@@ -29,9 +22,9 @@ system until a reconfiguration of the system is triggered. May only be sent by t
 account as a write set transaction.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Sets the account at <code>operator_account</code> address and with the specified <code>human_name</code> as an
 operator for the validator <code>account</code>. The account at <code>operator_account</code> address must have a
@@ -41,9 +34,9 @@ have a <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_V
 the system is initiated by this script.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name               | Type         | Description                                                                                                  |
 | ------             | ------       | -------------                                                                                                |
@@ -54,9 +47,9 @@ the system is initiated by this script.
 | <code>operator_account</code> | <code>address</code>    | Address of the validator operator account to be added as the <code>account</code> validator's operator.                 |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                                          | Description                                                                                                                                                  |
 | ----------------           | --------------                                        | -------------                                                                                                                                                |
@@ -70,20 +63,20 @@ the system is initiated by this script.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a></code>    | <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_EVALIDATOR_CONFIG">ValidatorConfig::EVALIDATOR_CONFIG</a></code>                  | A <code><a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_ValidatorConfig">ValidatorConfig::ValidatorConfig</a></code> is not published under <code>account</code>.                                                                                       |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_validator_account</code>
-* <code>Script::create_validator_operator_account</code>
-* <code>Script::register_validator_config</code>
-* <code>Script::remove_validator_and_reconfigure</code>
-* <code>Script::add_validator_and_reconfigure</code>
-* <code>Script::set_validator_operator</code>
-* <code>Script::set_validator_config_and_reconfigure</code>
+* <code><a href="create_validator_account.md#create_validator_account">Script::create_validator_account</a></code>
+* <code><a href="create_validator_operator_account.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="register_validator_config.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="remove_validator_and_reconfigure.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="add_validator_and_reconfigure.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="set_validator_operator.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="set_validator_config_and_reconfigure.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="set_validator_operator_with_nonce_admin.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(lr_account: &signer, account: &signer, sliding_nonce: u64, operator_name: vector&lt;u8&gt;, operator_account: address)
 </code></pre>
 
 
@@ -92,7 +85,7 @@ the system is initiated by this script.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
+<pre><code><b>fun</b> <a href="set_validator_operator_with_nonce_admin.md#set_validator_operator_with_nonce_admin">set_validator_operator_with_nonce_admin</a>(
     lr_account: &signer,
     account: &signer,
     sliding_nonce: u64,

@@ -1,0 +1,9 @@
+script {
+/// This script does also abort.
+fun other<T>(_account: &signer) {
+    abort 2
+}
+spec fun other {
+    aborts_if true with 2;
+}
+}

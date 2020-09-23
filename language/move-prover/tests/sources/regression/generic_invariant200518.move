@@ -39,6 +39,8 @@ module GenericBug {
     public fun root_address(): address { 0xA550C18 }
 
     // **************** SPECIFICATIONS ****************
+    spec module {} // switch documentation context back to module level
+
     spec module {
         pragma verify = true;
 

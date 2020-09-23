@@ -374,6 +374,13 @@ impl Options {
                     Generated docs will be written into the directory `./doc` unless configured otherwise via toml"),
             )
             .arg(
+                Arg::with_name("docgen-template")
+                    .long("docgen-template")
+                    .takes_value(true)
+                    .value_name("FILE")
+                    .help("a template for documentation generation."),
+            )
+            .arg(
                 Arg::with_name("abigen")
                     .long("abigen")
                     .help("run the ABI generator instead of the prover. \
@@ -525,6 +532,11 @@ impl Options {
         }
         if matches.is_present("docgen") {
             options.run_docgen = true;
+        }
+        if matches.is_present("docgen-template") {
+            options.run_docgen = true;
+            options.docgen.root_doc_template =
+                matches.value_of("docgen-template").map(|s| s.to_string());
         }
         if matches.is_present("abigen") {
             options.run_abigen = true;
@@ -684,5 +696,10 @@ impl Options {
             "linux" | "freebsd" | "openbsd" => time + time,
             _ => time,
         }
+    }
+
+    /// Convenience function to enable debugging (like high verbosity) on this instance.
+    pub fn enable_debug(&mut self) {
+        self.verbosity_level = LevelFilter::Debug;
     }
 }

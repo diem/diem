@@ -1,9 +1,9 @@
 Move prover returns: exiting with boogie verification errors
 error: post-condition does not hold
 
-    ┌── tests/sources/regression/generic_invariant200518.move:63:9 ───
+    ┌── tests/sources/regression/generic_invariant200518.move:65:9 ───
     │
- 63 │         invariant spec_addr_is_association(Signer::spec_address_of(sender));
+ 65 │         invariant spec_addr_is_association(Signer::spec_address_of(sender));
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/generic_invariant200518.move:23:5: remove_privilege

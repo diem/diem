@@ -1,35 +1,28 @@
 
-<a name="SCRIPT"></a>
+<a name="create_validator_account"></a>
 
-# Script `create_validator_account.move`
-
-### Table of Contents
-
--  [Function `create_validator_account`](#SCRIPT_create_validator_account)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `create_validator_account`
 
 
 
-<a name="SCRIPT_create_validator_account"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `create_validator_account`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Creates a Validator account. This transaction can only be sent by the Libra
 Root account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Creates an account with a Validator role at <code>new_account_address</code>, with authentication key
 <code>auth_key_prefix</code> | <code>new_account_address</code>. It publishes a
@@ -40,9 +33,9 @@ This script does not add the validator to the validator set or the system,
 but only creates the account.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                  | Type         | Description                                                                                     |
 | ------                | ------       | -------------                                                                                   |
@@ -53,9 +46,9 @@ but only creates the account.
 | <code>human_name</code>          | <code>vector&lt;u8&gt;</code> | ASCII-encoded human name for the validator.                                                     |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                            | Description                                                                                |
 | ----------------            | --------------                          | -------------                                                                              |
@@ -66,20 +59,20 @@ but only creates the account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>new_account_address</code> address is already taken.                                        |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::add_validator_and_reconfigure</code>
-* <code>Script::create_validator_operator_account</code>
-* <code>Script::register_validator_config</code>
-* <code>Script::remove_validator_and_reconfigure</code>
-* <code>Script::set_validator_operator</code>
-* <code>Script::set_validator_operator_with_nonce_admin</code>
-* <code>Script::set_validator_config_and_reconfigure</code>
+* <code><a href="add_validator_and_reconfigure.md#add_validator_and_reconfigure">Script::add_validator_and_reconfigure</a></code>
+* <code><a href="create_validator_operator_account.md#create_validator_operator_account">Script::create_validator_operator_account</a></code>
+* <code><a href="register_validator_config.md#register_validator_config">Script::register_validator_config</a></code>
+* <code><a href="remove_validator_and_reconfigure.md#remove_validator_and_reconfigure">Script::remove_validator_and_reconfigure</a></code>
+* <code><a href="set_validator_operator.md#set_validator_operator">Script::set_validator_operator</a></code>
+* <code><a href="set_validator_operator_with_nonce_admin.md#set_validator_operator_with_nonce_admin">Script::set_validator_operator_with_nonce_admin</a></code>
+* <code><a href="set_validator_config_and_reconfigure.md#set_validator_config_and_reconfigure">Script::set_validator_config_and_reconfigure</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_validator_account">create_validator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="create_validator_account.md#create_validator_account">create_validator_account</a>(lr_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -88,7 +81,7 @@ but only creates the account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_create_validator_account">create_validator_account</a>(
+<pre><code><b>fun</b> <a href="create_validator_account.md#create_validator_account">create_validator_account</a>(
     lr_account: &signer,
     sliding_nonce: u64,
     new_account_address: address,

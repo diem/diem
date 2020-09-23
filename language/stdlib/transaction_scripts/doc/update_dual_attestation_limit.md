@@ -1,44 +1,37 @@
 
-<a name="SCRIPT"></a>
+<a name="update_dual_attestation_limit"></a>
 
-# Script `update_dual_attestation_limit.move`
-
-### Table of Contents
-
--  [Function `update_dual_attestation_limit`](#SCRIPT_update_dual_attestation_limit)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `update_dual_attestation_limit`
 
 
 
-<a name="SCRIPT_update_dual_attestation_limit"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `update_dual_attestation_limit`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Update the dual attestation limit on-chain. Defined in terms of micro-LBR.  The transaction can
 only be sent by the Treasury Compliance account.  After this transaction all inter-VASP
 payments over this limit must be checked for dual attestation.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_Limit">DualAttestation::Limit</a></code> resource published under
 <code>0xA550C18</code>. The amount is set in micro-LBR.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                  | Type      | Description                                                                                               |
 | ------                | ------    | -------------                                                                                             |
@@ -47,9 +40,9 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 | <code>new_micro_lbr_limit</code> | <code>u64</code>     | The new dual attestation limit to be used on-chain.                                                       |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                            | Description                                                                                |
 | ----------------           | --------------                          | -------------                                                                              |
@@ -59,15 +52,15 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ADDRESS">Errors::REQUIRES_ADDRESS</a></code> | <code><a href="../../modules/doc/CoreAddresses.md#0x1_CoreAddresses_ETREASURY_COMPLIANCE">CoreAddresses::ETREASURY_COMPLIANCE</a></code>   | <code>tc_account</code> is not the Treasury Compliance account.                                       |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
 * <code>Scripts::update_exchange_rate</code>
 * <code>Scripts::update_minting_ability</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="update_dual_attestation_limit.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)
 </code></pre>
 
 
@@ -76,7 +69,7 @@ Updates the <code>micro_lbr_limit</code> field of the <code><a href="../../modul
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_update_dual_attestation_limit">update_dual_attestation_limit</a>(
+<pre><code><b>fun</b> <a href="update_dual_attestation_limit.md#update_dual_attestation_limit">update_dual_attestation_limit</a>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_micro_lbr_limit: u64

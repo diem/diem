@@ -1,39 +1,30 @@
 
-<a name="SCRIPT"></a>
+<a name="tiered_mint"></a>
 
-# Script `tiered_mint.move`
-
-### Table of Contents
-
--  [Function `tiered_mint`](#SCRIPT_tiered_mint)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `tiered_mint`](#SCRIPT_Specification_tiered_mint)
+# Script `tiered_mint`
 
 
 
-<a name="SCRIPT_tiered_mint"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `tiered_mint`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Mints a specified number of coins in a currency to a Designated Dealer. The sending account
 must be the Treasury Compliance account, and coins can only be minted to a Designated Dealer
 account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Mints <code>mint_amount</code> of coins in the <code>CoinType</code> currency to Designated Dealer account at
 <code>designated_dealer_address</code>. The <code>tier_index</code> parameter specifies which tier should be used to
@@ -44,9 +35,9 @@ they support. The sending <code>tc_account</code> must be the Treasury Complianc
 receiver an authorized Designated Dealer account.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 Successful execution of the transaction will emit two events:
 * A <code><a href="../../modules/doc/Libra.md#0x1_Libra_MintEvent">Libra::MintEvent</a></code> with the amount and currency code minted is emitted on the
@@ -57,9 +48,9 @@ Dealer's address is emitted on the <code>mint_event_handle</code> in the stored 
 resource published under the <code>designated_dealer_address</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name                        | Type      | Description                                                                                                |
 | ------                      | ------    | -------------                                                                                              |
@@ -71,9 +62,9 @@ resource published under the <code>designated_dealer_address</code>.
 | <code>tier_index</code>                | <code>u64</code>     | The mint tier index to use for the Designated Dealer account.                                              |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category                | Error Reason                                 | Description                                                                                                                  |
 | ----------------              | --------------                               | -------------                                                                                                                |
@@ -89,16 +80,16 @@ resource published under the <code>designated_dealer_address</code>.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a></code>       | <code><a href="../../modules/doc/Libra.md#0x1_Libra_EMINTING_NOT_ALLOWED">Libra::EMINTING_NOT_ALLOWED</a></code>                | Minting is not currently allowed for <code>CoinType</code> coins.                                                                       |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::create_designated_dealer</code>
-* <code>Script::peer_to_peer_with_metadata</code>
-* <code>Script::rotate_dual_attestation_info</code>
+* <code><a href="create_designated_dealer.md#create_designated_dealer">Script::create_designated_dealer</a></code>
+* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
+* <code><a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="tiered_mint.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -107,7 +98,7 @@ resource published under the <code>designated_dealer_address</code>.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="tiered_mint.md#tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     designated_dealer_address: address,
@@ -125,19 +116,8 @@ resource published under the <code>designated_dealer_address</code>.
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_tiered_mint"></a>
-
-### Function `tiered_mint`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
@@ -145,3 +125,7 @@ resource published under the <code>designated_dealer_address</code>.
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintAbortsIf">LibraAccount::TieredMintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_TieredMintEnsures">LibraAccount::TieredMintEnsures</a>&lt;CoinType&gt;;
 </code></pre>
+
+
+
+</details>

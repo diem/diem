@@ -185,6 +185,7 @@ module RecoveryAddress {
     }
 
     // ****************** SPECIFICATIONS *******************
+    spec module {} // switch documentation context back to module level
 
     /// # Module specifications
 

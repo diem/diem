@@ -1,61 +1,52 @@
 
-<a name="SCRIPT"></a>
+<a name="burn_txn_fees"></a>
 
-# Script `burn_txn_fees.move`
-
-### Table of Contents
-
--  [Function `burn_txn_fees`](#SCRIPT_burn_txn_fees)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-        -  [Events](#SCRIPT_@Events)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
--  [Specification](#SCRIPT_Specification)
-    -  [Function `burn_txn_fees`](#SCRIPT_Specification_burn_txn_fees)
+# Script `burn_txn_fees`
 
 
 
-<a name="SCRIPT_burn_txn_fees"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+    -  [Events](#@Events_2)
+-  [Parameters](#@Parameters_3)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_4)
+-  [Related Scripts](#@Related_Scripts_5)
 
-## Function `burn_txn_fees`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Burns the transaction fees collected in the <code>CoinType</code> currency so that the
 Libra association may reclaim the backing coins off-chain. May only be sent
 by the Treasury Compliance account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Burns the transaction fees collected in <code>CoinType</code> so that the
 association may reclaim the backing coins. Once this transaction has executed
 successfully all transaction fees that will have been collected in
 <code>CoinType</code> since the last time this script was called with that specific
-currency. Both <code>balance</code> and <code>preburn</code> fields in the
+currency. Both <code>balance</code> and <code><a href="preburn.md#preburn">preburn</a></code> fields in the
 <code><a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_TransactionFee">TransactionFee::TransactionFee</a>&lt;CoinType&gt;</code> resource published under the <code>0xB1E55ED</code>
 account address will have a value of 0 after the successful execution of this script.
 
 
-<a name="SCRIPT_@Events"></a>
+<a name="@Events_2"></a>
 
-#### Events
+### Events
 
 The successful execution of this transaction will emit a <code><a href="../../modules/doc/Libra.md#0x1_Libra_BurnEvent">Libra::BurnEvent</a></code> on the event handle
 held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Libra::CurrencyInfo</a>&lt;CoinType&gt;</code> resource's <code>burn_events</code> published under
 <code>0xA550C18</code>.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_3"></a>
 
-### Parameters
+## Parameters
 
 | Name         | Type      | Description                                                                                                                                         |
 | ------       | ------    | -------------                                                                                                                                       |
@@ -63,9 +54,9 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code>tc_account</code> | <code>&signer</code> | The signer reference of the sending account of this transaction. Must be the Treasury Compliance account.                                           |
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_4"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category             | Error Reason                          | Description                                                 |
 | ----------------           | --------------                        | -------------                                               |
@@ -74,15 +65,15 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a></code> | <code><a href="../../modules/doc/Libra.md#0x1_Libra_ECOIN">Libra::ECOIN</a></code>                        | The collected fees in <code>CoinType</code> are zero.                  |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_5"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::burn</code>
-* <code>Script::cancel_burn</code>
+* <code><a href="burn.md#burn">Script::burn</a></code>
+* <code><a href="cancel_burn.md#cancel_burn">Script::cancel_burn</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="burn_txn_fees.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
 </code></pre>
 
 
@@ -91,7 +82,7 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer) {
+<pre><code><b>fun</b> <a href="burn_txn_fees.md#burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer) {
     <a href="../../modules/doc/TransactionFee.md#0x1_TransactionFee_burn_fees">TransactionFee::burn_fees</a>&lt;CoinType&gt;(tc_account);
 }
 </code></pre>
@@ -100,21 +91,14 @@ held in the <code><a href="../../modules/doc/Libra.md#0x1_Libra_CurrencyInfo">Li
 
 </details>
 
-<a name="SCRIPT_Specification"></a>
-
-## Specification
-
-
-<a name="SCRIPT_Specification_burn_txn_fees"></a>
-
-### Function `burn_txn_fees`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
-</code></pre>
-
+<details>
+<summary>Specification</summary>
 
 
 
 <pre><code>pragma verify = <b>false</b>;
 </code></pre>
+
+
+
+</details>

@@ -167,9 +167,7 @@ fn main() {
         time_it("Generating script documentation", || {
             std::fs::remove_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap_or(());
             std::fs::create_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap();
-            transaction_files
-                .par_iter()
-                .for_each(|txn_file| build_transaction_script_doc(txn_file.clone()));
+            build_transaction_script_doc(&transaction_files);
         });
     }
 

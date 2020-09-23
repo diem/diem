@@ -3,23 +3,20 @@
 
 # Module `0x1::SlidingNonce`
 
-### Table of Contents
 
--  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
--  [Const `ESLIDING_NONCE`](#0x1_SlidingNonce_ESLIDING_NONCE)
--  [Const `ENONCE_TOO_OLD`](#0x1_SlidingNonce_ENONCE_TOO_OLD)
--  [Const `ENONCE_TOO_NEW`](#0x1_SlidingNonce_ENONCE_TOO_NEW)
--  [Const `ENONCE_ALREADY_RECORDED`](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
--  [Const `ENONCE_ALREADY_PUBLISHED`](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
--  [Const `NONCE_MASK_SIZE`](#0x1_SlidingNonce_NONCE_MASK_SIZE)
--  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
--  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
--  [Function `publish`](#0x1_SlidingNonce_publish)
--  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
--  [Specification](#0x1_SlidingNonce_Specification)
-    -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_Specification_record_nonce_or_abort)
-    -  [Function `try_record_nonce`](#0x1_SlidingNonce_Specification_try_record_nonce)
 
+-  [Resource <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code>](#0x1_SlidingNonce_SlidingNonce)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a></code>](#0x1_SlidingNonce_ESLIDING_NONCE)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a></code>](#0x1_SlidingNonce_ENONCE_TOO_OLD)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a></code>](#0x1_SlidingNonce_ENONCE_TOO_NEW)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a></code>](#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a></code>](#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED)
+-  [Const <code><a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a></code>](#0x1_SlidingNonce_NONCE_MASK_SIZE)
+-  [Function <code>record_nonce_or_abort</code>](#0x1_SlidingNonce_record_nonce_or_abort)
+-  [Function <code>try_record_nonce</code>](#0x1_SlidingNonce_try_record_nonce)
+-  [Function <code>publish</code>](#0x1_SlidingNonce_publish)
+-  [Function <code>publish_nonce_resource</code>](#0x1_SlidingNonce_publish_nonce_resource)
+-  [Module Specification](#@Module_Specification_0)
 
 
 <a name="0x1_SlidingNonce_SlidingNonce"></a>
@@ -34,7 +31,7 @@ In a nutshell, min_nonce records minimal nonce allowed
 And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_SlidingNonce">SlidingNonce</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>
 </code></pre>
 
 
@@ -65,10 +62,10 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 ## Const `ESLIDING_NONCE`
 
-The <code><a href="#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
+The <code><a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an invalid state
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>: u64 = 0;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>: u64 = 0;
 </code></pre>
 
 
@@ -80,7 +77,7 @@ The <code><a href="#0x1_SlidingNonce">SlidingNonce</a></code> resource is in an 
 The nonce is too old and impossible to ensure whether it's duplicated or not
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>: u64 = 1;
 </code></pre>
 
 
@@ -92,7 +89,7 @@ The nonce is too old and impossible to ensure whether it's duplicated or not
 The nonce is too far in the future - this is not allowed to protect against nonce exhaustion
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>: u64 = 2;
 </code></pre>
 
 
@@ -104,7 +101,7 @@ The nonce is too far in the future - this is not allowed to protect against nonc
 The nonce was already recorded previously
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>: u64 = 3;
 </code></pre>
 
 
@@ -116,7 +113,7 @@ The nonce was already recorded previously
 The sliding nonce resource was already published
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>: u64 = 4;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>: u64 = 4;
 </code></pre>
 
 
@@ -128,7 +125,7 @@ The sliding nonce resource was already published
 Size of SlidingNonce::nonce_mask in bits.
 
 
-<pre><code><b>const</b> <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>: u64 = 128;
+<pre><code><b>const</b> <a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>: u64 = 128;
 </code></pre>
 
 
@@ -140,7 +137,7 @@ Size of SlidingNonce::nonce_mask in bits.
 Calls try_record_nonce and aborts transaction if returned code is non-0
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
 </code></pre>
 
 
@@ -149,9 +146,35 @@ Calls try_record_nonce and aborts transaction if returned code is non-0
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
-    <b>let</b> code = <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a> {
+    <b>let</b> code = <a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
     <b>assert</b>(code == 0, <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(code));
+}
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+
+<pre><code><b>include</b> <a href="SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a>;
+</code></pre>
+
+
+
+
+<a name="0x1_SlidingNonce_RecordNonceAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="SlidingNonce.md#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a> {
+    account: signer;
+    seq_nonce: u64;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>aborts_if</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce) != 0 <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
 }
 </code></pre>
 
@@ -167,7 +190,7 @@ Tries to record this nonce in the account.
 Returns 0 if a nonce was recorded and non-0 otherwise
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
 </code></pre>
 
 
@@ -176,25 +199,25 @@ Returns 0 if a nonce was recorded and non-0 otherwise
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64 <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64 <b>acquires</b> <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a> {
     <b>if</b> (seq_nonce == 0) {
         <b>return</b> 0
     };
-    <b>assert</b>(exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>));
-    <b>let</b> t = borrow_global_mut&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+    <b>assert</b>(<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="SlidingNonce.md#0x1_SlidingNonce_ESLIDING_NONCE">ESLIDING_NONCE</a>));
+    <b>let</b> t = borrow_global_mut&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
     <b>if</b> (t.min_nonce &gt; seq_nonce) {
-        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>
+        <b>return</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_OLD">ENONCE_TOO_OLD</a>
     };
     <b>let</b> jump_limit = 10000; // Don't allow giant leaps in nonce <b>to</b> protect against nonce exhaustion
     <b>if</b> (t.min_nonce + jump_limit &lt;= seq_nonce) {
-        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>
+        <b>return</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_TOO_NEW">ENONCE_TOO_NEW</a>
     };
     <b>let</b> bit_pos = seq_nonce - t.min_nonce;
-    <b>if</b> (bit_pos &gt;= <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
-        <b>let</b> shift = (bit_pos - <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a> + 1);
-        <b>if</b>(shift &gt;= <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
+    <b>if</b> (bit_pos &gt;= <a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
+        <b>let</b> shift = (bit_pos - <a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a> + 1);
+        <b>if</b>(shift &gt;= <a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>) {
             t.nonce_mask = 0;
-            t.min_nonce = seq_nonce + 1 - <a href="#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>;
+            t.min_nonce = seq_nonce + 1 - <a href="SlidingNonce.md#0x1_SlidingNonce_NONCE_MASK_SIZE">NONCE_MASK_SIZE</a>;
         } <b>else</b> {
             t.nonce_mask = t.nonce_mask &gt;&gt; (shift <b>as</b> u8);
             t.min_nonce = t.min_nonce + shift;
@@ -203,11 +226,28 @@ Returns 0 if a nonce was recorded and non-0 otherwise
     <b>let</b> bit_pos = seq_nonce - t.min_nonce;
     <b>let</b> set = 1u128 &lt;&lt; (bit_pos <b>as</b> u8);
     <b>if</b> (t.nonce_mask & set != 0) {
-        <b>return</b> <a href="#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>
+        <b>return</b> <a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_RECORDED">ENONCE_ALREADY_RECORDED</a>
     };
     t.nonce_mask = t.nonce_mask | set;
     0
 }
+</code></pre>
+
+
+
+</details>
+
+<details>
+<summary>Specification</summary>
+
+
+> TODO: turn verify on when we are ready to specify this function.
+It is currently assumed that this function raises no arithmetic overflow/underflow.
+
+
+<pre><code>pragma opaque, verify = <b>false</b>;
+<b>ensures</b> result == <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce);
+<b>aborts_if</b> !<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 </code></pre>
 
 
@@ -222,7 +262,7 @@ Publishes nonce resource for <code>account</code>
 This is required before other functions in this module can be called for `account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_publish">publish</a>(account: &signer)
 </code></pre>
 
 
@@ -231,9 +271,9 @@ This is required before other functions in this module can be called for `accoun
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer) {
-    <b>assert</b>(!exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
-    move_to(account, <a href="#0x1_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_publish">publish</a>(account: &signer) {
+    <b>assert</b>(!<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
+    move_to(account, <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
 }
 </code></pre>
 
@@ -249,7 +289,7 @@ Publishes nonce resource into specific account
 Only the libra root account can create this resource for different accounts
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(lr_account: &signer, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(lr_account: &signer, account: &signer)
 </code></pre>
 
 
@@ -258,17 +298,17 @@ Only the libra root account can create this resource for different accounts
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(
     lr_account: &signer,
     account: &signer
 ) {
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
-    <b>let</b> new_resource = <a href="#0x1_SlidingNonce">SlidingNonce</a> {
+    <b>let</b> new_resource = <a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a> {
         min_nonce: 0,
         nonce_mask: 0,
     };
-    <b>assert</b>(!exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
-            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
+    <b>assert</b>(!<b>exists</b>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+            <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="SlidingNonce.md#0x1_SlidingNonce_ENONCE_ALREADY_PUBLISHED">ENONCE_ALREADY_PUBLISHED</a>));
     move_to(account, new_resource);
 }
 </code></pre>
@@ -277,66 +317,15 @@ Only the libra root account can create this resource for different accounts
 
 </details>
 
-<a name="0x1_SlidingNonce_Specification"></a>
+<a name="@Module_Specification_0"></a>
 
-## Specification
+## Module Specification
 
-Specification version of <code><a href="#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
+Specification version of <code><a href="SlidingNonce.md#0x1_SlidingNonce_try_record_nonce">Self::try_record_nonce</a></code>.
 
 
 <a name="0x1_SlidingNonce_spec_try_record_nonce"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
-</code></pre>
-
-
-
-<a name="0x1_SlidingNonce_Specification_record_nonce_or_abort"></a>
-
-### Function `record_nonce_or_abort`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
-</code></pre>
-
-
-
-
-<pre><code><b>include</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a>;
-</code></pre>
-
-
-
-
-<a name="0x1_SlidingNonce_RecordNonceAbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_SlidingNonce_RecordNonceAbortsIf">RecordNonceAbortsIf</a> {
-    account: signer;
-    seq_nonce: u64;
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
-    <b>aborts_if</b> <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce) != 0 with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-}
-</code></pre>
-
-
-
-<a name="0x1_SlidingNonce_Specification_try_record_nonce"></a>
-
-### Function `try_record_nonce`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
-</code></pre>
-
-
-
-> TODO: turn verify on when we are ready to specify this function.
-It is currently assumed that this function raises no arithmetic overflow/underflow.
-
-
-<pre><code>pragma opaque, verify = <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account, seq_nonce);
-<b>aborts_if</b> !exists&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<pre><code><b>define</b> <a href="SlidingNonce.md#0x1_SlidingNonce_spec_try_record_nonce">spec_try_record_nonce</a>(account: signer, seq_nonce: u64): u64;
 </code></pre>

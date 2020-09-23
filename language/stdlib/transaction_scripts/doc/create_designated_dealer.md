@@ -1,35 +1,28 @@
 
-<a name="SCRIPT"></a>
+<a name="create_designated_dealer"></a>
 
-# Script `create_designated_dealer.move`
-
-### Table of Contents
-
--  [Function `create_designated_dealer`](#SCRIPT_create_designated_dealer)
-    -  [Summary](#SCRIPT_@Summary)
-    -  [Technical Description](#SCRIPT_@Technical_Description)
-    -  [Parameters](#SCRIPT_@Parameters)
-    -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
-    -  [Related Scripts](#SCRIPT_@Related_Scripts)
+# Script `create_designated_dealer`
 
 
 
-<a name="SCRIPT_create_designated_dealer"></a>
+-  [Summary](#@Summary_0)
+-  [Technical Description](#@Technical_Description_1)
+-  [Parameters](#@Parameters_2)
+-  [Common Abort Conditions](#@Common_Abort_Conditions_3)
+-  [Related Scripts](#@Related_Scripts_4)
 
-## Function `create_designated_dealer`
 
+<a name="@Summary_0"></a>
 
-<a name="SCRIPT_@Summary"></a>
-
-### Summary
+## Summary
 
 Creates a Designated Dealer account with the provided information, and initializes it with
 default mint tiers. The transaction can only be sent by the Treasury Compliance account.
 
 
-<a name="SCRIPT_@Technical_Description"></a>
+<a name="@Technical_Description_1"></a>
 
-### Technical Description
+## Technical Description
 
 Creates an account with the Designated Dealer role at <code>addr</code> with authentication key
 <code>auth_key_prefix</code> | <code>addr</code> and a 0 balance of type <code>Currency</code>. If <code>add_all_currencies</code> is true,
@@ -41,9 +34,9 @@ At the time of creation the account is also initialized with default mint tiers 
 account.
 
 
-<a name="SCRIPT_@Parameters"></a>
+<a name="@Parameters_2"></a>
 
-### Parameters
+## Parameters
 
 | Name                 | Type         | Description                                                                                                                                         |
 | ------               | ------       | -------------                                                                                                                                       |
@@ -57,9 +50,9 @@ account.
 
 
 
-<a name="SCRIPT_@Common_Abort_Conditions"></a>
+<a name="@Common_Abort_Conditions_3"></a>
 
-### Common Abort Conditions
+## Common Abort Conditions
 
 | Error Category              | Error Reason                            | Description                                                                                |
 | ----------------            | --------------                          | -------------                                                                              |
@@ -71,16 +64,16 @@ account.
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a></code> | <code><a href="../../modules/doc/Roles.md#0x1_Roles_EROLE_ID">Roles::EROLE_ID</a></code>                       | The <code>addr</code> address is already taken.                                                       |
 
 
-<a name="SCRIPT_@Related_Scripts"></a>
+<a name="@Related_Scripts_4"></a>
 
-### Related Scripts
+## Related Scripts
 
-* <code>Script::tiered_mint</code>
-* <code>Script::peer_to_peer_with_metadata</code>
-* <code>Script::rotate_dual_attestation_info</code>
+* <code><a href="tiered_mint.md#tiered_mint">Script::tiered_mint</a></code>
+* <code><a href="overview.md#peer_to_peer_with_metadata">Script::peer_to_peer_with_metadata</a></code>
+* <code><a href="rotate_dual_attestation_info.md#rotate_dual_attestation_info">Script::rotate_dual_attestation_info</a></code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="create_designated_dealer.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -89,7 +82,7 @@ account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="create_designated_dealer.md#create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     addr: address,

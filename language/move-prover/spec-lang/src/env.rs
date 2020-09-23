@@ -822,10 +822,18 @@ impl GlobalEnv {
         spec_block_infos: Vec<SpecBlockInfo>,
     ) {
         let idx = self.module_data.len();
-        let name = ModuleName::from_str(
-            &module.self_id().address().to_string(),
-            self.symbol_pool.make(module.self_id().name().as_str()),
-        );
+        let effective_name = if module.self_id().name().as_str() == SCRIPT_MODULE_NAME {
+            // Use the name of the first function in this module.
+            function_data
+                .iter()
+                .next()
+                .expect("functions in script")
+                .1
+                .name
+        } else {
+            self.symbol_pool.make(module.self_id().name().as_str())
+        };
+        let name = ModuleName::from_str(&module.self_id().address().to_string(), effective_name);
         let struct_idx_to_id: BTreeMap<StructDefinitionIndex, StructId> = struct_data
             .iter()
             .map(|(id, data)| (data.def_idx, *id))
@@ -1267,7 +1275,7 @@ impl<'env> ModuleEnv<'env> {
 
     /// Returns true if this is a module representing a script.
     pub fn is_script_module(&self) -> bool {
-        self.symbol_pool().string(self.data.name.name()).as_str() == SCRIPT_MODULE_NAME
+        self.data.name.is_script()
     }
 
     /// Returns true of this module is from a dependency, i.e. not the target of verification.

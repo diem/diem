@@ -728,7 +728,6 @@ module LibraTest {
     spec fun register_SCS_currency {
         // TODO (dd): I could not figure out what the problem was here.
         pragma aborts_if_is_partial = true;
-        include RegisterCurrencyAbortsIf<CoinType>;
         ensures spec_has_mint_capability<CoinType>(Signer::spec_address_of(tc_account));
     }
 
@@ -857,6 +856,7 @@ module LibraTest {
 
 
     /// **************** MODULE SPECIFICATION ****************
+    spec module {} // switch documentation context back to module level
 
     /// # Module Specification
 
