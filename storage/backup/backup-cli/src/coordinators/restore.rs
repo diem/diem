@@ -11,12 +11,11 @@ use crate::{
     metadata::{cache::MetadataCacheOpt, TransactionBackupMeta},
     metrics::restore::COORDINATOR_TARGET_VERSION,
     storage::BackupStorage,
-    utils::GlobalRestoreOpt,
+    utils::{GlobalRestoreOptions, RestoreRunMode},
 };
 use anyhow::{bail, Result};
 use libra_logger::prelude::*;
 use libra_types::transaction::Version;
-use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
 
@@ -28,21 +27,18 @@ pub struct RestoreCoordinatorOpt {
 
 pub struct RestoreCoordinator {
     storage: Arc<dyn BackupStorage>,
-    restore_handler: Arc<RestoreHandler>,
-    global_opt: GlobalRestoreOpt,
+    global_opt: GlobalRestoreOptions,
     metadata_cache_opt: MetadataCacheOpt,
 }
 
 impl RestoreCoordinator {
     pub fn new(
         opt: RestoreCoordinatorOpt,
-        global_opt: GlobalRestoreOpt,
+        global_opt: GlobalRestoreOptions,
         storage: Arc<dyn BackupStorage>,
-        restore_handler: Arc<RestoreHandler>,
     ) -> Self {
         Self {
             storage,
-            restore_handler,
             global_opt,
             metadata_cache_opt: opt.metadata_cache_opt,
         }
@@ -64,9 +60,15 @@ impl RestoreCoordinator {
         };
         COORDINATOR_TARGET_VERSION.set(actual_target_version as i64);
         info!("Planned to restore to version {}.", actual_target_version);
-        let txn_resume_point = self
-            .restore_handler
-            .get_next_expected_transaction_version()?;
+        let txn_resume_point = match self.global_opt.run_mode.as_ref() {
+            RestoreRunMode::Restore { restore_handler } => {
+                restore_handler.get_next_expected_transaction_version()?
+            }
+            RestoreRunMode::Verify => {
+                info!("This is a dry run.");
+                0
+            }
+        };
         if txn_resume_point > 0 {
             warn!(
                 "DB has existing transactions, will skip transaction backups before version {}",
@@ -82,7 +84,6 @@ impl RestoreCoordinator {
                     .collect(),
                 self.global_opt.clone(),
                 self.storage.clone(),
-                self.restore_handler.clone(),
             )
             .run()
             .await?,
@@ -96,7 +97,6 @@ impl RestoreCoordinator {
                 },
                 self.global_opt.clone(),
                 Arc::clone(&self.storage),
-                Arc::clone(&self.restore_handler),
                 Some(Arc::clone(&epoch_history)),
             )
             .run()
@@ -116,7 +116,6 @@ impl RestoreCoordinator {
                 },
                 self.global_opt.clone(),
                 Arc::clone(&self.storage),
-                Arc::clone(&self.restore_handler),
                 Some(Arc::clone(&epoch_history)),
             )
             .run()
@@ -130,7 +129,7 @@ impl RestoreCoordinator {
 
 impl RestoreCoordinator {
     fn target_version(&self) -> Version {
-        self.global_opt.target_version()
+        self.global_opt.target_version
     }
 
     fn get_actual_target_version(

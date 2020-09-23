@@ -14,17 +14,16 @@ use crate::{
     },
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
-        backup_service_client::BackupServiceClient,
-        test_utils::{start_local_backup_service, tmp_db_empty},
-        GlobalBackupOpt, GlobalRestoreOpt,
+        backup_service_client::BackupServiceClient, test_utils::start_local_backup_service,
+        GlobalBackupOpt, GlobalRestoreOpt, GlobalRestoreOptions,
     },
 };
 use executor_test_helpers::integration_test_impl::test_execution_with_storage_impl;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
-use libradb::{GetRestoreHandler, LibraDB};
+use libradb::LibraDB;
 use proptest::prelude::*;
-use std::{path::PathBuf, sync::Arc};
+use std::{convert::TryInto, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
 
@@ -62,8 +61,8 @@ fn test_data_strategy() -> impl Strategy<Value = TestData> {
 }
 
 fn test_end_to_end_impl(d: TestData) {
-    let (_tgt_db_dir, tgt_db) = tmp_db_empty();
-
+    let tgt_db_dir = TempPath::new();
+    tgt_db_dir.create_as_dir().unwrap();
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
@@ -106,10 +105,13 @@ fn test_end_to_end_impl(d: TestData) {
         .unwrap();
 
     // Restore
-    let global_restore_opt = GlobalRestoreOpt {
-        db_dir: PathBuf::new(), // doesn't matter, we opened storage above manually.
+    let global_restore_opt: GlobalRestoreOptions = GlobalRestoreOpt {
+        dry_run: false,
+        db_dir: Some(tgt_db_dir.path().to_path_buf()),
         target_version: Some(d.target_ver),
-    };
+    }
+    .try_into()
+    .unwrap();
     if let Some(version) = d.state_snapshot_ver {
         rt.block_on(
             StateSnapshotRestoreController::new(
@@ -119,7 +121,6 @@ fn test_end_to_end_impl(d: TestData) {
                 },
                 global_restore_opt.clone(),
                 Arc::clone(&store),
-                Arc::new(tgt_db.get_restore_handler()),
                 None, /* epoch_history */
             )
             .run(),
@@ -136,7 +137,6 @@ fn test_end_to_end_impl(d: TestData) {
             },
             global_restore_opt,
             store,
-            Arc::new(tgt_db.get_restore_handler()),
             None, /* epoch_history */
         )
         .run(),
@@ -144,6 +144,12 @@ fn test_end_to_end_impl(d: TestData) {
     .unwrap();
 
     // Check
+    let tgt_db = LibraDB::open(
+        &tgt_db_dir,
+        false, /* read_only */
+        None,  /* pruner */
+    )
+    .unwrap();
     assert_eq!(
         d.db.get_transactions(d.txn_start_ver, num_txns_to_backup, d.target_ver, false)
             .unwrap(),

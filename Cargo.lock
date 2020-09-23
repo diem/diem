@@ -252,6 +252,7 @@ dependencies = [
  "libra-canonical-serialization",
  "libra-config",
  "libra-crypto",
+ "libra-jellyfish-merkle",
  "libra-logger",
  "libra-proptest-helpers",
  "libra-secure-push-metrics",

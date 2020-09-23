@@ -5,7 +5,10 @@ use crate::{
     backup_types::epoch_ending::manifest::EpochEndingBackup,
     metrics::restore::{EPOCH_ENDING_EPOCH, EPOCH_ENDING_VERSION},
     storage::{BackupStorage, FileHandle},
-    utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
+    utils::{
+        read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
+        RestoreRunMode,
+    },
 };
 use anyhow::{anyhow, ensure, Result};
 use libra_logger::prelude::*;
@@ -15,7 +18,6 @@ use libra_types::{
     transaction::Version,
     waypoint::Waypoint,
 };
-use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
 
@@ -27,7 +29,7 @@ pub struct EpochEndingRestoreOpt {
 
 pub struct EpochEndingRestoreController {
     storage: Arc<dyn BackupStorage>,
-    restore_handler: Arc<RestoreHandler>,
+    run_mode: Arc<RestoreRunMode>,
     manifest_handle: FileHandle,
     target_version: Version,
     previous_epoch_ending_ledger_info: Option<LedgerInfo>,
@@ -36,35 +38,36 @@ pub struct EpochEndingRestoreController {
 impl EpochEndingRestoreController {
     pub fn new(
         opt: EpochEndingRestoreOpt,
-        global_opt: GlobalRestoreOpt,
+        global_opt: GlobalRestoreOptions,
         storage: Arc<dyn BackupStorage>,
-        restore_handler: Arc<RestoreHandler>,
         previous_epoch_ending_ledger_info: Option<LedgerInfo>,
     ) -> Self {
         Self {
             storage,
-            restore_handler,
+            run_mode: global_opt.run_mode,
             manifest_handle: opt.manifest_handle,
-            target_version: global_opt.target_version(),
+            target_version: global_opt.target_version,
             previous_epoch_ending_ledger_info,
         }
     }
 
     pub async fn run(self) -> Result<Vec<LedgerInfo>> {
-        info!(
-            "Epoch ending restore started. Manifest: {}",
-            self.manifest_handle
-        );
+        let name = self.name();
+        info!("{} started. Manifest: {}", name, self.manifest_handle);
         let res = self
             .run_impl()
             .await
-            .map_err(|e| anyhow!("Epoch ending restore failed: {}", e))?;
-        info!("Epoch ending restore succeeded.");
+            .map_err(|e| anyhow!("{} failed: {}", name, e))?;
+        info!("{} succeeded.", name);
         Ok(res)
     }
 }
 
 impl EpochEndingRestoreController {
+    fn name(&self) -> String {
+        format!("epoch ending {}", self.run_mode.name())
+    }
+
     async fn run_impl(self) -> Result<Vec<LedgerInfo>> {
         let manifest: EpochEndingBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
@@ -147,19 +150,26 @@ impl EpochEndingRestoreController {
 
             // write to db
             if !lis.is_empty() {
-                self.restore_handler.save_ledger_infos(&lis)?;
-                EPOCH_ENDING_EPOCH.set(
-                    lis.last()
-                        .expect("Verified not empty.")
-                        .ledger_info()
-                        .epoch() as i64,
-                );
-                EPOCH_ENDING_VERSION.set(
-                    lis.last()
-                        .expect("Verified not empty.")
-                        .ledger_info()
-                        .version() as i64,
-                );
+                match self.run_mode.as_ref() {
+                    RestoreRunMode::Restore { restore_handler } => {
+                        restore_handler.save_ledger_infos(&lis)?;
+                        EPOCH_ENDING_EPOCH.set(
+                            lis.last()
+                                .expect("Verified not empty.")
+                                .ledger_info()
+                                .epoch() as i64,
+                        );
+                        EPOCH_ENDING_VERSION.set(
+                            lis.last()
+                                .expect("Verified not empty.")
+                                .ledger_info()
+                                .version() as i64,
+                        );
+                    }
+                    RestoreRunMode::Verify => {
+                        // add counters
+                    }
+                };
                 output_lis.extend(lis.into_iter().map(|x| x.ledger_info().clone()));
             }
 
@@ -217,41 +227,44 @@ impl EpochHistory {
 
 pub struct EpochHistoryRestoreController {
     storage: Arc<dyn BackupStorage>,
-    restore_handler: Arc<RestoreHandler>,
     manifest_handles: Vec<FileHandle>,
-    global_opt: GlobalRestoreOpt,
+    global_opt: GlobalRestoreOptions,
 }
 
 impl EpochHistoryRestoreController {
     pub fn new(
         manifest_handles: Vec<FileHandle>,
-        global_opt: GlobalRestoreOpt,
+        global_opt: GlobalRestoreOptions,
         storage: Arc<dyn BackupStorage>,
-        restore_handler: Arc<RestoreHandler>,
     ) -> Self {
         Self {
             storage,
-            restore_handler,
             manifest_handles,
             global_opt,
         }
     }
 
     pub async fn run(self) -> Result<EpochHistory> {
+        let name = self.name();
         info!(
-            "Epoch history restore started. Trying to restore epoch endings for epoch 0 till {} (inclusive)",
+            "{} started. Trying epoch endings for epoch 0 till {} (inclusive)",
+            name,
             self.manifest_handles.len() - 1,
         );
         let res = self
             .run_impl()
             .await
-            .map_err(|e| anyhow!("Epoch history restore failed: {}", e))?;
-        info!("Epoch history restore succeeded.");
+            .map_err(|e| anyhow!("{} failed: {}", name, e))?;
+        info!("{} succeeded.", name);
         Ok(res)
     }
 }
 
 impl EpochHistoryRestoreController {
+    fn name(&self) -> String {
+        format!("epoch history {}", self.global_opt.run_mode.name())
+    }
+
     async fn run_impl(self) -> Result<EpochHistory> {
         let mut next_epoch = 0u64;
         let mut previous_li = None;
@@ -264,7 +277,6 @@ impl EpochHistoryRestoreController {
                 },
                 self.global_opt.clone(),
                 self.storage.clone(),
-                self.restore_handler.clone(),
                 previous_li.clone(),
             )
             .run()

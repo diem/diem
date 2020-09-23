@@ -8,9 +8,12 @@ use crate::{
     },
     metrics::restore::{TRANSACTION_REPLAY_VERSION, TRANSACTION_SAVE_VERSION},
     storage::{BackupStorage, FileHandle},
-    utils::{read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOpt},
+    utils::{
+        read_record_bytes::ReadRecordBytes, storage_ext::BackupStorageExt, GlobalRestoreOptions,
+        RestoreRunMode,
+    },
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use executor::Executor;
 use executor_types::TransactionReplayer;
 use libra_logger::prelude::*;
@@ -20,7 +23,6 @@ use libra_types::{
     transaction::{Transaction, TransactionInfo, TransactionListWithProof, Version},
 };
 use libra_vm::LibraVM;
-use libradb::backup::restore_handler::RestoreHandler;
 use std::{
     cmp::{max, min},
     sync::Arc,
@@ -49,7 +51,7 @@ impl TransactionRestoreOpt {
 
 pub struct TransactionRestoreController {
     storage: Arc<dyn BackupStorage>,
-    restore_handler: Arc<RestoreHandler>,
+    run_mode: Arc<RestoreRunMode>,
     manifest_handle: FileHandle,
     target_version: Version,
     replay_from_version: Version,
@@ -129,36 +131,37 @@ impl LoadedChunk {
 impl TransactionRestoreController {
     pub fn new(
         opt: TransactionRestoreOpt,
-        global_opt: GlobalRestoreOpt,
+        global_opt: GlobalRestoreOptions,
         storage: Arc<dyn BackupStorage>,
-        restore_handler: Arc<RestoreHandler>,
         epoch_history: Option<Arc<EpochHistory>>,
     ) -> Self {
         Self {
             storage,
-            restore_handler,
+            run_mode: global_opt.run_mode,
             replay_from_version: opt.replay_from_version(),
             manifest_handle: opt.manifest_handle,
-            target_version: global_opt.target_version(),
+            target_version: global_opt.target_version,
             epoch_history,
             state: State::default(),
         }
     }
 
     pub async fn run(self) -> Result<()> {
-        info!(
-            "Transaction restore started. Manifest: {}",
-            self.manifest_handle
-        );
+        let name = self.name();
+        info!("{} started. Manifest: {}", name, self.manifest_handle);
         self.run_impl()
             .await
-            .map_err(|e| anyhow!("Transaction restore failed: {}", e))?;
-        info!("Transaction restore succeeded.");
+            .map_err(|e| anyhow!("{} failed: {}", name, e))?;
+        info!("{} succeeded.", name);
         Ok(())
     }
 }
 
 impl TransactionRestoreController {
+    fn name(&self) -> String {
+        format!("transaction {}", self.run_mode.name())
+    }
+
     async fn run_impl(mut self) -> Result<()> {
         let manifest: TransactionBackup =
             self.storage.load_json_file(&self.manifest_handle).await?;
@@ -176,7 +179,7 @@ impl TransactionRestoreController {
                 break;
             }
 
-            let mut chunk =
+            let chunk =
                 LoadedChunk::load(chunk_manifest, &self.storage, self.epoch_history.as_ref())
                     .await?;
             self.maybe_save_frozen_subtrees(&chunk)?;
@@ -184,11 +187,31 @@ impl TransactionRestoreController {
             let last = min(self.target_version, chunk.manifest.last_version);
             let first_to_replay = max(chunk.manifest.first_version, self.replay_from_version);
 
+            self.maybe_restore_transactions(chunk, last, first_to_replay)?;
+        }
+
+        if self.target_version < manifest.last_version {
+            warn!(
+                "Transactions newer than target version {} ignored.",
+                self.target_version,
+            )
+        }
+
+        Ok(())
+    }
+
+    fn maybe_restore_transactions(
+        &mut self,
+        mut chunk: LoadedChunk,
+        last: u64,
+        first_to_replay: u64,
+    ) -> Result<()> {
+        if let RestoreRunMode::Restore { restore_handler } = self.run_mode.as_ref() {
             // Transactions to save without replaying:
             if first_to_replay > chunk.manifest.first_version {
                 let last_to_save = min(last, first_to_replay - 1);
                 let num_txns_to_save = (last_to_save - chunk.manifest.first_version + 1) as usize;
-                self.restore_handler.save_transactions(
+                restore_handler.save_transactions(
                     chunk.manifest.first_version,
                     &chunk.txns[..num_txns_to_save],
                     &chunk.txn_infos[..num_txns_to_save],
@@ -226,36 +249,38 @@ impl TransactionRestoreController {
                     TRANSACTION_REPLAY_VERSION.set(current_version as i64 - 1);
                 }
             }
-        }
-
-        if self.target_version < manifest.last_version {
-            warn!(
-                "Transactions newer than target version {} ignored.",
-                self.target_version,
-            )
+        } else {
+            // FIXME: add counters
         }
 
         Ok(())
     }
 
     fn maybe_save_frozen_subtrees(&mut self, chunk: &LoadedChunk) -> Result<()> {
-        if !self.state.frozen_subtree_confirmed {
-            self.restore_handler.confirm_or_save_frozen_subtrees(
-                chunk.manifest.first_version,
-                chunk.range_proof.left_siblings(),
-            )?;
-            self.state.frozen_subtree_confirmed = true;
+        if let RestoreRunMode::Restore { restore_handler } = self.run_mode.as_ref() {
+            if !self.state.frozen_subtree_confirmed {
+                restore_handler.confirm_or_save_frozen_subtrees(
+                    chunk.manifest.first_version,
+                    chunk.range_proof.left_siblings(),
+                )?;
+                self.state.frozen_subtree_confirmed = true;
+            }
         }
+
         Ok(())
     }
 
     fn transaction_replayer(&mut self, first_version: Version) -> Result<&mut Executor<LibraVM>> {
         if self.state.transaction_replayer.is_none() {
-            let replayer = Executor::new_on_unbootstrapped_db(
-                DbReaderWriter::from_arc(Arc::clone(&self.restore_handler.libradb)),
-                self.restore_handler.get_tree_state(first_version)?,
-            );
-            self.state.transaction_replayer = Some(replayer);
+            if let RestoreRunMode::Restore { restore_handler } = self.run_mode.as_ref() {
+                let replayer = Executor::new_on_unbootstrapped_db(
+                    DbReaderWriter::from_arc(Arc::clone(&restore_handler.libradb)),
+                    restore_handler.get_tree_state(first_version)?,
+                );
+                self.state.transaction_replayer = Some(replayer);
+            } else {
+                bail!("Trying to construct TransactionReplayer under Verify mode.");
+            }
         } else {
             assert_eq!(
                 self.state
@@ -266,6 +291,7 @@ impl TransactionRestoreController {
                 first_version
             );
         }
+
         Ok(self.state.transaction_replayer.as_mut().unwrap())
     }
 }

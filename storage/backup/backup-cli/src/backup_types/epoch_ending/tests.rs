@@ -8,18 +8,17 @@ use crate::{
     },
     storage::{local_fs::LocalFs, BackupStorage},
     utils::{
-        backup_service_client::BackupServiceClient,
-        test_utils::{tmp_db_empty, tmp_db_with_random_content},
+        backup_service_client::BackupServiceClient, test_utils::tmp_db_with_random_content,
         GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
 use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
-use libradb::GetRestoreHandler;
+use libradb::LibraDB;
 use std::{
+    convert::TryInto,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    path::PathBuf,
     sync::Arc,
 };
 use storage_interface::DbReader;
@@ -28,7 +27,9 @@ use tokio::time::Duration;
 #[test]
 fn end_to_end() {
     let (_src_db_dir, src_db, blocks) = tmp_db_with_random_content();
-    let (_tgt_db_dir, tgt_db) = tmp_db_empty();
+    let tgt_db_dir = TempPath::new();
+    tgt_db_dir.create_as_dir().unwrap();
+
     let backup_dir = TempPath::new();
     backup_dir.create_as_dir().unwrap();
     let store: Arc<dyn BackupStorage> = Arc::new(LocalFs::new(backup_dir.path().to_path_buf()));
@@ -66,11 +67,13 @@ fn end_to_end() {
         EpochEndingRestoreController::new(
             EpochEndingRestoreOpt { manifest_handle },
             GlobalRestoreOpt {
-                db_dir: PathBuf::new(),
+                db_dir: Some(tgt_db_dir.path().to_path_buf()),
+                dry_run: false,
                 target_version: Some(target_version),
-            },
+            }
+            .try_into()
+            .unwrap(),
             store,
-            Arc::new(tgt_db.get_restore_handler()),
             None,
         )
         .run(),
@@ -87,6 +90,12 @@ fn end_to_end() {
         .map(|li| li.ledger_info().next_block_epoch())
         .unwrap_or(0);
 
+    let tgt_db = LibraDB::open(
+        &tgt_db_dir,
+        true, /* read_only */
+        None, /* pruner */
+    )
+    .unwrap();
     assert_eq!(
         tgt_db
             .get_epoch_ending_ledger_infos(0, target_version_next_block_epoch)
