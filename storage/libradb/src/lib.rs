@@ -635,6 +635,12 @@ impl DbReader for LibraDB {
             .start_timer();
 
         let ledger_info = ledger_info_with_sigs.ledger_info();
+        ensure!(
+            known_version <= ledger_info.version(),
+            "Client known_version {} larger than ledger version {}.",
+            known_version,
+            ledger_info.version(),
+        );
         let known_epoch = self.ledger_store.get_epoch(known_version)?;
         let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
             let (ledger_infos_with_sigs, more) =
