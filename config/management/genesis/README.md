@@ -96,7 +96,8 @@ Overview of fields:
 cargo run -p libra-genesis-tool -- \
     set-layout \
     --config config_file.yaml \
-    --path $PATH_TO_LAYOUT ```
+    --path $PATH_TO_LAYOUT
+```
 * The association will publish the the `libra root`  public key to the `shared storage`:
 ```
 cargo run -p libra-genesis-tool -- \

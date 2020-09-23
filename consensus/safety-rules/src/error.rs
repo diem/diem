@@ -15,7 +15,7 @@ pub enum Error {
     IncorrectLastVotedRound(u64, u64),
     #[error("Provided round, {0}, is incompatible with preferred round, {1}")]
     IncorrectPreferredRound(u64, u64),
-    #[error("Unable to verify that the new tree extneds the parent: {0}")]
+    #[error("Unable to verify that the new tree extends the parent: {0}")]
     InvalidAccumulatorExtension(String),
     #[error("Invalid EpochChangeProof: {0}")]
     InvalidEpochChangeProof(String),
