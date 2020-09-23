@@ -178,7 +178,7 @@ pub(crate) async fn coordinator<V>(
             complete => break,
         }
     }
-    error!("[shared mempool] inbound_network_task terminated");
+    warn!("[shared mempool] inbound_network_task terminated");
 }
 
 /// GC all expired transactions by SystemTTL
@@ -191,5 +191,5 @@ pub(crate) async fn gc_coordinator(mempool: Arc<Mutex<CoreMempool>>, gc_interval
             .gc();
     }
 
-    error!("SharedMempool gc_task terminated");
+    warn!("SharedMempool gc_task terminated");
 }

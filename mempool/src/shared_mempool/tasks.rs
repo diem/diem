@@ -288,8 +288,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
     if let Err(e) = send_mempool_sync_msg(ack_response, peer.peer_id(), &mut network_sender) {
         error!(
             MempoolSchema::new().peer(&peer).error(&e),
-            "[shared mempool] failed to send ACK back to peer {:?}: {}",
-            peer, e
+            "[shared mempool] failed to send ACK back to peer {:?}: {}", peer, e
         );
     }
     notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
@@ -475,8 +474,7 @@ pub(crate) async fn process_state_sync_request(
         }) {
         error!(
             MempoolSchema::new().error(&e),
-            "[shared mempool] failed to send back CommitResponse with error: {:?}",
-            e
+            "[shared mempool] failed to send back CommitResponse with error: {:?}", e
         );
         counters::REQUEST_FAIL_LABEL
     } else {
@@ -539,8 +537,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
     }) {
         error!(
             MempoolSchema::new().error(&e),
-            "[shared mempool] failed to send back mempool response with error: {:?}",
-            e
+            "[shared mempool] failed to send back mempool response with error: {:?}", e
         );
         counters::REQUEST_FAIL_LABEL
     } else {
