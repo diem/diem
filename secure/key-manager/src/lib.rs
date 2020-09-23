@@ -222,7 +222,7 @@ where
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
         let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        counters::increment_state("consensus_key", "submit_tx");
+        counters::increment_state("consensus_key", "submitted_rotation_transaction");
         self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
@@ -232,7 +232,7 @@ where
         info!(LogSchema::new(LogEntry::KeyRotatedInStorage)
             .event(LogEvent::Success)
             .consensus_key(&consensus_key));
-        counters::increment_state("consensus_key", "complete");
+        counters::increment_state("consensus_key", "rotated_in_storage");
         self.submit_key_rotation_transaction(consensus_key)
     }
 
