@@ -279,7 +279,7 @@ proptest! {
         let store2 = &db2.state_store;
 
         let mut restore =
-            JellyfishMerkleRestore::new(&**store2, version, expected_root_hash).unwrap();
+            JellyfishMerkleRestore::new(Arc::clone(store2), version, expected_root_hash).unwrap();
 
         let mut ordered_input: Vec<_> = input
             .into_iter()
@@ -337,7 +337,7 @@ proptest! {
         let store2 = &db2.state_store;
 
         let mut restore =
-            JellyfishMerkleRestore::new(&**store2, version, expected_root_hash).unwrap();
+            JellyfishMerkleRestore::new(Arc::clone(store2), version, expected_root_hash).unwrap();
 
         let mut ordered_input: Vec<_> = input
             .into_iter()

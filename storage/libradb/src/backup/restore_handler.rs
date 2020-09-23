@@ -8,7 +8,7 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use libra_crypto::{hash::SPARSE_MERKLE_PLACEHOLDER_HASH, HashValue};
-use libra_jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
+use libra_jellyfish_merkle::restore::JellyfishMerkleRestore;
 use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{definition::LeafCount, position::FrozenSubTreeIterator},
@@ -49,8 +49,12 @@ impl RestoreHandler {
         &self,
         version: Version,
         expected_root_hash: HashValue,
-    ) -> Result<JellyfishMerkleRestore<impl TreeReader + TreeWriter>> {
-        JellyfishMerkleRestore::new_overwrite(&*self.state_store, version, expected_root_hash)
+    ) -> Result<JellyfishMerkleRestore> {
+        JellyfishMerkleRestore::new_overwrite(
+            Arc::clone(&self.state_store),
+            version,
+            expected_root_hash,
+        )
     }
 
     pub fn save_ledger_infos(&self, ledger_infos: &[LedgerInfoWithSignatures]) -> Result<()> {
