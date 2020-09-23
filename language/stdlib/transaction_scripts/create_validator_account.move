@@ -1,6 +1,7 @@
 script {
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
+use 0x1::Errors;
 
 /// # Summary
 /// Creates a Validator account. This transaction can only be sent by the Libra
@@ -57,5 +58,16 @@ fun create_validator_account(
         auth_key_prefix,
         human_name,
     );
-}
+  }
+
+
+/// Only Libra root may create Validator accounts
+/// Authentication: ValidatorAccountAbortsIf includes AbortsIfNotLibraRoot.
+/// Checks that above table includes all error categories.
+spec fun create_validator_account {
+    aborts_with Errors::INVALID_ARGUMENT, Errors::REQUIRES_ADDRESS, Errors::ALREADY_PUBLISHED;
+    include SlidingNonce::RecordNonceAbortsIf{seq_nonce: sliding_nonce, account: lr_account};
+    include LibraAccount::CreateValidatorAccountAbortsIf;
+    include LibraAccount::CreateValidatorAccountEnsures;
+    }
 }

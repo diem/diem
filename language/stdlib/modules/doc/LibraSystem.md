@@ -314,12 +314,14 @@ An out of bounds index for the validator set was encountered
     lr_account: &signer,
     validator_address: address
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
+
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <a href="Roles.md#0x1_Roles_assert_libra_root">Roles::assert_libra_root</a>(lr_account);
     // A prospective validator must have a validator config <b>resource</b>
     <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address), <a href="Errors.md#0x1_Errors_invalid_argument">Errors::invalid_argument</a>(<a href="#0x1_LibraSystem_EINVALID_PROSPECTIVE_VALIDATOR">EINVALID_PROSPECTIVE_VALIDATOR</a>));
 
     <b>let</b> libra_system_config = <a href="#0x1_LibraSystem_get_libra_system_config">get_libra_system_config</a>();
+
     // Ensure that this address is not already a validator
     <b>assert</b>(
         !<a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(validator_address, &libra_system_config.validators),
@@ -410,7 +412,7 @@ An out of bounds index for the validator set was encountered
     <b>let</b> is_validator_info_updated = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(&<b>mut</b> libra_system_config.validators, to_update_index);
     <b>if</b> (is_validator_info_updated) {
         <a href="#0x1_LibraSystem_set_libra_system_config">set_libra_system_config</a>(libra_system_config);
-    }
+    };
 }
 </code></pre>
 
@@ -806,7 +808,6 @@ a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorCon
 <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address) with <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>ensures</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 </code></pre>
 
 
@@ -820,7 +821,8 @@ a published ValidatorConfig has a ValidatorRole is an invariant (in ValidatorCon
 </code></pre>
 
 
-Removed validator should no longer be valid.
+Removed validator is no longer a validator.  Depends on no other entries for same address
+in validator_set
 
 
 <pre><code><b>ensures</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
@@ -855,11 +857,10 @@ Must abort if the signer does not have the ValidatorOperator role [B23].
 <a name="0x1_LibraSystem_is_validator_info_updated$18"></a>
 <b>let</b> is_validator_info_updated =
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address) &&
-    (exists v in <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>():
-        v.addr == validator_address
-        && v.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_address));
+    (exists v_info in <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>():
+        v_info.addr == validator_address
+        && v_info.config != <a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_get_config">ValidatorConfig::spec_get_config</a>(validator_address));
 <b>include</b> is_validator_info_updated ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_ReconfigureAbortsIf">LibraConfig::ReconfigureAbortsIf</a>;
-<b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_address);
 </code></pre>
 
 
@@ -900,6 +901,7 @@ It updates the correct entry in the correct way
 <pre><code><b>ensures</b> forall i in 0..len(vs): vs[i].config == <b>old</b>(vs[i].config) ||
             (<b>old</b>(vs)[i].addr == validator_address &&
             vs[i].config == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(validator_address));
+<b>ensures</b> <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(validator_address);
 </code></pre>
 
 
@@ -1027,11 +1029,11 @@ exists v in <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</
 <b>ensures</b> (forall i in 0..size: validators[i].addr != addr) ==&gt; <a href="Option.md#0x1_Option_is_none">Option::is_none</a>(result);
 <b>ensures</b>
     (exists i in 0..size: validators[i].addr == addr) ==&gt;
-        <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result) &&
-        {
-            <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
-            0 &lt;= at && at &lt; size && validators[at].addr == addr
-        };
+        <a href="Option.md#0x1_Option_is_some">Option::is_some</a>(result)
+        && {
+                <b>let</b> at = <a href="Option.md#0x1_Option_spec_get">Option::spec_get</a>(result);
+                0 &lt;= at && at &lt; size && validators[at].addr == addr
+            };
 </code></pre>
 
 
@@ -1156,10 +1158,25 @@ Only {add, remove} validator [B22] and update_config_and_reconfigure
 
 
 
+Every validator has a published ValidatorConfig whose config option is "some"
+(meaning of ValidatorConfig::is_valid).
+I'm not sure why this is important, but add_validator goes to the trouble
+of aborting if is_valid is not true.
+Unfortunately, this times out for unknown reasons (it doesn't seem to be hard),
+so it is deactivated.
 
-<a name="0x1_LibraSystem_validators$22"></a>
+
+<pre><code><b>invariant</b> [deactivated, <b>global</b>] forall i1 in 0..len(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].addr);
+</code></pre>
 
 
-<pre><code><b>let</b> validators = <a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>();
-<b>invariant</b> [deactivated, <b>global</b>] forall i1 in 0..len(validators): <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validators[i1].addr);
+Every validator in the validator set has a validator role.
+Note: Verification of LibraSystem seems to be very sensitive, and will
+often time out because of very small changes.  Disabling this property
+(with [deactivate, global]) is a quick temporary fix.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] forall i1 in 0..len(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()):
+     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(<a href="#0x1_LibraSystem_spec_get_validators">spec_get_validators</a>()[i1].addr);
 </code></pre>

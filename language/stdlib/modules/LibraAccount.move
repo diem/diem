@@ -992,6 +992,7 @@ module LibraAccount {
             Errors::invalid_argument(EMALFORMED_AUTHENTICATION_KEY)
         );
         assert(!exists_at(new_account_addr), Errors::already_published(EACCOUNT));
+        AccountFreezing::create(&new_account);
         move_to(
             &new_account,
             LibraAccount {
@@ -1009,7 +1010,6 @@ module LibraAccount {
                 sequence_number: 0,
             }
         );
-        AccountFreezing::create(&new_account);
         destroy_signer(new_account);
     }
 
@@ -1024,10 +1024,11 @@ module LibraAccount {
         addr: address;
         auth_key_prefix: vector<u8>;
         aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
+        // TODO (dd) one of the next two is probably redundant, based on setup invariant.
+        aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
         aborts_if exists_at(addr) with Errors::ALREADY_PUBLISHED;
         aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
             with Errors::INVALID_ARGUMENT;
-        aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
     }
 
     /// Creates the libra root account in genesis.
@@ -1646,6 +1647,30 @@ module LibraAccount {
         make_account(new_account, auth_key_prefix)
     }
 
+    spec fun create_validator_account {
+        include CreateValidatorAccountAbortsIf;
+        include CreateValidatorAccountEnsures;
+    }
+
+    spec schema CreateValidatorAccountAbortsIf {
+        lr_account: signer;
+        new_account_address: address;
+        // from Roles::new_validator_role
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include MakeAccountAbortsIf{addr: new_account_address};
+        // from ValidatorConfig::publish
+        include LibraTimestamp::AbortsIfNotOperating;
+        aborts_if ValidatorConfig::exists_config(new_account_address) with Errors::ALREADY_PUBLISHED;
+    }
+
+    spec schema CreateValidatorAccountEnsures {
+        new_account_address: address;
+        // TODO (dd): "GrantRole" includes an aborts_if.
+        include Roles::GrantRole{addr: new_account_address, role_id: Roles::VALIDATOR_ROLE_ID};
+        ensures exists_at(new_account_address);
+        ensures ValidatorConfig::exists_config(new_account_address);
+    }
+
     public fun create_validator_operator_account(
         lr_account: &signer,
         new_account_address: address,
@@ -1659,6 +1684,31 @@ module LibraAccount {
         ValidatorOperatorConfig::publish(&new_account, lr_account, human_name);
         make_account(new_account, auth_key_prefix)
     }
+
+    spec fun create_validator_operator_account {
+        include CreateValidatorOperatorAccountAbortsIf;
+        include CreateValidatorOperatorAccountEnsures;
+    }
+
+    spec schema CreateValidatorOperatorAccountAbortsIf {
+        lr_account: signer;
+        new_account_address: address;
+        // from Roles::new_validator_operator_role
+        include Roles::AbortsIfNotLibraRoot{account: lr_account};
+        include MakeAccountAbortsIf{addr: new_account_address};
+        // from ValidatorConfig::publish
+        include LibraTimestamp::AbortsIfNotOperating;
+        aborts_if ValidatorOperatorConfig::has_validator_operator_config(new_account_address) with Errors::ALREADY_PUBLISHED;
+    }
+
+    spec schema CreateValidatorOperatorAccountEnsures {
+        new_account_address: address;
+        // TODO (dd): "GrantRole" includes an aborts_if.
+        include Roles::GrantRole{addr: new_account_address, role_id: Roles::VALIDATOR_OPERATOR_ROLE_ID};
+        ensures exists_at(new_account_address);
+        ensures ValidatorOperatorConfig::has_validator_operator_config(new_account_address);
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////
     // End of the proof of concept code

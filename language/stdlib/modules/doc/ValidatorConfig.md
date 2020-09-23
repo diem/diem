@@ -819,11 +819,23 @@ set_operator, remove_operator can change the operator account [B24].
 </code></pre>
 
 
+
 LIP-6 Property: If address has a ValidatorConfig, it has a validator role.  This invariant is useful
 in LibraSystem so we don't have to check whether every validator address has a validator role.
-<a name="ValidatorConfigImpliesValidatorRole"></a>
+ref: "ValidatorConfigImpliesValidatorRole"
 
 
-<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr1):
+<pre><code><b>invariant</b> [<b>global</b>, isolated] forall addr1: address where <a href="#0x1_ValidatorConfig_exists_config">exists_config</a>(addr1):
+    <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr1);
+</code></pre>
+
+
+LIP-6 Property: Every address that is_valid (meaning it has a ValidatorConfig with
+a config option that is "some") has a validator role. This is a trivial consequence
+of the previous invariant, but it is not inductive and can't be proved without the
+previous one as a helper.
+
+
+<pre><code><b>invariant</b> [<b>global</b>] forall addr1: address where <a href="#0x1_ValidatorConfig_is_valid">is_valid</a>(addr1):
     <a href="Roles.md#0x1_Roles_spec_has_validator_role_addr">Roles::spec_has_validator_role_addr</a>(addr1);
 </code></pre>

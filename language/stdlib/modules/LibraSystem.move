@@ -28,7 +28,7 @@ module LibraSystem {
         validators: vector<ValidatorInfo>,
     }
     spec struct LibraSystem {
-        /// Members of `validators` vector (the validator set) have unique addresses.
+       /// Members of `validators` vector (the validator set) have unique addresses.
         invariant
             forall i in 0..len(validators), j in 0..len(validators):
                 validators[i].addr == validators[j].addr ==> i == j;
@@ -117,12 +117,14 @@ module LibraSystem {
         lr_account: &signer,
         validator_address: address
     ) acquires CapabilityHolder {
+
         LibraTimestamp::assert_operating();
         Roles::assert_libra_root(lr_account);
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig::is_valid(validator_address), Errors::invalid_argument(EINVALID_PROSPECTIVE_VALIDATOR));
 
         let libra_system_config = get_libra_system_config();
+
         // Ensure that this address is not already a validator
         assert(
             !is_validator_(validator_address, &libra_system_config.validators),
@@ -188,13 +190,13 @@ module LibraSystem {
         include LibraTimestamp::AbortsIfNotOperating;
         include LibraConfig::ReconfigureAbortsIf;
         aborts_if !spec_is_validator(account_address) with Errors::INVALID_ARGUMENT;
-        ensures !spec_is_validator(account_address);
     }
     spec fun remove_validator {
         let vs = spec_get_validators();
         ensures forall vi in vs where vi.addr != account_address: exists ovi in old(vs): vi == ovi;
-        /// Removed validator should no longer be valid.
-        ensures !spec_is_validator(account_address);
+      /// Removed validator is no longer a validator.  Depends on no other entries for same address
+      /// in validator_set
+      ensures !spec_is_validator(account_address);
     }
 
     // For a calling validator's operator copy the information from ValidatorConfig into the ValidatorSet.
@@ -228,14 +230,16 @@ module LibraSystem {
             != Signer::spec_address_of(validator_operator_account)
             with Errors::INVALID_ARGUMENT;
         aborts_if !spec_is_validator(validator_address) with Errors::INVALID_ARGUMENT;
+        // TODO (dd): Currently, next depends on data structure invariant that validator addresses
+        // in validator_set are unique.  If we could use the same v_info returned by get_validator_index_
+        // even when there are multiple entries for the same address, we could make it independent
+        // of that assumption. Simplifying the formula may also improve efficiency.
         let is_validator_info_updated =
             ValidatorConfig::is_valid(validator_address) &&
-            (exists v in spec_get_validators():
-                v.addr == validator_address
-                && v.config != ValidatorConfig::spec_get_config(validator_address));
+            (exists v_info in spec_get_validators():
+                v_info.addr == validator_address
+                && v_info.config != ValidatorConfig::spec_get_config(validator_address));
         include is_validator_info_updated ==> LibraConfig::ReconfigureAbortsIf;
-        // LIP-6 property
-        ensures Roles::spec_has_validator_role_addr(validator_address);
     }
 
     /// *Informally:* Does not change the length of the validator set, only
@@ -256,6 +260,8 @@ module LibraSystem {
         ensures forall i in 0..len(vs): vs[i].config == old(vs[i].config) ||
                     (old(vs)[i].addr == validator_address &&
                     vs[i].config == ValidatorConfig::get_config(validator_address));
+        // LIP-6 property
+        ensures Roles::spec_has_validator_role_addr(validator_address);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -362,11 +368,11 @@ module LibraSystem {
         ensures (forall i in 0..size: validators[i].addr != addr) ==> Option::is_none(result);
         ensures
             (exists i in 0..size: validators[i].addr == addr) ==>
-                Option::is_some(result) &&
-                {
-                    let at = Option::spec_get(result);
-                    0 <= at && at < size && validators[at].addr == addr
-                };
+                Option::is_some(result)
+                && {
+                        let at = Option::spec_get(result);
+                        0 <= at && at < size && validators[at].addr == addr
+                    };
     }
 
     // Updates ith validator info, if nothing changed, return false.
@@ -445,6 +451,7 @@ module LibraSystem {
         define spec_get_validators(): vector<ValidatorInfo> {
             LibraConfig::get<LibraSystem>().validators
         }
+
     }
 
     /// After genesis, the `LibraSystem` configuration is published, as well as the capability
@@ -485,16 +492,29 @@ module LibraSystem {
                initialize_validator_set, set_libra_system_config;
     }
 
-    // TODO (dd): every member of validator_set has a ValidatorConfig that is not "None".
-    // This also implies that every member has a validator role.
-    // TODO (dd): Times out.  I think it should not be hard, so don't know why.
     spec module {
-       let validators = spec_get_validators();
-       invariant [deactivated, global] forall i1 in 0..len(validators): ValidatorConfig::is_valid(validators[i1].addr);
+
+       /// Every validator has a published ValidatorConfig whose config option is "some"
+       /// (meaning of ValidatorConfig::is_valid).
+       /// I'm not sure why this is important, but add_validator goes to the trouble
+       /// of aborting if is_valid is not true.
+       /// Unfortunately, this times out for unknown reasons (it doesn't seem to be hard),
+       /// so it is deactivated.
+       /// The Prover can prove it if the uniqueness invariant for the LibraSystem resource
+       /// is commented out, along with aborts for update_config_and_reconfigure and everything
+       /// else that breaks (e.g., there is an ensures in remove_validator that has to be
+       /// commented out)
+       invariant [deactivated, global] forall i1 in 0..len(spec_get_validators()):
+           ValidatorConfig::is_valid(spec_get_validators()[i1].addr);
+
+       /// Every validator in the validator set has a validator role.
+       /// Note: Verification of LibraSystem seems to be very sensitive, and will
+       /// often time out because of very small changes.  Disabling this property
+       /// (with [deactivate, global]) is a quick temporary fix.
+       invariant [global] forall i1 in 0..len(spec_get_validators()):
+            Roles::spec_has_validator_role_addr(spec_get_validators()[i1].addr);
+
     }
-
-
-    // TODO (dd): validator operator addresses have validator role
 
 }
 }
