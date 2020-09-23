@@ -1,6 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
-use anyhow::{format_err, Error, Result};
+use anyhow::{ensure, format_err, Error, Result};
 use serde::{de::Visitor, export::fmt::Debug, Deserialize, Deserializer, Serialize};
 use std::{
     convert::TryFrom,
@@ -138,8 +138,12 @@ impl FromStr for ChainId {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        assert!(!s.is_empty());
-        NamedChain::str_to_chain_id(s).or_else(|_err| Ok(ChainId::new(s.parse::<u8>()?)))
+        ensure!(!s.is_empty(), "Cannot create chain ID from empty string");
+        NamedChain::str_to_chain_id(s).or_else(|_err| {
+            let value = s.parse::<u8>()?;
+            ensure!(value > 0, "cannot have chain ID with 0");
+            Ok(ChainId::new(value))
+        })
     }
 }
 
@@ -155,5 +159,20 @@ impl ChainId {
 
     pub fn test() -> Self {
         ChainId::new(NamedChain::TESTING.id())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_chain_id_from_str() {
+        assert!(ChainId::from_str("").is_err());
+        assert!(ChainId::from_str("0").is_err());
+        assert!(ChainId::from_str("256").is_err());
+        assert!(ChainId::from_str("255255").is_err());
+        assert_eq!(ChainId::from_str("TESTING").unwrap(), ChainId::test());
+        assert_eq!(ChainId::from_str("255").unwrap(), ChainId::new(255));
     }
 }
