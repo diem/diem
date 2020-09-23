@@ -15,7 +15,8 @@ use storage_client::StorageClient;
 
 pub trait RemoteService {
     fn client(&self) -> SerializerClient {
-        let network_client = NetworkClient::new(self.server_address(), self.network_timeout());
+        let network_client =
+            NetworkClient::new("execution", self.server_address(), self.network_timeout());
         let service = Box::new(RemoteClient::new(network_client));
         SerializerClient::new_client(service)
     }
@@ -34,7 +35,7 @@ pub fn execute(
         StorageClient::new(&storage_addr, network_timeout).into(),
     ));
     let mut serializer_service = SerializerService::new(block_executor, prikey);
-    let mut network_server = NetworkServer::new(listen_addr, network_timeout);
+    let mut network_server = NetworkServer::new("execution", listen_addr, network_timeout);
 
     loop {
         if let Err(e) = process_one_message(&mut network_server, &mut serializer_service) {

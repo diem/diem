@@ -3098,7 +3098,10 @@ version = "0.1.0"
 dependencies = [
  "libra-config 0.1.0",
  "libra-logger 0.1.0",
+ "libra-secure-push-metrics 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "once_cell 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.116 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

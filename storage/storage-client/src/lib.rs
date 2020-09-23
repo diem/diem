@@ -31,7 +31,7 @@ pub struct StorageClient {
 impl StorageClient {
     pub fn new(server_address: &SocketAddr, timeout: u64) -> Self {
         Self {
-            network_client: Mutex::new(NetworkClient::new(*server_address, timeout)),
+            network_client: Mutex::new(NetworkClient::new("storage", *server_address, timeout)),
         }
     }
 
