@@ -6,6 +6,7 @@
 use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
+    logging::MempoolSchema,
     network::{MempoolNetworkSender, MempoolSyncMsg},
     shared_mempool::types::{
         notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
@@ -161,8 +162,8 @@ where
         &mut network_sender,
     ) {
         error!(
-            "[shared mempool] error broadcasting transactions to peer {:?}: {}",
-            peer, e
+            MempoolSchema::new().peer(&peer).error(&e),
+            "[shared mempool] error broadcasting transactions to peer {:?}: {}", peer, e
         );
     } else {
         let broadcast_time = Instant::now();
@@ -271,10 +272,10 @@ pub(crate) async fn process_transaction_broadcast<V>(
 
     for (maybe_vm_status, failed_transaction) in failed_transactions {
         error!(
+            MempoolSchema::new().peer(&peer),
             SecurityEvent::InvalidTransactionMempool,
             failed_transaction = failed_transaction,
             vm_status = maybe_vm_status,
-            from_peer = peer,
         );
     }
 
@@ -286,6 +287,7 @@ pub(crate) async fn process_transaction_broadcast<V>(
         .expect("[shared mempool] missing network sender");
     if let Err(e) = send_mempool_sync_msg(ack_response, peer.peer_id(), &mut network_sender) {
         error!(
+            MempoolSchema::new().peer(&peer).error(&e),
             "[shared mempool] failed to send ACK back to peer {:?}: {}",
             peer, e
         );
@@ -472,6 +474,7 @@ pub(crate) async fn process_state_sync_request(
             format_err!("[shared mempool] timeout on callback sending response to Mempool request")
         }) {
         error!(
+            MempoolSchema::new().error(&e),
             "[shared mempool] failed to send back CommitResponse with error: {:?}",
             e
         );
@@ -535,6 +538,7 @@ pub(crate) async fn process_consensus_request(mempool: &Mutex<CoreMempool>, req:
         format_err!("[shared mempool] timeout on callback sending response to Mempool request")
     }) {
         error!(
+            MempoolSchema::new().error(&e),
             "[shared mempool] failed to send back mempool response with error: {:?}",
             e
         );
