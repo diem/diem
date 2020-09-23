@@ -813,30 +813,6 @@ jobs:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
       - build_setup
-      - restore_cache:
-          name: restore daily latch cache file.
-          key: code-coverage-daily
-      - run:
-          name: Halt job if already built code coverage today.
-          command: |
-            NOW=`date +%Y-%m-%d`
-            LAST=`cat /home/circleci/lastbuild` || true
-            if [[ "$LAST" == "$NOW" ]]; then
-              echo Last build occured today, halting.
-              circleci step halt
-            else
-              echo Last build occured $LAST, building.
-              date +%Y-%m-%d > /home/circleci/lastbuild
-            fi
-      - save_cache:
-          name: store updated daily latch file.
-          key: code-coverage-daily-{{ epoch }}
-          paths:
-            - /home/circleci/lastbuild
-      - aws-cli/configure:
-          aws-access-key-id: AWS_ACCESS_KEY_ID
-          aws-secret-access-key: AWS_SECRET_ACCESS_KEY
-          aws-region: AWS_REGION
       - run:
           name: Setup code coverage output
           command: |
@@ -849,24 +825,6 @@ jobs:
       - run:
           name: Upload result to codecov.io
           command: bash <(curl -s https://codecov.io/bash) -f $CODECOV_OUTPUT/lcov.info -F unittest;
-      - run:
-          name: Push Coverage Reports to S3
-          command: |
-            set -x
-            SUFFIX="$(date +"%Y-%m-%d")-$(git rev-parse --short=8 HEAD)"
-            PREFIX="ci-artifacts.libra.org/coverage";
-            #Push grcov
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/${SUFFIX}/";
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/grcovhtml "s3://${PREFIX}/unit-coverage/latest/";
-            echo "Grcov available in s3 https://${PREFIX}/unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-            #Push lcov
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/${SUFFIX}/";
-            aws s3 cp --recursive ${CODECOV_OUTPUT}/lcovhtml "s3://${PREFIX}/lcov-unit-coverage/latest/";
-            echo "lcov available in s3 https://${PREFIX}/lcov-unit-coverage/${SUFFIX}/index.html" >> ${MESSAGE_PAYLOAD_FILE}
-      - send_message:
-          payload_file: "${MESSAGE_PAYLOAD_FILE}"
-          build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
-          webhook: "${WEBHOOK_COVERAGE_INFO}"
 
 workflows:
   ######################################################################################################################
@@ -936,46 +894,7 @@ workflows:
   ######################################################################################################################
   commit-workflow:
     jobs:
-      - lint-docker:
-          filters: *filter-only-auto-canary
-      - prefetch-crates:
-          filters: *filter-only-auto-canary
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          requires:
-            - prefetch-crates
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-      - build-benchmark:
-          requires:
-            - prefetch-crates
-      - docker-ci-build:
-          target-image: circleci
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          target-image: centos
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          #sccache fails to execute in alpine.
-          target-image: alpine
-          filters: *filter-only-auto-canary
-      - docker-ci-build:
-          target-image: arch
-          filters: *filter-only-auto-canary
-      - docker-pre-publish:
-          context: docker
-          filters:
-            branches:
-              only: auto
+      - code_coverage
 
   pull-request-workflow:
     jobs:
