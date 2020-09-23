@@ -366,8 +366,8 @@ where
     ) -> Result<AccumulatorConsistencyProof> {
         ensure!(
             sub_acc_leaves <= self.num_leaves,
-            "The other accumulator is bigger than this one. self.num_leaves: {}. \
-             sub_acc_leaves: {}.",
+            "Can't get accumulator consistency proof for a version newer than the local version. \
+            Local next version: {}, asked next version: {}",
             self.num_leaves,
             sub_acc_leaves,
         );
