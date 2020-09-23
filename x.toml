@@ -126,7 +126,6 @@ members = [
 [workspace.subsets.release]
 # The Libra release binaries
 members = [
-    "config/config-builder",
     "config/management/genesis",
     "consensus/safety-rules",
     "execution/db-bootstrapper",
