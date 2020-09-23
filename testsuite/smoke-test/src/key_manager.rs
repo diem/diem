@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_environment::TestEnvironment, workspace_builder};
+use crate::{smoke_test_environment::SmokeTestEnvironment, workspace_builder};
 use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
 use libra_global_constants::CONSENSUS_KEY;
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
@@ -19,7 +19,7 @@ const KEY_MANAGER_BIN: &str = "libra-key-manager";
 #[ignore]
 fn test_key_manager_consensus_rotation() {
     // Create and launch a local validator swarm of 2 nodes.
-    let mut env = TestEnvironment::new(2);
+    let mut env = SmokeTestEnvironment::new(2);
     env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.

@@ -29,7 +29,7 @@ mod state_sync;
 mod storage;
 
 #[cfg(test)]
-mod test_environment;
+mod smoke_test_environment;
 
 #[cfg(test)]
 mod test_utils;

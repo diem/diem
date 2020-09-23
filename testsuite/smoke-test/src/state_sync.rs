@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_environment::TestEnvironment,
+    smoke_test_environment::SmokeTestEnvironment,
     test_utils::{compare_balances, setup_swarm_and_client_proxy},
 };
 use libra_config::config::NodeConfig;
@@ -17,7 +17,7 @@ fn test_basic_state_synchronization() {
     // - Verify that the restarted node has synced up with the submitted transactions.
 
     // we set a smaller chunk limit (=5) here to properly test multi-chunk state sync
-    let mut env = TestEnvironment::new_with_chunk_limit(5, 5);
+    let mut env = SmokeTestEnvironment::new_with_chunk_limit(5, 5);
     env.validator_swarm.launch();
     let mut client_proxy = env.get_validator_client(1, None);
 

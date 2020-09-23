@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_environment::TestEnvironment, test_utils::load_libra_root_storage, workspace_builder,
-    workspace_builder::workspace_root,
+    smoke_test_environment::SmokeTestEnvironment, test_utils::load_libra_root_storage,
+    workspace_builder, workspace_builder::workspace_root,
 };
 use anyhow::anyhow;
 use libra_config::config::{NodeConfig, SecureBackend, WaypointConfig};
@@ -29,7 +29,7 @@ use transaction_builder::encode_remove_validator_and_reconfigure_script;
 /// 4. test a node lag behind can sync to the waypoint
 fn test_genesis_transaction_flow() {
     let db_bootstrapper = workspace_builder::get_bin("db-bootstrapper");
-    let mut env = TestEnvironment::new(4);
+    let mut env = SmokeTestEnvironment::new(4);
     println!("1. set sync_only = true for the first node and check it can sync to others");
     let config_path = env.validator_swarm.config.config_files.first().unwrap();
     let mut node_config = NodeConfig::load(config_path).unwrap();

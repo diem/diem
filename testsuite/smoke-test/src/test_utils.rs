@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::test_environment::TestEnvironment;
+use crate::smoke_test_environment::SmokeTestEnvironment;
 use cli::client_proxy::ClientProxy;
 use libra_config::config::{Identity, NodeConfig, SecureBackend};
 use rust_decimal::{prelude::FromPrimitive, Decimal};
@@ -79,8 +79,8 @@ pub fn test_smoke_script(mut client_proxy: ClientProxy) {
 pub fn setup_swarm_and_client_proxy(
     num_nodes: usize,
     client_port_index: usize,
-) -> (TestEnvironment, ClientProxy) {
-    let mut env = TestEnvironment::new(num_nodes);
+) -> (SmokeTestEnvironment, ClientProxy) {
+    let mut env = SmokeTestEnvironment::new(num_nodes);
     env.validator_swarm.launch();
     let ac_client = env.get_validator_client(client_port_index, None);
     (env, ac_client)

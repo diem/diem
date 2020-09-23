@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_environment::TestEnvironment,
+    smoke_test_environment::SmokeTestEnvironment,
     test_utils::{compare_balances, test_smoke_script},
 };
 use libra_types::account_config::{
@@ -12,7 +12,7 @@ use libra_types::account_config::{
 #[test]
 fn test_full_node_basic_flow() {
     // launch environment of 4 validator nodes and 2 full nodes
-    let mut env = TestEnvironment::new(4);
+    let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
     env.setup_public_fn_swarm(2);
     env.validator_swarm.launch();
@@ -160,7 +160,7 @@ fn test_full_node_basic_flow() {
 #[test]
 fn test_vfn_failover() {
     // launch environment of 4 validator nodes and 2 full nodes
-    let mut env = TestEnvironment::new(4);
+    let mut env = SmokeTestEnvironment::new(4);
     env.setup_vfn_swarm();
     env.setup_public_fn_swarm(1);
     env.validator_swarm.launch();

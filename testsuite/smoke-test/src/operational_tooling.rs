@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    test_environment::TestEnvironment,
+    smoke_test_environment::SmokeTestEnvironment,
     test_utils::{
         compare_balances, load_backend_storage, load_libra_root_storage,
         setup_swarm_and_client_proxy,
@@ -26,7 +26,7 @@ use std::convert::{TryFrom, TryInto};
 
 #[test]
 fn test_consensus_key_rotation() {
-    let mut swarm = TestEnvironment::new(5);
+    let mut swarm = SmokeTestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -71,7 +71,7 @@ fn test_consensus_key_rotation() {
 
 #[test]
 fn test_operator_key_rotation() {
-    let mut swarm = TestEnvironment::new(5);
+    let mut swarm = SmokeTestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -118,7 +118,7 @@ fn test_operator_key_rotation() {
 
 #[test]
 fn test_operator_key_rotation_recovery() {
-    let mut swarm = TestEnvironment::new(5);
+    let mut swarm = SmokeTestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -190,7 +190,7 @@ fn test_operator_key_rotation_recovery() {
 #[test]
 fn test_network_key_rotation() {
     let num_nodes = 5;
-    let mut swarm = TestEnvironment::new(num_nodes);
+    let mut swarm = SmokeTestEnvironment::new(num_nodes);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -238,7 +238,7 @@ fn test_network_key_rotation() {
 #[test]
 fn test_network_key_rotation_recovery() {
     let num_nodes = 5;
-    let mut swarm = TestEnvironment::new(num_nodes);
+    let mut swarm = SmokeTestEnvironment::new(num_nodes);
     swarm.validator_swarm.launch();
 
     // Load a node config
@@ -359,7 +359,7 @@ fn test_e2e_reconfiguration() {
 }
 
 fn wait_for_transaction_on_all_nodes(
-    swarm: &TestEnvironment,
+    swarm: &SmokeTestEnvironment,
     num_nodes: usize,
     account: AccountAddress,
     sequence_number: u64,

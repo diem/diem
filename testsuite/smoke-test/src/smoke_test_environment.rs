@@ -12,7 +12,7 @@ use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 
-pub struct TestEnvironment {
+pub struct SmokeTestEnvironment {
     pub validator_swarm: LibraSwarm,
     pub vfn_swarm: Option<LibraSwarm>,
     pub public_fn_swarm: Option<LibraSwarm>,
@@ -20,7 +20,7 @@ pub struct TestEnvironment {
     mnemonic_file: TempPath,
 }
 
-impl TestEnvironment {
+impl SmokeTestEnvironment {
     pub fn new_with_chunk_limit(num_validators: usize, chunk_limit: u64) -> Self {
         ::libra_logger::Logger::new().init();
         let mut template = NodeConfig::default_for_validator();
