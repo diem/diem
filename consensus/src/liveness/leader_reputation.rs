@@ -73,7 +73,9 @@ impl MetadataBackend for LibraDBBackend {
             || known_version == self.libra_db.get_latest_version().unwrap_or(0))
         {
             if let Err(e) = self.refresh_window(target_round) {
-                error!("[leader reputation] Fail to refresh window: {:?}", e);
+                error!(
+                    error = ?e, "[leader reputation] Fail to refresh window",
+                );
                 return vec![];
             }
         }

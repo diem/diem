@@ -51,9 +51,9 @@ impl StateComputer for ExecutionProxy {
             })
         });
         debug!(
-            "Executing block {:x}. Parent: {:x}.",
-            block.id(),
-            block.parent_id(),
+            block_id = block.id(),
+            parent_id = block.parent_id(),
+            "Executing block",
         );
 
         // TODO: figure out error handling for the prologue txn
@@ -85,7 +85,7 @@ impl StateComputer for ExecutionProxy {
                 .commit(committed_txns, reconfig_events)
                 .await
         ) {
-            error!("failed to notify state synchronizer: {:?}", e);
+            error!(error = ?e, "Failed to notify state synchronizer");
         }
         Ok(())
     }

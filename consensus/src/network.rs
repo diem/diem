@@ -3,6 +3,7 @@
 
 use crate::{
     counters,
+    logging::LogEvent,
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
 };
 use anyhow::{anyhow, ensure};
@@ -102,7 +103,7 @@ impl NetworkSender {
                 error!(
                     SecurityEvent::InvalidRetrievedBlock,
                     request_block_response = response,
-                    error = e.to_string()
+                    error = ?e,
                 );
                 e
             })?;
@@ -133,7 +134,7 @@ impl NetworkSender {
 
         // Broadcast message over direct-send to all other validators.
         if let Err(err) = self.network_sender.send_to_many(other_validators, msg) {
-            error!("Error broadcasting message: {:?}", err);
+            error!(error = ?err, "Error broadcasting message");
         }
     }
 
@@ -153,12 +154,15 @@ impl NetworkSender {
             if self.author == peer {
                 let self_msg = Event::Message((self.author, msg.clone()));
                 if let Err(err) = self_sender.send(Ok(self_msg)).await {
-                    error!("Error delivering a self vote: {:?}", err);
+                    error!(error = ?err, "Error delivering a self vote");
                 }
                 continue;
             }
             if let Err(e) = network_sender.send_to(peer, msg.clone()) {
-                error!("Failed to send a vote to peer {:?}: {:?}", peer, e);
+                error!(
+                    remote_peer = peer,
+                    error = ?e, "Failed to send a vote to peer",
+                );
             }
         }
     }
@@ -171,8 +175,10 @@ impl NetworkSender {
         let mut network_sender = self.network_sender.clone();
         if let Err(e) = network_sender.send_to(recipient, msg) {
             warn!(
-                "Failed to send a sync info msg to peer {:?}: {:?}",
-                recipient, e
+                remote_peer = recipient,
+                error = "Failed to send a sync info msg to peer {:?}",
+                "{:?}",
+                e
             );
         }
     }
@@ -181,7 +187,10 @@ impl NetworkSender {
         let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         let self_msg = Event::Message((self.author, msg));
         if let Err(e) = self.self_sender.send(Ok(self_msg)).await {
-            warn!("Failed to notify to self an epoch change {:?}", e);
+            warn!(
+                error = "Failed to notify to self an epoch change",
+                "{:?}", e
+            );
         }
     }
 }
@@ -235,16 +244,22 @@ impl NetworkTask {
                         .push((peer_id, discriminant(&msg)), (peer_id, msg))
                     {
                         warn!(
-                            "Error pushing consensus msg from {}, error: {:?}",
-                            peer_id, e
+                            remote_peer = peer_id,
+                            error = ?e, "Error pushing consensus msg",
                         );
                     }
                 }
                 Event::RpcRequest((peer_id, msg, callback)) => match msg {
                     ConsensusMsg::BlockRetrievalRequest(request) => {
-                        debug!("Received block retrieval request {}", request);
+                        debug!(
+                            remote_peer = peer_id,
+                            event = LogEvent::ReceiveBlockRetrieval,
+                            "{}",
+                            request
+                        );
                         if request.num_blocks() > MAX_BLOCKS_PER_REQUEST {
                             warn!(
+                                remote_peer = peer_id,
                                 "Ignore block retrieval with too many blocks: {}",
                                 request.num_blocks()
                             );
@@ -255,19 +270,19 @@ impl NetworkTask {
                             response_sender: callback,
                         };
                         if let Err(e) = self.block_retrieval_tx.push(peer_id, req_with_callback) {
-                            warn!("libra channel closed: {:?}", e);
+                            warn!(error = ?e, "libra channel closed");
                         }
                     }
                     _ => {
-                        warn!("Unexpected msg from {}: {:?}", peer_id, msg);
+                        warn!(remote_peer = peer_id, "Unexpected msg: {:?}", msg);
                         continue;
                     }
                 },
                 Event::NewPeer(peer_id, _origin) => {
-                    debug!("Peer {} connected", peer_id);
+                    debug!(remote_peer = peer_id, "Peer connected");
                 }
                 Event::LostPeer(peer_id, _origin) => {
-                    debug!("Peer {} disconnected", peer_id);
+                    debug!(remote_peer = peer_id, "Peer disconnected");
                 }
             }
         }

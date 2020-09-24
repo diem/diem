@@ -4,6 +4,7 @@
 use crate::{
     block_storage::{block_tree::BlockTree, BlockReader},
     counters,
+    logging::{LogEvent, LogSchema},
     persistent_liveness_storage::{
         PersistentLivenessStorage, RecoveryData, RootInfo, RootMetadata,
     },
@@ -26,7 +27,6 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use termion::color::*;
 
 #[cfg(test)]
 #[path = "block_store_test.rs"]
@@ -229,11 +229,17 @@ impl BlockStore {
             .await
             .expect("Failed to persist commit");
         update_counters_for_committed_blocks(&blocks_to_commit);
-        debug!("{}Committed{} {}", Fg(Blue), Fg(Reset), *block_to_commit);
+        let current_round = self.root().round();
+        let committed_round = block_to_commit.round();
+        debug!(
+            LogSchema::new(LogEvent::CommitViaBlock).round(current_round),
+            committed_round = committed_round,
+            block_id = block_to_commit.id(),
+        );
         event!("committed",
             "block_id": block_to_commit.id().short_str(),
             "epoch": block_to_commit.epoch(),
-            "round": block_to_commit.round(),
+            "round": committed_round,
             "parent_id": block_to_commit.parent_id().short_str(),
         );
         self.prune_tree(block_to_commit.id());
@@ -264,7 +270,7 @@ impl BlockStore {
         let to_remove = self.inner.read().unwrap().get_all_block_id();
         if let Err(e) = self.storage.prune_tree(to_remove) {
             // it's fine to fail here, the next restart will try to clean up dangling blocks again.
-            error!("fail to delete block: {:?}", e);
+            error!(error = ?e, "Fail to delete block from consensus db");
         }
         // Unwrap the new tree and replace the existing tree.
         *self.inner.write().unwrap() = Arc::try_unwrap(inner)
@@ -279,7 +285,7 @@ impl BlockStore {
         if self.highest_commit_cert().commit_info().round() > self.root().round() {
             let finality_proof = self.highest_commit_cert().ledger_info().clone();
             if let Err(e) = self.commit(finality_proof).await {
-                warn!("{:?}", e);
+                error!(error = ?e, "Commit error during rebuild");
             }
         }
     }
@@ -400,7 +406,7 @@ impl BlockStore {
             // it's fine to fail here, as long as the commit succeeds, the next restart will clean
             // up dangling blocks, and we need to prune the tree to keep the root consistent with
             // executor.
-            error!("fail to delete block: {:?}", e);
+            error!(error = ?e, "fail to delete block");
         }
         self.inner
             .write()

@@ -10,8 +10,9 @@ use crate::{
         proposer_election::ProposerElection,
         rotating_proposer_election::{choose_leader, RotatingProposer},
         round_proposer_election::RoundProposer,
-        round_state::{ExponentialTimeInterval, RoundState},
+        round_state::{ExponentialTimeInterval, RoundState, RoundStateLogSchema},
     },
+    logging::{LogEvent, LogSchema},
     metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
@@ -193,9 +194,10 @@ impl EpochManager {
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         debug!(
-            "[EpochManager] receive {} from {}",
-            request,
-            peer_id.short_str()
+            LogSchema::new(LogEvent::ReceiveEpochRetrieval)
+                .remote_peer(peer_id)
+                .epoch(self.epoch()),
+            "[EpochManager] receive {}", request,
         );
         let proof = self
             .storage
@@ -215,10 +217,10 @@ impl EpochManager {
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         debug!(
-            "[EpochManager] receive message from epoch {} from {}, local epoch: {}",
-            different_epoch,
-            peer_id,
-            self.epoch()
+            LogSchema::new(LogEvent::ReceiveMessageFromDifferentEpoch)
+                .remote_peer(peer_id)
+                .epoch(self.epoch()),
+            remote_epoch = different_epoch,
         );
         match different_epoch.cmp(&self.epoch()) {
             // We try to help nodes that have lower epoch than us
@@ -255,8 +257,8 @@ impl EpochManager {
             .verify(self.epoch_state())
             .context("[EpochManager] Invalid EpochChangeProof")?;
         debug!(
-            "Received epoch change to {}",
-            ledger_info.ledger_info().epoch() + 1
+            LogSchema::new(LogEvent::NewEpoch).epoch(ledger_info.ledger_info().next_block_epoch()),
+            "Received verified epoch change",
         );
 
         // make sure storage is on this ledger_info too, it should be no-op if it's already committed
@@ -275,16 +277,18 @@ impl EpochManager {
     async fn start_round_manager(&mut self, recovery_data: RecoveryData, epoch_state: EpochState) {
         // Release the previous RoundManager, especially the SafetyRule client
         self.processor = None;
+        let epoch = epoch_state.epoch;
         counters::EPOCH.set(epoch_state.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_state.verifier.len() as i64);
         info!(
-            "Starting {} with root {}",
-            epoch_state,
-            recovery_data.root_block(),
+            epoch = epoch_state.epoch,
+            validators = epoch_state.verifier.to_string(),
+            root_block = recovery_data.root_block(),
+            "Starting new epoch",
         );
         let last_vote = recovery_data.last_vote();
 
-        info!("Create BlockStore");
+        info!(epoch = epoch, "Create BlockStore");
         let block_store = Arc::new(BlockStore::new(
             Arc::clone(&self.storage),
             recovery_data,
@@ -293,7 +297,7 @@ impl EpochManager {
             Arc::clone(&self.time_service),
         ));
 
-        info!("Update SafetyRules");
+        info!(epoch = epoch, "Update SafetyRules");
 
         let mut safety_rules =
             MetricsSafetyRules::new(self.safety_rules_manager.client(), self.storage.clone());
@@ -301,7 +305,7 @@ impl EpochManager {
             .perform_initialize()
             .expect("Unable to initialize SafetyRules");
 
-        info!("Create ProposalGenerator");
+        info!(epoch = epoch, "Create ProposalGenerator");
         // txn manager is required both by proposal generator (to pull the proposers)
         // and by event processor (to update their status).
         let proposal_generator = ProposalGenerator::new(
@@ -312,11 +316,11 @@ impl EpochManager {
             self.config.max_block_size,
         );
 
-        info!("Create RoundState");
+        info!(epoch = epoch, "Create RoundState");
         let round_state =
             self.create_round_state(self.time_service.clone(), self.timeout_sender.clone());
 
-        info!("Create ProposerElection");
+        info!(epoch = epoch, "Create ProposerElection");
         let proposer_election = self.create_proposer_election(&epoch_state);
         let network_sender = NetworkSender::new(
             self.author,
@@ -339,7 +343,7 @@ impl EpochManager {
         );
         processor.start(last_vote).await;
         self.processor = Some(RoundProcessor::Normal(processor));
-        info!("RoundManager started");
+        info!(epoch = epoch, "RoundManager started");
     }
 
     // Depending on what data we can extract from consensusdb, we may or may not have an
@@ -351,6 +355,7 @@ impl EpochManager {
         ledger_recovery_data: LedgerRecoveryData,
         epoch_state: EpochState,
     ) {
+        let epoch = epoch_state.epoch;
         let network_sender = NetworkSender::new(
             self.author,
             self.network_sender.clone(),
@@ -364,7 +369,7 @@ impl EpochManager {
             self.state_computer.clone(),
             ledger_recovery_data.commit_round(),
         )));
-        info!("SyncProcessor started");
+        info!(epoch = epoch, "SyncProcessor started");
     }
 
     async fn start_processor(&mut self, payload: OnChainConfigPayload) {
@@ -405,7 +410,7 @@ impl EpochManager {
                     error!(
                         SecurityEvent::ConsensusInvalidMessage,
                         remote_peer = peer_id,
-                        error = err.to_string(),
+                        error = ?err,
                         unverified_event = unverified_event
                     );
                     err
@@ -436,6 +441,12 @@ impl EpochManager {
             }
             ConsensusMsg::EpochChangeProof(proof) => {
                 let msg_epoch = proof.epoch()?;
+                debug!(
+                    LogSchema::new(LogEvent::ReceiveEpochChangeProof)
+                        .remote_peer(peer_id)
+                        .epoch(self.epoch()),
+                    "Proof from epoch {}", msg_epoch,
+                );
                 if msg_epoch == self.epoch() {
                     monitor!("process_epoch_proof", self.start_new_epoch(*proof).await?);
                 } else {
@@ -549,15 +560,15 @@ impl EpochManager {
                 }
             );
             let round_state = if let RoundProcessor::Normal(p) = self.processor_mut() {
-                p.round_state().to_string()
+                Some(p.round_state())
             } else {
-                "RoundState: None".into()
+                None
             };
             match result {
-                Ok(_) => trace!("{}", round_state),
+                Ok(_) => trace!(RoundStateLogSchema::new(round_state)),
                 Err(e) => {
                     counters::ERROR_COUNT.inc();
-                    error!("{:?}, {}", e, round_state);
+                    error!(error = ?e, RoundStateLogSchema::new(round_state));
                 }
             }
         }

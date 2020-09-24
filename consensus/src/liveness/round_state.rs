@@ -7,12 +7,13 @@ use crate::{
     util::time_service::{SendTask, TimeService},
 };
 use consensus_types::{common::Round, sync_info::SyncInfo, vote::Vote};
-use libra_logger::prelude::*;
+use libra_logger::{prelude::*, Schema};
 use libra_types::validator_verifier::ValidatorVerifier;
+use serde::Serialize;
 use std::{fmt, sync::Arc, time::Duration};
 
 /// A reason for starting a new round: introduced for monitoring / debug purposes.
-#[derive(Eq, Debug, PartialEq)]
+#[derive(Serialize, Eq, Debug, PartialEq)]
 pub enum NewRoundReason {
     QCReady,
     Timeout,
@@ -150,25 +151,27 @@ pub struct RoundState {
     vote_sent: Option<Vote>,
 }
 
-// this is required by structured log
-impl fmt::Debug for RoundState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self)
-    }
+#[derive(Default, Schema)]
+pub struct RoundStateLogSchema<'a> {
+    round: Option<Round>,
+    committed_round: Option<Round>,
+    #[schema(display)]
+    pending_votes: Option<&'a PendingVotes>,
+    #[schema(display)]
+    self_vote: Option<&'a Vote>,
 }
 
-impl fmt::Display for RoundState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Round: {} ", self.current_round)?;
-        write!(f, "Committed Round: {} ", self.highest_committed_round)?;
-        write!(f, "{} ", self.pending_votes)?;
-        write!(
-            f,
-            "Self Vote: {}",
-            self.vote_sent
-                .as_ref()
-                .map_or("None".to_string(), |v| v.to_string())
-        )
+impl<'a> RoundStateLogSchema<'a> {
+    pub fn new(round_state: Option<&'a RoundState>) -> Self {
+        match round_state {
+            Some(state) => Self {
+                round: Some(state.current_round),
+                committed_round: Some(state.highest_committed_round),
+                pending_votes: Some(&state.pending_votes),
+                self_vote: state.vote_sent.as_ref(),
+            },
+            None => Self::default(),
+        }
     }
 }
 
@@ -212,7 +215,7 @@ impl RoundState {
         if round != self.current_round {
             return false;
         }
-        warn!("Local timeout for round {}", round);
+        warn!(round = round, "Local timeout");
         counters::TIMEOUT_COUNT.inc();
         self.setup_timeout();
         true
@@ -242,7 +245,7 @@ impl RoundState {
                 reason: new_round_reason,
                 timeout,
             };
-            debug!("Starting new round: {}", new_round_event);
+            debug!(round = new_round, "Starting new round: {}", new_round_event);
             return Some(new_round_event);
         }
         None
@@ -305,11 +308,15 @@ impl RoundState {
             .get_round_duration(round_index_after_committed_round);
         let now = self.time_service.get_current_timestamp();
         debug!(
+            round = self.current_round,
             "{:?} passed since the previous deadline.",
             now.checked_sub(self.current_round_deadline)
                 .map_or("0 ms".to_string(), |v| format!("{:?}", v))
         );
-        debug!("Set round deadline to {:?} from now", timeout);
+        debug!(
+            round = self.current_round,
+            "Set round deadline to {:?} from now", timeout
+        );
         self.current_round_deadline = now + timeout;
         timeout
     }

@@ -393,7 +393,7 @@ impl PersistentLivenessStorage for StorageWriteProxy {
                 LivenessStorageData::RecoveryData(initial_data)
             }
             Err(e) => {
-                error!("Failed to construct recovery data: {}", e);
+                error!(error = ?e, "Failed to construct recovery data");
                 LivenessStorageData::LedgerRecoveryData(ledger_recovery_data)
             }
         }

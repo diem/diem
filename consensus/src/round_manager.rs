@@ -9,6 +9,7 @@ use crate::{
         proposer_election::ProposerElection,
         round_state::{NewRoundEvent, NewRoundReason, RoundState},
     },
+    logging::{LogEvent, LogSchema},
     metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::ConsensusMsg,
@@ -236,7 +237,6 @@ impl RoundManager {
         &mut self,
         new_round_event: NewRoundEvent,
     ) -> anyhow::Result<()> {
-        debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
         match new_round_event.reason {
@@ -247,6 +247,10 @@ impl RoundManager {
                 counters::TIMEOUT_ROUNDS_COUNT.inc();
             }
         };
+        debug!(
+            self.new_log(LogEvent::NewRound),
+            reason = new_round_event.reason
+        );
         if self
             .proposer_election
             .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
@@ -273,7 +277,7 @@ impl RoundManager {
         self.txn_manager.trace_transactions(&signed_proposal);
         trace_edge!("parent_proposal", {"block", signed_proposal.parent_id()}, {"block", signed_proposal.id()});
         trace_event!("round_manager::generate_proposal", {"block", signed_proposal.id()});
-        debug!("Propose {}", signed_proposal);
+        debug!(self.new_log(LogEvent::Propose), "{}", signed_proposal);
         // return proposal
         Ok(ProposalMsg::new(
             signed_proposal,
@@ -321,19 +325,15 @@ impl RoundManager {
         if help_remote && local_sync_info.has_newer_certificates(&sync_info) {
             counters::SYNC_INFO_MSGS_SENT_COUNT.inc();
             debug!(
-                "Peer {} has stale state {}, send it back {}",
-                author.short_str(),
-                sync_info,
-                local_sync_info,
+                self.new_log(LogEvent::HelpPeerSync).remote_peer(author),
+                "Remote peer has stale state {}, send it back {}", sync_info, local_sync_info,
             );
             self.network.send_sync_info(local_sync_info.clone(), author);
         }
         if sync_info.has_newer_certificates(&local_sync_info) {
             debug!(
-                "Local state {} is stale than peer {} remote state {}",
-                local_sync_info,
-                author.short_str(),
-                sync_info
+                self.new_log(LogEvent::SyncToPeer).remote_peer(author),
+                "Local state {} is stale than remote state {}", local_sync_info, sync_info
             );
             // Some information in SyncInfo is ahead of what we have locally.
             // First verify the SyncInfo (didn't verify it in the yet).
@@ -344,7 +344,7 @@ impl RoundManager {
                         SecurityEvent::InvalidSyncInfoMsg,
                         sync_info = sync_info,
                         remote_peer = author,
-                        error = e.to_string()
+                        error = ?e,
                     );
                     e
                 })?;
@@ -395,7 +395,10 @@ impl RoundManager {
         fail_point!("consensus::process_sync_info_msg", |_| {
             Err(anyhow::anyhow!("Injected error in process_sync_info_msg"))
         });
-        debug!("Received a sync info msg: {}", sync_info);
+        debug!(
+            self.new_log(LogEvent::ReceiveSyncInfo).remote_peer(peer),
+            "{}", sync_info
+        );
         // To avoid a ping-pong cycle between two peers that move forward together.
         self.ensure_round_and_sync_up(sync_info.highest_round() + 1, &sync_info, peer, false)
             .await
@@ -430,7 +433,10 @@ impl RoundManager {
             _ => {
                 // Didn't vote in this round yet, generate a backup vote
                 let nil_block = self.proposal_generator.generate_nil_block(round)?;
-                debug!("Planning to vote for a NIL block {}", nil_block);
+                debug!(
+                    self.new_log(LogEvent::VoteNIL),
+                    "Planning to vote for a NIL block {}", nil_block
+                );
                 counters::VOTE_NIL_COUNT.inc();
                 let nil_vote = self.execute_and_vote(nil_block).await?;
                 (false, nil_vote)
@@ -452,12 +458,13 @@ impl RoundManager {
             self.block_store.sync_info(),
         )));
         self.network.broadcast(timeout_vote_msg).await;
-        bail!(
-            "Round {} timed out: {}, expected round proposer was {:?}, broadcasted the vote to all replicas",
-            round,
-            if use_last_vote { "already executed and voted at this round" } else { "generate a backup vote" },
-            self.proposer_election.get_valid_proposer(round),
+        error!(
+            round = round,
+            remote_peer = self.proposer_election.get_valid_proposer(round),
+            voted = use_last_vote,
+            event = LogEvent::Timeout,
         );
+        bail!("Round {} timeout, broadcast to all peers", round);
     }
 
     /// This function is called only after all the dependencies of the given QC have been retrieved.
@@ -476,12 +483,13 @@ impl RoundManager {
     /// 4. In case a validator chooses to vote, send the vote to the representatives at the next
     /// round.
     async fn process_proposal(&mut self, proposal: Block) -> Result<()> {
+        let author = proposal
+            .author()
+            .expect("Proposal should be verified having an author");
         ensure!(
             self.proposer_election.is_valid_proposal(&proposal),
             "[RoundManager] Proposer {} for block {} is not a valid proposer for this round",
-            proposal
-                .author()
-                .expect("Proposal should be verified having an author"),
+            author,
             proposal,
         );
 
@@ -495,13 +503,16 @@ impl RoundManager {
             self.round_state.current_round_deadline(),
         );
 
-        debug!("RoundManager: process_proposed_block {}", proposal);
+        let proposal_round = proposal.round();
+
+        debug!(
+            self.new_log(LogEvent::ReceiveProposal).remote_peer(author),
+            "{}", proposal
+        );
 
         if let Some(time_to_receival) = duration_since_epoch().checked_sub(block_time_since_epoch) {
             counters::CREATION_TO_RECEIVAL_S.observe_duration(time_to_receival);
         }
-
-        let proposal_round = proposal.round();
 
         let vote = self
             .execute_and_vote(proposal)
@@ -511,7 +522,7 @@ impl RoundManager {
         let recipients = self
             .proposer_election
             .get_valid_proposer(proposal_round + 1);
-        debug!("{}Voted: {} {}", Fg(Green), Fg(Reset), vote);
+        debug!(self.new_log(LogEvent::Vote).remote_peer(author), "{}", vote);
 
         self.round_state.record_vote(vote.clone());
         let vote_msg = VoteMsg::new(vote, self.block_store.sync_info());
@@ -538,8 +549,7 @@ impl RoundManager {
             .await
         {
             error!(
-                "[RoundManager] Failed to notify mempool of rejected txns: {:?}",
-                e
+                error = ?e, "[RoundManager] Failed to notify mempool of rejected txns",
             );
         }
 
@@ -607,9 +617,15 @@ impl RoundManager {
     /// 1) fetch missing dependencies if required, and then
     /// 2) call process_certificates(), which will start a new round in return.
     async fn process_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
+        let round = vote.vote_data().proposed().round();
+        debug!(
+            self.new_log(LogEvent::ReceiveVote)
+                .remote_peer(vote.author()),
+            "{}", vote
+        );
         if !vote.is_timeout() {
             // Unlike timeout votes regular votes are sent to the leaders of the next round only.
-            let next_round = vote.vote_data().proposed().round() + 1;
+            let next_round = round + 1;
             ensure!(
                 self.proposer_election
                     .is_valid_proposer(self.proposal_generator.author(), next_round),
@@ -618,7 +634,6 @@ impl RoundManager {
                 next_round
             );
         }
-        debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
         // Check if the block already had a QC
         if self
@@ -724,7 +739,7 @@ impl RoundManager {
             self.round_state.record_vote(vote);
         }
         if let Err(e) = self.process_new_round_event(new_round_event).await {
-            error!("[RoundManager] Error during start: {:?}", e);
+            error!(error = ?e, "[RoundManager] Error during start");
         }
     }
 
@@ -745,5 +760,11 @@ impl RoundManager {
 
     pub fn round_state(&self) -> &RoundState {
         &self.round_state
+    }
+
+    fn new_log(&self, event: LogEvent) -> LogSchema {
+        LogSchema::new(event)
+            .round(self.round_state.current_round())
+            .epoch(self.epoch_state.epoch)
     }
 }
