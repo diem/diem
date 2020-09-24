@@ -60,6 +60,7 @@ jobs:
           echo "::set-output name=diff::${output}"
       - name: diff LEC summary
         id: verify-lec
+        if: ${{ github.actor != 'bors-libra' }}
         run: |
           output="$(cargo x diff-summary libra-base/target/summaries/summary-lec.toml target/summaries/summary-lec.toml)"
           echo "${output}"
