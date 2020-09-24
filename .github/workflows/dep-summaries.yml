@@ -37,7 +37,6 @@ jobs:
         if: ${{ github.actor != 'bors-libra' }}
         run: |
           set +e
-          sed -i.back '/^    "config\/config-builder",$/d' x.toml
           cargo x generate-summaries
 
       - name: generate base summaries
@@ -45,7 +44,6 @@ jobs:
         run: |
           set +e
           cd libra-base
-          sed -i.back '/^    "config\/config-builder",$/d' x.toml
           cargo x generate-summaries
 
       - name: diff LSR summary
