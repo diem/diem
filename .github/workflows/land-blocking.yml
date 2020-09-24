@@ -170,7 +170,7 @@ jobs:
           echo "cti exit code: $ret"
           echo "::set-env name=CTI_REPRO_CMD::$cmd"
           echo "::set-env name=CTI_EXIT_CODE::$ret"
-          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed."
+          msg_text="*${{ github.job }}* job in ${{ github.workflow }} workflow failed for PR $PR_NUM."
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json
