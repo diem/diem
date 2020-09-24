@@ -1,5 +1,5 @@
 Command `compile -c`:
-Compiling 1 module(s)
+Compiling 1 source file(s)
 Committed changes.
 Command `view move_data/0x00000000000000000000000000000002/modules/Module`:
 module 00000000.Module {

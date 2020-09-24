@@ -119,26 +119,18 @@ fn compile(
 ) -> Result<(OnDiskStateView, Option<CompiledScript>)> {
     let move_data = maybe_create_dir(&args.move_data)?;
 
-    // TODO: prevent cyclic dep?
     let mut user_move_src_files = if Path::new(&args.move_src).exists() {
         move_lang::find_move_filenames(&[args.move_src.clone()], true)?
     } else {
         vec![]
     };
+    if let Some(f) = script_file.as_ref() {
+        user_move_src_files.push(f.to_string())
+    }
 
     let has_user_modules = !user_move_src_files.is_empty();
     if has_user_modules {
-        print!("Compiling {:?} module(s)", user_move_src_files.len());
-    }
-    if let Some(f) = script_file.as_ref() {
-        if has_user_modules {
-            println!(" and 1 transaction script")
-        } else {
-            println!("Compiling transaction script")
-        }
-        user_move_src_files.push(f.to_string())
-    } else if has_user_modules {
-        println!()
+        println!("Compiling {:?} source file(s)", user_move_src_files.len());
     }
 
     let deps = stdlib::stdlib_files();
@@ -157,11 +149,16 @@ fn compile(
     let mut script_opt = None;
     for c in compilation_units {
         match c {
-            CompiledUnit::Script { script, .. } => {
-                if script_opt.is_some() {
-                    bail!("Error: found script in move_lib")
+            CompiledUnit::Script { script, loc, .. } => {
+                match script_file {
+                    Some(f) => {
+                        if Path::new(f).canonicalize()? == Path::new(loc.file()).canonicalize()? {
+                            script_opt = Some(script)
+                        }
+                    }
+                    None => (),
                 }
-                script_opt = Some(script)
+                // TODO: save script bytecodes on disk? where should we put them?
             }
             CompiledUnit::Module { module, .. } => modules.push(module),
         }

@@ -1,5 +1,5 @@
 Command `run script.move --signers 0xA 0xB --args 6 7`:
-Compiling 1 module(s) and 1 transaction script
+Compiling 2 source file(s)
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000a:
     Added type 00000000::Test::R: [U64(6)]
@@ -11,7 +11,7 @@ Error: `move view <file>` must point to a valid file under move_data
 Command `view move_data/0x0000000000000000000000000000000b/resources/0x00000000000000000000000000000002::Test::R`:
 Error: `move view <file>` must point to a valid file under move_data
 Command `run script.move --signers 0xA 0xB --args 6 7 -c`:
-Compiling 1 module(s) and 1 transaction script
+Compiling 2 source file(s)
 Changed resource(s) under 2 address(es):
   Changed 1 resource(s) under address 0000000000000000000000000000000a:
     Added type 00000000::Test::R: [U64(6)]
