@@ -15,49 +15,7 @@ To create, compile, and publish Move modules to an account on the local blockcha
 
 ### Start a Local Network of Validator Nodes
 
-To run a local network with one validator node and create a local blockchain, change to the `libra` directory and run `libra-swarm`, as shown below:
-
-```
-$ cd libra
-$ cargo run -p libra-swarm -- -s
-```
-
-This command will take some time to run and it will perform the following actions:
-
-* Spawn a local network with one validator node on your computer.
-* Generate genesis transaction, mint key, and bootstrap configuration of the node.
-* Start an instance of the Libra CLI client; the client is connected to the local network.
-
-Upon successful execution of the command, you'll see the CLI client menu and the `libra%` prompt as shown below:
-
-```
-usage: <command> <args>
-
-Use the following commands:
-
-account | a
-  Account operations
-query | q
-  Query operations
-transfer | transferb | t | tb
-  <sender_account_address>|<sender_account_ref_id> <receiver_account_address>|<receiver_account_ref_id> <number_of_coins> <currency_code> [gas_unit_price_in_micro_libras (default=0)] [max_gas_amount_in_micro_libras (default 400_000)] Suffix 'b' is for blocking.
-  Transfer coins from one account to another.
-info | i
-  Print cli config and client internal information
-dev
-  Local Move development
-help | h
-  Prints this help
-quit | q!
-  Exit this client
-
-
-Please, input commands:
-
-libra%
-```
-
-For detailed instructions on working with a local cluster of validator nodes, refer to [Run a Local Network](run-local-network.md).
+Begin by [running a local validator network](run-local-network.md).
 
 ### Create an Account
 
