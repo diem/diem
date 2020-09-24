@@ -1,11 +1,6 @@
 script {
 use 0x1::LibraAccount;
 
-// imports for the prover
-use 0x1::VASP;
-use 0x1::Roles;
-use 0x1::Signer;
-
 /// # Summary
 /// Creates a Child VASP account with its parent being the sending account of the transaction.
 /// The sender of the transaction must be a Parent VASP account.
@@ -81,18 +76,40 @@ fun create_child_vasp_account<CoinType>(
         LibraAccount::restore_withdraw_capability(vasp_withdrawal_cap);
     };
 }
+
 spec fun create_child_vasp_account {
-    pragma verify = false;
-    pragma aborts_if_is_partial = true;
-    /// `parent_vasp` must be a parent vasp account
-    // TODO(tzakian): need to teach the prover that Roles::has_parent_VASP_role ==> VASP::is_parent
-    aborts_if !Roles::spec_has_parent_VASP_role_addr(Signer::spec_address_of(parent_vasp));
-    aborts_if !VASP::is_parent(Signer::spec_address_of(parent_vasp));
-    /// `child_address` must not be an existing account/vasp account
-    // TODO(tzakian): need to teach the prover that !exists(account) ==> !VASP::is_vasp(child_address)
-    aborts_if exists<LibraAccount::LibraAccount>(child_address);
-    aborts_if VASP::is_vasp(child_address);
-    /// `parent_vasp` must not have created more than 256 children
-    aborts_if VASP::spec_get_num_children(Signer::spec_address_of(parent_vasp)) + 1 > 256; // MAX_CHILD_ACCOUNTS
+    use 0x1::Signer;
+    use 0x1::Errors;
+    pragma verify;
+    aborts_with [check]
+        Errors::REQUIRES_ROLE,
+        Errors::ALREADY_PUBLISHED,
+        Errors::LIMIT_EXCEEDED,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_STATE,
+        Errors::INVALID_ARGUMENT,
+        Errors::LIMIT_EXCEEDED;
+    let parent_addr = Signer::spec_address_of(parent_vasp);
+    let parent_cap = LibraAccount::spec_get_withdraw_cap(parent_addr);
+    include LibraAccount::CreateChildVASPAccountAbortsIf<CoinType>{
+        parent: parent_vasp, new_account_address: child_address};
+    aborts_if child_initial_balance > max_u64() with Errors::LIMIT_EXCEEDED;
+    include (child_initial_balance > 0) ==>
+        LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: parent_addr};
+    include (child_initial_balance > 0) ==>
+        LibraAccount::PayFromAbortsIfRestricted<CoinType>{
+            cap: parent_cap,
+            payee: child_address,
+            amount: child_initial_balance,
+            metadata: x"",
+            metadata_signature: x""
+        };
+    include LibraAccount::CreateChildVASPAccountEnsures<CoinType>{
+        parent_addr: parent_addr,
+        child_addr: child_address,
+    };
+    ensures LibraAccount::balance<CoinType>(child_address) == child_initial_balance;
+    ensures LibraAccount::balance<CoinType>(parent_addr)
+        == old(LibraAccount::balance<CoinType>(parent_addr)) - child_initial_balance;
 }
 }

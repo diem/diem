@@ -188,7 +188,7 @@ or if there is already a VASP (child or parent) at this account.
 <pre><code><b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
 <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: vasp};
-<a name="0x1_VASP_vasp_addr$13"></a>
+<a name="0x1_VASP_vasp_addr$14"></a>
 <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp);
 <b>aborts_if</b> <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
 <b>ensures</b> <a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(vasp_addr);
@@ -246,22 +246,46 @@ Aborts if <code>parent</code> is not a ParentVASP
 <summary>Specification</summary>
 
 
-TODO: this times out some times, some times not. To avoid flakes, turn this off until it
-reliably terminates.
 
-
-<pre><code>pragma verify_duration_estimate = 100;
-<b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
-<a name="0x1_VASP_parent_addr$14"></a>
-<b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
 <a name="0x1_VASP_child_addr$15"></a>
-<b>let</b> child_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child);
-<b>aborts_if</b> <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(child_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(parent_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
-<b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) + 1 &gt; <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
-<b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr)) + 1;
-<b>ensures</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(child_addr);
-<b>ensures</b> <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr) == parent_addr;
+
+
+<pre><code><b>let</b> child_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child);
+<b>include</b> <a href="VASP.md#0x1_VASP_PublishChildVASPAbortsIf">PublishChildVASPAbortsIf</a>{child_addr: child_addr};
+<b>include</b> <a href="VASP.md#0x1_VASP_PublishChildVASPEnsures">PublishChildVASPEnsures</a>{parent_addr: <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent), child_addr: child_addr};
+</code></pre>
+
+
+
+
+<a name="0x1_VASP_PublishChildVASPAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_PublishChildVASPAbortsIf">PublishChildVASPAbortsIf</a> {
+    parent: signer;
+    child_addr: address;
+    <a name="0x1_VASP_parent_addr$13"></a>
+    <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotParentVasp">Roles::AbortsIfNotParentVasp</a>{account: parent};
+    <b>aborts_if</b> <a href="VASP.md#0x1_VASP_is_vasp">is_vasp</a>(child_addr) <b>with</b> <a href="Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>;
+    <b>aborts_if</b> !<a href="VASP.md#0x1_VASP_is_parent">is_parent</a>(parent_addr) <b>with</b> <a href="Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>;
+    <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) + 1 &gt; <a href="VASP.md#0x1_VASP_MAX_CHILD_ACCOUNTS">MAX_CHILD_ACCOUNTS</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_VASP_PublishChildVASPEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="VASP.md#0x1_VASP_PublishChildVASPEnsures">PublishChildVASPEnsures</a> {
+    parent_addr: address;
+    child_addr: address;
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent_addr)) + 1;
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(child_addr);
+    <b>ensures</b> <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr) == parent_addr;
+}
 </code></pre>
 
 
@@ -693,5 +717,5 @@ Returns the number of children under <code>parent</code>.
 
 
 <pre><code><b>invariant</b> <b>update</b> [<b>global</b>]
-    <b>forall</b> a: address <b>where</b> <a href="VASP.md#0x1_VASP_is_child">is_child</a>(a): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
+    <b>forall</b> a: address <b>where</b> <b>old</b>(<a href="VASP.md#0x1_VASP_is_child">is_child</a>(a)): <a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a) == <b>old</b>(<a href="VASP.md#0x1_VASP_spec_parent_address">spec_parent_address</a>(a));
 </code></pre>

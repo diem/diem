@@ -79,15 +79,24 @@ module VASP {
         move_to(child, ChildVASP { parent_vasp_addr });
     }
     spec fun publish_child_vasp_credential {
-        /// TODO: this times out some times, some times not. To avoid flakes, turn this off until it
-        ///   reliably terminates.
-        pragma verify_duration_estimate = 100;
-        include Roles::AbortsIfNotParentVasp{account: parent};
-        let parent_addr = Signer::spec_address_of(parent);
         let child_addr = Signer::spec_address_of(child);
+        include PublishChildVASPAbortsIf{child_addr: child_addr};
+        include PublishChildVASPEnsures{parent_addr: Signer::spec_address_of(parent), child_addr: child_addr};
+    }
+
+    spec schema PublishChildVASPAbortsIf {
+        parent: signer;
+        child_addr: address;
+        let parent_addr = Signer::spec_address_of(parent);
+        include Roles::AbortsIfNotParentVasp{account: parent};
         aborts_if is_vasp(child_addr) with Errors::ALREADY_PUBLISHED;
         aborts_if !is_parent(parent_addr) with Errors::INVALID_ARGUMENT;
         aborts_if spec_get_num_children(parent_addr) + 1 > MAX_CHILD_ACCOUNTS with Errors::LIMIT_EXCEEDED;
+    }
+
+    spec schema PublishChildVASPEnsures {
+        parent_addr: address;
+        child_addr: address;
         ensures spec_get_num_children(parent_addr) == old(spec_get_num_children(parent_addr)) + 1;
         ensures is_child(child_addr);
         ensures spec_parent_address(child_addr) == parent_addr;
@@ -260,7 +269,7 @@ module VASP {
 
     spec module {
         invariant update [global]
-            forall a: address where is_child(a): spec_parent_address(a) == old(spec_parent_address(a));
+            forall a: address where old(is_child(a)): spec_parent_address(a) == old(spec_parent_address(a));
     }
 
 }
