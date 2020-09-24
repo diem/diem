@@ -57,8 +57,17 @@ fun burn<Token>(account: &signer, sliding_nonce: u64, preburn_address: address) 
     Libra::burn<Token>(account, preburn_address)
 }
 spec fun burn {
+    use 0x1::Errors;
+
     include SlidingNonce::RecordNonceAbortsIf{ seq_nonce: sliding_nonce };
     include Libra::BurnAbortsIf<Token>;
     include Libra::BurnEnsures<Token>;
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::REQUIRES_CAPABILITY,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_STATE,
+        Errors::LIMIT_EXCEEDED; // TODO: Undocumented error code. Can be caused by Libra.move:544.
 }
 }

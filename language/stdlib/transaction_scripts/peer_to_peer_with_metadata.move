@@ -68,15 +68,9 @@ fun peer_to_peer_with_metadata<Currency>(
 }
 spec fun peer_to_peer_with_metadata {
     use 0x1::Signer;
+    use 0x1::Errors;
     pragma verify;
-    /// TODO(emmazzz): the following abort code checks don't work because there
-    /// are addition overflow aborts in AccountLimits not accompanied with abort
-    /// codes.
-//    aborts_with [check]
-//        Errors::NOT_PUBLISHED,
-//        Errors::INVALID_STATE,
-//        Errors::INVALID_ARGUMENT,
-//        Errors::LIMIT_EXCEEDED;
+
     let payer_addr = Signer::spec_address_of(payer);
     let cap = LibraAccount::spec_get_withdraw_cap(payer_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: payer_addr};
@@ -93,5 +87,10 @@ spec fun peer_to_peer_with_metadata {
         ==> LibraAccount::balance<Currency>(payee)
         == old(LibraAccount::balance<Currency>(payee));
 
+    aborts_with [check]
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_STATE,
+        Errors::INVALID_ARGUMENT,
+        Errors::LIMIT_EXCEEDED;
 }
 }

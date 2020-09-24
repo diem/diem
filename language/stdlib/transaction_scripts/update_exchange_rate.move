@@ -50,4 +50,25 @@ fun update_exchange_rate<Currency>(
     );
     Libra::update_lbr_exchange_rate<Currency>(tc_account, rate);
 }
+spec fun update_exchange_rate {
+    use 0x1::Errors;
+
+    include SlidingNonce::RecordNonceAbortsIf{ account: tc_account, seq_nonce: sliding_nonce };
+    include FixedPoint32::CreateFromRationalAbortsIf{
+        numerator: new_exchange_rate_numerator,
+        denominator: new_exchange_rate_denominator
+    };
+    let rate = FixedPoint32::spec_create_from_rational(
+        new_exchange_rate_numerator,
+        new_exchange_rate_denominator
+    );
+    include Libra::UpdateLBRExchangeRateAbortsIf<Currency>;
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::REQUIRES_ADDRESS,
+        Errors::LIMIT_EXCEEDED,
+        Errors::REQUIRES_ROLE, // TODO: Undocumented error code. Can be raised in Roles::assert_treasury_compliance.
+        Errors::NOT_PUBLISHED; // TOOD: Undocumented error code. Added due to the possible absence of SlidingNonce in SlidingNonce::try_record_nonce.
+}
 }

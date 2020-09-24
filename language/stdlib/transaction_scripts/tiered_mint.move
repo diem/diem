@@ -68,8 +68,19 @@ fun tiered_mint<CoinType>(
 }
 
 spec fun tiered_mint {
+    use 0x1::Errors;
+
     include SlidingNonce::RecordNonceAbortsIf{account: tc_account, seq_nonce: sliding_nonce};
     include LibraAccount::TieredMintAbortsIf<CoinType>;
     include LibraAccount::TieredMintEnsures<CoinType>;
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::REQUIRES_ADDRESS,
+        Errors::NOT_PUBLISHED,
+        Errors::REQUIRES_CAPABILITY,
+        Errors::INVALID_STATE,
+        Errors::LIMIT_EXCEEDED, // TODO: Undocumented error code. Possibly raised in LibraAccount::deposit, Libra::deposit, and AccountLimits::can_receive.
+        Errors::REQUIRES_ROLE; // TODO: Undocumented error code. Added due to Roles::assert_treasury_compliance in DesginatedDealer::tiered_mint
 }
 }

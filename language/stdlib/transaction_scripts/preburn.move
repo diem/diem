@@ -51,11 +51,17 @@ fun preburn<Token>(account: &signer, amount: u64) {
 
 spec fun preburn {
     use 0x1::Signer;
-    pragma verify;
+    use 0x1::Errors;
+
     let account_addr = Signer::spec_address_of(account);
     let cap = LibraAccount::spec_get_withdraw_cap(account_addr);
     include LibraAccount::ExtractWithdrawCapAbortsIf{sender_addr: account_addr};
     include LibraAccount::PreburnAbortsIf<Token>{dd: account, cap: cap};
     include LibraAccount::PreburnEnsures<Token>{dd_addr: account_addr, payer: account_addr};
+
+    aborts_with [check]
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_STATE,
+        Errors::LIMIT_EXCEEDED;
 }
 }

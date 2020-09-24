@@ -34,6 +34,8 @@ fun rotate_authentication_key(account: &signer, new_key: vector<u8>) {
 }
 spec fun rotate_authentication_key {
     use 0x1::Signer;
+    use 0x1::Errors;
+
     let account_addr = Signer::spec_address_of(account);
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
     let key_rotation_capability = LibraAccount::spec_get_key_rotation_cap(account_addr);
@@ -41,5 +43,14 @@ spec fun rotate_authentication_key {
 
     /// This rotates the authentication key of `account` to `new_key`
     include LibraAccount::RotateAuthenticationKeyEnsures{addr: account_addr, new_authentication_key: new_key};
+
+    // TODO: The following line is added to help Prover verifying the
+    // "aborts_with [check]" spec. This fact can be inferred from the successful
+    // termination of the prologue functions, but Prover cannot figure it out currently.
+    requires LibraAccount::exists_at(account_addr);
+
+    aborts_with [check]
+        Errors::INVALID_STATE,
+        Errors::INVALID_ARGUMENT;
 }
 }

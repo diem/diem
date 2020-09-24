@@ -41,6 +41,8 @@ fun rotate_authentication_key_with_nonce_admin(lr_account: &signer, account: &si
 }
 spec fun rotate_authentication_key_with_nonce_admin {
     use 0x1::Signer;
+    use 0x1::Errors;
+
     let account_addr = Signer::spec_address_of(account);
     include SlidingNonce::RecordNonceAbortsIf{ account: lr_account, seq_nonce: sliding_nonce };
     include LibraAccount::ExtractKeyRotationCapabilityAbortsIf;
@@ -49,5 +51,10 @@ spec fun rotate_authentication_key_with_nonce_admin {
 
     /// This rotates the authentication key of `account` to `new_key`
     include LibraAccount::RotateAuthenticationKeyEnsures{addr: account_addr, new_authentication_key: new_key};
+
+    aborts_with [check]
+        Errors::INVALID_ARGUMENT,
+        Errors::INVALID_STATE,
+        Errors::NOT_PUBLISHED; // TOOD: Undocumented error code. Added due to the possible absence of SlidingNonce in SlidingNonce::try_record_nonce;
 }
 }

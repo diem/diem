@@ -939,7 +939,7 @@ Must abort if the account does not have the BurnCapability [B12].
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     <b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) <b>with</b> <a href="Errors.md#0x1_Errors_REQUIRES_CAPABILITY">Errors::REQUIRES_CAPABILITY</a>;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoPreburn">AbortsIfNoPreburn</a>&lt;CoinType&gt;;
     <b>include</b> <a href="Libra.md#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 }
 </code></pre>
@@ -954,6 +954,18 @@ Must abort if the account does not have the BurnCapability [B12].
     account: signer;
     preburn_address: address;
     <b>include</b> <a href="Libra.md#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_AbortsIfNoPreburn"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_AbortsIfNoPreburn">AbortsIfNoPreburn</a>&lt;CoinType&gt; {
+    preburn_address: address;
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
 }
 </code></pre>
 
@@ -1381,7 +1393,7 @@ Must abort if the account does have the Preburn [B13].
 
 
 <pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_PreburnToAbortsIf">PreburnToAbortsIf</a>&lt;CoinType&gt; {
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(account_addr) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoPreburn">AbortsIfNoPreburn</a>&lt;CoinType&gt;{preburn_address: account_addr};
     <b>include</b> <a href="Libra.md#0x1_Libra_PreburnWithResourceAbortsIf">PreburnWithResourceAbortsIf</a>&lt;CoinType&gt;{preburn: preburn};
 }
 </code></pre>
@@ -1434,7 +1446,7 @@ resource under <code>preburn_address</code>, or, if the preburn to_burn area for
 
 
 
-<pre><code><b>aborts_if</b> !<b>exists</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoPreburn">AbortsIfNoPreburn</a>&lt;CoinType&gt;;
 <b>include</b> <a href="Libra.md#0x1_Libra_BurnWithResourceCapAbortsIf">BurnWithResourceCapAbortsIf</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 <b>include</b> <a href="Libra.md#0x1_Libra_BurnWithResourceCapEnsures">BurnWithResourceCapEnsures</a>&lt;CoinType&gt;{preburn: <b>global</b>&lt;<a href="Libra.md#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address)};
 </code></pre>
@@ -2655,12 +2667,42 @@ Updates the <code>to_lbr_exchange_rate</code> held in the <code><a href="Libra.m
 <summary>Specification</summary>
 
 
+
+<pre><code><b>include</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateAbortsIf">UpdateLBRExchangeRateAbortsIf</a>&lt;FromCoinType&gt;;
+<b>include</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateEnsures">UpdateLBRExchangeRateEnsures</a>&lt;FromCoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_UpdateLBRExchangeRateAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateAbortsIf">UpdateLBRExchangeRateAbortsIf</a>&lt;FromCoinType&gt; {
+    tc_account: signer;
+}
+</code></pre>
+
+
 Must abort if the account does not have the TreasuryCompliance Role [B14].
 
 
-<pre><code><b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
-<b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;FromCoinType&gt;;
-<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;FromCoinType&gt;().to_lbr_exchange_rate == lbr_exchange_rate;
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateAbortsIf">UpdateLBRExchangeRateAbortsIf</a>&lt;FromCoinType&gt; {
+    <b>include</b> <a href="Roles.md#0x1_Roles_AbortsIfNotTreasuryCompliance">Roles::AbortsIfNotTreasuryCompliance</a>{account: tc_account};
+    <b>include</b> <a href="Libra.md#0x1_Libra_AbortsIfNoCurrency">AbortsIfNoCurrency</a>&lt;FromCoinType&gt;;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_Libra_UpdateLBRExchangeRateEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="Libra.md#0x1_Libra_UpdateLBRExchangeRateEnsures">UpdateLBRExchangeRateEnsures</a>&lt;FromCoinType&gt; {
+    lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>;
+    <b>ensures</b> <a href="Libra.md#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;FromCoinType&gt;().to_lbr_exchange_rate == lbr_exchange_rate;
+}
 </code></pre>
 
 

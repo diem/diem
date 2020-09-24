@@ -11,7 +11,7 @@
 -  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a></code>](#0x1_AccountLimits_ELIMITS_DEFINITION)
 -  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a></code>](#0x1_AccountLimits_EWINDOW)
 -  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_ONE_DAY">ONE_DAY</a></code>](#0x1_AccountLimits_ONE_DAY)
--  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a></code>](#0x1_AccountLimits_U64_MAX)
+-  [Const <code><a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a></code>](#0x1_AccountLimits_MAX_U64)
 -  [Function <code>grant_mutation_capability</code>](#0x1_AccountLimits_grant_mutation_capability)
 -  [Function <code>update_deposit_limits</code>](#0x1_AccountLimits_update_deposit_limits)
 -  [Function <code>update_withdrawal_limits</code>](#0x1_AccountLimits_update_withdrawal_limits)
@@ -214,13 +214,13 @@ The <code><a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a></code> 
 
 
 
-<a name="0x1_AccountLimits_U64_MAX"></a>
+<a name="0x1_AccountLimits_MAX_U64"></a>
 
-## Const `U64_MAX`
+## Const `MAX_U64`
 
 
 
-<pre><code><b>const</b> <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a>: u64 = 18446744073709551615;
+<pre><code><b>const</b> <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>: u64 = 18446744073709551615;
 </code></pre>
 
 
@@ -510,7 +510,7 @@ their root/parent account.
 ## Function `publish_unrestricted_limits`
 
 Unrestricted limits are represented by setting all fields in the
-limits definition to <code><a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a></code>. Anyone can publish an unrestricted
+limits definition to <code><a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a></code>. Anyone can publish an unrestricted
 limits since no windows will point to this limits definition unless the
 TC account, or a caller with access to a <code>&<a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a></code> points a
 window to it. Additionally, the TC controls the values held within this
@@ -534,9 +534,9 @@ resource once it's published.
     move_to(
         publish_account,
         <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
-            max_inflow: <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
-            max_outflow: <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
-            max_holding: <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a>,
+            max_inflow: <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>,
+            max_outflow: <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>,
+            max_holding: <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a>,
             time_period: <a href="AccountLimits.md#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>,
         }
     )
@@ -667,6 +667,7 @@ the inflow and outflow records.
 
 <pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType&gt;(window: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;, limits_definition: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;) {
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
+    <b>assert</b>(window.window_start &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - limits_definition.time_period, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>if</b> (current_time &gt; window.window_start + limits_definition.time_period) {
         window.window_start = current_time;
         window.window_inflow = 0;
@@ -699,7 +700,7 @@ the inflow and outflow records.
     window: <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
     limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;;
     <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
-    <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64();
+    <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -781,9 +782,11 @@ specified the <code>limits_definition</code> passed in.
     <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>(receiving, limits_definition);
     // Check that the inflow is OK
     // TODO(wrwg): instead of aborting <b>if</b> the below additions overflow, we should perhaps just have ok <b>false</b>.
-    <b>let</b> inflow_ok = receiving.window_inflow + amount &lt;= limits_definition.max_inflow;
+    <b>assert</b>(receiving.window_inflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>let</b> inflow_ok = (receiving.window_inflow + amount) &lt;= limits_definition.max_inflow;
     // Check that the holding after the deposit is OK
-    <b>let</b> holding_ok = receiving.tracked_balance + amount &lt;= limits_definition.max_holding;
+    <b>assert</b>(receiving.tracked_balance &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
+    <b>let</b> holding_ok = (receiving.tracked_balance + amount) &lt;= limits_definition.max_holding;
     // The account <b>with</b> `receiving` window can receive the payment so record it.
     <b>if</b> (inflow_ok && holding_ok) {
         receiving.window_inflow = receiving.window_inflow + amount;
@@ -834,8 +837,8 @@ specified the <code>limits_definition</code> passed in.
         window: receiving,
         limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(receiving)
     };
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount &gt; max_u64();
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).tracked_balance + amount &gt; max_u64();
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).window_inflow + amount &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(receiving).tracked_balance + amount &gt; max_u64() <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -912,12 +915,14 @@ in its <code>limits_definition</code>.
     amount: u64,
     sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <b>assert</b>(<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="AccountLimits.md#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_definition = borrow_global&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
     <a href="AccountLimits.md#0x1_AccountLimits_reset_window">reset_window</a>(sending, limits_definition);
     // Check outflow is OK
+    <b>assert</b>(sending.window_outflow &lt;= <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> - amount, <a href="Errors.md#0x1_Errors_limit_exceeded">Errors::limit_exceeded</a>(<a href="AccountLimits.md#0x1_AccountLimits_EWINDOW">EWINDOW</a>));
     <b>let</b> outflow_ok = sending.window_outflow + amount &lt;= limits_definition.max_outflow;
     // Flow is OK, so record it.
     <b>if</b> (outflow_ok) {
@@ -952,7 +957,7 @@ in its <code>limits_definition</code>.
 <pre><code><b>schema</b> <a href="AccountLimits.md#0x1_AccountLimits_CanWithdrawAbortsIf">CanWithdrawAbortsIf</a>&lt;CoinType&gt; {
     amount: u64;
     sending: &<b>mut</b> <a href="AccountLimits.md#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address);
+    <b>aborts_if</b> !<b>exists</b>&lt;<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(sending.limit_address) <b>with</b> <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> !<a href="AccountLimits.md#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>(sending) ==&gt; <a href="AccountLimits.md#0x1_AccountLimits_CanWithdrawRestrictedAbortsIf">CanWithdrawRestrictedAbortsIf</a>&lt;CoinType&gt;;
 }
 </code></pre>
@@ -970,7 +975,7 @@ in its <code>limits_definition</code>.
         window: sending,
         limits_definition: <a href="AccountLimits.md#0x1_AccountLimits_spec_window_limits">spec_window_limits</a>&lt;CoinType&gt;(sending)
     };
-    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &gt; max_u64();
+    <b>aborts_if</b> <a href="AccountLimits.md#0x1_AccountLimits_spec_window_reset">spec_window_reset</a>(sending).window_outflow + amount &gt; <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> <b>with</b> <a href="Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
 }
 </code></pre>
 
@@ -1026,9 +1031,9 @@ Return whether the <code><a href="AccountLimits.md#0x1_AccountLimits_LimitsDefin
 
 
 <pre><code><b>fun</b> <a href="AccountLimits.md#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType&gt;(limits_def: &<a href="AccountLimits.md#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;): bool {
-    limits_def.max_inflow == <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
-    limits_def.max_outflow == <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
-    limits_def.max_holding == <a href="AccountLimits.md#0x1_AccountLimits_U64_MAX">U64_MAX</a> &&
+    limits_def.max_inflow == <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> &&
+    limits_def.max_outflow == <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> &&
+    limits_def.max_holding == <a href="AccountLimits.md#0x1_AccountLimits_MAX_U64">MAX_U64</a> &&
     limits_def.time_period == <a href="AccountLimits.md#0x1_AccountLimits_ONE_DAY">ONE_DAY</a>
 }
 </code></pre>

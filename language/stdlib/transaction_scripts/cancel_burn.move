@@ -55,13 +55,6 @@ spec fun cancel_burn {
     use 0x1::Errors;
     use 0x1::Libra;
 
-    aborts_with [check]
-        Errors::REQUIRES_CAPABILITY,
-        Errors::NOT_PUBLISHED,
-        Errors::INVALID_ARGUMENT,
-        Errors::LIMIT_EXCEEDED,
-        Errors::INVALID_STATE;
-
     include LibraAccount::CancelBurnAbortsIf<Token>;
 
     let preburn_value_at_addr = global<Libra::Preburn<Token>>(preburn_address).to_burn.value;
@@ -77,5 +70,12 @@ spec fun cancel_burn {
 
     /// The balance of `Token` at `preburn_address` should increase by the preburned amount.
     ensures balance_at_addr == old(balance_at_addr) + old(preburn_value_at_addr);
+
+    aborts_with [check]
+        Errors::REQUIRES_CAPABILITY,
+        Errors::NOT_PUBLISHED,
+        Errors::INVALID_ARGUMENT,
+        Errors::LIMIT_EXCEEDED, // TODO: Undocumented error code. Possibly raised in LibraAccount::deposit, Libra::deposit, and AccountLimits::can_receive.
+        Errors::INVALID_STATE; // TODO: Undocumented error code. Possibly raised in DualAttestation::assert_signature_is_valid.
 }
 }
