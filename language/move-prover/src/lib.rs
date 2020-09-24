@@ -365,10 +365,21 @@ fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<V
         .iter()
         .map(|s| canonicalize(s))
         .collect::<BTreeSet<_>>();
-    let deps = deps
+    let mut deps = deps
         .into_iter()
         .filter(|d| !canonical_sources.contains(&canonicalize(d)))
         .collect_vec();
+    // Sort deps by simple file name. Sorting is important because different orders
+    // caused by platform dependent ways how `calculate_deps_recursively` may return values, can
+    // cause different behavior of the SMT solver (butterfly effect). By using the simple file
+    // name we abstract from places where the sources live in the file system. Since Move has
+    // no namespaces and file names can be expected to be unique matching module/script names,
+    // this should work in most cases.
+    deps.sort_by(|a, b| {
+        let fa = PathBuf::from(a);
+        let fb = PathBuf::from(b);
+        Ord::cmp(fa.file_name().unwrap(), fb.file_name().unwrap())
+    });
     Ok(deps)
 }
 
