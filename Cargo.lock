@@ -3976,6 +3976,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-vm-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "libra-workspace-hack",
+ "move-core-types",
+ "move-lang",
+ "move-vm-runtime",
+ "move-vm-test-utils",
+ "move-vm-types",
+ "tempfile",
+ "vm",
+]
+
+[[package]]
 name = "move-vm-natives"
 version = "0.1.0"
 dependencies = [

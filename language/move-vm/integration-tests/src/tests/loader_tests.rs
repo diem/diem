@@ -1,32 +1,30 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{data_cache::RemoteCache, move_vm::MoveVM};
+use crate::compiler::compile_modules_in_file;
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::{IdentStr, Identifier},
-    language_storage::{ModuleId, StructTag},
+    language_storage::ModuleId,
 };
-use move_lang::{compiled_unit::CompiledUnit, shared::Address};
+use move_vm_runtime::move_vm::MoveVM;
+use move_vm_test_utils::InMemoryStorage;
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
-use std::{collections::HashMap, path::PathBuf, sync::Arc, thread};
-use vm::{
-    errors::{PartialVMResult, VMResult},
-    CompiledModule,
-};
+use std::{path::PathBuf, sync::Arc, thread};
+use vm::CompiledModule;
 
 const WORKING_ACCOUNT: AccountAddress =
     AccountAddress::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]);
 
 struct Adapter {
-    store: DataStore,
+    store: InMemoryStorage,
     vm: Arc<MoveVM>,
     functions: Vec<(ModuleId, Identifier)>,
 }
 
 impl Adapter {
-    fn new(store: DataStore) -> Self {
+    fn new(store: InMemoryStorage) -> Self {
         let mut functions = vec![];
         functions.push((
             ModuleId::new(WORKING_ACCOUNT, Identifier::new("A").unwrap()),
@@ -70,7 +68,7 @@ impl Adapter {
         }
         let data = session.finish().expect("failure getting write set");
         for (module_id, module) in data.modules {
-            self.store.add_module(module_id, module);
+            self.store.publish_or_overwrite_module(module_id, module);
         }
     }
 
@@ -127,62 +125,17 @@ impl Adapter {
     }
 }
 
-#[derive(Clone, Debug)]
-struct DataStore {
-    modules: HashMap<ModuleId, Vec<u8>>,
-}
-
-impl DataStore {
-    fn empty() -> Self {
-        Self {
-            modules: HashMap::new(),
-        }
-    }
-
-    fn add_module(&mut self, module_id: ModuleId, binary: Vec<u8>) {
-        self.modules.insert(module_id, binary);
-    }
-}
-
-impl RemoteCache for DataStore {
-    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
-        match self.modules.get(module_id) {
-            None => Ok(None),
-            Some(binary) => Ok(Some(binary.clone())),
-        }
-    }
-
-    fn get_resource(
-        &self,
-        _address: &AccountAddress,
-        _tag: &StructTag,
-    ) -> PartialVMResult<Option<Vec<u8>>> {
-        Ok(None)
-    }
-}
-
-fn compile_file(addr: &[u8; AccountAddress::LENGTH]) -> Vec<CompiledModule> {
+fn get_modules() -> Vec<CompiledModule> {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("src/unit_tests/modules.move");
-    let s = path.to_str().expect("no path specified").to_owned();
-    let (_, modules) = move_lang::move_compile(&[s], &[], Some(Address::new(*addr)), None)
-        .expect("Error compiling...");
-
-    let mut compiled_modules = vec![];
-    for module in modules {
-        match module {
-            CompiledUnit::Module { module, .. } => compiled_modules.push(module),
-            CompiledUnit::Script { .. } => (),
-        }
-    }
-    compiled_modules
+    path.push("src/tests/loader_tests_modules.move");
+    compile_modules_in_file(AccountAddress::new([0; 16]), &path).unwrap()
 }
 
 #[test]
 fn load() {
-    let data_store = DataStore::empty();
+    let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = compile_file(&[0; 16]);
+    let modules = get_modules();
     adapter.publish_modules(modules);
     // calls all functions sequentially
     adapter.call_functions();
@@ -190,9 +143,9 @@ fn load() {
 
 #[test]
 fn load_concurrent() {
-    let data_store = DataStore::empty();
+    let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = compile_file(&[0; 16]);
+    let modules = get_modules();
     adapter.publish_modules(modules);
     // makes 15 threads
     adapter.call_functions_async(3);
@@ -200,9 +153,9 @@ fn load_concurrent() {
 
 #[test]
 fn load_concurrent_many() {
-    let data_store = DataStore::empty();
+    let data_store = InMemoryStorage::new();
     let mut adapter = Adapter::new(data_store);
-    let modules = compile_file(&[0; 16]);
+    let modules = get_modules();
     adapter.publish_modules(modules);
     // makes 150 threads
     adapter.call_functions_async(30);

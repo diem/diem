@@ -1,0 +1,24 @@
+[package]
+name = "move-vm-integration-tests"
+version = "0.1.0"
+authors = ["Libra Association <opensource@libra.org>"]
+description = "Move VM Integration Tests"
+repository = "https://github.com/libra/libra"
+homepage = "https://libra.org"
+license = "Apache-2.0"
+publish = false
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.32"
+tempfile = "3.1.0"
+
+libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1.0" }
+move-core-types = {path = "../../move-core/types", version = "0.1.0" }
+vm = { path = "../../vm", version = "0.1.0" }
+move-lang = { path = "../../move-lang", version = "0.0.1" }
+move-vm-runtime = { path = "../runtime", version = "0.1.0" }
+move-vm-types = { path = "../types", version = "0.1.0" }
+move-vm-test-utils = { path = "../test-utils", version = "0.1.0" }

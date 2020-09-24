@@ -15,6 +15,7 @@ use vm::errors::{PartialVMResult, VMResult};
 use crate::effects::{AccountChangeSet, ChangeSet};
 
 /// A dummy storage containing no modules or resources.
+#[derive(Debug, Clone)]
 pub struct BlankStorage;
 
 impl BlankStorage {
@@ -39,6 +40,7 @@ impl RemoteCache for BlankStorage {
 
 // A storage adapter created by stacking a change set on top of an existing storage backend.
 /// The new storage can be used for additional computations without modifying the base.
+#[derive(Debug, Clone)]
 pub struct DeltaStorage<'a, S> {
     base: &'a S,
     delta: ChangeSet,
@@ -77,12 +79,14 @@ impl<'a, S: RemoteCache> DeltaStorage<'a, S> {
 }
 
 /// Simple in-memory storage for modules and resources under an account.
+#[derive(Debug, Clone)]
 struct InMemoryAccountStorage {
     resources: BTreeMap<StructTag, Vec<u8>>,
     modules: BTreeMap<Identifier, Vec<u8>>,
 }
 
 /// Simple in-memory storage that can be used as a Move VM storage backend for testing purposes.
+#[derive(Debug, Clone)]
 pub struct InMemoryStorage {
     accounts: BTreeMap<AccountAddress, InMemoryAccountStorage>,
 }
@@ -163,6 +167,29 @@ impl InMemoryStorage {
             }
         }
         Ok(())
+    }
+
+    pub fn new() -> Self {
+        Self {
+            accounts: BTreeMap::new(),
+        }
+    }
+
+    pub fn publish_or_overwrite_module(&mut self, module_id: ModuleId, blob: Vec<u8>) {
+        let mut delta = ChangeSet::new();
+        delta.publish_module(module_id, blob).unwrap();
+        self.apply(delta).unwrap();
+    }
+
+    pub fn publish_or_overwrite_resource(
+        &mut self,
+        addr: AccountAddress,
+        struct_tag: StructTag,
+        blob: Vec<u8>,
+    ) {
+        let mut delta = ChangeSet::new();
+        delta.publish_resource(addr, struct_tag, blob).unwrap();
+        self.apply(delta).unwrap();
     }
 }
 

@@ -79,6 +79,7 @@ members = [
     "language/move-prover/errmapgen",
     "language/move-prover/spec-lang",
     "language/move-prover/test-utils",
+    "language/move-vm/integration-tests",
     "language/move-vm/natives",
     "language/move-vm/runtime",
     "language/move-vm/test-utils",
