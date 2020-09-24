@@ -15,7 +15,7 @@ hex = "0.4.2"
 reqwest = { version = "0.10.8", features = ["blocking"], default-features = false }
 serde = "1.0.116"
 serde_derive = "1.0.115"
-structopt = "0.3.17"
+structopt = "0.3.18"
 tokio = { version = "0.2.22", features = ["full"] }
 warp = "0.2.5"
 

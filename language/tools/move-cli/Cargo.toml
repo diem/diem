@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.31"
 difference = "2.0.0"
-structopt = "0.3.15"
+structopt = "0.3.18"
 
 compiled-stdlib = { path = "../../stdlib/compiled", version = "0.1.0" }
 disassembler = { path = "../disassembler", version = "0.1.0" }

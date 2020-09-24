@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.32"
 reqwest = { version = "0.10.8", features = ["blocking", "json"] }
-structopt = "0.3.17"
+structopt = "0.3.18"
 
 libra-json-rpc-client = { path = "../../../client/json-rpc", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }

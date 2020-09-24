@@ -18,7 +18,7 @@ proptest = { version = "0.10.1", default-features = false }
 proptest-derive = { version = "0.2.0", default-features = false }
 rusty-fork = { version = "0.3.0", default-features = false }
 sha-1 = { version = "0.9.1", default-features = false }
-structopt = "0.3.17"
+structopt = "0.3.18"
 rand = "0.7.3"
 ureq = { version = "1.4.1", features = ["json", "native-tls"], default-features = false }
 
