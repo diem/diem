@@ -11,6 +11,7 @@
         -  [Events](#SCRIPT_@Events)
     -  [Parameters](#SCRIPT_@Parameters)
     -  [Common Abort Conditions](#SCRIPT_@Common_Abort_Conditions)
+    -  [Other Abort Categories](#SCRIPT_@Other_Abort_Categories)
     -  [Related Scripts](#SCRIPT_@Related_Scripts)
 -  [Specification](#SCRIPT_Specification)
     -  [Function `create_child_vasp_account`](#SCRIPT_Specification_create_child_vasp_account)
@@ -88,6 +89,13 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 | <code><a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a></code>    | <code><a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_EINSUFFICIENT_BALANCE">LibraAccount::EINSUFFICIENT_BALANCE</a></code>                    | The sending account doesn't have at least <code>child_initial_balance</code> of <code>CoinType</code> balance. |
 
 
+<a name="SCRIPT_@Other_Abort_Categories"></a>
+
+### Other Abort Categories
+
+* Errors::INVALID_ARGUMENT
+
+
 <a name="SCRIPT_@Related_Scripts"></a>
 
 ### Related Scripts
@@ -115,6 +123,7 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
     add_all_currencies: bool,
     child_initial_balance: u64
 ) {
+    <a href="../../modules/doc/LibraTimestamp.md#0x1_LibraTimestamp_assert_operating">LibraTimestamp::assert_operating</a>();
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_child_vasp_account">LibraAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
         parent_vasp,
         child_address,
@@ -152,29 +161,38 @@ and payee field being <code>child_address</code>. This is emitted on the new Chi
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-pragma aborts_if_is_partial = <b>true</b>;
-</code></pre>
-
-
-<code>parent_vasp</code> must be a parent vasp account
-
-
-<pre><code><b>aborts_if</b> !<a href="../../modules/doc/Roles.md#0x1_Roles_spec_has_parent_VASP_role_addr">Roles::spec_has_parent_VASP_role_addr</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
-<b>aborts_if</b> !<a href="../../modules/doc/VASP.md#0x1_VASP_is_parent">VASP::is_parent</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
-</code></pre>
-
-
-<code>child_address</code> must not be an existing account/vasp account
-
-
-<pre><code><b>aborts_if</b> exists&lt;<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(child_address);
-<b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(child_address);
-</code></pre>
-
-
-<code>parent_vasp</code> must not have created more than 256 children
-
-
-<pre><code><b>aborts_if</b> <a href="../../modules/doc/VASP.md#0x1_VASP_spec_get_num_children">VASP::spec_get_num_children</a>(<a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)) + 1 &gt; 256;
+<pre><code>pragma verify;
+aborts_with [check]
+    <a href="../../modules/doc/Errors.md#0x1_Errors_REQUIRES_ROLE">Errors::REQUIRES_ROLE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_ALREADY_PUBLISHED">Errors::ALREADY_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_STATE">Errors::INVALID_STATE</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_INVALID_ARGUMENT">Errors::INVALID_ARGUMENT</a>,
+    <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<a name="SCRIPT_parent_addr$1"></a>
+<b>let</b> parent_addr = <a href="../../modules/doc/Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp);
+<a name="SCRIPT_parent_cap$2"></a>
+<b>let</b> parent_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_spec_get_withdraw_cap">LibraAccount::spec_get_withdraw_cap</a>(parent_addr);
+<b>include</b> <a href="../../modules/doc/LibraTimestamp.md#0x1_LibraTimestamp_AbortsIfNotOperating">LibraTimestamp::AbortsIfNotOperating</a>;
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateChildVASPAccountAbortsIf">LibraAccount::CreateChildVASPAccountAbortsIf</a>&lt;CoinType&gt;{
+    parent: parent_vasp, new_account_address: child_address};
+<b>aborts_if</b> child_initial_balance &gt; max_u64() with <a href="../../modules/doc/Errors.md#0x1_Errors_LIMIT_EXCEEDED">Errors::LIMIT_EXCEEDED</a>;
+<b>include</b> (child_initial_balance &gt; 0) ==&gt;
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_ExtractWithdrawCapAbortsIf">LibraAccount::ExtractWithdrawCapAbortsIf</a>{sender_addr: parent_addr};
+<b>include</b> (child_initial_balance &gt; 0) ==&gt;
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_PayFromAbortsIfRestricted">LibraAccount::PayFromAbortsIfRestricted</a>&lt;CoinType&gt;{
+        cap: parent_cap,
+        payee: child_address,
+        amount: child_initial_balance,
+        metadata: x"",
+        metadata_signature: x""
+    };
+<b>include</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_CreateChildVASPAccountEnsures">LibraAccount::CreateChildVASPAccountEnsures</a>&lt;CoinType&gt;{
+    parent_addr: parent_addr,
+    child_addr: child_address,
+};
+<b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(child_address) == child_initial_balance;
+<b>ensures</b> <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(parent_addr)
+    == <b>old</b>(<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(parent_addr)) - child_initial_balance;
 </code></pre>

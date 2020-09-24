@@ -238,11 +238,11 @@ module LibraAccount {
         if (is_withdrawal) {
             has_published_account_limits<Token>(payer) &&
             VASP::is_vasp(payer) &&
-            (!VASP::is_vasp(payee) || !VASP::is_same_vasp(payer, payee))
+            !VASP::is_same_vasp(payer, payee)
         } else {
             has_published_account_limits<Token>(payee) &&
             VASP::is_vasp(payee) &&
-            (!VASP::is_vasp(payer) || !VASP::is_same_vasp(payee, payer))
+            !VASP::is_same_vasp(payee, payer)
         }
     }
     spec fun should_track_limits_for_account {
@@ -261,11 +261,11 @@ module LibraAccount {
             if (is_withdrawal) {
                 spec_has_published_account_limits<Token>(payer) &&
                 VASP::is_vasp(payer) &&
-                (!VASP::is_vasp(payee) || !VASP::spec_is_same_vasp(payer, payee))
+                !VASP::spec_is_same_vasp(payer, payee)
             } else {
                 spec_has_published_account_limits<Token>(payee) &&
                 VASP::is_vasp(payee) &&
-                (!VASP::is_vasp(payer) || !VASP::spec_is_same_vasp(payee, payer))
+                !VASP::spec_is_same_vasp(payee, payer)
             }
         }
     }
@@ -465,8 +465,19 @@ module LibraAccount {
         amount: u64;
         metadata_signature: vector<u8>;
         metadata: vector<u8>;
-        include LibraTimestamp::AbortsIfNotOperating;
+        include DepositAbortsIfRestricted<Token>;
         include AccountFreezing::AbortsIfFrozen{account: payee};
+        aborts_if !exists<Balance<Token>>(payee) with Errors::INVALID_ARGUMENT;
+        aborts_if !exists_at(payee) with Errors::NOT_PUBLISHED;
+    }
+
+    spec schema DepositAbortsIfRestricted<Token> {
+        payer: address;
+        payee: address;
+        amount: u64;
+        metadata_signature: vector<u8>;
+        metadata: vector<u8>;
+        include LibraTimestamp::AbortsIfNotOperating;
         aborts_if amount == 0 with Errors::INVALID_ARGUMENT;
         include DualAttestation::AssertPaymentOkAbortsIf<Token>{value: amount};
         include
@@ -478,9 +489,6 @@ module LibraAccount {
             spec_should_track_limits_for_account<Token>(payer, payee, false) &&
                 !AccountLimits::spec_update_deposit_limits<Token>(amount, VASP::spec_parent_address(payee))
             with Errors::LIMIT_EXCEEDED;
-        aborts_if !exists<Balance<Token>>(payee) with Errors::INVALID_ARGUMENT;
-//        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
-        aborts_if !exists_at(payee) with Errors::NOT_PUBLISHED;
         include Libra::AbortsIfNoCurrency<Token>;
     }
     spec schema DepositEnsures<Token> {
@@ -574,7 +582,6 @@ module LibraAccount {
         Libra::withdraw(coin, amount)
     }
     spec fun withdraw_from_balance {
-        pragma opaque;
         modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payer));
         include WithdrawFromBalanceAbortsIf<Token>;
         include WithdrawFromBalanceEnsures<Token>;
@@ -584,8 +591,7 @@ module LibraAccount {
         payee: address;
         balance: Balance<Token>;
         amount: u64;
-        include LibraTimestamp::AbortsIfNotOperating;
-        include AccountFreezing::AbortsIfFrozen{account: payer};
+        include WithdrawFromBalanceNoLimitsAbortsIf<Token>;
         include
             spec_should_track_limits_for_account<Token>(payer, payee, true) ==>
             AccountLimits::UpdateWithdrawalLimitsAbortsIf<Token> {
@@ -597,7 +603,15 @@ module LibraAccount {
                 !AccountLimits::spec_update_withdrawal_limits<Token>(amount, VASP::spec_parent_address(payer))
             )
             with Errors::LIMIT_EXCEEDED;
-        aborts_if balance.coin.value < amount with Errors::LIMIT_EXCEEDED;
+    }
+    spec schema WithdrawFromBalanceNoLimitsAbortsIf<Token> {
+          payer: address;
+          payee: address;
+          balance: Balance<Token>;
+          amount: u64;
+          include LibraTimestamp::AbortsIfNotOperating;
+          include AccountFreezing::AbortsIfFrozen{account: payer};
+          aborts_if balance.coin.value < amount with Errors::LIMIT_EXCEEDED;
     }
     spec schema WithdrawFromBalanceEnsures<Token> {
         balance: Balance<Token>;
@@ -640,12 +654,9 @@ module LibraAccount {
     }
 
     spec fun withdraw_from {
-//        pragma opaque;
         let payer = cap.account_address;
         modifies global<Balance<Token>>(payer);
         modifies global<LibraAccount>(payer);
-        modifies global<AccountLimits::Window<Token>>(VASP::spec_parent_address(payer));
-//        ensures exists<AccountLimits::Window<Token>>(VASP::spec_parent_address(payer));
         ensures exists<LibraAccount>(payer);
         ensures global<LibraAccount>(payer).withdrawal_capability
                     == old(global<LibraAccount>(payer).withdrawal_capability);
@@ -788,13 +799,40 @@ module LibraAccount {
     }
 
     spec fun pay_from {
-        requires cap.account_address != payee;
-        requires VASP::spec_parent_address(cap.account_address) != VASP::spec_parent_address(payee);
+        pragma opaque;
+        let payer = cap.account_address;
+        modifies global<LibraAccount>(payer);
+        modifies global<LibraAccount>(payee);
+        ensures exists_at(payer);
+        ensures exists_at(payee);
+        ensures global<LibraAccount>(payer).withdrawal_capability ==
+            old(global<LibraAccount>(payer).withdrawal_capability);
+        include PayFromAbortsIf<Token>;
+        ensures payer == payee ==> balance<Token>(payer) == old(balance<Token>(payer));
+        ensures payer != payee ==> balance<Token>(payer) == old(balance<Token>(payer)) - amount;
+        ensures payer != payee ==> balance<Token>(payee) == old(balance<Token>(payee)) + amount;
+    }
+    spec schema PayFromAbortsIf<Token> {
+        cap: WithdrawCapability;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+        metadata_signature: vector<u8> ;
         include DepositAbortsIf<Token>{payer: cap.account_address};
         aborts_if cap.account_address != payee &&
             global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
-//        aborts_if global<Balance<Token>>(payee).coin.value + amount > max_u64() with Errors::LIMIT_EXCEEDED;
         include WithdrawFromAbortsIf<Token>;
+    }
+    spec schema PayFromAbortsIfRestricted<Token> {
+        cap: WithdrawCapability;
+        payee: address;
+        amount: u64;
+        metadata: vector<u8>;
+        metadata_signature: vector<u8> ;
+        let payer = cap.account_address;
+        include DepositAbortsIfRestricted<Token>{payer: cap.account_address};
+        include WithdrawFromBalanceNoLimitsAbortsIf<Token>{payer: payer, balance: global<Balance<Token>>(payer)};
+        aborts_if !exists<Balance<Token>>(payer) with Errors::NOT_PUBLISHED;
     }
 
     /// Rotate the authentication key for the account under cap.account_address
@@ -900,6 +938,33 @@ module LibraAccount {
         };
     }
 
+    spec fun add_currencies_for_account {
+        let new_account_addr = Signer::spec_address_of(new_account);
+        aborts_if !Roles::spec_can_hold_balance_addr(new_account_addr) with Errors::INVALID_ARGUMENT;
+        include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_addr};
+        include AddCurrencyEnsures<Token>{account: new_account};
+        include add_all_currencies && !exists<Balance<Coin1>>(new_account_addr)
+            ==> AddCurrencyEnsures<Coin1>{account: new_account};
+        include add_all_currencies && !exists<Balance<Coin2>>(new_account_addr)
+            ==> AddCurrencyEnsures<Coin2>{account: new_account};
+        include add_all_currencies && !exists<Balance<LBR>>(new_account_addr)
+            ==> AddCurrencyEnsures<LBR>{account: new_account};
+    }
+
+    spec schema AddCurrencyForAccountAbortsIf<Token> {
+        addr: address;
+        add_all_currencies: bool;
+        include Libra::AbortsIfNoCurrency<Token>;
+        aborts_if exists<Balance<Token>>(addr);
+        include add_all_currencies && !exists<Balance<Coin1>>(addr)
+            ==> Libra::AbortsIfNoCurrency<Coin1>;
+        include add_all_currencies && !exists<Balance<Coin2>>(addr)
+            ==> Libra::AbortsIfNoCurrency<Coin2>;
+        include add_all_currencies && !exists<Balance<LBR>>(addr)
+            ==> Libra::AbortsIfNoCurrency<LBR>;
+    }
+
+
     /// Creates a new account with account at `new_account_address` with a balance of
     /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`. If
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
@@ -949,9 +1014,20 @@ module LibraAccount {
     }
 
     spec fun make_account {
+        let addr = Signer::spec_address_of(new_account);
         /// Needed to prove invariant
-        let new_account_addr = Signer::address_of(new_account);
-        requires exists<Roles::RoleId>(new_account_addr);
+        requires exists<Roles::RoleId>(addr);
+        include MakeAccountAbortsIf{addr: addr};
+        ensures exists_at(addr);
+    }
+    spec schema MakeAccountAbortsIf {
+        addr: address;
+        auth_key_prefix: vector<u8>;
+        aborts_if addr == CoreAddresses::VM_RESERVED_ADDRESS() with Errors::INVALID_ARGUMENT;
+        aborts_if exists_at(addr) with Errors::ALREADY_PUBLISHED;
+        aborts_if Vector::length(auth_key_prefix) + Vector::length(LCS::serialize(addr)) != 32
+            with Errors::INVALID_ARGUMENT;
+        aborts_if exists<AccountFreezing::FreezingBit>(addr) with Errors::ALREADY_PUBLISHED;
     }
 
     /// Creates the libra root account in genesis.
@@ -1050,6 +1126,34 @@ module LibraAccount {
         make_account(new_account, auth_key_prefix)
     }
 
+    spec fun create_child_vasp_account {
+        include CreateChildVASPAccountAbortsIf<Token>;
+        include CreateChildVASPAccountEnsures<Token>{
+            parent_addr: Signer::spec_address_of(parent),
+            child_addr: new_account_address,
+        };
+    }
+
+    spec schema CreateChildVASPAccountAbortsIf<Token> {
+        parent: signer;
+        new_account_address: address;
+        auth_key_prefix: vector<u8>;
+        add_all_currencies: bool;
+        include Roles::AbortsIfNotParentVasp{account: parent};
+        aborts_if exists<Roles::RoleId>(new_account_address) with Errors::ALREADY_PUBLISHED;
+        include VASP::PublishChildVASPAbortsIf{child_addr: new_account_address};
+        include AddCurrencyForAccountAbortsIf<Token>{addr: new_account_address};
+        include MakeAccountAbortsIf{addr: new_account_address};
+    }
+
+    spec schema CreateChildVASPAccountEnsures<Token> {
+        parent_addr: address;
+        child_addr: address;
+        include VASP::PublishChildVASPEnsures;
+        ensures exists_at(child_addr);
+        ensures Roles::spec_has_child_VASP_role_addr(child_addr);
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // General purpose methods
     ///////////////////////////////////////////////////////////////////////////
@@ -1100,11 +1204,14 @@ module LibraAccount {
         /// `account` cannot have an existing balance in `Currency`
         aborts_if exists<Balance<Token>>(Signer::address_of(account)) with Errors::ALREADY_PUBLISHED;
     }
+
     spec schema AddCurrencyEnsures<Token> {
         account: signer;
+        let addr = Signer::spec_address_of(account);
         /// This publishes a `Balance<Currency>` to the caller's account
-        ensures exists<Balance<Token>>(Signer::address_of(account));
-        ensures global<Balance<Token>>(Signer::address_of(account)) == Balance<Token>{ coin: Libra<Token> { value: 0 } };
+        ensures exists<Balance<Token>>(addr);
+        ensures global<Balance<Token>>(addr)
+            == Balance<Token>{ coin: Libra<Token> { value: 0 } };
     }
 
     /// Return whether the account at `addr` accepts `Token` type coins

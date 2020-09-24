@@ -551,6 +551,7 @@ specified the <code>limits_definition</code> passed in.
     amount: u64,
     receiving: &<b>mut</b> <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address), <a href="Errors.md#0x1_Errors_not_published">Errors::not_published</a>(<a href="#0x1_AccountLimits_ELIMITS_DEFINITION">ELIMITS_DEFINITION</a>));
     <b>let</b> limits_definition = borrow_global&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
     // If the limits are unrestricted then don't do any more work.
     <b>if</b> (<a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
@@ -1063,7 +1064,7 @@ Invariant that <code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinit
 <pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt; {
     amount: num;
     receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
-    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address) with <a href="Errors.md#0x1_Errors_NOT_PUBLISHED">Errors::NOT_PUBLISHED</a>;
     <b>include</b> !<a href="#0x1_AccountLimits_spec_window_unrestricted">spec_window_unrestricted</a>&lt;CoinType&gt;(receiving) ==&gt; <a href="#0x1_AccountLimits_CanReceiveRestrictedAbortsIf">CanReceiveRestrictedAbortsIf</a>&lt;CoinType&gt;;
 }
 </code></pre>
