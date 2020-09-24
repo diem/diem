@@ -80,6 +80,7 @@ members = [
     "language/move-prover/test-utils",
     "language/move-vm/natives",
     "language/move-vm/runtime",
+    "language/move-vm/test-utils",
     "language/move-vm/types",
     "language/resource-viewer",
     "language/stdlib",

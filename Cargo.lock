@@ -3801,6 +3801,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "move-vm-test-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
+ "move-vm-runtime 0.1.0",
+ "vm 0.1.0",
+]
+
+[[package]]
 name = "move-vm-types"
 version = "0.1.0"
 dependencies = [

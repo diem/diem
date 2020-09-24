@@ -112,6 +112,12 @@ pub struct ModuleId {
     name: Identifier,
 }
 
+impl From<ModuleId> for (AccountAddress, Identifier) {
+    fn from(module_id: ModuleId) -> Self {
+        (module_id.address, module_id.name)
+    }
+}
+
 impl ModuleId {
     pub fn new(address: AccountAddress, name: Identifier) -> Self {
         ModuleId { address, name }
