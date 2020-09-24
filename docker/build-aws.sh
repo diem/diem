@@ -124,7 +124,12 @@ while true; do
     for (( i=0; i < ${#BUILD_PROJECTS[@]}; i++ ));
     do
         get_build_status ${BUILD_IDS[$i]}
-        if [[ ${DOWNLOAD_SOURCE_STATUS} == "FAILED" ]] || [[ $BUILD_STATUS == "TIMED_OUT" ]]; then
+        if [[ ${DOWNLOAD_SOURCE_STATUS} == "FAILED" ]]; then
+          echo "${BUILD_PROJECTS[$i]} download source failed"
+          exit ${NON_RETRY_EXIT_CODE}
+        fi
+        if [[ $BUILD_STATUS == "TIMED_OUT" ]]; then
+          echo "${BUILD_PROJECTS[$i]} build timed out"
           exit ${RETRYABLE_EXIT_CODE}
         fi
         if [[ $? -gt 0 ]] || [[ ${BUILD_STATUS} == "" ]]; then
