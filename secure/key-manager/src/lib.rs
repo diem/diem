@@ -298,7 +298,7 @@ where
         // If this is inconsistent, then we are waiting on a reconfiguration...
         if let Err(Error::ConfigInfoKeyMismatch(..)) = self.compare_info_to_config() {
             warn!(LogSchema::new(LogEntry::WaitForReconfiguration));
-            counters::increment_state("consensus_key", "waiting_on_reconfiguration");
+            counters::increment_state("check_keys", "waiting_on_reconfiguration");
             return Ok(Action::NoAction);
         }
 
@@ -310,7 +310,7 @@ where
                 Ok(Action::SubmitKeyRotationTransaction)
             } else {
                 warn!(LogSchema::new(LogEntry::WaitForTransactionExecution));
-                counters::increment_state("consensus_key", "waiting_on_transaction_execution");
+                counters::increment_state("check_keys", "waiting_on_transaction_execution");
                 Ok(Action::NoAction)
             };
         }
@@ -319,7 +319,7 @@ where
             Ok(Action::FullKeyRotation)
         } else {
             info!(LogSchema::new(LogEntry::KeyStillFresh));
-            counters::increment_state("consensus_key", "key_still_fresh");
+            counters::increment_state("check_keys", "keys_still_fresh");
             Ok(Action::NoAction)
         }
     }
@@ -336,7 +336,7 @@ where
             }
             Action::NoAction => {
                 info!(LogSchema::new(LogEntry::NoAction));
-                counters::increment_state("consensus_key", "no_action");
+                counters::increment_state("check_keys", "no_action");
                 Ok(())
             }
         }
