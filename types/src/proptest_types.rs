@@ -22,6 +22,8 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version, WriteSetPayload,
     },
+    validator_info::ValidatorInfo,
+    validator_signer::ValidatorSigner,
     vm_status::{KeptVMStatus, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -40,7 +42,11 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use serde_json::Value;
-use std::{convert::TryFrom, iter::Iterator};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::TryFrom,
+    iter::Iterator,
+};
 
 impl WriteOp {
     pub fn value_strategy() -> impl Strategy<Value = Self> {
@@ -140,6 +146,7 @@ pub struct AccountInfoUniverse {
     epoch: u64,
     round: Round,
     next_version: Version,
+    validator_set_by_epoch: BTreeMap<u64, Vec<ValidatorSigner>>,
 }
 
 impl AccountInfoUniverse {
@@ -153,17 +160,29 @@ impl AccountInfoUniverse {
             .into_iter()
             .map(|(private_key, public_key)| AccountInfo::new(private_key, public_key))
             .collect();
+        let validator_set_by_epoch = vec![(0, Vec::new())].into_iter().collect();
 
         Self {
             accounts,
             epoch,
             round,
             next_version,
+            validator_set_by_epoch,
         }
     }
 
     fn get_account_info(&self, account_index: Index) -> &AccountInfo {
         account_index.get(&self.accounts)
+    }
+
+    fn get_account_infos_dedup(&self, account_indices: &[Index]) -> Vec<&AccountInfo> {
+        account_indices
+            .iter()
+            .map(|idx| idx.index(self.accounts.len()))
+            .collect::<BTreeSet<_>>()
+            .iter()
+            .map(|idx| &self.accounts[*idx])
+            .collect()
     }
 
     fn get_account_info_mut(&mut self, account_index: Index) -> &mut AccountInfo {
@@ -189,6 +208,14 @@ impl AccountInfoUniverse {
         let epoch = self.epoch;
         self.epoch += 1;
         epoch
+    }
+
+    pub fn get_validator_set(&self, epoch: u64) -> &[ValidatorSigner] {
+        &self.validator_set_by_epoch[&epoch]
+    }
+
+    fn set_validator_set(&mut self, epoch: u64, validator_set: Vec<ValidatorSigner>) {
+        self.validator_set_by_epoch.insert(epoch, validator_set);
     }
 }
 
@@ -915,11 +942,38 @@ impl Arbitrary for BlockMetadata {
 }
 
 #[derive(Debug)]
+struct ValidatorSetGen {
+    validators: Vec<Index>,
+}
+
+impl ValidatorSetGen {
+    pub fn materialize(self, universe: &mut AccountInfoUniverse) -> Vec<ValidatorSigner> {
+        universe
+            .get_account_infos_dedup(&self.validators)
+            .iter()
+            .map(|account| ValidatorSigner::new(account.address, account.private_key.clone()))
+            .collect()
+    }
+}
+
+impl Arbitrary for ValidatorSetGen {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        vec(any::<Index>(), 3)
+            .prop_map(|validators| Self { validators })
+            .boxed()
+    }
+}
+
+#[derive(Debug)]
 pub struct BlockInfoGen {
     id: HashValue,
     executed_state_id: HashValue,
     timestamp_usecs: u64,
     new_epoch: bool,
+    validator_set_gen: ValidatorSetGen,
 }
 
 impl BlockInfoGen {
@@ -928,20 +982,32 @@ impl BlockInfoGen {
 
         let current_epoch = universe.get_epoch();
         // The first LedgerInfo should always carry a validator set.
-        let (epoch, next_epoch_state) = if current_epoch == 0 || self.new_epoch {
-            (
-                universe.get_and_bump_epoch(),
-                Some(EpochState {
-                    epoch: current_epoch + 1,
-                    verifier: (&ValidatorSet::empty()).into(),
-                }),
-            )
+        let next_epoch_state = if current_epoch == 0 || self.new_epoch {
+            let next_validator_set = self.validator_set_gen.materialize(universe);
+            let next_validator_infos = next_validator_set
+                .iter()
+                .map(|signer| {
+                    ValidatorInfo::new_with_test_network_keys(
+                        signer.author(),
+                        signer.public_key(),
+                        1, /* consensus_voting_power */
+                    )
+                })
+                .collect();
+            let next_epoch_state = EpochState {
+                epoch: current_epoch + 1,
+                verifier: (&ValidatorSet::new(next_validator_infos)).into(),
+            };
+
+            universe.get_and_bump_epoch();
+            universe.set_validator_set(current_epoch + 1, next_validator_set);
+            Some(next_epoch_state)
         } else {
-            (universe.get_epoch(), None)
+            None
         };
 
         BlockInfo::new(
-            epoch,
+            current_epoch,
             universe.get_and_bump_round(),
             self.id,
             self.executed_state_id,
@@ -963,19 +1029,23 @@ impl Arbitrary for BlockInfoGen {
             any::<HashValue>(),
             any::<u64>(),
             prop_oneof![1 => Just(true), 3 => Just(false)],
+            any::<ValidatorSetGen>(),
         )
-            .prop_map(|(id, executed_state_id, timestamp_usecs, new_epoch)| Self {
-                id,
-                executed_state_id,
-                timestamp_usecs,
-                new_epoch,
-            })
+            .prop_map(
+                |(id, executed_state_id, timestamp_usecs, new_epoch, validator_set_gen)| Self {
+                    id,
+                    executed_state_id,
+                    timestamp_usecs,
+                    new_epoch,
+                    validator_set_gen,
+                },
+            )
             .boxed()
     }
 }
 
 #[derive(Arbitrary, Debug)]
-struct LedgerInfoGen {
+pub struct LedgerInfoGen {
     commit_info_gen: BlockInfoGen,
     consensus_data_hash: HashValue,
 }
@@ -992,8 +1062,6 @@ impl LedgerInfoGen {
 #[derive(Debug)]
 pub struct LedgerInfoWithSignaturesGen {
     ledger_info_gen: LedgerInfoGen,
-    // TODO: To make it more real, we can let the universe carry the current validator set.
-    signers: Vec<Index>,
 }
 
 impl Arbitrary for LedgerInfoWithSignaturesGen {
@@ -1001,11 +1069,8 @@ impl Arbitrary for LedgerInfoWithSignaturesGen {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        (any::<LedgerInfoGen>(), vec(any::<Index>(), 3))
-            .prop_map(|(ledger_info_gen, signers)| LedgerInfoWithSignaturesGen {
-                ledger_info_gen,
-                signers,
-            })
+        any::<LedgerInfoGen>()
+            .prop_map(|ledger_info_gen| LedgerInfoWithSignaturesGen { ledger_info_gen })
             .boxed()
     }
 }
@@ -1017,14 +1082,10 @@ impl LedgerInfoWithSignaturesGen {
         block_size: usize,
     ) -> LedgerInfoWithSignatures {
         let ledger_info = self.ledger_info_gen.materialize(universe, block_size);
-        let signatures = self
-            .signers
-            .into_iter()
-            .map(|signer_index| {
-                let account = universe.get_account_info(signer_index);
-                let signature = account.private_key.sign(&ledger_info);
-                (account.address, signature)
-            })
+        let signatures = universe
+            .get_validator_set(ledger_info.epoch())
+            .iter()
+            .map(|signer| (signer.author(), signer.sign(&ledger_info)))
             .collect();
 
         LedgerInfoWithSignatures::new(ledger_info, signatures)
