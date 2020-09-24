@@ -150,12 +150,14 @@ where
                     error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .liveness_error(&error));
+                    counters::increment_state("check_keys", "liveness_error_encountered");
                 }
                 Err(e) => {
                     // Log the unexpected error and continue to execute.
                     error!(LogSchema::new(LogEntry::CheckKeyStatus)
                         .event(LogEvent::Error)
                         .unexpected_error(&e));
+                    counters::increment_state("check_keys", "unexpected_error_encountered");
                 }
             };
 
