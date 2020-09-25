@@ -245,20 +245,26 @@ impl LoggerService {
         for entry in self.receiver {
             PROCESSED_STRUCT_LOG_COUNT.inc();
 
-            if let Some(writer) = &mut writer {
-                Self::write_to_logstash(writer, &entry);
-            }
-
             if let Some(printer) = &self.printer {
                 let s = format(&entry).expect("Unable to format");
                 printer.write(s)
+            }
+
+            if let Some(writer) = &mut writer {
+                Self::write_to_logstash(writer, entry);
             }
         }
     }
 
     /// Writes a log line into json_lines logstash format, which has a newline at the end
-    fn write_to_logstash(stream: &mut TcpWriter, entry: &LogEntry) {
-        let message = if let Ok(json) = serde_json::to_string(entry) {
+    fn write_to_logstash(stream: &mut TcpWriter, mut entry: LogEntry) {
+        // XXX Temporary hack to ensure that log lines don't show up empty in kibana when the
+        // "message" field isn't set.
+        if entry.message.is_none() {
+            entry.message = Some(serde_json::to_string(&entry.data).unwrap());
+        }
+
+        let message = if let Ok(json) = serde_json::to_string(&entry) {
             json
         } else {
             STRUCT_LOG_PARSE_ERROR_COUNT.inc();
