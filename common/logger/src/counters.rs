@@ -27,6 +27,15 @@ pub static SENT_STRUCT_LOG_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     .unwrap()
 });
 
+/// Number of bytes of struct logs submitted through TCP
+pub static SENT_STRUCT_LOG_BYTES: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_struct_log_tcp_submit_bytes",
+        "Number of bytes of the struct logs submitted by TCP."
+    )
+    .unwrap()
+});
+
 /// Metric for when we connect the outbound TCP
 pub static STRUCT_LOG_TCP_CONNECT_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(

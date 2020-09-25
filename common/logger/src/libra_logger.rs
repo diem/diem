@@ -3,8 +3,8 @@
 
 use crate::{
     counters::{
-        PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_COUNT, STRUCT_LOG_PARSE_ERROR_COUNT,
-        STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
+        PROCESSED_STRUCT_LOG_COUNT, SENT_STRUCT_LOG_BYTES, SENT_STRUCT_LOG_COUNT,
+        STRUCT_LOG_PARSE_ERROR_COUNT, STRUCT_LOG_QUEUE_ERROR_COUNT, STRUCT_LOG_SEND_ERROR_COUNT,
     },
     logger::Logger,
     struct_log::TcpWriter,
@@ -273,6 +273,7 @@ impl LoggerService {
 
         let message = message + "\n";
         let bytes = message.as_bytes();
+        let message_length = bytes.len();
 
         // Attempt to write the log up to NUM_SEND_RETRIES + 1, and then drop it
         // Each `write_all` call will attempt to open a connection if one isn't open
@@ -293,7 +294,8 @@ impl LoggerService {
                 e
             );
         } else {
-            SENT_STRUCT_LOG_COUNT.inc()
+            SENT_STRUCT_LOG_COUNT.inc();
+            SENT_STRUCT_LOG_BYTES.inc_by(message_length as i64);
         }
     }
 }
