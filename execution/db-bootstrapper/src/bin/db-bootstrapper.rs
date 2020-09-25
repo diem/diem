@@ -56,7 +56,6 @@ fn main() -> Result<()> {
         .reader
         .get_latest_tree_state()
         .with_context(|| format_err!("Failed to get latest tree state."))?;
-    println!("Got DB state successfully: {}", tree_state.describe());
     if let Some(waypoint) = opt.waypoint_to_verify {
         ensure!(
             waypoint.version() == tree_state.num_transactions,

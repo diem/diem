@@ -763,6 +763,13 @@ impl DbReader for LibraDB {
             ),
         };
 
+        info!(
+            num_transactions = tree_state.num_transactions,
+            state_root_hash = %tree_state.account_state_root_hash,
+            description = tree_state.describe(),
+            "Got latest TreeState."
+        );
+
         Ok(tree_state)
     }
 
