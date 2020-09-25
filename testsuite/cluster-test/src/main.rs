@@ -38,7 +38,7 @@ use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use std::cmp::min;
 use tokio::time::{delay_for, delay_until, Instant as TokioInstant};
 
-const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
+const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(20);
 
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action"))]

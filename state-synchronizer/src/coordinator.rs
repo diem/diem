@@ -12,6 +12,7 @@ use crate::{
     SynchronizerState,
 };
 use anyhow::{bail, ensure, format_err, Result};
+use fail::fail_point;
 use futures::{
     channel::{mpsc, oneshot},
     stream::select_all,
@@ -368,6 +369,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// Sync up coordinator state with the local storage
     /// and updates the pending ledger info accordingly
     fn sync_state_with_local_storage(&mut self) -> Result<()> {
+        fail_point!("state_sync::sync_state_with_local_storage", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in sync_state_with_local_storage"
+            ))
+        });
         let new_state = self.executor_proxy.get_local_storage_state().map_err(|e| {
             counters::STORAGE_READ_FAIL_COUNT.inc();
             e
@@ -406,6 +412,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// StateSynchronizer assumes that it's the only one modifying the storage (consensus is not
     /// trying to commit transactions concurrently).
     fn request_sync(&mut self, request: SyncRequest) -> Result<()> {
+        fail_point!("state_sync::request_sync", |_| {
+            Err(anyhow::anyhow!("Injected error in request_sync"))
+        });
         let local_li_version = self.local_state.highest_local_li.ledger_info().version();
         let target_version = request.target.ledger_info().version();
         debug!(
@@ -448,6 +457,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         commit_callback: Option<oneshot::Sender<Result<CommitResponse>>>,
         chunk_sender: Option<&PeerNetworkId>,
     ) -> Result<()> {
+        fail_point!("state_sync::process_commit", |_| {
+            Err(anyhow::anyhow!("Injected error in process_commit"))
+        });
         // We choose to re-sync the state with the storage as it's the simplest approach:
         // in case the performance implications of re-syncing upon every commit are high,
         // it's possible to manage some of the highest known versions in memory.
@@ -597,6 +609,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer: PeerNetworkId,
         request: GetChunkRequest,
     ) -> Result<()> {
+        fail_point!("state_sync::process_chunk_request", |_| {
+            Err(anyhow::anyhow!("Injected error in process_chunk_request"))
+        });
         debug!(
             LogSchema::event_log(LogEntry::ProcessChunkRequest, LogEvent::Received)
                 .peer(&peer)
@@ -625,6 +640,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         request: GetChunkRequest,
         target_li: LedgerInfoWithSignatures,
     ) -> Result<()> {
+        fail_point!("state_sync::process_request_target_li", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_request_target_li"
+            ))
+        });
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let response_li = self.choose_response_li(request.current_epoch, Some(target_li))?;
         // In case known_version is lower than the requested ledger info an empty response might be
@@ -647,6 +667,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         target_li: Option<LedgerInfoWithSignatures>,
         timeout_ms: u64,
     ) -> Result<()> {
+        fail_point!("state_sync::process_request_highest_available", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_request_highest_available"
+            ))
+        });
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
@@ -695,6 +720,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         request: GetChunkRequest,
         waypoint_version: Version,
     ) -> Result<()> {
+        fail_point!("state_sync::process_request_waypoint", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_request_waypoint"
+            ))
+        });
         let mut limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         ensure!(
             self.local_state.highest_local_li.ledger_info().version() >= waypoint_version,
@@ -746,6 +776,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         response_li: ResponseLedgerInfo,
         limit: u64,
     ) -> Result<()> {
+        fail_point!("state_sync::deliver_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in deliver_chunk"))
+        });
         let txns = self
             .executor_proxy
             .get_chunk(known_version, limit, response_li.version())?;
@@ -813,6 +846,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             LogSchema::event_log(LogEntry::ProcessChunkResponse, LogEvent::Received)
                 .chunk_resp(&response)
         );
+        fail_point!("state_sync::apply_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in apply_chunk"))
+        });
         let txn_list_with_proof = response.txn_list_with_proof.clone();
         let known_version = self.local_state.highest_version_in_local_storage();
         let chunk_start_version =
@@ -940,6 +976,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // may be the same as response_li
         pending_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
+        fail_point!("state_sync::process_response_with_verifiable_li", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_response_with_verifiable_li"
+            ))
+        });
         ensure!(
             self.is_initialized(),
             "Response with a non-waypoint LI while still not initialized"
@@ -1002,6 +1043,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         waypoint_li: LedgerInfoWithSignatures,
         end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
+        fail_point!("state_sync::process_response_with_waypoint_li", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in process_response_with_waypoint_li"
+            ))
+        });
         ensure!(
             !self.is_initialized(),
             "Response with a waypoint LI but we're already initialized"
@@ -1041,6 +1087,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         target: LedgerInfoWithSignatures,
         intermediate_end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<()> {
+        fail_point!("state_sync::validate_and_store_chunk", |_| {
+            Err(anyhow::anyhow!(
+                "Injected error in validate_and_store_chunk"
+            ))
+        });
         let target_epoch = target.ledger_info().epoch();
         let target_version = target.ledger_info().version();
         let local_epoch = self.local_state.highest_local_li.ledger_info().epoch();
@@ -1122,6 +1173,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// Sends a chunk request with a given `known_version` and `known_epoch`
     /// (might be chosen optimistically).
     fn send_chunk_request(&mut self, known_version: u64, known_epoch: u64) -> Result<()> {
+        fail_point!("state_sync::send_chunk_request", |_| {
+            Err(anyhow::anyhow!("Injected error in send_chunk_request"))
+        });
         if self.request_manager.no_available_peers() {
             warn!(LogSchema::event_log(
                 LogEntry::SendChunkRequest,
@@ -1169,6 +1223,10 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         peer: PeerNetworkId,
         request_info: PendingRequestInfo,
     ) -> Result<()> {
+        fail_point!("state_sync::deliver_subscription", |_| {
+            Err(anyhow::anyhow!("Injected error in deliver_subscription"))
+        });
+
         counters::SUBSCRIPTION_DELIVERY_COUNT.inc();
         let response_li = self.choose_response_li(request_info.request_epoch, None)?;
         self.deliver_chunk(

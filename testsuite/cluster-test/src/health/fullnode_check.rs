@@ -18,7 +18,7 @@ pub static THRESHOLD: Lazy<i64> = Lazy::new(|| {
         v.parse()
             .expect("Failed to parse FULL_NODE_HEALTH_THRESHOLD")
     } else {
-        15000_i64
+        15_000_000_i64
     }
 });
 

@@ -64,3 +64,17 @@ failpoints:
   executor::commit_chunk: 1%return
   executor::vm_execute_block: 1%return
   #executor::commit_blocks: 0.01%return
+#  state_sync::deliver_subscription: 1%return
+#  state_sync::sync_state_with_local_storage: 1%return
+#  state_sync::request_sync: 1%return
+#  state_sync::process_commit: 1%return
+  state_sync::process_chunk_request: 1%return
+#  state_sync::process_request_target_li: 1%return
+#  state_sync::process_request_highest_available: 1%return
+#  state_sync::process_request_waypoint: 1%return
+#  state_sync::deliver_chunk: 1%return
+#  state_sync::apply_chunk: 1%return
+#  state_sync::process_response_with_verifiable_li: 1%return
+#  state_sync::process_response_with_waypoint_li: 1%return
+#  state_sync::validate_and_store_chunk: 1%return
+#  state_sync::send_chunk_request: 1%return
