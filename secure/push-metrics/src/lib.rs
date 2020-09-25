@@ -4,14 +4,14 @@
 #![forbid(unsafe_code)]
 
 // Re-export counter types from prometheus crate
-pub use prometheus::{
+pub use libra_metrics_core::{
     register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
     register_int_gauge, register_int_gauge_vec, Histogram, HistogramVec, IntCounter, IntCounterVec,
     IntGauge, IntGaugeVec,
 };
 
 use libra_logger::{error, info};
-use prometheus::{Encoder, TextEncoder};
+use libra_metrics_core::{Encoder, TextEncoder};
 use std::{env, sync::mpsc, thread, thread::JoinHandle, time::Duration};
 
 const DEFAULT_PUSH_FREQUENCY_SECS: u64 = 15;
@@ -29,7 +29,7 @@ impl MetricsPusher {
     fn push(push_metrics_endpoint: &str) {
         let mut buffer = Vec::new();
 
-        if let Err(e) = TextEncoder::new().encode(&prometheus::gather(), &mut buffer) {
+        if let Err(e) = TextEncoder::new().encode(&libra_metrics_core::gather(), &mut buffer) {
             error!("Failed to encode push metrics: {}.", e.to_string());
         } else {
             let response = ureq::post(&push_metrics_endpoint)

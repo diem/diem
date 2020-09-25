@@ -59,7 +59,7 @@ pub use op_counters::{DurationHistogram, OpMetrics};
 mod unit_tests;
 
 // Re-export counter types from prometheus crate
-pub use prometheus::{
+pub use libra_metrics_core::{
     register_histogram, register_histogram_vec, register_int_counter, register_int_counter_vec,
     register_int_gauge, register_int_gauge_vec, Histogram, HistogramVec, IntCounter, IntCounterVec,
     IntGauge, IntGaugeVec,
@@ -101,7 +101,7 @@ fn get_metrics_file<P: AsRef<Path>>(dir_path: &P, file_name: &str) -> File {
 }
 
 pub fn gather_metrics() -> Vec<prometheus::proto::MetricFamily> {
-    let metric_families = prometheus::gather();
+    let metric_families = libra_metrics_core::gather();
     let mut total: i64 = 0;
     let mut families_over_1000: i64 = 0;
 

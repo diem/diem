@@ -3105,12 +3105,21 @@ dependencies = [
  "futures 0.3.5",
  "hyper",
  "libra-logger",
+ "libra-metrics-core",
  "libra-workspace-hack",
  "once_cell",
  "prometheus",
  "rusty-fork",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "libra-metrics-core"
+version = "0.1.0"
+dependencies = [
+ "libra-workspace-hack",
+ "prometheus",
 ]
 
 [[package]]
@@ -3290,8 +3299,8 @@ name = "libra-secure-push-metrics"
 version = "0.1.0"
 dependencies = [
  "libra-logger",
+ "libra-metrics-core",
  "libra-workspace-hack",
- "prometheus",
  "ureq",
 ]
 
