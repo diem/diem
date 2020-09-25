@@ -56,11 +56,7 @@
 
     <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
 
-    // Register transaction fee <b>resource</b>
-    <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(
-        lr_account,
-        tc_account,
-    );
+    <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account);
 
     <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(
         lr_account,

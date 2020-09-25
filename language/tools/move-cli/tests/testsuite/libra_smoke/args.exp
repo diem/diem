@@ -4,7 +4,7 @@ Emitted 2 events:
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000a550c18), U64(0)] }))) as the 0th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Emitted Value(Container(StructC(RefCell { value: [Address(0000000000000000000000000b1e55ed), U64(1)] }))) as the 1th event to stream [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]
 Changed resource(s) under 2 address(es):
-  Changed 33 resource(s) under address 0000000000000000000000000a550c18:
+  Changed 30 resource(s) under address 0000000000000000000000000a550c18:
     Added type 00000000::Event::EventHandleGenerator: [U64(23), Address(00000000)]
     Added type 00000000::LibraTimestamp::CurrentTimeMicroseconds: [U64(0)]
     Added type 00000000::Roles::RoleId: [U64(0)]
@@ -35,10 +35,7 @@ Changed resource(s) under 2 address(es):
     Added type 00000000::Libra::CurrencyInfo<00000000::Coin1::Coin1>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 49], true, [U64(0), [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::Libra::CurrencyInfo<00000000::Coin2::Coin2>: [U128(0), U64(0), [U64(2147483648)], false, U64(1000000), U64(100), [67, 111, 105, 110, 50], true, [U64(0), [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
     Added type 00000000::Libra::CurrencyInfo<00000000::LBR::LBR>: [U128(0), U64(0), [U64(4294967296)], true, U64(1000000), U64(1000), [76, 66, 82], true, [U64(0), [15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]], [U64(0), [19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 85, 12, 24]]]
-    Added type 00000000::TransactionFee::TransactionFee<00000000::Coin1::Coin1>: [[U64(0)], [[U64(0)]]]
-    Added type 00000000::TransactionFee::TransactionFee<00000000::Coin2::Coin2>: [[U64(0)], [[U64(0)]]]
-    Added type 00000000::TransactionFee::TransactionFee<00000000::LBR::LBR>: [[U64(0)], [[U64(0)]]]
-  Changed 9 resource(s) under address 0000000000000000000000000b1e55ed:
+  Changed 12 resource(s) under address 0000000000000000000000000b1e55ed:
     Added type 00000000::Event::EventHandleGenerator: [U64(2), Address(00000000)]
     Added type 00000000::Roles::RoleId: [U64(1)]
     Added type 00000000::AccountFreezing::FreezingBit: [false]
@@ -48,6 +45,9 @@ Changed resource(s) under 2 address(es):
     Added type 00000000::Libra::BurnCapability<00000000::Coin2::Coin2>: [false]
     Added type 00000000::Libra::MintCapability<00000000::Coin1::Coin1>: [false]
     Added type 00000000::Libra::MintCapability<00000000::Coin2::Coin2>: [false]
+    Added type 00000000::TransactionFee::TransactionFee<00000000::Coin1::Coin1>: [[U64(0)], [[U64(0)]]]
+    Added type 00000000::TransactionFee::TransactionFee<00000000::Coin2::Coin2>: [[U64(0)], [[U64(0)]]]
+    Added type 00000000::TransactionFee::TransactionFee<00000000::LBR::LBR>: [[U64(0)], [[U64(0)]]]
 Committed changes.
 Command `run ../../../../../stdlib/transaction_scripts/create_designated_dealer.move --type-args 0x1::LBR::LBR --signers 0xB1E55ED --args 0 0xDD x"00000000000000000000000000000000" b"DD" true -c`:
 Compiling 1 source file(s)

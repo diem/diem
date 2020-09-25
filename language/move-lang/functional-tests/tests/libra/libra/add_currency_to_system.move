@@ -68,7 +68,7 @@ use 0x1::TransactionFee;
 use 0x1::COIN::{Self, COIN};
 fun main(lr_account: &signer, tc_account: &signer) {
     COIN::initialize(lr_account, tc_account);
-    TransactionFee::add_txn_fee_currency<COIN>(lr_account, tc_account);
+    TransactionFee::add_txn_fee_currency<COIN>(tc_account);
 }
 }
 // check: "Keep(EXECUTED)"
