@@ -5,7 +5,7 @@
 
 use crate::{atomic_histogram::*, cluster::Cluster, instance::Instance};
 use std::{
-    env, fmt, slice,
+    fmt, slice,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -40,7 +40,6 @@ use libra_types::{
     account_config::{libra_root_address, treasury_compliance_account_address},
     transaction::SignedTransaction,
 };
-use once_cell::sync::Lazy;
 use std::{
     cmp::{max, min},
     ops::Sub,
@@ -115,31 +114,29 @@ pub struct EmitJobRequest {
     pub accounts_per_client: usize,
     pub workers_per_ac: Option<usize>,
     pub thread_params: EmitThreadParams,
+    pub gas_price: u64,
 }
-
-pub static GAS_UNIT_PRICE: Lazy<u64> = Lazy::new(|| {
-    if let Ok(v) = env::var("GAS_UNIT_PRICE") {
-        v.parse().expect("Failed to parse GAS_UNIT_PRICE")
-    } else {
-        0_u64
-    }
-});
 
 impl EmitJobRequest {
     pub fn for_instances(
         instances: Vec<Instance>,
         global_emit_job_request: &Option<EmitJobRequest>,
+        gas_price: u64,
     ) -> Self {
         match global_emit_job_request {
             Some(global_emit_job_request) => EmitJobRequest {
                 instances,
-                ..global_emit_job_request.clone()
+                accounts_per_client: global_emit_job_request.accounts_per_client,
+                workers_per_ac: global_emit_job_request.workers_per_ac,
+                thread_params: global_emit_job_request.thread_params.clone(),
+                gas_price,
             },
             None => Self {
                 instances,
                 accounts_per_client: 15,
                 workers_per_ac: None,
                 thread_params: EmitThreadParams::default(),
+                gas_price,
             },
         }
     }
@@ -153,7 +150,7 @@ impl EmitJobRequest {
         (num_workers, wait_time)
     }
 
-    pub fn fixed_tps(instances: Vec<Instance>, tps: u64) -> Self {
+    pub fn fixed_tps(instances: Vec<Instance>, tps: u64, gas_price: u64) -> Self {
         let (num_workers, wait_time) = EmitJobRequest::fixed_tps_params(instances.len(), tps);
         Self {
             instances,
@@ -163,6 +160,7 @@ impl EmitJobRequest {
                 wait_millis: wait_time,
                 wait_committed: true,
             },
+            gas_price,
         }
     }
 }
@@ -210,6 +208,7 @@ impl TxEmitter {
                 receiver,
                 num_coins,
                 self.chain_id,
+                0,
             ))
             .await?;
         let deadline = Instant::now() + TXN_MAX_WAIT;
@@ -271,7 +270,7 @@ impl TxEmitter {
                     stats,
                     chain_id: self.chain_id,
                 };
-                let join_handle = tokio_handle.spawn(worker.run().boxed());
+                let join_handle = tokio_handle.spawn(worker.run(req.gas_price).boxed());
                 workers.push(Worker { join_handle });
             }
         }
@@ -434,7 +433,7 @@ impl TxEmitter {
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
         let num_accounts = requested_accounts - self.accounts.len(); // Only minting extra accounts
-        let coins_per_account = (SEND_AMOUNT + *GAS_UNIT_PRICE) * MAX_TXNS;
+        let coins_per_account = (SEND_AMOUNT + req.gas_price) * MAX_TXNS;
         let coins_per_seed_account =
             (coins_per_account * num_accounts as u64) / req.instances.len() as u64;
         let coins_total = coins_per_account * num_accounts as u64;
@@ -553,10 +552,10 @@ struct SubmissionWorker {
 
 impl SubmissionWorker {
     #[allow(clippy::collapsible_if)]
-    async fn run(mut self) -> Vec<AccountData> {
+    async fn run(mut self, gas_price: u64) -> Vec<AccountData> {
         let wait = Duration::from_millis(self.params.wait_millis);
         while !self.stop.load(Ordering::Relaxed) {
-            let requests = self.gen_requests();
+            let requests = self.gen_requests(gas_price);
             let num_requests = requests.len();
             let start_time = Instant::now();
             let wait_util = start_time + wait;
@@ -621,7 +620,7 @@ impl SubmissionWorker {
         self.accounts
     }
 
-    fn gen_requests(&mut self) -> Vec<SignedTransaction> {
+    fn gen_requests(&mut self, gas_price: u64) -> Vec<SignedTransaction> {
         let mut rng = ThreadRng::default();
         let batch_size = max(MAX_TXN_BATCH_SIZE, self.accounts.len());
         let accounts = self
@@ -634,7 +633,8 @@ impl SubmissionWorker {
                 .all_addresses
                 .choose(&mut rng)
                 .expect("all_addresses can't be empty");
-            let request = gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, self.chain_id);
+            let request =
+                gen_transfer_txn_request(sender, receiver, SEND_AMOUNT, self.chain_id, gas_price);
             requests.push(request);
         }
         requests
@@ -732,8 +732,8 @@ async fn retrieve_account_balance(
 pub fn gen_submit_transaction_request(
     script: Script,
     sender_account: &mut AccountData,
-    no_gas: bool,
     chain_id: ChainId,
+    gas_price: u64,
 ) -> SignedTransaction {
     let transaction = create_user_txn(
         &sender_account.key_pair,
@@ -741,7 +741,7 @@ pub fn gen_submit_transaction_request(
         sender_account.address,
         sender_account.sequence_number,
         MAX_GAS_AMOUNT,
-        if no_gas { 0 } else { *GAS_UNIT_PRICE },
+        gas_price,
         GAS_CURRENCY_CODE.to_owned(),
         TXN_EXPIRATION_SECONDS,
         chain_id,
@@ -766,8 +766,8 @@ fn gen_mint_request(
             vec![],
         ),
         faucet_account,
-        true,
         chain_id,
+        0,
     )
 }
 
@@ -776,6 +776,7 @@ fn gen_transfer_txn_request(
     receiver: &AccountAddress,
     num_coins: u64,
     chain_id: ChainId,
+    gas_price: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_peer_to_peer_with_metadata_script(
@@ -786,8 +787,8 @@ fn gen_transfer_txn_request(
             vec![],
         ),
         sender,
-        false,
         chain_id,
+        gas_price,
     )
 }
 
@@ -808,8 +809,8 @@ fn gen_create_child_txn_request(
             num_coins,
         ),
         sender,
-        true,
         chain_id,
+        0,
     )
 }
 
@@ -829,8 +830,8 @@ fn gen_create_account_txn_request(
             false,
         ),
         sender,
-        true,
         chain_id,
+        0,
     )
 }
 
@@ -849,8 +850,8 @@ fn gen_mint_txn_request(
             vec![],
         ),
         sender,
-        true,
         chain_id,
+        0,
     )
 }
 

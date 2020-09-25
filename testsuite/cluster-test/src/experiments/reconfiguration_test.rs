@@ -123,6 +123,7 @@ impl Experiment for Reconfiguration {
                     .start_job(EmitJobRequest::for_instances(
                         instances,
                         context.global_emit_job_request,
+                        0,
                     ))
                     .await?,
             )
@@ -145,8 +146,8 @@ impl Experiment for Reconfiguration {
                     self.affected_peer_id,
                 ),
                 &mut libra_root_account,
-                true,
                 ChainId::test(),
+                0,
             );
             execute_and_wait_transactions(
                 &mut full_node_client,
@@ -162,8 +163,8 @@ impl Experiment for Reconfiguration {
                     self.affected_peer_id,
                 ),
                 &mut libra_root_account,
-                true,
                 ChainId::test(),
+                0,
             );
             execute_and_wait_transactions(
                 &mut full_node_client,
@@ -180,8 +181,8 @@ impl Experiment for Reconfiguration {
             let update_txn = gen_submit_transaction_request(
                 encode_update_libra_version_script(allowed_nonce, magic_number),
                 &mut libra_root_account,
-                true,
                 ChainId::test(),
+                0,
             );
 
             execute_and_wait_transactions(

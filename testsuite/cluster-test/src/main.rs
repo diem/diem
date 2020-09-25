@@ -323,6 +323,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
             accounts_per_client,
             workers_per_ac,
             thread_params,
+            gas_price: 0,
         })
         .await
         .map_err(|e| format_err!("Failed to start emit job: {}", e))?;
@@ -532,6 +533,7 @@ impl ClusterTestRunner {
                 wait_millis: args.wait_millis,
                 wait_committed: !args.burst,
             },
+            gas_price: 0,
         };
         let emit_to_validator =
             if cluster.fullnode_instances().len() < cluster.validator_instances().len() {

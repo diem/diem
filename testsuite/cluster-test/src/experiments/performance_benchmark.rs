@@ -59,6 +59,8 @@ pub struct PerformanceBenchmarkParams {
         help = "Whether benchmark should pick one node to run DB backup."
     )]
     pub backup: bool,
+    #[structopt(long, default_value = "0", help = "Set gas price in tx")]
+    pub gas_price: u64,
 }
 
 pub struct PerformanceBenchmark {
@@ -72,6 +74,7 @@ pub struct PerformanceBenchmark {
     tps: Option<u64>,
     use_logs_for_trace: bool,
     backup: bool,
+    gas_price: u64,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -86,6 +89,7 @@ impl PerformanceBenchmarkParams {
             tps: None,
             use_logs_for_trace: false,
             backup: false,
+            gas_price: 0,
         }
     }
 
@@ -98,6 +102,20 @@ impl PerformanceBenchmarkParams {
             tps: Some(fixed_tps),
             use_logs_for_trace: false,
             backup: false,
+            gas_price: 0,
+        }
+    }
+
+    pub fn non_zero_gas_price(percent_nodes_down: usize, gas_price: u64) -> Self {
+        Self {
+            percent_nodes_down,
+            duration: DEFAULT_BENCH_DURATION,
+            trace: false,
+            trace_single: false,
+            tps: None,
+            use_logs_for_trace: false,
+            backup: false,
+            gas_price,
         }
     }
 
@@ -135,6 +153,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             tps: self.tps,
             use_logs_for_trace: self.use_logs_for_trace,
             backup: self.backup,
+            gas_price: self.gas_price,
         }
     }
 }
@@ -158,8 +177,12 @@ impl Experiment for PerformanceBenchmark {
             self.up_fullnodes.clone()
         };
         let emit_job_request = match self.tps {
-            Some(tps) => EmitJobRequest::fixed_tps(instances, tps),
-            None => EmitJobRequest::for_instances(instances, context.global_emit_job_request),
+            Some(tps) => EmitJobRequest::fixed_tps(instances, tps, self.gas_price),
+            None => EmitJobRequest::for_instances(
+                instances,
+                context.global_emit_job_request,
+                self.gas_price,
+            ),
         };
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
         let start = chrono::Utc::now();
@@ -318,11 +341,15 @@ impl PerformanceBenchmark {
 impl Display for PerformanceBenchmark {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         if let Some(tps) = self.tps {
-            write!(f, "fixed tps {}", tps)
+            write!(f, "fixed tps {}", tps)?;
         } else if self.percent_nodes_down == 0 {
-            write!(f, "all up")
+            write!(f, "all up")?;
         } else {
-            write!(f, "{}% down", self.percent_nodes_down)
+            write!(f, "{}% down, gas price", self.percent_nodes_down)?;
         }
+        if self.gas_price != 0 {
+            write!(f, ", gas price {}", self.gas_price)?;
+        }
+        Ok(())
     }
 }

@@ -89,6 +89,7 @@ impl Experiment for LoadTest {
                     .start_job(EmitJobRequest::for_instances(
                         context.cluster.fullnode_instances().to_vec(),
                         context.global_emit_job_request,
+                        0,
                     ))
                     .await?,
             );
