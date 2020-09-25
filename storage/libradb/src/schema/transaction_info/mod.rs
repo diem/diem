@@ -12,8 +12,8 @@
 //! `Version` is serialized in big endian so that records in RocksDB will be in order of it's
 //! numeric value.
 
-use crate::schema::TRANSACTION_INFO_CF_NAME;
-use anyhow::{ensure, Result};
+use crate::schema::{ensure_slice_len_eq, TRANSACTION_INFO_CF_NAME};
+use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt};
 use libra_types::transaction::{TransactionInfo, Version};
 use schemadb::{
@@ -35,11 +35,7 @@ impl KeyCodec<TransactionInfoSchema> for Version {
     }
 
     fn decode_key(data: &[u8]) -> Result<Self> {
-        ensure!(
-            data.len() == size_of::<Version>(),
-            "Bad num of bytes: {}",
-            data.len()
-        );
+        ensure_slice_len_eq(data, size_of::<Version>())?;
         Ok((&data[..]).read_u64::<BigEndian>()?)
     }
 }
