@@ -121,7 +121,7 @@ pub static GAS_UNIT_PRICE: Lazy<u64> = Lazy::new(|| {
     if let Ok(v) = env::var("GAS_UNIT_PRICE") {
         v.parse().expect("Failed to parse GAS_UNIT_PRICE")
     } else {
-        0_u64
+        1_u64
     }
 });
 
