@@ -9,12 +9,15 @@ on:
     types:
       - submitted
       - edited
+  push:
+    branches:
+      - auto
 
 jobs:
   calc-summaries:
     runs-on: ubuntu-latest
     name: Calculate dependency summary changes
-    if: ${{ github.actor != 'bors-libra' }}
+    if: ${{ github.event_name == 'push' || github.actor != 'bors-libra' }}
     outputs:
       lsr-summary-diff: ${{ steps.verify-lsr.diff }}
       lec-summary-diff: ${{ steps.verify-lec.diff }}
@@ -22,17 +25,31 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - name: fetch base ref
         id: fetch-base-ref
         uses: ./.github/actions/pr-base-ref
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: checkout base ref
         uses: actions/checkout@v2
+        if: ${{ startsWith(github.event_name, 'pull_request') }}
         with:
           ref: ${{ steps.fetch-base-ref.outputs.ref }}
+          path: libra-base
+      - name: checkout
+        uses: actions/checkout@v2
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: ${{ github.event.after }}
+      - name: checkout base ref
+        uses: actions/checkout@v2
+        if: ${{ github.event_name == 'push' }}
+        with:
+          ref: ${{ github.event.before }}
           path: libra-base
 
       - name: generate new summaries
