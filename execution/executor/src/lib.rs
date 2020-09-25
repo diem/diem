@@ -20,9 +20,9 @@ use crate::{
     logging::{LogEntry, LogSchema},
     metrics::{
         LIBRA_EXECUTOR_COMMIT_BLOCKS_SECONDS, LIBRA_EXECUTOR_ERRORS,
-        LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS, LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS,
-        LIBRA_EXECUTOR_TRANSACTIONS_SAVED, LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
-        LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS,
+        LIBRA_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS, LIBRA_EXECUTOR_EXECUTE_BLOCK_SECONDS,
+        LIBRA_EXECUTOR_SAVE_TRANSACTIONS_SECONDS, LIBRA_EXECUTOR_TRANSACTIONS_SAVED,
+        LIBRA_EXECUTOR_VM_EXECUTE_BLOCK_SECONDS,
     },
     speculation_cache::SpeculationCache,
     types::{ProcessedVMOutput, TransactionData},
@@ -444,13 +444,11 @@ where
             self.cache.synced_trees().state_root(),
             self.cache.synced_trees().state_tree(),
         );
-        let vm_outputs = {
-            let _timer = LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS.start_timer();
-            fail_point!("executor::vm_execute_chunk", |_| {
-                Err(anyhow::anyhow!("Injected error in execute_chunk"))
-            });
-            V::execute_block(transactions.clone(), &state_view)?
-        };
+
+        fail_point!("executor::vm_execute_chunk", |_| {
+            Err(anyhow::anyhow!("Injected error in execute_chunk"))
+        });
+        let vm_outputs = V::execute_block(transactions.clone(), &state_view)?;
 
         // Since other validators have committed these transactions, their status should all be
         // TransactionStatus::Keep.
@@ -564,6 +562,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
         // carrying any epoch change LI.
         epoch_change_li: Option<LedgerInfoWithSignatures>,
     ) -> Result<Vec<ContractEvent>> {
+        let _timer = LIBRA_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS.start_timer();
         // 1. Update the cache in executor to be consistent with latest synced state.
         self.reset_cache()?;
 

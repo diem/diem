@@ -4,12 +4,12 @@
 use libra_metrics::{register_histogram, register_int_counter, Histogram, IntCounter};
 use once_cell::sync::Lazy;
 
-pub static LIBRA_EXECUTOR_VM_EXECUTE_CHUNK_SECONDS: Lazy<Histogram> = Lazy::new(|| {
+pub static LIBRA_EXECUTOR_EXECUTE_AND_COMMIT_CHUNK_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
         // metric name
-        "libra_executor_vm_execute_chunk_seconds",
+        "libra_executor_execute_and_commit_chunk_seconds",
         // metric description
-        "The time spent in seconds of vm chunk execution in Libra executor"
+        "The time spent in seconds of chunk execution and committing in Libra executor"
     )
     .unwrap()
 });
