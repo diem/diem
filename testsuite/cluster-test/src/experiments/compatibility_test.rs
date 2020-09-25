@@ -303,6 +303,8 @@ impl Experiment for CompatibilityTest {
                 .map_err(|e| anyhow::format_err!("Failed to upgrade full node images: {}", e))?;
         }
 
+        anyhow::bail!("Invoke failure");
+
         Ok(())
     }
 
