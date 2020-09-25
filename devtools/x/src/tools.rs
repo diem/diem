@@ -1,7 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{context::XContext, installer, Result};
+use crate::{context::XContext, Result};
+use anyhow::anyhow;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -12,17 +13,13 @@ pub struct Args {
 }
 
 pub fn run(args: Args, xctx: XContext) -> Result<()> {
-    let tools = xctx.config().tools();
-    let mut failed: bool = false;
-    for (key, value) in tools {
-        let success = match args.check {
-            false => installer::install_if_needed(key, value),
-            true => installer::check_installed(key, value),
-        };
-        failed = failed || !success;
+    let success = match args.check {
+        false => xctx.installer().install_all(),
+        true => xctx.installer().check_all(),
+    };
+    if success {
+        Ok(())
+    } else {
+        Err(anyhow!("Failed to install tools"))
     }
-    if failed {
-        std::process::exit(1);
-    }
-    Ok(())
 }

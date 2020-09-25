@@ -33,7 +33,7 @@ pub fn run_with(cmd: CargoCommand<'_>, args: Args, xctx: &XContext) -> Result<()
 
     if !args.package.is_empty() {
         cmd.run_on_packages(args.package.iter(), &base_args)?;
-    } else if utils::project_is_root(&xctx)? || args.workspace {
+    } else if utils::project_is_root(&xctx.config().cargo_config())? || args.workspace {
         cmd.run_on_all_packages(&base_args)?;
     } else {
         cmd.run_on_local_package(&base_args)?;

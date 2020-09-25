@@ -25,19 +25,24 @@ pub struct Args {
 
 pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     args.args.extend(args.benchname.clone());
-    let config = xctx.config();
 
     let mut direct_args = Vec::new();
     if args.no_run {
         direct_args.push(OsString::from("--no-run"));
     };
 
-    let cmd = CargoCommand::Bench(config.cargo_config(), direct_args.as_slice(), &args.args);
+    let cmd = CargoCommand::Bench {
+        cargo_config: xctx.config().cargo_config(),
+        direct_args: direct_args.as_slice(),
+        args: &args.args,
+        env: &[],
+    };
+
     let base_args = CargoArgs::default();
 
     if !args.package.is_empty() {
         cmd.run_on_packages(args.package.iter(), &base_args)?;
-    } else if utils::project_is_root(&xctx)? {
+    } else if utils::project_is_root(&xctx.config().cargo_config())? {
         cmd.run_on_all_packages(&base_args)?;
     } else {
         cmd.run_on_local_package(&base_args)?;

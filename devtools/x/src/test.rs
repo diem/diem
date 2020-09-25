@@ -8,7 +8,7 @@ use crate::{
     utils::project_root,
     Result,
 };
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use log::info;
 use std::{
     ffi::OsString,
@@ -57,23 +57,26 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
 
     let generate_coverage = args.html_cov_dir.is_some() || args.html_lcov_dir.is_some();
 
-    let env_vars: &[(&str, &str)] = if generate_coverage {
+    let env_vars: &[(&str, Option<&str>)] = if generate_coverage {
+        if !xctx.installer().install_if_needed("grcov") {
+            return Err(anyhow!("Could not install grcov"));
+        }
         info!("Running \"cargo clean\" before collecting coverage");
         let mut clean_cmd = Command::new("cargo");
         clean_cmd.arg("clean");
         clean_cmd.output()?;
         &[
             // A way to use -Z (unstable) flags with the stable compiler. See below.
-            ("RUSTC_BOOTSTRAP", "1"),
+            ("RUSTC_BOOTSTRAP", Some("1")),
             // Recommend setting for grcov, avoids using the cargo cache.
-            ("CARGO_INCREMENTAL", "0"),
+            ("CARGO_INCREMENTAL", Some("0")),
             // language/ir-testsuite's tests will stack overflow without this setting.
-            ("RUST_MIN_STACK", "8388608"),
+            ("RUST_MIN_STACK", Some("8388608")),
             // Recommend flags for use with grcov, with these flags removed: -Copt-level=0, -Clink-dead-code.
             // for more info see:  https://github.com/mozilla/grcov#example-how-to-generate-gcda-fiels-for-a-rust-project
             (
                 "RUSTFLAGS",
-                "-Zprofile -Ccodegen-units=1 -Coverflow-checks=off",
+                Some("-Zprofile -Ccodegen-units=1 -Coverflow-checks=off"),
             ),
         ]
     } else {
@@ -110,7 +113,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
         )
     } else if !args.package.is_empty() {
         cmd.run_on_packages(args.package.iter(), &CargoArgs::default())
-    } else if utils::project_is_root(&xctx)? {
+    } else if utils::project_is_root(&xctx.config().cargo_config())? {
         // TODO Maybe only run a subest of tests if we're not inside
         // a package but not at the project root (e.g. language)
         cmd.run_on_all_packages(&CargoArgs::default())

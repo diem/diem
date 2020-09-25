@@ -9,6 +9,7 @@ aliases:
       only:
         - auto
         - canary
+  - &working_directory /opt/git/libra
 
 version: 2.1
 
@@ -73,6 +74,9 @@ commands:
       - run:
           name: Setup Env
           command: |
+            mkdir -p /opt/cargo/
+            export CARGO_HOME=/opt/cargo
+            echo 'export CARGO_HOME=/opt/cargo' >> $BASH_ENV
             echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
             echo 'export IMAGE_NAME=myapp' >> $BASH_ENV
             echo 'export LIBRA_DUMP_LOGS=1' >> $BASH_ENV
@@ -88,87 +92,11 @@ commands:
             echo 'export CARGO='$(rustup which cargo --toolchain "$RUST_NIGHTLY") >> $BASH_ENV
             # Pin the version of RUSTC used for all invocations of cargo
             echo 'export RUSTUP_TOOLCHAIN="$(cat rust-toolchain)"' >> $BASH_ENV
-            echo 'export SCCACHE_CACHE_SIZE=2G' >> $BASH_ENV
-            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
-            echo 'export CC="sccache cc"' >> $BASH_ENV
-            echo 'export CXX="sccache c++"' >> $BASH_ENV
 
             # Configure Move prover tools
             echo 'export Z3_EXE="$HOME/bin/z3"' >> $BASH_ENV
             echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> $BASH_ENV
             echo 'export BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $BASH_ENV
-
-  save_sccache:
-    description: Save shared compilation cache for future jobs
-    steps:
-      - run:
-          name: Show sccache
-          command: sccache -s
-      - run:
-          name: Generate date code for cache key
-          # NOTE circle's built-in key does not support date
-          command: |
-            cat rust-toolchain > /tmp/cache-key
-            cat cargo-toolchain >> /tmp/cache-key
-            date +%Y%m%d >> /tmp/cache-key
-      # NOTE circle supports cache corruption check upto 500MB. For
-      # SCCACHE_CACHE_SIZE=2G, split them into 4 chunks.
-      - save_cache:
-          name: Save sccache chunk 1/4
-          key: sccache-asset-chunk1-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-          paths:
-            - "/home/circleci/.cache/sccache/0"
-            - "/home/circleci/.cache/sccache/1"
-            - "/home/circleci/.cache/sccache/2"
-            - "/home/circleci/.cache/sccache/3"
-      - save_cache:
-          name: Save sccache chunk 2/4
-          key: sccache-asset-chunk2-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-          paths:
-            - "/home/circleci/.cache/sccache/4"
-            - "/home/circleci/.cache/sccache/5"
-            - "/home/circleci/.cache/sccache/6"
-            - "/home/circleci/.cache/sccache/7"
-      - save_cache:
-          name: Save sccache chunk 3/4
-          key: sccache-asset-chunk3-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-          paths:
-            - "/home/circleci/.cache/sccache/8"
-            - "/home/circleci/.cache/sccache/9"
-            - "/home/circleci/.cache/sccache/a"
-            - "/home/circleci/.cache/sccache/b"
-      - save_cache:
-          name: Save sccache chunk 4/4
-          key: sccache-asset-chunk4-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-          paths:
-            - "/home/circleci/.cache/sccache/c"
-            - "/home/circleci/.cache/sccache/d"
-            - "/home/circleci/.cache/sccache/e"
-            - "/home/circleci/.cache/sccache/f"
-  restore_sccache:
-    description: Restore shared compilation cache from prior jobs
-    steps:
-      - run:
-          name: Generate date code for cache key
-          command: |
-            cat rust-toolchain > /tmp/cache-key
-            cat cargo-toolchain >> /tmp/cache-key
-            date +%Y%m%d >> /tmp/cache-key
-      - restore_cache:
-          name: Restore sccache chunk 1/4
-          key: sccache-asset-chunk1-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-      - restore_cache:
-          name: Restore sccache chunk 2/4
-          key: sccache-asset-chunk2-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-      - restore_cache:
-          name: Restore sccache chunk 3/4
-          key: sccache-asset-chunk3-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-      - restore_cache:
-          name: Restore sccache chunk 4/4
-          key: sccache-asset-chunk4-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/cache-key" }}
-      - run:
-          name: Show sccache
-          command: sccache -s
   fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256:
     steps:
       - run:
@@ -248,12 +176,12 @@ commands:
     steps:
       - save_cache:
           name: Save cargo package cache
-          key: cargo-package-cache-new-{{ checksum "Cargo.lock" }}
+          key: cargo-package-sccache-new-{{ checksum "Cargo.lock" }}
           # paths are relative to /home/circleci/project/
           paths:
-            - "/home/circleci/.cargo/git"
-            - "/home/circleci/.cargo/registry"
-            - "/home/circleci/.cargo/.package-cache"
+            - "/opt/cargo/git"
+            - "/opt/cargo/registry"
+            - "/opt/cargo/.package-cache"
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
@@ -264,12 +192,12 @@ commands:
             sudo chmod 777 /usr/local/cargo/
       - restore_cache:
           name: Restore cargo package cache
-          key: cargo-package-cache-new-{{ checksum "Cargo.lock" }}
+          key: cargo-package-sccache-new-{{ checksum "Cargo.lock" }}
       - run:
           name: Check cargo package cache
           command: |
-            ls -all /home/circleci/.cargo
-            du -ssh /home/circleci/.cargo
+            ls -all /opt/cargo
+            du -ssh /opt/cargo
   save_breaking_change_rev:
     description: Save the breaking change rev since last testnet update.
     steps:
@@ -337,7 +265,15 @@ commands:
           when: always
   build_setup:
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - print_versions
       - env_setup
   build_teardown:
@@ -378,6 +314,7 @@ commands:
       - aws-ecr/ecr-login
 jobs:
   prefetch-crates:
+    working_directory: *working_directory
     executor: audit-executor
     description: Prefetch cargo crates for subsequent jobs.
     steps:
@@ -393,21 +330,21 @@ jobs:
             RUST_BACKTRACE=1 $CARGO $CARGOFLAGS fetch
       - save_cargo_package_cache
   lint:
+    working_directory: *working_directory
     executor: test-executor
     description: Run Rust linting tools.
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - restore_sccache
       - run:
           name: cargo lint
-          command: $CARGO $CARGOFLAGS x lint
+          command: cargo x lint
       - run:
           name: cargo clippy
-          command: $CARGO $CARGOFLAGS xclippy --workspace --all-targets
+          command: cargo xclippy --workspace --all-targets
       - run:
           name: cargo fmt
-          command: $CARGO $CARGOFLAGS xfmt --check
+          command: cargo xfmt --check
       - run:
           name: shell lints
           command: |
@@ -423,35 +360,34 @@ jobs:
             hadolint docker/ci/arch/Dockerfile && \
             hadolint docker/ci/alpine/Dockerfile && \
             hadolint docker/ci/centos/Dockerfile
-      - save_sccache
   build-dev:
+    working_directory: *working_directory
     executor: build-executor
     description: Development Build
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - restore_sccache
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p cli
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p cli
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p cluster-test
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p cluster-test
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p language-benchmarks
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p language-benchmarks
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-fuzzer
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p libra-fuzzer
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p libra-swarm
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p libra-swarm
       - run:
-          command: RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p test-generation
+          command: RUST_BACKTRACE=1 cargo xbuild -j 16 -p test-generation
       - run:
           command: |
             rustup target add powerpc-unknown-linux-gnu
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
-      - save_sccache
+            RUST_BACKTRACE=1 cargo xbuild -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
       - build_teardown
   run-e2e-test:
+    working_directory: *working_directory
     executor: build-executor
     parallelism: 2
     description: Run E2E tests in parallel. Each container runs a subset of
@@ -463,14 +399,13 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - restore_sccache
       - run:
           name: Determine test targets for this container.
           # NOTE Currently the tests are distributed by name order. Once test
           # metadata is enabled, the tests can be distributed by run time to
           # speed up this job.
           command: |
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x test --package smoke-test -- --list | \
+            RUST_BACKTRACE=1 cargo x test --package smoke-test -- --list | \
               grep "::" | sed 's/: .*$//' > e2e_tests
             cat e2e_tests
             echo -e "Found $(wc -l e2e_tests) tests."
@@ -489,7 +424,7 @@ jobs:
               status=1
               while [[ $status != 0 && $retry < ${E2E_RETRIES} ]]; do
                 RUST_BACKTRACE=full timeout --kill-after=370 --preserve-status 360 \
-                  $CARGO $CARGOFLAGS x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
+                  cargo x test --package smoke-test -- $target --test-threads 1 --exact --nocapture
                 status=$?
                 retry=$((retry + 1))
                 if [[ $status != 0 ]] ; then
@@ -514,25 +449,24 @@ jobs:
               echo -e "$num_fails test(s) failed:\n${failed_tests}"
             fi
             exit $num_fails
-      - save_sccache
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "https://app.circleci.com/pipelines/github/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/<<pipeline.number>>/workflows/${CIRCLE_WORKFLOW_ID}/jobs/${CIRCLE_BUILD_NUM}/parallel-runs/${CIRCLE_NODE_INDEX}?filterBy=ALL"
           webhook: "${WEBHOOK_FLAKY_TESTS}"
   run-unit-test:
+    working_directory: *working_directory
     executor: unittest-executor
     description: Run all unit tests, excluding E2E and flaky tests that are
       explicitly ignored.
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - restore_sccache
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT $CARGO $CARGOFLAGS x test --jobs 12 --unit
-      - save_sccache
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
   run-crypto-unit-test:
+    working_directory: *working_directory
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
     steps:
@@ -549,19 +483,19 @@ jobs:
               --features='vanilla-u32' \
               --no-default-features
   build-benchmark:
+    working_directory: *working_directory
     executor: build-executor
     description: Compile (but don't run) the benchmarks, to insulate against bit rot
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - restore_sccache
       - run:
           name: Build benchmark targets without running
           command: |
-            RUST_BACKTRACE=1 $CARGO $CARGOFLAGS x bench \
+            RUST_BACKTRACE=1 cargo x bench \
               --no-run
-      - save_sccache
   run-flaky-unit-test:
+    working_directory: *working_directory
     executor: test-executor
     description: Run a list of known flaky tests.
     steps:
@@ -573,6 +507,7 @@ jobs:
             RUST_BACKTRACE=1 $CI_TIMEOUT \
             ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
   audit:
+    working_directory: *working_directory
     executor: audit-executor
     steps:
       - build_setup
@@ -580,7 +515,7 @@ jobs:
       - run:
           name: Install Cargo Audit
           command: |
-            $CARGO $CARGOFLAGS install --force cargo-audit
+            cargo install --force cargo-audit
       - run:
           # NOTE ignored advisory rules
           # RUSTSEC-2018-0015 - term
@@ -593,10 +528,19 @@ jobs:
               --ignore RUSTSEC-2020-0016
       - build_teardown
   lint-docker:
+    working_directory: *working_directory
     executor: audit-executor
     description: Lint changed Dockerfiles
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - run:
           name: Lint DockerFile changes
           command: |
@@ -609,6 +553,7 @@ jobs:
             fi
       - fail_if_debian_buster_docker_base_images_are_not_tagged_with_sha256
   check-breaking-change:
+    working_directory: *working_directory
     executor: audit-executor
     description: Detect breaking change in CLI
     environment:
@@ -683,6 +628,7 @@ jobs:
   # dev_setup.sh script                                                                                #
   ######################################################################################################
   docker-ci-build:
+    working_directory: *working_directory
     executor: vm-large-executor
     parameters:
       target-image:
@@ -696,7 +642,15 @@ jobs:
         type: boolean
         default: false
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - run:
           name: Define relevant files
           command: |
@@ -722,9 +676,18 @@ jobs:
                   docker push --disable-content-trust=false libra/build_environment:<< parameters.target-image >>-latest
 
   docker-update-base-images:
+    working_directory: *working_directory
     executor: vm-medium-executor
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - run:
           name: Define relevant files
           command: |
@@ -757,10 +720,19 @@ jobs:
   # Disabled for now, until bors pipeline more configurable.                                           #
   ######################################################################################################
   docker-pre-publish:
+    working_directory: *working_directory
     executor: vm-2xlarge-executor
     description: publish docker images with a pre-* tag.
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - run:
           name: should pre build docker images (targeting a release branch)?
           command: |
@@ -786,10 +758,19 @@ jobs:
   # Docker Builds:                                                                                     #
   ######################################################################################################
   docker-publish:
+    working_directory: *working_directory
     executor: vm-2xlarge-executor
     description: publish docker images
     steps:
-      - checkout
+      - run:
+          command: |
+            sudo mkdir -p /opt/cargo/
+            sudo chown circleci /opt/cargo/
+            sudo mkdir -p /opt/git/
+            sudo chown circleci /opt/git/
+          working_directory: ~/project
+      - checkout:
+          path: *working_directory
       - setup_docker_signing
       - setup_aws
       - run:
@@ -823,6 +804,7 @@ jobs:
   ######################################################################################################################
 
   code_coverage:
+    working_directory: *working_directory
     description: Run code coverage
     executor: unittest-executor
     environment:
@@ -860,8 +842,7 @@ jobs:
       - run:
           name: Run code coverage
           command: |
-            set -x
-            $CARGO $CARGO_FLAGS xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 10 || true
+            cargo xtest --html-cov-dir=$CODECOV_OUTPUT/grcovhtml/ --html-lcov-dir=$CODECOV_OUTPUT/lcovhtml/ --no-fail-fast -j 10 || true
           no_output_timeout: 20m
       - run:
           name: Upload result to codecov.io
@@ -961,18 +942,23 @@ workflows:
           requires:
             - prefetch-crates
       - build-dev:
+          context: libra_ci
           requires:
             - prefetch-crates
       - run-e2e-test:
+          context: libra_ci
           requires:
             - prefetch-crates
       - run-unit-test:
+          context: libra_ci
           requires:
             - prefetch-crates
       - run-crypto-unit-test:
+          context: libra_ci
           requires:
             - prefetch-crates
       - build-benchmark:
+          context: libra_ci
           requires:
             - prefetch-crates
       - docker-ci-build:

@@ -1,7 +1,5 @@
-tools = [
-   ["sccache", "0.2.13"],
-   ["grcov", "0.5.15"],
-]
+[grcov.installer]
+version = "0.5.15"
 
 [system-tests]
 smoke-test = { path = "smoke-test" }
@@ -9,6 +7,25 @@ smoke-test = { path = "smoke-test" }
 [cargo]
 toolchain = "nightly-2020-07-08"
 flags = "-Zfeatures=all"
+
+[cargo.sccache]
+bucket = "ci-artifacts.libra.org"
+prefix = "sccache/libra/"
+public = true
+required-cargo-home = "/opt/cargo"
+required-git-home = "/opt/git/libra"
+envs = [
+   #To debug sccache uncomment the two lines below.
+   #["SCCACHE_ERROR_LOG","/tmp/sccache_log"],
+   #["SCCACHE_LOG", "sccache::compiler::compiler=trace"],
+]
+
+[cargo.sccache.installer]
+version = "0.2.14-alpha.0"
+git = "https://github.com/rexhoffman/sccache.git"
+git-rev = "19fef99c15765ea73460fd9ecb209c35313eac41"
+features = [ "s3" ]
+
 
 [fix]
 

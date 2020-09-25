@@ -1,8 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{config::CargoConfig, utils::project_root, Result};
+use crate::{
+    config::CargoConfig,
+    utils::{apply_sccache_if_possible, project_root},
+    Result,
+};
 use anyhow::anyhow;
+use indexmap::map::IndexMap;
 use log::{info, warn};
 use std::{
     env,
@@ -15,15 +20,19 @@ use std::{
 const RUST_TOOLCHAIN_VERSION: &str = include_str!("../../../rust-toolchain");
 const RUSTUP_TOOLCHAIN: &str = "RUSTUP_TOOLCHAIN";
 const CARGO: &str = "CARGO";
-
+const SECRET_ENVS: &[&str] = &["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"];
 pub struct Cargo {
     inner: Command,
     pass_through_args: Vec<OsString>,
-    env_additions: Vec<(OsString, OsString)>,
+    env_additions: IndexMap<OsString, Option<OsString>>,
 }
 
 impl Cargo {
-    pub fn new<S: AsRef<OsStr>>(cargo_config: &CargoConfig, command: S) -> Self {
+    pub fn new<S: AsRef<OsStr>>(
+        cargo_config: &CargoConfig,
+        command: S,
+        attempt_sccache: bool,
+    ) -> Self {
         // run rustup to find correct toolchain
         let output = Command::new("rustup")
             .arg("which")
@@ -50,11 +59,6 @@ impl Cargo {
             ("cargo".to_string(), &None)
         };
 
-        println!(
-            "cargo_binary = {}, cargo_flags = {:?}",
-            cargo_binary, cargo_flags
-        );
-
         let mut inner = Command::new(str::trim(&cargo_binary));
         if let Some(flags) = &cargo_flags {
             inner.arg(&flags);
@@ -69,11 +73,37 @@ impl Cargo {
         // Set the `CARGO` envvar with the path to the cargo binary being used
         inner.env(CARGO, cargo_binary.trim());
 
+        //sccache apply
+        let envs: IndexMap<OsString, Option<OsString>> = if attempt_sccache {
+            let result = apply_sccache_if_possible(cargo_config);
+            match result {
+                Ok(env) => env
+                    .iter()
+                    .map(|(key, option)| {
+                        if let Some(val) = option {
+                            (
+                                OsString::from(key.to_owned()),
+                                Some(OsString::from(val.to_owned())),
+                            )
+                        } else {
+                            (OsString::from(key.to_owned()), None)
+                        }
+                    })
+                    .collect(),
+                Err(hmm) => {
+                    warn!("Could not install sccache: {}", hmm);
+                    IndexMap::new()
+                }
+            }
+        } else {
+            IndexMap::new()
+        };
+
         inner.arg(command);
         Self {
             inner,
             pass_through_args: Vec::new(),
-            env_additions: Vec::new(),
+            env_additions: envs,
         }
     }
 
@@ -155,7 +185,7 @@ impl Cargo {
     /// Passes extra environment variables to x's target command.
     pub fn envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where
-        I: IntoIterator<Item = (K, V)>,
+        I: IntoIterator<Item = (K, Option<V>)>,
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
@@ -166,13 +196,19 @@ impl Cargo {
     }
 
     /// Passes an extra environment variable to x's target command.
-    pub fn env<K, V>(&mut self, key: K, val: V) -> &mut Self
+    pub fn env<K, V>(&mut self, key: K, val: Option<V>) -> &mut Self
     where
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
+        let converted_val = if let Some(s) = val {
+            Some(s.as_ref().to_owned())
+        } else {
+            None
+        };
+
         self.env_additions
-            .push((key.as_ref().to_os_string(), val.as_ref().to_os_string()));
+            .insert(key.as_ref().to_owned(), converted_val);
         self
     }
 
@@ -201,13 +237,28 @@ impl Cargo {
 
         // once all the arguments are added to the command we can log it.
         if log {
-            self.env_additions
-                .iter()
-                .for_each(|t| info!("Env {:?}: {:?}", t.0, t.1));
+            self.env_additions.iter().for_each(|t| {
+                if let Some(env_val) = t.1 {
+                    if SECRET_ENVS.contains(&t.0.to_str().unwrap_or_default()) && t.1.is_some() {
+                        info!("export {:?}=********", env_val);
+                    } else {
+                        info!("export {:?}={:?}", t.0, env_val);
+                    }
+                } else {
+                    info!("unset {:?}", t.0);
+                }
+            });
             info!("Executing: {:?}", &self.inner);
         }
-        self.inner
-            .envs(self.env_additions.iter().map(|(k, v)| (k, v)));
+        // process enviroment additions, removing Options that are none...
+        for (key, option_value) in &self.env_additions {
+            if let Some(value) = option_value {
+                self.inner.env(key, value);
+            } else {
+                self.inner.env_remove(key);
+            }
+        }
+
         let now = Instant::now();
         let output = self.inner.output()?;
         // once the command has been executed we log it's success or failure.
@@ -241,7 +292,12 @@ pub struct CargoArgs {
 /// Represents an invocations of cargo that will call multiple other invocations of
 /// cargo based on groupings implied by the contents of <workspace-root>/x.toml.
 pub enum CargoCommand<'a> {
-    Bench(&'a CargoConfig, &'a [OsString], &'a [OsString]),
+    Bench {
+        cargo_config: &'a CargoConfig,
+        direct_args: &'a [OsString],
+        args: &'a [OsString],
+        env: &'a [(&'a str, Option<&'a str>)],
+    },
     Check(&'a CargoConfig),
     Clippy(&'a CargoConfig, &'a [OsString]),
     Fix(&'a CargoConfig, &'a [OsString]),
@@ -249,23 +305,30 @@ pub enum CargoCommand<'a> {
         cargo_config: &'a CargoConfig,
         direct_args: &'a [OsString],
         args: &'a [OsString],
-        env: &'a [(&'a str, &'a str)],
+        env: &'a [(&'a str, Option<&'a str>)],
+    },
+    Build {
+        cargo_config: &'a CargoConfig,
+        direct_args: &'a [OsString],
+        args: &'a [OsString],
+        env: &'a [(&'a str, Option<&'a str>)],
     },
 }
 
 impl<'a> CargoCommand<'a> {
     pub fn cargo_config(&self) -> &CargoConfig {
         match self {
-            CargoCommand::Bench(config, _, _) => config,
+            CargoCommand::Bench { cargo_config, .. } => cargo_config,
             CargoCommand::Check(config) => config,
             CargoCommand::Clippy(config, _) => config,
             CargoCommand::Fix(config, _) => config,
             CargoCommand::Test { cargo_config, .. } => cargo_config,
+            CargoCommand::Build { cargo_config, .. } => cargo_config,
         }
     }
 
     pub fn run_on_local_package(&self, args: &CargoArgs) -> Result<()> {
-        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), false);
         Self::apply_args(&mut cargo, args);
         cargo
             .args(self.direct_args())
@@ -284,7 +347,7 @@ impl<'a> CargoCommand<'a> {
             return Ok(());
         }
 
-        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
@@ -296,7 +359,7 @@ impl<'a> CargoCommand<'a> {
     }
 
     pub fn run_on_all_packages(&self, args: &CargoArgs) -> Result<()> {
-        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
@@ -312,7 +375,7 @@ impl<'a> CargoCommand<'a> {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        let mut cargo = Cargo::new(self.cargo_config(), self.as_str());
+        let mut cargo = Cargo::new(self.cargo_config(), self.as_str(), true);
         Self::apply_args(&mut cargo, args);
         cargo
             .current_dir(project_root())
@@ -326,41 +389,45 @@ impl<'a> CargoCommand<'a> {
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            CargoCommand::Bench(_, _, _) => "bench",
+            CargoCommand::Bench { .. } => "bench",
             CargoCommand::Check(_) => "check",
             CargoCommand::Clippy(_, _) => "clippy",
             CargoCommand::Fix(_, _) => "fix",
             CargoCommand::Test { .. } => "test",
+            CargoCommand::Build { .. } => "build",
         }
     }
 
     fn pass_through_args(&self) -> &[OsString] {
         match self {
-            CargoCommand::Bench(_, _, args) => args,
+            CargoCommand::Bench { args, .. } => args,
             CargoCommand::Check(_) => &[],
             CargoCommand::Clippy(_, args) => args,
             CargoCommand::Fix(_, args) => args,
             CargoCommand::Test { args, .. } => args,
+            CargoCommand::Build { args, .. } => args,
         }
     }
 
     fn direct_args(&self) -> &[OsString] {
         match self {
-            CargoCommand::Bench(_, direct_args, _) => direct_args,
+            CargoCommand::Bench { direct_args, .. } => direct_args,
             CargoCommand::Check(_) => &[],
             CargoCommand::Clippy(_, _) => &[],
             CargoCommand::Fix(_, _) => &[],
             CargoCommand::Test { direct_args, .. } => direct_args,
+            CargoCommand::Build { direct_args, .. } => direct_args,
         }
     }
 
-    pub fn get_extra_env(&self) -> &[(&str, &str)] {
+    pub fn get_extra_env(&self) -> &[(&str, Option<&str>)] {
         match self {
-            CargoCommand::Bench(_, _, _) => &[],
+            CargoCommand::Bench { env, .. } => env,
             CargoCommand::Check(_) => &[],
             CargoCommand::Clippy(_, _) => &[],
             CargoCommand::Fix(_, _) => &[],
-            CargoCommand::Test { env, .. } => &env,
+            CargoCommand::Test { env, .. } => env,
+            CargoCommand::Build { env, .. } => env,
         }
     }
 

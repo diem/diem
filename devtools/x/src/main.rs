@@ -6,10 +6,11 @@
 use chrono::Local;
 use env_logger::{self, fmt::Color};
 use log::Level;
-use std::io::Write;
+use std::{boxed::Box, io::Write};
 use structopt::StructOpt;
 
 mod bench;
+mod build;
 mod cargo;
 mod check;
 mod clippy;
@@ -38,6 +39,10 @@ enum Command {
     #[structopt(name = "bench")]
     /// Run `cargo bench`
     Bench(bench::Args),
+    #[structopt(name = "build")]
+    /// Run `cargo build`
+    // the argument must be Boxed due to it's size and clippy (it's quite large by comparison to others.)
+    Build(Box<build::Args>),
     #[structopt(name = "check")]
     /// Run `cargo check`
     Check(check::Args),
@@ -95,6 +100,7 @@ fn main() -> Result<()> {
     match args.cmd {
         Command::Tools(args) => tools::run(args, xctx),
         Command::Test(args) => test::run(args, xctx),
+        Command::Build(args) => build::run(args, xctx),
         Command::Check(args) => check::run(args, xctx),
         Command::Clippy(args) => clippy::run(args, xctx),
         Command::Fix(args) => fix::run(args, xctx),

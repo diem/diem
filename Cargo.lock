@@ -7385,6 +7385,7 @@ dependencies = [
  "env_logger",
  "glob",
  "guppy",
+ "indexmap",
  "indoc",
  "libra-workspace-hack",
  "log",

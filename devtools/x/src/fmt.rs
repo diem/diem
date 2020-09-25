@@ -32,7 +32,7 @@ pub fn run(args: Args, xctx: XContext) -> Result<()> {
 
     pass_through_args.extend(args.args);
 
-    let mut cmd = Cargo::new(xctx.config().cargo_config(), "fmt");
+    let mut cmd = Cargo::new(xctx.config().cargo_config(), "fmt", false);
 
     if args.workspace {
         // cargo fmt doesn't have a --workspace flag, instead it uses the
