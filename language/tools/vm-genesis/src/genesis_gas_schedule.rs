@@ -3,8 +3,8 @@
 
 //! This file contains the starting gas schedule published at genesis.
 
-use move_core_types::gas_schedule::GasCost;
-use move_vm_types::gas_schedule::NativeCostIndex as N;
+use move_core_types::gas_schedule::{CostTable, GasCost};
+use move_vm_types::gas_schedule::{self, NativeCostIndex as N};
 use once_cell::sync::Lazy;
 use vm::{
     file_format::{
@@ -15,7 +15,7 @@ use vm::{
     file_format_common::instruction_key,
 };
 
-pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| {
+pub static INITIAL_GAS_SCHEDULE: Lazy<CostTable> = Lazy::new(|| {
     use Bytecode::*;
     let mut instrs = vec![
         (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(13, 1)),
@@ -123,7 +123,6 @@ pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| 
     ];
     // Note that the LibraVM is expecting the table sorted by instruction order.
     instrs.sort_by_key(|cost| instruction_key(&cost.0));
-    let raw_instruction_table = instrs.into_iter().map(|(_, cost)| cost).collect::<Vec<_>>();
 
     let mut native_table = vec![
         (N::SHA2_256, GasCost::new(21, 1)),
@@ -150,11 +149,5 @@ pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| 
         .into_iter()
         .map(|(_, cost)| cost)
         .collect::<Vec<_>>();
-
-    (
-        lcs::to_bytes(&raw_instruction_table)
-            .expect("Unable to serialize genesis gas schedule for instructions"),
-        lcs::to_bytes(&raw_native_table)
-            .expect("Unable to serialize genesis gas schedule for instructions"),
-    )
+    gas_schedule::new_from_instructions(instrs, raw_native_table)
 });

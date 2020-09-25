@@ -71,6 +71,11 @@ enum Command {
         /// `main<T>()`). Must match the type arguments kinds expected by `script_file`.
         #[structopt(long = "type-args", parse(try_from_str = parser::parse_type_tag))]
         type_args: Vec<TypeTag>,
+        /// Maximum number of gas units to be consumed by execution.
+        /// When the budget is exhaused, execution will abort.
+        /// By default, no `gas-budget` is specified and gas metering is disabled.
+        #[structopt(long = "gas-budget", short = "g")]
+        gas_budget: Option<u64>,
         /// If true, commit the effects of executing `script_file` (i.e., published, updated, and
         /// deleted resources) to disk.
         #[structopt(long = "commit", short = "c")]
@@ -171,6 +176,7 @@ fn run(
     signers: &[String],
     txn_args: &[TransactionArgument],
     vm_type_args: Vec<TypeTag>,
+    gas_budget: Option<u64>,
     commit: bool,
 ) -> Result<()> {
     let (state, script_opt) = compile(args, &Some(script_file.to_string()))?;
@@ -185,9 +191,18 @@ fn run(
     script.serialize(&mut script_bytes)?;
 
     let vm = MoveVM::new();
-    // TODO: use nonzero schedule and pick reasonable max default gas price
-    let cost_schedule = gas_schedule::zero_cost_schedule();
-    let mut cost_strategy = gas_schedule::CostStrategy::system(&cost_schedule, GasUnits::new(0));
+    let gas_schedule = &vm_genesis::genesis_gas_schedule::INITIAL_GAS_SCHEDULE;
+    let mut cost_strategy = if let Some(gas_budget) = gas_budget {
+        let max_gas_budget = u64::MAX / gas_schedule.gas_constants.gas_unit_scaling_factor;
+        if gas_budget >= max_gas_budget {
+            bail!("Gas budget set too high; maximum is {}", max_gas_budget)
+        }
+        gas_schedule::CostStrategy::transaction(gas_schedule, GasUnits::new(gas_budget))
+    } else {
+        // no budget specified. use CostStrategy::system, which disables gas metering
+        gas_schedule::CostStrategy::system(gas_schedule, GasUnits::new(0))
+    };
+
     let signer_addresses = signers
         .iter()
         .map(|s| AccountAddress::from_hex_literal(&s))
@@ -480,6 +495,7 @@ fn main() -> Result<()> {
             signers,
             args,
             type_args,
+            gas_budget,
             commit,
         } => run(
             &move_args,
@@ -487,6 +503,7 @@ fn main() -> Result<()> {
             signers,
             args,
             type_args.to_vec(),
+            *gas_budget,
             *commit,
         ),
         Command::Test { file } => test::run_one(

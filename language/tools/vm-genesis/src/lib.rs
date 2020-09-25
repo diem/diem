@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 mod genesis_context;
-mod genesis_gas_schedule;
+pub mod genesis_gas_schedule;
 
 use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
@@ -253,6 +253,12 @@ fn create_and_initialize_main_accounts(
     )
     .unwrap();
 
+    let genesis_gas_schedule = &INITIAL_GAS_SCHEDULE;
+    let instr_gas_costs = lcs::to_bytes(&genesis_gas_schedule.instruction_table)
+        .expect("Failure serializing genesis instr gas costs");
+    let native_gas_costs = lcs::to_bytes(&genesis_gas_schedule.native_table)
+        .expect("Failure serializing genesis native gas costs");
+
     exec_function(
         session,
         root_libra_root_address,
@@ -266,8 +272,8 @@ fn create_and_initialize_main_accounts(
             Value::vector_u8(treasury_compliance_auth_key.to_vec()),
             initial_allow_list,
             Value::bool(publishing_option.is_open_module),
-            Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
-            Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
+            Value::vector_u8(instr_gas_costs),
+            Value::vector_u8(native_gas_costs),
             Value::u8(chain_id.id()),
         ],
     );

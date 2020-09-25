@@ -3811,6 +3811,7 @@ dependencies = [
  "stdlib",
  "structopt 0.3.18",
  "vm",
+ "vm-genesis",
 ]
 
 [[package]]
