@@ -59,7 +59,7 @@ impl StartupInfo {
         }
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
+    #[cfg(any(feature = "fuzzing"))]
     pub fn new_for_testing() -> Self {
         use libra_types::on_chain_config::ValidatorSet;
 
@@ -111,11 +111,6 @@ impl TreeState {
             ledger_frozen_subtree_hashes,
             account_state_root_hash,
         }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.num_transactions == 0
-            && self.account_state_root_hash == *SPARSE_MERKLE_PLACEHOLDER_HASH
     }
 
     pub fn describe(&self) -> String {
