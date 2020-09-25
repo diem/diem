@@ -70,13 +70,14 @@ fn print_head(db: &LibraDB) -> Result<()> {
 }
 
 fn print_txn(db: &LibraDB, version: u64) {
-    let tx = db
-        .get_transaction_with_proof(version, version, false)
+    let tx_list = db
+        .get_transactions(version, 1, version, false)
         .expect("Unable to load latest TXN");
+    let tx = tx_list.transactions.first().expect("Got empty txn list.");
     println!(
         "Transaction {}: {}",
         version,
-        tx.transaction.format_for_client(get_transaction_name)
+        tx.format_for_client(get_transaction_name)
     );
 }
 

@@ -193,13 +193,11 @@ impl LibraDB {
         .expect("Unable to open LibraDB")
     }
 
-    // ================================== Public API ==================================
-
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
     /// more than `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results, this function returns all of them,
     /// otherwise the first `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results are returned and a flag
     /// (when true) will be used to indicate the fact that there is more.
-    pub fn get_epoch_ending_ledger_infos(
+    fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
@@ -257,7 +255,7 @@ impl LibraDB {
         Ok((lis, more))
     }
 
-    pub fn get_transaction_with_proof(
+    fn get_transaction_with_proof(
         &self,
         version: Version,
         ledger_version: Version,

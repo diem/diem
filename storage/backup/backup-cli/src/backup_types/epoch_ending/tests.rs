@@ -22,6 +22,7 @@ use std::{
     path::PathBuf,
     sync::Arc,
 };
+use storage_interface::DbReader;
 use tokio::time::Duration;
 
 #[test]
@@ -89,7 +90,7 @@ fn end_to_end() {
         tgt_db
             .get_epoch_ending_ledger_infos(0, target_version_next_block_epoch)
             .unwrap()
-            .0,
+            .ledger_info_with_sigs,
         expected_ledger_infos,
     );
 
