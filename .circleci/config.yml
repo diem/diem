@@ -69,7 +69,7 @@ commands:
     steps:
       - run:
           name: update tooling if needed.
-          command: scripts/dev_setup.sh -o -b -p
+          command: scripts/dev_setup.sh -t -o -b -p -y
       - run:
           name: Setup Env
           command: |
@@ -92,6 +92,12 @@ commands:
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
+
+            # Configure Move prover tools
+            echo 'export Z3_EXE="$HOME/bin/z3"' >> $BASH_ENV
+            echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> $BASH_ENV
+            echo 'export BOOGIE_EXE="$HOME/.dotnet/tools/boogie"' >> $BASH_ENV
+
   save_sccache:
     description: Save shared compilation cache for future jobs
     steps:
@@ -694,7 +700,7 @@ jobs:
             echo "cargo-toolchain" >> /tmp/ci_docker_files
             echo "docker/ci/<< parameters.target-image >>/Dockerfile" >> /tmp/ci_docker_files
             echo "rust-toolchain" >> /tmp/ci_docker_files
-            echo "scripts/dev_setup.sh" >> /tmp/ci_docker_files
+            echo "scripts/dev_setup.sh -t" >> /tmp/ci_docker_files
       - halt_if_no_relevant_files_changed_since_last_evaluation:
           cache_key_part: "dockerbuild"
           file_of_relevant_git_files: "/tmp/ci_docker_files"

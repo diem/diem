@@ -18,6 +18,9 @@ KUBECTL_VERSION=1.18.6
 TERRAFORM_VERSION=0.12.26
 HELM_VERSION=3.2.4
 VAULT_VERSION=1.5.0
+Z3_VERSION=4.8.9
+DOTNET_VERSION=3.1
+BOOGIE_VERSION=2.7.30
 
 SCRIPT_PATH="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 cd "$SCRIPT_PATH/.." || exit
@@ -27,18 +30,32 @@ function usage {
   echo "Installs or updates necessary dev tools for libra/libra."
   echo "-b batch mode, no user interactions and miminal output"
   echo "-p update ${HOME}/.profile"
-  echo "-o intall operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
+  echo "-t install build tools"
+  echo "-o install operations tooling as well: helm, terraform, hadolint, yamllint, vault, docker, kubectl, python3"
+  echo "-y install Move prover tools: z3, dotnet, boogie"
+  echo "-z installs or updates Move prover tools only"
   echo "-v verbose mode"
-  echo "should be called from the root folder of the libra project"
+  echo "If no toolchain component is selected with -t, -o, -y, or -p, the behavior is as if -t had been provided."
+  echo "This command must be called from the root folder of the Libra project."
+}
+
+function add_to_profile {
+  eval "$1"
+  FOUND=$(grep -c "$1" < "${HOME}/.profile")
+  if [ "$FOUND" == "0" ]; then
+    echo "$1" >> "${HOME}"/.profile
+  fi
 }
 
 function update_path_and_profile {
   touch "${HOME}"/.profile
   mkdir -p "${HOME}"/bin
-  export PATH="${HOME}"/bin:"${HOME}"/.cargo/bin:"${PATH}"
-  FOUND=$(grep -c "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\"" < "${HOME}/.profile")
-  if [ "$FOUND" == "0" ]; then
-    echo "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\"" >> "${HOME}"/.profile
+  add_to_profile "export PATH=\"${HOME}/bin:${HOME}/.cargo/bin:\$PATH\""
+  if [[ "$INSTALL_PROVER" == "true" ]]; then
+     add_to_profile "export DOTNET_ROOT=\$HOME/.dotnet"
+     add_to_profile "export PATH=\"${HOME}/.dotnet/tools:\$PATH\""
+     add_to_profile "export Z3_EXE=$HOME/bin/z3"
+     add_to_profile "export BOOGIE_EXE=$HOME/.dotnet/tools/boogie"
   fi
 }
 
@@ -55,7 +72,7 @@ function install_build_essentials {
     install_pkg alpine-sdk "$PACKAGE_MANAGER"
     install_pkg coreutils "$PACKAGE_MANAGER"
   fi
-  if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
     install_pkg gcc "$PACKAGE_MANAGER"
     install_pkg gcc-c++ "$PACKAGE_MANAGER"
     install_pkg make "$PACKAGE_MANAGER"
@@ -199,6 +216,8 @@ function install_pkg {
       "${PRE_COMMAND[@]}" pacman -Syu "$package" --noconfirm
     elif [[ "$PACKAGE_MANAGER" == "apk" ]]; then
       apk --update add --no-cache "${package}"
+    elif [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
+      dnf install "$package"
     elif [[ "$PACKAGE_MANAGER" == "brew" ]]; then
       brew install "$package"
     fi
@@ -208,7 +227,7 @@ function install_pkg {
 function install_pkg_config {
   PACKAGE_MANAGER=$1
   #Differently named packages for pkg-config
-  if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "apt-get" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
     install_pkg pkg-config "$PACKAGE_MANAGER"
   fi
   if [[ "$PACKAGE_MANAGER" == "pacman" ]]; then
@@ -247,7 +266,7 @@ function install_openssl_dev {
   if [[ "$PACKAGE_MANAGER" == "apt-get" ]]; then
     install_pkg libssl-dev "$PACKAGE_MANAGER"
   fi
-  if [[ "$PACKAGE_MANAGER" == "yum" ]]; then
+  if [[ "$PACKAGE_MANAGER" == "yum" ]] || [[ "$PACKAGE_MANAGER" == "dnf" ]]; then
     install_pkg openssl-devel "$PACKAGE_MANAGER"
   fi
   if [[ "$PACKAGE_MANAGER" == "pacman" ]] || [[ "$PACKAGE_MANAGER" == "brew" ]]; then
@@ -293,12 +312,89 @@ function install_grcov {
   fi
 }
 
+function install_dotnet {
+  echo "Installing .Net"
+  if [[ "$(uname)" == "Linux" ]]; then
+      # Install various prerequisites for .dotnet. There are known bugs
+      # in the dotnet installer to warn even if they are present. We try
+      # to install anyway based on the warnings the dotnet installer creates.
+      if [ "$PACKAGE_MANAGER" == "apk" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+        install_pkg libintl "$PACKAGE_MANAGER"
+        install_pkg libcurl "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "apt-get" ]; then
+        install_pkg gettext "$PACKAGE_MANAGER"
+        install_pkg zlib1g "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "yum" ] || [ "$PACKAGE_MANAGER" == "dnf" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+      elif [ "$PACKAGE_MANAGER" == "pacman" ]; then
+        install_pkg icu "$PACKAGE_MANAGER"
+        install_pkg zlib "$PACKAGE_MANAGER"
+      fi
+  fi
+  # Below we need to (a) set TERM variable because the .net installer expects it and it is not set
+  # in some environments (b) use bash not sh because the installer uses bash features.
+  curl -sSL https://dot.net/v1/dotnet-install.sh \
+       | TERM=linux /bin/bash -s -- --channel $DOTNET_VERSION --version latest
+}
+
+function install_boogie {
+  echo "Installing boogie"
+  export DOTNET_ROOT=$HOME/.dotnet
+  if [[ "$("$HOME"/.dotnet/dotnet tool list -g)" =~ .*boogie.*${BOOGIE_VERSION}.* ]]; then
+    echo "Boogie $BOOGIE_VERSION already installed"
+  else
+    "$HOME/.dotnet/dotnet" tool install --global Boogie --version "$BOOGIE_VERSION"
+  fi
+}
+
+function install_z3 {
+  echo "Installing Z3"
+  if which /usr/local/bin/z3 &>/dev/null; then
+    echo "z3 already exists at /usr/local/bin/z3"
+    echo "but this install will go to $HOME/bin/z3."
+    echo "you may want to remove the shared instance to avoid version confusion"
+  fi
+  if which "$HOME/bin/z3" &>/dev/null && [[ "$("$HOME/bin/z3" --version)" =~ .*${Z3_VERSION}.* ]]; then
+     echo "Z3 ${Z3_VERSION} already installed"
+     return
+  fi
+  if [[ "$(uname)" == "Linux" ]]; then
+    Z3_PKG="z3-$Z3_VERSION-x64-ubuntu-16.04"
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    Z3_PKG="z3-$Z3_VERSION-x64-osx-10.14.6"
+  else
+    echo "Z3 support not configured for this platform (uname=$(uname))"
+    return
+  fi
+  TMPFILE=$(mktemp)
+  rm "$TMPFILE"
+  mkdir -p "$TMPFILE"/
+  (
+    cd "$TMPFILE" || exit
+    curl -LOs "https://github.com/Z3Prover/z3/releases/download/z3-$Z3_VERSION/$Z3_PKG.zip"
+    unzip -q "$Z3_PKG.zip"
+    cp "$Z3_PKG/bin/z3" "$HOME/bin"
+    chmod +x "$HOME/bin/z3"
+  )
+  rm -rf "$TMPFILE"
+}
+
 function welcome_message {
 cat <<EOF
 Welcome to Libra!
 
 This script will download and install the necessary dependencies needed to
-build, test and inspect Libra Core. This includes:
+build, test and inspect Libra Core.
+
+Based on your selection, these tools will be included:
+EOF
+
+  if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
+cat <<EOF
+Build tools (since -t or no option was provided):
   * Rust (and the necessary components, e.g. rust-fmt, clippy)
   * CMake
   * Clang
@@ -308,7 +404,12 @@ build, test and inspect Libra Core. This includes:
   * libssl-dev
   * sccache
   * if linux, gcc-powerpc-linux-gnu
-If operations tools are selected, then
+EOF
+  fi
+
+  if [[ "$OPERATIONS" == "true" ]]; then
+cat <<EOF
+Operation tools (since -o was provided):
   * yamllint
   * python3
   * docker
@@ -317,7 +418,25 @@ If operations tools are selected, then
   * kubectl
   * helm
   * aws cli
+EOF
+  fi
 
+  if [[ "$INSTALL_PROVER" == "true" ]]; then
+cat <<EOF
+Move prover tools (since -y was provided):
+  * z3
+  * dotnet
+  * boogie
+EOF
+  fi
+
+  if [[ "$INSTALL_PROFILE" == "true" ]]; then
+cat <<EOF
+Moreover, ~/.profile will be updated (since -p was provided).
+EOF
+  fi
+
+cat <<EOF
 If you'd prefer to install these dependencies yourself, please exit this script
 now with Ctrl-C.
 EOF
@@ -325,14 +444,19 @@ EOF
 
 BATCH_MODE=false;
 VERBOSE=false;
+INSTALL_BUILD_TOOLS=false;
 OPERATIONS=false;
 INSTALL_PROFILE=false;
+INSTALL_PROVER=false;
 
 #parse args
-while getopts "bopvh" arg; do
+while getopts "btopvyh" arg; do
   case "$arg" in
     b)
       BATCH_MODE="true"
+      ;;
+    t)
+      INSTALL_BUILD_TOOLS="true"
       ;;
     o)
       OPERATIONS="true"
@@ -343,6 +467,9 @@ while getopts "bopvh" arg; do
     v)
       VERBOSE=true
       ;;
+    y)
+      INSTALL_PROVER="true"
+      ;;
     *)
       usage;
       exit 0;
@@ -352,6 +479,13 @@ done
 
 if [[ "$VERBOSE" == "true" ]]; then
 	set -x
+fi
+
+if [[ "$INSTALL_BUILD_TOOLS" == "false" ]] && \
+   [[ "$OPERATIONS" == "false" ]] && \
+   [[ "$INSTALL_PROFILE" == "false" ]] && \
+   [[ "$INSTALL_PROVER" == "false" ]]; then
+   INSTALL_BUILD_TOOLS="true"
 fi
 
 if [ ! -f rust-toolchain ]; then
@@ -374,8 +508,11 @@ if [[ "$(uname)" == "Linux" ]]; then
 		PACKAGE_MANAGER="pacman"
   elif command -v apk &>/dev/null; then
 		PACKAGE_MANAGER="apk"
+  elif command -v dnf &>/dev/null; then
+    echo "WARNING: dnf package manager support is experimental"
+    PACKAGE_MANAGER="dnf"
 	else
-		echo "Unable to find supported package manager (yum, apt-get, or pacman). Abort"
+		echo "Unable to find supported package manager (yum, apt-get, dnf, or pacman). Abort"
 		exit 1
 	fi
 elif [[ "$(uname)" == "Darwin" ]]; then
@@ -408,28 +545,30 @@ fi
 [[ "$INSTALL_PROFILE" == "true" ]] && update_path_and_profile
 
 install_pkg curl "$PACKAGE_MANAGER"
-install_shellcheck
-
-install_build_essentials "$PACKAGE_MANAGER"
-install_pkg cmake "$PACKAGE_MANAGER"
-install_pkg clang "$PACKAGE_MANAGER"
-install_pkg llvm "$PACKAGE_MANAGER"
 
 
-install_gcc_powerpc_linux_gnu "$PACKAGE_MANAGER"
-install_openssl_dev "$PACKAGE_MANAGER"
-install_pkg_config "$PACKAGE_MANAGER"
+if [[ "$INSTALL_BUILD_TOOLS" == "true" ]]; then
+  install_build_essentials "$PACKAGE_MANAGER"
+  install_pkg cmake "$PACKAGE_MANAGER"
+  install_pkg clang "$PACKAGE_MANAGER"
+  install_pkg llvm "$PACKAGE_MANAGER"
 
-install_rustup "$BATCH_MODE"
-install_toolchain "$(cat ./cargo-toolchain)"
-install_toolchain "$(cat ./rust-toolchain)"
-# Add all the components that we need
-rustup component add rustfmt
-rustup component add clippy
 
-install_sccache
-install_grcov
-install_pkg lcov "$PACKAGE_MANAGER"
+  install_gcc_powerpc_linux_gnu "$PACKAGE_MANAGER"
+  install_openssl_dev "$PACKAGE_MANAGER"
+  install_pkg_config "$PACKAGE_MANAGER"
+
+  install_rustup "$BATCH_MODE"
+  install_toolchain "$(cat ./cargo-toolchain)"
+  install_toolchain "$(cat ./rust-toolchain)"
+  # Add all the components that we need
+  rustup component add rustfmt
+  rustup component add clippy
+
+  install_sccache
+  install_grcov
+  install_pkg lcov "$PACKAGE_MANAGER"
+fi
 
 if [[ "$OPERATIONS" == "true" ]]; then
   install_pkg yamllint "$PACKAGE_MANAGER"
@@ -442,6 +581,12 @@ if [[ "$OPERATIONS" == "true" ]]; then
   install_terraform
   install_kubectl
   install_awscli
+fi
+
+if [[ "$INSTALL_PROVER" == "true" ]]; then
+  install_z3
+  install_dotnet
+  install_boogie
 fi
 
 [[ "${BATCH_MODE}" == "false" ]] && cat <<EOF

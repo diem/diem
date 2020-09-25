@@ -13,9 +13,12 @@ use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directiv
 
 #[allow(unused_imports)]
 use log::{debug, warn};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
+
+static NOT_CONFIGURED_WARNED: AtomicBool = AtomicBool::new(false);
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
@@ -39,6 +42,13 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     options.setup_logging_for_test();
     if no_boogie {
         options.prover.generate_only = true;
+        if !NOT_CONFIGURED_WARNED.compare_and_swap(false, true, Ordering::Relaxed) {
+            warn!(
+                "Prover tools are not configured, verification tests will be skipped. \
+        See https://github.com/libra/libra/tree/master/language/move-prover/doc/user/install.md \
+        for instructions."
+            );
+        }
     }
     options.prover.stable_test_output = true;
 

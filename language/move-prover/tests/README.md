@@ -1,17 +1,21 @@
 # Tests for Move Prover
 
-This directory contains the tests for Move Prover (or Prover for short). More specifically, `sources/stdlib/modules/`
-contains the clones of the current Move standard modules. `sources/` contains various Move functions
-(with specifications) to test Prover. The functions are grouped into different `.move` files in the directory,
-and further grouped into sections within a file divided e.g. by a dashed comment line (e.g., `// ----`).
-Please see `source/arithm.move` for example.
+This directory contains the tests for Move Prover. The tests are defined by the `.move` files in this tree,
+as well as all the `.move` files in the [Libra framework](../../stdlib).
 
-There is a convention for test cases under this directory. First of all, all functions defined as test cases should
-be valid, passing the syntax & type check. In addition, there are two kinds of test cases, which can be
-mixed in a file. The first type of test cases are "correct" Move functions which are expected to be proved by Prover.
-Another type of test cases are incorrect Move functions which are expected to be disproved by Prover.
-The incorrect functions have suffix `_incorrect` in their names for indication (this indication is currently for
-humans, not for the automated test infrastructure).
+*Note*: in order to run these tests locally, you must have installed tools and setup a few environment variables.
+See [`../doc/user/install.md`](../doc/user/install.md) for details. If the environment variables for
+configuring the prover are not set as described there, all tests and this directory will trivially pass.
+
+*Note*: these are baseline tests, with expectations of prover output stored in files ending in `.exp`. To update
+those files, use `UPBL=1 cargo test`. To update or test a single file, you can also provide a fragment of the move
+source path.
+
+There is a convention for test cases under this directory. In general, there are two kinds of test cases, which can be
+mixed in a file. The first type of test cases are "correct" Move functions which are expected to be proven so.
+Another type of test cases are incorrect Move functions which are expected to be disproven, with the created errors
+stored in so-called 'expectation baseline files' (`.exp`). The incorrect functions have suffix `_incorrect` in
+their names, by convention. It is expected that only errors for functions with this suffix appear in `.exp` files.
 
 `cargo test` will automatically detect all `.move` files under this directory and its sub-directories and let the Prover
 attempt to prove each function in the file. Unlike `cargo run`, `cargo test` can detect various directives
@@ -19,24 +23,12 @@ in comments in the Move source:
 
 - The line `// flag: <flag>` provides a flag to the Prover (see `cargo run -- --help` for  available flags). For
   example, use  `// flag: --verify=public` to restrict verification to public functions (by default, tests use
-  `--verify=all`, or `// flag: --boogie=-noVerify` to turn off Boogie verification.
-- You can also pass flags to test using the env variable `MVP_TEST_FLAGS`. This is a string like provided on
+  `--verify=all`).
+- You can also pass flags to test using the env variable `MVP_TEST_FLAGS`. This is a string as provided on
   the command line to the Move prover which can contain multiple flgs.
 - The line `// no-boogie-test` instructs the test driver to not attempt to run boogie at all. This is to support
   negative tests where translation to boogie actually fails.
 
-For each `.move` file, there is a corresponding baseline file (`.exp`) which stores the expected Prover's output
-for the `.move` file. `cargo test` invokes Prover against each `.move` file, and examine the output of Prover.
-The test is considered to "fail" if the output of Prover is different from the expected output stored in the
-corresponding `.exp` file. To update the baseline file, run the test with setting the env variable `UPBL=1`
-(i.e., run `UPBL=1 cargo test`). Also, one can run the individual test by giving a specific filename
-(for example, `cargo test arithm.move`, and `UPBL=1 cargo test arithm.move`). Note that Prover currently skips
-proving some functions such as the native functions and the functions in stanard vector module
-(`sources/stdlib/modules/vector.move`) even though these functions come with specifications.
-
-Lastly, if the environment variables such as `BOOGIE_EXE` and `Z3_EXE` are not defined, `cargo test` will only
-partially test Prover without invoking Boogie (e.g., only testing the translation to Boogie). The
-instruction on how to set the environment variables can be found in `../scripts/README.md`.
 
 ## Debugging Long Running Tests
 

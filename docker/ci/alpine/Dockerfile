@@ -9,7 +9,7 @@ COPY scripts/dev_setup.sh /libra/scripts/dev_setup.sh
 RUN apk add bash=5.0.17-r0 --no-cache
 
 #Batch mode and all operations tooling
-RUN scripts/dev_setup.sh -o -b -p
+RUN scripts/dev_setup.sh -t -o -y -b -p
 ENV PATH "/root/.cargo/bin:/root/bin/:$PATH"
 
 FROM setup_ci_alpine as tested_ci_alpine
@@ -27,6 +27,8 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v grcov)" ] \
     && [ -x "$(command -v helm)" ] \
     && [ -x "$(command -v aws)" ] \
+    && [ -x "$(command -v z3)" ] \
+    && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /libra/rust-toolchain )" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /libra/cargo-toolchain)" ]
 

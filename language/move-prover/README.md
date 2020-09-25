@@ -22,7 +22,9 @@ It's purpose is to make contracts more *trustworthy*, specifically:
 
 For more information, refer to the documentation:
 
-- [To be done] Move Prover Whitepaper
+-  [To be done] Move Prover Whitepaper
 -  [Move Prover User Guide](./doc/user/prover-guide.md)
 -  [Move Specification Language](./doc/user/spec-lang.md)
+-  [Installation](./doc/user/install.md)
+-  [Testing](./tests/README.md)
 -  [To be done] Move Prover Developer Guide

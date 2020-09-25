@@ -7,7 +7,7 @@ COPY cargo-toolchain /libra/cargo-toolchain
 COPY scripts/dev_setup.sh /libra/scripts/dev_setup.sh
 
 #Batch mode and all operations tooling
-RUN scripts/dev_setup.sh -o -b -p
+RUN scripts/dev_setup.sh -t -o -b -p -y
 USER root
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 USER circleci
@@ -28,6 +28,8 @@ RUN [ -x "$(command -v shellcheck)" ] \
     && [ -x "$(command -v grcov)" ] \
     && [ -x "$(command -v helm)" ] \
     && [ -x "$(command -v aws)" ] \
+    && [ -x "$(command -v z3)" ] \
+    && [ -x "$(command -v "$HOME/.dotnet/tools/boogie")" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /libra/rust-toolchain )" ] \
     && [ -x "$(xargs rustup which cargo --toolchain < /libra/cargo-toolchain)" ]
 
