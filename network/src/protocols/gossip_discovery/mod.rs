@@ -239,8 +239,8 @@ where
             if let Err(err) = sender.send_to(peer, msg) {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer)
-                        .debug_error(&err),
+                        .remote_peer(&peer),
+                    error = ?err,
                     "{} Failed to send discovery msg to {}; error: {:?}",
                     self.network_context,
                     peer.short_str(),
@@ -288,7 +288,8 @@ where
             }
             Err(err) => {
                 info!(
-                    NetworkSchema::new(&self.network_context).debug_error(&err),
+                    NetworkSchema::new(&self.network_context),
+                    error = ?err,
                     "{} Received error: {}", self.network_context, err
                 );
             }

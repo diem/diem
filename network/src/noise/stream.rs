@@ -153,7 +153,7 @@ where
                                     };
                                 }
                                 Err(e) => {
-                                    error!(error = e.to_string(), "Decryption Error: {}", e);
+                                    error!(error = %e, "Decryption Error: {}", e);
                                     self.read_state = ReadState::DecryptionError(e);
                                 }
                             }
@@ -290,7 +290,7 @@ where
                                 };
                             }
                             Err(e) => {
-                                error!("Encryption Error: {}", e);
+                                error!(error = %e, "Encryption Error: {}", e);
                                 let err = io::Error::new(
                                     io::ErrorKind::InvalidData,
                                     format!("EncryptionError: {}", e),

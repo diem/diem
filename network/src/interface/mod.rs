@@ -213,8 +213,8 @@ where
                 if let Err(e) = rpc_reqs_tx.send(req).await {
                     error!(
                         remote_peer = peer_id,
-                        error = e.to_string(),
-                        "Failed to send RPC to peer: {}. Error: {:?}",
+                        error = %e,
+                        "Failed to send RPC to peer: {}. Error: {}",
                         peer_id.short_str(),
                         e
                     );
@@ -224,8 +224,8 @@ where
                 if let Err(e) = ds_reqs_tx.send(DirectSendRequest::SendMessage(msg)).await {
                     error!(
                         remote_peer = peer_id,
-                        error = e.to_string(),
-                        "Failed to send DirectSend to peer: {}. Error: {:?}",
+                        error = %e,
+                        "Failed to send DirectSend to peer: {}. Error: {}",
                         peer_id.short_str(),
                         e
                     );

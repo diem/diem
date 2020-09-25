@@ -318,9 +318,9 @@ where
             if let Err(e) = self.connection_reqs_tx.disconnect_peer(p).await {
                 info!(
                     NetworkSchema::new(&self.network_context)
-                        .remote_peer(&p)
-                        .error(e.to_string()),
-                    "{} Failed to close stale connection to peer {} : {:?}",
+                        .remote_peer(&p),
+                    error = %e,
+                    "{} Failed to close stale connection to peer {} : {}",
                     self.network_context,
                     p.short_str(),
                     e
@@ -755,8 +755,8 @@ fn log_dial_result(
                 info!(
                     NetworkSchema::new(&network_context)
                         .remote_peer(&peer_id)
-                        .network_address(&addr)
-                        .error(e.to_string()),
+                        .network_address(&addr),
+                    error = %e,
                     "{} Failed to connect to peer: {} at address: {}; error: {}",
                     network_context,
                     peer_id.short_str(),

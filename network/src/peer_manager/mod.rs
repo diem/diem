@@ -479,7 +479,8 @@ where
                     // The client explicitly closed the connection and it should be notified.
                     if let Err(send_err) = oneshot_tx.send(Ok(())) {
                         info!(
-                            NetworkSchema::new(&self.network_context).debug_error(&send_err),
+                            NetworkSchema::new(&self.network_context),
+                            error = ?send_err,
                             "{} Failed to send connection close error. Error: {:?}",
                             self.network_context,
                             send_err
@@ -557,7 +558,8 @@ where
                     );
                     if let Err(err) = resp_tx.send(Err(PeerManagerError::NotConnected(peer_id))) {
                         info!(
-                            NetworkSchema::new(&self.network_context).debug_error(&err),
+                            NetworkSchema::new(&self.network_context),
+                            error = ?err,
                             "{} Failed to indicate that connection is already closed. Error: {:?}",
                             self.network_context,
                             err
@@ -583,7 +585,8 @@ where
                     if let Err(err) = sender.push(msg.protocol_id, NetworkRequest::SendMessage(msg))
                     {
                         info!(
-                            NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata).debug_error(&err),
+                            NetworkSchema::new(&self.network_context).connection_metadata(conn_metadata),
+                            error = ?err,
                             "{} Failed to forward outbound message to downstream actor. Error: {:?}",
                             self.network_context, err
                         );
@@ -697,8 +700,8 @@ where
                     {
                         error!(
                             NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id)
-                                .error(e.to_string()),
+                                .remote_peer(&peer_id),
+                            error = %e,
                             "{} Closing connection with Peer {} failed with error: {}",
                             network_context,
                             peer_id.short_str(),
@@ -746,8 +749,8 @@ where
             if let Err(e) = handler.push(peer_id, notification.clone()) {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer_id)
-                        .debug_error(&e),
+                        .remote_peer(&peer_id),
+                    error = ?e,
                     connection_notification = notification,
                     "{} Failed to send notification {} to handler for peer: {}. Error: {:?}",
                     self.network_context,
@@ -799,7 +802,8 @@ where
                         PeerManagerNotification::RecvMessage(peer_id, msg),
                     ) {
                         warn!(
-                            NetworkSchema::new(&network_context).debug_error(&err),
+                            NetworkSchema::new(&network_context),
+                            error = ?err,
                             protocol_id = protocol_id,
                             "{} Upstream handler unable to handle messages for protocol: {}. Error: {:?}",
                             network_context, protocol_id, err
@@ -824,7 +828,8 @@ where
                         PeerManagerNotification::RecvRpc(peer_id, rpc_req),
                     ) {
                         warn!(
-                            NetworkSchema::new(&network_context).debug_error(&err),
+                            NetworkSchema::new(&network_context),
+                            error = ?err,
                             "{} Upstream handler unable to handle rpc for protocol: {}. Error: {:?}",
                             network_context, protocol_id, err
                         );
@@ -949,8 +954,8 @@ where
                         }
                         Err(e) => {
                             warn!(
-                                NetworkSchema::new(&self.network_context)
-                                    .error(e.to_string()),
+                                NetworkSchema::new(&self.network_context),
+                                error = %e,
                                 "{} Incoming connection error {}",
                                 self.network_context,
                                 e
@@ -1083,8 +1088,8 @@ where
                 error!(
                     NetworkSchema::new(&self.network_context)
                         .remote_peer(&peer_id)
-                        .network_address(&addr)
-                        .error(err.to_string()),
+                        .network_address(&addr),
+                    error = %err,
                     "{} Error dialing Peer {} at {}: {}",
                     self.network_context,
                     peer_id.short_str(),
@@ -1149,8 +1154,8 @@ where
             Err(err) => {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .network_address(&addr)
-                        .error(err.to_string()),
+                        .network_address(&addr),
+                    error = %err,
                     "{} Connection from {} failed to upgrade after {:.3} secs: {}",
                     self.network_context,
                     addr,

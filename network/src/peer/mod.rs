@@ -194,8 +194,8 @@ where
                                     if let Err(err) = self.handle_inbound_message(message, write_reqs_tx.clone()).await {
                                         warn!(
                                             NetworkSchema::new(&self.network_context)
-                                                .connection_metadata(&self.connection_metadata)
-                                                .debug_error(&err),
+                                                .connection_metadata(&self.connection_metadata),
+                                            error = ?err,
                                             "{} Error in handling inbound message from peer: {}. Error: {:?}",
                                             self.network_context,
                                             remote_peer_id.short_str(),
@@ -206,8 +206,8 @@ where
                                 Some(Err(err)) => {
                                     warn!(
                                         NetworkSchema::new(&self.network_context)
-                                            .connection_metadata(&self.connection_metadata)
-                                            .debug_error(&err),
+                                            .connection_metadata(&self.connection_metadata),
+                                        error = ?err,
                                         "{} Failure in reading messages from socket from peer: {}. Error: {:?}",
                                         self.network_context,
                                         remote_peer_id.short_str(),
@@ -235,8 +235,8 @@ where
                     if let Err(e) = close_tx.send(()) {
                         info!(
                             NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata)
-                                .debug_error(&e),
+                                .connection_metadata(&self.connection_metadata),
+                            error = ?e,
                             "{} Failed to send close instruction to writer task. It must already be terminating/terminated. Error: {:?}",
                             self.network_context,
                             e
@@ -253,8 +253,8 @@ where
                     {
                         warn!(
                             NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata)
-                                .debug_error(&e),
+                                .connection_metadata(&self.connection_metadata),
+                            error = ?e,
                             "{} Failed to notify upstream about disconnection of peer: {}; error: {:?}",
                             self.network_context,
                             remote_peer_id.short_str(),
@@ -319,8 +319,8 @@ where
                         {
                             warn!(
                                 NetworkSchema::new(&network_context)
-                                    .connection_metadata(&connection_metadata)
-                                    .debug_error(&e),
+                                    .connection_metadata(&connection_metadata),
+                                error = ?e,
                                 "{} Error in sending message to peer: {}. Error: {:?}",
                                 network_context,
                                 remote_peer_id.short_str(),
@@ -358,8 +358,8 @@ where
                 Ok(Err(e)) => {
                     info!(
                         NetworkSchema::new(&network_context)
-                            .connection_metadata(&connection_metadata)
-                            .debug_error(&e),
+                            .connection_metadata(&connection_metadata),
+                        error = ?e,
                         "{} Failure in flush/close of connection to peer: {}. Error: {:?}",
                         network_context,
                         remote_peer_id.short_str(),
@@ -420,8 +420,8 @@ where
                     .map_err(|err| {
                         warn!(
                             NetworkSchema::new(&self.network_context)
-                                .connection_metadata(&self.connection_metadata)
-                                .debug_error(&err),
+                                .connection_metadata(&self.connection_metadata),
+                            error = ?err,
                             "{} Failed to send notification to DirectSend actor. Error: {:?}",
                             self.network_context,
                             err
@@ -432,8 +432,8 @@ where
             NetworkMessage::Error(error) => {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .connection_metadata(&self.connection_metadata)
-                        .debug_error(&error),
+                        .connection_metadata(&self.connection_metadata),
+                    error = ?error,
                     "{} Peer {} sent an error message: {:?}",
                     self.network_context,
                     self.remote_peer_id().short_str(),
@@ -445,8 +445,8 @@ where
                 self.rpc_notifs_tx.send(notif).await.map_err(|err| {
                     warn!(
                         NetworkSchema::new(&self.network_context)
-                            .connection_metadata(&self.connection_metadata)
-                            .debug_error(&err),
+                            .connection_metadata(&self.connection_metadata),
+                        error = ?err,
                         "{} Failed to send notification to RPC actor. Error: {:?}",
                         self.network_context,
                         err
@@ -476,8 +476,8 @@ where
                 if let Err(e) = write_reqs_tx.send((message, channel)).await {
                     error!(
                         NetworkSchema::new(&self.network_context)
-                            .connection_metadata(&self.connection_metadata)
-                            .debug_error(&e),
+                            .connection_metadata(&self.connection_metadata),
+                        error = ?e,
                         "Failed to send message for protocol {} to peer: {}. Error: {:?}",
                         protocol,
                         self.remote_peer_id().short_str(),
@@ -536,8 +536,8 @@ impl PeerHandle {
         {
             warn!(
                 NetworkSchema::new(&self.network_context)
-                    .connection_metadata(&self.connection_metadata)
-                    .debug_error(&e),
+                    .connection_metadata(&self.connection_metadata),
+                error = ?e,
                 "Sending message to Peer {} \
                  failed because it has already been shutdown.",
                 self.peer_id().short_str()
@@ -555,8 +555,8 @@ impl PeerHandle {
         if let Err(e) = self.sender.send(PeerRequest::CloseConnection).await {
             info!(
                 NetworkSchema::new(&self.network_context)
-                    .connection_metadata(&self.connection_metadata)
-                    .debug_error(&e),
+                    .connection_metadata(&self.connection_metadata),
+                error = ?e,
                 "Sending CloseConnection request to Peer {} \
                  failed because it has already been shutdown.",
                 self.peer_id().short_str()

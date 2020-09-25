@@ -227,8 +227,8 @@ where
                         Err(err) => {
                             warn!(
                                 SecurityEvent::InvalidNetworkEventHC,
-                                NetworkSchema::new(&self.network_context)
-                                    .debug_error(&err),
+                                NetworkSchema::new(&self.network_context),
+                                error = ?err,
                                 "{} Unexpected network error: {}",
                                 self.network_context,
                                 err
@@ -297,7 +297,8 @@ where
             Ok(msg) => msg,
             Err(e) => {
                 warn!(
-                    NetworkSchema::new(&self.network_context).debug_error(&e),
+                    NetworkSchema::new(&self.network_context),
+                    error = ?e,
                     "{} Unable to serialize pong response: {}", self.network_context, e
                 );
                 return;
@@ -356,8 +357,8 @@ where
             Err(err) => {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer_id)
-                        .debug_error(&err),
+                        .remote_peer(&peer_id),
+                    error = ?err,
                     round = round,
                     "{} Ping failed for peer: {} round: {} with error: {:?}",
                     self.network_context,
@@ -390,8 +391,8 @@ where
                             if let Err(err) = self.network_tx.disconnect_peer(peer_id).await {
                                 warn!(
                                     NetworkSchema::new(&self.network_context)
-                                        .remote_peer(&peer_id)
-                                        .debug_error(&err),
+                                        .remote_peer(&peer_id),
+                                    error = ?err,
                                     "{} Failed to disconnect from peer: {} with error: {:?}",
                                     self.network_context,
                                     peer_id.short_str(),

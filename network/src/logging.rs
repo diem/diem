@@ -38,7 +38,6 @@ pub struct NetworkSchema<'a> {
     connection_origin: Option<&'a ConnectionOrigin>,
     #[schema(display)]
     discovery_source: Option<&'a DiscoverySource>,
-    error: Option<String>,
     #[schema(display)]
     network_address: Option<&'a NetworkAddress>,
     network_context: &'a NetworkContext,
@@ -52,7 +51,6 @@ impl<'a> NetworkSchema<'a> {
             connection_id: None,
             connection_origin: None,
             discovery_source: None,
-            error: None,
             network_address: None,
             network_context,
             remote_peer: None,
@@ -70,9 +68,5 @@ impl<'a> NetworkSchema<'a> {
             .connection_origin(&metadata.origin)
             .remote_peer(&metadata.remote_peer_id)
             .network_address(&metadata.addr)
-    }
-
-    pub fn debug_error<Err: std::fmt::Debug>(self, error: &Err) -> Self {
-        self.error(format!("{:?}", error))
     }
 }

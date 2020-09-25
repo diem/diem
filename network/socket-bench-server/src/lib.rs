@@ -143,10 +143,14 @@ where
                                 stream.close().await.unwrap();
                             });
                         }
-                        Err(e) => error!("Connection upgrade failed {:?}", e),
+                        Err(e) => error!(
+                            error = ?e,
+                            "Connection upgrade failed {:?}", e),
                     };
                 }
-                Err(e) => error!("Stream failed {:?}", e),
+                Err(e) => error!(
+                    error = ?e,
+                    "Stream failed {:?}", e),
             }
         })
         .await

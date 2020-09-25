@@ -325,8 +325,8 @@ impl Rpc {
             if let Err(e) = response_tx.send(response) {
                 warn!(
                     NetworkSchema::new(&self.network_context)
-                        .remote_peer(&peer_id)
-                        .debug_error(&e),
+                        .remote_peer(&peer_id),
+                    error = ?e,
                     protocol_id = protocol_id,
                     "{} Failed to handle inbound RPC response from peer: {} for protocol: {}. Error: {:?}",
                     self.network_context,
@@ -399,8 +399,8 @@ impl Rpc {
                 counters::rpc_messages(&network_context, RESPONSE_LABEL, FAILED_LABEL).inc();
                 warn!(
                     NetworkSchema::new(&network_context)
-                        .remote_peer(&peer_id)
-                        .debug_error(&err),
+                        .remote_peer(&peer_id),
+                    error = ?err,
                     "{} Error handling inbound rpc request from {}: {:?}",
                     network_context,
                     peer_id.short_str(),
@@ -494,8 +494,8 @@ impl Rpc {
                             .inc();
                         warn!(
                             NetworkSchema::new(&network_context)
-                                .remote_peer(&peer_id)
-                                .debug_error(&err),
+                                .remote_peer(&peer_id),
+                            error = ?err,
                             request_id = request_id,
                             "{} Error making outbound rpc request with request_id {} to {}: {:?}",
                             network_context,

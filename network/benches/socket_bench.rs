@@ -338,7 +338,10 @@ fn bench_client_connection<F, T, S>(
                         futures.push(async move {
                             match fut.await {
                                 Ok(_socket) => (),
-                                Err(e) => error!("Failed to upgrade {:?}", e),
+                                Err(e) => error!(
+                                    error = ?e,
+                                    "Failed to upgrade {:?}", e
+                                ),
                             };
                         });
                         break;

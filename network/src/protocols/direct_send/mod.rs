@@ -170,8 +170,8 @@ impl DirectSend {
                     });
                     if let Err(err) = self.ds_notifs_tx.send(notif).await {
                         warn!(
-                            NetworkSchema::new(&self.network_context)
-                                .debug_error(&err),
+                            NetworkSchema::new(&self.network_context),
+                            error = ?err,
                             "{} Failed to notify upstream actor about inbound DirectSend message. Error: {:?}",
                             self.network_context,
                             err
