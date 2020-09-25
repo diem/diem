@@ -232,7 +232,7 @@ fn test_network_key_rotation() {
     // Restart validator
     // At this point, the `add_node` call ensures connectivity to all nodes
     swarm.validator_swarm.kill_node(0);
-    swarm.validator_swarm.add_node(0, false).unwrap();
+    swarm.validator_swarm.add_node(0).unwrap();
 }
 
 #[test]
@@ -287,7 +287,7 @@ fn test_network_key_rotation_recovery() {
     // Restart validator
     // At this point, the `add_node` call ensures connectivity to all nodes
     swarm.validator_swarm.kill_node(0);
-    swarm.validator_swarm.add_node(0, false).unwrap();
+    swarm.validator_swarm.add_node(0).unwrap();
 }
 
 #[test]

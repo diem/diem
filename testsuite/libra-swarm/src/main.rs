@@ -17,9 +17,6 @@ struct Args {
     /// Number of nodes to start (1 by default)
     #[structopt(short = "n", long, default_value = "1")]
     pub num_nodes: usize,
-    /// Enable logging, by default spawned nodes will not perform logging
-    #[structopt(short = "l", long)]
-    pub enable_logging: bool,
     /// Start client
     #[structopt(short = "s", long, requires("cli-path"))]
     pub start_client: bool,
@@ -78,11 +75,11 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt(!args.enable_logging)
+        .launch_attempt()
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt(!args.enable_logging)
+            .launch_attempt()
             .expect("Failed to launch full node swarm");
     }
 

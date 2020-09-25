@@ -77,7 +77,7 @@ fn test_basic_restartability() {
     let peer_to_restart = 0;
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
+    assert!(env.validator_swarm.add_node(peer_to_restart).is_ok());
     assert!(compare_balances(
         vec![(90.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap(),

@@ -82,7 +82,7 @@ fn test_db_restore() {
 
     // start node 0 on top of restored db
     // (add_node() waits for it to connect to peers)
-    env.validator_swarm.add_node(0, false).unwrap();
+    env.validator_swarm.add_node(0).unwrap();
 
     // stop transferring
     transfer_quit.store(true, Ordering::Relaxed);

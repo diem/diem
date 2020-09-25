@@ -54,12 +54,12 @@ fn test_genesis_transaction_flow() {
         node_config.consensus.sync_only = true;
         node_config.save(config_path).unwrap();
         env.validator_swarm.kill_node(i);
-        env.validator_swarm.add_node(i, false).unwrap();
+        env.validator_swarm.add_node(i).unwrap();
     }
     println!("3. delete one node's db and test they can still sync when sync_only is true for every nodes");
     env.validator_swarm.kill_node(0);
     fs::remove_dir_all(node_config.storage.dir()).unwrap();
-    env.validator_swarm.add_node(0, false).unwrap();
+    env.validator_swarm.add_node(0).unwrap();
     println!("4. verify all nodes are at the same round and no progress being made in 5 sec");
     env.validator_swarm.wait_for_all_nodes_to_catchup();
     let mut known_round = None;
@@ -152,7 +152,7 @@ fn test_genesis_transaction_flow() {
         node_config.save(config_path).unwrap();
     }
     for i in 1..4 {
-        env.validator_swarm.add_node(i, false).unwrap();
+        env.validator_swarm.add_node(i).unwrap();
     }
     println!("8. verify it's able to mint after the waypoint");
     let mut client_proxy_1 = env.get_validator_client(1, Some(waypoint));
@@ -179,7 +179,7 @@ fn test_genesis_transaction_flow() {
     node_config
         .save(&env.validator_swarm.config.config_files[0])
         .unwrap();
-    env.validator_swarm.add_node(0, false).unwrap();
+    env.validator_swarm.add_node(0).unwrap();
     let mut client_proxy_0 = env.get_validator_client(0, Some(waypoint));
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_0.create_next_account(false).unwrap();

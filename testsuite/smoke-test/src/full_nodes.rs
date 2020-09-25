@@ -274,7 +274,7 @@ fn test_vfn_failover() {
     }
 
     // bring back one of the validators so consensus can resume
-    assert!(env.validator_swarm.add_node(0, false).is_ok());
+    assert!(env.validator_swarm.add_node(0).is_ok());
     // check all txns submitted so far (even those submitted during overlapping validator downtime) are committed
     let vfn_0_acct_0 = vfn_0_client.copy_all_accounts().get(0).unwrap().address;
     vfn_0_client.wait_for_transaction(vfn_0_acct_0, 14).unwrap();
@@ -294,7 +294,7 @@ fn test_vfn_failover() {
         .unwrap();
 
     // bring back all Vs back up
-    assert!(env.validator_swarm.add_node(1, false).is_ok());
+    assert!(env.validator_swarm.add_node(1).is_ok());
 
     // just for kicks: check regular minting still works with revived validators
     for _ in 0..5 {

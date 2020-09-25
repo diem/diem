@@ -69,23 +69,19 @@ impl LibraHandle {
     }
 }
 
-pub fn start(no_logging: bool, config: &NodeConfig, log_file: Option<PathBuf>) {
+pub fn start(config: &NodeConfig, log_file: Option<PathBuf>) {
     crash_handler::setup_panic_handler();
 
-    let logger = if !no_logging {
-        let mut logger = libra_logger::Logger::new();
-        logger
-            .channel_size(config.logger.chan_size)
-            .is_async(config.logger.is_async)
-            .level(config.logger.level)
-            .read_env();
-        if let Some(log_file) = log_file {
-            logger.printer(Box::new(FileWriter::new(log_file)));
-        }
-        Some(logger.build())
-    } else {
-        None
-    };
+    let mut logger = libra_logger::Logger::new();
+    logger
+        .channel_size(config.logger.chan_size)
+        .is_async(config.logger.is_async)
+        .level(config.logger.level)
+        .read_env();
+    if let Some(log_file) = log_file {
+        logger.printer(Box::new(FileWriter::new(log_file)));
+    }
+    let logger = Some(logger.build());
 
     // Let's now log some important information, since the logger is set up
     info!(config = config, "Loaded config");
@@ -128,7 +124,7 @@ fn setup_metrics(peer_id: PeerId, config: &NodeConfig) {
     );
 }
 
-pub fn load_test_environment(config_path: Option<PathBuf>, no_logging: bool, random_ports: bool) {
+pub fn load_test_environment(config_path: Option<PathBuf>, random_ports: bool) {
     // Either allocate a temppath or reuse the passed in path and make sure the directory exists
     let config_temp_path = libra_temppath::TempPath::new();
     let config_path = config_path.unwrap_or_else(|| config_temp_path.as_ref().to_path_buf());
@@ -179,7 +175,7 @@ pub fn load_test_environment(config_path: Option<PathBuf>, no_logging: bool, ran
     println!("Libra is running, press ctrl-c to exit");
     println!();
 
-    start(no_logging, &config, Some(log_file))
+    start(&config, Some(log_file))
 }
 
 // Fetch chain ID from on-chain resource

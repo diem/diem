@@ -17,8 +17,6 @@ struct Args {
         help = "Path to NodeConfig"
     )]
     config: Option<PathBuf>,
-    #[structopt(short = "d", long, help = "Disable logging")]
-    no_logging: bool,
     #[structopt(long, help = "Enable a single validator testnet")]
     test: bool,
     #[structopt(long, help = "Enabling random ports for testnet")]
@@ -33,10 +31,10 @@ fn main() {
 
     if args.test {
         println!("Entering test mode, this should never be used in production!");
-        libra_node::load_test_environment(args.config, args.no_logging, args.random_ports);
+        libra_node::load_test_environment(args.config, args.random_ports);
     } else {
         let config = NodeConfig::load(args.config.unwrap()).expect("Failed to load node config");
         println!("Using node config {:?}", &config);
-        libra_node::start(args.no_logging, &config, None);
+        libra_node::start(&config, None);
     };
 }

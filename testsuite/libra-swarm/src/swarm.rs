@@ -58,8 +58,6 @@ impl LibraNode {
         role: RoleType,
         config_path: &Path,
         log_path: PathBuf,
-        struct_log_path: PathBuf,
-        disable_logging: bool,
     ) -> Result<Self> {
         let config = NodeConfig::load(&config_path)
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
@@ -73,11 +71,6 @@ impl LibraNode {
         if env::var("RUST_LOG").is_err() {
             // Only set our RUST_LOG if its not present in environment
             node_command.env("RUST_LOG", "debug");
-        }
-        if disable_logging {
-            node_command.arg("-d");
-        } else {
-            node_command.env("STRUCT_LOG_FILE", struct_log_path);
         }
         node_command
             .stdout(log_file.try_clone()?)
@@ -318,7 +311,7 @@ impl LibraSwarm {
     pub fn launch(&mut self) {
         let num_attempts = 5;
         for _ in 0..num_attempts {
-            match self.launch_attempt(false) {
+            match self.launch_attempt() {
                 Ok(_) => return,
                 Err(err) => error!("Error launching swarm: {}", err),
             }
@@ -326,7 +319,7 @@ impl LibraSwarm {
         panic!("Max out {} attempts to launch test swarm", num_attempts);
     }
 
-    pub fn launch_attempt(&mut self, disable_logging: bool) -> Result<(), SwarmLaunchFailure> {
+    pub fn launch_attempt(&mut self) -> Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
@@ -339,8 +332,6 @@ impl LibraSwarm {
                 self.role,
                 &path,
                 logs_dir_path.join(format!("{}.log", index)),
-                logs_dir_path.join(format!("{}.struct.log", index)),
-                disable_logging,
             )
             .unwrap();
             self.nodes.insert(node_id, node);
@@ -522,11 +513,7 @@ impl LibraSwarm {
         self.nodes.remove(&node_id);
     }
 
-    pub fn add_node(
-        &mut self,
-        idx: usize,
-        disable_logging: bool,
-    ) -> Result<(), SwarmLaunchFailure> {
+    pub fn add_node(&mut self, idx: usize) -> Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
         // `launch_node`.
         let path = self
@@ -535,11 +522,6 @@ impl LibraSwarm {
             .get(idx)
             .unwrap_or_else(|| panic!("Node at index {} not found", idx));
         let log_file_path = self.dir.as_ref().join("logs").join(format!("{}.log", idx));
-        let struct_log_file_path = self
-            .dir
-            .as_ref()
-            .join("logs")
-            .join(format!("{}.struct.log", idx));
         let node_id = format!("{}", idx);
         let mut node = LibraNode::launch(
             &self.libra_node_bin_path,
@@ -547,8 +529,6 @@ impl LibraSwarm {
             self.role,
             path,
             log_file_path,
-            struct_log_file_path,
-            disable_logging,
         )
         .unwrap();
         for _ in 0..60 {
